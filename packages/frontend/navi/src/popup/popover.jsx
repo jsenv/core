@@ -192,11 +192,16 @@ const ControlledPopover = (props) => {
           : "scale"
       : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    if (anchorPoint) {
-      popoverEl.setAttribute("data-anchor-point", anchorPoint);
-    } else {
-      popoverEl.removeAttribute("data-anchor-point");
-    }
+    // Mirrors how the anchor was resolved, in DOM-inspectable form: one of
+    // the 9 anchor points, "viewport" (no anchor at all), a structural
+    // relation to the popover ("previousSibling"/"nextSibling"/"parent" —
+    // the only relations worth naming; anything else is too indirect to be
+    // useful at a glance), "#id" when the anchor element has one, or
+    // "custom" as the last resort.
+    popoverEl.setAttribute(
+      "data-anchor",
+      resolveAnchorAttrValue(popoverEl, anchor, anchorPoint),
+    );
 
     debugPopup(
       e,
@@ -489,6 +494,28 @@ const POPOVER_PSEUDO_CLASSES = [
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+};
+
+const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
+  if (anchorPoint) {
+    return anchorPoint;
+  }
+  if (anchor) {
+    if (anchor === popoverEl.previousElementSibling) {
+      return "previousSibling";
+    }
+    if (anchor === popoverEl.nextElementSibling) {
+      return "nextSibling";
+    }
+    if (anchor === popoverEl.parentElement) {
+      return "parent";
+    }
+    if (anchor.id) {
+      return `#${anchor.id}`;
+    }
+    return "custom";
+  }
+  return "viewport";
 };
 
 // Values the `anchor` prop accepts besides a ref/DOM element, "ignore", or

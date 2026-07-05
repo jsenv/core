@@ -30,7 +30,7 @@
  * - "slide"/"slide-from-*": a real translate-based entrance, sized to the
  *   element's own dimensions (--popup-slide-distance defaults to 100%, i.e.
  *   it travels its own width/height) so it looks like it enters from just
- *   past its final position. Direction comes from `data-anchor-point` (set
+ *   past its final position. Direction comes from `data-anchor` (set
  *   when Popover's `anchor` prop is an anchor point value like "right" or
  *   "top-left") or from the explicit slide-from-top/bottom/left/right variant.
  */
@@ -116,40 +116,40 @@ export const buildPopupAnimationCss = (selector) => {
       }
     }
 
-    /* slide — direction multipliers. data-anchor-point (set when Popover's
+    /* slide — direction multipliers. data-anchor (set when Popover's
        anchor prop is an anchor point value, e.g. "right", "top-left") drives
        it automatically; slide-from-top/bottom/left/right set it directly,
        ignoring anchor/position entirely. Falls back to "from the top" when
        neither is present. */
-    ${selector}[data-anchor-point="top"] {
+    ${selector}[data-anchor="top"] {
       --popup-slide-x: 0;
       --popup-slide-y: -1;
     }
-    ${selector}[data-anchor-point="top-right"] {
+    ${selector}[data-anchor="top-right"] {
       --popup-slide-x: 1;
       --popup-slide-y: -1;
     }
-    ${selector}[data-anchor-point="right"] {
+    ${selector}[data-anchor="right"] {
       --popup-slide-x: 1;
       --popup-slide-y: 0;
     }
-    ${selector}[data-anchor-point="bottom-right"] {
+    ${selector}[data-anchor="bottom-right"] {
       --popup-slide-x: 1;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-point="bottom"] {
+    ${selector}[data-anchor="bottom"] {
       --popup-slide-x: 0;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-point="bottom-left"] {
+    ${selector}[data-anchor="bottom-left"] {
       --popup-slide-x: -1;
       --popup-slide-y: 1;
     }
-    ${selector}[data-anchor-point="left"] {
+    ${selector}[data-anchor="left"] {
       --popup-slide-x: -1;
       --popup-slide-y: 0;
     }
-    ${selector}[data-anchor-point="top-left"] {
+    ${selector}[data-anchor="top-left"] {
       --popup-slide-x: -1;
       --popup-slide-y: -1;
     }

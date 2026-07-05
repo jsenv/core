@@ -1,6 +1,7 @@
 import { chainEvent, findEvent } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
+import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
 /**
@@ -37,7 +38,10 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
  */
-export const createOpenController = (openHandler) => {
+export const createOpenController = (
+  openHandler,
+  { debugInteraction } = {},
+) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
 
@@ -47,7 +51,10 @@ export const createOpenController = (openHandler) => {
     prevent_reopen: {
       const mousedownEvent = findEvent(closeEvent, "mousedown");
       if (mousedownEvent) {
-        // debugPopup(closeEvent, `closed by mousedown -> disable next click`);
+        debugInteraction(
+          closeEvent,
+          `closed by mousedown -> disable next click`,
+        );
         suppressNextClick(closeEvent.currentTarget);
       } else {
         const spaceEvent = findEvent(
@@ -56,10 +63,10 @@ export const createOpenController = (openHandler) => {
         );
         if (spaceEvent) {
           // space would trigger a click on the picker button causing it to re-open immediatly after closing
-          // debugPopup(
-          //   closeEvent,
-          //   `closed by space key -> prevent browser click`,
-          // );
+          debugInteraction(
+            closeEvent,
+            `closed by space key -> prevent browser click`,
+          );
           // browser won't try to dispatch click
           // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
           spaceEvent.preventDefault();
@@ -180,10 +187,13 @@ const suppressNextClick = (element) => {
 // Dialog/Popover read fresh closures (scrollTrap, etc.) via
 // openController.openEffect on every render.
 export const useOpenController = (openHandler) => {
+  const debugInteraction = useDebugInteraction();
   const stableOpenHandler = useStableCallback(openHandler);
   const controllerRef = useRef(null);
   if (!controllerRef.current) {
-    controllerRef.current = createOpenController(stableOpenHandler);
+    controllerRef.current = createOpenController(stableOpenHandler, {
+      debugInteraction,
+    });
   }
   // Unmount safety net: if Dialog/Popover unmounts while still open (parent
   // removes it from the tree without going through requestClose()), there is
