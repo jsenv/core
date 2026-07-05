@@ -215,6 +215,19 @@ const ControlledPopover = (props) => {
       "data-anchor",
       resolveAnchorAttrValue(popoverEl, anchor, anchorPoint),
     );
+    // pickPositionRelativeTo persists data-position-y/x-current across calls
+    // on purpose (it avoids flicker while *this* popover stays open and
+    // repositions on scroll/resize). But the attribute lingers on the DOM
+    // node between separate open/close cycles too, and its hysteresis ("stay
+    // on the current side unless it clearly stops fitting") then gets
+    // applied to a fresh open as if it were a continuation of the last one —
+    // if the page was scrolled while closed, the *correct* side for this
+    // open can take a couple of open/close cycles to actually take effect
+    // (the clip animation reads data-position-y-current too, so it lags in
+    // sync). Clearing them here makes every open decide the side from
+    // scratch, matching the current scroll/viewport state right away.
+    popoverEl.removeAttribute("data-position-y-current");
+    popoverEl.removeAttribute("data-position-x-current");
 
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
