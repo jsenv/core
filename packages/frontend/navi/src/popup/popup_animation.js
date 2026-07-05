@@ -20,6 +20,7 @@ const SCALE_FROM = 0.92;
 export const buildPopupAnimationCss = (selector) => {
   const open = `${selector}[aria-expanded="true"]`;
   const closed = `${selector}[aria-expanded="false"]`;
+
   return /* css */ `
     ${selector}[navi-animation] {
       transition:
