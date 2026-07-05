@@ -1,4 +1,3 @@
-import { isSignal } from "../../utils/is_signal.js";
 import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
