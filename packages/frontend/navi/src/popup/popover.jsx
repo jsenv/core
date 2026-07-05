@@ -25,6 +25,7 @@ import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
   .navi_popover {
+    position: absolute;
     inset: unset;
 
     &[data-anchor-out-of-view] {
@@ -232,6 +233,7 @@ const ControlledPopover = (props) => {
         );
         const minLeft = 1;
         const effectivePositionX = anchor ? positionX : "center";
+        const effectivePositionY = anchor ? positionY : "center";
         // Remove max-height constraint so pickPositionRelativeTo measures the natural
         // (unconstrained) height of the popover. This ensures the 60% flip threshold
         // compares against the real content height, not the already-truncated one.
@@ -244,7 +246,7 @@ const ControlledPopover = (props) => {
           spaceBelow,
         } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
           positionX: effectivePositionX,
-          positionY,
+          positionY: effectivePositionY,
           positionXFixed,
           positionYFixed,
           spacing: resolveSpacingSize(spacing),
