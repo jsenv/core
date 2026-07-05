@@ -93,13 +93,11 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    stickTo,
     stickToContainerRef,
     scrollTrap,
     pointerTrap,
     focusTrap,
     animation,
-    animationDuration,
     children,
     positionX,
     positionY,
@@ -117,10 +115,11 @@ const ControlledPopover = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" picks the animation that best fits whether
-  // there is an anchor, resolved dynamically in openEffect (below) once the
-  // anchor for *this* open is actually known: "slide" when anchored (grows
-  // out of the anchor's edge), "scale" when not (grows from the pointer).
+  // animation={true} or "auto" picks the animation that best fits the anchor
+  // resolved dynamically in openEffect (below) once it's actually known for
+  // *this* open: "grow" when anchored to a real element, "slide" when
+  // anchored to a side/corner (anchor="right", "top-left", ...), "scale"
+  // when there's no anchor at all.
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the popover element itself (not driven through
@@ -149,55 +148,65 @@ const ControlledPopover = (props) => {
     transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
     // anchor="ignore" forces the popover to behave as anchorless even when
     // the request carries one (e.g. a --navi-toggle button that should not
-    // double as the visual anchor). Otherwise anchorRef (set by the parent
-    // component) wins; then the anchor carried by the request (e.g. the
-    // button that triggered a --navi-toggle/--navi-open command, forwarded
-    // as detail.source).
+    // double as the visual anchor). anchor="top"/"top-left"/etc (optionally
+    // "relative-" prefixed, see below) pins to a corner/edge instead of a
+    // real element. Otherwise a ref/DOM element wins; then the anchor
+    // carried by the request (e.g. the button that triggered a
+    // --navi-toggle/--navi-open command, forwarded as detail.source).
     let anchor;
+    let anchorSide; // e.g. "top-right" — set when anchorProp is a sided value
+    let anchorSideIsRelative = false; // sided value was "relative-<side>"
     if (anchorProp === "ignore") {
-    } else if (anchorProp) {
-      if (anchorProp.current) {
-        anchor = anchorProp.current;
-        // anchor prop is a ref
+      // anchorless, centered — nothing to resolve
+    } else if (typeof anchorProp === "string") {
+      const isRelative = anchorProp.startsWith("relative-");
+      const side = isRelative
+        ? anchorProp.slice("relative-".length)
+        : anchorProp;
+      if (SIDED_ANCHOR_VALUES.has(side)) {
+        anchorSide = side;
+        anchorSideIsRelative = isRelative;
       } else {
-        // anchor is assumed to be a DOM element
-        anchor = anchorProp;
+        console.warn(`Popover: unknown anchor="${anchorProp}"`);
       }
+    } else if (anchorProp) {
+      // anchor prop is a ref or a DOM element
+      anchor = anchorProp.current ?? anchorProp;
     } else if (e.detail.anchor) {
       anchor = e.detail.anchor;
     }
-    const stickToContainer = stickToContainerRef?.current ?? null;
+    const stickToContainer = anchorSideIsRelative
+      ? (stickToContainerRef?.current ?? null)
+      : null;
     // What we observe for repositioning on resize/scroll/visibility changes:
     // the anchor when anchored, otherwise the stickTo container (or the
-    // whole document when stickTo is viewport-relative).
+    // whole document when the sided anchor is viewport-relative).
     const effectiveAnchor =
       anchor || stickToContainer || document.documentElement;
     const resolvedAnimation = isAutoAnimation
       ? anchor
-        ? "slide"
-        : "scale"
+        ? "grow"
+        : anchorSide
+          ? "slide"
+          : "scale"
       : animation;
-    if (isAutoAnimation) {
-      popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    }
-    if (animationDuration) {
-      popoverEl.style.setProperty(
-        "--popup-animation-duration",
-        animationDuration,
-      );
+    popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    if (anchorSide) {
+      popoverEl.setAttribute("data-anchor-side", anchorSide);
+    } else {
+      popoverEl.removeAttribute("data-anchor-side");
     }
 
     debugPopup(
       e,
-      `openPopover() -> anchor: ${anchor?.tagName}, stickTo: ${stickTo}, stickToContainer: ${stickToContainer?.tagName}`,
+      `openPopover() -> anchor: ${anchor?.tagName}, anchorSide: ${anchorSide}, stickToContainer: ${stickToContainer?.tagName}`,
     );
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
       let top;
-      let finalPositionY;
 
-      if (stickTo) {
+      if (anchorSide) {
         const containerRect = stickToContainer
           ? stickToContainer.getBoundingClientRect()
           : {
@@ -212,21 +221,11 @@ const ControlledPopover = (props) => {
         const position = computeStickToPosition(
           popoverEl,
           containerRect,
-          stickTo,
+          anchorSide,
           spacingPx,
         );
         appliedLeft = position.left;
         top = position.top;
-        finalPositionY = stickTo.startsWith("bottom")
-          ? "above"
-          : stickTo.startsWith("top")
-            ? "below"
-            : undefined;
-        if (finalPositionY) {
-          popoverEl.setAttribute("data-position-y-current", finalPositionY);
-        } else {
-          popoverEl.removeAttribute("data-position-y-current");
-        }
       } else {
         const { width, height } = effectiveAnchor.getBoundingClientRect();
         const {
@@ -273,7 +272,7 @@ const ControlledPopover = (props) => {
           viewportSpacing: resolveSpacingSize(viewportSpacing),
           minLeft,
         });
-        finalPositionY = pickedPositionY;
+        const finalPositionY = pickedPositionY;
         const spaceAvailable =
           finalPositionY === "above" || finalPositionY === "above-overlap"
             ? spaceAbove
@@ -374,11 +373,34 @@ const ControlledPopover = (props) => {
     // after openEffect() returns (see picker_custom.jsx useOpenController).
     e.detail.focusedBeforeOpen = focusedBeforeOpen;
 
-    return () => {
-      debugPopup(e, `closePopover()`);
+    return (closeEvent) => {
+      debugPopup(closeEvent, `closePopover()`);
       markAutofocusRestoreOnClose(popoverEl);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
+
+      restore_focus: {
+        const focusoutEvent = findEvent(closeEvent, "focusout");
+        if (focusoutEvent) {
+          debugFocus(closeEvent, `closed by focusout -> let focus go away`);
+        } else {
+          const mousedownEvent = findEvent(closeEvent, "mousedown");
+          if (mousedownEvent) {
+            debugFocus(
+              closeEvent,
+              "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+            );
+            mousedownEvent.preventDefault();
+          }
+          debugFocus(
+            closeEvent,
+            `restore focus to previously focused element`,
+            focusedBeforeOpen,
+          );
+          focusedBeforeOpen.focus({ preventScroll: true });
+        }
+      }
+
       cleanup();
     };
   };
@@ -388,7 +410,7 @@ const ControlledPopover = (props) => {
       id={id}
       popover="manual"
       navi-animation={isAutoAnimation ? undefined : animation}
-      navi-stick-to={stickTo}
+      styleCSSVars={POPUP_STYLE_CSS_VARS}
       {...rest}
       {...autoFocusProps}
       ref={ref}
@@ -462,6 +484,28 @@ const POPOVER_PSEUDO_CLASSES = [
   ":focus-within",
 ];
 
+// Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
+// it to the CSS var for us (see box.jsx's styleCSSVars handling).
+const POPUP_STYLE_CSS_VARS = {
+  animationDuration: "--popup-animation-duration",
+};
+
+// Values the `anchor` prop accepts besides a ref/DOM element, "ignore", or
+// undefined — pins the popover to a corner/edge instead of a real element.
+// Optionally "relative-" prefixed (e.g. "relative-right") to make it relative
+// to `stickToContainerRef` instead of the viewport.
+const SIDED_ANCHOR_VALUES = new Set([
+  "top",
+  "top-right",
+  "right",
+  "bottom-right",
+  "bottom",
+  "bottom-left",
+  "left",
+  "top-left",
+  "center",
+]);
+
 /**
  * Places the popover pinned to a corner/edge of `containerRect` (the
  * viewport by default, or a `stickToContainerRef` element) instead of
@@ -472,7 +516,7 @@ const POPOVER_PSEUDO_CLASSES = [
 const computeStickToPosition = (
   popoverEl,
   containerRect,
-  stickTo,
+  anchorSide,
   spacingPx,
 ) => {
   const { width, height } = popoverEl.getBoundingClientRect();
@@ -480,15 +524,15 @@ const computeStickToPosition = (
 
   let left;
   if (
-    stickTo === "top-left" ||
-    stickTo === "bottom-left" ||
-    stickTo === "left-center"
+    anchorSide === "top-left" ||
+    anchorSide === "bottom-left" ||
+    anchorSide === "left"
   ) {
     left = containerRect.left + spacingPx;
   } else if (
-    stickTo === "top-right" ||
-    stickTo === "bottom-right" ||
-    stickTo === "right-center"
+    anchorSide === "top-right" ||
+    anchorSide === "bottom-right" ||
+    anchorSide === "right"
   ) {
     left = containerRect.right - spacingPx - width;
   } else {
@@ -497,15 +541,15 @@ const computeStickToPosition = (
 
   let top;
   if (
-    stickTo === "top-left" ||
-    stickTo === "top-center" ||
-    stickTo === "top-right"
+    anchorSide === "top-left" ||
+    anchorSide === "top" ||
+    anchorSide === "top-right"
   ) {
     top = containerRect.top + spacingPx;
   } else if (
-    stickTo === "bottom-left" ||
-    stickTo === "bottom-center" ||
-    stickTo === "bottom-right"
+    anchorSide === "bottom-left" ||
+    anchorSide === "bottom" ||
+    anchorSide === "bottom-right"
   ) {
     top = containerRect.bottom - spacingPx - height;
   } else {

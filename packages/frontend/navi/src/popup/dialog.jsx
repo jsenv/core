@@ -106,7 +106,6 @@ const ControlledDialog = (props) => {
     scrollTrap,
     pointerTrap,
     animation,
-    animationDuration,
     centerInVisualViewport: centerInVisualViewportProp,
     ...rest
   } = props;
@@ -115,11 +114,9 @@ const ControlledDialog = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" picks the animation that best fits whether
-  // there is an anchor, resolved dynamically in openEffect (below) once the
-  // anchor for *this* open is actually known: "slide" when anchored, "scale"
-  // when not (dialogs are almost always anchorless in practice, so this
-  // mostly resolves to "scale").
+  // animation={true} or "auto" always resolves to "scale": dialogs are
+  // always centered in the viewport (unlike Popover, they don't track an
+  // anchor edge to "grow" out of or a side to "slide" in from).
   const isAutoAnimation = animation === true || animation === "auto";
 
   // aria-expanded lives on the dialog element itself (not driven through
@@ -148,23 +145,12 @@ const ControlledDialog = (props) => {
     const anchor =
       anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null;
     const effectiveAnchor = anchor || document.documentElement;
-    const resolvedAnimation = isAutoAnimation
-      ? anchor
-        ? "slide"
-        : "scale"
-      : animation;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const { width, height } = effectiveAnchor.getBoundingClientRect();
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     if (isAutoAnimation) {
-      dialogEl.setAttribute("navi-animation", resolvedAnimation);
-    }
-    if (animationDuration) {
-      dialogEl.style.setProperty(
-        "--popup-animation-duration",
-        animationDuration,
-      );
+      dialogEl.setAttribute("navi-animation", "scale");
     }
     const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();

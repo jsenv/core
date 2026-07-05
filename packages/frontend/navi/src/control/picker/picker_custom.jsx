@@ -420,28 +420,6 @@ const PickerCustom = (props) => {
             }
           }
 
-          restore_focus: {
-            const focusoutEvent = findEvent(closeEvent, "focusout");
-            if (focusoutEvent) {
-              debugFocus(closeEvent, `closed by focusout -> let focus go away`);
-            } else {
-              const mousedownEvent = findEvent(closeEvent, "mousedown");
-              if (mousedownEvent) {
-                debugFocus(
-                  closeEvent,
-                  "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
-                );
-                mousedownEvent.preventDefault();
-              }
-              debugFocus(
-                closeEvent,
-                `restore focus to previously focused element`,
-                focusedBeforeOpen,
-              );
-              focusedBeforeOpen.focus({ preventScroll: true });
-            }
-          }
-
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
           defaultModeRef.current = null;
