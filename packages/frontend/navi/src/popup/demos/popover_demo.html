@@ -333,26 +333,15 @@
         </section>
       );
 
-      // Buttons live outside .demo-container (they don't need an
-      // offsetParent); the popovers they control live inside it, invisible
-      // until opened — one container serves both the plain grid (left) and
-      // the animated grid (right) so they can sit side by side.
+      // The container comes first, with the buttons that control the
+      // popovers it holds below it — the container itself doesn't need to be
+      // rendered inside anything, but the popovers do (that's how
+      // anchorRelativeTo="offsetParent" finds it), and the trigger buttons
+      // don't have to be inside it at all.
       const AnchorPointRelativeDemo = ({ animatedDuration }) => {
         const baseId = useId();
         return (
-          <div class="demo-side-by-side">
-            <PointGrid
-              renderCell={(point) => (
-                <Button
-                  command="--navi-toggle"
-                  commandFor={`${baseId}-plain-${point}`}
-                  className="demo-point-button"
-                  style={pointAlignStyle(point)}
-                >
-                  {point}
-                </Button>
-              )}
-            />
+          <>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {POINTS.map((point) => (
@@ -388,19 +377,33 @@
                 </Popover>
               ))}
             </div>
-            <PointGrid
-              renderCell={(point) => (
-                <Button
-                  command="--navi-toggle"
-                  commandFor={`${baseId}-animated-${point}`}
-                  className="demo-point-button"
-                  style={pointAlignStyle(point)}
-                >
-                  {point}
-                </Button>
-              )}
-            />
-          </div>
+            <div class="demo-side-by-side">
+              <PointGrid
+                renderCell={(point) => (
+                  <Button
+                    command="--navi-toggle"
+                    commandFor={`${baseId}-plain-${point}`}
+                    className="demo-point-button"
+                    style={pointAlignStyle(point)}
+                  >
+                    {point}
+                  </Button>
+                )}
+              />
+              <PointGrid
+                renderCell={(point) => (
+                  <Button
+                    command="--navi-toggle"
+                    commandFor={`${baseId}-animated-${point}`}
+                    className="demo-point-button"
+                    style={pointAlignStyle(point)}
+                  >
+                    {point}
+                  </Button>
+                )}
+              />
+            </div>
+          </>
         );
       };
 
