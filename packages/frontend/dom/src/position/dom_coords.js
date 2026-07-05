@@ -280,6 +280,24 @@ const viewportPosToScrollRelativePos = (
   ];
 };
 
+// position: fixed is already viewport-relative, so no scroll offset is
+// needed to place it correctly — adding one would double-count the scroll.
+// position: absolute (assumed relative to the initial containing block, the
+// common case for a document-relative absolutely positioned element) needs
+// the current scroll offset added to convert a viewport-relative coordinate
+// into one it can be set to directly. Read the element's own computed style
+// rather than assuming one or the other, since callers may use either.
+export const getPositioningScrollOffset = (element) => {
+  const isFixed = getComputedStyle(element).position === "fixed";
+  if (isFixed) {
+    return { scrollLeft: 0, scrollTop: 0 };
+  }
+  return {
+    scrollLeft: documentElement.scrollLeft,
+    scrollTop: documentElement.scrollTop,
+  };
+};
+
 export const addScrollToRect = (scrollRelativeRect) => {
   const { left, top, width, height, scrollLeft, scrollTop } =
     scrollRelativeRect;

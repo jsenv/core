@@ -2,6 +2,8 @@ import {
   createPubSub,
   findEvent,
   getBorderSizes,
+  getPositionedParent,
+  getPositioningScrollOffset,
   pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
@@ -20,7 +22,7 @@ import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
   .navi_popover {
-    position: absolute;
+    position: fixed;
     inset: unset;
     /* Set --popup-border-radius instead of border-radius directly: it's
        also what the "clip" animation rounds its clip-path shape to (see
@@ -170,17 +172,19 @@ const ControlledPopover = (props) => {
       anchor = e.detail.anchor;
     }
     // The popover's own nearest positioned DOM ancestor — for this to
-    // resolve to anything, the popover must be rendered inside that ancestor
-    // in the DOM (the trigger button doesn't have to be). Only meaningful
-    // for an anchor point: a real anchor element already carries its own
-    // position. Not `popoverEl.offsetParent`: an open [popover] element sits
-    // in the top layer, whose containing block is always the initial
-    // containing block (the viewport) — no DOM ancestor ever qualifies as
-    // its containing block, so offsetParent is spec'd to return null
-    // regardless of DOM position or timing.
+    // resolve to anything but document.body, the popover must be rendered
+    // inside that ancestor in the DOM (the trigger button doesn't have to
+    // be). Only meaningful for an anchor point: a real anchor element
+    // already carries its own position. Not `popoverEl.offsetParent`: an
+    // open [popover] element sits in the top layer, whose containing block
+    // is always the initial containing block (the viewport) — no DOM
+    // ancestor ever qualifies as its containing block, so offsetParent is
+    // spec'd to return null regardless of DOM position or timing.
+    // getPositionedParent walks the plain DOM ancestor chain instead, so
+    // it's unaffected by that.
     const relativeContainer =
       anchorPoint && anchorRelativeTo === "offsetParent"
-        ? findPositionedAncestor(popoverEl)
+        ? getPositionedParent(popoverEl)
         : null;
     const resolvedAnimation = isAutoAnimation
       ? anchorPoint && anchorPoint !== "center"
@@ -365,13 +369,15 @@ const ControlledPopover = (props) => {
         popoverEl.style.removeProperty("--popup-animation-origin-y");
         return;
       }
-      // appliedLeft/top are document-relative (pickPositionRelativeTo/
-      // computeStickToPosition both add the current scroll offset, since the
-      // popover is position: absolute), while clientX/clientY are
-      // viewport-relative — the scroll offset must be added to them too
-      // before diffing, otherwise the computed origin drifts off by the
-      // scroll amount as soon as the page isn't scrolled to the top.
-      const { scrollLeft, scrollTop } = document.documentElement;
+      // appliedLeft/top are in whatever coordinate space pickPositionRelativeTo/
+      // computeStickToPosition produced for popoverEl's own computed position
+      // (document-relative if position: absolute, viewport-relative if
+      // position: fixed — see getPositioningScrollOffset), while clientX/
+      // clientY are always viewport-relative — apply the same offset to them
+      // before diffing so both sides are in the same space, otherwise the
+      // computed origin drifts off by the scroll amount for an absolute
+      // popover as soon as the page isn't scrolled to the top.
+      const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);
       const boxCenterX = appliedLeft + popoverEl.offsetWidth / 2;
       const boxCenterY = top + popoverEl.offsetHeight / 2;
       popoverEl.style.setProperty(
@@ -531,20 +537,6 @@ const POPUP_STYLE_CSS_VARS = {
   borderRadius: "--popup-border-radius",
 };
 
-// Walks the DOM ancestor chain (not popoverEl.offsetParent — see the
-// relativeContainer comment in openEffect above for why) looking for the
-// nearest one whose computed position is not "static".
-const findPositionedAncestor = (element) => {
-  let current = element.parentElement;
-  while (current) {
-    if (getComputedStyle(current).position !== "static") {
-      return current;
-    }
-    current = current.parentElement;
-  }
-  return null;
-};
-
 const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
   if (anchorPoint) {
     return anchorPoint;
@@ -585,11 +577,12 @@ const ANCHOR_POINT_VALUES = new Set([
 
 /**
  * Places the popover pinned to an anchor point of `containerRect` (the
- * viewport by default, or the popover's own offsetParent when
+ * viewport by default, or the popover's own positioned ancestor when
  * anchorRelativeTo="offsetParent") instead of relative to an anchor. Returns
- * document-relative { left, top }, matching pickPositionRelativeTo's
- * convention (viewport rect math + current scroll, continuously recomputed
- * by visibleRectEffect on scroll/resize).
+ * { left, top } in whatever coordinate space popoverEl's own computed
+ * position needs (see getPositioningScrollOffset), matching
+ * pickPositionRelativeTo's convention — viewport rect math, converted at the
+ * very end, continuously recomputed by visibleRectEffect on scroll/resize.
  */
 const computeStickToPosition = (
   popoverEl,
@@ -603,7 +596,7 @@ const computeStickToPosition = (
   // off the position math (see the matching fix in pickPositionRelativeTo).
   const width = popoverEl.offsetWidth;
   const height = popoverEl.offsetHeight;
-  const { scrollLeft, scrollTop } = document.documentElement;
+  const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);
 
   let left;
   if (

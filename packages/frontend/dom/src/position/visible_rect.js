@@ -3,6 +3,7 @@ import { createPubSub } from "../pub_sub.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
+import { getPositioningScrollOffset } from "./dom_coords.js";
 
 const DEBUG = false;
 
@@ -518,7 +519,8 @@ export const visibleRectEffect = (
  * "which side is this on right now" — including for a fixed axis, even though a fixed
  * axis never reads the attribute back itself (positionXFixed/positionYFixed always win).
  *
- * @param {HTMLElement} element - The element to position (must be document-relative)
+ * @param {HTMLElement} element - The element to position (position: absolute or
+ *   fixed — detected from its own computed style, see the scroll offset comment below)
  * @param {HTMLElement} anchor - The anchor element to position against
  * @param {object} [options]
  * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
@@ -580,8 +582,7 @@ export const pickPositionRelativeTo = (
   // box — which, unlike the viewport, grows with document content and can be
   // far taller than what's on screen (its top is also negative once the page
   // is scrolled). Using the viewport rect here fixes that; the scroll offset
-  // is still added below like any other case, since the element is
-  // document-relative position: absolute, not position: fixed.
+  // is still applied below like any other case (see getPositioningScrollOffset).
   const anchorIsViewport = anchor === document.documentElement;
   // Get viewport-relative positions
   const anchorRect = anchorIsViewport
@@ -860,13 +861,16 @@ export const pickPositionRelativeTo = (
   element.setAttribute("data-position-x-current", finalX);
   element.setAttribute("data-position-y-current", finalY);
 
-  // Get document scroll for final coordinate conversion. The element is
-  // document-relative position: absolute (see popover.jsx), so the current
-  // scroll offset is always added — including when anchorIsViewport, so the
-  // result lands at the visual center of the viewport at its current scroll
-  // position. visibleRectEffect recomputes this on every scroll tick, which
-  // is what keeps it looking anchored to the viewport as the page scrolls.
-  const { scrollLeft, scrollTop } = document.documentElement;
+  // Convert the viewport-relative math above into whatever coordinate space
+  // `element.style.top/left` actually needs: none added for position: fixed
+  // (already viewport-relative — adding scroll would double-count it), the
+  // current scroll offset added for position: absolute (relative to the
+  // initial containing block, i.e. document-relative) — including when
+  // anchorIsViewport, so the result lands at the visual center of the
+  // viewport at its current scroll position. visibleRectEffect recomputes
+  // this on every scroll tick, which is what keeps it looking anchored as
+  // the page scrolls either way.
+  const { scrollLeft, scrollTop } = getPositioningScrollOffset(element);
   const elementDocumentLeft = snapToPixel(elementPositionLeft + scrollLeft);
   const elementDocumentTop = snapToPixel(elementPositionTop + scrollTop);
   const anchorDocumentLeft = anchorLeft + scrollLeft;

@@ -121,6 +121,7 @@ export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.
 
 // position
 export {
+  getPositioningScrollOffset,
   getScrollBox,
   getScrollRelativeRect,
 } from "./src/position/dom_coords.js";
