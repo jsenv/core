@@ -29,10 +29,9 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { SidePanel, useSidePanelClose } from "@jsenv/navi";
+      import { Button, SidePanel } from "@jsenv/navi";
 
       const PanelContent = () => {
-        const closeSidePanel = useSidePanelClose();
         const [innerCount, setInnerCount] = useState(0);
         return (
           <div style={{ padding: "24px" }}>
@@ -54,18 +53,36 @@
                 Increment panel counter
               </button>
             </div>
-            <button onClick={closeSidePanel} style={{ marginTop: "12px" }}>
+            {/* No SidePanelCloseContext needed: --navi-close resolves its target
+                by walking up to the closest [aria-expanded] ancestor, which the
+                side panel's root element carries while open. */}
+            <Button command="--navi-close" style={{ marginTop: "12px" }}>
               Close panel
-            </button>
+            </Button>
           </div>
         );
       };
+
+      const TallPanelContent = () => (
+        <div style={{ padding: "24px" }}>
+          <h2 style={{ marginTop: 0 }}>Tall content</h2>
+          <p>
+            This panel contains content taller than the viewport, to check that
+            the panel scrolls internally instead of overflowing.
+          </p>
+          <Button command="--navi-close">Close panel</Button>
+          {Array.from({ length: 40 }, (_, i) => (
+            <p key={i}>Line {i + 1} of tall content.</p>
+          ))}
+        </div>
+      );
 
       const App = () => {
         const [parentCount, setParentCount] = useState(0);
         const [isOpen, setIsOpen] = useState(false);
         const [isOpenWide, setIsOpenWide] = useState(false);
         const [isOpenClickOutside, setIsOpenClickOutside] = useState(false);
+        const [isOpenTall, setIsOpenTall] = useState(false);
 
         return (
           <div>
@@ -114,6 +131,19 @@
                 closeOnClickOutside
               >
                 <PanelContent />
+              </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>Tall content (internal scroll)</h3>
+              <button onClick={() => setIsOpenTall(true)}>
+                Open panel with tall content
+              </button>
+              <SidePanel
+                isOpen={isOpenTall}
+                onClose={() => setIsOpenTall(false)}
+              >
+                <TallPanelContent />
               </SidePanel>
             </div>
           </div>

@@ -213,7 +213,7 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 // popup (popover, dialog, tooltip, side panel ...)
 export { Dialog } from "./src/popup/dialog.jsx";
 export { Popover } from "./src/popup/popover.jsx";
-export { SidePanel, useSidePanelClose } from "./src/popup/side_panel.jsx";
+export { SidePanel } from "./src/popup/side_panel.jsx";
 
 // Responsivness
 export { windowWidthSignal } from "./src/layout/responsive.js";

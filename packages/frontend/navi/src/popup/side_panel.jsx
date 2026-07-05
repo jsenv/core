@@ -1,6 +1,4 @@
-import { createContext } from "preact";
-import { createPortal } from "preact/compat";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
@@ -17,12 +15,23 @@ const css = /* css */ `
   }
 
   .navi_side_panel {
+    /* Reset the UA [popover] defaults (margin: auto, inset: 0, border: solid,
+       padding: 0.25em, width/height: fit-content, background: Canvas) so the
+       popover behaves like a plain fixed-position wrapper. */
     position: fixed;
     top: 0;
     right: 0;
     bottom: 0;
-    z-index: 1000;
+    left: auto;
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: none;
+    border: none;
     pointer-events: none;
+    overflow: visible;
 
     .navi_side_panel_overlay {
       position: fixed;
@@ -105,9 +114,6 @@ const css = /* css */ `
   }
 `;
 
-const SidePanelCloseContext = createContext(null);
-export const useSidePanelClose = () => useContext(SidePanelCloseContext);
-
 const SidePanelStyleCSSVars = {
   width: "--side-panel-width",
 };
@@ -123,7 +129,8 @@ export const SidePanel = ({
 }) => {
   import.meta.css = css;
   onClose = useStableCallback(onClose);
-  const panelDialogRef = useRef(null);
+  const panelRef = useRef(null);
+  const dialogRef = useRef(null);
   const [phase, setPhase] = useState(isOpen ? "open" : "closed");
   const previousFocusRef = useRef(null);
   const isMountedRef = useRef(false);
@@ -141,13 +148,26 @@ export const SidePanel = ({
   }, [isOpen]);
 
   useLayoutEffect(() => {
-    if (phase === "opening" && panelDialogRef.current) {
-      previousFocusRef.current = document.activeElement;
-      panelDialogRef.current.focus();
+    const panelEl = panelRef.current;
+    if (!panelEl) {
+      return;
+    }
+    // "manual" popovers stay hidden (UA default: display: none) until shown —
+    // this is what promotes the element into the top layer, replacing the
+    // createPortal(..., document.body) this component used to need.
+    if (phase !== "closed" && !panelEl.matches(":popover-open")) {
+      panelEl.showPopover();
     }
   }, [phase]);
 
-  useKeyboardShortcuts(panelDialogRef, [
+  useLayoutEffect(() => {
+    if (phase === "opening" && dialogRef.current) {
+      previousFocusRef.current = document.activeElement;
+      dialogRef.current.focus();
+    }
+  }, [phase]);
+
+  useKeyboardShortcuts(dialogRef, [
     {
       key: "escape",
       handler: () => {
@@ -176,50 +196,48 @@ export const SidePanel = ({
     }
   };
 
-  return createPortal(
-    <SidePanelCloseContext.Provider value={onClose}>
-      <Box
-        baseClassName="navi_side_panel"
-        styleCSSVars={SidePanelStyleCSSVars}
-        width={width}
-        data-opening={phase === "opening" ? "" : undefined}
-        data-closing={phase === "closing" ? "" : undefined}
-        {...rest}
-      >
-        {closeOnClickOutside && (
-          <div
-            className="navi_side_panel_overlay"
-            onClick={(e) => {
-              onClose(e);
-            }}
-          />
-        )}
-        <Box
-          ref={panelDialogRef}
-          baseClassName="navi_side_panel_dialog"
-          tabIndex={-1}
-          role={closeOnClickOutside ? "dialog" : "complementary"}
-          aria-modal={closeOnClickOutside ? "true" : undefined}
-          onAnimationEnd={onAnimationEnd}
-        >
-          {!hideCloseButton && <NaviSidePanelCloseButton />}
-          {children}
-        </Box>
-      </Box>
-    </SidePanelCloseContext.Provider>,
-    document.body,
-  );
-};
-
-const NaviSidePanelCloseButton = () => {
-  const sidePanelClose = useSidePanelClose();
   return (
-    <button
-      className="navi_side_panel_close_button"
-      aria-label="Close panel"
-      onClick={sidePanelClose}
+    <Box
+      ref={panelRef}
+      popover="manual"
+      baseClassName="navi_side_panel"
+      styleCSSVars={SidePanelStyleCSSVars}
+      width={width}
+      aria-expanded={phase !== "closed" ? "true" : "false"}
+      data-opening={phase === "opening" ? "" : undefined}
+      data-closing={phase === "closing" ? "" : undefined}
+      onnavi_request_close={(e) => {
+        onClose(e);
+      }}
+      {...rest}
     >
-      ×
-    </button>
+      {closeOnClickOutside && (
+        <div
+          className="navi_side_panel_overlay"
+          onClick={(e) => {
+            onClose(e);
+          }}
+        />
+      )}
+      <Box
+        ref={dialogRef}
+        baseClassName="navi_side_panel_dialog"
+        tabIndex={-1}
+        role={closeOnClickOutside ? "dialog" : "complementary"}
+        aria-modal={closeOnClickOutside ? "true" : undefined}
+        onAnimationEnd={onAnimationEnd}
+      >
+        {!hideCloseButton && (
+          <button
+            className="navi_side_panel_close_button"
+            aria-label="Close panel"
+            onClick={() => onClose()}
+          >
+            ×
+          </button>
+        )}
+        {children}
+      </Box>
+    </Box>
   );
 };
