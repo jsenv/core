@@ -45,6 +45,54 @@ export const createOpenController = (
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
 
+  // Set true while we're waiting to see whether the click that follows a
+  // mousedown-close will land back on whatever would reopen us — see
+  // armSuppressNextOpenRequest below.
+  let suppressNextOpenRequest = false;
+  let disarmSuppressNextOpenRequest = null;
+
+  // When the popup closes because of a mousedown (e.g. clicking the
+  // backdrop), the browser still dispatches the matching "click" afterward.
+  // If that click lands back on the element that triggers open() (e.g. the
+  // picker button), it would immediately reopen the popup. We cannot
+  // preventDefault/stopPropagation the mousedown to stop that — the browser
+  // dispatches the click regardless.
+  //
+  // Instead: arm a capture-phase "click" listener on document. Capture fires
+  // before the click reaches its target, so by the time any bubble-phase
+  // click handler (e.g. the trigger button's onClick, which calls
+  // controller.open()) runs, `suppressNextOpenRequest` is already true and
+  // open() ignores the request — no need to know *which* element triggers
+  // it. A bubble-phase listener (runs after everything else, once the click
+  // reaches document) clears the flag if nothing consumed it, meaning this
+  // click never resulted in an open() call. A microtask is a last-resort
+  // safety net in case the click never reaches document at all (e.g. some
+  // ancestor called stopPropagation()).
+  const armSuppressNextOpenRequest = () => {
+    disarmSuppressNextOpenRequest?.();
+    const onCaptureClick = () => {
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      suppressNextOpenRequest = true;
+      document.addEventListener("click", onBubbleClick);
+      queueMicrotask(() => {
+        suppressNextOpenRequest = false;
+      });
+    };
+    const onBubbleClick = () => {
+      document.removeEventListener("click", onBubbleClick);
+      suppressNextOpenRequest = false;
+    };
+    disarmSuppressNextOpenRequest = () => {
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+    };
+    document.addEventListener("click", onCaptureClick, { capture: true });
+  };
+
   const performClose = (closeEvent) => {
     controller.opened = false;
 
@@ -53,9 +101,9 @@ export const createOpenController = (
       if (mousedownEvent) {
         debugInteraction(
           closeEvent,
-          `closed by mousedown -> disable next click`,
+          `closed by mousedown -> ignore next click`,
         );
-        suppressNextClick(closeEvent.currentTarget);
+        armSuppressNextOpenRequest();
       } else {
         const spaceEvent = findEvent(
           closeEvent,
@@ -88,6 +136,10 @@ export const createOpenController = (
     openEffect: null,
     open: (e, detail) => {
       if (controller.opened || !controller.openEffect) {
+        return;
+      }
+      if (suppressNextOpenRequest) {
+        suppressNextOpenRequest = false;
         return;
       }
       const requestOpenEvent = new CustomEvent("navi_request_open", {
@@ -138,48 +190,6 @@ export const createOpenController = (
     },
   };
   return controller;
-};
-
-/**
- * Returns a `disableClickFor` function that suppresses the next `click` event
- * that lands on a specific element after a `mousedown` already handled an
- * open/close action.
- *
- * Problem: when the popover backdrop closes on mousedown, the browser then
- * dispatches a `click` on whatever element is under the pointer. If that element
- * is the picker button, it would immediately re-open the picker.
- *
- * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
- * `mousedown` to prevent that click — the browser dispatches it regardless.
- *
- * Solution: register a self-removing capture-phase `click` listener on `document`
- * and suppress the click only if it lands inside the given element (the picker
- * button). Clicks on any other element (e.g. a submit button) pass through
- * normally.
- *
- * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
- * the browser always finds a target for the mousedown → click sequence. If the
- * backdrop were removed from the DOM between mousedown and mouseup, the browser
- * would not dispatch a click at all, which would leave this listener armed
- * forever and cause it to swallow the next unrelated user click.
- */
-const suppressNextClick = (element) => {
-  const cleanup = () => {
-    document.removeEventListener("click", suppressClick, { capture: true });
-  };
-
-  const suppressClick = (clickEvent) => {
-    cleanup();
-    const clickTarget = clickEvent.target;
-    if (clickTarget !== element && !element.contains(clickEvent.target)) {
-      // Click landed outside the element we are guarding — let it through.
-      return;
-    }
-    clickEvent.stopPropagation();
-    clickEvent.preventDefault();
-  };
-  document.addEventListener("click", suppressClick, { capture: true });
-  return cleanup;
 };
 
 // Created once per popup instance: openHandler is wrapped in a stable callback

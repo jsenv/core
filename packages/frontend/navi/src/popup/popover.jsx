@@ -457,11 +457,12 @@ const ControlledPopover = (props) => {
         the browser would see that the recorded target is gone and would NOT
         dispatch a click at all.
 
-        That silent missing click is a problem: we use a "disableNextClick" guard
-        to prevent the picker from immediately re-opening after the backdrop
-        close. That guard arms itself on mousedown, then waits for the click to
-        disarm. If no click ever comes, the guard stays armed and swallows the
-        very next intentional user click instead.
+        That silent missing click is a problem: open_controller.js's
+        armSuppressNextOpenRequest guards against it, making the popup ignore
+        the next open() request so this mousedown-driven click doesn't
+        immediately reopen it. That guard needs an actual click to arm/disarm
+        correctly (plus a microtask fallback) — keeping the backdrop in the
+        DOM is what guarantees the browser dispatches one.
       */}
       <div
         className="navi_popover_backdrop"
