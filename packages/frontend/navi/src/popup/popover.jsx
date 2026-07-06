@@ -1,3 +1,31 @@
+/**
+ * A popup positioned via `anchor`/`anchorArea`, opened imperatively via
+ * showPopover()/hidePopover() and driven either by --navi-toggle/
+ * --navi-open/--navi-close commands or the `open` prop.
+ *
+ * `aria-expanded` lives on the popover element itself, toggled imperatively
+ * in sync with showPopover()/hidePopover() (not through Preact's vdom) so
+ * popup_animation.js can key its CSS off one selector for both Popover and
+ * Dialog.
+ *
+ * `pointerInteractionOutsideEffect` ("none" default / "close" / "capture")
+ * is implemented via a backdrop: a sibling top-layer element, not a
+ * descendant (see the CSS below for why), shown once on mount and never
+ * hidden again for the component's lifetime — only its aria-expanded toggles
+ * in sync with the real popover. Hiding it in lockstep risks swallowing the
+ * click a mousedown-triggered close depends on (see armSuppressNextOpenRequest
+ * in open_controller.js): hidePopover() is display:none in disguise. Not
+ * rendered at all when the effect is "none".
+ *
+ * anchorArea's grammar (loosely inspired by CSS position-area): two
+ * space-separated words, order-independent. y: above/aligned-top/center/
+ * aligned-bottom/below. x: on-the-left/aligned-left/center/aligned-right/
+ * on-the-right. A bare word means no overlap with the anchor; "aligned-"
+ * means edges touching. A single word implies "center" on the other axis.
+ * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
+ * for the "aligned-" pair on both axes.
+ */
+
 import {
   createPubSub,
   findEvent,
@@ -55,13 +83,14 @@ const css = /* css */ `
 
     &[aria-expanded="true"] {
       pointer-events: auto;
-    }
-    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"] {
-      background: rgba(0, 0, 0, 0.1);
-    }
-    &[data-pointer-interaction-outside="capture"] {
-      background: rgba(0, 0, 0, 0.7);
+
+      /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
+      &[data-pointer-interaction-outside="close"] {
+        background: rgba(0, 0, 0, 0.1);
+      }
+      &[data-pointer-interaction-outside="capture"] {
+        background: rgba(0, 0, 0, 0.7);
+      }
     }
   }
 
@@ -110,11 +139,7 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    // anchorArea="above aligned-left"/"on-the-left"/"top-left"/etc — see
-    // ANCHOR_AREA_Y_VALUES/ANCHOR_AREA_X_VALUES/ANCHOR_AREA_PRESETS below
-    // for the full grammar. Two space-separated words, order-independent
-    // (loosely inspired by CSS position-area), with single-word and
-    // hyphenated presets for the common cases.
+    // see the anchorArea grammar in the file's top comment
     anchorArea = "below",
     anchorAreaFixed,
     scrollLock,
@@ -146,32 +171,9 @@ const ControlledPopover = (props) => {
   // (clip both axes, see data-clip-axis below).
   const isAutoAnimation = animation === true || animation === "auto";
 
-  // aria-expanded lives on the popover element itself (not driven through
-  // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
-  // with showPopover()/hidePopover(), see below) so popup_animation.js can
-  // key its CSS off a single selector regardless of Popover vs Dialog.
-  //
-  // The backdrop (rendered only when pointerInteractionOutsideEffect isn't
-  // "none" — see the JSX below) is shown here, once, and never hidden again
-  // for the component's lifetime (only its aria-expanded/pointer-events
-  // toggle, in openEffect below) — not opened/closed in lockstep with the
-  // real popover. Two reasons:
-  // - Stacking: each showPopover() call pushes an element to the very top
-  //   of the browser's top layer. Showing the backdrop once, before the
-  //   real popover is ever shown, guarantees the real popover — shown
-  //   fresh on every open — always ends up visually above it, with no
-  //   z-index involved (see the CSS comment above for why z-index can't
-  //   reliably do this for a *descendant* backdrop, which is why it's a
-  //   sibling top-layer element).
-  // - The exact same "keep it there to keep the browser dispatching a
-  //   click" reasoning that applies to the backdrop's onMouseDown handler
-  //   below (see that comment) also rules out hiding it here: hidePopover()
-  //   is display:none in disguise, so closing it synchronously inside the
-  //   same mousedown-triggered close would silently drop the very click
-  //   armSuppressNextOpenRequest depends on.
-  // The effect re-runs whenever the backdrop's existence toggles (mount, or
+  // Re-runs when the backdrop's existence toggles (mount, or
   // pointerInteractionOutsideEffect moving away from "none") so a
-  // freshly-mounted backdrop always gets this same once-shown treatment.
+  // freshly-mounted backdrop also gets shown once.
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
@@ -181,12 +183,6 @@ const ControlledPopover = (props) => {
     }
   }, [hasBackdrop]);
 
-  // Sync the DOM open and return how to sync it back closed, fresh on every
-  // render so it closes over the latest props (scrollLock, etc.). The
-  // controller (owned by the caller, or by UncontrolledPopover) decides
-  // *when* this runs. openEffect runs outside of render (triggered by
-  // openController.open()), so it cannot call hooks — cleanup is a plain
-  // pub/sub.
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
     // backdropEl is null when pointerInteractionOutsideEffect is "none" —
@@ -196,14 +192,6 @@ const ControlledPopover = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    // `anchor` describes *what* to position against: a ref/DOM element (a
-    // real anchor), "viewport", or "offsetParent" (the popover's own nearest
-    // positioned DOM ancestor — see relativeContainer below). If it's set at
-    // all (to anything), the request's own carried anchor (e.g. a
-    // --navi-toggle button, forwarded as detail.source) is never consulted —
-    // only when the prop is left undefined does the request get to supply
-    // one. To force viewport-relative placement even though the request
-    // carries an anchor, pass anchor="viewport" explicitly.
     let anchor;
     let anchorReference; // "viewport" | "offsetParent" — set when not a real anchor
     if (anchorProp === "viewport" || anchorProp === "offsetParent") {
@@ -221,21 +209,12 @@ const ControlledPopover = (props) => {
     if (!anchor && !anchorReference) {
       anchorReference = "viewport";
     }
-    // For this to resolve to anything but document.body, the popover must be
-    // rendered inside that ancestor in the DOM (the trigger button doesn't
-    // have to be). Not `popoverEl.offsetParent`: an open [popover] element
-    // sits in the top layer, whose containing block is always the initial
-    // containing block (the viewport) — no DOM ancestor ever qualifies as
-    // its containing block, so offsetParent is spec'd to return null
-    // regardless of DOM position or timing. getPositionedParent walks the
-    // plain DOM ancestor chain instead, so it's unaffected by that.
+    // popoverEl.offsetParent is always null for an open top-layer [popover]
+    // element, so getPositionedParent walks the DOM ancestor chain directly.
     const relativeContainer =
       anchorReference === "offsetParent"
         ? getPositionedParent(popoverEl)
         : null;
-    // Parse anchorArea into a { y, x } pair (see ANCHOR_AREA_Y_VALUES/
-    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_PRESETS below), falling back to the
-    // default ("below center") on an invalid value rather than crashing.
     const anchorAreaParseResult = parseAnchorArea(anchorArea);
     if (!anchorAreaParseResult) {
       console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
@@ -244,12 +223,6 @@ const ControlledPopover = (props) => {
       y: "below",
       x: "center",
     };
-    // slideDirectionKey collapses the y/x pair into the 8-compass-point +
-    // "center" vocabulary popup_animation.js's slide CSS keys off
-    // (data-anchor="top"/"top-left"/etc) — "above"/"aligned-top" both slide
-    // from the top, "below"/"aligned-bottom" both slide from the bottom,
-    // regardless of the overlap distinction, since that's a purely visual
-    // "which way does it enter from" concern.
     const slideDirectionKey = toSlideDirectionKey(
       parsedAnchorArea.y,
       parsedAnchorArea.x,
@@ -310,24 +283,12 @@ const ControlledPopover = (props) => {
         effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
-    // pickPositionRelativeTo persists data-position-y/x-current across calls
-    // on purpose (it avoids flicker while *this* popover stays open and
-    // repositions on scroll/resize). But the attribute lingers on the DOM
-    // node between separate open/close cycles too, and its hysteresis ("stay
-    // on the current side unless it clearly stops fitting") then gets
-    // applied to a fresh open as if it were a continuation of the last one —
-    // if the page was scrolled while closed, the *correct* side for this
-    // open can take a couple of open/close cycles to actually take effect
-    // (the clip animation reads data-position-y-current too, so it lags in
-    // sync). Clearing them here makes every open decide the side from
-    // scratch, matching the current scroll/viewport state right away — except
-    // when Fixed, in which case the final side is already known synchronously
-    // (no measurement needed) and must be set right here, same as
-    // navi-animation/data-anchor above: it's read by the "clip" animation's
-    // @starting-style rules, which snapshot whatever this attribute says the
-    // moment the box starts rendering. Waiting for pickPositionRelativeTo to
-    // set it (it only runs once the popover already has a layout box, after
-    // showPopover()) is too late for that first snapshot.
+    // data-position-y/x-current persists across renders (pickPositionRelativeTo
+    // avoids flicker by favoring the current side), so it must be cleared here
+    // to decide fresh on every open rather than carrying over a stale side
+    // from before the popover was closed. The Fixed case is the exception: the
+    // side is already known synchronously, and must be set now so the "clip"
+    // animation's @starting-style snapshots the right value at first paint.
     if (effectivePositionYFixed) {
       popoverEl.setAttribute(
         "data-position-y-current",
@@ -499,14 +460,11 @@ const ControlledPopover = (props) => {
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
       ({ visibilityRatio }, { event }) => {
-        // Only a real anchor element can meaningfully scroll "out of view" —
-        // document.documentElement (used for anchorless/anchor-point popups)
-        // is a huge, mostly-off-screen box on any tall page, so its own
-        // visibilityRatio is often well under the 0.2 threshold even though
-        // there's nothing actually hidden. Applying this gate there would
-        // skip positionPopover() on scroll (stale top/left/origin — wrong
-        // place on close, wrong transform origin on the next open) and even
-        // on the very first synchronous check right after opening.
+        // Only a real anchor can meaningfully go "out of view" — gating on
+        // document.documentElement's own visibilityRatio (used for
+        // anchorless/anchor-point popups) would wrongly skip positioning on
+        // a tall page, since its ratio is often low even when nothing's
+        // hidden.
         if (anchor && visibilityRatio <= 0.2) {
           popoverEl.setAttribute("data-anchor-out-of-view", "");
           return;
@@ -529,8 +487,7 @@ const ControlledPopover = (props) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
-      // Not backdropEl.hidePopover() — see the mount effect's comment for
-      // why the backdrop itself always stays open once shown.
+      // Not backdropEl.hidePopover() — see this file's top comment.
       backdropEl?.setAttribute("aria-expanded", "false");
       restoreFocus(closeEvent);
 
@@ -540,28 +497,9 @@ const ControlledPopover = (props) => {
 
   return (
     <>
-      {/*
-        A separate top-layer popover element, not a descendant of the real
-        one below — see the CSS comment on .navi_popover_backdrop for why a
-        descendant can never reliably paint behind the real popover's own
-        background. Being a sibling, shown first (see the mount effect),
-        means the real popover — shown fresh on every open — naturally ends
-        up above it in the browser's own top-layer stacking, no z-index
-        involved.
-
-        No document.body/createPortal needed: both popovers render wherever
-        this component sits in the tree, which is enough, since top-layer
-        promotion (not DOM position) is what puts them above normal page
-        content.
-
-        aria-hidden since it's purely decorative/interactive, never meant to
-        be perceived as its own UI element.
-
-        Not rendered at all when pointerInteractionOutsideEffect is "none":
-        it would have pointer-events: none and a transparent background,
-        i.e. no observable effect, so there's nothing to justify keeping an
-        always-open top-layer element around for the component's lifetime.
-      */}
+      {/* See this file's top comment for the backdrop's design. No
+          document.body/createPortal needed: top-layer promotion, not DOM
+          position, is what puts it above normal page content. */}
       {hasBackdrop && (
         <Box
           ref={backdropRef}
@@ -660,32 +598,7 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
   return "viewport";
 };
 
-// anchorArea's grammar, loosely inspired by CSS position-area:
-// https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
-//
-// Written as two space-separated words (e.g. "aligned-top aligned-left"),
-// each axis independently one of:
-//   y: "above" (no overlap, entirely above) / "aligned-top" (top edges
-//      aligned, overlapping downward) / "center" / "aligned-bottom" (bottom
-//      edges aligned, overlapping upward) / "below" (no overlap, entirely
-//      below)
-//   x: "on-the-left" (no overlap) / "aligned-left" (left edges aligned,
-//      overlapping) / "center" / "aligned-right" (right edges aligned,
-//      overlapping) / "on-the-right" (no overlap)
-// Every value except "center" belongs to exactly one axis, so word order in
-// the string doesn't matter — "on-the-left below" and "below on-the-left"
-// are the same thing. The plain words ("above"/"below"/"on-the-left"/
-// "on-the-right") mean "outside the anchor, no overlap"; the "aligned-"
-// prefix means "edges aligned, overlapping the anchor" (deliberately no
-// bare "top"/"bottom"/"left"/"right" shortcut — those read as ambiguous on
-// their own between the two).
-// A single recognized word is shorthand for pairing it with "center" on the
-// other axis — "on-the-left" alone means "center on-the-left". The 4 corner
-// compass names (top-left, top-right, bottom-left, bottom-right) are also
-// accepted directly as hyphenated presets — see ANCHOR_AREA_PRESETS — using
-// the "aligned-" (overlapping) pair on both axes, so the popover's corner
-// actually touches the anchor's corner.
-
+// See the anchorArea grammar in this file's top comment.
 const ANCHOR_AREA_X_VALUES = new Set([
   "on-the-left",
   "aligned-left",
@@ -707,11 +620,15 @@ const ANCHOR_AREA_PRESETS = {
   "bottom-right": { y: "aligned-bottom", x: "aligned-right" },
 };
 
-// Parses anchorArea into a { y, x } pair, or null if it's not a recognized
-// preset/word/pair. defaultX/defaultY fill in whichever axis a single-word
-// value doesn't specify — both default to "center", but a caller with its
-// own typical placement (e.g. a picker defaulting to "below") can override
-// either.
+/**
+ * Parses an anchorArea string into a { y, x } pair, or null if it's not a
+ * recognized preset/word/pair.
+ * @param {string} value
+ * @param {object} [options]
+ * @param {string} [options.defaultX] - fills the x axis when `value` is a
+ *   single y-only word (e.g. a picker defaulting to "below" on its own axis)
+ * @param {string} [options.defaultY] - same, for the y axis
+ */
 const parseAnchorArea = (
   value,
   { defaultX = "center", defaultY = "center" } = {},
@@ -747,13 +664,12 @@ const parseAnchorArea = (
   return null;
 };
 
-// Collapses anchorArea's y/x pair into the 8-compass-point + "center"
-// vocabulary popup_animation.js's slide CSS and computeStickToPosition below
-// key off — "above"/"aligned-top" both slide from (and pin to) the top,
-// "below"/"aligned-bottom" both slide from (and pin to) the bottom,
-// regardless of the overlap distinction, which doesn't apply to a
-// point/corner in the first place (there's no anchor box to overlap with
-// there).
+/**
+ * Collapses an anchorArea y/x pair into the 8-compass-point + "center"
+ * vocabulary popup_animation.js's slide CSS and computeStickToPosition key
+ * off — the overlap distinction (above/aligned-top, etc.) doesn't apply to a
+ * point/corner, which has no anchor box to overlap with.
+ */
 const toSlideDirectionKey = (y, x) => {
   const yKey =
     y === "above" || y === "aligned-top"

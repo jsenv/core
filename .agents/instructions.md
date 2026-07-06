@@ -71,6 +71,9 @@
   - Bad: `// No more positionX/positionY props — anchorArea covers this now.`
   - Good: nothing, or if the constraint is non-obvious, state it as a fact about the current API: `// anchorArea covers both axes in one prop.`
   - This applies even when the comment is otherwise useful/accurate — rewrite it to drop the comparison rather than skip explaining a genuinely non-obvious constraint.
+- **Don't comment what the code already says**: if a comment just narrates control flow or restates what a well-named variable/function already makes obvious ("Sync the DOM open and return how to sync it back closed" above a function that visibly does exactly that), delete it. Only comment the *why* behind a non-obvious choice — a constraint, a workaround, a rejected simpler alternative, a subtle invariant. If you can delete a comment and lose nothing a fresh reader needs, delete it.
+- **Long documentation doesn't belong inline next to implementation**: a prop's accepted-values grammar, a parameter's semantics, "how to use this component" — that's JSDoc (`@param` on the exported function/component, per the JSDoc section below) or a short module-level comment near the top of the file, not a multi-paragraph comment sitting next to the line of code that happens to use it. Inline comments justify *that specific line*; they are not the place to teach the whole feature.
+- **Keep inline comments short**: a sentence or two justifying the non-obvious choice at that line. If an inline comment runs past ~4-5 lines, either it belongs in a JSDoc/module-level comment instead (see above), or it needs to be cut down to its one essential point — don't preserve every nuance "just in case", trim to what a reader actually needs to not get confused at that line.
 
 #### JSDoc
 
