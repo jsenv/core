@@ -1,11 +1,21 @@
 /**
  * Entry/exit animation CSS shared by Popover and Dialog.
  *
- * Relies on `@starting-style` + `transition-behavior: allow-discrete` so the
- * browser keeps the popover/dialog rendered (not `display: none`) for the
- * duration of the exit transition — no JS timing/animationend bookkeeping
- * needed, `showPopover()`/`hidePopover()` (or `showModal()`/`close()`) can
- * stay perfectly synchronous.
+ * Relies on `transition-behavior: allow-discrete` so the browser keeps the
+ * popover/dialog rendered (not `display: none`) for the duration of the exit
+ * transition — no JS timing/animationend bookkeeping needed,
+ * `showPopover()`/`hidePopover()` (or `showModal()`/`close()`) can stay
+ * perfectly synchronous.
+ *
+ * Deliberately no `@starting-style`: the "closed" selectors below (keyed on
+ * `[aria-expanded="false"]`) are what an entry transition needs to animate
+ * *from* — but the popup's opener (popover.jsx) can only measure/position it
+ * (e.g. which edge the "clip" animation reveals from) once it's actually
+ * rendered, which is later than the point at which `@starting-style` would
+ * already have locked in its snapshot. Instead, the opener commits the
+ * correctly-measured "closed" frame (transitions suppressed) before flipping
+ * `aria-expanded` to `"true"` — an ordinary, already-rendered state change
+ * that transitions normally, no special "just born" handling needed.
  *
  * Both Popover and Dialog set `aria-expanded="true"`/`"false"` on themselves
  * (imperatively, in sync with showPopover()/hidePopover() or
@@ -60,7 +70,6 @@
  */
 
 export const buildPopupAnimationCss = (selector) => {
-  const open = `${selector}[aria-expanded="true"]`;
   const closed = `${selector}[aria-expanded="false"]`;
 
   return /* css */ `
@@ -89,23 +98,12 @@ export const buildPopupAnimationCss = (selector) => {
     ${closed}[navi-fade-animation] {
       opacity: 0;
     }
-    @starting-style {
-      ${open}[navi-fade-animation] {
-        opacity: 0;
-      }
-    }
 
     /* box-shadow fades in/out alongside any animation kind, instead of
        staying flat while the popup is still moving/clipping. */
     ${closed}[navi-animation],
     ${closed}[navi-fade-animation] {
       box-shadow: none;
-    }
-    @starting-style {
-      ${open}[navi-animation],
-      ${open}[navi-fade-animation] {
-        box-shadow: none;
-      }
     }
 
     /* clip — vertical-only by default (anchored case): reveals out of the
@@ -121,15 +119,6 @@ export const buildPopupAnimationCss = (selector) => {
     ${closed}[navi-animation="clip"][data-position-y-current="aligned-bottom"] {
       clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
     }
-    @starting-style {
-      ${open}[navi-animation="clip"] {
-        clip-path: inset(0 0 100% 0 round var(--popup-border-radius, 0));
-      }
-      ${open}[navi-animation="clip"][data-position-y-current="above"],
-      ${open}[navi-animation="clip"][data-position-y-current="aligned-bottom"] {
-        clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
-      }
-    }
 
     /* clip — both axes (no real anchor): a point-sized rect (the box's own
        center, in local percentages — no JS measurement needed) growing to
@@ -144,13 +133,6 @@ export const buildPopupAnimationCss = (selector) => {
       clip-path: inset(50% 50% 50% 50% round var(--popup-border-radius, 0));
       translate: var(--popup-animation-origin-x, 0px)
         var(--popup-animation-origin-y, 0px);
-    }
-    @starting-style {
-      ${open}[navi-animation="clip"][data-clip-axis="xy"] {
-        clip-path: inset(50% 50% 50% 50% round var(--popup-border-radius, 0));
-        translate: var(--popup-animation-origin-x, 0px)
-          var(--popup-animation-origin-y, 0px);
-      }
     }
 
     /* slide — direction multipliers. data-anchor (set when Popover's
@@ -221,16 +203,6 @@ export const buildPopupAnimationCss = (selector) => {
     ${closed}[navi-animation="slide-from-right"] {
       translate: calc(var(--popup-slide-x, 0) * var(--popup-slide-distance))
         calc(var(--popup-slide-y, -1) * var(--popup-slide-distance));
-    }
-    @starting-style {
-      ${open}[navi-animation="slide"],
-      ${open}[navi-animation="slide-from-top"],
-      ${open}[navi-animation="slide-from-bottom"],
-      ${open}[navi-animation="slide-from-left"],
-      ${open}[navi-animation="slide-from-right"] {
-        translate: calc(var(--popup-slide-x, 0) * var(--popup-slide-distance))
-          calc(var(--popup-slide-y, -1) * var(--popup-slide-distance));
-      }
     }
   `;
 };

@@ -248,14 +248,6 @@ const ControlledPopover = (props) => {
         ? "slide"
         : "clip"
       : animation;
-    // These must be set *before* showPopover()/aria-expanded below: the
-    // element is about to go from not-rendered to rendered (that's what
-    // makes @starting-style apply at all), and the "before" state it
-    // captures is whatever these attributes say at that exact moment. Set
-    // them after instead, and the first open silently skips the animation
-    // (the browser already treated it as "no navi-animation" at first
-    // paint) — only later opens/closes, once the attributes persist
-    // between renders, actually animate.
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
     // "clip" reveals vertically only by default (grows out of the anchor's
     // edge), which only makes sense against a real anchor element. Without
@@ -302,9 +294,8 @@ const ControlledPopover = (props) => {
     // data-position-y/x-current persists across renders (pickPositionRelativeTo
     // avoids flicker by favoring the current side), so it must be cleared here
     // to decide fresh on every open rather than carrying over a stale side
-    // from before the popover was closed. The Fixed case is the exception: the
-    // side is already known synchronously, and must be set now so the "clip"
-    // animation's @starting-style snapshots the right value at first paint.
+    // from before the popover was closed. The Fixed case is the exception:
+    // the side is already known synchronously, no measurement needed.
     if (effectivePositionYFixed) {
       popoverEl.setAttribute(
         "data-position-y-current",
@@ -321,6 +312,12 @@ const ControlledPopover = (props) => {
     } else {
       popoverEl.removeAttribute("data-position-x-current");
     }
+
+    // Suppressed until the popover is actually measured/positioned below —
+    // see this file's top comment for why @starting-style can't drive the
+    // opening transition (it needs the *correct* clip-path direction already
+    // in place, which requires a layout box that only exists once shown).
+    popoverEl.style.transitionProperty = "none";
 
     if (backdropEl) {
       // Disarm a still-pending hide from a previous close: a click arriving
@@ -340,17 +337,14 @@ const ControlledPopover = (props) => {
       backdropEl.setAttribute("aria-expanded", "true");
     }
     popoverEl.showPopover();
-    popoverEl.setAttribute("aria-expanded", "true");
+    // aria-expanded stays "false" here — still transitions-suppressed, so
+    // this doesn't matter yet — and only flips once positioned below.
+
     // What we observe for repositioning on resize/scroll/visibility changes:
     // the anchor when anchored, otherwise the relative container (or the
     // whole document when the anchor point is viewport-relative).
     const effectiveAnchor =
       anchor || relativeContainer || document.documentElement;
-    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
-    debugPopup(
-      e,
-      `openPopover() -> anchor: ${anchor?.tagName}, anchorReference: ${anchorReference}, relativeContainer: ${relativeContainer?.tagName}`,
-    );
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
@@ -516,6 +510,22 @@ const ControlledPopover = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+
+    // The reflow forces the browser to actually commit the correctly
+    // positioned/clipped "closed" frame set up above as a real rendered
+    // state, before transitions are re-enabled and aria-expanded flips to
+    // "true" — only then does the CSS transition play, from that
+    // just-committed frame to the open one, with no @starting-style
+    // involved at all.
+    popoverEl.getBoundingClientRect();
+    popoverEl.style.transitionProperty = "";
+    popoverEl.setAttribute("aria-expanded", "true");
+
+    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
+    debugPopup(
+      e,
+      `openPopover() -> anchor: ${anchor?.tagName}, anchorReference: ${anchorReference}, relativeContainer: ${relativeContainer?.tagName}`,
+    );
 
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
