@@ -62,6 +62,15 @@
  * *both* anchorArea axes overlap the anchor (see above) — there's no
  * sensible direction to slide from in that case, e.g. a dead-centered
  * popover or one placed fully inside/against the anchor on both axes.
+ *
+ * `animation="view-transition"` (Popover only, experimental): none of the
+ * CSS below applies — popover.jsx wraps its show/hide in
+ * `document.startViewTransition()` instead, which does its own before/after
+ * snapshot diffing (and, as a side effect, makes the popover non-interactive
+ * for the duration, unlike this file's CSS-transition approach). See
+ * popover.jsx's own `css` block for the handful of `::view-transition-*`
+ * rules that mode needs — deliberately excluded here since this file is
+ * shared with Dialog, which doesn't use it.
  */
 
 export const buildPopupAnimationCss = (selector) => {
@@ -76,7 +85,7 @@ export const buildPopupAnimationCss = (selector) => {
     }
 
     ${selector} {
-      &[navi-animation],
+      &[navi-animation]:not([navi-animation="view-transition"]),
       &[navi-fade-animation] {
         transition-property:
           display, overlay, opacity, translate, scale, box-shadow;

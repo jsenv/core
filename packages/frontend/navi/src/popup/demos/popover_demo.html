@@ -338,6 +338,7 @@
           <AnchorIgnoreSection />
           <AnchorSpacingSection />
           <FadingSection />
+          <ViewTransitionSection />
           <PointerInteractionOutsideSection />
         </div>
       );
@@ -360,6 +361,9 @@
             </li>
             <li>
               <a href="#fading">Fading</a>
+            </li>
+            <li>
+              <a href="#view-transition">View transition (experimental)</a>
             </li>
             <li>
               <a href="#pointer-interaction-outside">
@@ -464,6 +468,26 @@
           </p>
           <div class="demo-row">
             <AnchoredPopover label="fade" fadeAnimation />
+          </div>
+        </section>
+      );
+
+      const ViewTransitionSection = () => (
+        <section id="view-transition" class="demo-section">
+          <h2>View transition (experimental)</h2>
+          <p>
+            <code>animation="view-transition"</code> swaps the CSS-transition
+            machinery for <code>document.startViewTransition()</code> instead —
+            a side effect is the popover becomes non-interactive for the
+            duration of the transition, which the CSS-transition-based
+            animations above don't do on their own. Falls back to no animation
+            at all in browsers without support.
+          </p>
+          <div class="demo-row">
+            <AnchoredPopover
+              label="view-transition"
+              animation="view-transition"
+            />
           </div>
         </section>
       );
