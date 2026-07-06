@@ -59,13 +59,14 @@
       /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
          "capture" (nothing outside is reachable) than "close" (still lets
          the mousedown through, just closes on it) — "none" stays fully
-         transparent (the default .navi_popover_backdrop background). */
-      .demo_popover_box[data-pointer-interaction-outside="close"]
-        .navi_popover_backdrop {
+         transparent (the default .navi_popover_backdrop background). The
+         backdrop is its own top-layer element now (a sibling of the
+         popover, not a descendant), so the attribute is read directly off
+         it rather than through a .demo_popover_box ancestor. */
+      .navi_popover_backdrop[data-pointer-interaction-outside="close"] {
         background: rgba(0, 0, 0, 0.1);
       }
-      .demo_popover_box[data-pointer-interaction-outside="capture"]
-        .navi_popover_backdrop {
+      .navi_popover_backdrop[data-pointer-interaction-outside="capture"] {
         background: rgba(0, 0, 0, 0.7);
       }
       .demo-container {
@@ -73,7 +74,7 @@
         display: flex;
         width: 700px;
         max-width: 100%;
-        height: 500px;
+        height: 340px;
         margin-bottom: 8px;
         align-items: center;
         justify-content: center;
@@ -295,28 +296,12 @@
           <h2>2. anchorArea</h2>
           <p>
             <code>anchorArea</code> places the popover relative to{" "}
-            <code>anchor</code> (a real element by default, or{" "}
-            <code>"viewport"</code>/<code>"offsetParent"</code>). Written as two
-            space-separated words — one Y value, one X value, in either order
-            (every value but <code>"center"</code> belongs to exactly one axis,
-            so <code>"above on-the-left"</code> and{" "}
-            <code>"on-the-left above"</code> mean the same thing). The grid
-            below shows all 25 combinations: rows are <code>above</code>/
-            <code>aligned-top</code>/<code>center</code>/
-            <code>aligned-bottom</code>/<code>below</code>, columns are{" "}
-            <code>on-the-left</code>/<code>aligned-left</code>/
-            <code>center</code>/<code>aligned-right</code>/
-            <code>on-the-right</code>. The plain words (<code>above</code>/
-            <code>below</code>/<code>on-the-left</code>/
-            <code>on-the-right</code>) sit outside the anchor with a gap; the{" "}
-            <code>aligned-*</code> words overlap it (the matching edges align).
-            A single recognized word alone pairs with <code>"center"</code> on
-            the other axis — <code>"on-the-left"</code> alone means{" "}
-            <code>"center on-the-left"</code>. The 4 corner compass names (
-            <code>top-left</code>, <code>top-right</code>,{" "}
-            <code>bottom-left</code>, <code>bottom-right</code>) are also
-            accepted as shortcuts for the corresponding <code>aligned-*</code>/
-            <code>aligned-*</code> cell.
+            <code>anchor</code>. Order doesn't matter —{" "}
+            <code>"above on-the-left"</code> and{" "}
+            <code>"on-the-left above"</code> are the same — and the default is{" "}
+            <code>"center"</code>, so a single word like{" "}
+            <code>"on-the-left"</code> is enough when you only care about one
+            axis. The grid below is every combination.
           </p>
 
           <h3>anchor left on the trigger button (default)</h3>
@@ -557,7 +542,6 @@
         const [animate, setAnimate] = useStoredBoolean(storageKey, false);
         return (
           <>
-            <AnimateToggle animate={animate} onChange={setAnimate} />
             <div style={{ display: "flex" }}>
               {gutter ? <div class="demo-gutter" /> : null}
               <AreaGrid
@@ -571,6 +555,7 @@
                 )}
               />
             </div>
+            <AnimateToggle animate={animate} onChange={setAnimate} />
           </>
         );
       };
@@ -589,7 +574,6 @@
         const animationDuration = animate ? animatedDuration : undefined;
         return (
           <>
-            <AnimateToggle animate={animate} onChange={setAnimate} />
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
@@ -622,6 +606,7 @@
                 </Button>
               )}
             />
+            <AnimateToggle animate={animate} onChange={setAnimate} />
           </>
         );
       };

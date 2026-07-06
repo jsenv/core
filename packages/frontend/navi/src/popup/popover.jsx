@@ -33,26 +33,34 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
+  }
 
-    .navi_popover_backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background: transparent;
-      pointer-events: none;
-    }
+  /* A sibling top-layer popover, not a descendant of .navi_popover (see the
+     backdrop's own JSX comment for why) — position: fixed alone makes an
+     element a stacking-context root, and a stacking-context root's own
+     background/border always paints *below* even its own negative-z-index
+     children. A z-index trick on a descendant backdrop can therefore never
+     truly sit behind .navi_popover's own background, only behind its later
+     (content) children — which read as the backdrop's tint landing on top
+     of the popup. Being a separate element sidesteps that rule entirely. */
+  .navi_popover_backdrop {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    pointer-events: none;
 
     /* Default ("none"): the backdrop never intercepts anything — outside
        pointer interactions pass straight through to whatever's behind the
        popover, and it never auto-closes from them. "capture"/"close" both
-       need the backdrop to actually intercept pointer events while open;
-       only "close" also acts on them (see the backdrop's onMouseDown
-       below). */
-    &:popover-open[data-pointer-interaction-outside="capture"],
-    &:popover-open[data-pointer-interaction-outside="close"] {
-      .navi_popover_backdrop {
-        pointer-events: auto;
-      }
+       need the backdrop to actually intercept pointer events while its
+       popover is open; only "close" also acts on them (see the backdrop's
+       onMouseDown below). aria-expanded here mirrors the popover's own (not
+       the backdrop's :popover-open, which — see the mount effect — is
+       always true once shown): the backdrop itself is shown once and left
+       open for the component's lifetime, only this attribute toggles. */
+    &[aria-expanded="true"][data-pointer-interaction-outside="capture"],
+    &[aria-expanded="true"][data-pointer-interaction-outside="close"] {
+      pointer-events: auto;
     }
   }
 
@@ -121,8 +129,10 @@ const ControlledPopover = (props) => {
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const backdropRef = useRef();
   const defaultId = useId();
   const id = rest.id || defaultId;
+  const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
@@ -139,8 +149,30 @@ const ControlledPopover = (props) => {
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
   // with showPopover()/hidePopover(), see below) so popup_animation.js can
   // key its CSS off a single selector regardless of Popover vs Dialog.
+  //
+  // The backdrop is shown here, once, and never hidden again for the
+  // component's lifetime (only its aria-expanded/pointer-events toggle, in
+  // openEffect below) — specifically NOT hidden/shown in lockstep with the
+  // real popover. Two reasons:
+  // - Stacking: each showPopover() call pushes an element to the very top
+  //   of the browser's top layer. Showing the backdrop once, before the
+  //   real popover is ever shown, guarantees the real popover — shown
+  //   fresh on every open — always ends up visually above it, with no
+  //   z-index involved (see the CSS comment above for why z-index can't
+  //   reliably do this for a *descendant* backdrop, which is why it's a
+  //   sibling top-layer element now).
+  // - The exact same "keep it there to keep the browser dispatching a
+  //   click" reasoning that applies to the backdrop's onMouseDown handler
+  //   below (see that comment) also rules out hiding it here: hidePopover()
+  //   is display:none in disguise, so closing it synchronously inside the
+  //   same mousedown-triggered close would silently drop the very click
+  //   armSuppressNextOpenRequest depends on.
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
+    const backdropEl = backdropRef.current;
+    if (backdropEl && !backdropEl.matches(":popover-open")) {
+      backdropEl.showPopover();
+    }
   }, []);
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
@@ -151,7 +183,8 @@ const ControlledPopover = (props) => {
   // pub/sub.
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
-    if (!popoverEl) {
+    const backdropEl = backdropRef.current;
+    if (!popoverEl || !backdropEl) {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
@@ -305,6 +338,10 @@ const ControlledPopover = (props) => {
       popoverEl.removeAttribute("data-position-x-current");
     }
 
+    // The backdrop is already open (shown once, on mount — see that
+    // effect); only its aria-expanded (which its own CSS keys pointer-events
+    // off) needs to flip here, in sync with the real popover.
+    backdropEl.setAttribute("aria-expanded", "true");
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
     // What we observe for repositioning on resize/scroll/visibility changes:
@@ -484,6 +521,9 @@ const ControlledPopover = (props) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
+      // Not backdropEl.hidePopover() — see the mount effect's comment for
+      // why the backdrop itself always stays open once shown.
+      backdropEl.setAttribute("aria-expanded", "false");
       restoreFocus(closeEvent);
 
       cleanup();
@@ -491,67 +531,35 @@ const ControlledPopover = (props) => {
   };
 
   return (
-    <Box
-      id={id}
-      popover="manual"
-      navi-animation={isAutoAnimation ? undefined : animation}
-      navi-fade-animation={fadeAnimation ? "" : undefined}
-      data-pointer-interaction-outside={
-        pointerInteractionOutsideEffect === "none"
-          ? undefined
-          : pointerInteractionOutsideEffect
-      }
-      styleCSSVars={POPUP_STYLE_CSS_VARS}
-      {...rest}
-      {...autoFocusProps}
-      ref={ref}
-      baseClassName="navi_popover"
-      pseudoClasses={POPOVER_PSEUDO_CLASSES}
-      onnavi_command={(e) => {
-        onNaviCommand(e);
-      }}
-    >
+    <>
       {/*
-        The backdrop is placed inside the popover element rather than appended to
-        document.body (which would require createPortal).
+        A separate top-layer popover element, not a descendant of the real
+        one below — see the CSS comment on .navi_popover_backdrop for why a
+        descendant can never reliably paint behind the real popover's own
+        background. Being a sibling, shown first (see the mount effect),
+        means the real popover — shown fresh on every open — naturally ends
+        up above it in the browser's own top-layer stacking, no z-index
+        involved.
 
-        Keeping it inside the popover avoids:
-        - Polluting the root DOM with one extra element per popover instance.
-        - The need for createPortal, which adds conceptual overhead.
-        - Any z-index juggling: because the popover is in the browser top layer,
-          all its children are automatically painted above normal page content.
+        It still avoids document.body/createPortal: both popovers render
+        wherever this component sits in the tree, which is enough, since
+        top-layer promotion (not DOM position) is what puts them above
+        normal page content.
 
-        "position: fixed; inset: 0" still covers the full visual viewport when the
-        element lives inside a top-layer popover, because the top layer establishes
-        its own stacking context that is not affected by ancestor transforms, clips,
-        or overflow. No known limitation prevents the backdrop from covering the
-        whole document in this configuration.
-
-        ---
-
-        The backdrop is kept in the DOM at all times and toggled via pointer-events
-        (CSS :popover-open) rather than mounted/unmounted.
-
-        Why this matters: when the popover closes on a mousedown (e.g. clicking
-        outside), the browser records the target element of that mousedown. If the
-        same element is still in the DOM at mouseup, the browser dispatches a
-        "click" event — targeting document.body because the backdrop has
-        pointer-events:none by then and is no longer "hittable".
-
-        If we removed the backdrop from the DOM between mousedown and mouseup,
-        the browser would see that the recorded target is gone and would NOT
-        dispatch a click at all.
-
-        That silent missing click is a problem: open_controller.js's
-        armSuppressNextOpenRequest guards against it, making the popup ignore
-        the next open() request so this mousedown-driven click doesn't
-        immediately reopen it. That guard needs an actual click to arm/disarm
-        correctly (plus a microtask fallback) — keeping the backdrop in the
-        DOM is what guarantees the browser dispatches one.
+        aria-hidden since it's purely decorative/interactive, never meant to
+        be perceived as its own UI element.
       */}
-      <div
-        className="navi_popover_backdrop"
+      <Box
+        ref={backdropRef}
+        id={backdropId}
+        popover="manual"
+        baseClassName="navi_popover_backdrop"
         aria-hidden="true"
+        data-pointer-interaction-outside={
+          pointerInteractionOutsideEffect === "none"
+            ? undefined
+            : pointerInteractionOutsideEffect
+        }
         onMouseDown={(e) => {
           if (e.button !== 0) {
             return;
@@ -582,8 +590,24 @@ const ControlledPopover = (props) => {
           }
         }}
       />
-      {children}
-    </Box>
+      <Box
+        id={id}
+        popover="manual"
+        navi-animation={isAutoAnimation ? undefined : animation}
+        navi-fade-animation={fadeAnimation ? "" : undefined}
+        styleCSSVars={POPUP_STYLE_CSS_VARS}
+        {...rest}
+        {...autoFocusProps}
+        ref={ref}
+        baseClassName="navi_popover"
+        pseudoClasses={POPOVER_PSEUDO_CLASSES}
+        onnavi_command={(e) => {
+          onNaviCommand(e);
+        }}
+      >
+        {children}
+      </Box>
+    </>
   );
 };
 
