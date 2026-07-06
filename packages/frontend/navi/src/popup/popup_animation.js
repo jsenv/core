@@ -26,7 +26,7 @@
  * constants, so any consumer can override them per-instance from CSS (or via
  * the `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-slide-distance`, `--popup-border-radius`.
+ * `--popup-slide-distance`, `--popup-scale-from`, `--popup-border-radius`.
  *
  * Fading is a separate, independent concern from `animation` — see
  * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
@@ -40,13 +40,28 @@
  *
  * `animation="slide"`/`"slide-from-*"`: a real translate-based entrance.
  * Direction comes from, in order: the explicit slide-from-top/bottom/left/
- * right variant; `data-position-y/x-current` (real anchor — collapses the
- * aligned and bare variants, sliding a small fixed `--popup-slide-distance`
- * of 20px, not a distance relative to the popup's own size — the point is
- * just to hint at "coming from that direction", not to travel far); or
- * `data-anchor` (point/corner mode, set to an anchor point value like
- * "right"/"top-left", sliding the full 100%-of-own-size default instead, so
- * it looks like it enters from just past its final position).
+ * right variant; `data-anchor-area-y`/`data-anchor-area-x` (the requested
+ * anchorArea, set by popover.jsx for both a real anchor and
+ * anchorReference/point mode) — "above"/"below" and "on-the-left"/
+ * "on-the-right" (no overlap with the anchor) drive a translate on that
+ * axis, while "aligned-*"/"center" (overlaps the anchor) zeroes that axis
+ * out instead of sliding, since translating something that already overlaps
+ * its anchor reads oddly. This baseline uses point/corner mode's own sign
+ * convention (a point pinned to the top starts further up, off past its own
+ * edge, and slides down into place) since there's no real anchor box to
+ * overlap and no auto-flip either — final as-is. A real anchor overrides the
+ * sign with `data-position-y/x-current` (set by pickPositionRelativeTo once
+ * the actual, possibly auto-flipped, side is known), the *opposite*
+ * convention ("above" starts closer to the anchor, which sits below it, and
+ * slides up away from it), and a small fixed `--popup-slide-distance` of
+ * 20px rather than the 100%-of-own-size default — the point is just to hint
+ * at "coming from that direction", not to travel far.
+ *
+ * `animation="scale"`: a plain `scale` transform, `--popup-scale-from`
+ * (default 0.9) to `1`. Picked automatically by `animation="auto"` whenever
+ * *both* anchorArea axes overlap the anchor (see above) — there's no
+ * sensible direction to slide from in that case, e.g. a dead-centered
+ * popover or one placed fully inside/against the anchor on both axes.
  */
 
 export const buildPopupAnimationCss = (selector) => {
@@ -55,6 +70,7 @@ export const buildPopupAnimationCss = (selector) => {
       ${selector} {
         --popup-animation-duration: 0.18s;
         --popup-slide-distance: 100%;
+        --popup-scale-from: 0.9;
         --popup-border-radius: 0;
       }
     }
@@ -62,7 +78,8 @@ export const buildPopupAnimationCss = (selector) => {
     ${selector} {
       &[navi-animation],
       &[navi-fade-animation] {
-        transition-property: display, overlay, opacity, translate, box-shadow;
+        transition-property:
+          display, overlay, opacity, translate, scale, box-shadow;
         transition-duration: var(--popup-animation-duration);
         transition-timing-function: ease;
         transition-behavior: allow-discrete;
@@ -86,39 +103,72 @@ export const buildPopupAnimationCss = (selector) => {
         }
       }
 
-      /* slide — direction multipliers for a real anchor:
-         data-position-y/x-current (set by pickPositionRelativeTo) plays the
-         same role data-anchor plays below for point/corner mode, collapsing
-         the aligned and bare variants into one of three buckets each. The
-         sign is flipped from point/corner mode's own convention below:
-         "above" starts closer to the anchor (which sits below it) and slides
-         up, away from it, into its final resting position — the opposite of
-         a point pinned to the "top" of its reference box, which starts
-         further up (off past its edge) and slides down into place. A small
-         fixed px distance, not --popup-slide-distance's 100%-of-own-size
-         default — sliding a whole box-height away from a real anchor reads
-         as excessive; the point is just to hint at "coming from that
-         direction". */
-      &[data-position-y-current="above"],
-      &[data-position-y-current="aligned-top"] {
-        --popup-slide-y: 1;
+      /* scale — grows from --popup-scale-from (default 0.9) to full size,
+         no direction involved. */
+      &[navi-animation="scale"] {
+        scale: 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from);
+        }
       }
-      &[data-position-y-current="below"],
-      &[data-position-y-current="aligned-bottom"] {
+
+      /* slide — direction multipliers from the requested anchorArea (see
+         this file's top comment): "above"/"below" and "on-the-left"/
+         "on-the-right" drive a translate on their axis, "aligned-*"/
+         "center" zero it out instead. This is the baseline for
+         anchorReference/point mode (no real anchor box to overlap, so no
+         auto-flip either — these signs are final): a point pinned to the
+         top starts further up, off past its own edge, and slides down into
+         place, the opposite of a real anchor's own convention below (which
+         overrides this baseline whenever a real anchor is involved). */
+      &[data-anchor-area-y="above"] {
         --popup-slide-y: -1;
       }
-      &[data-position-y-current="center"] {
+      &[data-anchor-area-y="below"] {
+        --popup-slide-y: 1;
+      }
+      &[data-anchor-area-y="aligned-top"],
+      &[data-anchor-area-y="center"],
+      &[data-anchor-area-y="aligned-bottom"] {
         --popup-slide-y: 0;
       }
-      &[data-position-x-current="on-the-left"],
-      &[data-position-x-current="aligned-left"] {
-        --popup-slide-x: 1;
-      }
-      &[data-position-x-current="on-the-right"],
-      &[data-position-x-current="aligned-right"] {
+      &[data-anchor-area-x="on-the-left"] {
         --popup-slide-x: -1;
       }
-      &[data-position-x-current="center"] {
+      &[data-anchor-area-x="on-the-right"] {
+        --popup-slide-x: 1;
+      }
+      &[data-anchor-area-x="aligned-left"],
+      &[data-anchor-area-x="center"],
+      &[data-anchor-area-x="aligned-right"] {
+        --popup-slide-x: 0;
+      }
+
+      /* slide — real anchor only: overrides the sign above with the
+         *actual* resolved side (may differ from the requested one via
+         pickPositionRelativeTo's auto-flip), and switches to a small fixed
+         distance instead of a full box-size one (see this file's top
+         comment). */
+      &[data-position-y-current="above"] {
+        --popup-slide-y: 1;
+      }
+      &[data-position-y-current="below"] {
+        --popup-slide-y: -1;
+      }
+      &[data-position-y-current="aligned-top"],
+      &[data-position-y-current="center"],
+      &[data-position-y-current="aligned-bottom"] {
+        --popup-slide-y: 0;
+      }
+      &[data-position-x-current="on-the-left"] {
+        --popup-slide-x: 1;
+      }
+      &[data-position-x-current="on-the-right"] {
+        --popup-slide-x: -1;
+      }
+      &[data-position-x-current="aligned-left"],
+      &[data-position-x-current="center"],
+      &[data-position-x-current="aligned-right"] {
         --popup-slide-x: 0;
       }
       &[navi-animation="slide"] {
@@ -128,43 +178,7 @@ export const buildPopupAnimationCss = (selector) => {
         }
       }
 
-      /* slide — direction multipliers for anchor="viewport"/"offsetParent"
-         (point/corner mode): data-anchor (set when Popover's anchor prop is
-         an anchor point value, e.g. "right", "top-left") drives it
-         automatically; slide-from-top/bottom/left/right set it directly,
-         ignoring anchor/position entirely. */
-      &[data-anchor="top"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: -1;
-      }
-      &[data-anchor="top-right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: -1;
-      }
-      &[data-anchor="right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 0;
-      }
-      &[data-anchor="bottom-right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 1;
-      }
-      &[data-anchor="bottom"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: 1;
-      }
-      &[data-anchor="bottom-left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 1;
-      }
-      &[data-anchor="left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 0;
-      }
-      &[data-anchor="top-left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: -1;
-      }
+      /* slide — explicit direction, ignoring anchor/position entirely. */
       &[navi-animation="slide-from-top"] {
         --popup-slide-x: 0;
         --popup-slide-y: -1;

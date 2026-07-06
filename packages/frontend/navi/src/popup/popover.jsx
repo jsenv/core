@@ -40,7 +40,16 @@
  * on-the-right. A bare word means no overlap with the anchor; "aligned-"
  * means edges touching. A single word implies "center" on the other axis.
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
- * for the "aligned-" pair on both axes.
+ * for the "aligned-" pair on both axes. Exposed to CSS as
+ * `data-anchor-area-y`/`data-anchor-area-x` (see popup_animation.js): an
+ * "aligned-"/"center" axis means the popover overlaps the anchor there, so a
+ * translate-based slide on that axis reads oddly — `animation="auto"` picks
+ * "scale" instead of "slide" whenever *both* axes overlap, and "slide"
+ * itself zeroes out any overlapping axis rather than dropping the whole
+ * animation.
+ *
+ * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
+ * "offsetParent"), absent when anchored to a real element.
  */
 
 import {
@@ -85,7 +94,7 @@ const css = /* css */ `
        scrollable area once it extends past the current viewport edge,
        growing the page's scrollbar for no reason. anchor="offsetParent" is
        set to fixed too, experimentally, to see how it behaves. */
-    &[data-anchor-reference] {
+    &[data-anchor] {
       position: fixed;
     }
 
@@ -260,29 +269,35 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.y,
       parsedAnchorArea.x,
     );
-    const resolvedAnimation = isAutoAnimation ? "slide" : animation;
+    // "aligned-"/"center" means the popover overlaps the anchor on that axis
+    // (see the CSS comment above) — a slide reads oddly when it overlaps on
+    // *both* axes at once (it'd look like it's sliding out from inside the
+    // anchor itself), so auto-animation picks "scale" there instead.
+    const yOverlapsAnchor =
+      parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
+    const xOverlapsAnchor =
+      parsedAnchorArea.x !== "on-the-left" &&
+      parsedAnchorArea.x !== "on-the-right";
+    const resolvedAnimation = isAutoAnimation
+      ? yOverlapsAnchor && xOverlapsAnchor
+        ? "scale"
+        : "slide"
+      : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
     // Keys the CSS that switches to position: fixed for both anchorReference
-    // cases (see the CSS comment above for why).
+    // cases (see the CSS comment above for why), and mirrors the `anchor`
+    // prop's own reference mode in DOM-inspectable form — absent when
+    // anchored to a real element.
     if (anchorReference) {
-      popoverEl.setAttribute("data-anchor-reference", anchorReference);
+      popoverEl.setAttribute("data-anchor", anchorReference);
     } else {
-      popoverEl.removeAttribute("data-anchor-reference");
+      popoverEl.removeAttribute("data-anchor");
     }
-    // Mirrors how the anchor was resolved, in DOM-inspectable form:
-    // slideDirectionKey when anchorReference is set, a structural relation
-    // to the popover ("previousSibling"/"nextSibling"/"parent" — the only
-    // relations worth naming; anything else is too indirect to be useful at
-    // a glance), "#id" when the anchor element has one, or "custom" as the
-    // last resort.
-    popoverEl.setAttribute(
-      "data-anchor",
-      resolveAnchorAttrValue(
-        popoverEl,
-        anchor,
-        anchorReference && slideDirectionKey,
-      ),
-    );
+    // The requested anchorArea, exposed per-axis for popup_animation.js to
+    // key its slide direction/scale-vs-slide choice off (see the file's top
+    // comment) — set for both anchorReference and real-anchor modes.
+    popoverEl.setAttribute("data-anchor-area-y", parsedAnchorArea.y);
+    popoverEl.setAttribute("data-anchor-area-x", parsedAnchorArea.x);
     // anchorArea's y/x vocabulary is pickPositionRelativeTo's own
     // positionY/positionX vocabulary (see visible_rect.js) — no translation
     // needed, only meaningful against a real anchor (pickPositionRelativeTo
@@ -636,28 +651,6 @@ const armBackdropHideOnClick = (backdropEl, closeEvent) => {
   return () => {
     document.removeEventListener("click", onClick, { capture: true });
   };
-};
-
-const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
-  if (anchorPoint) {
-    return anchorPoint;
-  }
-  if (anchor) {
-    if (anchor === popoverEl.previousElementSibling) {
-      return "previousSibling";
-    }
-    if (anchor === popoverEl.nextElementSibling) {
-      return "nextSibling";
-    }
-    if (anchor === popoverEl.parentElement) {
-      return "parent";
-    }
-    if (anchor.id) {
-      return `#${anchor.id}`;
-    }
-    return "custom";
-  }
-  return "viewport";
 };
 
 // See the anchorArea grammar in this file's top comment.
