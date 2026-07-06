@@ -94,6 +94,10 @@ export const buildPopupAnimationCss = (selector) => {
         --popup-animation-duration: 0.18s;
         --popup-scale-from: 0.9;
         --popup-border-radius: 0;
+
+        --popup-opacity-duration: var(--popup-animation-duration);
+        --popup-translate-duration: var(--popup-animation-duration);
+        --popup-scale-duration: var(--popup-animation-duration);
       }
     }
 
@@ -101,7 +105,10 @@ export const buildPopupAnimationCss = (selector) => {
       &[navi-animation]:not([navi-animation="view-transition"]) {
         transition-property:
           display, overlay, opacity, translate, scale, box-shadow;
-        transition-duration: var(--popup-animation-duration);
+        transition-duration:
+          var(--popup-animation-duration), var(--popup-animation-duration),
+          var(--popup-opacity-duration), var(--popup-translate-duration),
+          var(--popup-scale-duration), var(--popup-animation-duration);
         transition-timing-function: ease;
         transition-behavior: allow-discrete;
       }
@@ -139,13 +146,8 @@ export const buildPopupAnimationCss = (selector) => {
         &[aria-expanded="false"] {
           opacity: 0;
           scale: var(--popup-scale-from);
-          &[data-spawn-from-pointer] {
-            --popup-scale-from: 0.5;
-            translate: var(--popup-spawn-origin-x, 0px)
-              var(--popup-spawn-origin-y, 0px);
-          }
-        }
-        /* Unconditional (not nested under [aria-expanded="false"]) — CSS
+
+          /* Unconditional (not nested under [aria-expanded="false"]) — CSS
            reads a transition's timing from the *target* state, so scoping
            this to the closed selector would only speed up the closing
            transition, not the opening one. --popup-spawn-translate-duration
@@ -153,15 +155,13 @@ export const buildPopupAnimationCss = (selector) => {
            transition-property order (display, overlay, opacity, translate,
            scale, box-shadow) below — everything else keeps
            --popup-animation-duration. */
-        &[data-spawn-from-pointer] {
-          transition-duration:
-            var(--popup-animation-duration), var(--popup-animation-duration),
-            var(--popup-animation-duration),
-            var(
-              --popup-spawn-translate-duration,
-              calc(var(--popup-animation-duration) * 0.5)
-            ),
-            var(--popup-animation-duration), var(--popup-animation-duration);
+          &[data-spawn-from-pointer] {
+            --popup-scale-from: 0.5;
+            --popup-translate-duration: calc(var(--popup-scale-duration) * 0.5);
+
+            translate: var(--popup-spawn-origin-x, 0px)
+              var(--popup-spawn-origin-y, 0px);
+          }
         }
       }
 
