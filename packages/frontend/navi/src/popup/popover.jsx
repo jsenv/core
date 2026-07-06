@@ -51,11 +51,10 @@
  * indirection. `animation="fading"` is a third, explicit-only kind (no
  * motion at all — see `navi-fade-animation` below).
  *
- * There's no such thing as motion without a fade anymore: whenever
- * `resolvedAnimation` is truthy (any kind, "fading" included),
- * `navi-fade-animation` is set right alongside `navi-animation` — no
- * separate `fadeAnimation` prop to independently opt in/out of it. The
- * backdrop mirrors the same thing on itself.
+ * Every animation kind includes a fade: whenever `resolvedAnimation` is
+ * truthy (any kind, "fading" included), `navi-fade-animation` is set right
+ * alongside `navi-animation` — one combined switch, not two independent
+ * ones. The backdrop mirrors the same attribute on itself.
  *
  * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
  * "offsetParent"), absent when anchored to a real element.
@@ -159,9 +158,10 @@ const css = /* css */ `
       transition-property: opacity;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
-    }
-    &[aria-expanded="false"][navi-fade-animation] {
-      opacity: 0;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
+      }
     }
   }
 
@@ -331,7 +331,7 @@ const ControlledPopover = (props) => {
     } else {
       popoverEl.removeAttribute("navi-animation");
     }
-    // No animation without a fade anymore — see this file's top comment.
+    // Every animation kind includes a fade — see this file's top comment.
     // Excludes "view-transition": that mode already does its own opacity
     // cross-fade as part of the snapshot diffing, a plain CSS opacity
     // transition running in parallel would just double up on it. Mirrored

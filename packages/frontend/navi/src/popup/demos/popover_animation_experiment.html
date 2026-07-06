@@ -180,20 +180,31 @@
            aggressive — even 5-10% of the box) hides the "squished" bottom
            edge without the "mask" look pure clip-path has on its own. */
       .experiment-popover {
-        transition-duration: 180ms;
+        width: 240px;
+        /* Constant throughout (not toggled to "none" when closed, unlike
+           popover.jsx's own box-shadow handling) — the point here is
+           specifically to see the shadow's shape get clipped mid-transition,
+           not to fade it in/out. */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        /* Slow, so each step of the transition is easy to follow. */
+        transition-duration: 900ms;
         transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         transition-behavior: allow-discrete;
         view-transition-name: none;
       }
+      /* clip-path's own `round` argument must match the box's actual
+         border-radius (8px, see [popover] above) — without it, the clipped
+         shape has square corners while the box underneath has rounded ones,
+         a visible mismatch right at the clipped edge. */
       #popover-clip-only {
         opacity: 1;
-        clip-path: inset(0);
+        clip-path: inset(0 round 8px);
         transform-origin: top;
         transition-property: display, overlay, opacity, clip-path;
       }
       #popover-clip-only[aria-expanded="false"] {
         opacity: 0;
-        clip-path: inset(0 0 100% 0);
+        clip-path: inset(0 0 100% 0 round 8px);
       }
       #popover-scale-only {
         opacity: 1;
@@ -207,14 +218,14 @@
       }
       #popover-clip-and-scale {
         opacity: 1;
-        clip-path: inset(0);
+        clip-path: inset(0 round 8px);
         transform-origin: top;
         scale: 1 1;
         transition-property: display, overlay, opacity, scale, clip-path;
       }
       #popover-clip-and-scale[aria-expanded="false"] {
         opacity: 0;
-        clip-path: inset(0 0 8% 0);
+        clip-path: inset(0 0 8% 0 round 8px);
         scale: 0.99 0.96;
       }
     </style>
@@ -380,56 +391,86 @@
       re-enabled, then aria-expanded flips — see its own comments for why, in
       short: <code>@starting-style</code> can't see a measurement-dependent
       "closed" state in time). Comparing 3 recipes for a real-anchor "below"
-      entrance, each isolating one idea:
+      entrance, each isolating one idea. Trigger button and popover content are
+      identical across all 3 (only the heading above each differs), so the
+      recipe itself is the only variable when comparing them.
     </p>
-    <ul>
-      <li>
-        <strong>clip-path alone</strong> — reads as a mask being *removed*, not
-        an opening: the content is already at its final size underneath, just
-        revealed.
-      </li>
-      <li>
-        <strong>scaleY alone</strong> — reads as an actual opening, but content
-        (text/icons) looks slightly squished for the first instants of the
-        transition.
-      </li>
-      <li>
-        <strong>clip-path + scaleY combined</strong> — each compensates for the
-        other's flaw: scaleY does most of the work, a shallow clip-path (doesn't
-        need to be aggressive — even 5-10% of the box) hides the "squished"
-        bottom edge without clip-path's own "mask" look when used alone.
-      </li>
-    </ul>
 
-    <div style="display: flex; gap: 24px; flex-wrap: wrap">
-      <p>
-        <button id="trigger-clip-only" type="button">clip-path only</button>
-      </p>
-      <p>
-        <button id="trigger-scale-only" type="button">scaleY only</button>
-      </p>
-      <p>
-        <button id="trigger-clip-and-scale" type="button">
-          clip-path + scaleY
-        </button>
-      </p>
-    </div>
-
+    <h3>clip-path alone</h3>
+    <p>
+      Reads as a mask being *removed*, not an opening: the content is already at
+      its final size underneath, just revealed.
+    </p>
+    <p>
+      <button class="experiment-trigger" id="trigger-clip-only" type="button">
+        Toggle popover
+      </button>
+    </p>
     <div id="popover-clip-only" class="experiment-popover" popover="manual">
-      <p style="margin-top: 0">clip-path only</p>
+      <div class="experiment-popover-content"></div>
     </div>
+    <div style="height: 220px"></div>
+
+    <h3>scaleY alone</h3>
+    <p>
+      Reads as an actual opening, but content (text/icons) looks slightly
+      squished for the first instants of the transition.
+    </p>
+    <p>
+      <button class="experiment-trigger" id="trigger-scale-only" type="button">
+        Toggle popover
+      </button>
+    </p>
     <div id="popover-scale-only" class="experiment-popover" popover="manual">
-      <p style="margin-top: 0">scaleY only</p>
+      <div class="experiment-popover-content"></div>
     </div>
+    <div style="height: 220px"></div>
+
+    <h3>clip-path + scaleY combined</h3>
+    <p>
+      Each compensates for the other's flaw: scaleY does most of the work, a
+      shallow clip-path (doesn't need to be aggressive — even 5-10% of the box)
+      hides the "squished" bottom edge without clip-path's own "mask" look when
+      used alone.
+    </p>
+    <p>
+      <button
+        class="experiment-trigger"
+        id="trigger-clip-and-scale"
+        type="button"
+      >
+        Toggle popover
+      </button>
+    </p>
     <div
       id="popover-clip-and-scale"
       class="experiment-popover"
       popover="manual"
     >
-      <p style="margin-top: 0">clip-path + scaleY</p>
+      <div class="experiment-popover-content"></div>
     </div>
+    <div style="height: 220px"></div>
 
     <script>
+      // Same markup in every popover (set once here rather than duplicated
+      // 3 times) — enough content to give clip-path/scale something visible
+      // to act on, and tall enough that the squished-top-during-scale effect
+      // actually shows.
+      const EXPERIMENT_POPOVER_CONTENT = `
+        <p style="margin-top: 0">Popover content</p>
+        <ul style="margin: 0; padding-left: 20px">
+          <li>First item</li>
+          <li>Second item</li>
+          <li>Third item</li>
+        </ul>
+        <p><button type="button">A button</button></p>
+      `;
+      for (const el of document.querySelectorAll(
+        ".experiment-popover-content",
+      )) {
+        el.innerHTML = EXPERIMENT_POPOVER_CONTENT;
+      }
+
       // Positions `popoverEl` flush below `triggerEl`, then commits that
       // "closed" frame as a real rendered state (transitions suppressed,
       // forced reflow) before flipping aria-expanded — same reasoning as

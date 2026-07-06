@@ -32,12 +32,11 @@
  *
  * Fading is driven by `[navi-fade-animation]` below — a separate attribute
  * from `[navi-animation]` in CSS terms (its own selector, its own opacity
- * rule), but Popover no longer lets you have one without the other: it sets
- * both attributes together, whenever any animation is active, with no
- * separate `fadeAnimation` prop to opt out (see popover.jsx's own top
- * comment) — so this file still supports fade-alone (Dialog's own
- * `fadeAnimation` prop still drives it independently, unrelated to any
- * `animation` kind, exactly as before).
+ * rule). Popover sets both attributes together whenever any animation is
+ * active, one combined switch with no separate `fadeAnimation` prop (see
+ * popover.jsx's own top comment). Dialog sets `navi-fade-animation`
+ * independently via its own `fadeAnimation` prop, unrelated to any
+ * `animation` kind.
  *
  * Whenever either attribute is active, `box-shadow` is also transitioned
  * to/from `none` (open/closed) — the consumer's own box-shadow (e.g.
@@ -45,9 +44,10 @@
  * the shadow fades in/out along with the rest instead of looking flat while
  * the popup is still moving.
  *
- * `animation="fading"` (Popover): `[navi-fade-animation]` alone, no
- * `[navi-animation]`-specific rule needed here at all — no motion, just the
- * fade every kind already gets.
+ * `animation="fading"` (Popover): opacity only, no motion — its own
+ * self-contained `[navi-animation="fading"]` rule below, independent of
+ * `[navi-fade-animation]` (Popover happens to set both together, but this
+ * kind doesn't rely on that).
  *
  * `animation="slide-from-*"`/`"slide-*"`: a real translate-based entrance,
  * two independent 8-direction (cardinal + 4 diagonals) families, each with
@@ -120,6 +120,14 @@ export const buildPopupAnimationCss = (selector) => {
         &[navi-animation],
         &[navi-fade-animation] {
           box-shadow: none;
+        }
+      }
+
+      /* fading — opacity only, no motion. */
+      &[navi-animation="fading"] {
+        opacity: 1;
+        &[aria-expanded="false"] {
+          opacity: 0;
         }
       }
 

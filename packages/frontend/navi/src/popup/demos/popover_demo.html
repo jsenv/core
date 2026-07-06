@@ -255,14 +255,14 @@
 
       // Backs a section's own "Animate"/"Slow" checkboxes and computes the
       // animationDuration to pass down — storageKey scopes both to that one
-      // section, independent of every other section's own toggles. No
-      // separate "Fade" toggle anymore — Popover always bundles a fade with
-      // whatever animation is active, no independent opt-out. Returns plain
-      // values/setters (not a component) so the checkboxes stay one stable
-      // component across renders — a component created fresh on every call
-      // (as this used to return) gets a new identity each render, and Preact
-      // remounts it whenever anything in the parent re-renders, discarding
-      // whatever the user was in the middle of clicking.
+      // section, independent of every other section's own toggles. Popover
+      // always bundles a fade with whatever animation is active, so there's
+      // no separate "Fade" toggle. Returns plain values/setters (not a
+      // component) so the checkboxes stay one stable component across
+      // renders — a component returned fresh on every call gets a new
+      // identity each render, and Preact remounts it whenever anything in
+      // the parent re-renders, discarding whatever the user was in the
+      // middle of clicking.
       const useAnimateControls = (storageKey) => {
         const [animate, setAnimate] = useStoredBoolean(
           `${storageKey}_animate`,
@@ -307,11 +307,11 @@
           <h1>Popover demo</h1>
 
           <p>
-            Most sections below have an "Animate"/"Fade" checkbox pair — the
-            same buttons, with <code>animation</code>/<code>fadeAnimation</code>{" "}
-            turned on — the best animation for that context gets picked
-            automatically. A "Slow" checkbox next to them slows that section's
-            animations down so you can actually see them play out.
+            Most sections below have an "Animate" checkbox — the same buttons,
+            with <code>animation</code> turned on — the best animation for that
+            context gets picked automatically, always with a fade bundled in (no
+            independent opt-out). A "Slow" checkbox next to it slows that
+            section's animations down so you can actually see them play out.
           </p>
 
           <TableOfContents />
@@ -354,7 +354,7 @@
       );
 
       const AnchorSection = () => {
-        const { animate, fade, animationDuration, controlsProps } =
+        const { animate, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_anchor");
         return (
           <section id="anchor" class="demo-section">
@@ -363,7 +363,6 @@
               <AnchoredPopover
                 label="Button commanding popover"
                 animation={animate}
-                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
             </div>
@@ -462,7 +461,7 @@
       );
 
       const PointerInteractionOutsideSection = () => {
-        const { animate, fade, animationDuration, controlsProps } =
+        const { animate, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
@@ -477,21 +476,18 @@
               <PointerInteractionOutsideDemo
                 label="none (default)"
                 animation={animate}
-                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="close"
                 pointerInteractionOutsideEffect="close"
                 animation={animate}
-                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="capture"
                 pointerInteractionOutsideEffect="capture"
                 animation={animate}
-                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
             </div>
@@ -524,7 +520,6 @@
         label,
         animation,
         animationDuration,
-        fadeAnimation,
         anchorSpacing,
       }) => {
         const popoverId = useId();
@@ -538,7 +533,6 @@
               id={popoverId}
               animation={animation}
               animationDuration={animationDuration}
-              fadeAnimation={fadeAnimation}
               anchorSpacing={anchorSpacing}
               borderRadius="8px"
               className="demo_popover_box"
@@ -587,7 +581,6 @@
         label,
         pointerInteractionOutsideEffect,
         animation,
-        fadeAnimation,
         animationDuration,
       }) => {
         const popoverId = useId();
@@ -602,7 +595,6 @@
               borderRadius="8px"
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
               animation={animation}
-              fadeAnimation={fadeAnimation}
               animationDuration={animationDuration}
               className="demo_popover_box"
             >
@@ -627,7 +619,6 @@
         duplicate = false,
         commandProxyFor,
         animation,
-        fadeAnimation,
         animationDuration,
         spawnFromPointer,
       }) => {
@@ -647,7 +638,6 @@
             <Popover
               id={popoverId}
               animation={animation}
-              fadeAnimation={fadeAnimation}
               animationDuration={animationDuration}
               spawnFromPointer={spawnFromPointer}
               borderRadius="8px"
@@ -691,7 +681,7 @@
       // to (via navi-command-proxy-for) instead of to itself.
       const AnchorAreaDefaultDemo = () => {
         const anchorId = useId();
-        const { animate, fade, animationDuration, controlsProps } =
+        const { animate, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_anchor");
         return (
           <>
@@ -715,7 +705,6 @@
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animate}
-                  fadeAnimation={fade}
                   animationDuration={animationDuration}
                 />
               )}
@@ -756,7 +745,7 @@
       );
 
       const AnchorAreaViewportDemo = () => {
-        const { animate, fade, animationDuration, controlsProps } =
+        const { animate, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_viewport");
         const { spawnFromPointer, toggle: spawnFromPointerToggle } =
           useSpawnFromPointerToggle("popover_demo_area_viewport");
@@ -771,7 +760,6 @@
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animate}
-                  fadeAnimation={fade}
                   animationDuration={animationDuration}
                   spawnFromPointer={spawnFromPointer}
                 />
@@ -788,7 +776,7 @@
       // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
-        const { animate, fade, animationDuration, controlsProps } =
+        const { animate, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_offset_parent");
         const { spawnFromPointer, toggle: spawnFromPointerToggle } =
           useSpawnFromPointerToggle("popover_demo_area_offset_parent");
@@ -810,7 +798,6 @@
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
                     animation={animate}
-                    fadeAnimation={fade}
                     animationDuration={animationDuration}
                     spawnFromPointer={spawnFromPointer}
                     borderRadius="8px"
