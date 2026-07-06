@@ -28,6 +28,7 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   // "ui-action-target",
   "navi-input-type",
   "navi-control-proxy-for",
+  "navi-command-proxy-for",
   "navi-command-target",
   "onnavi_command",
   "onnavi_request_open",

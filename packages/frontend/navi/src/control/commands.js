@@ -100,6 +100,26 @@ const resolveFirstChildControl = (el) => {
 const resolveClosestExpandable = (el) => {
   return el.closest("[aria-expanded]");
 };
+// An element carrying navi-command-proxy-for="anchorId" stands in for that
+// other element as the command's source when the source is forwarded to
+// consumers (e.g. Popover reads a --navi-toggle/--navi-open request's source
+// as its anchor) — useful for a trigger button that should open a popover
+// anchored to some other, unrelated element rather than to itself.
+const resolveCommandProxySource = (element) => {
+  const proxyForId = element.getAttribute("navi-command-proxy-for");
+  if (!proxyForId) {
+    return element;
+  }
+  const proxyTarget = document.getElementById(proxyForId);
+  if (!proxyTarget) {
+    console.warn(
+      `navi-command-proxy-for="${proxyForId}" but no element with that id found`,
+      element,
+    );
+    return element;
+  }
+  return proxyTarget;
+};
 const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
@@ -320,7 +340,7 @@ registerNaviCommand("--navi-toggle", (source, event) => {
         : "navi_request_open";
       return dispatchCustomEvent(target, customEventName, {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -336,7 +356,7 @@ registerNaviCommand("--navi-open", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -352,7 +372,7 @@ registerNaviCommand("--navi-close", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -368,7 +388,7 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
         isCancel: true,
       });
     },

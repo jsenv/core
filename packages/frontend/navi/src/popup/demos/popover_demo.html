@@ -68,23 +68,6 @@
         border: 1px dotted #999;
         border-radius: 8px;
       }
-      .demo-gutter {
-        width: 130px;
-        margin-right: 8px;
-        /* Reserves room to the left of a real-anchor/offsetParent grid so
-           "on-the-left"/"aligned-left" cells actually have somewhere to
-           render — matches the popover's own fixed width. */
-        flex-shrink: 0;
-        background: repeating-linear-gradient(
-          45deg,
-          #f6f6f6,
-          #f6f6f6 8px,
-          #eee 8px,
-          #eee 16px
-        );
-        border: 1px dashed #999;
-        border-radius: 4px;
-      }
       .demo-animate-toggle {
         display: block;
         margin-top: 8px;
@@ -127,6 +110,72 @@
         line-height: 1.2;
         white-space: normal;
       }
+      .demo-area-button[data-duplicate] {
+        opacity: 0.35;
+      }
+      .demo-static-anchor-wrapper {
+        position: relative;
+        display: flex;
+        width: fit-content;
+        /* Left/right margin gives "on-the-left"/"on-the-right" popovers
+           (130px wide) room to render without being clipped by the
+           viewport edge. */
+        margin: 16px 150px 44px;
+        align-items: center;
+        justify-content: center;
+      }
+      .demo-static-anchor {
+        padding: 10px 16px;
+        color: #666;
+        font-size: 12px;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
+      .demo-zone-label {
+        position: absolute;
+        color: #bbb;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .demo-zone-label-above {
+        bottom: 100%;
+        margin-bottom: 4px;
+      }
+      .demo-zone-label-below {
+        top: 100%;
+        margin-top: 4px;
+      }
+      .demo-zone-label-left {
+        right: 100%;
+        margin-right: 8px;
+      }
+      .demo-zone-label-right {
+        left: 100%;
+        margin-left: 8px;
+      }
+      .demo-legend {
+        display: flex;
+        margin: 8px 0 4px;
+        align-items: center;
+        gap: 10px;
+        color: #555;
+        font-size: 13px;
+      }
+      .demo-legend-example {
+        display: flex;
+        width: 90px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .demo-legend-example[data-duplicate] {
+        opacity: 0.35;
+      }
     </style>
   </head>
   <body>
@@ -153,6 +202,31 @@
         "aligned-right",
         "on-the-right",
       ];
+
+      // Drops "center" from a label when the other axis already carries the
+      // real information — "center on-the-left" reads as "on-the-left".
+      const formatAreaLabel = (y, x) => {
+        if (y === "center" && x === "center") {
+          return "center";
+        }
+        if (y === "center") {
+          return x;
+        }
+        if (x === "center") {
+          return y;
+        }
+        return `${y} ${x}`;
+      };
+
+      // Against a viewport point (rather than a real anchor box), overlap
+      // and no-overlap collapse to the same placement, so "aligned-top"
+      // lands exactly where "above" does (ditto "aligned-bottom"/"below" and
+      // "aligned-left"/"on-the-left"/"aligned-right"/"on-the-right").
+      const isDuplicateViewportArea = (y, x) =>
+        y === "aligned-top" ||
+        y === "aligned-bottom" ||
+        x === "aligned-left" ||
+        x === "aligned-right";
 
       const SLOW_DOWN_STORAGE_KEY = "popover_demo_slow_down_animations";
 
@@ -292,20 +366,17 @@
           </p>
 
           <h3>anchor left on the trigger button (default)</h3>
-          <AnchorAreaGrid
-            storageKey="popover_demo_area_animate_anchor"
-            animatedDuration={animatedDuration}
-            gutter
-          />
+          <p>
+            Every button below opens its own popover, but all of them anchor to
+            the same static box instead of to themselves, via{" "}
+            <code>navi-command-proxy-for</code>.
+          </p>
+          <AnchorAreaDefaultDemo animatedDuration={animatedDuration} />
 
           <h3>
             anchor<code>="viewport"</code>
           </h3>
-          <AnchorAreaGrid
-            anchor="viewport"
-            storageKey="popover_demo_area_animate_viewport"
-            animatedDuration={animatedDuration}
-          />
+          <AnchorAreaViewportDemo animatedDuration={animatedDuration} />
 
           <h3>
             anchor<code>="offsetParent"</code>
@@ -481,10 +552,16 @@
       // anchor is left undefined (real anchor, from the toggle event) unless
       // explicitly passed as "viewport"/"offsetParent". Always uses the
       // flexible anchorArea (never anchorAreaFixed): what you'd actually use
-      // day to day.
+      // day to day. commandProxyFor redirects the trigger button's anchor to
+      // another element (see navi-command-proxy-for on the Button below) —
+      // used by the default-anchor subsection so every button anchors to one
+      // shared static box instead of to itself.
       const AnchorAreaPopover = ({
         anchor,
         anchorArea,
+        label = anchorArea,
+        duplicate = false,
+        commandProxyFor,
         animation,
         animationDuration,
       }) => {
@@ -495,9 +572,11 @@
             <Button
               command="--navi-toggle"
               commandFor={popoverId}
+              navi-command-proxy-for={commandProxyFor}
               className="demo-area-button"
+              data-duplicate={duplicate ? "" : undefined}
             >
-              {anchorArea}
+              {label}
             </Button>
             <Popover
               id={popoverId}
@@ -509,39 +588,87 @@
               spacing={16}
               className="demo_popover_box"
             >
-              <p style={{ marginTop: 0 }}>{anchorArea}</p>
+              <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
           </>
         );
       };
 
-      // gutter reserves room to the left for "on-the-left"/"aligned-left"
-      // cells — only needed against a real anchor, which sits wherever the
-      // page laid its trigger button out, unlike the point-mode subsections
-      // below which never escape their reference box in the first place.
-      const AnchorAreaGrid = ({
-        anchor,
-        storageKey,
-        animatedDuration,
-        gutter = false,
-      }) => {
-        const [animate, setAnimate] = useStoredBoolean(storageKey, false);
+      // A single static box, with faint labels hinting at the four
+      // directions around it, that every button below anchors its popover
+      // to (via navi-command-proxy-for) instead of to itself.
+      const AnchorAreaDefaultDemo = ({ animatedDuration }) => {
+        const anchorId = useId();
+        const [animate, setAnimate] = useStoredBoolean(
+          "popover_demo_area_animate_anchor",
+          false,
+        );
         return (
           <>
-            <div style={{ display: "flex" }}>
-              {gutter ? <div class="demo-gutter" /> : null}
-              <AreaGrid
-                renderCell={(y, x) => (
-                  <AnchorAreaPopover
-                    anchor={anchor}
-                    anchorArea={`${y} ${x}`}
-                    animation={animate}
-                    animationDuration={animate ? animatedDuration : undefined}
-                  />
-                )}
-              />
+            <div class="demo-static-anchor-wrapper">
+              <span class="demo-zone-label demo-zone-label-above">above</span>
+              <span class="demo-zone-label demo-zone-label-below">below</span>
+              <span class="demo-zone-label demo-zone-label-left">
+                on-the-left
+              </span>
+              <span class="demo-zone-label demo-zone-label-right">
+                on-the-right
+              </span>
+              <div id={anchorId} class="demo-static-anchor">
+                anchor
+              </div>
             </div>
+            <AreaGrid
+              renderCell={(y, x) => (
+                <AnchorAreaPopover
+                  anchorArea={`${y} ${x}`}
+                  commandProxyFor={anchorId}
+                  animation={animate}
+                  animationDuration={animate ? animatedDuration : undefined}
+                />
+              )}
+            />
+            <AnimateToggle animate={animate} onChange={setAnimate} />
+          </>
+        );
+      };
+
+      // Two swatches, one faded, illustrating what the faded cells in the
+      // grid below mean.
+      const ViewportDuplicateLegend = () => (
+        <p class="demo-legend">
+          <span class="demo-legend-example">on-the-left</span>
+          <span class="demo-legend-example" data-duplicate="">
+            aligned-left
+          </span>
+          <span>
+            same placement — a popover pinned to a viewport point can't overlap
+            it, so alignment doesn't change anything.
+          </span>
+        </p>
+      );
+
+      const AnchorAreaViewportDemo = ({ animatedDuration }) => {
+        const [animate, setAnimate] = useStoredBoolean(
+          "popover_demo_area_animate_viewport",
+          false,
+        );
+        return (
+          <>
+            <ViewportDuplicateLegend />
+            <AreaGrid
+              renderCell={(y, x) => (
+                <AnchorAreaPopover
+                  anchor="viewport"
+                  anchorArea={`${y} ${x}`}
+                  label={formatAreaLabel(y, x)}
+                  duplicate={isDuplicateViewportArea(y, x)}
+                  animation={animate}
+                  animationDuration={animate ? animatedDuration : undefined}
+                />
+              )}
+            />
             <AnimateToggle animate={animate} onChange={setAnimate} />
           </>
         );
