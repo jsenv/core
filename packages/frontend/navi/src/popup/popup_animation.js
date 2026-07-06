@@ -30,13 +30,13 @@
  * 100%-of-own-size distance is hardcoded for now rather than exposed as a
  * variable — fine to revisit if a consumer ever needs to override it.
  *
- * Fading is driven by `[navi-fade-animation]` below — a separate attribute
- * from `[navi-animation]` in CSS terms (its own selector, its own opacity
- * rule). Popover sets both attributes together whenever any animation is
- * active, one combined switch with no separate `fadeAnimation` prop (see
- * popover.jsx's own top comment). Dialog sets `navi-fade-animation`
- * independently via its own `fadeAnimation` prop, unrelated to any
- * `animation` kind.
+ * `[navi-fade-animation]` below is Dialog's own, independent fade mechanism —
+ * driven by its own `fadeAnimation` prop, unrelated to any `animation` kind.
+ * Popover doesn't use this attribute at all: each of its `navi-animation`
+ * values gets its own opacity in/out written directly into its own rule
+ * below (repeated per kind rather than factored into one shared selector),
+ * so a kind's fade can diverge from the others later without disturbing
+ * anything else.
  *
  * Whenever either attribute is active, `box-shadow` is also transitioned
  * to/from `none` (open/closed) — the consumer's own box-shadow (e.g.
@@ -44,10 +44,7 @@
  * the shadow fades in/out along with the rest instead of looking flat while
  * the popup is still moving.
  *
- * `animation="fading"` (Popover): opacity only, no motion — its own
- * self-contained `[navi-animation="fading"]` rule below, independent of
- * `[navi-fade-animation]` (Popover happens to set both together, but this
- * kind doesn't rely on that).
+ * `animation="fading"` (Popover): opacity only, no motion.
  *
  * `animation="slide-from-*"` (anchorReference/point mode only): a real
  * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
@@ -110,8 +107,9 @@ export const buildPopupAnimationCss = (selector) => {
         transition-behavior: allow-discrete;
       }
 
-      /* fade — independent of "animation", combines with any kind (or none,
-         for a plain fade in/out). */
+      /* Dialog's own independent fade (see this file's top comment) —
+         Popover doesn't use this attribute, each of its own kinds below
+         handles its own opacity directly. */
       &[navi-fade-animation] {
         opacity: 1;
       }
@@ -142,8 +140,10 @@ export const buildPopupAnimationCss = (selector) => {
          instead of the box's own center — a static anchor point for the
          transform, doesn't itself need to transition. */
       &[navi-animation="scaling"] {
+        opacity: 1;
         scale: 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from);
         }
         &[data-spawn-from-pointer] {
@@ -157,58 +157,74 @@ export const buildPopupAnimationCss = (selector) => {
          Cardinal directions scale a single axis only; diagonals scale
          both. */
       &[navi-animation="expand-up"] {
+        opacity: 1;
         transform-origin: bottom;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: 1 var(--popup-scale-from);
         }
       }
       &[navi-animation="expand-down"] {
+        opacity: 1;
         transform-origin: top;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: 1 var(--popup-scale-from);
         }
       }
       &[navi-animation="expand-left"] {
+        opacity: 1;
         transform-origin: right;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from) 1;
         }
       }
       &[navi-animation="expand-right"] {
+        opacity: 1;
         transform-origin: left;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from) 1;
         }
       }
       &[navi-animation="expand-up-left"] {
+        opacity: 1;
         transform-origin: bottom right;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from);
         }
       }
       &[navi-animation="expand-up-right"] {
+        opacity: 1;
         transform-origin: bottom left;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from);
         }
       }
       &[navi-animation="expand-down-left"] {
+        opacity: 1;
         transform-origin: top right;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from);
         }
       }
       &[navi-animation="expand-down-right"] {
+        opacity: 1;
         transform-origin: top left;
         scale: 1 1;
         &[aria-expanded="false"] {
+          opacity: 0;
           scale: var(--popup-scale-from);
         }
       }
@@ -256,9 +272,11 @@ export const buildPopupAnimationCss = (selector) => {
       &[navi-animation="slide-from-top-right"],
       &[navi-animation="slide-from-bottom-left"],
       &[navi-animation="slide-from-bottom-right"] {
+        opacity: 1;
         translate: 0 0;
 
         &[aria-expanded="false"] {
+          opacity: 0;
           translate: calc(var(--popup-slide-x, 0) * 100%)
             calc(var(--popup-slide-y, -1) * 100%);
         }

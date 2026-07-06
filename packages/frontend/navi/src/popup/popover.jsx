@@ -46,17 +46,17 @@
  * overlap (see resolveDirectionValue below); otherwise "expanding" for a
  * real anchor (grows out of its own edge) or "sliding" for a point/corner
  * (no edge to grow out of, slides in instead) — concretely as one of
- * popup_animation.js's `slide-from-*`/`slide-*`/`expand-*` values, computed
- * here in JS (not left for CSS to puzzle out from raw position attributes)
- * so there's a single, inspectable `navi-animation` value driving one direct
- * CSS rule per direction, no attribute-cascade indirection. `animation="fading"`
- * is a fourth, explicit-only kind (no motion at all — see
- * `navi-fade-animation` below).
+ * popup_animation.js's `slide-from-*`/`expand-*` values, computed here in JS
+ * (not left for CSS to puzzle out from raw position attributes) so there's a
+ * single, inspectable `navi-animation` value driving one direct CSS rule per
+ * direction, no attribute-cascade indirection. `animation="fading"` is a
+ * fourth, explicit-only kind (no motion at all).
  *
- * Every animation kind includes a fade: whenever `resolvedAnimation` is
- * truthy (any kind, "fading" included), `navi-fade-animation` is set right
- * alongside `navi-animation` — one combined switch, not two independent
- * ones. The backdrop mirrors the same attribute on itself.
+ * Each `navi-animation` value's own CSS rule (popup_animation.js) includes
+ * its own fade in/out — no separate `fadeAnimation` prop or attribute.
+ * `resolvedAnimation` is mirrored onto the backdrop's own `navi-animation`
+ * too, which only ever fades regardless of which kind it is (see the
+ * backdrop's own CSS comment for why).
  *
  * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
  * "offsetParent"), absent when anchored to a real element.
@@ -152,10 +152,11 @@ const css = /* css */ `
       }
     }
 
-    /* Set imperatively in openEffect right alongside the content popover's
-       own, so the backdrop's tint fades in/out alongside it instead of
-       snapping abruptly. */
-    &[navi-fade-animation] {
+    /* navi-animation mirrors the content popover's own resolved value (set
+       imperatively in openEffect) — the backdrop only ever fades, regardless
+       of which kind it is (it's a fixed, inset: 0 element, translate/scale
+       wouldn't mean anything on it). */
+    &[navi-animation] {
       opacity: 1;
       transition-property: opacity;
       transition-duration: var(--popup-animation-duration);
@@ -336,20 +337,12 @@ const ControlledPopover = (props) => {
     }
     if (resolvedAnimation) {
       popoverEl.setAttribute("navi-animation", resolvedAnimation);
+      // The backdrop mirrors the same value, but only ever fades regardless
+      // of which kind it is — see the backdrop's own CSS comment for why.
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {
       popoverEl.removeAttribute("navi-animation");
-    }
-    // Every animation kind includes a fade — see this file's top comment.
-    // Excludes "view-transition": that mode already does its own opacity
-    // cross-fade as part of the snapshot diffing, a plain CSS opacity
-    // transition running in parallel would just double up on it. Mirrored
-    // onto the backdrop too, so its own tint fades in/out alongside.
-    if (resolvedAnimation && resolvedAnimation !== "view-transition") {
-      popoverEl.setAttribute("navi-fade-animation", "");
-      backdropEl?.setAttribute("navi-fade-animation", "");
-    } else {
-      popoverEl.removeAttribute("navi-fade-animation");
-      backdropEl?.removeAttribute("navi-fade-animation");
+      backdropEl?.removeAttribute("navi-animation");
     }
     // Only makes sense for a "scaling" popup with no real anchor to grow out
     // of (a real anchor's own edge already reads fine as the grow point) —
