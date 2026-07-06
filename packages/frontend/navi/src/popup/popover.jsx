@@ -469,11 +469,6 @@ const ControlledPopover = (props) => {
       // whole document when the anchor point is viewport-relative).
       const effectiveAnchor =
         anchor || relativeContainer || document.documentElement;
-      // Computed once, from the original open-triggering event's pointer
-      // position — not on every reposition (scroll/resize), which wouldn't
-      // carry a meaningful click position anyway and shouldn't move the
-      // spawn point once it's been set.
-      let spawnOriginComputed = false;
 
       const positionPopover = (positionEvent) => {
         let appliedLeft;
@@ -507,31 +502,6 @@ const ControlledPopover = (props) => {
           );
           appliedLeft = stickPosition.left;
           top = stickPosition.top;
-          if (useSpawnFromPointer && !spawnOriginComputed) {
-            spawnOriginComputed = true;
-            // popoverEl is position: fixed in anchorReference mode, so
-            // appliedLeft/top are already viewport-relative, same coordinate
-            // space as clientX/clientY — no scroll conversion needed.
-            const pointerEvent = findEvent(
-              e,
-              (candidate) => typeof candidate.clientX === "number",
-            );
-            if (pointerEvent) {
-              const originXPercent =
-                ((pointerEvent.clientX - appliedLeft) / popoverEl.offsetWidth) *
-                100;
-              const originYPercent =
-                ((pointerEvent.clientY - top) / popoverEl.offsetHeight) * 100;
-              popoverEl.style.setProperty(
-                "--popup-spawn-origin-x",
-                `${originXPercent}%`,
-              );
-              popoverEl.style.setProperty(
-                "--popup-spawn-origin-y",
-                `${originYPercent}%`,
-              );
-            }
-          }
         } else {
           const { width, height } = effectiveAnchor.getBoundingClientRect();
           const {
@@ -591,18 +561,13 @@ const ControlledPopover = (props) => {
           // Refines the placeholder set earlier in openEffect now that the
           // *actual* (possibly auto-flipped) side is known — see
           // resolveDirectionValue's own doc comment.
-          if (
-            resolvedAnimationKind === "sliding" ||
-            resolvedAnimationKind === "expanding"
-          ) {
-            const prefix =
-              resolvedAnimationKind === "expanding" ? "expand" : "slide";
+          if (resolvedAnimationKind === "expanding") {
             popoverEl.setAttribute(
               "navi-animation",
               resolveDirectionValue(pickedPositionY, pickedPositionX, {
                 isRealAnchor: true,
-                prefix,
-              }) ?? `${prefix}-up`,
+                prefix: "expand",
+              }) ?? "expand-up",
             );
           }
         }
@@ -646,6 +611,36 @@ const ControlledPopover = (props) => {
       addCleanup(() => {
         rectEffect.disconnect();
       });
+
+      // rectEffect's own setup already called positionPopover() once above,
+      // synchronously, so popoverEl.style.left/top already hold the resting
+      // position the click/pointer position needs to be expressed relative
+      // to — read from the original open-triggering event `e`, not
+      // recomputed on later repositions (scroll/resize), which wouldn't
+      // carry a meaningful click position anyway and shouldn't move the
+      // spawn point once it's been set. Must still run before transitions
+      // are re-enabled below, same as the positioning itself.
+      if (useSpawnFromPointer) {
+        const pointerEvent = findEvent(
+          e,
+          (candidate) => typeof candidate.clientX === "number",
+        );
+        if (pointerEvent) {
+          // popoverEl is position: fixed in anchorReference mode, so
+          // style.left/top are already viewport-relative, same coordinate
+          // space as clientX/clientY — no scroll conversion needed.
+          const boxLeft = parseFloat(popoverEl.style.left);
+          const boxTop = parseFloat(popoverEl.style.top);
+          popoverEl.style.setProperty(
+            "--popup-spawn-origin-x",
+            `${((pointerEvent.clientX - boxLeft) / popoverEl.offsetWidth) * 100}%`,
+          );
+          popoverEl.style.setProperty(
+            "--popup-spawn-origin-y",
+            `${((pointerEvent.clientY - boxTop) / popoverEl.offsetHeight) * 100}%`,
+          );
+        }
+      }
 
       if (!useViewTransition) {
         // The reflow forces the browser to actually commit the correctly
@@ -1010,13 +1005,13 @@ const toSlideDirectionKey = (y, x) => {
  * (no direction at all — that's `resolvedAnimation === "scaling"` territory
  * instead, see openEffect).
  *
- * `isRealAnchor: false` (anchorReference/point mode, used only for
+ * `isRealAnchor: false` (anchorReference/point mode, used only with
  * `prefix: "slide-from"`) keeps the word as the compass direction the
  * popover comes from: placed "above" (a point/corner), it slides in from
- * the top. `isRealAnchor: true` (a real anchor, `prefix: "slide"` or
- * `"expand"`) uses the motion/growth direction instead, the opposite
- * compass point: placed "above" the anchor, it moves/grows up, away from
- * the anchor (which sits below it).
+ * the top. `isRealAnchor: true` (a real anchor, used only with
+ * `prefix: "expand"`) uses the motion/growth direction instead, the
+ * opposite compass point: placed "above" the anchor, it moves/grows up,
+ * away from the anchor (which sits below it).
  *
  * "aligned-*"/"center" contribute no direction on their axis either way.
  */

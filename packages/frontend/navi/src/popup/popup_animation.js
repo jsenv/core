@@ -26,9 +26,9 @@
  * so any consumer can override it per-instance from CSS (or via the
  * `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-scale-from`, `--popup-border-radius`. Slide distances (100%/20px,
- * see below) are hardcoded for now rather than exposed as variables — fine
- * to revisit if a consumer ever needs to override them.
+ * `--popup-scale-from`, `--popup-border-radius`. `slide-from-*`'s own
+ * 100%-of-own-size distance is hardcoded for now rather than exposed as a
+ * variable — fine to revisit if a consumer ever needs to override it.
  *
  * Fading is driven by `[navi-fade-animation]` below — a separate attribute
  * from `[navi-animation]` in CSS terms (its own selector, its own opacity
@@ -58,20 +58,16 @@
  * so it slides in instead. The word names *where it comes from*: placed
  * "above" (a point/corner), it slides in from the top.
  *
- * `animation="expand-*"` (a real anchor only): the auto-picked default
- * there instead of sliding — reads better against a real anchor than a
- * translate, which visually travels *through* the anchor element on its way
- * in. Grows out of the anchor's own edge via `scale` + `transform-origin`,
- * 8 directions (cardinal + 4 diagonals) — cardinal ones scale a single axis
- * only (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
+ * `animation="expand-*"` (a real anchor only, the auto-picked default
+ * there): reads better against a real anchor than a translate, which
+ * visually travels *through* the anchor element on its way in. Grows out of
+ * the anchor's own edge via `scale` + `transform-origin`, 8 directions
+ * (cardinal + 4 diagonals) — cardinal ones scale a single axis only
+ * (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
  * only), diagonals scale both. The word names the motion/growth direction,
  * the opposite compass point from the point/corner family above: placed
  * "above" the anchor, it grows *up*, away from the anchor (which sits below
- * it) — not "from the top". `animation="slide-{up,down,left,right}"` (+
- * diagonals, a small fixed 20px translate) is still available as an
- * explicit opt-in — same word/direction convention as `expand-*`, just
- * translate-based instead of scale-based — but no longer the auto-picked
- * default for a real anchor.
+ * it) — not "from the top".
  *
  * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.
@@ -265,57 +261,6 @@ export const buildPopupAnimationCss = (selector) => {
         &[aria-expanded="false"] {
           translate: calc(var(--popup-slide-x, 0) * 100%)
             calc(var(--popup-slide-y, -1) * 100%);
-        }
-      }
-
-      /* slide — real-anchor family: same idea, a small fixed 20px distance
-         instead, and the *opposite* compass direction's multipliers (see
-         this file's top comment for why). */
-      &[navi-animation="slide-up"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-down"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-left"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 0;
-      }
-      &[navi-animation="slide-right"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 0;
-      }
-      &[navi-animation="slide-up-left"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-up-right"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-down-left"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-down-right"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-up"],
-      &[navi-animation="slide-down"],
-      &[navi-animation="slide-left"],
-      &[navi-animation="slide-right"],
-      &[navi-animation="slide-up-left"],
-      &[navi-animation="slide-up-right"],
-      &[navi-animation="slide-down-left"],
-      &[navi-animation="slide-down-right"] {
-        translate: 0 0;
-
-        &[aria-expanded="false"] {
-          translate: calc(var(--popup-slide-x, 0) * 20px)
-            calc(var(--popup-slide-y, -1) * 20px);
         }
       }
     }
