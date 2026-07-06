@@ -40,13 +40,14 @@
  * on-the-right. A bare word means no overlap with the anchor; "aligned-"
  * means edges touching. A single word implies "center" on the other axis.
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
- * for the "aligned-" pair on both axes. Exposed to CSS as
- * `data-anchor-area-y`/`data-anchor-area-x` (see popup_animation.js): an
- * "aligned-"/"center" axis means the popover overlaps the anchor there, so a
- * translate-based slide on that axis reads oddly — `animation="auto"` picks
- * "scale" instead of "slide" whenever *both* axes overlap, and "slide"
- * itself zeroes out any overlapping axis rather than dropping the whole
- * animation.
+ * for the "aligned-" pair on both axes. An "aligned-"/"center" axis means the
+ * popover overlaps the anchor there, so a translate-based slide on that axis
+ * reads oddly — `animation="auto"` resolves to "scale" whenever *both* axes
+ * overlap (see resolveSlideFrom below), "slide" otherwise, concretely as one
+ * of popup_animation.js's `slide-from-*` values — computed here in JS (not
+ * left for CSS to puzzle out from raw position attributes) so there's a
+ * single, inspectable `navi-animation` value driving one direct CSS rule per
+ * direction, no attribute-cascade indirection.
  *
  * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
  * "offsetParent"), absent when anchored to a real element.
@@ -222,6 +223,10 @@ const ControlledPopover = (props) => {
   // open, two separate invocations of openEffect that don't otherwise share
   // any scope, hence the ref.
   const disarmBackdropHideRef = useRef(null);
+  // Cancels a still-pending suppressPointerEventsDuringTransition (see
+  // openEffect below) from a previous open/close, so it can't fire late and
+  // clobber a fresh one's own pointer-events state.
+  const pointerEventsCleanupRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
@@ -291,18 +296,45 @@ const ControlledPopover = (props) => {
     const xOverlapsAnchor =
       parsedAnchorArea.x !== "on-the-left" &&
       parsedAnchorArea.x !== "on-the-right";
-    const resolvedAnimation = isAutoAnimation
+    const resolvedAnimationKind = isAutoAnimation
       ? yOverlapsAnchor && xOverlapsAnchor
         ? "scale"
         : "slide"
       : animation;
+    // "slide" (whether auto-picked or requested explicitly) needs a concrete
+    // slide-from-* direction. anchorReference/point mode has no auto-flip, so
+    // it's known synchronously; a real anchor's *actual* side (which may
+    // differ from the one requested here) is only known once
+    // pickPositionRelativeTo runs — positionPopover's real-anchor branch
+    // below overwrites this with the final value before transitions are ever
+    // re-enabled, so this placeholder is never visibly wrong.
+    let resolvedAnimation = resolvedAnimationKind;
+    if (resolvedAnimationKind === "slide" && anchorReference) {
+      resolvedAnimation =
+        resolveSlideFrom(parsedAnchorArea.y, parsedAnchorArea.x, {
+          flip: false,
+        }) ?? "slide-from-top";
+    }
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    // A real anchor hints at "coming from that direction" with a small fixed
+    // distance; anchorReference/point mode has no anchor to be "close to", so
+    // it travels the full 100%-of-own-size default instead (see
+    // popup_animation.js).
+    popoverEl.style.setProperty(
+      "--popup-slide-distance",
+      anchor ? "20px" : "100%",
+    );
     // Experimental: swaps the CSS-transition machinery below for
     // document.startViewTransition() (see runOpen/runClose below) —
     // unsupported browsers just fall back to no animation at all.
     const useViewTransition =
       resolvedAnimation === "view-transition" &&
       typeof document.startViewTransition === "function";
+    // Whether there's an actual CSS transition to wait for below
+    // (suppressPointerEventsDuringTransition) — skipped entirely otherwise,
+    // so a popover with no animation/fade at all stays instantly interactive.
+    const hasCssTransitionAnimation =
+      !useViewTransition && Boolean(fadeAnimation || resolvedAnimation);
     if (resolvedAnimation === "view-transition") {
       // Unique per instance: view-transition-name must be a <custom-ident>
       // (no colons, which useId()'s default id contains) and can't be
@@ -323,11 +355,6 @@ const ControlledPopover = (props) => {
     } else {
       popoverEl.removeAttribute("data-anchor");
     }
-    // The requested anchorArea, exposed per-axis for popup_animation.js to
-    // key its slide direction/scale-vs-slide choice off (see the file's top
-    // comment) — set for both anchorReference and real-anchor modes.
-    popoverEl.setAttribute("data-anchor-area-y", parsedAnchorArea.y);
-    popoverEl.setAttribute("data-anchor-area-x", parsedAnchorArea.x);
     // anchorArea's y/x vocabulary is pickPositionRelativeTo's own
     // positionY/positionX vocabulary (see visible_rect.js) — no translation
     // needed, only meaningful against a real anchor (pickPositionRelativeTo
@@ -347,34 +374,6 @@ const ControlledPopover = (props) => {
         effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
-    // Cleared here (not at the previous close): popup_animation.js's slide
-    // CSS reads these live, so removing them there — in the very same
-    // synchronous tick as flipping aria-expanded to start the close
-    // transition — changes what the *closing* transition animates towards
-    // mid-flight (both the direction's sign and --popup-slide-distance's
-    // unit, 20px vs 100%, briefly interpolating between incompatible units).
-    // Cleared fresh on every open instead: harmless even though
-    // pickPositionRelativeTo unconditionally overwrites both right after
-    // anyway (below) — this only matters for the point/corner
-    // (anchorReference) case, which never sets them at all, so a stale value
-    // from a *previous* real-anchor open must not leak into this one. The
-    // Fixed case is known synchronously, no measurement needed — set right
-    // away instead of merely cleared.
-    popoverEl.removeAttribute("data-position-y-current");
-    popoverEl.removeAttribute("data-position-x-current");
-    if (effectivePositionYFixed) {
-      popoverEl.setAttribute(
-        "data-position-y-current",
-        effectivePositionYFixed,
-      );
-    }
-    if (effectivePositionXFixed) {
-      popoverEl.setAttribute(
-        "data-position-x-current",
-        effectivePositionXFixed,
-      );
-    }
-
     if (!useViewTransition) {
       // Suppressed until the popover is actually measured/positioned below —
       // see this file's top comment for why @starting-style can't drive the
@@ -494,6 +493,7 @@ const ControlledPopover = (props) => {
             left,
             top: pickedTop,
             positionY: pickedPositionY,
+            positionX: pickedPositionX,
             spaceAbove,
             spaceBelow,
           } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
@@ -516,6 +516,17 @@ const ControlledPopover = (props) => {
           );
           appliedLeft = Math.max(left, minLeft);
           top = pickedTop;
+          // Refines the placeholder set earlier in openEffect now that the
+          // *actual* (possibly auto-flipped) side is known — see
+          // resolveSlideFrom's own doc comment for the flip.
+          if (resolvedAnimationKind === "slide") {
+            popoverEl.setAttribute(
+              "navi-animation",
+              resolveSlideFrom(pickedPositionY, pickedPositionX, {
+                flip: true,
+              }) ?? "slide-from-top",
+            );
+          }
         }
 
         debugPopup(
@@ -568,6 +579,13 @@ const ControlledPopover = (props) => {
         popoverEl.style.transitionProperty = "";
       }
       popoverEl.setAttribute("aria-expanded", "true");
+      // Not interactive again until the entrance transition settles — avoids
+      // the cursor changing/something becoming clickable while the popover
+      // is still visually sliding/scaling into place.
+      pointerEventsCleanupRef.current?.();
+      pointerEventsCleanupRef.current = hasCssTransitionAnimation
+        ? suppressPointerEventsDuringTransition(popoverEl)
+        : null;
     };
 
     let viewTransition;
@@ -603,8 +621,12 @@ const ControlledPopover = (props) => {
       } else {
         runClose();
       }
-      // data-position-y/x-current is deliberately *not* cleared here — see
-      // the comment where it's cleared instead (start of the next open).
+      // Same reasoning as the open side — not interactive while it's still
+      // visually leaving.
+      pointerEventsCleanupRef.current?.();
+      pointerEventsCleanupRef.current = hasCssTransitionAnimation
+        ? suppressPointerEventsDuringTransition(popoverEl)
+        : null;
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armBackdropHideOnClick(
@@ -765,6 +787,53 @@ const armBackdropHideOnClick = (backdropEl, closeEvent) => {
   };
 };
 
+/**
+ * Disables pointer-events on `el` until its current CSS transition settles
+ * (via `transitionend`, with a safety `setTimeout` fallback matching the
+ * longest `transition-duration` in case nothing actually transitions or an
+ * event is missed) — avoids the cursor changing/something becoming
+ * clickable while the popover is still visually moving into or out of
+ * place. Not needed for `animation="view-transition"`, which already makes
+ * the element non-interactive for the duration natively.
+ *
+ * Returns a "cancel" function: doesn't restore pointer-events (a fresh call
+ * for the next open/close is about to set its own state) — only prevents
+ * this stale instance's `transitionend` listener/timeout from firing later
+ * and clobbering that fresh state.
+ */
+const suppressPointerEventsDuringTransition = (el) => {
+  el.style.pointerEvents = "none";
+  let settled = false;
+  const onTransitionEnd = (transitionEvent) => {
+    if (transitionEvent.target === el) {
+      finish();
+    }
+  };
+  const finish = () => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    el.style.pointerEvents = "";
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+  el.addEventListener("transitionend", onTransitionEnd);
+  const durationsInSeconds = getComputedStyle(el)
+    .transitionDuration.split(",")
+    .map((value) => parseFloat(value) || 0);
+  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
+  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
+  return () => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+};
+
 // See the anchorArea grammar in this file's top comment.
 const ANCHOR_AREA_X_VALUES = new Set([
   "on-the-left",
@@ -857,6 +926,54 @@ const toSlideDirectionKey = (y, x) => {
     return yKey;
   }
   return `${yKey}-${xKey}`;
+};
+
+/**
+ * Maps an anchorArea y/x pair to one of popup_animation.js's `slide-from-*`
+ * `navi-animation` values, or `null` if both axes overlap the anchor (no
+ * direction to slide from — that's `resolvedAnimation === "scale"`
+ * territory instead, see openEffect).
+ *
+ * `flip: true` (a real anchor) swaps each bare word for its *opposite*
+ * compass direction: placed "above" the anchor, the popover should slide in
+ * from below — closer to the anchor, which sits below it — not from above,
+ * which would instead read like it's arriving from further away. `flip:
+ * false` (anchorReference/point mode, no anchor box to be "closer to") keeps
+ * the word as-is: "above" slides in from the top, matching the public
+ * `animation="slide-from-top"` value's own established meaning. "aligned-*"/
+ * "center" contribute no direction on their axis.
+ */
+const resolveSlideFrom = (y, x, { flip }) => {
+  const yWord =
+    y === "above"
+      ? flip
+        ? "bottom"
+        : "top"
+      : y === "below"
+        ? flip
+          ? "top"
+          : "bottom"
+        : null;
+  const xWord =
+    x === "on-the-left"
+      ? flip
+        ? "right"
+        : "left"
+      : x === "on-the-right"
+        ? flip
+          ? "left"
+          : "right"
+        : null;
+  if (yWord && xWord) {
+    return `slide-from-${yWord}-${xWord}`;
+  }
+  if (yWord) {
+    return `slide-from-${yWord}`;
+  }
+  if (xWord) {
+    return `slide-from-${xWord}`;
+  }
+  return null;
 };
 
 /**
