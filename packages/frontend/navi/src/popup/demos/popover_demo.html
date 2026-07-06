@@ -245,22 +245,32 @@
         return [value, setValue];
       };
 
-      // Backs a section's own "Animate" + "Slow" checkboxes and computes the
-      // animationDuration to pass down — storageKey scopes both to that one
-      // section, independent of every other section's own toggles.
+      // Backs a section's own "Animate"/"Fade"/"Slow" checkboxes and computes
+      // the animationDuration to pass down — storageKey scopes all three to
+      // that one section, independent of every other section's own toggles.
       const useAnimateControls = (storageKey) => {
         const [animate, setAnimate] = useStoredBoolean(
           `${storageKey}_animate`,
           false,
         );
+        const [fade, setFade] = useStoredBoolean(`${storageKey}_fade`, false);
         const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
         const animationDuration = animate && slow ? "0.6s" : undefined;
         return {
           animate,
+          fade,
           animationDuration,
           Toggle: () => (
             <div class="demo-animate-controls">
               <AnimateToggle animate={animate} onChange={setAnimate} />
+              <label class="demo-animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={fade}
+                  onChange={(e) => setFade(e.target.checked)}
+                />
+                Fade
+              </label>
               <label class="demo-animate-toggle">
                 <input
                   type="checkbox"
@@ -436,7 +446,7 @@
       );
 
       const PointerInteractionOutsideSection = () => {
-        const { animate, animationDuration, Toggle } = useAnimateControls(
+        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
           "popover_demo_pointer_interaction_outside",
         );
         return (
@@ -452,18 +462,21 @@
               <PointerInteractionOutsideDemo
                 label="none (default)"
                 animation={animate}
+                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="close"
                 pointerInteractionOutsideEffect="close"
                 animation={animate}
+                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="capture"
                 pointerInteractionOutsideEffect="capture"
                 animation={animate}
+                fadeAnimation={fade}
                 animationDuration={animationDuration}
               />
             </div>
@@ -559,6 +572,7 @@
         label,
         pointerInteractionOutsideEffect,
         animation,
+        fadeAnimation,
         animationDuration,
       }) => {
         const popoverId = useId();
@@ -573,6 +587,7 @@
               borderRadius="8px"
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
               animation={animation}
+              fadeAnimation={fadeAnimation}
               animationDuration={animationDuration}
               className="demo_popover_box"
             >
@@ -597,6 +612,7 @@
         duplicate = false,
         commandProxyFor,
         animation,
+        fadeAnimation,
         animationDuration,
       }) => {
         const popoverId = useId();
@@ -615,6 +631,7 @@
             <Popover
               id={popoverId}
               animation={animation}
+              fadeAnimation={fadeAnimation}
               animationDuration={animationDuration}
               borderRadius="8px"
               anchor={anchor}
@@ -633,7 +650,7 @@
       // to (via navi-command-proxy-for) instead of to itself.
       const AnchorAreaDefaultDemo = () => {
         const anchorId = useId();
-        const { animate, animationDuration, Toggle } = useAnimateControls(
+        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
           "popover_demo_area_anchor",
         );
         return (
@@ -658,6 +675,7 @@
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animate}
+                  fadeAnimation={fade}
                   animationDuration={animationDuration}
                 />
               )}
@@ -692,7 +710,7 @@
       );
 
       const AnchorAreaViewportDemo = () => {
-        const { animate, animationDuration, Toggle } = useAnimateControls(
+        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
           "popover_demo_area_viewport",
         );
         return (
@@ -706,6 +724,7 @@
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animate}
+                  fadeAnimation={fade}
                   animationDuration={animationDuration}
                 />
               )}
@@ -720,7 +739,7 @@
       // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
-        const { animate, animationDuration, Toggle } = useAnimateControls(
+        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
           "popover_demo_area_offset_parent",
         );
         return (
@@ -734,6 +753,7 @@
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
                     animation={animate}
+                    fadeAnimation={fade}
                     animationDuration={animationDuration}
                     borderRadius="8px"
                     anchor="offsetParent"
