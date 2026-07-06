@@ -506,33 +506,51 @@ const ControlledPopover = (props) => {
       // anchor="offsetParent" conceptually places the popover *inside*
       // relativeContainer — if that container hides overflow, clip the
       // popover to its visible bounds too, so it can't visually escape a
-      // container it's meant to live within. getBoundingClientRect() for
-      // both, read fresh right after the assignments above, so this is a
-      // plain viewport-relative rect comparison — no scroll-offset
-      // conversion needed either way.
+      // container it's meant to live within. Computed from `top`/`appliedLeft`
+      // (viewport-relative here via the scroll offset below) plus offsetWidth/
+      // Height, not popoverEl.getBoundingClientRect(): at this point the
+      // popover is still in its closed state, and for a "slide" animation
+      // that means its *painted* position is offset by the slide's own
+      // translate — getBoundingClientRect() would capture that transient
+      // offset instead of the popover's actual resting position.
       if (relativeContainer) {
         const containerOverflow = getComputedStyle(relativeContainer);
         const containerClips =
           containerOverflow.overflowX !== "visible" ||
           containerOverflow.overflowY !== "visible";
         if (containerClips) {
+          const { scrollLeft, scrollTop } =
+            getPositioningScrollOffset(popoverEl);
+          const popoverViewportTop = top - scrollTop;
+          const popoverViewportLeft = appliedLeft - scrollLeft;
+          const popoverWidth = popoverEl.offsetWidth;
+          const popoverHeight = popoverEl.offsetHeight;
           const containerRect = relativeContainer.getBoundingClientRect();
-          const popoverRect = popoverEl.getBoundingClientRect();
           popoverEl.style.setProperty(
             "--popup-container-clip-top",
-            `${snapToPixel(Math.max(0, containerRect.top - popoverRect.top))}px`,
+            `${snapToPixel(Math.max(0, containerRect.top - popoverViewportTop))}px`,
           );
           popoverEl.style.setProperty(
             "--popup-container-clip-right",
-            `${snapToPixel(Math.max(0, popoverRect.right - containerRect.right))}px`,
+            `${snapToPixel(
+              Math.max(
+                0,
+                popoverViewportLeft + popoverWidth - containerRect.right,
+              ),
+            )}px`,
           );
           popoverEl.style.setProperty(
             "--popup-container-clip-bottom",
-            `${snapToPixel(Math.max(0, popoverRect.bottom - containerRect.bottom))}px`,
+            `${snapToPixel(
+              Math.max(
+                0,
+                popoverViewportTop + popoverHeight - containerRect.bottom,
+              ),
+            )}px`,
           );
           popoverEl.style.setProperty(
             "--popup-container-clip-left",
-            `${snapToPixel(Math.max(0, containerRect.left - popoverRect.left))}px`,
+            `${snapToPixel(Math.max(0, containerRect.left - popoverViewportLeft))}px`,
           );
           popoverEl.style.setProperty(
             "--popup-container-clip-radius",
