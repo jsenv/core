@@ -166,13 +166,22 @@ const ControlledPopover = (props) => {
   //   is display:none in disguise, so closing it synchronously inside the
   //   same mousedown-triggered close would silently drop the very click
   //   armSuppressNextOpenRequest depends on.
+  //
+  // The backdrop isn't rendered at all when pointerInteractionOutsideEffect
+  // is "none" (see the JSX below) — it would have zero effect there, so
+  // there's no reason to pay for an always-open top-layer element. This
+  // effect depends on whether the backdrop currently exists (rather than
+  // []) so that if a caller flips pointerInteractionOutsideEffect away from
+  // "none" later, the newly-mounted backdrop still gets this same
+  // once-on-mount showPopover().
+  const hasBackdrop = pointerInteractionOutsideEffect !== "none";
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
     const backdropEl = backdropRef.current;
     if (backdropEl && !backdropEl.matches(":popover-open")) {
       backdropEl.showPopover();
     }
-  }, []);
+  }, [hasBackdrop]);
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollLock, etc.). The
@@ -182,8 +191,10 @@ const ControlledPopover = (props) => {
   // pub/sub.
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
+    // backdropEl is null when pointerInteractionOutsideEffect is "none" —
+    // the backdrop isn't rendered at all in that case (see the JSX below).
     const backdropEl = backdropRef.current;
-    if (!popoverEl || !backdropEl) {
+    if (!popoverEl) {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
@@ -337,10 +348,11 @@ const ControlledPopover = (props) => {
       popoverEl.removeAttribute("data-position-x-current");
     }
 
-    // The backdrop is already open (shown once, on mount — see that
-    // effect); only its aria-expanded (which its own CSS keys pointer-events
-    // off) needs to flip here, in sync with the real popover.
-    backdropEl.setAttribute("aria-expanded", "true");
+    // The backdrop (when rendered — see backdropEl's own definition above)
+    // is already open (shown once, on mount — see that effect); only its
+    // aria-expanded (which its own CSS keys pointer-events off) needs to
+    // flip here, in sync with the real popover.
+    backdropEl?.setAttribute("aria-expanded", "true");
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
     // What we observe for repositioning on resize/scroll/visibility changes:
@@ -522,7 +534,7 @@ const ControlledPopover = (props) => {
       popoverEl.hidePopover();
       // Not backdropEl.hidePopover() — see the mount effect's comment for
       // why the backdrop itself always stays open once shown.
-      backdropEl.setAttribute("aria-expanded", "false");
+      backdropEl?.setAttribute("aria-expanded", "false");
       restoreFocus(closeEvent);
 
       cleanup();
@@ -547,48 +559,50 @@ const ControlledPopover = (props) => {
 
         aria-hidden since it's purely decorative/interactive, never meant to
         be perceived as its own UI element.
+
+        Not rendered at all when pointerInteractionOutsideEffect is "none":
+        it would have pointer-events: none and a transparent background,
+        i.e. no observable effect, so there's nothing to justify keeping an
+        always-open top-layer element around for the component's lifetime.
       */}
-      <Box
-        ref={backdropRef}
-        id={backdropId}
-        popover="manual"
-        baseClassName="navi_popover_backdrop"
-        aria-hidden="true"
-        data-pointer-interaction-outside={
-          pointerInteractionOutsideEffect === "none"
-            ? undefined
-            : pointerInteractionOutsideEffect
-        }
-        onMouseDown={(e) => {
-          if (e.button !== 0) {
-            return;
-          }
-          // Ignore clicks that land inside the popover's bounding rect
-          // (padding and border area are part of the popover box but can
-          // forward pointer events to the backdrop behind them).
-          const rect = ref.current.getBoundingClientRect();
-          const isOutside =
-            e.clientX < rect.left ||
-            e.clientX > rect.right ||
-            e.clientY < rect.top ||
-            e.clientY > rect.bottom;
-          if (!isOutside) {
-            return;
-          }
-          // "capture" absorbs the click so it doesn't reach whatever's
-          // behind the popover, without closing it; "none" never reaches
-          // here at all (the backdrop has pointer-events: none in that
-          // case, see the CSS above) — this check is just a safety net.
-          if (pointerInteractionOutsideEffect === "capture") {
-            e.preventDefault();
-            return;
-          }
-          if (pointerInteractionOutsideEffect === "close") {
-            openController.requestClose(e, { isCancel: true });
-            return;
-          }
-        }}
-      />
+      {hasBackdrop && (
+        <Box
+          ref={backdropRef}
+          id={backdropId}
+          popover="manual"
+          baseClassName="navi_popover_backdrop"
+          aria-hidden="true"
+          data-pointer-interaction-outside={pointerInteractionOutsideEffect}
+          onMouseDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
+            // Ignore clicks that land inside the popover's bounding rect
+            // (padding and border area are part of the popover box but can
+            // forward pointer events to the backdrop behind them).
+            const rect = ref.current.getBoundingClientRect();
+            const isOutside =
+              e.clientX < rect.left ||
+              e.clientX > rect.right ||
+              e.clientY < rect.top ||
+              e.clientY > rect.bottom;
+            if (!isOutside) {
+              return;
+            }
+            // "capture" absorbs the click so it doesn't reach whatever's
+            // behind the popover, without closing it. "none" never reaches
+            // here at all — the backdrop isn't rendered in that case.
+            if (pointerInteractionOutsideEffect === "capture") {
+              e.preventDefault();
+              return;
+            }
+            if (pointerInteractionOutsideEffect === "close") {
+              openController.requestClose(e, { isCancel: true });
+              return;
+            }
+          }}
+        />
+      )}
       <Box
         id={id}
         popover="manual"
