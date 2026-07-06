@@ -145,6 +145,24 @@ export const buildPopupAnimationCss = (selector) => {
               var(--popup-spawn-origin-y, 0px);
           }
         }
+        /* Unconditional (not nested under [aria-expanded="false"]) — CSS
+           reads a transition's timing from the *target* state, so scoping
+           this to the closed selector would only speed up the closing
+           transition, not the opening one. --popup-spawn-translate-duration
+           only overrides the 4th slot (translate) in the shared
+           transition-property order (display, overlay, opacity, translate,
+           scale, box-shadow) below — everything else keeps
+           --popup-animation-duration. */
+        &[data-spawn-from-pointer] {
+          transition-duration:
+            var(--popup-animation-duration), var(--popup-animation-duration),
+            var(--popup-animation-duration),
+            var(
+              --popup-spawn-translate-duration,
+              calc(var(--popup-animation-duration) * 0.5)
+            ),
+            var(--popup-animation-duration), var(--popup-animation-duration);
+        }
       }
 
       /* slide — anchorReference/point mode family: direction multipliers,
