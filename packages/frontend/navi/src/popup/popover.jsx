@@ -603,11 +603,8 @@ const ControlledPopover = (props) => {
       } else {
         runClose();
       }
-      // Cleared here, not at the next open: this is stale state from *this*
-      // close, not something to decide fresh right before positioning — see
-      // the comment above where it's set.
-      popoverEl.removeAttribute("data-position-y-current");
-      popoverEl.removeAttribute("data-position-x-current");
+      // data-position-y/x-current is deliberately *not* cleared here — see
+      // the comment where it's cleared instead (start of the next open).
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armBackdropHideOnClick(

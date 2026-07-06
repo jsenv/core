@@ -323,11 +323,10 @@
           <h1>Popover demo</h1>
 
           <p>
-            Most sections below have an "Animated" part — the same buttons, with{" "}
-            <code>animation</code> turned on — the best animation for that
-            context gets picked automatically (Fading is the exception, since
-            it's not about <code>animation</code>). Where there's an "Animate"
-            checkbox, a "Slow" checkbox next to it slows that section's
+            Most sections below have an "Animate"/"Fade" checkbox pair — the
+            same buttons, with <code>animation</code>/<code>fadeAnimation</code>{" "}
+            turned on — the best animation for that context gets picked
+            automatically. A "Slow" checkbox next to them slows that section's
             animations down so you can actually see them play out.
           </p>
 
@@ -337,7 +336,6 @@
           <AnchorAreaSection />
           <AnchorIgnoreSection />
           <AnchorSpacingSection />
-          <FadingSection />
           <ViewTransitionSection />
           <PointerInteractionOutsideSection />
         </div>
@@ -360,9 +358,6 @@
               <a href="#anchor-spacing">anchorSpacing</a>
             </li>
             <li>
-              <a href="#fading">Fading</a>
-            </li>
-            <li>
               <a href="#view-transition">View transition (experimental)</a>
             </li>
             <li>
@@ -374,19 +369,24 @@
         </nav>
       );
 
-      const AnchorSection = () => (
-        <section id="anchor" class="demo-section">
-          <h2>1. Anchor</h2>
-          <div class="demo-row">
-            <AnchoredPopover label="anchored (default)" />
-            <AnchoredPopover
-              label="animated"
-              animation
-              animationDuration="0.6s"
-            />
-          </div>
-        </section>
-      );
+      const AnchorSection = () => {
+        const { animate, fade, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_anchor");
+        return (
+          <section id="anchor" class="demo-section">
+            <h2>1. Anchor</h2>
+            <div class="demo-row">
+              <AnchoredPopover
+                label="anchored (default)"
+                animation={animate}
+                fadeAnimation={fade}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
 
       // This section is always relative to *an* anchor — a real element by
       // default, or "viewport"/"offsetParent" (see the 2nd/3rd subsections
@@ -457,21 +457,6 @@
         </section>
       );
 
-      const FadingSection = () => (
-        <section id="fading" class="demo-section">
-          <h2>5. Fading</h2>
-          <p>
-            <code>fadeAnimation</code> (defaults to <code>false</code>) controls
-            opacity fading independently of <code>animation</code> — it combines
-            with any of the animations above, or works on its own with no{" "}
-            <code>animation</code> at all.
-          </p>
-          <div class="demo-row">
-            <AnchoredPopover label="fade" fadeAnimation />
-          </div>
-        </section>
-      );
-
       const ViewTransitionSection = () => (
         <section id="view-transition" class="demo-section">
           <h2>View transition (experimental)</h2>
@@ -497,7 +482,7 @@
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>6. pointerInteractionOutsideEffect</h2>
+            <h2>5. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"none"</code> (default) — interactions outside the popover
               happen normally. <code>"close"</code> — a mousedown outside closes
