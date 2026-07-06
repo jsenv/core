@@ -357,24 +357,16 @@ const ControlledPopover = (props) => {
       let top;
 
       if (anchorReference) {
-        // anchor="offsetParent" renders popoverEl *inside* relativeContainer
-        // (required for getPositionedParent to find it at all) — since
-        // popoverEl is position: absolute, that container *is* its
-        // containing block, so the coordinates computeStickToPosition works
-        // with must be local to it (0,0 at its own padding-box corner, no
-        // scroll offset added). Plain "viewport" mode (no relativeContainer)
-        // has no such container: its containing block is the document root,
-        // which is what the scroll offset added inside computeStickToPosition
-        // already accounts for.
+        // An element in the top layer always uses the initial containing
+        // block, regardless of `position` (absolute or fixed) and regardless
+        // of where it actually sits in the DOM — so popoverEl's own
+        // containing block is the document root here even in "offsetParent"
+        // mode, same as "viewport". relativeContainer is only where to
+        // visually position against, not a containing block: containerRect
+        // stays viewport-relative, converted like any other case by
+        // getPositioningScrollOffset inside computeStickToPosition.
         const containerRect = relativeContainer
-          ? {
-              left: 0,
-              top: 0,
-              right: relativeContainer.clientWidth,
-              bottom: relativeContainer.clientHeight,
-              width: relativeContainer.clientWidth,
-              height: relativeContainer.clientHeight,
-            }
+          ? relativeContainer.getBoundingClientRect()
           : {
               left: 0,
               top: 0,
@@ -389,7 +381,6 @@ const ControlledPopover = (props) => {
           containerRect,
           slideDirectionKey,
           spacingPx,
-          { skipScrollOffset: Boolean(relativeContainer) },
         );
         appliedLeft = stickPosition.left;
         top = stickPosition.top;
@@ -780,17 +771,12 @@ const toSlideDirectionKey = (y, x) => {
  * position needs (see getPositioningScrollOffset), matching
  * pickPositionRelativeTo's convention — viewport rect math, converted at the
  * very end, continuously recomputed by visibleRectEffect on scroll/resize.
- * @param {object} [options]
- * @param {boolean} [options.skipScrollOffset] - true when `containerRect` is
- *   already local to popoverEl's own containing block (see the caller) — no
- *   viewport/document conversion needed in that case.
  */
 const computeStickToPosition = (
   popoverEl,
   containerRect,
   anchorPoint,
   spacingPx,
-  { skipScrollOffset = false } = {},
 ) => {
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect(): the
   // popover may have an active CSS scale transform mid-animation (e.g.
@@ -798,9 +784,7 @@ const computeStickToPosition = (
   // off the position math (see the matching fix in pickPositionRelativeTo).
   const width = popoverEl.offsetWidth;
   const height = popoverEl.offsetHeight;
-  const { scrollLeft, scrollTop } = skipScrollOffset
-    ? { scrollLeft: 0, scrollTop: 0 }
-    : getPositioningScrollOffset(popoverEl);
+  const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);
 
   let left;
   if (

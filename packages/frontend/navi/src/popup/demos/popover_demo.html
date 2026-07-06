@@ -26,9 +26,6 @@
       .demo-toc li {
         margin-bottom: 4px;
       }
-      .demo-slow-toggle {
-        margin-bottom: 24px;
-      }
       .demo-section {
         margin-bottom: 32px;
         scroll-margin-top: 16px;
@@ -68,9 +65,13 @@
         border: 1px dotted #999;
         border-radius: 8px;
       }
+      .demo-animate-controls {
+        display: flex;
+        margin-top: 8px;
+        gap: 12px;
+      }
       .demo-animate-toggle {
         display: block;
-        margin-top: 8px;
         font-size: 13px;
       }
       .demo-container-label {
@@ -229,10 +230,9 @@
         x === "aligned-left" ||
         x === "aligned-right";
 
-      const SLOW_DOWN_STORAGE_KEY = "popover_demo_slow_down_animations";
-
-      // Backs each grid demo's own "Animate" checkbox — independent of the
-      // others, unlike "Slow down animations" above.
+      // Backs each grid demo's own "Animate"/"Slow" checkboxes — independent
+      // per section, so slowing down one doesn't affect the others while
+      // you're testing.
       const useStoredBoolean = (key, defaultValue) => {
         const [value, setValue] = useState(() => {
           const stored = localStorage.getItem(key);
@@ -242,6 +242,35 @@
           localStorage.setItem(key, String(value));
         }, [key, value]);
         return [value, setValue];
+      };
+
+      // Backs a section's own "Animate" + "Slow" checkboxes and computes the
+      // animationDuration to pass down — storageKey scopes both to that one
+      // section, independent of every other section's own toggles.
+      const useAnimateControls = (storageKey) => {
+        const [animate, setAnimate] = useStoredBoolean(
+          `${storageKey}_animate`,
+          false,
+        );
+        const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
+        const animationDuration = animate && slow ? "0.6s" : undefined;
+        return {
+          animate,
+          animationDuration,
+          Toggle: () => (
+            <div class="demo-animate-controls">
+              <AnimateToggle animate={animate} onChange={setAnimate} />
+              <label class="demo-animate-toggle">
+                <input
+                  type="checkbox"
+                  checked={slow}
+                  onChange={(e) => setSlow(e.target.checked)}
+                />
+                Slow
+              </label>
+            </div>
+          ),
+        };
       };
 
       const AnimateToggle = ({ animate, onChange }) => (
@@ -255,57 +284,28 @@
         </label>
       );
 
-      const App = () => {
-        // Defaults to checked: absence of the key (never saved before) means
-        // "true", not the string comparison's natural "false" default —
-        // only an explicit previous "false" should turn it off.
-        const [slowDown, setSlowDown] = useState(() => {
-          const stored = localStorage.getItem(SLOW_DOWN_STORAGE_KEY);
-          return stored === null ? true : stored === "true";
-        });
-        useEffect(() => {
-          localStorage.setItem(SLOW_DOWN_STORAGE_KEY, String(slowDown));
-        }, [slowDown]);
-        const animatedDuration = slowDown ? "0.6s" : undefined;
+      const App = () => (
+        <div>
+          <h1>Popover demo</h1>
 
-        return (
-          <div>
-            <h1>Popover demo</h1>
+          <p>
+            Most sections below have an "Animated" part — the same buttons, with{" "}
+            <code>animation</code> turned on — the best animation for that
+            context gets picked automatically (Fading is the exception, since
+            it's not about <code>animation</code>). Where there's an "Animate"
+            checkbox, a "Slow" checkbox next to it slows that section's
+            animations down so you can actually see them play out.
+          </p>
 
-            <p>
-              Most sections below have an "Animated" part — the same buttons,
-              with <code>animation</code> turned on (an "Animate" checkbox in
-              the anchorArea section) — the best animation for that context gets
-              picked automatically (Fading is the exception, since it's not
-              about <code>animation</code>). Animations are quick by default;
-              check the box below to slow them down so you can actually see them
-              play out.
-            </p>
-            <SlowDownToggle slowDown={slowDown} onChange={setSlowDown} />
+          <TableOfContents />
 
-            <TableOfContents />
-
-            <AnchorSection animatedDuration={animatedDuration} />
-            <AnchorAreaSection animatedDuration={animatedDuration} />
-            <AnchorIgnoreSection animatedDuration={animatedDuration} />
-            <AnchorSpacingSection animatedDuration={animatedDuration} />
-            <FadingSection />
-            <PointerInteractionOutsideSection
-              animatedDuration={animatedDuration}
-            />
-          </div>
-        );
-      };
-
-      const SlowDownToggle = ({ slowDown, onChange }) => (
-        <label class="demo-slow-toggle">
-          <input
-            type="checkbox"
-            checked={slowDown}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          Slow down animations
-        </label>
+          <AnchorSection />
+          <AnchorAreaSection />
+          <AnchorIgnoreSection />
+          <AnchorSpacingSection />
+          <FadingSection />
+          <PointerInteractionOutsideSection />
+        </div>
       );
 
       const TableOfContents = () => (
@@ -336,7 +336,7 @@
         </nav>
       );
 
-      const AnchorSection = ({ animatedDuration }) => (
+      const AnchorSection = () => (
         <section id="anchor" class="demo-section">
           <h2>1. Anchor</h2>
           <div class="demo-row">
@@ -344,7 +344,7 @@
             <AnchoredPopover
               label="animated"
               animation
-              animationDuration={animatedDuration}
+              animationDuration="0.6s"
             />
           </div>
         </section>
@@ -354,7 +354,7 @@
       // default, or "viewport"/"offsetParent" (see the 2nd/3rd subsections
       // below) — so it's anchorArea itself that's worth documenting, not
       // "placement" as some separate idea.
-      const AnchorAreaSection = ({ animatedDuration }) => (
+      const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
           <h2>2. anchorArea</h2>
 
@@ -364,21 +364,21 @@
             <code>navi-command-proxy-for</code>) instead of anchoring to
             themselves — useful for this demo, but also in practice.
           </p>
-          <AnchorAreaDefaultDemo animatedDuration={animatedDuration} />
+          <AnchorAreaDefaultDemo />
 
           <h3>
             anchor<code>="viewport"</code>
           </h3>
-          <AnchorAreaViewportDemo animatedDuration={animatedDuration} />
+          <AnchorAreaViewportDemo />
 
           <h3>
             anchor<code>="offsetParent"</code>
           </h3>
-          <AnchorAreaOffsetParentDemo animatedDuration={animatedDuration} />
+          <AnchorAreaOffsetParentDemo />
         </section>
       );
 
-      const AnchorIgnoreSection = ({ animatedDuration }) => (
+      const AnchorIgnoreSection = () => (
         <section id="anchor-ignore" class="demo-section">
           <h2>3. Ignoring the anchor</h2>
           <p>
@@ -393,13 +393,13 @@
             <AnchorlessPopover
               label="animated"
               animation
-              animationDuration={animatedDuration}
+              animationDuration="0.6s"
             />
           </div>
         </section>
       );
 
-      const AnchorSpacingSection = ({ animatedDuration }) => (
+      const AnchorSpacingSection = () => (
         <section id="anchor-spacing" class="demo-section">
           <h2>4. anchorSpacing</h2>
           <p>
@@ -413,7 +413,7 @@
               label="animated"
               anchorSpacing={16}
               animation
-              animationDuration={animatedDuration}
+              animationDuration="0.6s"
             />
           </div>
         </section>
@@ -434,10 +434,9 @@
         </section>
       );
 
-      const PointerInteractionOutsideSection = ({ animatedDuration }) => {
-        const [animate, setAnimate] = useStoredBoolean(
-          "popover_demo_animate_pointer_interaction_outside",
-          false,
+      const PointerInteractionOutsideSection = () => {
+        const { animate, animationDuration, Toggle } = useAnimateControls(
+          "popover_demo_pointer_interaction_outside",
         );
         return (
           <section id="pointer-interaction-outside" class="demo-section">
@@ -452,22 +451,22 @@
               <PointerInteractionOutsideDemo
                 label="none (default)"
                 animation={animate}
-                animationDuration={animate ? animatedDuration : undefined}
+                animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="close"
                 pointerInteractionOutsideEffect="close"
                 animation={animate}
-                animationDuration={animate ? animatedDuration : undefined}
+                animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="capture"
                 pointerInteractionOutsideEffect="capture"
                 animation={animate}
-                animationDuration={animate ? animatedDuration : undefined}
+                animationDuration={animationDuration}
               />
             </div>
-            <AnimateToggle animate={animate} onChange={setAnimate} />
+            <Toggle />
           </section>
         );
       };
@@ -631,11 +630,10 @@
       // A single static box, with faint labels hinting at the four
       // directions around it, that every button below anchors its popover
       // to (via navi-command-proxy-for) instead of to itself.
-      const AnchorAreaDefaultDemo = ({ animatedDuration }) => {
+      const AnchorAreaDefaultDemo = () => {
         const anchorId = useId();
-        const [animate, setAnimate] = useStoredBoolean(
-          "popover_demo_area_animate_anchor",
-          false,
+        const { animate, animationDuration, Toggle } = useAnimateControls(
+          "popover_demo_area_anchor",
         );
         return (
           <>
@@ -659,11 +657,11 @@
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animate}
-                  animationDuration={animate ? animatedDuration : undefined}
+                  animationDuration={animationDuration}
                 />
               )}
             />
-            <AnimateToggle animate={animate} onChange={setAnimate} />
+            <Toggle />
           </>
         );
       };
@@ -692,10 +690,9 @@
         </>
       );
 
-      const AnchorAreaViewportDemo = ({ animatedDuration }) => {
-        const [animate, setAnimate] = useStoredBoolean(
-          "popover_demo_area_animate_viewport",
-          false,
+      const AnchorAreaViewportDemo = () => {
+        const { animate, animationDuration, Toggle } = useAnimateControls(
+          "popover_demo_area_viewport",
         );
         return (
           <>
@@ -708,11 +705,11 @@
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animate}
-                  animationDuration={animate ? animatedDuration : undefined}
+                  animationDuration={animationDuration}
                 />
               )}
             />
-            <AnimateToggle animate={animate} onChange={setAnimate} />
+            <Toggle />
           </>
         );
       };
@@ -720,13 +717,11 @@
       // anchor="offsetParent" needs the popovers rendered *inside* the
       // positioned container to find it — the trigger buttons don't, so
       // they live outside it, in their own grid below.
-      const AnchorAreaOffsetParentDemo = ({ animatedDuration }) => {
+      const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
-        const [animate, setAnimate] = useStoredBoolean(
-          "popover_demo_area_animate_offset_parent",
-          false,
+        const { animate, animationDuration, Toggle } = useAnimateControls(
+          "popover_demo_area_offset_parent",
         );
-        const animationDuration = animate ? animatedDuration : undefined;
         return (
           <>
             <PointModeNote referenceLabel="the container" />
@@ -762,7 +757,7 @@
                 </Button>
               )}
             />
-            <AnimateToggle animate={animate} onChange={setAnimate} />
+            <Toggle />
           </>
         );
       };
