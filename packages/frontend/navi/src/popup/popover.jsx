@@ -40,17 +40,18 @@
  * on-the-right. A bare word means no overlap with the anchor; "aligned-"
  * means edges touching. A single word implies "center" on the other axis.
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
- * for the "aligned-" pair on both axes. An "aligned-"/"center" axis means the
- * popover overlaps the anchor there, so a translate/scale on that axis reads
- * oddly — `animation="auto"` resolves to "scaling" whenever *both* axes
- * overlap (see resolveDirectionValue below); otherwise "expanding" for a
- * real anchor (grows out of its own edge) or "sliding" for a point/corner
- * (no edge to grow out of, slides in instead) — concretely as one of
- * popup_animation.js's `slide-from-*`/`expand-*` values, computed here in JS
- * (not left for CSS to puzzle out from raw position attributes) so there's a
- * single, inspectable `navi-animation` value driving one direct CSS rule per
- * direction, no attribute-cascade indirection. `animation="fading"` is a
- * fourth, explicit-only kind (no motion at all).
+ * for the "aligned-" pair on both axes. `animation="auto"` resolves to
+ * "scaling" for any real anchor, or for a point/corner placed dead-center
+ * (an "aligned-"/"center" axis means the popover overlaps the anchor there,
+ * so a translate reads oddly — see resolveDirectionValue below); "sliding"
+ * otherwise (a point/corner with a direction, no anchor edge to grow out
+ * of) — concretely as one of popup_animation.js's `slide-from-*` values,
+ * computed here in JS (not left for CSS to puzzle out from raw position
+ * attributes) so there's a single, inspectable `navi-animation` value
+ * driving one direct CSS rule per direction, no attribute-cascade
+ * indirection. `animation="expanding"` (grows out of a real anchor's own
+ * edge, `expand-*` concretely) and `animation="fading"` (opacity only, no
+ * motion) are both explicit-only — never auto-picked.
  *
  * Each `navi-animation` value's own CSS rule (popup_animation.js) includes
  * its own fade in/out — no separate `fadeAnimation` prop or attribute.
@@ -301,28 +302,21 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.y,
       parsedAnchorArea.x,
     );
-    // "aligned-"/"center" means the popover overlaps the anchor on that axis
-    // (see the CSS comment above) — a translate/scale reads oddly when it
-    // overlaps on *both* axes at once, so auto-animation picks "scaling"
-    // there instead. Otherwise: a real anchor grows out of its own edge
-    // ("expanding") — unless anchorSpacing leaves a gap between the popover
-    // and that edge, in which case growing "from" a point floating in that
-    // gap looks disconnected from the anchor, so "scaling" (center-based,
-    // no edge involved) is preferred there too. A point/corner has no edge
-    // to grow out of either way, and slides in instead ("sliding").
+    // A real anchor always auto-picks "scaling" — reads better overall than
+    // "expanding" (which stays available as an explicit opt-in). A
+    // point/corner has no anchor edge to grow out of either way: "scaling"
+    // for the dead-center case ("aligned-"/"center" on *both* axes, see the
+    // CSS comment above — a translate reads oddly there), "sliding"
+    // otherwise.
     const yOverlapsAnchor =
       parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
     const xOverlapsAnchor =
       parsedAnchorArea.x !== "on-the-left" &&
       parsedAnchorArea.x !== "on-the-right";
     const resolvedAnimationKind = isAutoAnimation
-      ? yOverlapsAnchor && xOverlapsAnchor
+      ? anchor || (yOverlapsAnchor && xOverlapsAnchor)
         ? "scaling"
-        : anchor
-          ? anchorSpacing
-            ? "scaling"
-            : "expanding"
-          : "sliding"
+        : "sliding"
       : animation;
     // Only makes sense for a "scaling" popup with no real anchor to grow out
     // of (a real anchor's own edge already reads fine as the grow point) —

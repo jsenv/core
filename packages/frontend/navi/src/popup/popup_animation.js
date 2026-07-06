@@ -55,10 +55,10 @@
  * so it slides in instead. The word names *where it comes from*: placed
  * "above" (a point/corner), it slides in from the top.
  *
- * `animation="expand-*"` (a real anchor only, the auto-picked default
- * there): reads better against a real anchor than a translate, which
- * visually travels *through* the anchor element on its way in. Grows out of
- * the anchor's own edge via `scale` + `transform-origin`, 8 directions
+ * `animation="expand-*"` (a real anchor only, explicit opt-in — no longer
+ * auto-picked, "scaling" reads better overall): grows out of the anchor's
+ * own edge via `scale` + `transform-origin` instead of a translate, which
+ * visually travels *through* the anchor element on its way in. 8 directions
  * (cardinal + 4 diagonals) — cardinal ones scale a single axis only
  * (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
  * only), diagonals scale both. The word names the motion/growth direction,
@@ -68,14 +68,13 @@
  *
  * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.
- * Popover picks this automatically for `animation="auto"` whenever both
- * anchorArea axes overlap the anchor — there's no sensible direction to
- * grow/slide from in that case, e.g. a dead-centered popover or one placed
- * fully inside/against the anchor on both axes. Popover's own
- * `spawnFromPointer` prop (anchorReference/point mode + "scaling" only) adds
- * a `translate` from the click/pointer position to `0 0` alongside the same
- * centered scale — see `--popup-spawn-origin-x/y` below, set by
- * popover.jsx's `positionPopover`.
+ * Popover picks this automatically for `animation="auto"` for any real
+ * anchor, or a point/corner placed dead-center (both anchorArea axes
+ * overlapping the anchor — there's no sensible direction to slide from in
+ * that case). Popover's own `spawnFromPointer` prop (anchorReference/point
+ * mode + "scaling" only) adds a `translate` from the click/pointer position
+ * to `0 0` alongside the same centered scale — see
+ * `--popup-spawn-origin-x/y` below, set by popover.jsx's `positionPopover`.
  *
  * `animation="view-transition"` (Popover only, experimental): none of the
  * CSS below applies — popover.jsx wraps its show/hide in
