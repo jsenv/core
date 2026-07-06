@@ -495,21 +495,21 @@ export const visibleRectEffect = (
  *
  * Horizontal axis — positionX / positionXFixed (left → right):
  *   "on-the-left"   element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "left-aligned"  element.left   = anchor.left   (left edges aligned, overlapping)
+ *   "aligned-left"  element.left   = anchor.left   (left edges aligned, overlapping)
  *   "center"        element centered horizontally over anchor  (default)
- *   "right-aligned" element.right  = anchor.right  (right edges aligned, overlapping)
+ *   "aligned-right" element.right  = anchor.right  (right edges aligned, overlapping)
  *   "on-the-right"  element.left   = anchor.right  (sits entirely to the right of anchor)
  *
  * Vertical axis — positionY / positionYFixed (top → bottom):
  *   "above"          element.bottom = anchor.top    (sits above, no overlap)
- *   "top-aligned"    element.top    = anchor.top    (top edges aligned, overlapping)
+ *   "aligned-top"    element.top    = anchor.top    (top edges aligned, overlapping)
  *   "center"         element centered vertically over anchor
- *   "bottom-aligned" element.bottom = anchor.bottom (bottom edges aligned, overlapping)
+ *   "aligned-bottom" element.bottom = anchor.bottom (bottom edges aligned, overlapping)
  *   "below"          element.top    = anchor.bottom (sits below, no overlap)  (default)
  *
  * positionX / positionY attempt the requested placement and automatically flip to the
  * logical opposite when the element does not fit in the viewport:
- *   above ↔ below,   top-aligned ↔ bottom-aligned,   on-the-left ↔ on-the-right,   left-aligned ↔ right-aligned
+ *   above ↔ below,   aligned-top ↔ aligned-bottom,   on-the-left ↔ on-the-right,   aligned-left ↔ aligned-right
  *
  * positionXFixed / positionYFixed skip the fit check entirely.
  *
@@ -525,15 +525,15 @@ export const visibleRectEffect = (
  * @param {object} [options]
  * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
  *   "on-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "left-aligned"  — element.left   = anchor.left   (left edges aligned, overlapping)
+ *   "aligned-left"  — element.left   = anchor.left   (left edges aligned, overlapping)
  *   "center"        — element centered horizontally over anchor  (default)
- *   "right-aligned" — element.right  = anchor.right  (right edges aligned, overlapping)
+ *   "aligned-right" — element.right  = anchor.right  (right edges aligned, overlapping)
  *   "on-the-right"  — element.left   = anchor.right  (sits entirely to the right of anchor)
  * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
  *   "above"          — element.bottom = anchor.top    (sits above, no overlap)
- *   "top-aligned"    — element.top    = anchor.top    (top edges aligned, overlapping)
+ *   "aligned-top"    — element.top    = anchor.top    (top edges aligned, overlapping)
  *   "center"         — element centered vertically over anchor
- *   "bottom-aligned" — element.bottom = anchor.bottom (bottom edges aligned, overlapping)
+ *   "aligned-bottom" — element.bottom = anchor.bottom (bottom edges aligned, overlapping)
  *   "below"          — element.top    = anchor.bottom (sits below, no overlap)  (default)
  * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
  * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
@@ -655,21 +655,21 @@ export const pickPositionRelativeTo = (
     const oppositeY = {
       "above": "below",
       "below": "above",
-      "top-aligned": "bottom-aligned",
-      "bottom-aligned": "top-aligned",
+      "aligned-top": "aligned-bottom",
+      "aligned-bottom": "aligned-top",
     };
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
         return spaceAbove - spacing - viewportSpacing;
       }
-      if (y === "bottom-aligned") {
+      if (y === "aligned-bottom") {
         return spaceAbove + anchorHeight - viewportSpacing;
       }
       if (y === "below") {
         return spaceBelow - spacing - viewportSpacing;
       }
-      if (y === "top-aligned") {
+      if (y === "aligned-top") {
         return spaceBelow + anchorHeight - viewportSpacing;
       }
       return Infinity; // center
@@ -716,18 +716,18 @@ export const pickPositionRelativeTo = (
     const oppositeX = {
       "on-the-left": "on-the-right",
       "on-the-right": "on-the-left",
-      "left-aligned": "right-aligned",
-      "right-aligned": "left-aligned",
+      "aligned-left": "aligned-right",
+      "aligned-right": "aligned-left",
     };
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "on-the-left") {
         return spaceLeft - spacing - viewportSpacing;
       }
-      if (x === "left-aligned") {
+      if (x === "aligned-left") {
         return viewportWidth - anchorLeft - viewportSpacing;
       }
-      if (x === "right-aligned") {
+      if (x === "aligned-right") {
         return anchorRight - viewportSpacing;
       }
       if (x === "on-the-right") {
@@ -769,7 +769,7 @@ export const pickPositionRelativeTo = (
   {
     if (finalX === "on-the-left") {
       elementPositionLeft = effectiveAnchorLeft - elementWidth - spacing;
-    } else if (finalX === "left-aligned") {
+    } else if (finalX === "aligned-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
       // Complex logic handles wide anchors and viewport-edge snapping
@@ -806,7 +806,7 @@ export const pickPositionRelativeTo = (
           }
         }
       }
-    } else if (finalX === "right-aligned") {
+    } else if (finalX === "aligned-right") {
       elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
       // "on-the-right"
@@ -831,13 +831,13 @@ export const pickPositionRelativeTo = (
       const idealTop = anchorTop + insetTop - elementHeight - spacing;
       elementPositionTop =
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
-    } else if (finalY === "bottom-aligned") {
+    } else if (finalY === "aligned-bottom") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop =
         idealTop < viewportSpacing ? viewportSpacing : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
-    } else if (finalY === "top-aligned") {
+    } else if (finalY === "aligned-top") {
       const idealTop = anchorTop;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
@@ -883,11 +883,11 @@ export const pickPositionRelativeTo = (
   // spacing (gap between anchor and element) and viewportSpacing are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
-    (finalY === "bottom-aligned" ? spaceAbove + anchorHeight : spaceAbove) -
+    (finalY === "aligned-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
     (finalY === "above" ? spacing : 0) -
     viewportSpacing;
   const effectiveSpaceBelow =
-    (finalY === "top-aligned" ? spaceBelow + anchorHeight : spaceBelow) -
+    (finalY === "aligned-top" ? spaceBelow + anchorHeight : spaceBelow) -
     (finalY === "below" ? spacing : 0) -
     viewportSpacing;
 

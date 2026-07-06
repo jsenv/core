@@ -73,29 +73,31 @@
         align-items: flex-start;
         gap: 24px;
       }
-      .demo-point-grid {
+      .demo-area-grid {
         display: grid;
         width: fit-content;
         margin-top: 8px;
         padding: 8px;
-        grid-template-areas:
-          "top-left top top-right"
-          "left center right"
-          "bottom-left bottom bottom-right";
-        grid-template-columns: repeat(3, 80px);
-        grid-template-rows: repeat(3, 48px);
+        grid-template-columns: repeat(5, 100px);
+        grid-template-rows: repeat(5, 48px);
+        gap: 2px;
         border: 1px solid #999;
       }
-      .demo-point-cell {
+      .demo-area-cell {
         display: flex;
         border: 1px solid #ccc;
       }
-      .demo-point-button {
+      .demo-area-button {
         display: flex;
         width: 100%;
         height: 100%;
         padding: 2px;
-        font-size: 11px;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        text-align: center;
+        line-height: 1.2;
+        white-space: normal;
       }
     </style>
   </head>
@@ -106,30 +108,21 @@
       import { useId, useState, useEffect } from "preact/hooks";
       import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
-      // The 9 classic compass presets anchorArea accepts directly (also
-      // used to lay out PointGrid's cells, matching the CSS
-      // grid-template-areas names above).
-      const POINTS = [
-        "top-left",
-        "top",
-        "top-right",
-        "left",
-        "center",
-        "right",
-        "bottom-left",
-        "bottom",
-        "bottom-right",
-      ];
-
-      // The "top"/"bottom"/"left"/"right" presets above are shortcuts for
-      // these same plain, non-overlapping axis words ("above"/"below" for
-      // Y, "on-the-left"/"on-the-right" for X) paired with "center" on the
-      // other axis — shown here explicitly to demonstrate both spellings
-      // produce the identical placement.
-      const ANCHOR_AREA_EXTRA_VALUES = [
+      // Every value anchorArea's Y/X axes accept — the grid below shows all
+      // 25 combinations (order-independent: "above on-the-left" and
+      // "on-the-left above" mean the same thing).
+      const ANCHOR_AREA_Y_VALUES = [
         "above",
+        "aligned-top",
+        "center",
+        "aligned-bottom",
         "below",
+      ];
+      const ANCHOR_AREA_X_VALUES = [
         "on-the-left",
+        "aligned-left",
+        "center",
+        "aligned-right",
         "on-the-right",
       ];
 
@@ -238,27 +231,27 @@
           <p>
             <code>anchorArea</code> places the popover relative to{" "}
             <code>anchor</code> (a real element by default, or{" "}
-            <code>"viewport"</code>/<code>"offsetParent"</code>). Written as{" "}
-            <code>"&lt;y&gt; &lt;x&gt;"</code> (e.g.{" "}
-            <code>"top-aligned left-aligned"</code>), with 9 classic compass
-            presets as one-word/hyphenated shortcuts: <code>top-left</code>,{" "}
-            <code>top</code>, <code>top-right</code>, <code>left</code>,{" "}
-            <code>center</code>, <code>right</code>, <code>bottom-left</code>,{" "}
-            <code>bottom</code>, <code>bottom-right</code>.
-          </p>
-          <p>
-            Beyond the 9 presets, each axis has its own full vocabulary you can
-            combine explicitly: <code>above</code>/<code>top-aligned</code>/
-            <code>center</code>/<code>bottom-aligned</code>/<code>below</code>{" "}
-            for Y, <code>on-the-left</code>/<code>left-aligned</code>/
-            <code>center</code>/<code>right-aligned</code>/
-            <code>on-the-right</code> for X. The <code>-aligned</code> values
-            overlap the anchor (the matching edges align); <code>above</code>/
+            <code>"viewport"</code>/<code>"offsetParent"</code>). Written as two
+            space-separated words — one Y value, one X value, in either order
+            (every value but <code>"center"</code> belongs to exactly one axis,
+            so <code>"above on-the-left"</code> and{" "}
+            <code>"on-the-left above"</code> mean the same thing). The grid
+            below shows all 25 combinations: rows are <code>above</code>/
+            <code>aligned-top</code>/<code>center</code>/
+            <code>aligned-bottom</code>/<code>below</code>, columns are{" "}
+            <code>on-the-left</code>/<code>aligned-left</code>/
+            <code>center</code>/<code>aligned-right</code>/
+            <code>on-the-right</code>. The plain words (<code>above</code>/
             <code>below</code>/<code>on-the-left</code>/
-            <code>on-the-right</code> don't (there's a gap, no overlap). A
-            single recognized word alone pairs with "center" on the other axis —{" "}
-            <code>"on-the-left"</code> alone means{" "}
-            <code>"center on-the-left"</code>.
+            <code>on-the-right</code>) sit outside the anchor with a gap; the{" "}
+            <code>aligned-*</code> words overlap it (the matching edges align).
+            A single recognized word alone pairs with <code>"center"</code> on
+            the other axis — <code>"on-the-left"</code> alone means{" "}
+            <code>"center on-the-left"</code>. The 4 corner compass names (
+            <code>top-left</code>, <code>top-right</code>,{" "}
+            <code>bottom-left</code>, <code>bottom-right</code>) are also
+            accepted as shortcuts for the corresponding <code>aligned-*</code>/
+            <code>aligned-*</code> cell.
           </p>
 
           <h3>anchor left on the trigger button (default)</h3>
@@ -339,36 +332,18 @@
         </section>
       );
 
-      // Positions a point-grid button's label within its own box to match
-      // the point it represents — "top-left" reads in the top-left corner
-      // of its button, "bottom" reads bottom-center, etc.
-      const pointAlignStyle = (point) => ({
-        justifyContent: point.includes("left")
-          ? "flex-start"
-          : point.includes("right")
-            ? "flex-end"
-            : "center",
-        alignItems: point.startsWith("top")
-          ? "flex-start"
-          : point.startsWith("bottom")
-            ? "flex-end"
-            : "center",
-      });
-
-      // Pins each rendered cell to the anchor-point-shaped area matching its
-      // name (grid-template-areas in the CSS uses the same 9 names), so the
-      // grid visually mirrors the actual corners/edges/center it represents.
-      const PointGrid = ({ renderCell }) => (
-        <div class="demo-point-grid">
-          {POINTS.map((point) => (
-            <div
-              key={point}
-              class="demo-point-cell"
-              style={{ gridArea: point }}
-            >
-              {renderCell(point)}
-            </div>
-          ))}
+      // Renders all 25 Y × X combinations, row-major (Y varies per row, X
+      // per column) so the grid visually reads the same as the prose above
+      // (rows = Y values top to bottom, columns = X values left to right).
+      const AreaGrid = ({ renderCell }) => (
+        <div class="demo-area-grid">
+          {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
+            ANCHOR_AREA_X_VALUES.map((x) => (
+              <div key={`${y} ${x}`} class="demo-area-cell">
+                {renderCell(y, x)}
+              </div>
+            )),
+          )}
         </div>
       );
 
@@ -396,6 +371,7 @@
               animationDuration={animationDuration}
               fadeAnimation={fadeAnimation}
               borderRadius="8px"
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -423,6 +399,7 @@
               borderRadius="8px"
               anchor="viewport"
               anchorArea="center"
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -466,12 +443,7 @@
       // section is about placement, not animation, and always uses the
       // flexible anchorArea (never anchorAreaFixed): what you'd actually use
       // day to day.
-      const AnchorAreaPopover = ({
-        label,
-        anchor,
-        anchorArea,
-        gridStyle = false,
-      }) => {
+      const AnchorAreaPopover = ({ anchor, anchorArea }) => {
         const popoverId = useId();
 
         return (
@@ -479,10 +451,9 @@
             <Button
               command="--navi-toggle"
               commandFor={popoverId}
-              className={gridStyle ? "demo-point-button" : undefined}
-              style={gridStyle ? pointAlignStyle(label) : undefined}
+              className="demo-area-button"
             >
-              {label}
+              {anchorArea}
             </Button>
             <Popover
               id={popoverId}
@@ -490,9 +461,10 @@
               anchor={anchor}
               anchorArea={anchorArea}
               spacing={16}
+              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
-              <p style={{ marginTop: 0 }}>{label}</p>
+              <p style={{ marginTop: 0 }}>{anchorArea}</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
           </>
@@ -500,77 +472,51 @@
       };
 
       const AnchorAreaGrid = ({ anchor }) => (
-        <>
-          <PointGrid
-            renderCell={(preset) => (
-              <AnchorAreaPopover
-                label={preset}
-                anchor={anchor}
-                anchorArea={preset}
-                gridStyle
-              />
-            )}
-          />
-          <div class="demo-row">
-            {ANCHOR_AREA_EXTRA_VALUES.map((value) => (
-              <AnchorAreaPopover
-                key={value}
-                label={value}
-                anchor={anchor}
-                anchorArea={value}
-              />
-            ))}
-          </div>
-        </>
+        <AreaGrid
+          renderCell={(y, x) => (
+            <AnchorAreaPopover anchor={anchor} anchorArea={`${y} ${x}`} />
+          )}
+        />
       );
 
       // anchor="offsetParent" needs the popovers rendered *inside* the
       // positioned container to find it — the trigger buttons don't, so
-      // they live outside it, in their own grid/row below.
+      // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
         return (
           <>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
-              {[...POINTS, ...ANCHOR_AREA_EXTRA_VALUES].map((value) => (
-                <Popover
-                  key={value}
-                  id={`${baseId}-${value}`}
-                  borderRadius="8px"
-                  anchor="offsetParent"
-                  anchorArea={value}
-                  spacing={16}
-                  className="demo_popover_box"
-                >
-                  <p style={{ marginTop: 0 }}>{value}</p>
-                  <Button command="--navi-close">Close</Button>
-                </Popover>
-              ))}
+              {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
+                ANCHOR_AREA_X_VALUES.map((x) => (
+                  <Popover
+                    key={`${y} ${x}`}
+                    id={`${baseId}-${y}-${x}`}
+                    borderRadius="8px"
+                    anchor="offsetParent"
+                    anchorArea={`${y} ${x}`}
+                    spacing={16}
+                    pointerInteractionOutsideEffect="close"
+                    className="demo_popover_box"
+                  >
+                    <p style={{ marginTop: 0 }}>{`${y} ${x}`}</p>
+                    <Button command="--navi-close">Close</Button>
+                  </Popover>
+                )),
+              )}
             </div>
-            <PointGrid
-              renderCell={(preset) => (
+            <AreaGrid
+              renderCell={(y, x) => (
                 <Button
                   command="--navi-toggle"
-                  commandFor={`${baseId}-${preset}`}
-                  className="demo-point-button"
-                  style={pointAlignStyle(preset)}
+                  commandFor={`${baseId}-${y}-${x}`}
+                  className="demo-area-button"
                 >
-                  {preset}
+                  {`${y} ${x}`}
                 </Button>
               )}
             />
-            <div class="demo-row">
-              {ANCHOR_AREA_EXTRA_VALUES.map((value) => (
-                <Button
-                  key={value}
-                  command="--navi-toggle"
-                  commandFor={`${baseId}-${value}`}
-                >
-                  {value}
-                </Button>
-              ))}
-            </div>
           </>
         );
       };

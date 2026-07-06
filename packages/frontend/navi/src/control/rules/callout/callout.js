@@ -1153,7 +1153,7 @@ const stickCalloutToAnchor = (
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
       const spaceAvailable =
-        positionY === "above" || positionY === "bottom-aligned"
+        positionY === "above" || positionY === "aligned-bottom"
           ? spaceAbove
           : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
@@ -1184,7 +1184,7 @@ const stickCalloutToAnchor = (
         optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (positionY === "above" || positionY === "bottom-aligned") {
+      if (positionY === "above" || positionY === "aligned-bottom") {
         // Arrow at bottom, extending below the element
         calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = "";

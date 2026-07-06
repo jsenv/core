@@ -102,7 +102,7 @@ const css = /* css */ `
         }
 
         &[data-position-y-current="above"],
-        &[data-position-y-current="bottom-aligned"] {
+        &[data-position-y-current="aligned-bottom"] {
           .navi_picker_anchor_clone {
             order: 1; /* after the list — popover is above the trigger */
             border-top: var(--picker-border-width) solid
@@ -661,8 +661,8 @@ const PickerContentInsidePopover = (props) => {
         className="navi_picker_popover"
         anchorArea={
           popoverMode === "nearby"
-            ? "below left-aligned"
-            : "top-aligned left-aligned"
+            ? "below aligned-left"
+            : "aligned-top aligned-left"
         }
         spacing={popoverSpacing}
         viewportSpacing={viewportSpacing}

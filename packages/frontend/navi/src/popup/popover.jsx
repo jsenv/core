@@ -101,11 +101,11 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    // anchorArea="above left-aligned"/"on-the-left"/"top-left"/etc — see
+    // anchorArea="above aligned-left"/"on-the-left"/"top-left"/etc — see
     // ANCHOR_AREA_Y_VALUES/ANCHOR_AREA_X_VALUES/ANCHOR_AREA_PRESETS below
-    // for the full grammar. Written as "<y> <x>" (loosely inspired by CSS
-    // position-area), with single-word and hyphenated presets for the
-    // common cases.
+    // for the full grammar. Two space-separated words, order-independent
+    // (loosely inspired by CSS position-area), with single-word and
+    // hyphenated presets for the common cases.
     anchorArea = "below",
     anchorAreaFixed,
     scrollLock,
@@ -206,8 +206,8 @@ const ControlledPopover = (props) => {
     };
     // slideDirectionKey collapses the y/x pair into the 8-compass-point +
     // "center" vocabulary popup_animation.js's slide CSS keys off
-    // (data-anchor="top"/"top-left"/etc) — "above"/"top-aligned" both slide
-    // from the top, "below"/"bottom-aligned" both slide from the bottom,
+    // (data-anchor="top"/"top-left"/etc) — "above"/"aligned-top" both slide
+    // from the top, "below"/"aligned-bottom" both slide from the bottom,
     // regardless of the overlap distinction, since that's a purely visual
     // "which way does it enter from" concern.
     const slideDirectionKey = toSlideDirectionKey(
@@ -388,7 +388,7 @@ const ControlledPopover = (props) => {
         });
         const finalPositionY = pickedPositionY;
         const spaceAvailable =
-          finalPositionY === "above" || finalPositionY === "bottom-aligned"
+          finalPositionY === "above" || finalPositionY === "aligned-bottom"
             ? spaceAbove
             : spaceBelow;
         popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
@@ -629,75 +629,85 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
 // anchorArea's grammar, loosely inspired by CSS position-area:
 // https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
 //
-// Written as "<y> <x>" (e.g. "top-aligned left-aligned"), each axis
-// independently one of:
-//   y: "above" (no overlap, entirely above) / "top-aligned" (top edges
-//      aligned, overlapping downward) / "center" / "bottom-aligned" (bottom
+// Written as two space-separated words (e.g. "aligned-top aligned-left"),
+// each axis independently one of:
+//   y: "above" (no overlap, entirely above) / "aligned-top" (top edges
+//      aligned, overlapping downward) / "center" / "aligned-bottom" (bottom
 //      edges aligned, overlapping upward) / "below" (no overlap, entirely
 //      below)
-//   x: "on-the-left" (no overlap) / "left-aligned" (left edges aligned,
-//      overlapping) / "center" / "right-aligned" (right edges aligned,
+//   x: "on-the-left" (no overlap) / "aligned-left" (left edges aligned,
+//      overlapping) / "center" / "aligned-right" (right edges aligned,
 //      overlapping) / "on-the-right" (no overlap)
-// "above"/"below"/"on-the-left"/"on-the-right" mean "outside the anchor, no
-// overlap"; the "-aligned" word means "edges aligned, overlapping the
-// anchor" (deliberately no bare "top"/"bottom"/"left"/"right" shortcut —
-// those read as ambiguous on their own between the two).
+// Every value except "center" belongs to exactly one axis, so word order in
+// the string doesn't matter — "on-the-left below" and "below on-the-left"
+// are the same thing. The plain words ("above"/"below"/"on-the-left"/
+// "on-the-right") mean "outside the anchor, no overlap"; the "aligned-"
+// prefix means "edges aligned, overlapping the anchor" (deliberately no
+// bare "top"/"bottom"/"left"/"right" shortcut — those read as ambiguous on
+// their own between the two).
 // A single recognized word is shorthand for pairing it with "center" on the
-// other axis — "on-the-left" alone means "center on-the-left", "above"
-// alone means "above center". The 9 classic compass names (top, top-right,
-// right, bottom-right, bottom, bottom-left, left, top-left, center) are also
-// accepted directly as hyphenated presets — see ANCHOR_AREA_PRESETS. The 4
-// corners use the "-aligned" (overlapping) pair on both axes, so the
-// popover's corner actually touches the anchor's corner; the 4 edges
-// ("top", "bottom", "left", "right") use the plain, non-overlapping axis
-// word instead, paired with "center" on the other axis.
+// other axis — "on-the-left" alone means "center on-the-left". The 4 corner
+// compass names (top-left, top-right, bottom-left, bottom-right) are also
+// accepted directly as hyphenated presets — see ANCHOR_AREA_PRESETS — using
+// the "aligned-" (overlapping) pair on both axes, so the popover's corner
+// actually touches the anchor's corner.
 
 const ANCHOR_AREA_X_VALUES = new Set([
   "on-the-left",
-  "left-aligned",
+  "aligned-left",
   "center",
-  "right-aligned",
+  "aligned-right",
   "on-the-right",
 ]);
 const ANCHOR_AREA_Y_VALUES = new Set([
   "above",
-  "top-aligned",
+  "aligned-top",
   "center",
-  "bottom-aligned",
+  "aligned-bottom",
   "below",
 ]);
 const ANCHOR_AREA_PRESETS = {
-  "top-left": { y: "top-aligned", x: "left-aligned" },
-  "top-right": { y: "top-aligned", x: "right-aligned" },
-  "bottom-left": { y: "bottom-aligned", x: "left-aligned" },
-  "bottom-right": { y: "bottom-aligned", x: "right-aligned" },
-  "top": { y: "above", x: "center" },
-  "bottom": { y: "below", x: "center" },
-  "left": { y: "center", x: "on-the-left" },
-  "right": { y: "center", x: "on-the-right" },
+  "top-left": { y: "aligned-top", x: "aligned-left" },
+  "top-right": { y: "aligned-top", x: "aligned-right" },
+  "bottom-left": { y: "aligned-bottom", x: "aligned-left" },
+  "bottom-right": { y: "aligned-bottom", x: "aligned-right" },
 };
 
 // Parses anchorArea into a { y, x } pair, or null if it's not a recognized
-// preset/word/pair.
-const parseAnchorArea = (value) => {
+// preset/word/pair. defaultX/defaultY fill in whichever axis a single-word
+// value doesn't specify — both default to "center", but a caller with its
+// own typical placement (e.g. a picker defaulting to "below") can override
+// either.
+const parseAnchorArea = (
+  value,
+  { defaultX = "center", defaultY = "center" } = {},
+) => {
   if (ANCHOR_AREA_PRESETS[value]) {
     return ANCHOR_AREA_PRESETS[value];
   }
   const tokens = value.split(" ");
   if (tokens.length === 1) {
     const [token] = tokens;
+    if (token === "center") {
+      return { y: "center", x: "center" };
+    }
     if (ANCHOR_AREA_Y_VALUES.has(token)) {
-      return { y: token, x: "center" };
+      return { y: token, x: defaultX };
     }
     if (ANCHOR_AREA_X_VALUES.has(token)) {
-      return { y: "center", x: token };
+      return { y: defaultY, x: token };
     }
     return null;
   }
   if (tokens.length === 2) {
-    const [y, x] = tokens;
-    if (ANCHOR_AREA_Y_VALUES.has(y) && ANCHOR_AREA_X_VALUES.has(x)) {
-      return { y, x };
+    const [a, b] = tokens;
+    // Every value but "center" is unique to one axis, so either order
+    // works — whichever token is the Y value becomes y, the other x.
+    if (ANCHOR_AREA_Y_VALUES.has(a) && ANCHOR_AREA_X_VALUES.has(b)) {
+      return { y: a, x: b };
+    }
+    if (ANCHOR_AREA_X_VALUES.has(a) && ANCHOR_AREA_Y_VALUES.has(b)) {
+      return { y: b, x: a };
     }
   }
   return null;
@@ -705,22 +715,22 @@ const parseAnchorArea = (value) => {
 
 // Collapses anchorArea's y/x pair into the 8-compass-point + "center"
 // vocabulary popup_animation.js's slide CSS and computeStickToPosition below
-// key off — "above"/"top-aligned" both slide from (and pin to) the top,
-// "below"/"bottom-aligned" both slide from (and pin to) the bottom,
+// key off — "above"/"aligned-top" both slide from (and pin to) the top,
+// "below"/"aligned-bottom" both slide from (and pin to) the bottom,
 // regardless of the overlap distinction, which doesn't apply to a
 // point/corner in the first place (there's no anchor box to overlap with
 // there).
 const toSlideDirectionKey = (y, x) => {
   const yKey =
-    y === "above" || y === "top-aligned"
+    y === "above" || y === "aligned-top"
       ? "top"
-      : y === "below" || y === "bottom-aligned"
+      : y === "below" || y === "aligned-bottom"
         ? "bottom"
         : "center";
   const xKey =
-    x === "on-the-left" || x === "left-aligned"
+    x === "on-the-left" || x === "aligned-left"
       ? "left"
-      : x === "on-the-right" || x === "right-aligned"
+      : x === "on-the-right" || x === "aligned-right"
         ? "right"
         : "center";
   if (yKey === "center") {
