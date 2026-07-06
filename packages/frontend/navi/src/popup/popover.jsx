@@ -81,24 +81,6 @@ const css = /* css */ `
        popup_animation.js), so the two can never drift out of sync. */
     border-radius: var(--popup-border-radius, 0);
 
-    /* anchor="offsetParent" places the popover *inside* a container that
-       may hide overflow — these default to a no-op (0px on every side) and
-       are only set (by positionPopover, in this file) when that container
-       actually clips, so the popover can't visually escape it. Sits under
-       the "clip" animation's own clip-path (popup_animation.js), which
-       currently doesn't combine with this — a known gap for the rare
-       animation="clip" + offsetParent + a centered anchorArea combo. */
-    --popup-container-clip-top: 0px;
-    --popup-container-clip-right: 0px;
-    --popup-container-clip-bottom: 0px;
-    --popup-container-clip-left: 0px;
-    --popup-container-clip-radius: 0;
-    clip-path: inset(
-      var(--popup-container-clip-top) var(--popup-container-clip-right)
-        var(--popup-container-clip-bottom) var(--popup-container-clip-left)
-        round var(--popup-container-clip-radius)
-    );
-
     /* anchor="viewport" has no real anchor to stay in scroll-lockstep with
        in the first place — it's meant to stay pinned to the viewport itself,
        exactly what position: fixed already does natively. Staying absolute
@@ -502,68 +484,6 @@ const ControlledPopover = (props) => {
       );
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
-
-      // anchor="offsetParent" conceptually places the popover *inside*
-      // relativeContainer — if that container hides overflow, clip the
-      // popover to its visible bounds too, so it can't visually escape a
-      // container it's meant to live within. Computed from `top`/`appliedLeft`
-      // (viewport-relative here via the scroll offset below) plus offsetWidth/
-      // Height, not popoverEl.getBoundingClientRect(): at this point the
-      // popover is still in its closed state, and for a "slide" animation
-      // that means its *painted* position is offset by the slide's own
-      // translate — getBoundingClientRect() would capture that transient
-      // offset instead of the popover's actual resting position.
-      if (relativeContainer) {
-        const containerOverflow = getComputedStyle(relativeContainer);
-        const containerClips =
-          containerOverflow.overflowX !== "visible" ||
-          containerOverflow.overflowY !== "visible";
-        if (containerClips) {
-          const { scrollLeft, scrollTop } =
-            getPositioningScrollOffset(popoverEl);
-          const popoverViewportTop = top - scrollTop;
-          const popoverViewportLeft = appliedLeft - scrollLeft;
-          const popoverWidth = popoverEl.offsetWidth;
-          const popoverHeight = popoverEl.offsetHeight;
-          const containerRect = relativeContainer.getBoundingClientRect();
-          popoverEl.style.setProperty(
-            "--popup-container-clip-top",
-            `${snapToPixel(Math.max(0, containerRect.top - popoverViewportTop))}px`,
-          );
-          popoverEl.style.setProperty(
-            "--popup-container-clip-right",
-            `${snapToPixel(
-              Math.max(
-                0,
-                popoverViewportLeft + popoverWidth - containerRect.right,
-              ),
-            )}px`,
-          );
-          popoverEl.style.setProperty(
-            "--popup-container-clip-bottom",
-            `${snapToPixel(
-              Math.max(
-                0,
-                popoverViewportTop + popoverHeight - containerRect.bottom,
-              ),
-            )}px`,
-          );
-          popoverEl.style.setProperty(
-            "--popup-container-clip-left",
-            `${snapToPixel(Math.max(0, containerRect.left - popoverViewportLeft))}px`,
-          );
-          popoverEl.style.setProperty(
-            "--popup-container-clip-radius",
-            containerOverflow.borderRadius,
-          );
-        } else {
-          popoverEl.style.removeProperty("--popup-container-clip-top");
-          popoverEl.style.removeProperty("--popup-container-clip-right");
-          popoverEl.style.removeProperty("--popup-container-clip-bottom");
-          popoverEl.style.removeProperty("--popup-container-clip-left");
-          popoverEl.style.removeProperty("--popup-container-clip-radius");
-        }
-      }
 
       if (resolvedAnimation !== "clip" || anchor) {
         // Anchored "clip" is vertical-only (see popup_animation.js): it

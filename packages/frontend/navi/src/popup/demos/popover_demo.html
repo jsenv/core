@@ -63,15 +63,16 @@
         align-items: center;
         justify-content: center;
         border: 1px dotted #999;
-        /* overflow/border-radius are controlled inline — see
-           AnchorAreaOffsetParentDemo's own controls. */
+        border-radius: 8px;
       }
-      .demo-container-controls {
-        display: flex;
-        margin-bottom: 8px;
-        align-items: center;
-        gap: 16px;
+      .demo-important-note {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #7a5b00;
         font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
       }
       .demo-animate-controls {
         display: flex;
@@ -245,19 +246,6 @@
         const [value, setValue] = useState(() => {
           const stored = localStorage.getItem(key);
           return stored === null ? defaultValue : stored === "true";
-        });
-        useEffect(() => {
-          localStorage.setItem(key, String(value));
-        }, [key, value]);
-        return [value, setValue];
-      };
-
-      // Same as useStoredBoolean, but for any value that round-trips through
-      // a plain string (numbers via `parse`, strings as-is by default).
-      const useStoredValue = (key, defaultValue, parse = (v) => v) => {
-        const [value, setValue] = useState(() => {
-          const stored = localStorage.getItem(key);
-          return stored === null ? defaultValue : parse(stored);
         });
         useEffect(() => {
           localStorage.setItem(key, String(value));
@@ -773,45 +761,17 @@
         const baseId = useId();
         const { animate, fade, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_offset_parent");
-        const [overflow, setOverflow] = useStoredValue(
-          "popover_demo_area_offset_parent_overflow",
-          "visible",
-        );
-        const [containerRadius, setContainerRadius] = useStoredValue(
-          "popover_demo_area_offset_parent_border_radius",
-          20,
-          Number,
-        );
         return (
           <>
             <PointModeNote referenceLabel="the container" />
-            <div class="demo-container-controls">
-              <label>
-                container overflow:{" "}
-                <select
-                  value={overflow}
-                  onChange={(e) => setOverflow(e.target.value)}
-                >
-                  <option value="visible">visible</option>
-                  <option value="hidden">hidden</option>
-                  <option value="auto">auto</option>
-                </select>
-              </label>
-              <label>
-                container border-radius: {containerRadius}px{" "}
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  value={containerRadius}
-                  onInput={(e) => setContainerRadius(Number(e.target.value))}
-                />
-              </label>
-            </div>
-            <div
-              class="demo-container"
-              style={{ overflow, borderRadius: `${containerRadius}px` }}
-            >
+            <p class="demo-important-note">
+              The popover is promoted to the top layer once shown, so it isn't
+              actually clipped by the container's own{" "}
+              <code>overflow: hidden</code>/<code>auto</code> the way normal
+              in-flow content would be — it can render outside the container
+              regardless of what the container's overflow is set to.
+            </p>
+            <div class="demo-container">
               <span class="demo-container-label">container</span>
               {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
                 ANCHOR_AREA_X_VALUES.map((x) => (
