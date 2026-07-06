@@ -250,14 +250,14 @@ const ControlledPopover = (props) => {
         anchorReference && slideDirectionKey,
       ),
     );
-    // anchorArea's y/x translate to pickPositionRelativeTo's own
-    // positionY/positionX vocabulary via ANCHOR_AREA_Y_TO_POSITION_Y/
-    // ANCHOR_AREA_X_TO_POSITION_X. Only meaningful against a real anchor
-    // (pickPositionRelativeTo below) — anchorReference mode uses
-    // slideDirectionKey directly instead, feeding computeStickToPosition,
-    // which already speaks that same 9-compass-point vocabulary natively.
-    const effectivePositionX = ANCHOR_AREA_X_TO_POSITION_X[parsedAnchorArea.x];
-    const effectivePositionY = ANCHOR_AREA_Y_TO_POSITION_Y[parsedAnchorArea.y];
+    // anchorArea's y/x vocabulary is pickPositionRelativeTo's own
+    // positionY/positionX vocabulary (see visible_rect.js) — no translation
+    // needed, only meaningful against a real anchor (pickPositionRelativeTo
+    // below); anchorReference mode uses slideDirectionKey directly instead,
+    // feeding computeStickToPosition, which speaks the 9-compass-point
+    // vocabulary natively.
+    const effectivePositionX = parsedAnchorArea.x;
+    const effectivePositionY = parsedAnchorArea.y;
     let effectivePositionXFixed;
     let effectivePositionYFixed;
     if (anchorAreaFixed) {
@@ -265,10 +265,8 @@ const ControlledPopover = (props) => {
       if (!parsedAnchorAreaFixed) {
         console.warn(`Popover: invalid anchorAreaFixed="${anchorAreaFixed}"`);
       } else {
-        effectivePositionXFixed =
-          ANCHOR_AREA_X_TO_POSITION_X[parsedAnchorAreaFixed.x];
-        effectivePositionYFixed =
-          ANCHOR_AREA_Y_TO_POSITION_Y[parsedAnchorAreaFixed.y];
+        effectivePositionXFixed = parsedAnchorAreaFixed.x;
+        effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
     // pickPositionRelativeTo persists data-position-y/x-current across calls
@@ -557,16 +555,6 @@ const ControlledPopover = (props) => {
           if (e.button !== 0) {
             return;
           }
-          if (pointerInteractionOutsideEffect !== "close") {
-            // "capture" absorbs the click so it doesn't reach whatever's
-            // behind the popover, without closing it; "none" never reaches
-            // here at all (the backdrop has pointer-events: none in that
-            // case, see the CSS above) — this check is just a safety net.
-            if (pointerInteractionOutsideEffect === "capture") {
-              e.preventDefault();
-            }
-            return;
-          }
           // Ignore clicks that land inside the popover's bounding rect
           // (padding and border area are part of the popover box but can
           // forward pointer events to the backdrop behind them).
@@ -579,7 +567,18 @@ const ControlledPopover = (props) => {
           if (!isOutside) {
             return;
           }
-          openController.requestClose(e, { isCancel: true });
+          // "capture" absorbs the click so it doesn't reach whatever's
+          // behind the popover, without closing it; "none" never reaches
+          // here at all (the backdrop has pointer-events: none in that
+          // case, see the CSS above) — this check is just a safety net.
+          if (pointerInteractionOutsideEffect === "capture") {
+            e.preventDefault();
+            return;
+          }
+          if (pointerInteractionOutsideEffect === "close") {
+            openController.requestClose(e, { isCancel: true });
+            return;
+          }
         }}
       />
       {children}
@@ -689,23 +688,6 @@ const parseAnchorArea = (value) => {
     }
   }
   return null;
-};
-
-// Translates anchorArea's y/x vocabulary into pickPositionRelativeTo's own
-// positionY/positionX vocabulary (only used against a real anchor).
-const ANCHOR_AREA_Y_TO_POSITION_Y = {
-  above: "above",
-  top: "below-overlap",
-  center: "center",
-  bottom: "above-overlap",
-  below: "below",
-};
-const ANCHOR_AREA_X_TO_POSITION_X = {
-  "to-the-left": "to-the-left",
-  "left": "left-aligned",
-  "center": "center",
-  "right": "right-aligned",
-  "to-the-right": "to-the-right",
 };
 
 // Collapses anchorArea's y/x pair into the 8-compass-point + "center"
