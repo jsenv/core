@@ -387,7 +387,7 @@ const ControlledPopover = (props) => {
         });
         const finalPositionY = pickedPositionY;
         const spaceAvailable =
-          finalPositionY === "above" || finalPositionY === "above-overlap"
+          finalPositionY === "above" || finalPositionY === "bottom"
             ? spaceAbove
             : spaceBelow;
         popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
