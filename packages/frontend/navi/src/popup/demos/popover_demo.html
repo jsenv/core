@@ -416,6 +416,12 @@
               animation
               animationDuration="0.6s"
             />
+            <AnchorlessPopover
+              label="animated from pointer"
+              animation
+              animationDuration="0.6s"
+              spawnFromPointer
+            />
           </div>
         </section>
       );
@@ -547,7 +553,7 @@
       // Still command-driven (--navi-toggle), but anchor="viewport" tells
       // the popover not to use the toggle button as its anchor, so it
       // centers itself in the viewport instead (anchorArea="center").
-      const AnchorlessPopover = ({ label, animation, animationDuration }) => {
+      const AnchorlessPopover = ({ label, ...rest }) => {
         const popoverId = useId();
 
         return (
@@ -557,12 +563,11 @@
             </Button>
             <Popover
               id={popoverId}
-              animation={animation}
-              animationDuration={animationDuration}
               borderRadius="8px"
               anchor="viewport"
               anchorArea="center"
               className="demo_popover_box"
+              {...rest}
             >
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>

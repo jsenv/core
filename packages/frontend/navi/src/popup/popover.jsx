@@ -305,8 +305,11 @@ const ControlledPopover = (props) => {
     // (see the CSS comment above) — a translate/scale reads oddly when it
     // overlaps on *both* axes at once, so auto-animation picks "scaling"
     // there instead. Otherwise: a real anchor grows out of its own edge
-    // ("expanding"), a point/corner has no edge to grow out of and slides in
-    // instead ("sliding").
+    // ("expanding") — unless anchorSpacing leaves a gap between the popover
+    // and that edge, in which case growing "from" a point floating in that
+    // gap looks disconnected from the anchor, so "scaling" (center-based,
+    // no edge involved) is preferred there too. A point/corner has no edge
+    // to grow out of either way, and slides in instead ("sliding").
     const yOverlapsAnchor =
       parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
     const xOverlapsAnchor =
@@ -316,34 +319,11 @@ const ControlledPopover = (props) => {
       ? yOverlapsAnchor && xOverlapsAnchor
         ? "scaling"
         : anchor
-          ? "expanding"
+          ? anchorSpacing
+            ? "scaling"
+            : "expanding"
           : "sliding"
       : animation;
-    // "sliding"/"expanding" (whether auto-picked or requested explicitly)
-    // need a concrete direction (see resolveDirectionValue). anchorReference/
-    // point mode has no auto-flip, so it's known synchronously; a real
-    // anchor's *actual* side (which may differ from the one requested here)
-    // is only known once pickPositionRelativeTo runs — positionPopover's
-    // real-anchor branch below overwrites this with the final value before
-    // transitions are ever re-enabled, so this placeholder is never visibly
-    // wrong.
-    let resolvedAnimation = resolvedAnimationKind;
-    if (resolvedAnimationKind === "sliding" && anchorReference) {
-      resolvedAnimation =
-        resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
-          isRealAnchor: false,
-          prefix: "slide-from",
-        }) ?? "slide-from-top";
-    }
-    if (resolvedAnimation) {
-      popoverEl.setAttribute("navi-animation", resolvedAnimation);
-      // The backdrop mirrors the same value, but only ever fades regardless
-      // of which kind it is — see the backdrop's own CSS comment for why.
-      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
-    } else {
-      popoverEl.removeAttribute("navi-animation");
-      backdropEl?.removeAttribute("navi-animation");
-    }
     // Only makes sense for a "scaling" popup with no real anchor to grow out
     // of (a real anchor's own edge already reads fine as the grow point) —
     // see positionPopover's anchorReference branch for where the actual
@@ -361,16 +341,19 @@ const ControlledPopover = (props) => {
     }
     // Experimental: swaps the CSS-transition machinery below for
     // document.startViewTransition() (see runOpen/runClose below) —
-    // unsupported browsers just fall back to no animation at all.
+    // unsupported browsers just fall back to no animation at all. Both this
+    // and the kind itself are already final at this point (only the
+    // concrete direction for "sliding"/"expanding" needs positioning info,
+    // resolved once below) — no need to wait for that.
     const useViewTransition =
-      resolvedAnimation === "view-transition" &&
+      resolvedAnimationKind === "view-transition" &&
       typeof document.startViewTransition === "function";
     // Whether there's an actual CSS transition to wait for below
     // (suppressPointerEventsDuringTransition) — skipped entirely otherwise,
     // so a popover with no animation at all stays instantly interactive.
     const hasCssTransitionAnimation =
-      !useViewTransition && Boolean(resolvedAnimation);
-    if (resolvedAnimation === "view-transition") {
+      !useViewTransition && Boolean(resolvedAnimationKind);
+    if (resolvedAnimationKind === "view-transition") {
       // Unique per instance: view-transition-name must be a <custom-ident>
       // (no colons, which useId()'s default id contains) and can't be
       // shared by two simultaneously-open popovers.
@@ -528,7 +511,6 @@ const ControlledPopover = (props) => {
             left,
             top: pickedTop,
             positionY: pickedPositionY,
-            positionX: pickedPositionX,
             spaceAbove,
             spaceBelow,
           } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
@@ -551,21 +533,6 @@ const ControlledPopover = (props) => {
           );
           appliedLeft = Math.max(left, minLeft);
           top = pickedTop;
-          // Refines the placeholder set earlier in openEffect now that the
-          // *actual* (possibly auto-flipped) side is known — see
-          // resolveDirectionValue's own doc comment. Mirrored onto the
-          // backdrop too, so its own attribute doesn't stay stuck on the
-          // placeholder (harmless for its own CSS, which only checks
-          // presence — but confusing to inspect otherwise).
-          if (resolvedAnimationKind === "expanding") {
-            const direction =
-              resolveDirectionValue(pickedPositionY, pickedPositionX, {
-                isRealAnchor: true,
-                prefix: "expand",
-              }) ?? "expand-up";
-            popoverEl.setAttribute("navi-animation", direction);
-            backdropEl?.setAttribute("navi-animation", direction);
-          }
         }
 
         debugPopup(
@@ -607,6 +574,44 @@ const ControlledPopover = (props) => {
       addCleanup(() => {
         rectEffect.disconnect();
       });
+
+      // "sliding"/"expanding" need a concrete direction (see
+      // resolveDirectionValue) — resolved here, once, now that rectEffect's
+      // own setup has already called positionPopover() above and the actual
+      // position is known: anchorReference/point mode ("sliding") has no
+      // auto-flip, so `parsedAnchorArea` itself is already final;
+      // pickPositionRelativeTo (called from positionPopover, for a real
+      // anchor) may have picked a different side than requested, written
+      // onto data-position-y/x-current — reading that back here instead of
+      // the originally-requested `parsedAnchorArea` is what makes
+      // "expanding" point the right way. Both need to happen before
+      // transitions are re-enabled below, same constraint as positioning
+      // itself.
+      let resolvedAnimation = resolvedAnimationKind;
+      if (resolvedAnimationKind === "sliding") {
+        resolvedAnimation =
+          resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
+            isRealAnchor: false,
+            prefix: "slide-from",
+          }) ?? "slide-from-top";
+      } else if (resolvedAnimationKind === "expanding") {
+        resolvedAnimation =
+          resolveDirectionValue(
+            popoverEl.getAttribute("data-position-y-current"),
+            popoverEl.getAttribute("data-position-x-current"),
+            { isRealAnchor: true, prefix: "expand" },
+          ) ?? "expand-up";
+      }
+      if (resolvedAnimation) {
+        popoverEl.setAttribute("navi-animation", resolvedAnimation);
+        // The backdrop mirrors the same value, but only ever fades
+        // regardless of which kind it is — see the backdrop's own CSS
+        // comment for why.
+        backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+      } else {
+        popoverEl.removeAttribute("navi-animation");
+        backdropEl?.removeAttribute("navi-animation");
+      }
 
       // rectEffect's own setup already called positionPopover() once above,
       // synchronously, so popoverEl.style.left/top already hold the resting
