@@ -147,83 +147,6 @@ export const buildPopupAnimationCss = (selector) => {
         }
       }
 
-      /* expand — real-anchor family (see this file's top comment): grows
-         out of the anchor's own edge via transform-origin + scale.
-         Cardinal directions scale a single axis only; diagonals scale
-         both. */
-      &[navi-animation="expand-up"] {
-        opacity: 1;
-        transform-origin: bottom;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: 1 var(--popup-scale-from);
-        }
-      }
-      &[navi-animation="expand-down"] {
-        opacity: 1;
-        transform-origin: top;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: 1 var(--popup-scale-from);
-        }
-      }
-      &[navi-animation="expand-left"] {
-        opacity: 1;
-        transform-origin: right;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from) 1;
-        }
-      }
-      &[navi-animation="expand-right"] {
-        opacity: 1;
-        transform-origin: left;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from) 1;
-        }
-      }
-      &[navi-animation="expand-up-left"] {
-        opacity: 1;
-        transform-origin: bottom right;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from);
-        }
-      }
-      &[navi-animation="expand-up-right"] {
-        opacity: 1;
-        transform-origin: bottom left;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from);
-        }
-      }
-      &[navi-animation="expand-down-left"] {
-        opacity: 1;
-        transform-origin: top right;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from);
-        }
-      }
-      &[navi-animation="expand-down-right"] {
-        opacity: 1;
-        transform-origin: top left;
-        scale: 1 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from);
-        }
-      }
-
       /* slide — anchorReference/point mode family: direction multipliers,
          one per concrete navi-animation value, 100%-of-own-size distance
          (see this file's top comment). */
@@ -275,6 +198,83 @@ export const buildPopupAnimationCss = (selector) => {
           translate: calc(var(--popup-slide-x, 0) * 100%)
             calc(var(--popup-slide-y, -1) * 100%);
         }
+      }
+    }
+
+    /* expand — real-anchor family (see this file's top comment): grows
+         out of the anchor's own edge via transform-origin + scale.
+         Cardinal directions scale a single axis only; diagonals scale
+         both. */
+    &[navi-animation="expand-up"] {
+      opacity: 1;
+      transform-origin: bottom;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: 1 var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down"] {
+      opacity: 1;
+      transform-origin: top;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: 1 var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-left"] {
+      opacity: 1;
+      transform-origin: right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from) 1;
+      }
+    }
+    &[navi-animation="expand-right"] {
+      opacity: 1;
+      transform-origin: left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from) 1;
+      }
+    }
+    &[navi-animation="expand-up-left"] {
+      opacity: 1;
+      transform-origin: bottom right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-up-right"] {
+      opacity: 1;
+      transform-origin: bottom left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down-left"] {
+      opacity: 1;
+      transform-origin: top right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down-right"] {
+      opacity: 1;
+      transform-origin: top left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
       }
     }
   `;
