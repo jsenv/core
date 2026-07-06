@@ -139,10 +139,11 @@ export const buildPopupAnimationCss = (selector) => {
         &[aria-expanded="false"] {
           opacity: 0;
           scale: var(--popup-scale-from);
-        }
-        &[data-spawn-from-pointer][aria-expanded="false"] {
-          translate: var(--popup-spawn-origin-x, 0px)
-            var(--popup-spawn-origin-y, 0px);
+          &[data-spawn-from-pointer] {
+            /* --popup-scale-from: 0.5; */
+            translate: var(--popup-spawn-origin-x, 0px)
+              var(--popup-spawn-origin-y, 0px);
+          }
         }
       }
 
