@@ -156,7 +156,7 @@ const ControlledPopover = (props) => {
     animation,
     fadeAnimation,
     children,
-    spacing = 0,
+    anchorSpacing = 0,
     viewportSpacing = 0,
     ...rest
   } = props;
@@ -348,7 +348,7 @@ const ControlledPopover = (props) => {
               width: document.documentElement.clientWidth,
               height: document.documentElement.clientHeight,
             };
-        const spacingPx = resolveSpacingSize(spacing);
+        const spacingPx = resolveSpacingSize(anchorSpacing);
         const stickPosition = computeStickToPosition(
           popoverEl,
           containerRect,
@@ -397,7 +397,7 @@ const ControlledPopover = (props) => {
           positionY: effectivePositionY,
           positionXFixed: effectivePositionXFixed,
           positionYFixed: effectivePositionYFixed,
-          spacing: resolveSpacingSize(spacing),
+          spacing: resolveSpacingSize(anchorSpacing),
           viewportSpacing: resolveSpacingSize(viewportSpacing),
           minLeft,
         });

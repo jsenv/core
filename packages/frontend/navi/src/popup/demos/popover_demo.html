@@ -287,8 +287,11 @@
             <AnchorSection animatedDuration={animatedDuration} />
             <AnchorAreaSection animatedDuration={animatedDuration} />
             <AnchorIgnoreSection animatedDuration={animatedDuration} />
+            <AnchorSpacingSection animatedDuration={animatedDuration} />
             <FadingSection />
-            <PointerInteractionOutsideSection />
+            <PointerInteractionOutsideSection
+              animatedDuration={animatedDuration}
+            />
           </div>
         );
       };
@@ -316,6 +319,9 @@
             </li>
             <li>
               <a href="#anchor-ignore">Ignoring the anchor</a>
+            </li>
+            <li>
+              <a href="#anchor-spacing">anchorSpacing</a>
             </li>
             <li>
               <a href="#fading">Fading</a>
@@ -392,9 +398,29 @@
         </section>
       );
 
+      const AnchorSpacingSection = ({ animatedDuration }) => (
+        <section id="anchor-spacing" class="demo-section">
+          <h2>4. anchorSpacing</h2>
+          <p>
+            The gap between the popover and its anchor — defaults to{" "}
+            <code>0</code> (touching).
+          </p>
+          <div class="demo-row">
+            <AnchoredPopover label="anchorSpacing={0} (default)" />
+            <AnchoredPopover label="anchorSpacing={16}" anchorSpacing={16} />
+            <AnchoredPopover
+              label="animated"
+              anchorSpacing={16}
+              animation
+              animationDuration={animatedDuration}
+            />
+          </div>
+        </section>
+      );
+
       const FadingSection = () => (
         <section id="fading" class="demo-section">
-          <h2>4. Fading</h2>
+          <h2>5. Fading</h2>
           <p>
             <code>fadeAnimation</code> (defaults to <code>false</code>) controls
             opacity fading independently of <code>animation</code> — it combines
@@ -407,28 +433,43 @@
         </section>
       );
 
-      const PointerInteractionOutsideSection = () => (
-        <section id="pointer-interaction-outside" class="demo-section">
-          <h2>5. pointerInteractionOutsideEffect</h2>
-          <p>
-            <code>"none"</code> (default) — interactions outside the popover
-            happen normally. <code>"close"</code> — a mousedown outside closes
-            it. <code>"capture"</code> — pointer interactions outside the
-            popover don't reach the page at all.
-          </p>
-          <div class="demo-row">
-            <PointerInteractionOutsideDemo label="none (default)" />
-            <PointerInteractionOutsideDemo
-              label="close"
-              pointerInteractionOutsideEffect="close"
-            />
-            <PointerInteractionOutsideDemo
-              label="capture"
-              pointerInteractionOutsideEffect="capture"
-            />
-          </div>
-        </section>
-      );
+      const PointerInteractionOutsideSection = ({ animatedDuration }) => {
+        const [animate, setAnimate] = useStoredBoolean(
+          "popover_demo_animate_pointer_interaction_outside",
+          false,
+        );
+        return (
+          <section id="pointer-interaction-outside" class="demo-section">
+            <h2>6. pointerInteractionOutsideEffect</h2>
+            <p>
+              <code>"none"</code> (default) — interactions outside the popover
+              happen normally. <code>"close"</code> — a mousedown outside closes
+              it. <code>"capture"</code> — pointer interactions outside the
+              popover don't reach the page at all.
+            </p>
+            <div class="demo-row">
+              <PointerInteractionOutsideDemo
+                label="none (default)"
+                animation={animate}
+                animationDuration={animate ? animatedDuration : undefined}
+              />
+              <PointerInteractionOutsideDemo
+                label="close"
+                pointerInteractionOutsideEffect="close"
+                animation={animate}
+                animationDuration={animate ? animatedDuration : undefined}
+              />
+              <PointerInteractionOutsideDemo
+                label="capture"
+                pointerInteractionOutsideEffect="capture"
+                animation={animate}
+                animationDuration={animate ? animatedDuration : undefined}
+              />
+            </div>
+            <AnimateToggle animate={animate} onChange={setAnimate} />
+          </section>
+        );
+      };
 
       // Renders all 25 Y × X combinations, row-major (Y varies per row, X
       // per column) so the grid visually reads the same as the prose above
@@ -455,6 +496,7 @@
         animation,
         animationDuration,
         fadeAnimation,
+        anchorSpacing,
       }) => {
         const popoverId = useId();
 
@@ -468,6 +510,7 @@
               animation={animation}
               animationDuration={animationDuration}
               fadeAnimation={fadeAnimation}
+              anchorSpacing={anchorSpacing}
               borderRadius="8px"
               className="demo_popover_box"
             >
@@ -514,6 +557,8 @@
       const PointerInteractionOutsideDemo = ({
         label,
         pointerInteractionOutsideEffect,
+        animation,
+        animationDuration,
       }) => {
         const popoverId = useId();
 
@@ -526,6 +571,8 @@
               id={popoverId}
               borderRadius="8px"
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              animation={animation}
+              animationDuration={animationDuration}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -571,7 +618,6 @@
               borderRadius="8px"
               anchor={anchor}
               anchorArea={anchorArea}
-              spacing={16}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -687,7 +733,6 @@
                     borderRadius="8px"
                     anchor="offsetParent"
                     anchorArea={`${y} ${x}`}
-                    spacing={16}
                     className="demo_popover_box"
                   >
                     <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>

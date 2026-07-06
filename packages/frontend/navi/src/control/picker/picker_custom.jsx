@@ -664,7 +664,7 @@ const PickerContentInsidePopover = (props) => {
             ? "below aligned-left"
             : "aligned-top aligned-left"
         }
-        spacing={popoverSpacing}
+        anchorSpacing={popoverSpacing}
         viewportSpacing={viewportSpacing}
         scrollLock={scrollLock}
         pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
