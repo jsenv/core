@@ -611,7 +611,7 @@ const ControlledPopover = (props) => {
     popoverEl.style.transitionProperty = "";
     popoverEl.setAttribute("aria-expanded", "true");
     // Not interactive again until it settles into its resting state.
-    let cleanupInteractionDuringTransition = hasCssTransitionAnimation
+    const cancelOpenInteractionSuppression = hasCssTransitionAnimation
       ? suppressPointerEventsDuringTransition(popoverEl)
       : null;
 
@@ -625,12 +625,15 @@ const ControlledPopover = (props) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
-      // Same reasoning as the open side — not interactive while it's still
-      // leaving, cancelling whatever the open side left pending.
-      cleanupInteractionDuringTransition?.();
-      cleanupInteractionDuringTransition = hasCssTransitionAnimation
-        ? suppressPointerEventsDuringTransition(popoverEl)
-        : null;
+      // Not interactive while it's leaving either — cancel the open side's
+      // still-pending suppression first, since a fresh one below fully
+      // replaces it (nothing ever needs to cancel this one in turn: a closed
+      // popover can stay non-interactive indefinitely, and the next open is
+      // its own separate call with no way to reach back into this one).
+      cancelOpenInteractionSuppression?.();
+      if (hasCssTransitionAnimation) {
+        suppressPointerEventsDuringTransition(popoverEl);
+      }
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armBackdropHideOnClick(
