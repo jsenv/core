@@ -553,15 +553,18 @@ const ControlledPopover = (props) => {
           top = pickedTop;
           // Refines the placeholder set earlier in openEffect now that the
           // *actual* (possibly auto-flipped) side is known — see
-          // resolveDirectionValue's own doc comment.
+          // resolveDirectionValue's own doc comment. Mirrored onto the
+          // backdrop too, so its own attribute doesn't stay stuck on the
+          // placeholder (harmless for its own CSS, which only checks
+          // presence — but confusing to inspect otherwise).
           if (resolvedAnimationKind === "expanding") {
-            popoverEl.setAttribute(
-              "navi-animation",
+            const direction =
               resolveDirectionValue(pickedPositionY, pickedPositionX, {
                 isRealAnchor: true,
                 prefix: "expand",
-              }) ?? "expand-up",
-            );
+              }) ?? "expand-up";
+            popoverEl.setAttribute("navi-animation", direction);
+            backdropEl?.setAttribute("navi-animation", direction);
           }
         }
 
