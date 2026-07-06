@@ -42,12 +42,20 @@
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
  * for the "aligned-" pair on both axes. An "aligned-"/"center" axis means the
  * popover overlaps the anchor there, so a translate-based slide on that axis
- * reads oddly — `animation="auto"` resolves to "scale" whenever *both* axes
- * overlap (see resolveSlideDirection below), "slide" otherwise, concretely as
- * one of popup_animation.js's `slide-from-*`/`slide-*` values — computed
- * here in JS (not left for CSS to puzzle out from raw position attributes)
- * so there's a single, inspectable `navi-animation` value driving one direct
- * CSS rule per direction, no attribute-cascade indirection.
+ * reads oddly — `animation="auto"` resolves to "scaling" whenever *both*
+ * axes overlap (see resolveSlideDirection below), "sliding" otherwise,
+ * concretely as one of popup_animation.js's `slide-from-*`/`slide-*` values
+ * — computed here in JS (not left for CSS to puzzle out from raw position
+ * attributes) so there's a single, inspectable `navi-animation` value
+ * driving one direct CSS rule per direction, no attribute-cascade
+ * indirection. `animation="fading"` is a third, explicit-only kind (no
+ * motion at all — see `navi-fade-animation` below).
+ *
+ * There's no such thing as motion without a fade anymore: whenever
+ * `resolvedAnimation` is truthy (any kind, "fading" included),
+ * `navi-fade-animation` is set right alongside `navi-animation` — no
+ * separate `fadeAnimation` prop to independently opt in/out of it. The
+ * backdrop mirrors the same thing on itself.
  *
  * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
  * "offsetParent"), absent when anchored to a real element.
@@ -143,8 +151,9 @@ const css = /* css */ `
       }
     }
 
-    /* Mirrors the content popover's own fadeAnimation, so the backdrop's
-       tint fades in/out alongside it instead of snapping abruptly. */
+    /* Set imperatively in openEffect right alongside the content popover's
+       own, so the backdrop's tint fades in/out alongside it instead of
+       snapping abruptly. */
     &[navi-fade-animation] {
       opacity: 1;
       transition-property: opacity;
@@ -208,8 +217,7 @@ const ControlledPopover = (props) => {
     pointerInteractionOutsideEffect = "none",
     focusTrap,
     animation,
-    fadeAnimation,
-    // only meaningful with anchor="viewport"/"offsetParent" + a "scale"
+    // only meaningful with anchor="viewport"/"offsetParent" + a "scaling"
     // animation — see openEffect for why it's a no-op otherwise.
     spawnFromPointer,
     children,
@@ -236,8 +244,8 @@ const ControlledPopover = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" always resolves to "slide" (see
-  // popup_animation.js for how it reads its direction).
+  // animation={true} or "auto" always resolves to "sliding" or "scaling"
+  // (see the resolvedAnimationKind ternary in openEffect below).
   const isAutoAnimation = animation === true || animation === "auto";
 
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
@@ -293,7 +301,7 @@ const ControlledPopover = (props) => {
     // "aligned-"/"center" means the popover overlaps the anchor on that axis
     // (see the CSS comment above) — a slide reads oddly when it overlaps on
     // *both* axes at once (it'd look like it's sliding out from inside the
-    // anchor itself), so auto-animation picks "scale" there instead.
+    // anchor itself), so auto-animation picks "scaling" there instead.
     const yOverlapsAnchor =
       parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
     const xOverlapsAnchor =
@@ -301,32 +309,48 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.x !== "on-the-right";
     const resolvedAnimationKind = isAutoAnimation
       ? yOverlapsAnchor && xOverlapsAnchor
-        ? "scale"
-        : "slide"
+        ? "scaling"
+        : "sliding"
       : animation;
-    // "slide" (whether auto-picked or requested explicitly) needs a concrete
-    // direction (see resolveSlideDirection). anchorReference/point mode has
-    // no auto-flip, so it's known synchronously; a real anchor's *actual*
-    // side (which may differ from the one requested here) is only known once
-    // pickPositionRelativeTo runs — positionPopover's real-anchor branch
-    // below overwrites this with the final value before transitions are ever
-    // re-enabled, so this placeholder is never visibly wrong.
+    // "sliding" (whether auto-picked or requested explicitly) needs a
+    // concrete direction (see resolveSlideDirection). anchorReference/point
+    // mode has no auto-flip, so it's known synchronously; a real anchor's
+    // *actual* side (which may differ from the one requested here) is only
+    // known once pickPositionRelativeTo runs — positionPopover's real-anchor
+    // branch below overwrites this with the final value before transitions
+    // are ever re-enabled, so this placeholder is never visibly wrong.
     let resolvedAnimation = resolvedAnimationKind;
-    if (resolvedAnimationKind === "slide" && anchorReference) {
+    if (resolvedAnimationKind === "sliding" && anchorReference) {
       resolvedAnimation =
         resolveSlideDirection(parsedAnchorArea.y, parsedAnchorArea.x, {
           isRealAnchor: false,
         }) ?? "slide-from-top";
     }
-    popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    // Only makes sense for a "scale" popup with no real anchor to grow out
+    if (resolvedAnimation) {
+      popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      popoverEl.removeAttribute("navi-animation");
+    }
+    // No animation without a fade anymore — see this file's top comment.
+    // Excludes "view-transition": that mode already does its own opacity
+    // cross-fade as part of the snapshot diffing, a plain CSS opacity
+    // transition running in parallel would just double up on it. Mirrored
+    // onto the backdrop too, so its own tint fades in/out alongside.
+    if (resolvedAnimation && resolvedAnimation !== "view-transition") {
+      popoverEl.setAttribute("navi-fade-animation", "");
+      backdropEl?.setAttribute("navi-fade-animation", "");
+    } else {
+      popoverEl.removeAttribute("navi-fade-animation");
+      backdropEl?.removeAttribute("navi-fade-animation");
+    }
+    // Only makes sense for a "scaling" popup with no real anchor to grow out
     // of (a real anchor's own edge already reads fine as the grow point) —
     // see positionPopover's anchorReference branch for where the actual
     // click/pointer position gets translated into --popup-spawn-origin-x/y.
     const useSpawnFromPointer =
       Boolean(spawnFromPointer) &&
       Boolean(anchorReference) &&
-      resolvedAnimationKind === "scale";
+      resolvedAnimationKind === "scaling";
     if (useSpawnFromPointer) {
       popoverEl.setAttribute("data-spawn-from-pointer", "");
     } else {
@@ -342,9 +366,9 @@ const ControlledPopover = (props) => {
       typeof document.startViewTransition === "function";
     // Whether there's an actual CSS transition to wait for below
     // (suppressPointerEventsDuringTransition) — skipped entirely otherwise,
-    // so a popover with no animation/fade at all stays instantly interactive.
+    // so a popover with no animation at all stays instantly interactive.
     const hasCssTransitionAnimation =
-      !useViewTransition && Boolean(fadeAnimation || resolvedAnimation);
+      !useViewTransition && Boolean(resolvedAnimation);
     if (resolvedAnimation === "view-transition") {
       // Unique per instance: view-transition-name must be a <custom-ident>
       // (no colons, which useId()'s default id contains) and can't be
@@ -418,8 +442,8 @@ const ControlledPopover = (props) => {
           backdropEl.hidePopover();
         }
         // Same reflow trick as the real popover below (no @starting-style):
-        // the backdrop's own fadeAnimation needs a genuinely rendered "closed"
-        // frame to transition from, not a jump straight from not-rendered to
+        // the backdrop's own fade needs a genuinely rendered "closed" frame
+        // to transition from, not a jump straight from not-rendered to
         // aria-expanded="true".
         backdropEl.style.transitionProperty = "none";
         backdropEl.showPopover();
@@ -559,7 +583,7 @@ const ControlledPopover = (props) => {
           // Refines the placeholder set earlier in openEffect now that the
           // *actual* (possibly auto-flipped) side is known — see
           // resolveSlideDirection's own doc comment.
-          if (resolvedAnimationKind === "slide") {
+          if (resolvedAnimationKind === "sliding") {
             popoverEl.setAttribute(
               "navi-animation",
               resolveSlideDirection(pickedPositionY, pickedPositionX, {
@@ -706,7 +730,6 @@ const ControlledPopover = (props) => {
           popover="manual"
           baseClassName="navi_popover_backdrop"
           aria-hidden="true"
-          navi-fade-animation={fadeAnimation ? "" : undefined}
           styleCSSVars={POPUP_STYLE_CSS_VARS}
           animationDuration={rest.animationDuration}
           data-pointer-interaction-outside={pointerInteractionOutsideEffect}
@@ -744,7 +767,6 @@ const ControlledPopover = (props) => {
         id={id}
         popover="manual"
         navi-animation={isAutoAnimation ? undefined : animation}
-        navi-fade-animation={fadeAnimation ? "" : undefined}
         styleCSSVars={POPUP_STYLE_CSS_VARS}
         {...rest}
         {...autoFocusProps}
@@ -971,7 +993,7 @@ const toSlideDirectionKey = (y, x) => {
 /**
  * Maps an anchorArea y/x pair to a concrete `navi-animation` slide value, or
  * `null` if both axes overlap the anchor (no direction to slide from —
- * that's `resolvedAnimation === "scale"` territory instead, see openEffect).
+ * that's `resolvedAnimation === "scaling"` territory instead, see openEffect).
  *
  * Two distinct naming/value families, picked via `isRealAnchor` — not just a
  * cosmetic choice, `popup_animation.js` gives them independent CSS rules
@@ -1028,8 +1050,8 @@ const computeStickToPosition = (
 ) => {
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect(): the
   // popover may have an active CSS scale transform mid-animation (e.g.
-  // animation="scale"), which would otherwise report a shrunk size and throw
-  // off the position math (see the matching fix in pickPositionRelativeTo).
+  // animation="scaling"), which would otherwise report a shrunk size and
+  // throw off the position math (see the matching fix in pickPositionRelativeTo).
   const width = popoverEl.offsetWidth;
   const height = popoverEl.offsetHeight;
   const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);

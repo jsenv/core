@@ -30,22 +30,31 @@
  * see below) are hardcoded for now rather than exposed as variables — fine
  * to revisit if a consumer ever needs to override them.
  *
- * Fading is a separate, independent concern from `animation` — see
- * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
- * combines with any `animation` kind (or with none at all, for a plain fade).
+ * Fading is driven by `[navi-fade-animation]` below — a separate attribute
+ * from `[navi-animation]` in CSS terms (its own selector, its own opacity
+ * rule), but Popover no longer lets you have one without the other: it sets
+ * both attributes together, whenever any animation is active, with no
+ * separate `fadeAnimation` prop to opt out (see popover.jsx's own top
+ * comment) — so this file still supports fade-alone (Dialog's own
+ * `fadeAnimation` prop still drives it independently, unrelated to any
+ * `animation` kind, exactly as before).
  *
- * Whenever either `animation` or `fadeAnimation` is active, `box-shadow` is
- * also transitioned to/from `none` (open/closed) — the consumer's own
- * box-shadow (e.g. Popover's `demo_popover_box` class) only takes effect once
- * fully open, so the shadow fades in/out along with the rest instead of
- * looking flat while the popup is still moving.
+ * Whenever either attribute is active, `box-shadow` is also transitioned
+ * to/from `none` (open/closed) — the consumer's own box-shadow (e.g.
+ * Popover's `demo_popover_box` class) only takes effect once fully open, so
+ * the shadow fades in/out along with the rest instead of looking flat while
+ * the popup is still moving.
+ *
+ * `animation="fading"` (Popover): `[navi-fade-animation]` alone, no
+ * `[navi-animation]`-specific rule needed here at all — no motion, just the
+ * fade every kind already gets.
  *
  * `animation="slide-from-*"`/`"slide-*"`: a real translate-based entrance,
  * two independent 8-direction (cardinal + 4 diagonals) families, each with
  * its own hardcoded distance — Popover always resolves
- * `animation="auto"`/`"slide"` to one of these concretely in JS (see
- * popover.jsx's `resolveSlideDirection`), so there's no `animation="slide"`
- * (bare, no direction) selector here at all:
+ * `animation="auto"`/`"sliding"` to one of these concretely in JS (see
+ * popover.jsx's `resolveSlideDirection`), so there's no bare
+ * `animation="sliding"` selector here at all:
  * - `slide-from-{top,bottom,left,right}` (+ diagonals), 100%-of-own-size:
  *   anchorReference/point mode — no real anchor box to travel a short,
  *   anchor-relative distance from. The word names *where it comes from*.
@@ -56,13 +65,13 @@
  *   "above" a real anchor, it slides *up*, away from the anchor which sits
  *   below it — not "from the top").
  *
- * `animation="scale"`: a plain `scale` transform, `--popup-scale-from`
- * (default 0.9) to `1`. Popover picks this automatically over "slide" for
+ * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
+ * (default 0.9) to `1`. Popover picks this automatically over "sliding" for
  * `animation="auto"` whenever both anchorArea axes overlap the anchor —
  * there's no sensible direction to slide from in that case, e.g. a
  * dead-centered popover or one placed fully inside/against the anchor on
  * both axes. Popover's own `spawnFromPointer` prop (anchorReference/point
- * mode + "scale" only) points `transform-origin` at the click/pointer
+ * mode + "scaling" only) points `transform-origin` at the click/pointer
  * position instead of the box's own center — see `--popup-spawn-origin-x/y`
  * below, set by popover.jsx's `positionPopover`.
  *
@@ -114,12 +123,12 @@ export const buildPopupAnimationCss = (selector) => {
         }
       }
 
-      /* scale — grows from --popup-scale-from (default 0.9) to full size,
+      /* scaling — grows from --popup-scale-from (default 0.9) to full size,
          no direction involved. spawnFromPointer (Popover only, see this
          file's top comment) points the growth at the click/pointer position
          instead of the box's own center — a static anchor point for the
          transform, doesn't itself need to transition. */
-      &[navi-animation="scale"] {
+      &[navi-animation="scaling"] {
         scale: 1;
         &[aria-expanded="false"] {
           scale: var(--popup-scale-from);

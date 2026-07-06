@@ -253,28 +253,27 @@
         return [value, setValue];
       };
 
-      // Backs a section's own "Animate"/"Fade"/"Slow" checkboxes and computes
-      // the animationDuration to pass down — storageKey scopes all three to
-      // that one section, independent of every other section's own toggles.
-      // Returns plain values/setters (not a component) so the checkboxes
-      // stay one stable component across renders — a component created fresh
-      // on every call (as this used to return) gets a new identity each
-      // render, and Preact remounts it whenever anything in the parent
-      // re-renders, discarding whatever the user was in the middle of
-      // clicking.
+      // Backs a section's own "Animate"/"Slow" checkboxes and computes the
+      // animationDuration to pass down — storageKey scopes both to that one
+      // section, independent of every other section's own toggles. No
+      // separate "Fade" toggle anymore — Popover always bundles a fade with
+      // whatever animation is active, no independent opt-out. Returns plain
+      // values/setters (not a component) so the checkboxes stay one stable
+      // component across renders — a component created fresh on every call
+      // (as this used to return) gets a new identity each render, and Preact
+      // remounts it whenever anything in the parent re-renders, discarding
+      // whatever the user was in the middle of clicking.
       const useAnimateControls = (storageKey) => {
         const [animate, setAnimate] = useStoredBoolean(
           `${storageKey}_animate`,
           false,
         );
-        const [fade, setFade] = useStoredBoolean(`${storageKey}_fade`, false);
         const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
         const animationDuration = animate && slow ? "0.6s" : undefined;
         return {
           animate,
-          fade,
           animationDuration,
-          controlsProps: { animate, setAnimate, fade, setFade, slow, setSlow },
+          controlsProps: { animate, setAnimate, slow, setSlow },
         };
       };
 
@@ -289,24 +288,9 @@
         </label>
       );
 
-      const AnimateControls = ({
-        animate,
-        setAnimate,
-        fade,
-        setFade,
-        slow,
-        setSlow,
-      }) => (
+      const AnimateControls = ({ animate, setAnimate, slow, setSlow }) => (
         <div class="demo-animate-controls">
           <AnimateToggle animate={animate} onChange={setAnimate} />
-          <label class="demo-animate-toggle">
-            <input
-              type="checkbox"
-              checked={fade}
-              onChange={(e) => setFade(e.target.checked)}
-            />
-            Fade
-          </label>
           <label class="demo-animate-toggle">
             <input
               type="checkbox"
