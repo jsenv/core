@@ -16,14 +16,15 @@
  * matters when several popovers are open at once, since an older backdrop
  * left in its original top-layer slot would sit above a more-recently-opened
  * popover, and an outside click on that popover would never reach it.
- * hidePopover() is deferred until the browser's matching "click" fires
- * when the close was triggered by a mousedown (an outside click): hiding it
- * synchronously would make the mousedown's target vanish before mouseup,
- * silently dropping that click (see armSuppressNextOpenRequest in
- * open_controller.js, which depends on that click too) — aria-expanded is
- * still set to "false" immediately, so the backdrop stops intercepting
- * anything right away even while its hidePopover() is still pending. Not
- * rendered at all when the effect is "none".
+ * hidePopover() is deferred (armBackdropHideOnClick, below) until the
+ * browser's matching "click" fires when the close was triggered by a
+ * mousedown (an outside click): hiding it synchronously would make the
+ * mousedown's target vanish before mouseup, silently dropping that click
+ * (see armSuppressNextOpenRequest in open_controller.js, which depends on
+ * that click too) — aria-expanded is still set to "false" immediately, so
+ * the backdrop stops intercepting anything right away even while its
+ * hidePopover() is still pending. Not rendered at all when the effect is
+ * "none".
  *
  * anchorArea's grammar (loosely inspired by CSS position-area): two
  * space-separated words, order-independent. y: above/aligned-top/center/
@@ -164,6 +165,11 @@ const ControlledPopover = (props) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
+  // Disarms the previous close's pending backdrop hide (see
+  // armBackdropHideOnClick below) whenever a fresh open needs the backdrop
+  // right away, so a click that arrives later can't hide a backdrop that,
+  // by then, belongs to a new open cycle.
+  const disarmBackdropHideRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
@@ -308,6 +314,10 @@ const ControlledPopover = (props) => {
     }
 
     if (backdropEl) {
+      // Disarm before touching the backdrop: a click arriving later must not
+      // hide the fresh instance this open is about to show.
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
       // Hidden first if a previous close's deferred hidePopover() (see the
       // close cleanup below) hasn't run yet — showPopover() throws on an
       // already-open element. Showing it fresh here (rather than reusing an
@@ -498,7 +508,10 @@ const ControlledPopover = (props) => {
       popoverEl.hidePopover();
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
-        hideBackdropAfterClick(backdropEl, closeEvent);
+        disarmBackdropHideRef.current = armBackdropHideOnClick(
+          backdropEl,
+          closeEvent,
+        );
       }
       restoreFocus(closeEvent);
 
@@ -590,28 +603,33 @@ const POPUP_STYLE_CSS_VARS = {
 /**
  * Hides the backdrop, deferring until the browser's matching "click" fires
  * when `closeEvent` was triggered by a mousedown (see this file's top
- * comment for why). Falls back to a short timeout in case that click never
- * reaches document (e.g. an ancestor called stopPropagation()).
+ * comment for why) — same capture-phase-on-document pattern as
+ * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
+ * can't safely replace: mouseup (and the click that follows it) can land an
+ * arbitrarily long time after mousedown (the user is still holding the
+ * button down), so a short timeout can fire first and hide the backdrop
+ * before its own click ever arrives. A capture-phase listener on document
+ * fires for every click regardless of what any bubble-phase handler does
+ * downstream, so no fallback timer is needed. Returns a disarm function (or
+ * undefined if hidden immediately), so a fresh open can cancel a pending
+ * hide it's about to make redundant.
  */
-const hideBackdropAfterClick = (backdropEl, closeEvent) => {
+const armBackdropHideOnClick = (backdropEl, closeEvent) => {
   const mousedownEvent = findEvent(closeEvent, "mousedown");
   if (!mousedownEvent) {
     backdropEl.hidePopover();
-    return;
+    return undefined;
   }
-  let done = false;
-  const finish = () => {
-    if (done) {
-      return;
-    }
-    done = true;
-    document.removeEventListener("click", finish);
+  const onClick = () => {
+    document.removeEventListener("click", onClick, { capture: true });
     if (backdropEl.matches(":popover-open")) {
       backdropEl.hidePopover();
     }
   };
-  document.addEventListener("click", finish);
-  setTimeout(finish, 0);
+  document.addEventListener("click", onClick, { capture: true });
+  return () => {
+    document.removeEventListener("click", onClick, { capture: true });
+  };
 };
 
 const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
