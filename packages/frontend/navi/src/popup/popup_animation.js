@@ -98,8 +98,7 @@ export const buildPopupAnimationCss = (selector) => {
     }
 
     ${selector} {
-      &[navi-animation]:not([navi-animation="view-transition"]),
-      &[navi-fade-animation] {
+      &[navi-animation]:not([navi-animation="view-transition"]) {
         transition-property:
           display, overlay, opacity, translate, scale, box-shadow;
         transition-duration: var(--popup-animation-duration);
@@ -107,21 +106,10 @@ export const buildPopupAnimationCss = (selector) => {
         transition-behavior: allow-discrete;
       }
 
-      /* Dialog's own independent fade (see this file's top comment) —
-         Popover doesn't use this attribute, each of its own kinds below
-         handles its own opacity directly. */
-      &[navi-fade-animation] {
-        opacity: 1;
-      }
-      &[aria-expanded="false"][navi-fade-animation] {
-        opacity: 0;
-      }
-
       /* box-shadow fades in/out alongside any animation kind, instead of
          staying flat while the popup is still moving. */
       &[aria-expanded="false"] {
-        &[navi-animation],
-        &[navi-fade-animation] {
+        &[navi-animation] {
           box-shadow: none;
         }
       }
