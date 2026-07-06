@@ -43,11 +43,11 @@
  * for the "aligned-" pair on both axes. An "aligned-"/"center" axis means the
  * popover overlaps the anchor there, so a translate-based slide on that axis
  * reads oddly — `animation="auto"` resolves to "scale" whenever *both* axes
- * overlap (see resolveSlideFrom below), "slide" otherwise, concretely as one
- * of popup_animation.js's `slide-from-*` values — computed here in JS (not
- * left for CSS to puzzle out from raw position attributes) so there's a
- * single, inspectable `navi-animation` value driving one direct CSS rule per
- * direction, no attribute-cascade indirection.
+ * overlap (see resolveSlideDirection below), "slide" otherwise, concretely as
+ * one of popup_animation.js's `slide-from-*`/`slide-*` values — computed
+ * here in JS (not left for CSS to puzzle out from raw position attributes)
+ * so there's a single, inspectable `navi-animation` value driving one direct
+ * CSS rule per direction, no attribute-cascade indirection.
  *
  * `data-anchor` mirrors the `anchor` prop's own reference mode ("viewport"/
  * "offsetParent"), absent when anchored to a real element.
@@ -115,6 +115,15 @@ const css = /* css */ `
     &[data-anchor-out-of-view] {
       opacity: 0;
       pointer-events: none;
+    }
+
+    /* spawnFromPointer: the "scale" animation grows from the click/pointer
+       position instead of its own center (see openEffect/positionPopover for
+       how --popup-spawn-origin-x/y are computed) — a static anchor point for
+       the scale transform, doesn't itself need to transition. */
+    &[navi-animation="scale"][data-spawn-from-pointer] {
+      transform-origin: var(--popup-spawn-origin-x, 50%)
+        var(--popup-spawn-origin-y, 50%);
     }
   }
 
@@ -209,6 +218,9 @@ const ControlledPopover = (props) => {
     focusTrap,
     animation,
     fadeAnimation,
+    // only meaningful with anchor="viewport"/"offsetParent" + a "scale"
+    // animation — see openEffect for why it's a no-op otherwise.
+    spawnFromPointer,
     children,
     anchorSpacing = 0,
     viewportSpacing = 0,
@@ -302,17 +314,17 @@ const ControlledPopover = (props) => {
         : "slide"
       : animation;
     // "slide" (whether auto-picked or requested explicitly) needs a concrete
-    // slide-from-* direction. anchorReference/point mode has no auto-flip, so
-    // it's known synchronously; a real anchor's *actual* side (which may
-    // differ from the one requested here) is only known once
+    // direction (see resolveSlideDirection). anchorReference/point mode has
+    // no auto-flip, so it's known synchronously; a real anchor's *actual*
+    // side (which may differ from the one requested here) is only known once
     // pickPositionRelativeTo runs — positionPopover's real-anchor branch
     // below overwrites this with the final value before transitions are ever
     // re-enabled, so this placeholder is never visibly wrong.
     let resolvedAnimation = resolvedAnimationKind;
     if (resolvedAnimationKind === "slide" && anchorReference) {
       resolvedAnimation =
-        resolveSlideFrom(parsedAnchorArea.y, parsedAnchorArea.x, {
-          flip: false,
+        resolveSlideDirection(parsedAnchorArea.y, parsedAnchorArea.x, {
+          isRealAnchor: false,
         }) ?? "slide-from-top";
     }
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
@@ -324,6 +336,21 @@ const ControlledPopover = (props) => {
       "--popup-slide-distance",
       anchor ? "20px" : "100%",
     );
+    // Only makes sense for a "scale" popup with no real anchor to grow out
+    // of (a real anchor's own edge already reads fine as the grow point) —
+    // see positionPopover's anchorReference branch for where the actual
+    // click/pointer position gets translated into --popup-spawn-origin-x/y.
+    const useSpawnFromPointer =
+      Boolean(spawnFromPointer) &&
+      Boolean(anchorReference) &&
+      resolvedAnimationKind === "scale";
+    if (useSpawnFromPointer) {
+      popoverEl.setAttribute("data-spawn-from-pointer", "");
+    } else {
+      popoverEl.removeAttribute("data-spawn-from-pointer");
+      popoverEl.style.removeProperty("--popup-spawn-origin-x");
+      popoverEl.style.removeProperty("--popup-spawn-origin-y");
+    }
     // Experimental: swaps the CSS-transition machinery below for
     // document.startViewTransition() (see runOpen/runClose below) —
     // unsupported browsers just fall back to no animation at all.
@@ -427,6 +454,11 @@ const ControlledPopover = (props) => {
       // whole document when the anchor point is viewport-relative).
       const effectiveAnchor =
         anchor || relativeContainer || document.documentElement;
+      // Computed once, from the original open-triggering event's pointer
+      // position — not on every reposition (scroll/resize), which wouldn't
+      // carry a meaningful click position anyway and shouldn't move the
+      // spawn point once it's been set.
+      let spawnOriginComputed = false;
 
       const positionPopover = (positionEvent) => {
         let appliedLeft;
@@ -460,6 +492,31 @@ const ControlledPopover = (props) => {
           );
           appliedLeft = stickPosition.left;
           top = stickPosition.top;
+          if (useSpawnFromPointer && !spawnOriginComputed) {
+            spawnOriginComputed = true;
+            // popoverEl is position: fixed in anchorReference mode, so
+            // appliedLeft/top are already viewport-relative, same coordinate
+            // space as clientX/clientY — no scroll conversion needed.
+            const pointerEvent = findEvent(
+              e,
+              (candidate) => typeof candidate.clientX === "number",
+            );
+            if (pointerEvent) {
+              const originXPercent =
+                ((pointerEvent.clientX - appliedLeft) / popoverEl.offsetWidth) *
+                100;
+              const originYPercent =
+                ((pointerEvent.clientY - top) / popoverEl.offsetHeight) * 100;
+              popoverEl.style.setProperty(
+                "--popup-spawn-origin-x",
+                `${originXPercent}%`,
+              );
+              popoverEl.style.setProperty(
+                "--popup-spawn-origin-y",
+                `${originYPercent}%`,
+              );
+            }
+          }
         } else {
           const { width, height } = effectiveAnchor.getBoundingClientRect();
           const {
@@ -518,13 +575,13 @@ const ControlledPopover = (props) => {
           top = pickedTop;
           // Refines the placeholder set earlier in openEffect now that the
           // *actual* (possibly auto-flipped) side is known — see
-          // resolveSlideFrom's own doc comment for the flip.
+          // resolveSlideDirection's own doc comment.
           if (resolvedAnimationKind === "slide") {
             popoverEl.setAttribute(
               "navi-animation",
-              resolveSlideFrom(pickedPositionY, pickedPositionX, {
-                flip: true,
-              }) ?? "slide-from-top",
+              resolveSlideDirection(pickedPositionY, pickedPositionX, {
+                isRealAnchor: true,
+              }) ?? "slide-up",
             );
           }
         }
@@ -929,51 +986,46 @@ const toSlideDirectionKey = (y, x) => {
 };
 
 /**
- * Maps an anchorArea y/x pair to one of popup_animation.js's `slide-from-*`
- * `navi-animation` values, or `null` if both axes overlap the anchor (no
- * direction to slide from — that's `resolvedAnimation === "scale"`
- * territory instead, see openEffect).
+ * Maps an anchorArea y/x pair to a concrete `navi-animation` slide value, or
+ * `null` if both axes overlap the anchor (no direction to slide from —
+ * that's `resolvedAnimation === "scale"` territory instead, see openEffect).
  *
- * `flip: true` (a real anchor) swaps each bare word for its *opposite*
- * compass direction: placed "above" the anchor, the popover should slide in
- * from below — closer to the anchor, which sits below it — not from above,
- * which would instead read like it's arriving from further away. `flip:
- * false` (anchorReference/point mode, no anchor box to be "closer to") keeps
- * the word as-is: "above" slides in from the top, matching the public
- * `animation="slide-from-top"` value's own established meaning. "aligned-*"/
- * "center" contribute no direction on their axis.
+ * Two distinct naming/value families, picked via `isRealAnchor` — not just a
+ * cosmetic choice, `popup_animation.js` gives them independent CSS rules:
+ * - anchorReference/point mode (`isRealAnchor: false`, 100%-of-own-size
+ *   `--popup-slide-distance`): `slide-from-{top,bottom,left,right}` (+ the 4
+ *   diagonals) — the word names *where it comes from*, matching the word
+ *   as-is: placed "above" (a point/corner), it slides in from the top.
+ * - a real anchor (`isRealAnchor: true`, a small fixed 20px
+ *   `--popup-slide-distance` — a "from" that never varies enough to be
+ *   worth naming) `slide-{up,down,left,right}` (+ the 4 diagonals) — the
+ *   word names the *motion* instead: placed "above" the anchor, it slides
+ *   *up*, away from the anchor (which sits below it) — the opposite
+ *   direction of the point/corner case above, since there's an anchor to be
+ *   "closer to" here.
+ *
+ * "aligned-*"/"center" contribute no direction on their axis either way.
  */
-const resolveSlideFrom = (y, x, { flip }) => {
+const resolveSlideDirection = (y, x, { isRealAnchor }) => {
   const yWord =
     y === "above"
-      ? flip
-        ? "bottom"
+      ? isRealAnchor
+        ? "up"
         : "top"
       : y === "below"
-        ? flip
-          ? "top"
+        ? isRealAnchor
+          ? "down"
           : "bottom"
         : null;
   const xWord =
-    x === "on-the-left"
-      ? flip
-        ? "right"
-        : "left"
-      : x === "on-the-right"
-        ? flip
-          ? "left"
-          : "right"
-        : null;
-  if (yWord && xWord) {
-    return `slide-from-${yWord}-${xWord}`;
+    x === "on-the-left" ? "left" : x === "on-the-right" ? "right" : null;
+  if (!yWord && !xWord) {
+    return null;
   }
-  if (yWord) {
-    return `slide-from-${yWord}`;
-  }
-  if (xWord) {
-    return `slide-from-${xWord}`;
-  }
-  return null;
+  const prefix = isRealAnchor ? "slide" : "slide-from";
+  return yWord && xWord
+    ? `${prefix}-${yWord}-${xWord}`
+    : `${prefix}-${yWord || xWord}`;
 };
 
 /**

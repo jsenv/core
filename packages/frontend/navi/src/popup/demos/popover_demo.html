@@ -645,6 +645,7 @@
         animation,
         fadeAnimation,
         animationDuration,
+        spawnFromPointer,
       }) => {
         const popoverId = useId();
 
@@ -664,6 +665,7 @@
               animation={animation}
               fadeAnimation={fadeAnimation}
               animationDuration={animationDuration}
+              spawnFromPointer={spawnFromPointer}
               borderRadius="8px"
               anchor={anchor}
               anchorArea={anchorArea}
@@ -674,6 +676,30 @@
             </Popover>
           </>
         );
+      };
+
+      // Only meaningful for anchor="viewport"/"offsetParent" + "scale" (see
+      // Popover's own spawnFromPointer doc) — a small local toggle rather
+      // than folded into useAnimateControls/AnimateControls, since it's
+      // specific to these two point-mode sections.
+      const useSpawnFromPointerToggle = (storageKey) => {
+        const [spawnFromPointer, setSpawnFromPointer] = useStoredBoolean(
+          `${storageKey}_spawn_from_pointer`,
+          false,
+        );
+        return {
+          spawnFromPointer,
+          toggle: (
+            <label class="demo-animate-toggle">
+              <input
+                type="checkbox"
+                checked={spawnFromPointer}
+                onChange={(e) => setSpawnFromPointer(e.target.checked)}
+              />
+              Spawn from pointer (scale only)
+            </label>
+          ),
+        };
       };
 
       // A single static box, with faint labels hinting at the four
@@ -748,6 +774,8 @@
       const AnchorAreaViewportDemo = () => {
         const { animate, fade, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_viewport");
+        const { spawnFromPointer, toggle: spawnFromPointerToggle } =
+          useSpawnFromPointerToggle("popover_demo_area_viewport");
         return (
           <>
             <PointModeNote referenceLabel="the viewport" />
@@ -761,10 +789,12 @@
                   animation={animate}
                   fadeAnimation={fade}
                   animationDuration={animationDuration}
+                  spawnFromPointer={spawnFromPointer}
                 />
               )}
             />
             <AnimateControls {...controlsProps} />
+            {spawnFromPointerToggle}
           </>
         );
       };
@@ -776,6 +806,8 @@
         const baseId = useId();
         const { animate, fade, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_offset_parent");
+        const { spawnFromPointer, toggle: spawnFromPointerToggle } =
+          useSpawnFromPointerToggle("popover_demo_area_offset_parent");
         return (
           <>
             <PointModeNote referenceLabel="the container" />
@@ -796,6 +828,7 @@
                     animation={animate}
                     fadeAnimation={fade}
                     animationDuration={animationDuration}
+                    spawnFromPointer={spawnFromPointer}
                     borderRadius="8px"
                     anchor="offsetParent"
                     anchorArea={`${y} ${x}`}
@@ -820,6 +853,7 @@
               )}
             />
             <AnimateControls {...controlsProps} />
+            {spawnFromPointerToggle}
           </>
         );
       };

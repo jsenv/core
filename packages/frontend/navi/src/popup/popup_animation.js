@@ -38,17 +38,22 @@
  * fully open, so the shadow fades in/out along with the rest instead of
  * looking flat while the popup is still moving.
  *
- * `animation="slide-from-*"`: a real translate-based entrance, one of 8
- * directions (top/bottom/left/right and the 4 diagonals). Popover always
- * resolves to one of these concretely in JS (see popover.jsx's
- * `resolveSlideFrom`) — direction and distance both depend on whether
- * there's a real anchor (a small fixed 20px hint, "coming from that
- * direction" without traveling far) or not (anchorReference/point mode,
- * traveling the full 100%-of-own-size default instead) — this file only
- * renders whatever concrete direction it's given, no attribute-cascade
- * resolution logic here. `animation="slide"` alone (no direction) is treated
- * the same as `"slide-from-top"` — a plain fallback for a caller that wants
- * *some* slide without picking a side.
+ * `animation="slide-from-*"`/`"slide-*"`: a real translate-based entrance,
+ * one of two independent 8-direction (cardinal + 4 diagonals) families —
+ * Popover always resolves `animation="auto"`/`"slide"` to one of these
+ * concretely in JS (see popover.jsx's `resolveSlideDirection`), so there's
+ * no `animation="slide"` (bare, no direction) selector here at all, only the
+ * two resolved families below:
+ * - `slide-from-{top,bottom,left,right}` (+ diagonals): anchorReference/
+ *   point mode — no real anchor box, travels the full 100%-of-own-size
+ *   `--popup-slide-distance` default. The word names *where it comes from*.
+ * - `slide-{up,down,left,right}` (+ diagonals): a real anchor — a small
+ *   fixed 20px `--popup-slide-distance` (popover.jsx sets it whenever
+ *   there's a real anchor element), just enough to hint at "coming from
+ *   that direction" without traveling far. The word names the *motion*
+ *   instead, since it's the opposite compass direction from the
+ *   point/corner family above (placed "above" a real anchor, it slides
+ *   *up*, away from the anchor which sits below it — not "from the top").
  *
  * `animation="scale"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`. Popover picks this automatically over "slide" for
@@ -119,7 +124,6 @@ export const buildPopupAnimationCss = (selector) => {
          value (see this file's top comment: popover.jsx always resolves to
          one of these, distance/direction already accounting for
          anchor-vs-anchorReference and any auto-flip). */
-      &[navi-animation="slide"],
       &[navi-animation="slide-from-top"] {
         --popup-slide-x: 0;
         --popup-slide-y: -1;
@@ -153,7 +157,41 @@ export const buildPopupAnimationCss = (selector) => {
         --popup-slide-y: 1;
       }
 
-      &[navi-animation="slide"],
+      /* slide — real-anchor family (see this file's top comment for why
+         these mirror the *opposite* point/corner direction's values). */
+      &[navi-animation="slide-up"] {
+        --popup-slide-x: 0;
+        --popup-slide-y: 1;
+      }
+      &[navi-animation="slide-down"] {
+        --popup-slide-x: 0;
+        --popup-slide-y: -1;
+      }
+      &[navi-animation="slide-left"] {
+        --popup-slide-x: 1;
+        --popup-slide-y: 0;
+      }
+      &[navi-animation="slide-right"] {
+        --popup-slide-x: -1;
+        --popup-slide-y: 0;
+      }
+      &[navi-animation="slide-up-left"] {
+        --popup-slide-x: 1;
+        --popup-slide-y: 1;
+      }
+      &[navi-animation="slide-up-right"] {
+        --popup-slide-x: -1;
+        --popup-slide-y: 1;
+      }
+      &[navi-animation="slide-down-left"] {
+        --popup-slide-x: 1;
+        --popup-slide-y: -1;
+      }
+      &[navi-animation="slide-down-right"] {
+        --popup-slide-x: -1;
+        --popup-slide-y: -1;
+      }
+
       &[navi-animation="slide-from-top"],
       &[navi-animation="slide-from-bottom"],
       &[navi-animation="slide-from-left"],
@@ -161,7 +199,15 @@ export const buildPopupAnimationCss = (selector) => {
       &[navi-animation="slide-from-top-left"],
       &[navi-animation="slide-from-top-right"],
       &[navi-animation="slide-from-bottom-left"],
-      &[navi-animation="slide-from-bottom-right"] {
+      &[navi-animation="slide-from-bottom-right"],
+      &[navi-animation="slide-up"],
+      &[navi-animation="slide-down"],
+      &[navi-animation="slide-left"],
+      &[navi-animation="slide-right"],
+      &[navi-animation="slide-up-left"],
+      &[navi-animation="slide-up-right"],
+      &[navi-animation="slide-down-left"],
+      &[navi-animation="slide-down-right"] {
         translate: 0 0;
 
         &[aria-expanded="false"] {
