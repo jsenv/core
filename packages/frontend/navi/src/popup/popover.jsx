@@ -10,11 +10,19 @@
  *
  * `pointerInteractionOutsideEffect` ("none" default / "close" / "capture")
  * is implemented via a backdrop: a sibling top-layer element, not a
- * descendant (see the CSS below for why), shown once on mount and never
- * hidden again for the component's lifetime — only its aria-expanded toggles
- * in sync with the real popover. Hiding it in lockstep risks swallowing the
- * click a mousedown-triggered close depends on (see armSuppressNextOpenRequest
- * in open_controller.js): hidePopover() is display:none in disguise. Not
+ * descendant (see the CSS below for why). It opens/closes together with the
+ * real popover, freshly re-shown (hidden first if still open) on every open
+ * so its top-layer position resets to just below the real popover — this
+ * matters when several popovers are open at once, since an older backdrop
+ * left in its original top-layer slot would sit above a more-recently-opened
+ * popover, and an outside click on that popover would never reach it.
+ * hidePopover() is deferred until the browser's matching "click" fires
+ * when the close was triggered by a mousedown (an outside click): hiding it
+ * synchronously would make the mousedown's target vanish before mouseup,
+ * silently dropping that click (see armSuppressNextOpenRequest in
+ * open_controller.js, which depends on that click too) — aria-expanded is
+ * still set to "false" immediately, so the backdrop stops intercepting
+ * anything right away even while its hidePopover() is still pending. Not
  * rendered at all when the effect is "none".
  *
  * anchorArea's grammar (loosely inspired by CSS position-area): two
@@ -171,17 +179,10 @@ const ControlledPopover = (props) => {
   // (clip both axes, see data-clip-axis below).
   const isAutoAnimation = animation === true || animation === "auto";
 
-  // Re-runs when the backdrop's existence toggles (mount, or
-  // pointerInteractionOutsideEffect moving away from "none") so a
-  // freshly-mounted backdrop also gets shown once.
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
-    const backdropEl = backdropRef.current;
-    if (backdropEl && !backdropEl.matches(":popover-open")) {
-      backdropEl.showPopover();
-    }
-  }, [hasBackdrop]);
+  }, []);
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
@@ -306,11 +307,19 @@ const ControlledPopover = (props) => {
       popoverEl.removeAttribute("data-position-x-current");
     }
 
-    // The backdrop (when rendered — see backdropEl's own definition above)
-    // is already open (shown once, on mount — see that effect); only its
-    // aria-expanded (which its own CSS keys pointer-events off) needs to
-    // flip here, in sync with the real popover.
-    backdropEl?.setAttribute("aria-expanded", "true");
+    if (backdropEl) {
+      // Hidden first if a previous close's deferred hidePopover() (see the
+      // close cleanup below) hasn't run yet — showPopover() throws on an
+      // already-open element. Showing it fresh here (rather than reusing an
+      // older still-open instance) resets its top-layer position to right
+      // below the real popover, which matters when other popovers already
+      // opened in between.
+      if (backdropEl.matches(":popover-open")) {
+        backdropEl.hidePopover();
+      }
+      backdropEl.showPopover();
+      backdropEl.setAttribute("aria-expanded", "true");
+    }
     popoverEl.showPopover();
     popoverEl.setAttribute("aria-expanded", "true");
     // What we observe for repositioning on resize/scroll/visibility changes:
@@ -487,8 +496,10 @@ const ControlledPopover = (props) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
-      // Not backdropEl.hidePopover() — see this file's top comment.
-      backdropEl?.setAttribute("aria-expanded", "false");
+      if (backdropEl) {
+        backdropEl.setAttribute("aria-expanded", "false");
+        hideBackdropAfterClick(backdropEl, closeEvent);
+      }
       restoreFocus(closeEvent);
 
       cleanup();
@@ -574,6 +585,33 @@ const POPOVER_PSEUDO_CLASSES = [
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   borderRadius: "--popup-border-radius",
+};
+
+/**
+ * Hides the backdrop, deferring until the browser's matching "click" fires
+ * when `closeEvent` was triggered by a mousedown (see this file's top
+ * comment for why). Falls back to a short timeout in case that click never
+ * reaches document (e.g. an ancestor called stopPropagation()).
+ */
+const hideBackdropAfterClick = (backdropEl, closeEvent) => {
+  const mousedownEvent = findEvent(closeEvent, "mousedown");
+  if (!mousedownEvent) {
+    backdropEl.hidePopover();
+    return;
+  }
+  let done = false;
+  const finish = () => {
+    if (done) {
+      return;
+    }
+    done = true;
+    document.removeEventListener("click", finish);
+    if (backdropEl.matches(":popover-open")) {
+      backdropEl.hidePopover();
+    }
+  };
+  document.addEventListener("click", finish);
+  setTimeout(finish, 0);
 };
 
 const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
