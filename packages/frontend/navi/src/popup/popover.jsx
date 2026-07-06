@@ -238,10 +238,6 @@ const ControlledPopover = (props) => {
   // open, two separate invocations of openEffect that don't otherwise share
   // any scope, hence the ref.
   const disarmBackdropHideRef = useRef(null);
-  // Cancels a still-pending suppressPointerEventsDuringTransition (see
-  // openEffect below) from a previous open/close, so it can't fire late and
-  // clobber a fresh one's own pointer-events state.
-  const pointerEventsCleanupRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
@@ -372,262 +368,252 @@ const ControlledPopover = (props) => {
     // shown).
     popoverEl.style.transitionProperty = "none";
 
-    const runOpen = () => {
-      if (backdropEl) {
-        // Disarm a still-pending hide from a previous close: a click arriving
-        // later must not hide the fresh instance this open is about to show.
-        disarmBackdropHideRef.current?.();
-        disarmBackdropHideRef.current = null;
-        // Hidden first if a previous close's deferred hidePopover() (see the
-        // close cleanup below) hasn't run yet — showPopover() throws on an
-        // already-open element. Showing it fresh here (rather than reusing an
-        // older still-open instance) resets its top-layer position to right
-        // below the real popover, which matters when other popovers already
-        // opened in between.
-        if (backdropEl.matches(":popover-open")) {
-          backdropEl.hidePopover();
-        }
-        // Same reflow trick as the real popover below (no @starting-style):
-        // the backdrop's own fade needs a genuinely rendered "closed" frame
-        // to transition from, not a jump straight from not-rendered to
-        // aria-expanded="true".
-        backdropEl.style.transitionProperty = "none";
-        backdropEl.showPopover();
-        backdropEl.getBoundingClientRect();
-        backdropEl.style.transitionProperty = "";
-        backdropEl.setAttribute("aria-expanded", "true");
+    if (backdropEl) {
+      // Disarm a still-pending hide from a previous close: a click arriving
+      // later must not hide the fresh instance this open is about to show.
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
+      // Hidden first if a previous close's deferred hidePopover() (see the
+      // close cleanup below) hasn't run yet — showPopover() throws on an
+      // already-open element. Showing it fresh here (rather than reusing an
+      // older still-open instance) resets its top-layer position to right
+      // below the real popover, which matters when other popovers already
+      // opened in between.
+      if (backdropEl.matches(":popover-open")) {
+        backdropEl.hidePopover();
       }
-      popoverEl.showPopover();
-      // aria-expanded stays "false" here — transitions are still
-      // suppressed, so this doesn't matter yet — and only flips once
-      // positioned below.
+      // Same reflow trick as the real popover below (no @starting-style):
+      // the backdrop's own fade needs a genuinely rendered "closed" frame
+      // to transition from, not a jump straight from not-rendered to
+      // aria-expanded="true".
+      backdropEl.style.transitionProperty = "none";
+      backdropEl.showPopover();
+      backdropEl.getBoundingClientRect();
+      backdropEl.style.transitionProperty = "";
+      backdropEl.setAttribute("aria-expanded", "true");
+    }
+    popoverEl.showPopover();
+    // aria-expanded stays "false" here — transitions are still
+    // suppressed, so this doesn't matter yet — and only flips once
+    // positioned below.
 
-      // What we observe for repositioning on resize/scroll/visibility changes:
-      // the anchor when anchored, otherwise the relative container (or the
-      // whole document when the anchor point is viewport-relative).
-      const effectiveAnchor =
-        anchor || relativeContainer || document.documentElement;
+    // What we observe for repositioning on resize/scroll/visibility changes:
+    // the anchor when anchored, otherwise the relative container (or the
+    // whole document when the anchor point is viewport-relative).
+    const effectiveAnchor =
+      anchor || relativeContainer || document.documentElement;
 
-      const positionPopover = (positionEvent) => {
-        let appliedLeft;
-        let top;
+    const positionPopover = (positionEvent) => {
+      let appliedLeft;
+      let top;
 
-        if (anchorReference) {
-          // An element in the top layer always uses the initial containing
-          // block, regardless of `position` (absolute or fixed) and regardless
-          // of where it actually sits in the DOM — so popoverEl's own
-          // containing block is the document root here even in "offsetParent"
-          // mode, same as "viewport". relativeContainer is only where to
-          // visually position against, not a containing block: containerRect
-          // stays viewport-relative, converted like any other case by
-          // getPositioningScrollOffset inside computeStickToPosition.
-          const containerRect = relativeContainer
-            ? relativeContainer.getBoundingClientRect()
-            : {
-                left: 0,
-                top: 0,
-                right: document.documentElement.clientWidth,
-                bottom: document.documentElement.clientHeight,
-                width: document.documentElement.clientWidth,
-                height: document.documentElement.clientHeight,
-              };
-          const spacingPx = resolveSpacingSize(anchorSpacing);
-          const stickPosition = computeStickToPosition(
-            popoverEl,
-            containerRect,
-            slideDirectionKey,
-            spacingPx,
-          );
-          appliedLeft = stickPosition.left;
-          top = stickPosition.top;
-        } else {
-          const { width, height } = effectiveAnchor.getBoundingClientRect();
-          const {
-            left: borderLeft,
-            right: borderRight,
-            top: borderTop,
-            bottom: borderBottom,
-          } = getBorderSizes(effectiveAnchor);
-          popoverEl.style.setProperty(
-            "--anchor-width",
-            `${snapToPixel(width)}px`,
-          );
-          popoverEl.style.setProperty(
-            "--anchor-height",
-            `${snapToPixel(height)}px`,
-          );
-          popoverEl.style.setProperty(
-            "--anchor-inner-width",
-            `${snapToPixel(width - borderLeft - borderRight)}px`,
-          );
-          popoverEl.style.setProperty(
-            "--anchor-inner-height",
-            `${snapToPixel(height - borderTop - borderBottom)}px`,
-          );
-          const minLeft = 1;
-          // Remove max-height constraint so pickPositionRelativeTo measures the natural
-          // (unconstrained) height of the popover. This ensures the 60% flip threshold
-          // compares against the real content height, not the already-truncated one.
-          popoverEl.style.removeProperty("--space-available");
-          const {
-            left,
-            top: pickedTop,
-            positionY: pickedPositionY,
-            spaceAbove,
-            spaceBelow,
-          } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-            positionX: effectivePositionX,
-            positionY: effectivePositionY,
-            positionXFixed: effectivePositionXFixed,
-            positionYFixed: effectivePositionYFixed,
-            spacing: resolveSpacingSize(anchorSpacing),
-            viewportSpacing: resolveSpacingSize(viewportSpacing),
-            minLeft,
-          });
-          const finalPositionY = pickedPositionY;
-          const spaceAvailable =
-            finalPositionY === "above" || finalPositionY === "aligned-bottom"
-              ? spaceAbove
-              : spaceBelow;
-          popoverEl.style.setProperty(
-            "--space-available",
-            `${spaceAvailable}px`,
-          );
-          appliedLeft = Math.max(left, minLeft);
-          top = pickedTop;
-        }
-
-        debugPopup(
-          positionEvent,
-          `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
+      if (anchorReference) {
+        // An element in the top layer always uses the initial containing
+        // block, regardless of `position` (absolute or fixed) and regardless
+        // of where it actually sits in the DOM — so popoverEl's own
+        // containing block is the document root here even in "offsetParent"
+        // mode, same as "viewport". relativeContainer is only where to
+        // visually position against, not a containing block: containerRect
+        // stays viewport-relative, converted like any other case by
+        // getPositioningScrollOffset inside computeStickToPosition.
+        const containerRect = relativeContainer
+          ? relativeContainer.getBoundingClientRect()
+          : {
+              left: 0,
+              top: 0,
+              right: document.documentElement.clientWidth,
+              bottom: document.documentElement.clientHeight,
+              width: document.documentElement.clientWidth,
+              height: document.documentElement.clientHeight,
+            };
+        const spacingPx = resolveSpacingSize(anchorSpacing);
+        const stickPosition = computeStickToPosition(
+          popoverEl,
+          containerRect,
+          slideDirectionKey,
+          spacingPx,
         );
-        popoverEl.style.top = `${top}px`;
-        popoverEl.style.left = `${appliedLeft}px`;
-      };
-
-      if (scrollLock) {
-        addCleanup(trapScrollInside(popoverEl));
-      }
-      if (focusTrap) {
-        addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
-      }
-      const rectEffect = visibleRectEffect(
-        effectiveAnchor,
-        ({ visibilityRatio }, { event }) => {
-          // Only a real anchor can meaningfully go "out of view" — gating on
-          // document.documentElement's own visibilityRatio (used for
-          // anchorless/anchor-point popups) would wrongly skip positioning on
-          // a tall page, since its ratio is often low even when nothing's
-          // hidden.
-          if (anchor && visibilityRatio <= 0.2) {
-            popoverEl.setAttribute("data-anchor-out-of-view", "");
-            return;
-          }
-          popoverEl.removeAttribute("data-anchor-out-of-view");
-          positionPopover(event);
-        },
-        {
-          event: e,
-          // it's ok for the popover to become unsync with the anchor size
-          // (we could even argue it's a feature as it helps to keep the popover position stable)
-          skipElementResize: true,
-        },
-      );
-      addCleanup(() => {
-        rectEffect.disconnect();
-      });
-
-      // "sliding"/"expanding" need a concrete direction (see
-      // resolveDirectionValue) — resolved here, once, now that rectEffect's
-      // own setup has already called positionPopover() above and the actual
-      // position is known: anchorReference/point mode ("sliding") has no
-      // auto-flip, so `parsedAnchorArea` itself is already final;
-      // pickPositionRelativeTo (called from positionPopover, for a real
-      // anchor) may have picked a different side than requested, written
-      // onto data-position-y/x-current — reading that back here instead of
-      // the originally-requested `parsedAnchorArea` is what makes
-      // "expanding" point the right way. Both need to happen before
-      // transitions are re-enabled below, same constraint as positioning
-      // itself.
-      let resolvedAnimation = resolvedAnimationKind;
-      if (resolvedAnimationKind === "sliding") {
-        resolvedAnimation =
-          resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
-            isRealAnchor: false,
-            prefix: "slide-from",
-          }) ?? "slide-from-top";
-      } else if (resolvedAnimationKind === "expanding") {
-        resolvedAnimation =
-          resolveDirectionValue(
-            popoverEl.getAttribute("data-position-y-current"),
-            popoverEl.getAttribute("data-position-x-current"),
-            { isRealAnchor: true, prefix: "expand" },
-          ) ?? "expand-up";
-      }
-      if (resolvedAnimation) {
-        popoverEl.setAttribute("navi-animation", resolvedAnimation);
-        // The backdrop mirrors the same value, but only ever fades
-        // regardless of which kind it is — see the backdrop's own CSS
-        // comment for why.
-        backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+        appliedLeft = stickPosition.left;
+        top = stickPosition.top;
       } else {
-        popoverEl.removeAttribute("navi-animation");
-        backdropEl?.removeAttribute("navi-animation");
-      }
-
-      // rectEffect's own setup already called positionPopover() once above,
-      // synchronously, so popoverEl.style.left/top already hold the resting
-      // position the click/pointer position needs to be expressed relative
-      // to — read from the original open-triggering event `e`, not
-      // recomputed on later repositions (scroll/resize), which wouldn't
-      // carry a meaningful click position anyway and shouldn't move the
-      // spawn point once it's been set. Must still run before transitions
-      // are re-enabled below, same as the positioning itself.
-      if (useSpawnFromPointer) {
-        const pointerEvent = findEvent(
-          e,
-          (candidate) => typeof candidate.clientX === "number",
+        const { width, height } = effectiveAnchor.getBoundingClientRect();
+        const {
+          left: borderLeft,
+          right: borderRight,
+          top: borderTop,
+          bottom: borderBottom,
+        } = getBorderSizes(effectiveAnchor);
+        popoverEl.style.setProperty(
+          "--anchor-width",
+          `${snapToPixel(width)}px`,
         );
-        if (pointerEvent) {
-          // popoverEl is position: fixed in anchorReference mode, so
-          // style.left/top are already viewport-relative, same coordinate
-          // space as clientX/clientY — no scroll conversion needed. Offset
-          // from the box's own center (not its top-left corner), since
-          // that's the point popup_animation.js's translate settles back to
-          // 0 0 (the box's resting position) while scale stays centered.
-          const boxCenterX =
-            parseFloat(popoverEl.style.left) + popoverEl.offsetWidth / 2;
-          const boxCenterY =
-            parseFloat(popoverEl.style.top) + popoverEl.offsetHeight / 2;
-          popoverEl.style.setProperty(
-            "--popup-spawn-origin-x",
-            `${pointerEvent.clientX - boxCenterX}px`,
-          );
-          popoverEl.style.setProperty(
-            "--popup-spawn-origin-y",
-            `${pointerEvent.clientY - boxCenterY}px`,
-          );
-        }
+        popoverEl.style.setProperty(
+          "--anchor-height",
+          `${snapToPixel(height)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-width",
+          `${snapToPixel(width - borderLeft - borderRight)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-height",
+          `${snapToPixel(height - borderTop - borderBottom)}px`,
+        );
+        const minLeft = 1;
+        // Remove max-height constraint so pickPositionRelativeTo measures the natural
+        // (unconstrained) height of the popover. This ensures the 60% flip threshold
+        // compares against the real content height, not the already-truncated one.
+        popoverEl.style.removeProperty("--space-available");
+        const {
+          left,
+          top: pickedTop,
+          positionY: pickedPositionY,
+          spaceAbove,
+          spaceBelow,
+        } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
+          positionX: effectivePositionX,
+          positionY: effectivePositionY,
+          positionXFixed: effectivePositionXFixed,
+          positionYFixed: effectivePositionYFixed,
+          spacing: resolveSpacingSize(anchorSpacing),
+          viewportSpacing: resolveSpacingSize(viewportSpacing),
+          minLeft,
+        });
+        const finalPositionY = pickedPositionY;
+        const spaceAvailable =
+          finalPositionY === "above" || finalPositionY === "aligned-bottom"
+            ? spaceAbove
+            : spaceBelow;
+        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+        appliedLeft = Math.max(left, minLeft);
+        top = pickedTop;
       }
 
-      // The reflow forces the browser to actually commit the correctly
-      // positioned "closed" frame set up above as a real rendered state,
-      // before transitions are re-enabled and aria-expanded flips to "true" —
-      // only then does the CSS transition play, from that just-committed
-      // frame to the open one, with no @starting-style involved at all.
-      popoverEl.getBoundingClientRect();
-      popoverEl.style.transitionProperty = "";
-      popoverEl.setAttribute("aria-expanded", "true");
-      // Not interactive again until the entrance transition settles — avoids
-      // the cursor changing/something becoming clickable while the popover
-      // is still visually sliding/scaling into place.
-      pointerEventsCleanupRef.current?.();
-      pointerEventsCleanupRef.current = hasCssTransitionAnimation
-        ? suppressPointerEventsDuringTransition(popoverEl)
-        : null;
+      debugPopup(
+        positionEvent,
+        `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
+      );
+      popoverEl.style.top = `${top}px`;
+      popoverEl.style.left = `${appliedLeft}px`;
     };
 
-    runOpen();
+    if (scrollLock) {
+      addCleanup(trapScrollInside(popoverEl));
+    }
+    if (focusTrap) {
+      addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
+    }
+    const rectEffect = visibleRectEffect(
+      effectiveAnchor,
+      ({ visibilityRatio }, { event }) => {
+        // Only a real anchor can meaningfully go "out of view" — gating on
+        // document.documentElement's own visibilityRatio (used for
+        // anchorless/anchor-point popups) would wrongly skip positioning on
+        // a tall page, since its ratio is often low even when nothing's
+        // hidden.
+        if (anchor && visibilityRatio <= 0.2) {
+          popoverEl.setAttribute("data-anchor-out-of-view", "");
+          return;
+        }
+        popoverEl.removeAttribute("data-anchor-out-of-view");
+        positionPopover(event);
+      },
+      {
+        event: e,
+        // it's ok for the popover to become unsync with the anchor size
+        // (we could even argue it's a feature as it helps to keep the popover position stable)
+        skipElementResize: true,
+      },
+    );
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
+
+    // "sliding"/"expanding" need a concrete direction (see
+    // resolveDirectionValue) — resolved here, once, now that rectEffect's
+    // own setup has already called positionPopover() above and the actual
+    // position is known: anchorReference/point mode ("sliding") has no
+    // auto-flip, so `parsedAnchorArea` itself is already final;
+    // pickPositionRelativeTo (called from positionPopover, for a real
+    // anchor) may have picked a different side than requested, written
+    // onto data-position-y/x-current — reading that back here instead of
+    // the originally-requested `parsedAnchorArea` is what makes
+    // "expanding" point the right way. Both need to happen before
+    // transitions are re-enabled below, same constraint as positioning
+    // itself.
+    let resolvedAnimation = resolvedAnimationKind;
+    if (resolvedAnimationKind === "sliding") {
+      resolvedAnimation =
+        resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
+          isRealAnchor: false,
+          prefix: "slide-from",
+        }) ?? "slide-from-top";
+    } else if (resolvedAnimationKind === "expanding") {
+      resolvedAnimation =
+        resolveDirectionValue(
+          popoverEl.getAttribute("data-position-y-current"),
+          popoverEl.getAttribute("data-position-x-current"),
+          { isRealAnchor: true, prefix: "expand" },
+        ) ?? "expand-up";
+    }
+    if (resolvedAnimation) {
+      popoverEl.setAttribute("navi-animation", resolvedAnimation);
+      // The backdrop mirrors the same value, but only ever fades
+      // regardless of which kind it is — see the backdrop's own CSS
+      // comment for why.
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      popoverEl.removeAttribute("navi-animation");
+      backdropEl?.removeAttribute("navi-animation");
+    }
+
+    // rectEffect's own setup already called positionPopover() once above,
+    // synchronously, so popoverEl.style.left/top already hold the resting
+    // position the click/pointer position needs to be expressed relative
+    // to — read from the original open-triggering event `e`, not
+    // recomputed on later repositions (scroll/resize), which wouldn't
+    // carry a meaningful click position anyway and shouldn't move the
+    // spawn point once it's been set. Must still run before transitions
+    // are re-enabled below, same as the positioning itself.
+    if (useSpawnFromPointer) {
+      const pointerEvent = findEvent(
+        e,
+        (candidate) => typeof candidate.clientX === "number",
+      );
+      if (pointerEvent) {
+        // popoverEl is position: fixed in anchorReference mode, so
+        // style.left/top are already viewport-relative, same coordinate
+        // space as clientX/clientY — no scroll conversion needed. Offset
+        // from the box's own center (not its top-left corner), since
+        // that's the point popup_animation.js's translate settles back to
+        // 0 0 (the box's resting position) while scale stays centered.
+        const boxCenterX =
+          parseFloat(popoverEl.style.left) + popoverEl.offsetWidth / 2;
+        const boxCenterY =
+          parseFloat(popoverEl.style.top) + popoverEl.offsetHeight / 2;
+        popoverEl.style.setProperty(
+          "--popup-spawn-origin-x",
+          `${pointerEvent.clientX - boxCenterX}px`,
+        );
+        popoverEl.style.setProperty(
+          "--popup-spawn-origin-y",
+          `${pointerEvent.clientY - boxCenterY}px`,
+        );
+      }
+    }
+
+    // The reflow forces the browser to actually commit the correctly
+    // positioned "closed" frame set up above as a real rendered state,
+    // before transitions are re-enabled and aria-expanded flips to "true" —
+    // only then does the CSS transition play, from that just-committed
+    // frame to the open one, with no @starting-style involved at all.
+    popoverEl.getBoundingClientRect();
+    popoverEl.style.transitionProperty = "";
+    popoverEl.setAttribute("aria-expanded", "true");
+    // Not interactive again until it settles into its resting state.
+    let cleanupInteractionDuringTransition = hasCssTransitionAnimation
+      ? suppressPointerEventsDuringTransition(popoverEl)
+      : null;
 
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
@@ -640,9 +626,9 @@ const ControlledPopover = (props) => {
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
       // Same reasoning as the open side — not interactive while it's still
-      // visually leaving.
-      pointerEventsCleanupRef.current?.();
-      pointerEventsCleanupRef.current = hasCssTransitionAnimation
+      // leaving, cancelling whatever the open side left pending.
+      cleanupInteractionDuringTransition?.();
+      cleanupInteractionDuringTransition = hasCssTransitionAnimation
         ? suppressPointerEventsDuringTransition(popoverEl)
         : null;
       if (backdropEl) {
