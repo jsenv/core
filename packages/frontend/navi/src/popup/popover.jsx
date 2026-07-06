@@ -46,21 +46,31 @@ const css = /* css */ `
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
+    padding: 0;
     background: transparent;
+    border: none;
     pointer-events: none;
 
-    /* Default ("none"): the backdrop never intercepts anything — outside
-       pointer interactions pass straight through to whatever's behind the
-       popover, and it never auto-closes from them. "capture"/"close" both
-       need the backdrop to actually intercept pointer events while its
-       popover is open; only "close" also acts on them (see the backdrop's
-       onMouseDown below). aria-expanded here mirrors the popover's own (not
-       the backdrop's :popover-open, which — see the mount effect — is
-       always true once shown): the backdrop itself is shown once and left
-       open for the component's lifetime, only this attribute toggles. */
-    &[aria-expanded="true"][data-pointer-interaction-outside="capture"],
-    &[aria-expanded="true"][data-pointer-interaction-outside="close"] {
-      pointer-events: auto;
+    /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
+         "capture" (nothing outside is reachable) than "close" (still lets
+         the mousedown through, just closes on it) — "none" stays fully
+         transparent (the default .navi_popover_backdrop background). The
+         backdrop is its own top-layer element now (a sibling of the
+         popover, not a descendant), so the attribute is read directly off
+         it rather than through a .demo_popover_box ancestor. */
+    &[data-pointer-interaction-outside="close"] {
+      background: rgba(0, 0, 0, 0.1);
+
+      &[aria-expanded="true"] {
+        pointer-events: auto;
+      }
+    }
+    &[data-pointer-interaction-outside="capture"] {
+      background: rgba(0, 0, 0, 0.7);
+
+      &[aria-expanded="true"] {
+        pointer-events: auto;
+      }
     }
   }
 

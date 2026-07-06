@@ -56,19 +56,6 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         overflow: auto;
       }
-      /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
-         "capture" (nothing outside is reachable) than "close" (still lets
-         the mousedown through, just closes on it) — "none" stays fully
-         transparent (the default .navi_popover_backdrop background). The
-         backdrop is its own top-layer element now (a sibling of the
-         popover, not a descendant), so the attribute is read directly off
-         it rather than through a .demo_popover_box ancestor. */
-      .navi_popover_backdrop[data-pointer-interaction-outside="close"] {
-        background: rgba(0, 0, 0, 0.1);
-      }
-      .navi_popover_backdrop[data-pointer-interaction-outside="capture"] {
-        background: rgba(0, 0, 0, 0.7);
-      }
       .demo-container {
         position: relative;
         display: flex;
