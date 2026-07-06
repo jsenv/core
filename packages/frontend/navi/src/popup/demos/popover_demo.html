@@ -218,11 +218,12 @@
         return `${y} ${x}`;
       };
 
-      // Against a viewport point (rather than a real anchor box), overlap
-      // and no-overlap collapse to the same placement, so "aligned-top"
-      // lands exactly where "above" does (ditto "aligned-bottom"/"below" and
-      // "aligned-left"/"on-the-left"/"aligned-right"/"on-the-right").
-      const isDuplicateViewportArea = (y, x) =>
+      // Pinned to a point/corner (anchor="viewport" or "offsetParent" — no
+      // real anchor box), overlap and no-overlap collapse to the same
+      // placement, so "aligned-top" lands exactly where "above" does (ditto
+      // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
+      // "aligned-right"/"on-the-right").
+      const isDuplicatePointArea = (y, x) =>
         y === "aligned-top" ||
         y === "aligned-bottom" ||
         x === "aligned-left" ||
@@ -667,19 +668,28 @@
         );
       };
 
-      // Two swatches, one faded, illustrating what the faded cells in the
-      // grid below mean.
-      const ViewportDuplicateLegend = () => (
-        <p class="demo-legend">
-          <span class="demo-legend-example">on-the-left</span>
-          <span class="demo-legend-example" data-duplicate="">
-            aligned-left
-          </span>
-          <span>
-            same placement — a popover pinned to a viewport point can't overlap
-            it, so alignment doesn't change anything.
-          </span>
-        </p>
+      // Shared by both point-mode subsections (viewport and offsetParent):
+      // pinned to a point/corner of referenceLabel instead of a real anchor
+      // box, the popover can only sit flush against its edges — never
+      // floating outside with a gap the way "above"/"below" do against a
+      // real anchor. That collapses the overlap distinction, so some
+      // positions are equivalent (faded in the grid below).
+      const PointModeNote = ({ referenceLabel }) => (
+        <>
+          <p>
+            Pinned to a point/corner of {referenceLabel} instead of a real
+            anchor box, the popover can only sit flush against its edges — never
+            floating outside with a gap. That collapses the overlap distinction:
+            some positions below are equivalent (faded).
+          </p>
+          <p class="demo-legend">
+            <span class="demo-legend-example">on-the-left</span>
+            <span class="demo-legend-example" data-duplicate="">
+              aligned-left
+            </span>
+            <span>same placement as each other.</span>
+          </p>
+        </>
       );
 
       const AnchorAreaViewportDemo = ({ animatedDuration }) => {
@@ -689,14 +699,14 @@
         );
         return (
           <>
-            <ViewportDuplicateLegend />
+            <PointModeNote referenceLabel="the viewport" />
             <AreaGrid
               renderCell={(y, x) => (
                 <AnchorAreaPopover
                   anchor="viewport"
                   anchorArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
-                  duplicate={isDuplicateViewportArea(y, x)}
+                  duplicate={isDuplicatePointArea(y, x)}
                   animation={animate}
                   animationDuration={animate ? animatedDuration : undefined}
                 />
@@ -709,9 +719,7 @@
 
       // anchor="offsetParent" needs the popovers rendered *inside* the
       // positioned container to find it — the trigger buttons don't, so
-      // they live outside it, in their own grid below. No gutter needed:
-      // the (large) container itself is the room a popover positions
-      // within, it never escapes it.
+      // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = ({ animatedDuration }) => {
         const baseId = useId();
         const [animate, setAnimate] = useStoredBoolean(
@@ -721,6 +729,7 @@
         const animationDuration = animate ? animatedDuration : undefined;
         return (
           <>
+            <PointModeNote referenceLabel="the container" />
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
@@ -747,6 +756,7 @@
                   command="--navi-toggle"
                   commandFor={`${baseId}-${y}-${x}`}
                   className="demo-area-button"
+                  data-duplicate={isDuplicatePointArea(y, x) ? "" : undefined}
                 >
                   {formatAreaLabel(y, x)}
                 </Button>
