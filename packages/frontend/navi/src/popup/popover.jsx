@@ -76,18 +76,16 @@ const css = /* css */ `
        flips/resizes, not to chase the anchor on every scroll tick. */
     position: absolute;
     inset: unset;
-    /* Set --popup-border-radius instead of border-radius directly: it's
-       also what the "clip" animation rounds its clip-path shape to (see
-       popup_animation.js), so the two can never drift out of sync. */
     border-radius: var(--popup-border-radius, 0);
 
-    /* anchor="viewport" has no real anchor to stay in scroll-lockstep with
-       in the first place — it's meant to stay pinned to the viewport itself,
-       exactly what position: fixed already does natively. Staying absolute
-       here would instead let it contribute to the document's own scrollable
-       area once it extends past the current viewport edge, growing the
-       page's scrollbar for no reason. */
-    &[data-anchor-reference="viewport"] {
+    /* Neither anchorReference case has a real anchor to stay in
+       scroll-lockstep with: anchor="viewport" is meant to stay pinned to the
+       viewport itself, exactly what position: fixed already does natively —
+       staying absolute would instead let it contribute to the document's own
+       scrollable area once it extends past the current viewport edge,
+       growing the page's scrollbar for no reason. anchor="offsetParent" is
+       set to fixed too, experimentally, to see how it behaves. */
+    &[data-anchor-reference] {
       position: fixed;
     }
 
@@ -208,13 +206,8 @@ const ControlledPopover = (props) => {
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
   const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" picks the animation that best fits the anchor
-  // resolved dynamically in openEffect (below) once it's actually known for
-  // *this* open: "slide" when anchored to a point other than "center"
-  // (anchor="right", "top-left", ...) — sliding in to land exactly centered
-  // would look odd, so "center" gets "clip" too — "clip" otherwise, whether
-  // anchored to a real element (vertical-only clip out of its edge) or not
-  // (clip both axes, see data-clip-axis below).
+  // animation={true} or "auto" always resolves to "slide" (see
+  // popup_animation.js for how it reads its direction).
   const isAutoAnimation = animation === true || animation === "auto";
 
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
@@ -267,40 +260,14 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.y,
       parsedAnchorArea.x,
     );
-    // "slide" whenever there's a direction to slide from — a real anchor's
-    // own position (data-position-y/x-current) or a point/corner's
-    // slideDirectionKey (data-anchor) — "clip" only for the directionless
-    // dead-center case (see popup_animation.js for how each reads its
-    // direction).
-    const resolvedAnimation = isAutoAnimation
-      ? slideDirectionKey !== "center"
-        ? "slide"
-        : "clip"
-      : animation;
+    const resolvedAnimation = isAutoAnimation ? "slide" : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    // Keys the CSS that switches back to position: fixed for anchor="viewport"
-    // specifically (see the CSS comment above for why).
-    if (anchorReference === "viewport") {
-      popoverEl.setAttribute("data-anchor-reference", "viewport");
+    // Keys the CSS that switches to position: fixed for both anchorReference
+    // cases (see the CSS comment above for why).
+    if (anchorReference) {
+      popoverEl.setAttribute("data-anchor-reference", anchorReference);
     } else {
       popoverEl.removeAttribute("data-anchor-reference");
-    }
-    // "clip" reveals vertically only by default (grows out of the anchor's
-    // edge), which only makes sense against a real anchor element. Without
-    // one — anchorReference (viewport/offsetParent) or nothing at all — it
-    // clips both axes around a point instead (see popup_animation.js). A
-    // real anchor with a centered Y (pure "on-the-left"/"on-the-right"
-    // placement) clips horizontally instead of vertically — anything with a
-    // non-center Y (including corner combos) keeps the vertical default.
-    if (!anchor) {
-      popoverEl.setAttribute("data-clip-axis", "xy");
-    } else if (
-      parsedAnchorArea.y === "center" &&
-      parsedAnchorArea.x !== "center"
-    ) {
-      popoverEl.setAttribute("data-clip-axis", "x");
-    } else {
-      popoverEl.removeAttribute("data-clip-axis");
     }
     // Mirrors how the anchor was resolved, in DOM-inspectable form:
     // slideDirectionKey when anchorReference is set, a structural relation
@@ -359,8 +326,9 @@ const ControlledPopover = (props) => {
 
     // Suppressed until the popover is actually measured/positioned below —
     // see this file's top comment for why @starting-style can't drive the
-    // opening transition (it needs the *correct* clip-path direction already
-    // in place, which requires a layout box that only exists once shown).
+    // opening transition (it needs the popover's actual resting position
+    // already in place, which requires a layout box that only exists once
+    // shown).
     popoverEl.style.transitionProperty = "none";
 
     if (backdropEl) {
@@ -489,45 +457,6 @@ const ControlledPopover = (props) => {
       );
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
-
-      if (resolvedAnimation !== "clip" || anchor) {
-        // Anchored "clip" is vertical-only (see popup_animation.js): it
-        // reads data-position-y-current directly, no origin/translate to
-        // compute here.
-        return;
-      }
-      // Not anchored: translate from the click/pointer position — expressed
-      // as an offset from the box's own center, since that's what the CSS
-      // translates back to 0 0 — to the final resting position, while
-      // clip-path grows outward from the box's own center (in local
-      // percentages, so no JS measurement needed for that part). Falls back
-      // to growing in place (no translate) when there's no pointer to read.
-      const pointerEvent = findEvent(
-        e,
-        (candidate) => typeof candidate.clientX === "number",
-      );
-      if (!pointerEvent) {
-        popoverEl.style.removeProperty("--popup-animation-origin-x");
-        popoverEl.style.removeProperty("--popup-animation-origin-y");
-        return;
-      }
-      // appliedLeft/top are document-relative (popoverEl is position:
-      // absolute — see getPositioningScrollOffset), while clientX/clientY
-      // are always viewport-relative — apply the same offset to them before
-      // diffing so both sides are in the same space, otherwise the computed
-      // origin drifts off by the scroll amount as soon as the page isn't
-      // scrolled to the top.
-      const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);
-      const boxCenterX = appliedLeft + popoverEl.offsetWidth / 2;
-      const boxCenterY = top + popoverEl.offsetHeight / 2;
-      popoverEl.style.setProperty(
-        "--popup-animation-origin-x",
-        `${snapToPixel(pointerEvent.clientX + scrollLeft - boxCenterX)}px`,
-      );
-      popoverEl.style.setProperty(
-        "--popup-animation-origin-y",
-        `${snapToPixel(pointerEvent.clientY + scrollTop - boxCenterY)}px`,
-      );
     };
 
     if (scrollLock) {
@@ -563,11 +492,10 @@ const ControlledPopover = (props) => {
     });
 
     // The reflow forces the browser to actually commit the correctly
-    // positioned/clipped "closed" frame set up above as a real rendered
-    // state, before transitions are re-enabled and aria-expanded flips to
-    // "true" — only then does the CSS transition play, from that
-    // just-committed frame to the open one, with no @starting-style
-    // involved at all.
+    // positioned "closed" frame set up above as a real rendered state,
+    // before transitions are re-enabled and aria-expanded flips to "true" —
+    // only then does the CSS transition play, from that just-committed frame
+    // to the open one, with no @starting-style involved at all.
     popoverEl.getBoundingClientRect();
     popoverEl.style.transitionProperty = "";
     popoverEl.setAttribute("aria-expanded", "true");
@@ -672,8 +600,7 @@ const POPOVER_PSEUDO_CLASSES = [
 
 // Lets consumers pass animationDuration="0.5s"/borderRadius="8px" as regular
 // props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
-// handling). borderRadius drives both the popover's own visible corners and
-// what "clip" animations round their clip-path to (see popup_animation.js).
+// handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   borderRadius: "--popup-border-radius",
