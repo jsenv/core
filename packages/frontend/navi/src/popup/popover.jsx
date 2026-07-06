@@ -149,9 +149,10 @@ const ControlledPopover = (props) => {
   // with showPopover()/hidePopover(), see below) so popup_animation.js can
   // key its CSS off a single selector regardless of Popover vs Dialog.
   //
-  // The backdrop is shown here, once, and never hidden again for the
-  // component's lifetime (only its aria-expanded/pointer-events toggle, in
-  // openEffect below) — specifically NOT hidden/shown in lockstep with the
+  // The backdrop (rendered only when pointerInteractionOutsideEffect isn't
+  // "none" — see the JSX below) is shown here, once, and never hidden again
+  // for the component's lifetime (only its aria-expanded/pointer-events
+  // toggle, in openEffect below) — not opened/closed in lockstep with the
   // real popover. Two reasons:
   // - Stacking: each showPopover() call pushes an element to the very top
   //   of the browser's top layer. Showing the backdrop once, before the
@@ -159,21 +160,16 @@ const ControlledPopover = (props) => {
   //   fresh on every open — always ends up visually above it, with no
   //   z-index involved (see the CSS comment above for why z-index can't
   //   reliably do this for a *descendant* backdrop, which is why it's a
-  //   sibling top-layer element now).
+  //   sibling top-layer element).
   // - The exact same "keep it there to keep the browser dispatching a
   //   click" reasoning that applies to the backdrop's onMouseDown handler
   //   below (see that comment) also rules out hiding it here: hidePopover()
   //   is display:none in disguise, so closing it synchronously inside the
   //   same mousedown-triggered close would silently drop the very click
   //   armSuppressNextOpenRequest depends on.
-  //
-  // The backdrop isn't rendered at all when pointerInteractionOutsideEffect
-  // is "none" (see the JSX below) — it would have zero effect there, so
-  // there's no reason to pay for an always-open top-layer element. This
-  // effect depends on whether the backdrop currently exists (rather than
-  // []) so that if a caller flips pointerInteractionOutsideEffect away from
-  // "none" later, the newly-mounted backdrop still gets this same
-  // once-on-mount showPopover().
+  // The effect re-runs whenever the backdrop's existence toggles (mount, or
+  // pointerInteractionOutsideEffect moving away from "none") so a
+  // freshly-mounted backdrop always gets this same once-shown treatment.
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
@@ -204,9 +200,8 @@ const ControlledPopover = (props) => {
     // all (to anything), the request's own carried anchor (e.g. a
     // --navi-toggle button, forwarded as detail.source) is never consulted —
     // only when the prop is left undefined does the request get to supply
-    // one. There is no "ignore" value any more: to force viewport-relative
-    // placement even though the request carries an anchor, pass
-    // anchor="viewport" explicitly.
+    // one. To force viewport-relative placement even though the request
+    // carries an anchor, pass anchor="viewport" explicitly.
     let anchor;
     let anchorReference; // "viewport" | "offsetParent" — set when not a real anchor
     if (anchorProp === "viewport" || anchorProp === "offsetParent") {
@@ -552,10 +547,10 @@ const ControlledPopover = (props) => {
         up above it in the browser's own top-layer stacking, no z-index
         involved.
 
-        It still avoids document.body/createPortal: both popovers render
-        wherever this component sits in the tree, which is enough, since
-        top-layer promotion (not DOM position) is what puts them above
-        normal page content.
+        No document.body/createPortal needed: both popovers render wherever
+        this component sits in the tree, which is enough, since top-layer
+        promotion (not DOM position) is what puts them above normal page
+        content.
 
         aria-hidden since it's purely decorative/interactive, never meant to
         be perceived as its own UI element.

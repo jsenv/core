@@ -64,7 +64,13 @@
 - To add debug logs: use `console.debug` with plain sentences, not objects (easier to copy-paste)
 - **Optional Chaining**: Only use `?.` when the value can genuinely be undefined. If you control the data structure and know values exist, access them directly
 - **Always use `{}` block bodies**: Never single-expression `if` without braces. Always `if (x) { return y; }` not `if (x) return y;` — makes it easy to add `console.log` or `debugger` without restructuring
-- **No history-referencing comments**: Never write comments explaining what used to be there, what changed, or that something "no longer" happens (e.g. "no more X round-trip", "replaces the old Y", "instead of a hook-based one"). Comments describe the current code, not its diff against a previous version — that belongs in the commit message/PR description. A comment should make sense to someone who has never seen the old code.
+- **No history-referencing comments**: Never write comments explaining what used to be there, what changed, or why the current code is better/different than before. Comments describe the current code in isolation, as if written by someone seeing it for the first time — not its diff against a previous version. That belongs in the commit message/PR description.
+  - Banned words/phrases (all signal a diff-comment, not a code-comment): "now" (as in "X now does Y"), "no longer", "instead of", "used to", "previously", "replaces", "changed from", "no more X", "own top-layer element now", "not a descendant of X anymore".
+  - Bad: `// The backdrop is its own top-layer element now` — implies there's an "old way" the reader needs to unlearn.
+  - Good: `// A sibling top-layer element, not a descendant of the popover — see the CSS comment for why.` — describes the structure as it is, no before/after.
+  - Bad: `// No more positionX/positionY props — anchorArea covers this now.`
+  - Good: nothing, or if the constraint is non-obvious, state it as a fact about the current API: `// anchorArea covers both axes in one prop.`
+  - This applies even when the comment is otherwise useful/accurate — rewrite it to drop the comparison rather than skip explaining a genuinely non-obvious constraint.
 
 #### JSDoc
 
