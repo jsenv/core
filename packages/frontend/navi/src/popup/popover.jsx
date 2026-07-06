@@ -267,8 +267,13 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.y,
       parsedAnchorArea.x,
     );
+    // "slide" whenever there's a direction to slide from — a real anchor's
+    // own position (data-position-y/x-current) or a point/corner's
+    // slideDirectionKey (data-anchor) — "clip" only for the directionless
+    // dead-center case (see popup_animation.js for how each reads its
+    // direction).
     const resolvedAnimation = isAutoAnimation
-      ? anchorReference && slideDirectionKey !== "center"
+      ? slideDirectionKey !== "center"
         ? "slide"
         : "clip"
       : animation;

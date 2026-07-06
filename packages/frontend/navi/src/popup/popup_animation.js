@@ -64,12 +64,16 @@
  *     (--popup-animation-origin-x/y — the click/pointer position when
  *     available, else the box's own center, in which case the translate is
  *     a no-op and it just grows in place).
- * - "slide"/"slide-from-*": a real translate-based entrance, sized to the
- *   element's own dimensions (--popup-slide-distance defaults to 100%, i.e.
- *   it travels its own width/height) so it looks like it enters from just
- *   past its final position. Direction comes from `data-anchor` (set
- *   when Popover's `anchor` prop is an anchor point value like "right" or
- *   "top-left") or from the explicit slide-from-top/bottom/left/right variant.
+ * - "slide"/"slide-from-*": a real translate-based entrance. Direction comes
+ *   from, in order: the explicit slide-from-top/bottom/left/right variant;
+ *   `data-position-y/x-current` (real anchor — collapses the aligned and
+ *   bare variants the same way "clip" does, sliding a small fixed
+ *   `--popup-slide-distance` of 20px, not a distance relative to the popup's
+ *   own size — the point is just to hint at "coming from that direction",
+ *   not to travel far); or `data-anchor` (point/corner mode, set to an
+ *   anchor point value like "right"/"top-left", sliding the full
+ *   100%-of-own-size default instead, so it looks like it enters from just
+ *   past its final position).
  */
 
 export const buildPopupAnimationCss = (selector) => {
@@ -154,11 +158,46 @@ export const buildPopupAnimationCss = (selector) => {
         var(--popup-animation-origin-y, 0px);
     }
 
-    /* slide — direction multipliers. data-anchor (set when Popover's
-       anchor prop is an anchor point value, e.g. "right", "top-left") drives
-       it automatically; slide-from-top/bottom/left/right set it directly,
-       ignoring anchor/position entirely. Falls back to "from the top" when
-       neither is present. */
+    /* slide — direction multipliers for a real anchor: data-position-y/x-
+       current (set by pickPositionRelativeTo) plays the same role data-anchor
+       plays below for point/corner mode, collapsing the aligned and bare
+       variants the same way "clip" does. A small fixed px distance, not
+       --popup-slide-distance's 100%-of-own-size default — sliding a whole
+       box-height away from a real anchor reads as excessive; the point is
+       just to hint at "coming from that direction". */
+    ${selector}[data-position-y-current="above"],
+    ${selector}[data-position-y-current="aligned-top"] {
+      --popup-slide-y: -1;
+    }
+    ${selector}[data-position-y-current="below"],
+    ${selector}[data-position-y-current="aligned-bottom"] {
+      --popup-slide-y: 1;
+    }
+    ${selector}[data-position-y-current="center"] {
+      --popup-slide-y: 0;
+    }
+    ${selector}[data-position-x-current="on-the-left"],
+    ${selector}[data-position-x-current="aligned-left"] {
+      --popup-slide-x: -1;
+    }
+    ${selector}[data-position-x-current="on-the-right"],
+    ${selector}[data-position-x-current="aligned-right"] {
+      --popup-slide-x: 1;
+    }
+    ${selector}[data-position-x-current="center"] {
+      --popup-slide-x: 0;
+    }
+    ${selector}[navi-animation="slide"][data-position-y-current],
+    ${selector}[navi-animation="slide"][data-position-x-current] {
+      --popup-slide-distance: 20px;
+    }
+
+    /* slide — direction multipliers for anchor="viewport"/"offsetParent"
+       (point/corner mode): data-anchor (set when Popover's anchor prop is an
+       anchor point value, e.g. "right", "top-left") drives it automatically;
+       slide-from-top/bottom/left/right set it directly, ignoring anchor/
+       position entirely. Falls back to "from the top" when neither this nor
+       the anchored rules above set anything. */
     ${selector}[data-anchor="top"] {
       --popup-slide-x: 0;
       --popup-slide-y: -1;
