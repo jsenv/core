@@ -187,7 +187,7 @@
            not to fade it in/out. */
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
         /* Slow, so each step of the transition is easy to follow. */
-        transition-duration: 900ms;
+        transition-duration: 200ms;
         transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
         transition-behavior: allow-discrete;
         view-transition-name: none;
@@ -214,7 +214,7 @@
       }
       #popover-scale-only[aria-expanded="false"] {
         opacity: 0;
-        scale: 1 0.96;
+        scale: 1 0.8;
       }
       #popover-clip-and-scale {
         opacity: 1;
@@ -225,8 +225,8 @@
       }
       #popover-clip-and-scale[aria-expanded="false"] {
         opacity: 0;
-        clip-path: inset(0 0 8% 0 round 8px);
-        scale: 0.99 0.96;
+        clip-path: inset(0 0 40% 0 round 8px);
+        scale: 0.99 0.99;
       }
     </style>
   </head>
