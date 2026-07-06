@@ -317,26 +317,23 @@ const ControlledPopover = (props) => {
         effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
-    // data-position-y/x-current persists across renders (pickPositionRelativeTo
-    // avoids flicker by favoring the current side), so it must be cleared here
-    // to decide fresh on every open rather than carrying over a stale side
-    // from before the popover was closed. The Fixed case is the exception:
-    // the side is already known synchronously, no measurement needed.
+    // The Fixed case is known synchronously, no measurement needed — set
+    // right away. Otherwise, data-position-y/x-current is left alone here:
+    // it's already been cleared by the previous close (see the cleanup
+    // below), so pickPositionRelativeTo decides fresh on this first
+    // positioning; while open, it persists across repositions (scroll/resize)
+    // to favor the current side and avoid flicker.
     if (effectivePositionYFixed) {
       popoverEl.setAttribute(
         "data-position-y-current",
         effectivePositionYFixed,
       );
-    } else {
-      popoverEl.removeAttribute("data-position-y-current");
     }
     if (effectivePositionXFixed) {
       popoverEl.setAttribute(
         "data-position-x-current",
         effectivePositionXFixed,
       );
-    } else {
-      popoverEl.removeAttribute("data-position-x-current");
     }
 
     // Suppressed until the popover is actually measured/positioned below —
@@ -525,6 +522,11 @@ const ControlledPopover = (props) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
       popoverEl.hidePopover();
+      // Cleared here, not at the next open: this is stale state from *this*
+      // close, not something to decide fresh right before positioning — see
+      // the comment above where it's set.
+      popoverEl.removeAttribute("data-position-y-current");
+      popoverEl.removeAttribute("data-position-x-current");
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armBackdropHideOnClick(

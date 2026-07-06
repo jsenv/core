@@ -718,7 +718,13 @@
             Pinned to a point/corner of {referenceLabel} instead of a real
             anchor box, the popover can only sit flush against its edges — never
             floating outside with a gap. That collapses the overlap distinction:
-            some positions below are equivalent (faded).
+            some positions below are equivalent (faded) in terms of where they
+            land, but with "Animate" on they still pick a different animation
+            (slide vs scale) — a side effect of the pair still choosing the
+            animation independently of the actual position, which turns out to
+            be a handy way to control it directly (e.g. "on-the-left" slides in
+            from the side, "aligned-left" scales in place, same spot either
+            way).
           </p>
           <p class="demo-legend">
             <span class="demo-legend-example">on-the-left</span>
