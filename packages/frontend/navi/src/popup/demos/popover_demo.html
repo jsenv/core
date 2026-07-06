@@ -239,9 +239,9 @@
         x === "aligned-left" ||
         x === "aligned-right";
 
-      // Backs each grid demo's own "Animate"/"Slow" checkboxes — independent
-      // per section, so slowing down one doesn't affect the others while
-      // you're testing.
+      // Backs each grid demo's own "Slow" checkbox — independent per
+      // section, so slowing down one doesn't affect the others while you're
+      // testing.
       const useStoredBoolean = (key, defaultValue) => {
         const [value, setValue] = useState(() => {
           const stored = localStorage.getItem(key);
@@ -253,44 +253,73 @@
         return [value, setValue];
       };
 
-      // Backs a section's own "Animate"/"Slow" checkboxes and computes the
-      // animationDuration to pass down — storageKey scopes both to that one
-      // section, independent of every other section's own toggles. Popover
-      // always bundles a fade with whatever animation is active, so there's
-      // no separate "Fade" toggle. Returns plain values/setters (not a
-      // component) so the checkboxes stay one stable component across
-      // renders — a component returned fresh on every call gets a new
-      // identity each render, and Preact remounts it whenever anything in
-      // the parent re-renders, discarding whatever the user was in the
-      // middle of clicking.
+      // Backs each grid demo's own "Animation" select.
+      const useStoredString = (key, defaultValue) => {
+        const [value, setValue] = useState(
+          () => localStorage.getItem(key) ?? defaultValue,
+        );
+        useEffect(() => {
+          localStorage.setItem(key, value);
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // "none" maps to no `animation` prop at all (Popover's own default —
+      // no motion, no fade); every other option passes straight through as
+      // the literal `animation` value.
+      const ANIMATION_CHOICES = [
+        "none",
+        "auto",
+        "sliding",
+        "scaling",
+        "expanding",
+        "fading",
+      ];
+
+      // Backs a section's own "Animation" select and "Slow" checkbox, and
+      // computes the animationDuration to pass down — storageKey scopes both
+      // to that one section, independent of every other section's own
+      // controls. Returns plain values/setters (not a component) so the
+      // controls stay one stable component across renders — a component
+      // returned fresh on every call gets a new identity each render, and
+      // Preact remounts it whenever anything in the parent re-renders,
+      // discarding whatever the user was in the middle of clicking.
       const useAnimateControls = (storageKey) => {
-        const [animate, setAnimate] = useStoredBoolean(
-          `${storageKey}_animate`,
-          false,
+        const [animationChoice, setAnimationChoice] = useStoredString(
+          `${storageKey}_animation`,
+          "none",
         );
         const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
-        const animationDuration = animate && slow ? "0.6s" : undefined;
+        const animation =
+          animationChoice === "none" ? undefined : animationChoice;
+        const animationDuration = animation && slow ? "0.6s" : undefined;
         return {
-          animate,
+          animation,
           animationDuration,
-          controlsProps: { animate, setAnimate, slow, setSlow },
+          controlsProps: { animationChoice, setAnimationChoice, slow, setSlow },
         };
       };
 
-      const AnimateToggle = ({ animate, onChange }) => (
-        <label class="demo-animate-toggle">
-          <input
-            type="checkbox"
-            checked={animate}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          Animate
-        </label>
-      );
-
-      const AnimateControls = ({ animate, setAnimate, slow, setSlow }) => (
+      const AnimateControls = ({
+        animationChoice,
+        setAnimationChoice,
+        slow,
+        setSlow,
+      }) => (
         <div class="demo-animate-controls">
-          <AnimateToggle animate={animate} onChange={setAnimate} />
+          <label class="demo-animate-toggle">
+            Animation:{" "}
+            <select
+              value={animationChoice}
+              onChange={(e) => setAnimationChoice(e.target.value)}
+            >
+              {ANIMATION_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {choice}
+                </option>
+              ))}
+            </select>
+          </label>
           <label class="demo-animate-toggle">
             <input
               type="checkbox"
@@ -354,7 +383,7 @@
       );
 
       const AnchorSection = () => {
-        const { animate, animationDuration, controlsProps } =
+        const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_anchor");
         return (
           <section id="anchor" class="demo-section">
@@ -362,7 +391,7 @@
             <div class="demo-row">
               <AnchoredPopover
                 label="Button commanding popover"
-                animation={animate}
+                animation={animation}
                 animationDuration={animationDuration}
               />
             </div>
@@ -467,7 +496,7 @@
       );
 
       const PointerInteractionOutsideSection = () => {
-        const { animate, animationDuration, controlsProps } =
+        const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
@@ -481,19 +510,19 @@
             <div class="demo-row">
               <PointerInteractionOutsideDemo
                 label="none (default)"
-                animation={animate}
+                animation={animation}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="close"
                 pointerInteractionOutsideEffect="close"
-                animation={animate}
+                animation={animation}
                 animationDuration={animationDuration}
               />
               <PointerInteractionOutsideDemo
                 label="capture"
                 pointerInteractionOutsideEffect="capture"
-                animation={animate}
+                animation={animation}
                 animationDuration={animationDuration}
               />
             </div>
@@ -686,7 +715,7 @@
       // to (via navi-command-proxy-for) instead of to itself.
       const AnchorAreaDefaultDemo = () => {
         const anchorId = useId();
-        const { animate, animationDuration, controlsProps } =
+        const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_anchor");
         return (
           <>
@@ -709,7 +738,7 @@
                   anchorArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
-                  animation={animate}
+                  animation={animation}
                   animationDuration={animationDuration}
                 />
               )}
@@ -750,7 +779,7 @@
       );
 
       const AnchorAreaViewportDemo = () => {
-        const { animate, animationDuration, controlsProps } =
+        const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_viewport");
         const { spawnFromPointer, toggle: spawnFromPointerToggle } =
           useSpawnFromPointerToggle("popover_demo_area_viewport");
@@ -764,7 +793,7 @@
                   anchorArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
-                  animation={animate}
+                  animation={animation}
                   animationDuration={animationDuration}
                   spawnFromPointer={spawnFromPointer}
                 />
@@ -781,7 +810,7 @@
       // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
-        const { animate, animationDuration, controlsProps } =
+        const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_offset_parent");
         const { spawnFromPointer, toggle: spawnFromPointerToggle } =
           useSpawnFromPointerToggle("popover_demo_area_offset_parent");
@@ -802,7 +831,7 @@
                   <Popover
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
-                    animation={animate}
+                    animation={animation}
                     animationDuration={animationDuration}
                     spawnFromPointer={spawnFromPointer}
                     borderRadius="8px"
