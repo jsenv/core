@@ -41,15 +41,17 @@
  * means edges touching. A single word implies "center" on the other axis.
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
  * for the "aligned-" pair on both axes. An "aligned-"/"center" axis means the
- * popover overlaps the anchor there, so a translate-based slide on that axis
- * reads oddly — `animation="auto"` resolves to "scaling" whenever *both*
- * axes overlap (see resolveSlideDirection below), "sliding" otherwise,
- * concretely as one of popup_animation.js's `slide-from-*`/`slide-*` values
- * — computed here in JS (not left for CSS to puzzle out from raw position
- * attributes) so there's a single, inspectable `navi-animation` value
- * driving one direct CSS rule per direction, no attribute-cascade
- * indirection. `animation="fading"` is a third, explicit-only kind (no
- * motion at all — see `navi-fade-animation` below).
+ * popover overlaps the anchor there, so a translate/scale on that axis reads
+ * oddly — `animation="auto"` resolves to "scaling" whenever *both* axes
+ * overlap (see resolveDirectionValue below); otherwise "expanding" for a
+ * real anchor (grows out of its own edge) or "sliding" for a point/corner
+ * (no edge to grow out of, slides in instead) — concretely as one of
+ * popup_animation.js's `slide-from-*`/`slide-*`/`expand-*` values, computed
+ * here in JS (not left for CSS to puzzle out from raw position attributes)
+ * so there's a single, inspectable `navi-animation` value driving one direct
+ * CSS rule per direction, no attribute-cascade indirection. `animation="fading"`
+ * is a fourth, explicit-only kind (no motion at all — see
+ * `navi-fade-animation` below).
  *
  * Every animation kind includes a fade: whenever `resolvedAnimation` is
  * truthy (any kind, "fading" included), `navi-fade-animation` is set right
@@ -299,9 +301,11 @@ const ControlledPopover = (props) => {
       parsedAnchorArea.x,
     );
     // "aligned-"/"center" means the popover overlaps the anchor on that axis
-    // (see the CSS comment above) — a slide reads oddly when it overlaps on
-    // *both* axes at once (it'd look like it's sliding out from inside the
-    // anchor itself), so auto-animation picks "scaling" there instead.
+    // (see the CSS comment above) — a translate/scale reads oddly when it
+    // overlaps on *both* axes at once, so auto-animation picks "scaling"
+    // there instead. Otherwise: a real anchor grows out of its own edge
+    // ("expanding"), a point/corner has no edge to grow out of and slides in
+    // instead ("sliding").
     const yOverlapsAnchor =
       parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
     const xOverlapsAnchor =
@@ -310,20 +314,24 @@ const ControlledPopover = (props) => {
     const resolvedAnimationKind = isAutoAnimation
       ? yOverlapsAnchor && xOverlapsAnchor
         ? "scaling"
-        : "sliding"
+        : anchor
+          ? "expanding"
+          : "sliding"
       : animation;
-    // "sliding" (whether auto-picked or requested explicitly) needs a
-    // concrete direction (see resolveSlideDirection). anchorReference/point
-    // mode has no auto-flip, so it's known synchronously; a real anchor's
-    // *actual* side (which may differ from the one requested here) is only
-    // known once pickPositionRelativeTo runs — positionPopover's real-anchor
-    // branch below overwrites this with the final value before transitions
-    // are ever re-enabled, so this placeholder is never visibly wrong.
+    // "sliding"/"expanding" (whether auto-picked or requested explicitly)
+    // need a concrete direction (see resolveDirectionValue). anchorReference/
+    // point mode has no auto-flip, so it's known synchronously; a real
+    // anchor's *actual* side (which may differ from the one requested here)
+    // is only known once pickPositionRelativeTo runs — positionPopover's
+    // real-anchor branch below overwrites this with the final value before
+    // transitions are ever re-enabled, so this placeholder is never visibly
+    // wrong.
     let resolvedAnimation = resolvedAnimationKind;
     if (resolvedAnimationKind === "sliding" && anchorReference) {
       resolvedAnimation =
-        resolveSlideDirection(parsedAnchorArea.y, parsedAnchorArea.x, {
+        resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
           isRealAnchor: false,
+          prefix: "slide-from",
         }) ?? "slide-from-top";
     }
     if (resolvedAnimation) {
@@ -582,13 +590,19 @@ const ControlledPopover = (props) => {
           top = pickedTop;
           // Refines the placeholder set earlier in openEffect now that the
           // *actual* (possibly auto-flipped) side is known — see
-          // resolveSlideDirection's own doc comment.
-          if (resolvedAnimationKind === "sliding") {
+          // resolveDirectionValue's own doc comment.
+          if (
+            resolvedAnimationKind === "sliding" ||
+            resolvedAnimationKind === "expanding"
+          ) {
+            const prefix =
+              resolvedAnimationKind === "expanding" ? "expand" : "slide";
             popoverEl.setAttribute(
               "navi-animation",
-              resolveSlideDirection(pickedPositionY, pickedPositionX, {
+              resolveDirectionValue(pickedPositionY, pickedPositionX, {
                 isRealAnchor: true,
-              }) ?? "slide-up",
+                prefix,
+              }) ?? `${prefix}-up`,
             );
           }
         }
@@ -991,27 +1005,22 @@ const toSlideDirectionKey = (y, x) => {
 };
 
 /**
- * Maps an anchorArea y/x pair to a concrete `navi-animation` slide value, or
- * `null` if both axes overlap the anchor (no direction to slide from —
- * that's `resolvedAnimation === "scaling"` territory instead, see openEffect).
+ * Maps an anchorArea y/x pair to a concrete `navi-animation` value (a
+ * `prefix` plus a direction word), or `null` if both axes overlap the anchor
+ * (no direction at all — that's `resolvedAnimation === "scaling"` territory
+ * instead, see openEffect).
  *
- * Two distinct naming/value families, picked via `isRealAnchor` — not just a
- * cosmetic choice, `popup_animation.js` gives them independent CSS rules
- * with their own hardcoded distance:
- * - anchorReference/point mode (`isRealAnchor: false`, 100%-of-own-size):
- *   `slide-from-{top,bottom,left,right}` (+ the 4 diagonals) — the word
- *   names *where it comes from*, matching the word as-is: placed "above" (a
- *   point/corner), it slides in from the top.
- * - a real anchor (`isRealAnchor: true`, a small fixed 20px — a "from" that
- *   never varies enough to be worth naming) `slide-{up,down,left,right}`
- *   (+ the 4 diagonals) — the word names the *motion* instead: placed
- *   "above" the anchor, it slides *up*, away from the anchor (which sits
- *   below it) — the opposite direction of the point/corner case above,
- *   since there's an anchor to be "closer to" here.
+ * `isRealAnchor: false` (anchorReference/point mode, used only for
+ * `prefix: "slide-from"`) keeps the word as the compass direction the
+ * popover comes from: placed "above" (a point/corner), it slides in from
+ * the top. `isRealAnchor: true` (a real anchor, `prefix: "slide"` or
+ * `"expand"`) uses the motion/growth direction instead, the opposite
+ * compass point: placed "above" the anchor, it moves/grows up, away from
+ * the anchor (which sits below it).
  *
  * "aligned-*"/"center" contribute no direction on their axis either way.
  */
-const resolveSlideDirection = (y, x, { isRealAnchor }) => {
+const resolveDirectionValue = (y, x, { isRealAnchor, prefix }) => {
   const yWord =
     y === "above"
       ? isRealAnchor
@@ -1027,7 +1036,6 @@ const resolveSlideDirection = (y, x, { isRealAnchor }) => {
   if (!yWord && !xWord) {
     return null;
   }
-  const prefix = isRealAnchor ? "slide" : "slide-from";
   return yWord && xWord
     ? `${prefix}-${yWord}-${xWord}`
     : `${prefix}-${yWord || xWord}`;

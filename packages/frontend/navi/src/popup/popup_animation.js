@@ -49,31 +49,40 @@
  * `[navi-fade-animation]` (Popover happens to set both together, but this
  * kind doesn't rely on that).
  *
- * `animation="slide-from-*"`/`"slide-*"`: a real translate-based entrance,
- * two independent 8-direction (cardinal + 4 diagonals) families, each with
- * its own hardcoded distance — Popover always resolves
- * `animation="auto"`/`"sliding"` to one of these concretely in JS (see
- * popover.jsx's `resolveSlideDirection`), so there's no bare
- * `animation="sliding"` selector here at all:
- * - `slide-from-{top,bottom,left,right}` (+ diagonals), 100%-of-own-size:
- *   anchorReference/point mode — no real anchor box to travel a short,
- *   anchor-relative distance from. The word names *where it comes from*.
- * - `slide-{up,down,left,right}` (+ diagonals), a small fixed 20px: a real
- *   anchor — just enough to hint at "coming from that direction" without
- *   traveling far. The word names the *motion* instead, since it's the
- *   opposite compass direction from the point/corner family above (placed
- *   "above" a real anchor, it slides *up*, away from the anchor which sits
- *   below it — not "from the top").
+ * `animation="slide-from-*"` (anchorReference/point mode only): a real
+ * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
+ * 100%-of-own-size. Popover always resolves `animation="auto"`/`"sliding"`
+ * to one of these concretely in JS (see popover.jsx's
+ * `resolveDirectionValue`), so there's no bare `animation="sliding"`
+ * selector here at all — a point/corner has no anchor edge to grow out of,
+ * so it slides in instead. The word names *where it comes from*: placed
+ * "above" (a point/corner), it slides in from the top.
+ *
+ * `animation="expand-*"` (a real anchor only): the auto-picked default
+ * there instead of sliding — reads better against a real anchor than a
+ * translate, which visually travels *through* the anchor element on its way
+ * in. Grows out of the anchor's own edge via `scale` + `transform-origin`,
+ * 8 directions (cardinal + 4 diagonals) — cardinal ones scale a single axis
+ * only (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
+ * only), diagonals scale both. The word names the motion/growth direction,
+ * the opposite compass point from the point/corner family above: placed
+ * "above" the anchor, it grows *up*, away from the anchor (which sits below
+ * it) — not "from the top". `animation="slide-{up,down,left,right}"` (+
+ * diagonals, a small fixed 20px translate) is still available as an
+ * explicit opt-in — same word/direction convention as `expand-*`, just
+ * translate-based instead of scale-based — but no longer the auto-picked
+ * default for a real anchor.
  *
  * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
- * (default 0.9) to `1`. Popover picks this automatically over "sliding" for
- * `animation="auto"` whenever both anchorArea axes overlap the anchor —
- * there's no sensible direction to slide from in that case, e.g. a
- * dead-centered popover or one placed fully inside/against the anchor on
- * both axes. Popover's own `spawnFromPointer` prop (anchorReference/point
- * mode + "scaling" only) points `transform-origin` at the click/pointer
- * position instead of the box's own center — see `--popup-spawn-origin-x/y`
- * below, set by popover.jsx's `positionPopover`.
+ * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.
+ * Popover picks this automatically for `animation="auto"` whenever both
+ * anchorArea axes overlap the anchor — there's no sensible direction to
+ * grow/slide from in that case, e.g. a dead-centered popover or one placed
+ * fully inside/against the anchor on both axes. Popover's own
+ * `spawnFromPointer` prop (anchorReference/point mode + "scaling" only)
+ * points `transform-origin` at the click/pointer position instead of the
+ * box's own center — see `--popup-spawn-origin-x/y` below, set by
+ * popover.jsx's `positionPopover`.
  *
  * `animation="view-transition"` (Popover only, experimental): none of the
  * CSS below applies — popover.jsx wraps its show/hide in
@@ -144,6 +153,67 @@ export const buildPopupAnimationCss = (selector) => {
         &[data-spawn-from-pointer] {
           transform-origin: var(--popup-spawn-origin-x, 50%)
             var(--popup-spawn-origin-y, 50%);
+        }
+      }
+
+      /* expand — real-anchor family (see this file's top comment): grows
+         out of the anchor's own edge via transform-origin + scale.
+         Cardinal directions scale a single axis only; diagonals scale
+         both. */
+      &[navi-animation="expand-up"] {
+        transform-origin: bottom;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: 1 var(--popup-scale-from);
+        }
+      }
+      &[navi-animation="expand-down"] {
+        transform-origin: top;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: 1 var(--popup-scale-from);
+        }
+      }
+      &[navi-animation="expand-left"] {
+        transform-origin: right;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from) 1;
+        }
+      }
+      &[navi-animation="expand-right"] {
+        transform-origin: left;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from) 1;
+        }
+      }
+      &[navi-animation="expand-up-left"] {
+        transform-origin: bottom right;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from);
+        }
+      }
+      &[navi-animation="expand-up-right"] {
+        transform-origin: bottom left;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from);
+        }
+      }
+      &[navi-animation="expand-down-left"] {
+        transform-origin: top right;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from);
+        }
+      }
+      &[navi-animation="expand-down-right"] {
+        transform-origin: top left;
+        scale: 1 1;
+        &[aria-expanded="false"] {
+          scale: var(--popup-scale-from);
         }
       }
 
