@@ -53,6 +53,18 @@
  * edge, `expand-*` concretely) and `animation="fading"` (opacity only, no
  * motion) are both explicit-only — never auto-picked.
  *
+ * A genuinely satisfying popup-opening animation is hard to pull off —
+ * "scaling" is the kind that reads best in practice, which is why it's the
+ * auto-pick for any real anchor. "expanding" (growing out of the anchor's
+ * own edge) comes close, but "scaling" still does it better, hence staying
+ * explicit-only rather than becoming a second auto-pick.
+ *
+ * `spawnFromPointer` is conceptually appealing — it tells the user where
+ * the popover is emerging from, tying it to the click/pointer that opened
+ * it — but in practice the extra motion it adds is more distracting than
+ * informative, which is why it's opt-in rather than bundled into "scaling"
+ * by default.
+ *
  * Each `navi-animation` value's own CSS rule (popup_animation.js) includes
  * its own fade in/out — no separate `fadeAnimation` prop or attribute.
  * `resolvedAnimation` is mirrored onto the backdrop's own `navi-animation`
@@ -87,18 +99,6 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
-  /* animation="view-transition" (experimental, see openEffect below): these
-     pseudo-elements are rooted at the document, not nested inside
-     .navi_popover, so they can't key off --popup-animation-duration (set on
-     the popover itself) directly — openEffect mirrors it onto
-     --popup-view-transition-duration on the document root right before
-     starting each transition instead. */
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation-duration: var(--popup-view-transition-duration, 0.18s);
-  }
-
   .navi_popover {
     /* absolute, not fixed: a fixed element stays pinned to the viewport by
        default, so scrolling instantly drags it out of sync with its
@@ -333,31 +333,10 @@ const ControlledPopover = (props) => {
       popoverEl.style.removeProperty("--popup-spawn-origin-x");
       popoverEl.style.removeProperty("--popup-spawn-origin-y");
     }
-    // Experimental: swaps the CSS-transition machinery below for
-    // document.startViewTransition() (see runOpen/runClose below) —
-    // unsupported browsers just fall back to no animation at all. Both this
-    // and the kind itself are already final at this point (only the
-    // concrete direction for "sliding"/"expanding" needs positioning info,
-    // resolved once below) — no need to wait for that.
-    const useViewTransition =
-      resolvedAnimationKind === "view-transition" &&
-      typeof document.startViewTransition === "function";
     // Whether there's an actual CSS transition to wait for below
     // (suppressPointerEventsDuringTransition) — skipped entirely otherwise,
     // so a popover with no animation at all stays instantly interactive.
-    const hasCssTransitionAnimation =
-      !useViewTransition && Boolean(resolvedAnimationKind);
-    if (resolvedAnimationKind === "view-transition") {
-      // Unique per instance: view-transition-name must be a <custom-ident>
-      // (no colons, which useId()'s default id contains) and can't be
-      // shared by two simultaneously-open popovers.
-      popoverEl.style.viewTransitionName = `navi-popover-vt-${id}`.replace(
-        /[^a-zA-Z0-9_-]/g,
-        "-",
-      );
-    } else {
-      popoverEl.style.removeProperty("view-transition-name");
-    }
+    const hasCssTransitionAnimation = Boolean(resolvedAnimationKind);
     // Keys the CSS that switches to position: fixed for both anchorReference
     // cases (see the CSS comment above for why), and mirrors the `anchor`
     // prop's own reference mode in DOM-inspectable form — absent when
@@ -386,24 +365,13 @@ const ControlledPopover = (props) => {
         effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
-    if (!useViewTransition) {
-      // Suppressed until the popover is actually measured/positioned below —
-      // see this file's top comment for why @starting-style can't drive the
-      // opening transition (it needs the popover's actual resting position
-      // already in place, which requires a layout box that only exists once
-      // shown). Not needed for view-transition mode: startViewTransition()
-      // does its own before/after snapshot diffing instead.
-      popoverEl.style.transitionProperty = "none";
-    }
+    // Suppressed until the popover is actually measured/positioned below —
+    // see this file's top comment for why @starting-style can't drive the
+    // opening transition (it needs the popover's actual resting position
+    // already in place, which requires a layout box that only exists once
+    // shown).
+    popoverEl.style.transitionProperty = "none";
 
-    // Wrapped in document.startViewTransition() below for the experimental
-    // "view-transition" mode: everything from showPopover() through the
-    // final aria-expanded="true" flip must run as that API's single
-    // synchronous mutation callback, so it captures the popover's real
-    // "new" state (backdrop show/positioning aren't part of the transition
-    // itself, but nothing here yields control before aria-expanded flips,
-    // so bundling them in doesn't change anything for the non-view-transition
-    // path).
     const runOpen = () => {
       if (backdropEl) {
         // Disarm a still-pending hide from a previous close: a click arriving
@@ -430,9 +398,9 @@ const ControlledPopover = (props) => {
         backdropEl.setAttribute("aria-expanded", "true");
       }
       popoverEl.showPopover();
-      // aria-expanded stays "false" here — still transitions-suppressed
-      // (non-view-transition mode) or simply not-yet-flipped, so this
-      // doesn't matter yet — and only flips once positioned below.
+      // aria-expanded stays "false" here — transitions are still
+      // suppressed, so this doesn't matter yet — and only flips once
+      // positioned below.
 
       // What we observe for repositioning on resize/scroll/visibility changes:
       // the anchor when anchored, otherwise the relative container (or the
@@ -642,15 +610,13 @@ const ControlledPopover = (props) => {
         }
       }
 
-      if (!useViewTransition) {
-        // The reflow forces the browser to actually commit the correctly
-        // positioned "closed" frame set up above as a real rendered state,
-        // before transitions are re-enabled and aria-expanded flips to "true" —
-        // only then does the CSS transition play, from that just-committed
-        // frame to the open one, with no @starting-style involved at all.
-        popoverEl.getBoundingClientRect();
-        popoverEl.style.transitionProperty = "";
-      }
+      // The reflow forces the browser to actually commit the correctly
+      // positioned "closed" frame set up above as a real rendered state,
+      // before transitions are re-enabled and aria-expanded flips to "true" —
+      // only then does the CSS transition play, from that just-committed
+      // frame to the open one, with no @starting-style involved at all.
+      popoverEl.getBoundingClientRect();
+      popoverEl.style.transitionProperty = "";
       popoverEl.setAttribute("aria-expanded", "true");
       // Not interactive again until the entrance transition settles — avoids
       // the cursor changing/something becoming clickable while the popover
@@ -661,22 +627,9 @@ const ControlledPopover = (props) => {
         : null;
     };
 
-    let viewTransition;
-    if (useViewTransition) {
-      syncViewTransitionDuration(popoverEl);
-      viewTransition = document.startViewTransition(runOpen);
-    } else {
-      runOpen();
-    }
+    runOpen();
 
-    // The popover's elements are momentarily unfocusable while
-    // view-transition's snapshot covers them (see transferFocus's own
-    // comment) — deferred until `.finished` in that case, immediate
-    // otherwise.
-    const restoreFocus = openController.transferFocusOnOpen(
-      popoverEl,
-      viewTransition ? { readyPromise: viewTransition.ready } : undefined,
-    );
+    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
       `openPopover() -> anchor: ${anchor?.tagName}, anchorReference: ${anchorReference}, relativeContainer: ${relativeContainer?.tagName}`,
@@ -684,16 +637,8 @@ const ControlledPopover = (props) => {
 
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
-      const runClose = () => {
-        popoverEl.setAttribute("aria-expanded", "false");
-        popoverEl.hidePopover();
-      };
-      if (useViewTransition) {
-        syncViewTransitionDuration(popoverEl);
-        document.startViewTransition(runClose);
-      } else {
-        runClose();
-      }
+      popoverEl.setAttribute("aria-expanded", "false");
+      popoverEl.hidePopover();
       // Same reasoning as the open side — not interactive while it's still
       // visually leaving.
       pointerEventsCleanupRef.current?.();
@@ -793,23 +738,6 @@ const ControlledPopover = (props) => {
   );
 };
 
-/**
- * `::view-transition-*` pseudo-elements are rooted at the document, not
- * nested inside `.navi_popover`, so they can't read `--popup-animation-duration`
- * directly off the popover — mirrors it onto the document root right before
- * each `document.startViewTransition()` call (see the CSS at the top of this
- * file).
- */
-const syncViewTransitionDuration = (popoverEl) => {
-  const duration = getComputedStyle(popoverEl)
-    .getPropertyValue("--popup-animation-duration")
-    .trim();
-  document.documentElement.style.setProperty(
-    "--popup-view-transition-duration",
-    duration || "0.18s",
-  );
-};
-
 const POPOVER_PSEUDO_CLASSES = [
   ":hover",
   ":active",
@@ -864,8 +792,7 @@ const armBackdropHideOnClick = (backdropEl, closeEvent) => {
  * longest `transition-duration` in case nothing actually transitions or an
  * event is missed) — avoids the cursor changing/something becoming
  * clickable while the popover is still visually moving into or out of
- * place. Not needed for `animation="view-transition"`, which already makes
- * the element non-interactive for the duration natively.
+ * place.
  *
  * Returns a "cancel" function: doesn't restore pointer-events (a fresh call
  * for the next open/close is about to set its own state) — only prevents

@@ -55,9 +55,9 @@
  * so it slides in instead. The word names *where it comes from*: placed
  * "above" (a point/corner), it slides in from the top.
  *
- * `animation="expand-*"` (a real anchor only, explicit opt-in — no longer
- * auto-picked, "scaling" reads better overall): grows out of the anchor's
- * own edge via `scale` + `transform-origin` instead of a translate, which
+ * `animation="expand-*"` (a real anchor only, explicit opt-in — "scaling"
+ * reads better overall, see popover.jsx's top comment): grows out of the
+ * anchor's own edge via `scale` + `transform-origin` instead of a translate, which
  * visually travels *through* the anchor element on its way in. 8 directions
  * (cardinal + 4 diagonals) — cardinal ones scale a single axis only
  * (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
@@ -75,15 +75,6 @@
  * mode + "scaling" only) adds a `translate` from the click/pointer position
  * to `0 0` alongside the same centered scale — see
  * `--popup-spawn-origin-x/y` below, set by popover.jsx's `positionPopover`.
- *
- * `animation="view-transition"` (Popover only, experimental): none of the
- * CSS below applies — popover.jsx wraps its show/hide in
- * `document.startViewTransition()` instead, which does its own before/after
- * snapshot diffing (and, as a side effect, makes the popover non-interactive
- * for the duration, unlike this file's CSS-transition approach). See
- * popover.jsx's own `css` block for the handful of `::view-transition-*`
- * rules that mode needs — deliberately excluded here since this file is
- * shared with Dialog, which doesn't use it.
  */
 
 export const buildPopupAnimationCss = (selector) => {
@@ -101,7 +92,7 @@ export const buildPopupAnimationCss = (selector) => {
     }
 
     ${selector} {
-      &[navi-animation]:not([navi-animation="view-transition"]) {
+      &[navi-animation] {
         transition-property:
           display, overlay, opacity, translate, scale, box-shadow;
         transition-duration:

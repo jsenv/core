@@ -41,81 +41,61 @@ export const getFocusedBeforeTransfer = (e) => {
   return document.activeElement;
 };
 
-export const transferFocus = (
-  containerEl,
-  debugFocus,
-  e,
-  fallback,
-  { readyPromise } = {},
-) => {
-  const run = () => {
-    let target;
-    let reason;
-    if (containerEl.hasAttribute("navi-autofocus-restore")) {
-      containerEl.removeAttribute("navi-autofocus-restore");
-      const naviAutoFocusFallback = containerEl.querySelector(
-        "[navi-autofocus='fallback']",
-      );
-      if (naviAutoFocusFallback) {
-        reason = "navi-autofocus fallback (restore)";
-        target = naviAutoFocusFallback;
-      }
-    }
-    if (!target) {
-      const naviAutoFocus = containerEl.querySelector(
-        "[navi-autofocus]:not([navi-autofocus='fallback'])",
-      );
-      if (naviAutoFocus) {
-        reason = "navi-autofocus";
-        target = naviAutoFocus;
-      }
-    }
-    if (!target) {
-      const focusable = findFocusable(containerEl, {
-        exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
-      });
-      if (focusable) {
-        reason = "first focusable element";
-        target = focusable;
-      }
-    }
-    if (!target) {
-      const naviAutoFocusFallback = containerEl.querySelector(
-        "[navi-autofocus='fallback']",
-      );
-      if (naviAutoFocusFallback) {
-        reason = "navi-autofocus fallback";
-        target = naviAutoFocusFallback;
-      }
-    }
-    if (!target) {
-      if (fallback) {
-        target = fallback;
-      }
-    }
-    if (!target) {
-      return;
-    }
-    debugFocus(
-      e,
-      `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
+export const transferFocus = (containerEl, debugFocus, e, fallback) => {
+  let target;
+  let reason;
+  if (containerEl.hasAttribute("navi-autofocus-restore")) {
+    containerEl.removeAttribute("navi-autofocus-restore");
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
     );
-    target.focus({ preventScroll: true });
-    if (target.hasAttribute("navi-autofocus-select")) {
-      target.select();
-      target.scrollLeft = 0;
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback (restore)";
+      target = naviAutoFocusFallback;
     }
-  };
-  // A document.startViewTransition() callback's elements are momentarily
-  // unfocusable (findFocusable's own visibility check fails, not just
-  // .focus() itself) while the transition's pseudo-element snapshot covers
-  // them, so the caller (Popover, for animation="view-transition") passes
-  // the transition's own `.finished` promise to defer the *entire* target
-  // search until they're interactive again — searching too early would
-  // find nothing and silently fall through to `fallback`.
-  if (readyPromise) {
-    readyPromise.then(run);
-  } else {
-    run();
+  }
+  if (!target) {
+    const naviAutoFocus = containerEl.querySelector(
+      "[navi-autofocus]:not([navi-autofocus='fallback'])",
+    );
+    if (naviAutoFocus) {
+      reason = "navi-autofocus";
+      target = naviAutoFocus;
+    }
+  }
+  if (!target) {
+    const focusable = findFocusable(containerEl, {
+      exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+    });
+    if (focusable) {
+      reason = "first focusable element";
+      target = focusable;
+    }
+  }
+  if (!target) {
+    const naviAutoFocusFallback = containerEl.querySelector(
+      "[navi-autofocus='fallback']",
+    );
+    if (naviAutoFocusFallback) {
+      reason = "navi-autofocus fallback";
+      target = naviAutoFocusFallback;
+    }
+  }
+  if (!target) {
+    if (fallback) {
+      target = fallback;
+    }
+  }
+  if (!target) {
+    return;
+  }
+  debugFocus(
+    e,
+    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
+  );
+  target.focus({ preventScroll: true });
+  if (target.hasAttribute("navi-autofocus-select")) {
+    target.select();
+    target.scrollLeft = 0;
   }
 };
