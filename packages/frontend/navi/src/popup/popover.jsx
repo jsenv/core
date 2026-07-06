@@ -54,14 +54,7 @@ const css = /* css */ `
     &[aria-expanded="true"] {
       pointer-events: auto;
     }
-
-    /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
-         "capture" (nothing outside is reachable) than "close" (still lets
-         the mousedown through, just closes on it) — "none" stays fully
-         transparent (the default .navi_popover_backdrop background). The
-         backdrop is its own top-layer element now (a sibling of the
-         popover, not a descendant), so the attribute is read directly off
-         it rather than through a .demo_popover_box ancestor. */
+    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"] {
       background: rgba(0, 0, 0, 0.1);
     }
