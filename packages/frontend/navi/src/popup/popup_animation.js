@@ -137,6 +137,16 @@ export const buildPopupAnimationCss = (selector) => {
         &[data-spawn-from-pointer] {
           transform-origin: var(--popup-spawn-origin-x, 50%)
             var(--popup-spawn-origin-y, 50%);
+
+          &[aria-expanded="false"] {
+            /* --popup-scale-from's own 0.9 is too subtle here: growing
+               *from a distant point* only reads as such if the box's own
+               size visibly changes a lot along the way — a 10% change
+               barely displaces anything even when the transform-origin
+               itself is far off-box, so it just looks like it "appears in
+               place" instead. */
+            scale: var(--popup-spawn-scale-from, 0.1);
+          }
         }
       }
 
