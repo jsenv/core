@@ -72,9 +72,9 @@
  * anchorArea axes overlap the anchor — there's no sensible direction to
  * grow/slide from in that case, e.g. a dead-centered popover or one placed
  * fully inside/against the anchor on both axes. Popover's own
- * `spawnFromPointer` prop (anchorReference/point mode + "scaling" only)
- * points `transform-origin` at the click/pointer position instead of the
- * box's own center — see `--popup-spawn-origin-x/y` below, set by
+ * `spawnFromPointer` prop (anchorReference/point mode + "scaling" only) adds
+ * a `translate` from the click/pointer position to `0 0` alongside the same
+ * centered scale — see `--popup-spawn-origin-x/y` below, set by
  * popover.jsx's `positionPopover`.
  *
  * `animation="view-transition"` (Popover only, experimental): none of the
@@ -123,30 +123,26 @@ export const buildPopupAnimationCss = (selector) => {
       }
 
       /* scaling — grows from --popup-scale-from (default 0.9) to full size,
-         no direction involved. spawnFromPointer (Popover only, see this
-         file's top comment) points the growth at the click/pointer position
-         instead of the box's own center — a static anchor point for the
-         transform, doesn't itself need to transition. */
+         centered, no direction involved. spawnFromPointer (Popover only, see
+         this file's top comment) adds a translate from the click/pointer
+         position to 0 0 alongside it, instead of moving transform-origin
+         there: growing from an off-center transform-origin only reads as
+         "coming from there" if the scale range is dramatic enough to
+         visibly displace the box by that much — translate conveys the
+         traveled distance directly, at any scale range, so scaling can stay
+         centered and keep the same subtle --popup-scale-from as plain
+         "scaling". */
       &[navi-animation="scaling"] {
         opacity: 1;
+        translate: 0 0;
         scale: 1;
         &[aria-expanded="false"] {
           opacity: 0;
           scale: var(--popup-scale-from);
         }
-        &[data-spawn-from-pointer] {
-          transform-origin: var(--popup-spawn-origin-x, 50%)
-            var(--popup-spawn-origin-y, 50%);
-
-          &[aria-expanded="false"] {
-            /* --popup-scale-from's own 0.9 is too subtle here: growing
-               *from a distant point* only reads as such if the box's own
-               size visibly changes a lot along the way — a 10% change
-               barely displaces anything even when the transform-origin
-               itself is far off-box, so it just looks like it "appears in
-               place" instead. */
-            scale: var(--popup-spawn-scale-from, 0.1);
-          }
+        &[data-spawn-from-pointer][aria-expanded="false"] {
+          translate: var(--popup-spawn-origin-x, 0px)
+            var(--popup-spawn-origin-y, 0px);
         }
       }
 

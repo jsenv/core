@@ -629,16 +629,21 @@ const ControlledPopover = (props) => {
         if (pointerEvent) {
           // popoverEl is position: fixed in anchorReference mode, so
           // style.left/top are already viewport-relative, same coordinate
-          // space as clientX/clientY — no scroll conversion needed.
-          const boxLeft = parseFloat(popoverEl.style.left);
-          const boxTop = parseFloat(popoverEl.style.top);
+          // space as clientX/clientY — no scroll conversion needed. Offset
+          // from the box's own center (not its top-left corner), since
+          // that's the point popup_animation.js's translate settles back to
+          // 0 0 (the box's resting position) while scale stays centered.
+          const boxCenterX =
+            parseFloat(popoverEl.style.left) + popoverEl.offsetWidth / 2;
+          const boxCenterY =
+            parseFloat(popoverEl.style.top) + popoverEl.offsetHeight / 2;
           popoverEl.style.setProperty(
             "--popup-spawn-origin-x",
-            `${((pointerEvent.clientX - boxLeft) / popoverEl.offsetWidth) * 100}%`,
+            `${pointerEvent.clientX - boxCenterX}px`,
           );
           popoverEl.style.setProperty(
             "--popup-spawn-origin-y",
-            `${((pointerEvent.clientY - boxTop) / popoverEl.offsetHeight) * 100}%`,
+            `${pointerEvent.clientY - boxCenterY}px`,
           );
         }
       }
