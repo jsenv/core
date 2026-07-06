@@ -51,6 +51,10 @@ const css = /* css */ `
     border: none;
     pointer-events: none;
 
+    &[aria-expanded="true"] {
+      pointer-events: auto;
+    }
+
     /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
          "capture" (nothing outside is reachable) than "close" (still lets
          the mousedown through, just closes on it) — "none" stays fully
@@ -60,17 +64,9 @@ const css = /* css */ `
          it rather than through a .demo_popover_box ancestor. */
     &[data-pointer-interaction-outside="close"] {
       background: rgba(0, 0, 0, 0.1);
-
-      &[aria-expanded="true"] {
-        pointer-events: auto;
-      }
     }
     &[data-pointer-interaction-outside="capture"] {
       background: rgba(0, 0, 0, 0.7);
-
-      &[aria-expanded="true"] {
-        pointer-events: auto;
-      }
     }
   }
 
