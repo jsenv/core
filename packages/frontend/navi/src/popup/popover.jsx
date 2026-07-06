@@ -101,10 +101,11 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    // anchorArea="top left"/"left"/"top-left"/etc — see ANCHOR_AREA_Y_VALUES/
-    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_CORNER_PRESETS below for the full
-    // grammar. Written as "<y> <x>" (loosely inspired by CSS position-area),
-    // with single-word and hyphenated-corner shortcuts for the common cases.
+    // anchorArea="above left-aligned"/"on-the-left"/"top-left"/etc — see
+    // ANCHOR_AREA_Y_VALUES/ANCHOR_AREA_X_VALUES/ANCHOR_AREA_PRESETS below
+    // for the full grammar. Written as "<y> <x>" (loosely inspired by CSS
+    // position-area), with single-word and hyphenated presets for the
+    // common cases.
     anchorArea = "below",
     anchorAreaFixed,
     scrollLock,
@@ -193,8 +194,8 @@ const ControlledPopover = (props) => {
         ? getPositionedParent(popoverEl)
         : null;
     // Parse anchorArea into a { y, x } pair (see ANCHOR_AREA_Y_VALUES/
-    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_CORNER_PRESETS below), falling back to
-    // the default ("below center") on an invalid value rather than crashing.
+    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_PRESETS below), falling back to the
+    // default ("below center") on an invalid value rather than crashing.
     const anchorAreaParseResult = parseAnchorArea(anchorArea);
     if (!anchorAreaParseResult) {
       console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
@@ -205,10 +206,10 @@ const ControlledPopover = (props) => {
     };
     // slideDirectionKey collapses the y/x pair into the 8-compass-point +
     // "center" vocabulary popup_animation.js's slide CSS keys off
-    // (data-anchor="top"/"top-left"/etc) — "above"/"top" both slide from the
-    // top, "below"/"bottom" both slide from the bottom, regardless of the
-    // overlap distinction, since that's a purely visual "which way does it
-    // enter from" concern.
+    // (data-anchor="top"/"top-left"/etc) — "above"/"top-aligned" both slide
+    // from the top, "below"/"bottom-aligned" both slide from the bottom,
+    // regardless of the overlap distinction, since that's a purely visual
+    // "which way does it enter from" concern.
     const slideDirectionKey = toSlideDirectionKey(
       parsedAnchorArea.y,
       parsedAnchorArea.x,
@@ -387,7 +388,7 @@ const ControlledPopover = (props) => {
         });
         const finalPositionY = pickedPositionY;
         const spaceAvailable =
-          finalPositionY === "above" || finalPositionY === "bottom"
+          finalPositionY === "above" || finalPositionY === "bottom-aligned"
             ? spaceAbove
             : spaceBelow;
         popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
@@ -628,47 +629,59 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
 // anchorArea's grammar, loosely inspired by CSS position-area:
 // https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
 //
-// Written as "<y> <x>" (e.g. "top left"), each axis independently one of:
-//   y: "above" (no overlap, entirely above) / "top" (top edges aligned,
-//      overlapping downward) / "center" / "bottom" (bottom edges aligned,
-//      overlapping upward) / "below" (no overlap, entirely below)
-//   x: "to-the-left" (no overlap) / "left" (left edges aligned, overlapping)
-//      / "center" / "right" (right edges aligned, overlapping) /
-//      "to-the-right" (no overlap)
+// Written as "<y> <x>" (e.g. "top-aligned left-aligned"), each axis
+// independently one of:
+//   y: "above" (no overlap, entirely above) / "top-aligned" (top edges
+//      aligned, overlapping downward) / "center" / "bottom-aligned" (bottom
+//      edges aligned, overlapping upward) / "below" (no overlap, entirely
+//      below)
+//   x: "on-the-left" (no overlap) / "left-aligned" (left edges aligned,
+//      overlapping) / "center" / "right-aligned" (right edges aligned,
+//      overlapping) / "on-the-right" (no overlap)
+// "above"/"below"/"on-the-left"/"on-the-right" mean "outside the anchor, no
+// overlap"; the "-aligned" word means "edges aligned, overlapping the
+// anchor" (deliberately no bare "top"/"bottom"/"left"/"right" shortcut —
+// those read as ambiguous on their own between the two).
 // A single recognized word is shorthand for pairing it with "center" on the
-// other axis — "left" alone means "center left", "top" alone means "top
-// center". The 9 classic compass names (top, top-right, right,
-// bottom-right, bottom, bottom-left, left, top-left, center) are also
-// accepted directly as one-word/hyphenated presets — see
-// ANCHOR_AREA_CORNER_PRESETS for the 4 corners (the 5 non-corner ones are
-// already covered by the single-word rule above).
+// other axis — "on-the-left" alone means "center on-the-left", "above"
+// alone means "above center". The 9 classic compass names (top, top-right,
+// right, bottom-right, bottom, bottom-left, left, top-left, center) are also
+// accepted directly as hyphenated presets — see ANCHOR_AREA_PRESETS. The 4
+// corners use the "-aligned" (overlapping) pair on both axes, so the
+// popover's corner actually touches the anchor's corner; the 4 edges
+// ("top", "bottom", "left", "right") use the plain, non-overlapping axis
+// word instead, paired with "center" on the other axis.
 
 const ANCHOR_AREA_X_VALUES = new Set([
-  "to-the-left",
-  "left",
+  "on-the-left",
+  "left-aligned",
   "center",
-  "right",
-  "to-the-right",
+  "right-aligned",
+  "on-the-right",
 ]);
 const ANCHOR_AREA_Y_VALUES = new Set([
   "above",
-  "top",
+  "top-aligned",
   "center",
-  "bottom",
+  "bottom-aligned",
   "below",
 ]);
-const ANCHOR_AREA_CORNER_PRESETS = {
-  "top-left": { y: "top", x: "left" },
-  "top-right": { y: "top", x: "right" },
-  "bottom-left": { y: "bottom", x: "left" },
-  "bottom-right": { y: "bottom", x: "right" },
+const ANCHOR_AREA_PRESETS = {
+  "top-left": { y: "top-aligned", x: "left-aligned" },
+  "top-right": { y: "top-aligned", x: "right-aligned" },
+  "bottom-left": { y: "bottom-aligned", x: "left-aligned" },
+  "bottom-right": { y: "bottom-aligned", x: "right-aligned" },
+  "top": { y: "above", x: "center" },
+  "bottom": { y: "below", x: "center" },
+  "left": { y: "center", x: "on-the-left" },
+  "right": { y: "center", x: "on-the-right" },
 };
 
 // Parses anchorArea into a { y, x } pair, or null if it's not a recognized
 // preset/word/pair.
 const parseAnchorArea = (value) => {
-  if (ANCHOR_AREA_CORNER_PRESETS[value]) {
-    return ANCHOR_AREA_CORNER_PRESETS[value];
+  if (ANCHOR_AREA_PRESETS[value]) {
+    return ANCHOR_AREA_PRESETS[value];
   }
   const tokens = value.split(" ");
   if (tokens.length === 1) {
@@ -692,21 +705,22 @@ const parseAnchorArea = (value) => {
 
 // Collapses anchorArea's y/x pair into the 8-compass-point + "center"
 // vocabulary popup_animation.js's slide CSS and computeStickToPosition below
-// key off — "above"/"top" both slide from (and pin to) the top, "below"/
-// "bottom" both slide from (and pin to) the bottom, regardless of the
-// overlap distinction, which doesn't apply to a point/corner in the first
-// place (there's no anchor box to overlap with there).
+// key off — "above"/"top-aligned" both slide from (and pin to) the top,
+// "below"/"bottom-aligned" both slide from (and pin to) the bottom,
+// regardless of the overlap distinction, which doesn't apply to a
+// point/corner in the first place (there's no anchor box to overlap with
+// there).
 const toSlideDirectionKey = (y, x) => {
   const yKey =
-    y === "above" || y === "top"
+    y === "above" || y === "top-aligned"
       ? "top"
-      : y === "below" || y === "bottom"
+      : y === "below" || y === "bottom-aligned"
         ? "bottom"
         : "center";
   const xKey =
-    x === "to-the-left" || x === "left"
+    x === "on-the-left" || x === "left-aligned"
       ? "left"
-      : x === "to-the-right" || x === "right"
+      : x === "on-the-right" || x === "right-aligned"
         ? "right"
         : "center";
   if (yKey === "center") {

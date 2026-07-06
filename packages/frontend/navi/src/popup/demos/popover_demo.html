@@ -121,15 +121,16 @@
         "bottom-right",
       ];
 
-      // Beyond the 9 presets, each axis has its own non-overlapping value
-      // ("above"/"below" for Y, "to-the-left"/"to-the-right" for X) — the
-      // presets' "top"/"bottom"/"left"/"right" all overlap the anchor
-      // (edges aligned); these don't.
+      // The "top"/"bottom"/"left"/"right" presets above are shortcuts for
+      // these same plain, non-overlapping axis words ("above"/"below" for
+      // Y, "on-the-left"/"on-the-right" for X) paired with "center" on the
+      // other axis — shown here explicitly to demonstrate both spellings
+      // produce the identical placement.
       const ANCHOR_AREA_EXTRA_VALUES = [
         "above",
         "below",
-        "to-the-left",
-        "to-the-right",
+        "on-the-left",
+        "on-the-right",
       ];
 
       const SLOW_DOWN_STORAGE_KEY = "popover_demo_slow_down_animations";
@@ -238,25 +239,26 @@
             <code>anchorArea</code> places the popover relative to{" "}
             <code>anchor</code> (a real element by default, or{" "}
             <code>"viewport"</code>/<code>"offsetParent"</code>). Written as{" "}
-            <code>"&lt;y&gt; &lt;x&gt;"</code> (e.g. <code>"top left"</code>),
-            with 9 classic compass presets as one-word/hyphenated shortcuts:{" "}
-            <code>top-left</code>, <code>top</code>, <code>top-right</code>,{" "}
-            <code>left</code>, <code>center</code>, <code>right</code>,{" "}
-            <code>bottom-left</code>, <code>bottom</code>,{" "}
-            <code>bottom-right</code>.
+            <code>"&lt;y&gt; &lt;x&gt;"</code> (e.g.{" "}
+            <code>"top-aligned left-aligned"</code>), with 9 classic compass
+            presets as one-word/hyphenated shortcuts: <code>top-left</code>,{" "}
+            <code>top</code>, <code>top-right</code>, <code>left</code>,{" "}
+            <code>center</code>, <code>right</code>, <code>bottom-left</code>,{" "}
+            <code>bottom</code>, <code>bottom-right</code>.
           </p>
           <p>
             Beyond the 9 presets, each axis has its own full vocabulary you can
-            combine explicitly: <code>above</code>/<code>top</code>/
-            <code>center</code>/<code>bottom</code>/<code>below</code> for Y,{" "}
-            <code>to-the-left</code>/<code>left</code>/<code>center</code>/
-            <code>right</code>/<code>to-the-right</code> for X. <code>top</code>
-            /<code>bottom</code>/<code>left</code>/<code>right</code> overlap
-            the anchor (the matching edges align); <code>above</code>/
-            <code>below</code>/<code>to-the-left</code>/
-            <code>to-the-right</code> don't (there's a gap, no overlap). A
+            combine explicitly: <code>above</code>/<code>top-aligned</code>/
+            <code>center</code>/<code>bottom-aligned</code>/<code>below</code>{" "}
+            for Y, <code>on-the-left</code>/<code>left-aligned</code>/
+            <code>center</code>/<code>right-aligned</code>/
+            <code>on-the-right</code> for X. The <code>-aligned</code> values
+            overlap the anchor (the matching edges align); <code>above</code>/
+            <code>below</code>/<code>on-the-left</code>/
+            <code>on-the-right</code> don't (there's a gap, no overlap). A
             single recognized word alone pairs with "center" on the other axis —{" "}
-            <code>"left"</code> alone means <code>"center left"</code>.
+            <code>"on-the-left"</code> alone means{" "}
+            <code>"center on-the-left"</code>.
           </p>
 
           <h3>anchor left on the trigger button (default)</h3>

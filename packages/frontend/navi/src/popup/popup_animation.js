@@ -118,7 +118,7 @@ export const buildPopupAnimationCss = (selector) => {
       clip-path: inset(0 0 100% 0 round var(--popup-border-radius, 0));
     }
     ${closed}[navi-animation="clip"][data-position-y-current="above"],
-    ${closed}[navi-animation="clip"][data-position-y-current="bottom"] {
+    ${closed}[navi-animation="clip"][data-position-y-current="bottom-aligned"] {
       clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
     }
     @starting-style {
@@ -126,7 +126,7 @@ export const buildPopupAnimationCss = (selector) => {
         clip-path: inset(0 0 100% 0 round var(--popup-border-radius, 0));
       }
       ${open}[navi-animation="clip"][data-position-y-current="above"],
-      ${open}[navi-animation="clip"][data-position-y-current="bottom"] {
+      ${open}[navi-animation="clip"][data-position-y-current="bottom-aligned"] {
         clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
       }
     }
