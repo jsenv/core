@@ -33,21 +33,16 @@
         view-transition-name: demo-popover;
       }
 
-      /* Default view-transition behavior is a plain cross-fade between the
-         "old" and "new" snapshots — this replaces it with a small scale, so
-         opening reads as "growing in" rather than just fading. */
+      /* Common to every technique below — only animation-name changes
+         (swapped by #transition-style, filled in by JS) to switch technique. */
       ::view-transition-old(demo-popover),
       ::view-transition-new(demo-popover) {
         animation-duration: 0.25s;
         animation-timing-function: ease;
       }
-      ::view-transition-old(demo-popover) {
-        animation-name: popover-out;
-      }
-      ::view-transition-new(demo-popover) {
-        animation-name: popover-in;
-      }
-      @keyframes popover-in {
+
+      /* fade + scale, subtle (0.9 -> 1, a 10% size change) */
+      @keyframes scale-subtle-in {
         from {
           opacity: 0;
           scale: 0.9;
@@ -57,7 +52,7 @@
           scale: 1;
         }
       }
-      @keyframes popover-out {
+      @keyframes scale-subtle-out {
         from {
           opacity: 1;
           scale: 1;
@@ -65,6 +60,110 @@
         to {
           opacity: 0;
           scale: 0.9;
+        }
+      }
+
+      /* fade + scale, dramatic (0.1 -> 1, a 90% size change) */
+      @keyframes scale-dramatic-in {
+        from {
+          opacity: 0;
+          scale: 0.1;
+        }
+        to {
+          opacity: 1;
+          scale: 1;
+        }
+      }
+      @keyframes scale-dramatic-out {
+        from {
+          opacity: 1;
+          scale: 1;
+        }
+        to {
+          opacity: 0;
+          scale: 0.1;
+        }
+      }
+
+      /* fade + slide, from each of the 4 directions */
+      @keyframes slide-bottom-in {
+        from {
+          opacity: 0;
+          translate: 0 16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-bottom-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 0 16px;
+        }
+      }
+      @keyframes slide-top-in {
+        from {
+          opacity: 0;
+          translate: 0 -16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-top-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 0 -16px;
+        }
+      }
+      @keyframes slide-left-in {
+        from {
+          opacity: 0;
+          translate: -16px 0;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-left-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: -16px 0;
+        }
+      }
+      @keyframes slide-right-in {
+        from {
+          opacity: 0;
+          translate: 16px 0;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-right-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 16px 0;
         }
       }
     </style>
@@ -78,7 +177,8 @@
       <code>document.startViewTransition()</code> instead of a CSS
       <code>transition</code>/<code>@starting-style</code>. Click the button to
       open, click it again to close. Change "side" (even while open) to see it
-      reposition.
+      reposition, or "transition" to compare techniques — each is just a pair of
+      `@keyframes` bound to `::view-transition-old/new(demo-popover)`.
     </p>
 
     <p>
@@ -91,7 +191,24 @@
           <option value="right">right</option>
         </select>
       </label>
+      <label>
+        transition:
+        <select id="transition-select">
+          <option value="fade">fade only (default cross-fade)</option>
+          <option value="fade-scale-subtle" selected>
+            fade + scale (subtle, 90% -> 100%)
+          </option>
+          <option value="fade-scale-dramatic">
+            fade + scale (dramatic, 10% -> 100%)
+          </option>
+          <option value="slide-bottom">slide from bottom</option>
+          <option value="slide-top">slide from top</option>
+          <option value="slide-left">slide from left</option>
+          <option value="slide-right">slide from right</option>
+        </select>
+      </label>
     </p>
+    <style id="transition-style"></style>
 
     <p>
       <button id="trigger" type="button">Toggle popover</button>
@@ -107,8 +224,40 @@
       const popover = document.getElementById("popover");
       const sideSelect = document.getElementById("side-select");
       const sideLabel = document.getElementById("side-label");
+      const transitionSelect = document.getElementById("transition-select");
+      const transitionStyle = document.getElementById("transition-style");
 
       const GAP = 8;
+
+      // Maps each <option> to the in/out @keyframes declared above (all
+      // pre-defined and static — only which pair ::view-transition-old/new
+      // point to changes). "fade" has no entry: the browser's own default
+      // view-transition behavior already *is* a plain cross-fade, so there's
+      // nothing to override.
+      const TRANSITIONS = {
+        "fade": null,
+        "fade-scale-subtle": { in: "scale-subtle-in", out: "scale-subtle-out" },
+        "fade-scale-dramatic": {
+          in: "scale-dramatic-in",
+          out: "scale-dramatic-out",
+        },
+        "slide-bottom": { in: "slide-bottom-in", out: "slide-bottom-out" },
+        "slide-top": { in: "slide-top-in", out: "slide-top-out" },
+        "slide-left": { in: "slide-left-in", out: "slide-left-out" },
+        "slide-right": { in: "slide-right-in", out: "slide-right-out" },
+      };
+
+      const applyTransitionStyle = () => {
+        const names = TRANSITIONS[transitionSelect.value];
+        transitionStyle.textContent = names
+          ? `
+            ::view-transition-old(demo-popover) { animation-name: ${names.out}; }
+            ::view-transition-new(demo-popover) { animation-name: ${names.in}; }
+          `
+          : "";
+      };
+      applyTransitionStyle();
+      transitionSelect.addEventListener("change", applyTransitionStyle);
 
       // Reads the *current* side from the select every time, so changing it
       // while the popover is open (or right before opening) always takes
