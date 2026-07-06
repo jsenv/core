@@ -157,12 +157,18 @@ export const createOpenController = (
       controller.opened = true;
       // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
       // by mutating it — openHandler reads it right after, synchronously.
-      controller.transferFocusOnOpen = (el) => {
+      controller.transferFocusOnOpen = (el, transferFocusOptions) => {
         const focusedBeforeOpen = getFocusedBeforeTransfer(e);
         // Picker's openController.open() reads this back synchronously right
         // after openEffect() returns (see picker_custom.jsx useOpenController).
         e.detail.focusedBeforeOpen = focusedBeforeOpen;
-        transferFocus(el, debugInteraction, e, focusedBeforeOpen);
+        transferFocus(
+          el,
+          debugInteraction,
+          e,
+          focusedBeforeOpen,
+          transferFocusOptions,
+        );
         return (closeEvent) => {
           markAutofocusRestoreOnClose(el);
           const focusoutEvent = findEvent(closeEvent, "focusout");

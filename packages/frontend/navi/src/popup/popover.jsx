@@ -560,14 +560,22 @@ const ControlledPopover = (props) => {
       popoverEl.setAttribute("aria-expanded", "true");
     };
 
+    let viewTransition;
     if (useViewTransition) {
       syncViewTransitionDuration(popoverEl);
-      document.startViewTransition(runOpen);
+      viewTransition = document.startViewTransition(runOpen);
     } else {
       runOpen();
     }
 
-    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
+    // The popover's elements are momentarily unfocusable while
+    // view-transition's snapshot covers them (see transferFocus's own
+    // comment) — deferred until `.finished` in that case, immediate
+    // otherwise.
+    const restoreFocus = openController.transferFocusOnOpen(
+      popoverEl,
+      viewTransition ? { readyPromise: viewTransition.ready } : undefined,
+    );
     debugPopup(
       e,
       `openPopover() -> anchor: ${anchor?.tagName}, anchorReference: ${anchorReference}, relativeContainer: ${relativeContainer?.tagName}`,
