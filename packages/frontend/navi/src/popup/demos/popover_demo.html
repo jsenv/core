@@ -44,23 +44,63 @@
         gap: 12px;
       }
       .demo_popover_box {
-        max-width: 220px;
-        padding: 12px 16px;
+        /* Fixed size — content (a label of varying length + a Close button)
+           must not influence it, so every popover in a grid demo is
+           directly comparable regardless of which anchorArea it shows. */
+        width: 130px;
+        height: 70px;
+        padding: 6px 8px;
+        font-size: 11px;
         background: white;
         border: 1px solid #d0d0d0;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        overflow: auto;
+      }
+      /* Makes pointerInteractionOutsideEffect's backdrop visible: darker for
+         "capture" (nothing outside is reachable) than "close" (still lets
+         the mousedown through, just closes on it) — "none" stays fully
+         transparent (the default .navi_popover_backdrop background). */
+      .demo_popover_box[data-pointer-interaction-outside="close"]
+        .navi_popover_backdrop {
+        background: rgba(0, 0, 0, 0.1);
+      }
+      .demo_popover_box[data-pointer-interaction-outside="capture"]
+        .navi_popover_backdrop {
+        background: rgba(0, 0, 0, 0.7);
       }
       .demo-container {
         position: relative;
         display: flex;
-        width: 300px;
+        width: 700px;
         max-width: 100%;
-        height: 180px;
+        height: 500px;
         margin-bottom: 8px;
         align-items: center;
         justify-content: center;
         border: 1px dotted #999;
         border-radius: 8px;
+      }
+      .demo-gutter {
+        width: 130px;
+        margin-right: 8px;
+        /* Reserves room to the left of a real-anchor/offsetParent grid so
+           "on-the-left"/"aligned-left" cells actually have somewhere to
+           render — matches the popover's own fixed width. */
+        flex-shrink: 0;
+        background: repeating-linear-gradient(
+          45deg,
+          #f6f6f6,
+          #f6f6f6 8px,
+          #eee 8px,
+          #eee 16px
+        );
+        border: 1px dashed #999;
+        border-radius: 4px;
+      }
+      .demo-animate-toggle {
+        display: block;
+        margin-top: 8px;
+        font-size: 13px;
       }
       .demo-container-label {
         color: #999;
@@ -128,6 +168,30 @@
 
       const SLOW_DOWN_STORAGE_KEY = "popover_demo_slow_down_animations";
 
+      // Backs each grid demo's own "Animate" checkbox — independent of the
+      // others, unlike "Slow down animations" above.
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      const AnimateToggle = ({ animate, onChange }) => (
+        <label class="demo-animate-toggle">
+          <input
+            type="checkbox"
+            checked={animate}
+            onChange={(e) => onChange(e.target.checked)}
+          />
+          Animate
+        </label>
+      );
+
       const App = () => {
         // Defaults to checked: absence of the key (never saved before) means
         // "true", not the string comparison's natural "false" default —
@@ -146,19 +210,20 @@
             <h1>Popover demo</h1>
 
             <p>
-              Most sections below have an "Animated" part: the same buttons,
-              with <code>animation</code> turned on — the best animation for
-              that context gets picked automatically (the anchorArea and Fading
-              sections are the exceptions, since they're not about animation).
-              Animations are quick by default; check the box below to slow them
-              down so you can actually see them play out.
+              Most sections below have an "Animated" part — the same buttons,
+              with <code>animation</code> turned on (an "Animate" checkbox in
+              the anchorArea section) — the best animation for that context gets
+              picked automatically (Fading is the exception, since it's not
+              about <code>animation</code>). Animations are quick by default;
+              check the box below to slow them down so you can actually see them
+              play out.
             </p>
             <SlowDownToggle slowDown={slowDown} onChange={setSlowDown} />
 
             <TableOfContents />
 
             <AnchorSection animatedDuration={animatedDuration} />
-            <AnchorAreaSection />
+            <AnchorAreaSection animatedDuration={animatedDuration} />
             <AnchorIgnoreSection animatedDuration={animatedDuration} />
             <FadingSection />
             <PointerInteractionOutsideSection />
@@ -225,7 +290,7 @@
       // default, or "viewport"/"offsetParent" (see the 2nd/3rd subsections
       // below) — so it's anchorArea itself that's worth documenting, not
       // "placement" as some separate idea.
-      const AnchorAreaSection = () => (
+      const AnchorAreaSection = ({ animatedDuration }) => (
         <section id="anchor-area" class="demo-section">
           <h2>2. anchorArea</h2>
           <p>
@@ -255,17 +320,25 @@
           </p>
 
           <h3>anchor left on the trigger button (default)</h3>
-          <AnchorAreaGrid />
+          <AnchorAreaGrid
+            storageKey="popover_demo_area_animate_anchor"
+            animatedDuration={animatedDuration}
+            gutter
+          />
 
           <h3>
             anchor<code>="viewport"</code>
           </h3>
-          <AnchorAreaGrid anchor="viewport" />
+          <AnchorAreaGrid
+            anchor="viewport"
+            storageKey="popover_demo_area_animate_viewport"
+            animatedDuration={animatedDuration}
+          />
 
           <h3>
             anchor<code>="offsetParent"</code>
           </h3>
-          <AnchorAreaOffsetParentDemo />
+          <AnchorAreaOffsetParentDemo animatedDuration={animatedDuration} />
         </section>
       );
 
@@ -309,24 +382,20 @@
         <section id="pointer-interaction-outside" class="demo-section">
           <h2>5. pointerInteractionOutsideEffect</h2>
           <p>
-            Controls what a pointer interaction (mousedown) landing outside the
-            popover does while it's open. Click each button below, then click it
-            again while its popover is open to see the difference.
+            <code>"none"</code> (default) — interactions outside the popover
+            happen normally. <code>"close"</code> — a mousedown outside closes
+            it. <code>"capture"</code> — pointer interactions outside the
+            popover don't reach the page at all.
           </p>
           <div class="demo-row">
-            <PointerInteractionOutsideDemo
-              label="none (default)"
-              description="Clicking again just toggles it closed, same as if there were no popover at all."
-            />
+            <PointerInteractionOutsideDemo label="none (default)" />
             <PointerInteractionOutsideDemo
               label="close"
               pointerInteractionOutsideEffect="close"
-              description="Clicking again closes it (via the backdrop, not the toggle)."
             />
             <PointerInteractionOutsideDemo
               label="capture"
               pointerInteractionOutsideEffect="capture"
-              description="Clicking again does nothing — the click is absorbed."
             />
           </div>
         </section>
@@ -398,7 +467,6 @@
               borderRadius="8px"
               anchor="viewport"
               anchorArea="center"
-              pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -411,10 +479,12 @@
       // The same button doubles as the popover's own anchor and as "the rest
       // of the page" to click on once it's open — no separate elements
       // needed to see what pointerInteractionOutsideEffect actually does.
+      // The backdrop's opacity (see the CSS at the top) makes "close"/
+      // "capture" visually distinct from "none" (fully transparent) without
+      // needing more prose.
       const PointerInteractionOutsideDemo = ({
         label,
         pointerInteractionOutsideEffect,
-        description,
       }) => {
         const popoverId = useId();
 
@@ -432,17 +502,20 @@
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
-            <p>{description}</p>
           </div>
         );
       };
 
       // anchor is left undefined (real anchor, from the toggle event) unless
-      // explicitly passed as "viewport"/"offsetParent". No animation — this
-      // section is about placement, not animation, and always uses the
+      // explicitly passed as "viewport"/"offsetParent". Always uses the
       // flexible anchorArea (never anchorAreaFixed): what you'd actually use
       // day to day.
-      const AnchorAreaPopover = ({ anchor, anchorArea }) => {
+      const AnchorAreaPopover = ({
+        anchor,
+        anchorArea,
+        animation,
+        animationDuration,
+      }) => {
         const popoverId = useId();
 
         return (
@@ -456,6 +529,8 @@
             </Button>
             <Popover
               id={popoverId}
+              animation={animation}
+              animationDuration={animationDuration}
               borderRadius="8px"
               anchor={anchor}
               anchorArea={anchorArea}
@@ -469,21 +544,52 @@
         );
       };
 
-      const AnchorAreaGrid = ({ anchor }) => (
-        <AreaGrid
-          renderCell={(y, x) => (
-            <AnchorAreaPopover anchor={anchor} anchorArea={`${y} ${x}`} />
-          )}
-        />
-      );
+      // gutter reserves room to the left for "on-the-left"/"aligned-left"
+      // cells — only needed against a real anchor, which sits wherever the
+      // page laid its trigger button out, unlike the point-mode subsections
+      // below which never escape their reference box in the first place.
+      const AnchorAreaGrid = ({
+        anchor,
+        storageKey,
+        animatedDuration,
+        gutter = false,
+      }) => {
+        const [animate, setAnimate] = useStoredBoolean(storageKey, false);
+        return (
+          <>
+            <AnimateToggle animate={animate} onChange={setAnimate} />
+            <div style={{ display: "flex" }}>
+              {gutter ? <div class="demo-gutter" /> : null}
+              <AreaGrid
+                renderCell={(y, x) => (
+                  <AnchorAreaPopover
+                    anchor={anchor}
+                    anchorArea={`${y} ${x}`}
+                    animation={animate}
+                    animationDuration={animate ? animatedDuration : undefined}
+                  />
+                )}
+              />
+            </div>
+          </>
+        );
+      };
 
       // anchor="offsetParent" needs the popovers rendered *inside* the
       // positioned container to find it — the trigger buttons don't, so
-      // they live outside it, in their own grid below.
-      const AnchorAreaOffsetParentDemo = () => {
+      // they live outside it, in their own grid below. No gutter needed:
+      // the (large) container itself is the room a popover positions
+      // within, it never escapes it.
+      const AnchorAreaOffsetParentDemo = ({ animatedDuration }) => {
         const baseId = useId();
+        const [animate, setAnimate] = useStoredBoolean(
+          "popover_demo_area_animate_offset_parent",
+          false,
+        );
+        const animationDuration = animate ? animatedDuration : undefined;
         return (
           <>
+            <AnimateToggle animate={animate} onChange={setAnimate} />
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
@@ -491,6 +597,8 @@
                   <Popover
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
+                    animation={animate}
+                    animationDuration={animationDuration}
                     borderRadius="8px"
                     anchor="offsetParent"
                     anchorArea={`${y} ${x}`}
