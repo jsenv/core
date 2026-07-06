@@ -70,6 +70,7 @@ import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
@@ -346,12 +347,21 @@ const ControlledPopover = (props) => {
         effectivePositionYFixed = parsedAnchorAreaFixed.y;
       }
     }
-    // The Fixed case is known synchronously, no measurement needed — set
-    // right away. Otherwise, data-position-y/x-current is left alone here:
-    // it's already been cleared by the previous close (see the cleanup
-    // below), so pickPositionRelativeTo decides fresh on this first
-    // positioning; while open, it persists across repositions (scroll/resize)
-    // to favor the current side and avoid flicker.
+    // Cleared here (not at the previous close): popup_animation.js's slide
+    // CSS reads these live, so removing them there — in the very same
+    // synchronous tick as flipping aria-expanded to start the close
+    // transition — changes what the *closing* transition animates towards
+    // mid-flight (both the direction's sign and --popup-slide-distance's
+    // unit, 20px vs 100%, briefly interpolating between incompatible units).
+    // Cleared fresh on every open instead: harmless even though
+    // pickPositionRelativeTo unconditionally overwrites both right after
+    // anyway (below) — this only matters for the point/corner
+    // (anchorReference) case, which never sets them at all, so a stale value
+    // from a *previous* real-anchor open must not leak into this one. The
+    // Fixed case is known synchronously, no measurement needed — set right
+    // away instead of merely cleared.
+    popoverEl.removeAttribute("data-position-y-current");
+    popoverEl.removeAttribute("data-position-x-current");
     if (effectivePositionYFixed) {
       popoverEl.setAttribute(
         "data-position-y-current",
@@ -611,6 +621,20 @@ const ControlledPopover = (props) => {
     };
   };
 
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    escape: (e) => {
+      if (!openController.opened) {
+        return null;
+      }
+      return {
+        name: "escape_to_cancel",
+        allowed: () => {
+          openController.requestClose(e, { isCancel: true });
+        },
+      };
+    },
+  });
+
   return (
     <>
       {/* See this file's top comment for the backdrop's design. No
@@ -671,6 +695,7 @@ const ControlledPopover = (props) => {
         onnavi_command={(e) => {
           onNaviCommand(e);
         }}
+        onKeyDown={onKeyDownShortcuts}
       >
         {children}
       </Box>
