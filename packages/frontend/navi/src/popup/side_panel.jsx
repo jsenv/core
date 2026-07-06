@@ -185,7 +185,9 @@ export const SidePanel = ({
       className="navi_side_panel"
       styleCSSVars={SidePanelStyleCSSVars}
       width={width}
-      pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "lock"}
+      pointerInteractionOutsideEffect={
+        closeOnClickOutside ? "close" : "capture"
+      }
       focusTrap={closeOnClickOutside}
       autoFocus="fallback"
       data-opening={phase === "opening" ? "" : undefined}

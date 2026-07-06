@@ -44,10 +44,11 @@ const css = /* css */ `
 
     /* Default ("none"): the backdrop never intercepts anything — outside
        pointer interactions pass straight through to whatever's behind the
-       popover, and it never auto-closes from them. "lock"/"close" both need
-       the backdrop to actually intercept pointer events while open; only
-       "close" also acts on them (see the backdrop's onMouseDown below). */
-    &:popover-open[data-pointer-interaction-outside="lock"],
+       popover, and it never auto-closes from them. "capture"/"close" both
+       need the backdrop to actually intercept pointer events while open;
+       only "close" also acts on them (see the backdrop's onMouseDown
+       below). */
+    &:popover-open[data-pointer-interaction-outside="capture"],
     &:popover-open[data-pointer-interaction-outside="close"] {
       .navi_popover_backdrop {
         pointer-events: auto;
@@ -100,19 +101,12 @@ const ControlledPopover = (props) => {
   const {
     openController,
     anchor: anchorProp,
-    // position="top"/"top-right"/etc is the friendly, common-case way to
-    // describe placement — one of the 9 compass values in POSITION_TO_XY,
-    // loosely inspired by CSS position-area. positionX/positionY (and their
-    // Fixed variants) are the lower-level escape hatch for placements the
-    // compass model can't express — e.g. "left-aligned" + "below-overlap"
-    // for a combobox popup that overlaps its trigger (see picker_custom.jsx)
-    // — and win over position/positionFixed when explicitly provided.
-    position = "bottom",
-    positionFixed,
-    positionX,
-    positionY,
-    positionXFixed,
-    positionYFixed,
+    // anchorArea="top left"/"left"/"top-left"/etc — see ANCHOR_AREA_Y_VALUES/
+    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_CORNER_PRESETS below for the full
+    // grammar. Written as "<y> <x>" (loosely inspired by CSS position-area),
+    // with single-word and hyphenated-corner shortcuts for the common cases.
+    anchorArea = "below",
+    anchorAreaFixed,
     scrollLock,
     pointerInteractionOutsideEffect = "none",
     focusTrap,
@@ -198,8 +192,29 @@ const ControlledPopover = (props) => {
       anchorReference === "offsetParent"
         ? getPositionedParent(popoverEl)
         : null;
+    // Parse anchorArea into a { y, x } pair (see ANCHOR_AREA_Y_VALUES/
+    // ANCHOR_AREA_X_VALUES/ANCHOR_AREA_CORNER_PRESETS below), falling back to
+    // the default ("below center") on an invalid value rather than crashing.
+    const anchorAreaParseResult = parseAnchorArea(anchorArea);
+    if (!anchorAreaParseResult) {
+      console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
+    }
+    const parsedAnchorArea = anchorAreaParseResult ?? {
+      y: "below",
+      x: "center",
+    };
+    // slideDirectionKey collapses the y/x pair into the 8-compass-point +
+    // "center" vocabulary popup_animation.js's slide CSS keys off
+    // (data-anchor="top"/"top-left"/etc) — "above"/"top" both slide from the
+    // top, "below"/"bottom" both slide from the bottom, regardless of the
+    // overlap distinction, since that's a purely visual "which way does it
+    // enter from" concern.
+    const slideDirectionKey = toSlideDirectionKey(
+      parsedAnchorArea.y,
+      parsedAnchorArea.x,
+    );
     const resolvedAnimation = isAutoAnimation
-      ? anchorReference && position !== "center"
+      ? anchorReference && slideDirectionKey !== "center"
         ? "slide"
         : "clip"
       : animation;
@@ -221,39 +236,39 @@ const ControlledPopover = (props) => {
     } else {
       popoverEl.setAttribute("data-clip-axis", "xy");
     }
-    // Mirrors how the anchor was resolved, in DOM-inspectable form: the
-    // `position` compass value when anchorReference is set, a structural
-    // relation to the popover ("previousSibling"/"nextSibling"/"parent" —
-    // the only relations worth naming; anything else is too indirect to be
-    // useful at a glance), "#id" when the anchor element has one, or
-    // "custom" as the last resort.
+    // Mirrors how the anchor was resolved, in DOM-inspectable form:
+    // slideDirectionKey when anchorReference is set, a structural relation
+    // to the popover ("previousSibling"/"nextSibling"/"parent" — the only
+    // relations worth naming; anything else is too indirect to be useful at
+    // a glance), "#id" when the anchor element has one, or "custom" as the
+    // last resort.
     popoverEl.setAttribute(
       "data-anchor",
-      resolveAnchorAttrValue(popoverEl, anchor, anchorReference && position),
+      resolveAnchorAttrValue(
+        popoverEl,
+        anchor,
+        anchorReference && slideDirectionKey,
+      ),
     );
-    // `position`/`positionFixed` (the compass shorthand) translate to an
-    // (x, y) pair via POSITION_TO_XY; positionX/positionY (the escape hatch
-    // for placements the compass model can't express, e.g. an "-overlap"
-    // corner — see picker_custom.jsx) win when explicitly provided. Only
-    // meaningful against a real anchor (pickPositionRelativeTo below) —
-    // anchorReference mode passes `position` straight through to
-    // computeStickToPosition instead, which already speaks the same 9
-    // compass values natively.
-    const positionFromKeyword = POSITION_TO_XY[position];
-    if (!positionFromKeyword) {
-      console.warn(`Popover: unknown position="${position}"`);
-    }
-    const effectivePositionX = positionX ?? positionFromKeyword?.x ?? "center";
-    const effectivePositionY = positionY ?? positionFromKeyword?.y ?? "below";
-    let effectivePositionXFixed = positionXFixed;
-    let effectivePositionYFixed = positionYFixed;
-    if (positionFixed) {
-      const positionFixedFromKeyword = POSITION_TO_XY[positionFixed];
-      if (!positionFixedFromKeyword) {
-        console.warn(`Popover: unknown positionFixed="${positionFixed}"`);
+    // anchorArea's y/x translate to pickPositionRelativeTo's own
+    // positionY/positionX vocabulary via ANCHOR_AREA_Y_TO_POSITION_Y/
+    // ANCHOR_AREA_X_TO_POSITION_X. Only meaningful against a real anchor
+    // (pickPositionRelativeTo below) — anchorReference mode uses
+    // slideDirectionKey directly instead, feeding computeStickToPosition,
+    // which already speaks that same 9-compass-point vocabulary natively.
+    const effectivePositionX = ANCHOR_AREA_X_TO_POSITION_X[parsedAnchorArea.x];
+    const effectivePositionY = ANCHOR_AREA_Y_TO_POSITION_Y[parsedAnchorArea.y];
+    let effectivePositionXFixed;
+    let effectivePositionYFixed;
+    if (anchorAreaFixed) {
+      const parsedAnchorAreaFixed = parseAnchorArea(anchorAreaFixed);
+      if (!parsedAnchorAreaFixed) {
+        console.warn(`Popover: invalid anchorAreaFixed="${anchorAreaFixed}"`);
       } else {
-        effectivePositionXFixed = positionXFixed ?? positionFixedFromKeyword.x;
-        effectivePositionYFixed = positionYFixed ?? positionFixedFromKeyword.y;
+        effectivePositionXFixed =
+          ANCHOR_AREA_X_TO_POSITION_X[parsedAnchorAreaFixed.x];
+        effectivePositionYFixed =
+          ANCHOR_AREA_Y_TO_POSITION_Y[parsedAnchorAreaFixed.y];
       }
     }
     // pickPositionRelativeTo persists data-position-y/x-current across calls
@@ -323,7 +338,7 @@ const ControlledPopover = (props) => {
         const stickPosition = computeStickToPosition(
           popoverEl,
           containerRect,
-          position,
+          slideDirectionKey,
           spacingPx,
         );
         appliedLeft = stickPosition.left;
@@ -543,11 +558,11 @@ const ControlledPopover = (props) => {
             return;
           }
           if (pointerInteractionOutsideEffect !== "close") {
-            // "lock" absorbs the click so it doesn't reach whatever's behind
-            // the popover, without closing it; "none" never reaches here at
-            // all (the backdrop has pointer-events: none in that case, see
-            // the CSS above) — this check is just a safety net.
-            if (pointerInteractionOutsideEffect === "lock") {
+            // "capture" absorbs the click so it doesn't reach whatever's
+            // behind the popover, without closing it; "none" never reaches
+            // here at all (the backdrop has pointer-events: none in that
+            // case, see the CSS above) — this check is just a safety net.
+            if (pointerInteractionOutsideEffect === "capture") {
               e.preventDefault();
             }
             return;
@@ -611,23 +626,114 @@ const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
   return "viewport";
 };
 
-// The 9 compass values `position`/`positionFixed` accept, loosely inspired
-// by CSS position-area: https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
-// Each maps to an (x, y) pair for the lower-level positionX/positionY escape
-// hatch (see the ControlledPopover destructuring comment), and — for
-// anchorReference ("viewport"/"offsetParent") mode — the compass value
-// itself is also what computeStickToPosition below consumes directly, since
-// it already speaks this same vocabulary natively.
-const POSITION_TO_XY = {
-  "top": { x: "center", y: "above" },
-  "top-right": { x: "right-aligned", y: "above" },
-  "right": { x: "to-the-right", y: "center" },
-  "bottom-right": { x: "right-aligned", y: "below" },
-  "bottom": { x: "center", y: "below" },
-  "bottom-left": { x: "left-aligned", y: "below" },
-  "left": { x: "to-the-left", y: "center" },
-  "top-left": { x: "left-aligned", y: "above" },
-  "center": { x: "center", y: "center" },
+// anchorArea's grammar, loosely inspired by CSS position-area:
+// https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/position-area
+//
+// Written as "<y> <x>" (e.g. "top left"), each axis independently one of:
+//   y: "above" (no overlap, entirely above) / "top" (top edges aligned,
+//      overlapping downward) / "center" / "bottom" (bottom edges aligned,
+//      overlapping upward) / "below" (no overlap, entirely below)
+//   x: "to-the-left" (no overlap) / "left" (left edges aligned, overlapping)
+//      / "center" / "right" (right edges aligned, overlapping) /
+//      "to-the-right" (no overlap)
+// A single recognized word is shorthand for pairing it with "center" on the
+// other axis — "left" alone means "center left", "top" alone means "top
+// center". The 9 classic compass names (top, top-right, right,
+// bottom-right, bottom, bottom-left, left, top-left, center) are also
+// accepted directly as one-word/hyphenated presets — see
+// ANCHOR_AREA_CORNER_PRESETS for the 4 corners (the 5 non-corner ones are
+// already covered by the single-word rule above).
+
+const ANCHOR_AREA_X_VALUES = new Set([
+  "to-the-left",
+  "left",
+  "center",
+  "right",
+  "to-the-right",
+]);
+const ANCHOR_AREA_Y_VALUES = new Set([
+  "above",
+  "top",
+  "center",
+  "bottom",
+  "below",
+]);
+const ANCHOR_AREA_CORNER_PRESETS = {
+  "top-left": { y: "top", x: "left" },
+  "top-right": { y: "top", x: "right" },
+  "bottom-left": { y: "bottom", x: "left" },
+  "bottom-right": { y: "bottom", x: "right" },
+};
+
+// Parses anchorArea into a { y, x } pair, or null if it's not a recognized
+// preset/word/pair.
+const parseAnchorArea = (value) => {
+  if (ANCHOR_AREA_CORNER_PRESETS[value]) {
+    return ANCHOR_AREA_CORNER_PRESETS[value];
+  }
+  const tokens = value.split(" ");
+  if (tokens.length === 1) {
+    const [token] = tokens;
+    if (ANCHOR_AREA_Y_VALUES.has(token)) {
+      return { y: token, x: "center" };
+    }
+    if (ANCHOR_AREA_X_VALUES.has(token)) {
+      return { y: "center", x: token };
+    }
+    return null;
+  }
+  if (tokens.length === 2) {
+    const [y, x] = tokens;
+    if (ANCHOR_AREA_Y_VALUES.has(y) && ANCHOR_AREA_X_VALUES.has(x)) {
+      return { y, x };
+    }
+  }
+  return null;
+};
+
+// Translates anchorArea's y/x vocabulary into pickPositionRelativeTo's own
+// positionY/positionX vocabulary (only used against a real anchor).
+const ANCHOR_AREA_Y_TO_POSITION_Y = {
+  above: "above",
+  top: "below-overlap",
+  center: "center",
+  bottom: "above-overlap",
+  below: "below",
+};
+const ANCHOR_AREA_X_TO_POSITION_X = {
+  "to-the-left": "to-the-left",
+  "left": "left-aligned",
+  "center": "center",
+  "right": "right-aligned",
+  "to-the-right": "to-the-right",
+};
+
+// Collapses anchorArea's y/x pair into the 8-compass-point + "center"
+// vocabulary popup_animation.js's slide CSS and computeStickToPosition below
+// key off — "above"/"top" both slide from (and pin to) the top, "below"/
+// "bottom" both slide from (and pin to) the bottom, regardless of the
+// overlap distinction, which doesn't apply to a point/corner in the first
+// place (there's no anchor box to overlap with there).
+const toSlideDirectionKey = (y, x) => {
+  const yKey =
+    y === "above" || y === "top"
+      ? "top"
+      : y === "below" || y === "bottom"
+        ? "bottom"
+        : "center";
+  const xKey =
+    x === "to-the-left" || x === "left"
+      ? "left"
+      : x === "to-the-right" || x === "right"
+        ? "right"
+        : "center";
+  if (yKey === "center") {
+    return xKey;
+  }
+  if (xKey === "center") {
+    return yKey;
+  }
+  return `${yKey}-${xKey}`;
 };
 
 /**

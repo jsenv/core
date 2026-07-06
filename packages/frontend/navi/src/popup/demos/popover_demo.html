@@ -106,6 +106,9 @@
       import { useId, useState, useEffect } from "preact/hooks";
       import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
+      // The 9 classic compass presets anchorArea accepts directly (also
+      // used to lay out PointGrid's cells, matching the CSS
+      // grid-template-areas names above).
       const POINTS = [
         "top-left",
         "top",
@@ -116,6 +119,17 @@
         "bottom-left",
         "bottom",
         "bottom-right",
+      ];
+
+      // Beyond the 9 presets, each axis has its own non-overlapping value
+      // ("above"/"below" for Y, "to-the-left"/"to-the-right" for X) — the
+      // presets' "top"/"bottom"/"left"/"right" all overlap the anchor
+      // (edges aligned); these don't.
+      const ANCHOR_AREA_EXTRA_VALUES = [
+        "above",
+        "below",
+        "to-the-left",
+        "to-the-right",
       ];
 
       const SLOW_DOWN_STORAGE_KEY = "popover_demo_slow_down_animations";
@@ -140,20 +154,17 @@
             <p>
               Most sections below have an "Animated" part: the same buttons,
               with <code>animation</code> turned on — the best animation for
-              that context gets picked automatically (the Fading section is the
-              one exception, since it only demonstrates{" "}
-              <code>fadeAnimation</code>). Animations are quick by default;
-              check the box below to slow them down so you can actually see them
-              play out.
+              that context gets picked automatically (the anchorArea and Fading
+              sections are the exceptions, since they're not about animation).
+              Animations are quick by default; check the box below to slow them
+              down so you can actually see them play out.
             </p>
             <SlowDownToggle slowDown={slowDown} onChange={setSlowDown} />
 
             <TableOfContents />
 
             <AnchorSection animatedDuration={animatedDuration} />
-            <AnchorPlacementSection animatedDuration={animatedDuration} />
-            <AnchorPointSection animatedDuration={animatedDuration} />
-            <AnchorPointRelativeSection animatedDuration={animatedDuration} />
+            <AnchorAreaSection />
             <AnchorIgnoreSection animatedDuration={animatedDuration} />
             <FadingSection />
             <PointerInteractionOutsideSection />
@@ -180,15 +191,7 @@
               <a href="#anchor">Anchor</a>
             </li>
             <li>
-              <a href="#anchor-placement">Placement relative to the anchor</a>
-            </li>
-            <li>
-              <a href="#anchor-point">Anchor as a point</a>
-            </li>
-            <li>
-              <a href="#anchor-point-relative">
-                Anchor relative to nearest positioned ancestor
-              </a>
+              <a href="#anchor-area">anchorArea</a>
             </li>
             <li>
               <a href="#anchor-ignore">Ignoring the anchor</a>
@@ -224,191 +227,59 @@
         </section>
       );
 
-      const AnchorPlacementSection = ({ animatedDuration }) => (
-        <section id="anchor-placement" class="demo-section">
-          <h2>2. Placement relative to the anchor</h2>
+      // This section is always relative to *an* anchor — a real element by
+      // default, or "viewport"/"offsetParent" (see the 2nd/3rd subsections
+      // below) — so it's anchorArea itself that's worth documenting, not
+      // "placement" as some separate idea.
+      const AnchorAreaSection = () => (
+        <section id="anchor-area" class="demo-section">
+          <h2>2. anchorArea</h2>
           <p>
-            <code>position</code> ("top", "top-right", "right", ... — the same 9
-            compass values as section 3 below) places the popover relative to a
-            real anchor element, auto-flipping to the opposite side when there
-            isn't enough room — which is why this demo uses{" "}
-            <code>positionFixed</code> instead: same values, but it skips the
-            fit check, so what you pick is what you always get (useful here to
-            see each value unambiguously; <code>position</code> is what you want
-            in real usage).
+            <code>anchorArea</code> places the popover relative to{" "}
+            <code>anchor</code> (a real element by default, or{" "}
+            <code>"viewport"</code>/<code>"offsetParent"</code>). Written as{" "}
+            <code>"&lt;y&gt; &lt;x&gt;"</code> (e.g. <code>"top left"</code>),
+            with 9 classic compass presets as one-word/hyphenated shortcuts:{" "}
+            <code>top-left</code>, <code>top</code>, <code>top-right</code>,{" "}
+            <code>left</code>, <code>center</code>, <code>right</code>,{" "}
+            <code>bottom-left</code>, <code>bottom</code>,{" "}
+            <code>bottom-right</code>.
           </p>
-          {/* marginLeft gives the grid's own "left"/"top-left"/"bottom-left"
-              cases room to open leftward — they'd otherwise butt straight
-              into the page's left edge, since (unlike section 3's
-              viewport-relative points) these are positioned relative to the
-              clicked button's own position on the page. */}
-          <div class="demo-side-by-side" style={{ marginLeft: "240px" }}>
-            <PointGrid
-              renderCell={(point) => (
-                <AnchoredPopover label={point} positionFixed={point} />
-              )}
-            />
-            <PointGrid
-              renderCell={(point) => (
-                <AnchoredPopover
-                  label={point}
-                  positionFixed={point}
-                  animation
-                  animationDuration={animatedDuration}
-                />
-              )}
-            />
-          </div>
+          <p>
+            Beyond the 9 presets, each axis has its own full vocabulary you can
+            combine explicitly: <code>above</code>/<code>top</code>/
+            <code>center</code>/<code>bottom</code>/<code>below</code> for Y,{" "}
+            <code>to-the-left</code>/<code>left</code>/<code>center</code>/
+            <code>right</code>/<code>to-the-right</code> for X. <code>top</code>
+            /<code>bottom</code>/<code>left</code>/<code>right</code> overlap
+            the anchor (the matching edges align); <code>above</code>/
+            <code>below</code>/<code>to-the-left</code>/
+            <code>to-the-right</code> don't (there's a gap, no overlap). A
+            single recognized word alone pairs with "center" on the other axis —{" "}
+            <code>"left"</code> alone means <code>"center left"</code>.
+          </p>
 
-          <p>
-            <em>
-              Note: <code>positionFixed</code> exists specifically for when you
-              don't want that auto-flip-based-on-available-space behavior — a
-              bit of an unusual thing to want, but here we are.
-            </em>
-          </p>
+          <h3>anchor left on the trigger button (default)</h3>
+          <AnchorAreaGrid />
+
+          <h3>
+            anchor<code>="viewport"</code>
+          </h3>
+          <AnchorAreaGrid anchor="viewport" />
+
+          <h3>
+            anchor<code>="offsetParent"</code>
+          </h3>
+          <AnchorAreaOffsetParentDemo />
         </section>
       );
-
-      const AnchorPointSection = ({ animatedDuration }) => (
-        <section id="anchor-point" class="demo-section">
-          <h2>3. Anchor as a point</h2>
-          <p>
-            <code>anchor="viewport"</code> +{" "}
-            <code>position="&lt;point&gt;"</code> pins the popover to a point of
-            the viewport (a corner, an edge center, or "center") instead of a
-            real element — one of <code>top</code>, <code>top-right</code>,{" "}
-            <code>right</code>, <code>bottom-right</code>,<code>bottom</code>,{" "}
-            <code>bottom-left</code>, <code>left</code>,<code>top-left</code>,{" "}
-            <code>center</code>.
-          </p>
-          <div class="demo-side-by-side">
-            <PointGrid
-              renderCell={(point) => (
-                <AnchorPointPopover
-                  label={point}
-                  anchor="viewport"
-                  position={point}
-                  spacing={16}
-                />
-              )}
-            />
-            <PointGrid
-              renderCell={(point) => (
-                <AnchorPointPopover
-                  label={point}
-                  anchor="viewport"
-                  position={point}
-                  spacing={16}
-                  animation
-                  animationDuration={animatedDuration}
-                />
-              )}
-            />
-          </div>
-        </section>
-      );
-
-      // anchor="offsetParent" positions the popover relative to its own
-      // nearest positioned ancestor instead of the viewport — the popover
-      // must be rendered inside that ancestor to find it (that's
-      // .demo-container below, which has position: relative), but the
-      // trigger button doesn't have to be (a possible future addition would
-      // let a container be referenced by CSS selector instead, so a popover
-      // could target one without being a DOM descendant of it — not needed
-      // yet since offsetParent already covers today's case).
-      const AnchorPointRelativeSection = ({ animatedDuration }) => (
-        <section id="anchor-point-relative" class="demo-section">
-          <h2>4. Anchor relative to nearest positioned ancestor</h2>
-          <p>
-            <code>anchor="offsetParent"</code> — positions the popover relative
-            to its nearest positioned ancestor (the dotted box in the middle)
-            instead of the viewport.
-          </p>
-          <AnchorPointRelativeDemo animatedDuration={animatedDuration} />
-        </section>
-      );
-
-      // The container comes first, with the buttons that control the
-      // popovers it holds below it — the container itself doesn't need to be
-      // rendered inside anything, but the popovers do (that's how
-      // anchor="offsetParent" finds it), and the trigger buttons don't have
-      // to be inside it at all.
-      const AnchorPointRelativeDemo = ({ animatedDuration }) => {
-        const baseId = useId();
-        return (
-          <>
-            <div class="demo-container">
-              <span class="demo-container-label">container</span>
-              {POINTS.map((point) => (
-                <Popover
-                  key={`plain-${point}`}
-                  id={`${baseId}-plain-${point}`}
-                  borderRadius="8px"
-                  anchor="offsetParent"
-                  position={point}
-                  spacing={16}
-                  pointerInteractionOutsideEffect="lock"
-                  className="demo_popover_box"
-                >
-                  <p style={{ marginTop: 0 }}>{point}</p>
-                  <Button command="--navi-close">Close</Button>
-                </Popover>
-              ))}
-              {POINTS.map((point) => (
-                <Popover
-                  key={`animated-${point}`}
-                  id={`${baseId}-animated-${point}`}
-                  animation
-                  animationDuration={animatedDuration}
-                  borderRadius="8px"
-                  anchor="offsetParent"
-                  position={point}
-                  spacing={16}
-                  pointerInteractionOutsideEffect="lock"
-                  className="demo_popover_box"
-                >
-                  <p style={{ marginTop: 0 }}>{point}</p>
-                  <Button command="--navi-close">Close</Button>
-                </Popover>
-              ))}
-            </div>
-            <div class="demo-side-by-side">
-              <PointGrid
-                renderCell={(point) => (
-                  <Button
-                    command="--navi-toggle"
-                    commandFor={`${baseId}-plain-${point}`}
-                    className="demo-point-button"
-                    style={pointAlignStyle(point)}
-                  >
-                    {point}
-                  </Button>
-                )}
-              />
-              <PointGrid
-                renderCell={(point) => (
-                  <Button
-                    command="--navi-toggle"
-                    commandFor={`${baseId}-animated-${point}`}
-                    className="demo-point-button"
-                    style={pointAlignStyle(point)}
-                  >
-                    {point}
-                  </Button>
-                )}
-              />
-            </div>
-          </>
-        );
-      };
 
       const AnchorIgnoreSection = ({ animatedDuration }) => (
         <section id="anchor-ignore" class="demo-section">
-          <h2>5. Ignoring the anchor</h2>
+          <h2>3. Ignoring the anchor</h2>
           <p>
             Setting <code>anchor="viewport"</code> (with{" "}
-            <code>position="center"</code>) forces the popover to ignore the
+            <code>anchorArea="center"</code>) forces the popover to ignore the
             toggle button as its anchor and center itself in the viewport
             instead — once <code>anchor</code> is set to anything, the event's
             own carried anchor is never consulted.
@@ -426,7 +297,7 @@
 
       const FadingSection = () => (
         <section id="fading" class="demo-section">
-          <h2>6. Fading</h2>
+          <h2>4. Fading</h2>
           <p>
             <code>fadeAnimation</code> (defaults to <code>false</code>) controls
             opacity fading independently of <code>animation</code> — it combines
@@ -441,39 +312,26 @@
 
       const PointerInteractionOutsideSection = () => (
         <section id="pointer-interaction-outside" class="demo-section">
-          <h2>7. pointerInteractionOutsideEffect</h2>
+          <h2>5. pointerInteractionOutsideEffect</h2>
           <p>
             Controls what a pointer interaction (mousedown) landing outside the
-            popover does while it's open:
-          </p>
-          <ul>
-            <li>
-              <code>"none"</code> (default) — nothing special: the popover
-              doesn't intercept it at all (no backdrop), and never closes from
-              it.
-            </li>
-            <li>
-              <code>"close"</code> — closes the popover.
-            </li>
-            <li>
-              <code>"lock"</code> — prevents interacting with the rest of the
-              document (the click is absorbed) without closing the popover.
-            </li>
-          </ul>
-          <p>
-            Open a popover below, then click "Click the rest of the page" — the
-            counter and the popover's open/closed state show which one actually
-            happened.
+            popover does while it's open. Click each button below, then click it
+            again while its popover is open to see the difference.
           </p>
           <div class="demo-row">
-            <PointerInteractionOutsideDemo label="none (default)" />
+            <PointerInteractionOutsideDemo
+              label="none (default)"
+              description="Clicking again just toggles it closed, same as if there were no popover at all."
+            />
             <PointerInteractionOutsideDemo
               label="close"
               pointerInteractionOutsideEffect="close"
+              description="Clicking again closes it (via the backdrop, not the toggle)."
             />
             <PointerInteractionOutsideDemo
-              label="lock"
-              pointerInteractionOutsideEffect="lock"
+              label="capture"
+              pointerInteractionOutsideEffect="capture"
+              description="Clicking again does nothing — the click is absorbed."
             />
           </div>
         </section>
@@ -522,7 +380,6 @@
         animation,
         animationDuration,
         fadeAnimation,
-        positionFixed,
       }) => {
         const popoverId = useId();
 
@@ -537,7 +394,6 @@
               animationDuration={animationDuration}
               fadeAnimation={fadeAnimation}
               borderRadius="8px"
-              positionFixed={positionFixed}
               pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
@@ -550,7 +406,7 @@
 
       // Still command-driven (--navi-toggle), but anchor="viewport" tells
       // the popover not to use the toggle button as its anchor, so it
-      // centers itself in the viewport instead (position="center").
+      // centers itself in the viewport instead (anchorArea="center").
       const AnchorlessPopover = ({ label, animation, animationDuration }) => {
         const popoverId = useId();
 
@@ -565,7 +421,7 @@
               animationDuration={animationDuration}
               borderRadius="8px"
               anchor="viewport"
-              position="center"
+              anchorArea="center"
               pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
@@ -576,18 +432,15 @@
         );
       };
 
-      // The counter button represents "the rest of the document" — clicking
-      // it while the popover is open exercises whatever
-      // pointerInteractionOutsideEffect actually does: increments and
-      // closes the popover ("close"), doesn't increment and keeps it open
-      // ("lock"), or increments and keeps it open, same as if the popover
-      // weren't there at all ("none").
+      // The same button doubles as the popover's own anchor and as "the rest
+      // of the page" to click on once it's open — no separate elements
+      // needed to see what pointerInteractionOutsideEffect actually does.
       const PointerInteractionOutsideDemo = ({
         label,
         pointerInteractionOutsideEffect,
+        description,
       }) => {
         const popoverId = useId();
-        const [count, setCount] = useState(0);
 
         return (
           <div>
@@ -603,27 +456,21 @@
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
-            <p>
-              Background clicks: {count}
-              <br />
-              <Button onClick={() => setCount((c) => c + 1)}>
-                Click the rest of the page
-              </Button>
-            </p>
+            <p>{description}</p>
           </div>
         );
       };
 
-      // anchor="viewport"/"offsetParent" + position="top"/"top-left"/etc
-      // pins the popover to a point instead of positioning relative to a
-      // real element. No animation by default.
-      const AnchorPointPopover = ({
+      // anchor is left undefined (real anchor, from the toggle event) unless
+      // explicitly passed as "viewport"/"offsetParent". No animation — this
+      // section is about placement, not animation, and always uses the
+      // flexible anchorArea (never anchorAreaFixed): what you'd actually use
+      // day to day.
+      const AnchorAreaPopover = ({
         label,
         anchor,
-        position,
-        spacing,
-        animation,
-        animationDuration,
+        anchorArea,
+        gridStyle = false,
       }) => {
         const popoverId = useId();
 
@@ -632,25 +479,100 @@
             <Button
               command="--navi-toggle"
               commandFor={popoverId}
-              className="demo-point-button"
-              style={pointAlignStyle(label)}
+              className={gridStyle ? "demo-point-button" : undefined}
+              style={gridStyle ? pointAlignStyle(label) : undefined}
             >
               {label}
             </Button>
             <Popover
               id={popoverId}
-              animation={animation}
-              animationDuration={animationDuration}
               borderRadius="8px"
               anchor={anchor}
-              position={position}
-              spacing={spacing}
+              anchorArea={anchorArea}
+              spacing={16}
               pointerInteractionOutsideEffect="close"
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Popover>
+          </>
+        );
+      };
+
+      const AnchorAreaGrid = ({ anchor }) => (
+        <>
+          <PointGrid
+            renderCell={(preset) => (
+              <AnchorAreaPopover
+                label={preset}
+                anchor={anchor}
+                anchorArea={preset}
+                gridStyle
+              />
+            )}
+          />
+          <div class="demo-row">
+            {ANCHOR_AREA_EXTRA_VALUES.map((value) => (
+              <AnchorAreaPopover
+                key={value}
+                label={value}
+                anchor={anchor}
+                anchorArea={value}
+              />
+            ))}
+          </div>
+        </>
+      );
+
+      // anchor="offsetParent" needs the popovers rendered *inside* the
+      // positioned container to find it — the trigger buttons don't, so
+      // they live outside it, in their own grid/row below.
+      const AnchorAreaOffsetParentDemo = () => {
+        const baseId = useId();
+        return (
+          <>
+            <div class="demo-container">
+              <span class="demo-container-label">container</span>
+              {[...POINTS, ...ANCHOR_AREA_EXTRA_VALUES].map((value) => (
+                <Popover
+                  key={value}
+                  id={`${baseId}-${value}`}
+                  borderRadius="8px"
+                  anchor="offsetParent"
+                  anchorArea={value}
+                  spacing={16}
+                  pointerInteractionOutsideEffect="close"
+                  className="demo_popover_box"
+                >
+                  <p style={{ marginTop: 0 }}>{value}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Popover>
+              ))}
+            </div>
+            <PointGrid
+              renderCell={(preset) => (
+                <Button
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${preset}`}
+                  className="demo-point-button"
+                  style={pointAlignStyle(preset)}
+                >
+                  {preset}
+                </Button>
+              )}
+            />
+            <div class="demo-row">
+              {ANCHOR_AREA_EXTRA_VALUES.map((value) => (
+                <Button
+                  key={value}
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${value}`}
+                >
+                  {value}
+                </Button>
+              ))}
+            </div>
           </>
         );
       };

@@ -659,12 +659,11 @@ const PickerContentInsidePopover = (props) => {
       <Popover
         {...popupProps}
         className="navi_picker_popover"
-        positionX="left-aligned"
-        positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
+        anchorArea={popoverMode === "nearby" ? "below" : "top left"}
         spacing={popoverSpacing}
         viewportSpacing={viewportSpacing}
         scrollLock={scrollLock}
-        pointerInteractionOutsideEffect={pointerLock ? "lock" : "close"}
+        pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
         focusTrap={focusTrap}
         /* make popover focusable so it can be the first focus target when opening */
         tabIndex={-1}
