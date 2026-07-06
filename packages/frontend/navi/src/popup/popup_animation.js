@@ -161,28 +161,33 @@ export const buildPopupAnimationCss = (selector) => {
     /* slide — direction multipliers for a real anchor: data-position-y/x-
        current (set by pickPositionRelativeTo) plays the same role data-anchor
        plays below for point/corner mode, collapsing the aligned and bare
-       variants the same way "clip" does. A small fixed px distance, not
+       variants the same way "clip" does. The sign is flipped from point/
+       corner mode's own convention below: "above" starts closer to the
+       anchor (which sits below it) and slides up, away from it, into its
+       final resting position — the opposite of a point pinned to the "top"
+       of its reference box, which starts further up (off past its edge) and
+       slides down into place. A small fixed px distance, not
        --popup-slide-distance's 100%-of-own-size default — sliding a whole
        box-height away from a real anchor reads as excessive; the point is
        just to hint at "coming from that direction". */
     ${selector}[data-position-y-current="above"],
     ${selector}[data-position-y-current="aligned-top"] {
-      --popup-slide-y: -1;
+      --popup-slide-y: 1;
     }
     ${selector}[data-position-y-current="below"],
     ${selector}[data-position-y-current="aligned-bottom"] {
-      --popup-slide-y: 1;
+      --popup-slide-y: -1;
     }
     ${selector}[data-position-y-current="center"] {
       --popup-slide-y: 0;
     }
     ${selector}[data-position-x-current="on-the-left"],
     ${selector}[data-position-x-current="aligned-left"] {
-      --popup-slide-x: -1;
+      --popup-slide-x: 1;
     }
     ${selector}[data-position-x-current="on-the-right"],
     ${selector}[data-position-x-current="aligned-right"] {
-      --popup-slide-x: 1;
+      --popup-slide-x: -1;
     }
     ${selector}[data-position-x-current="center"] {
       --popup-slide-x: 0;
