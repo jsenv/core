@@ -46,9 +46,11 @@ const css = /* css */ `
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
-    padding: 0;
+    width: auto; /* Override user-agent */
+    height: auto; /* Override user-agent */
+    padding: 0; /* Override user-agent */
     background: transparent;
-    border: none;
+    border: none; /* Override user-agent */
     pointer-events: none;
 
     &[aria-expanded="true"] {
