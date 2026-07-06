@@ -332,11 +332,6 @@
       const AnchorSection = ({ animatedDuration }) => (
         <section id="anchor" class="demo-section">
           <h2>1. Anchor</h2>
-          <p>
-            A popover opened via a <code>--navi-toggle</code> command anchors
-            itself to the button that triggered it automatically — no anchorRef
-            to wire up.
-          </p>
           <div class="demo-row">
             <AnchoredPopover label="anchored (default)" />
             <AnchoredPopover
@@ -355,21 +350,12 @@
       const AnchorAreaSection = ({ animatedDuration }) => (
         <section id="anchor-area" class="demo-section">
           <h2>2. anchorArea</h2>
-          <p>
-            <code>anchorArea</code> places the popover relative to{" "}
-            <code>anchor</code>. Order doesn't matter —{" "}
-            <code>"above on-the-left"</code> and{" "}
-            <code>"on-the-left above"</code> are the same — and the default is{" "}
-            <code>"center"</code>, so a single word like{" "}
-            <code>"on-the-left"</code> is enough when you only care about one
-            axis. The grid below is every combination.
-          </p>
 
           <h3>anchor left on the trigger button (default)</h3>
           <p>
-            Every button below opens its own popover, but all of them anchor to
-            the same static box instead of to themselves, via{" "}
-            <code>navi-command-proxy-for</code>.
+            The buttons below are wired to the anchor above (via{" "}
+            <code>navi-command-proxy-for</code>) instead of anchoring to
+            themselves — useful for this demo, but also in practice.
           </p>
           <AnchorAreaDefaultDemo animatedDuration={animatedDuration} />
 
@@ -623,6 +609,7 @@
               renderCell={(y, x) => (
                 <AnchorAreaPopover
                   anchorArea={`${y} ${x}`}
+                  label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animate}
                   animationDuration={animate ? animatedDuration : undefined}
@@ -703,7 +690,7 @@
                     spacing={16}
                     className="demo_popover_box"
                   >
-                    <p style={{ marginTop: 0 }}>{`${y} ${x}`}</p>
+                    <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>
                     <Button command="--navi-close">Close</Button>
                   </Popover>
                 )),
@@ -716,7 +703,7 @@
                   commandFor={`${baseId}-${y}-${x}`}
                   className="demo-area-button"
                 >
-                  {`${y} ${x}`}
+                  {formatAreaLabel(y, x)}
                 </Button>
               )}
             />
