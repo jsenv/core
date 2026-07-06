@@ -59,7 +59,11 @@ import { buildPopupAnimationCss } from "./popup_animation.js";
 
 const css = /* css */ `
   .navi_popover {
-    position: fixed;
+    /* absolute (not fixed): scrolls natively with the document instead of
+       needing a JS reposition on every scroll tick — getPositioningScrollOffset/
+       pickPositionRelativeTo (@jsenv/dom) and computeStickToPosition below
+       already detect this dynamically from the computed style. */
+    position: absolute;
     inset: unset;
     /* Set --popup-border-radius instead of border-radius directly: it's
        also what the "clip" animation rounds its clip-path shape to (see
@@ -73,13 +77,14 @@ const css = /* css */ `
   }
 
   /* A sibling top-layer popover, not a descendant of .navi_popover (see the
-     backdrop's own JSX comment for why) — position: fixed alone makes an
-     element a stacking-context root, and a stacking-context root's own
-     background/border always paints *below* even its own negative-z-index
-     children. A z-index trick on a descendant backdrop can therefore never
-     truly sit behind .navi_popover's own background, only behind its later
-     (content) children — which read as the backdrop's tint landing on top
-     of the popup. Being a separate element sidesteps that rule entirely. */
+     backdrop's own JSX comment for why) — an element promoted to the top
+     layer establishes its own stacking context regardless of its position
+     value, and a stacking-context root's own background/border always
+     paints *below* even its own negative-z-index children. A z-index trick
+     on a descendant backdrop can therefore never truly sit behind
+     .navi_popover's own background, only behind its later (content)
+     children — which read as the backdrop's tint landing on top of the
+     popup. Being a separate element sidesteps that rule entirely. */
   .navi_popover_backdrop {
     position: fixed;
     inset: 0;
@@ -165,11 +170,6 @@ const ControlledPopover = (props) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
-  // Disarms the previous close's pending backdrop hide (see
-  // armBackdropHideOnClick below) whenever a fresh open needs the backdrop
-  // right away, so a click that arrives later can't hide a backdrop that,
-  // by then, belongs to a new open cycle.
-  const disarmBackdropHideRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
@@ -314,10 +314,10 @@ const ControlledPopover = (props) => {
     }
 
     if (backdropEl) {
-      // Disarm before touching the backdrop: a click arriving later must not
-      // hide the fresh instance this open is about to show.
-      disarmBackdropHideRef.current?.();
-      disarmBackdropHideRef.current = null;
+      // Invalidates a still-pending hide from a previous close (see
+      // armBackdropHideOnClick below) — a click arriving later must not hide
+      // the fresh instance this open is about to show.
+      backdropEl[PENDING_HIDE_TOKEN] = null;
       // Hidden first if a previous close's deferred hidePopover() (see the
       // close cleanup below) hasn't run yet — showPopover() throws on an
       // already-open element. Showing it fresh here (rather than reusing an
@@ -348,22 +348,44 @@ const ControlledPopover = (props) => {
       let top;
 
       if (anchorReference) {
-        const containerRect = relativeContainer
-          ? relativeContainer.getBoundingClientRect()
-          : {
+        // anchor="offsetParent" renders popoverEl *inside* relativeContainer
+        // (required for getPositionedParent to find it at all), which makes
+        // that container popoverEl's own containing block once popoverEl is
+        // position: absolute — so the coordinates computeStickToPosition
+        // works with must be local to it (0,0 at its own padding-box corner,
+        // no scroll offset added), not the viewport-relative rect that a
+        // position: fixed popover (or the plain "viewport" case, whose
+        // containing block is the document root either way) needs.
+        const popoverIsAbsolute =
+          getComputedStyle(popoverEl).position === "absolute";
+        const isContainerTheContainingBlock =
+          Boolean(relativeContainer) && popoverIsAbsolute;
+        const containerRect = isContainerTheContainingBlock
+          ? {
               left: 0,
               top: 0,
-              right: document.documentElement.clientWidth,
-              bottom: document.documentElement.clientHeight,
-              width: document.documentElement.clientWidth,
-              height: document.documentElement.clientHeight,
-            };
+              right: relativeContainer.clientWidth,
+              bottom: relativeContainer.clientHeight,
+              width: relativeContainer.clientWidth,
+              height: relativeContainer.clientHeight,
+            }
+          : relativeContainer
+            ? relativeContainer.getBoundingClientRect()
+            : {
+                left: 0,
+                top: 0,
+                right: document.documentElement.clientWidth,
+                bottom: document.documentElement.clientHeight,
+                width: document.documentElement.clientWidth,
+                height: document.documentElement.clientHeight,
+              };
         const spacingPx = resolveSpacingSize(anchorSpacing);
         const stickPosition = computeStickToPosition(
           popoverEl,
           containerRect,
           slideDirectionKey,
           spacingPx,
+          { skipScrollOffset: isContainerTheContainingBlock },
         );
         appliedLeft = stickPosition.left;
         top = stickPosition.top;
@@ -508,10 +530,7 @@ const ControlledPopover = (props) => {
       popoverEl.hidePopover();
       if (backdropEl) {
         backdropEl.setAttribute("aria-expanded", "false");
-        disarmBackdropHideRef.current = armBackdropHideOnClick(
-          backdropEl,
-          closeEvent,
-        );
+        armBackdropHideOnClick(backdropEl, closeEvent);
       }
       restoreFocus(closeEvent);
 
@@ -600,6 +619,13 @@ const POPUP_STYLE_CSS_VARS = {
   borderRadius: "--popup-border-radius",
 };
 
+// Marks a backdrop element as having a hide pending (see
+// armBackdropHideOnClick) — a plain property on the DOM node itself rather
+// than component-level state, since the node already persists across
+// renders and across the separate open()/close() invocations that need to
+// coordinate here.
+const PENDING_HIDE_TOKEN = Symbol("pendingBackdropHideToken");
+
 /**
  * Hides the backdrop, deferring until the browser's matching "click" fires
  * when `closeEvent` was triggered by a mousedown (see this file's top
@@ -610,26 +636,28 @@ const POPUP_STYLE_CSS_VARS = {
  * button down), so a short timeout can fire first and hide the backdrop
  * before its own click ever arrives. A capture-phase listener on document
  * fires for every click regardless of what any bubble-phase handler does
- * downstream, so no fallback timer is needed. Returns a disarm function (or
- * undefined if hidden immediately), so a fresh open can cancel a pending
- * hide it's about to make redundant.
+ * downstream, so no fallback timer is needed. The token guards against a
+ * fresh open (which clears it) getting its backdrop hidden by this stale
+ * listener if the click arrives after that reopen.
  */
 const armBackdropHideOnClick = (backdropEl, closeEvent) => {
   const mousedownEvent = findEvent(closeEvent, "mousedown");
   if (!mousedownEvent) {
     backdropEl.hidePopover();
-    return undefined;
+    return;
   }
+  const token = {};
+  backdropEl[PENDING_HIDE_TOKEN] = token;
   const onClick = () => {
     document.removeEventListener("click", onClick, { capture: true });
-    if (backdropEl.matches(":popover-open")) {
+    if (
+      backdropEl[PENDING_HIDE_TOKEN] === token &&
+      backdropEl.matches(":popover-open")
+    ) {
       backdropEl.hidePopover();
     }
   };
   document.addEventListener("click", onClick, { capture: true });
-  return () => {
-    document.removeEventListener("click", onClick, { capture: true });
-  };
 };
 
 const resolveAnchorAttrValue = (popoverEl, anchor, anchorPoint) => {
@@ -756,12 +784,17 @@ const toSlideDirectionKey = (y, x) => {
  * position needs (see getPositioningScrollOffset), matching
  * pickPositionRelativeTo's convention — viewport rect math, converted at the
  * very end, continuously recomputed by visibleRectEffect on scroll/resize.
+ * @param {object} [options]
+ * @param {boolean} [options.skipScrollOffset] - true when `containerRect` is
+ *   already local to popoverEl's own containing block (see the caller) — no
+ *   viewport/document conversion needed in that case.
  */
 const computeStickToPosition = (
   popoverEl,
   containerRect,
   anchorPoint,
   spacingPx,
+  { skipScrollOffset = false } = {},
 ) => {
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect(): the
   // popover may have an active CSS scale transform mid-animation (e.g.
@@ -769,7 +802,9 @@ const computeStickToPosition = (
   // off the position math (see the matching fix in pickPositionRelativeTo).
   const width = popoverEl.offsetWidth;
   const height = popoverEl.offsetHeight;
-  const { scrollLeft, scrollTop } = getPositioningScrollOffset(popoverEl);
+  const { scrollLeft, scrollTop } = skipScrollOffset
+    ? { scrollLeft: 0, scrollTop: 0 }
+    : getPositioningScrollOffset(popoverEl);
 
   let left;
   if (
