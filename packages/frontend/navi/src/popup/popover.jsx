@@ -98,6 +98,7 @@ const css = /* css */ `
     background: transparent;
     border: none; /* Override user-agent */
     pointer-events: none;
+    --popup-animation-duration: 0.18s;
 
     &[aria-expanded="true"] {
       pointer-events: auto;
@@ -109,6 +110,18 @@ const css = /* css */ `
       &[data-pointer-interaction-outside="capture"] {
         background: rgba(0, 0, 0, 0.7);
       }
+    }
+
+    /* Mirrors the content popover's own fadeAnimation, so the backdrop's
+       tint fades in/out alongside it instead of snapping abruptly. */
+    &[navi-fade-animation] {
+      opacity: 1;
+      transition-property: opacity;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+    }
+    &[aria-expanded="false"][navi-fade-animation] {
+      opacity: 0;
     }
   }
 
@@ -197,6 +210,7 @@ const ControlledPopover = (props) => {
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
   useLayoutEffect(() => {
     ref.current?.setAttribute("aria-expanded", "false");
+    backdropRef.current?.setAttribute("aria-expanded", "false");
   }, []);
 
   openController.openEffect = (e) => {
@@ -252,11 +266,19 @@ const ControlledPopover = (props) => {
     // "clip" reveals vertically only by default (grows out of the anchor's
     // edge), which only makes sense against a real anchor element. Without
     // one — anchorReference (viewport/offsetParent) or nothing at all — it
-    // clips both axes around a point instead (see popup_animation.js).
-    if (anchor) {
-      popoverEl.removeAttribute("data-clip-axis");
-    } else {
+    // clips both axes around a point instead (see popup_animation.js). A
+    // real anchor with a centered Y (pure "on-the-left"/"on-the-right"
+    // placement) clips horizontally instead of vertically — anything with a
+    // non-center Y (including corner combos) keeps the vertical default.
+    if (!anchor) {
       popoverEl.setAttribute("data-clip-axis", "xy");
+    } else if (
+      parsedAnchorArea.y === "center" &&
+      parsedAnchorArea.x !== "center"
+    ) {
+      popoverEl.setAttribute("data-clip-axis", "x");
+    } else {
+      popoverEl.removeAttribute("data-clip-axis");
     }
     // Mirrors how the anchor was resolved, in DOM-inspectable form:
     // slideDirectionKey when anchorReference is set, a structural relation
@@ -333,7 +355,14 @@ const ControlledPopover = (props) => {
       if (backdropEl.matches(":popover-open")) {
         backdropEl.hidePopover();
       }
+      // Same reflow trick as the real popover below (no @starting-style):
+      // the backdrop's own fadeAnimation needs a genuinely rendered "closed"
+      // frame to transition from, not a jump straight from not-rendered to
+      // aria-expanded="true".
+      backdropEl.style.transitionProperty = "none";
       backdropEl.showPopover();
+      backdropEl.getBoundingClientRect();
+      backdropEl.style.transitionProperty = "";
       backdropEl.setAttribute("aria-expanded", "true");
     }
     popoverEl.showPopover();
@@ -556,6 +585,9 @@ const ControlledPopover = (props) => {
           popover="manual"
           baseClassName="navi_popover_backdrop"
           aria-hidden="true"
+          navi-fade-animation={fadeAnimation ? "" : undefined}
+          styleCSSVars={POPUP_STYLE_CSS_VARS}
+          animationDuration={rest.animationDuration}
           data-pointer-interaction-outside={pointerInteractionOutsideEffect}
           onMouseDown={(e) => {
             if (e.button !== 0) {

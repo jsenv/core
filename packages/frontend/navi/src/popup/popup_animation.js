@@ -48,13 +48,16 @@
  * Two `animation` kinds:
  * - "clip": reveals via `clip-path` rather than a `scale` transform, so child
  *   content never visually shrinks/distorts and the box's real layout size
- *   is never touched — only what's painted changes. Two modes, chosen by
+ *   is never touched — only what's painted changes. Three modes, chosen by
  *   `data-clip-axis`:
- *   - default (no `data-clip-axis`, set when Popover has a real anchor
- *     element): clips vertically only, revealing out of the anchor's edge —
- *     top when placed below it, bottom when placed above it
+ *   - default (no `data-clip-axis`, set when Popover has a real anchor and a
+ *     non-center Y placement): clips vertically only, revealing out of the
+ *     anchor's edge — top when placed below it, bottom when placed above it
  *     (data-position-y-current, set by pickPositionRelativeTo). *Reads* like
  *     the popup's height is growing without any translation happening.
+ *   - `data-clip-axis="x"` (real anchor, Y centered — pure "on-the-left"/
+ *     "on-the-right" placement): same idea on the horizontal axis, out of
+ *     the anchor's left/right edge (data-position-x-current).
  *   - `data-clip-axis="xy"` (no real anchor — an anchor point like "center",
  *     or no anchor at all): clips both axes around a point, combined with a
  *     `translate` from that point to the final resting position
@@ -118,6 +121,22 @@ export const buildPopupAnimationCss = (selector) => {
     ${closed}[navi-animation="clip"][data-position-y-current="above"],
     ${closed}[navi-animation="clip"][data-position-y-current="aligned-bottom"] {
       clip-path: inset(100% 0 0 0 round var(--popup-border-radius, 0));
+    }
+
+    /* clip — horizontal-only (data-clip-axis="x", set when placed purely
+       "on-the-left"/"on-the-right" of a real anchor, Y centered): reveals
+       out of the anchor's edge, left when placed to its right, right when
+       placed to its left. */
+    ${selector}[navi-animation="clip"][data-clip-axis="x"] {
+      clip-path: inset(0 0 0 0 round var(--popup-border-radius, 0));
+      translate: 0 0;
+    }
+    ${closed}[navi-animation="clip"][data-clip-axis="x"] {
+      clip-path: inset(0 100% 0 0 round var(--popup-border-radius, 0));
+    }
+    ${closed}[navi-animation="clip"][data-clip-axis="x"][data-position-x-current="on-the-left"],
+    ${closed}[navi-animation="clip"][data-clip-axis="x"][data-position-x-current="aligned-right"] {
+      clip-path: inset(0 0 0 100% round var(--popup-border-radius, 0));
     }
 
     /* clip — both axes (no real anchor): a point-sized rect (the box's own
