@@ -81,6 +81,34 @@ const css = /* css */ `
        popup_animation.js), so the two can never drift out of sync. */
     border-radius: var(--popup-border-radius, 0);
 
+    /* anchor="offsetParent" places the popover *inside* a container that
+       may hide overflow — these default to a no-op (0px on every side) and
+       are only set (by positionPopover, in this file) when that container
+       actually clips, so the popover can't visually escape it. Sits under
+       the "clip" animation's own clip-path (popup_animation.js), which
+       currently doesn't combine with this — a known gap for the rare
+       animation="clip" + offsetParent + a centered anchorArea combo. */
+    --popup-container-clip-top: 0px;
+    --popup-container-clip-right: 0px;
+    --popup-container-clip-bottom: 0px;
+    --popup-container-clip-left: 0px;
+    --popup-container-clip-radius: 0;
+    clip-path: inset(
+      var(--popup-container-clip-top) var(--popup-container-clip-right)
+        var(--popup-container-clip-bottom) var(--popup-container-clip-left)
+        round var(--popup-container-clip-radius)
+    );
+
+    /* anchor="viewport" has no real anchor to stay in scroll-lockstep with
+       in the first place — it's meant to stay pinned to the viewport itself,
+       exactly what position: fixed already does natively. Staying absolute
+       here would instead let it contribute to the document's own scrollable
+       area once it extends past the current viewport edge, growing the
+       page's scrollbar for no reason. */
+    &[data-anchor-reference="viewport"] {
+      position: fixed;
+    }
+
     &[data-anchor-out-of-view] {
       opacity: 0;
       pointer-events: none;
@@ -263,6 +291,13 @@ const ControlledPopover = (props) => {
         : "clip"
       : animation;
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    // Keys the CSS that switches back to position: fixed for anchor="viewport"
+    // specifically (see the CSS comment above for why).
+    if (anchorReference === "viewport") {
+      popoverEl.setAttribute("data-anchor-reference", "viewport");
+    } else {
+      popoverEl.removeAttribute("data-anchor-reference");
+    }
     // "clip" reveals vertically only by default (grows out of the anchor's
     // edge), which only makes sense against a real anchor element. Without
     // one — anchorReference (viewport/offsetParent) or nothing at all — it
@@ -467,6 +502,50 @@ const ControlledPopover = (props) => {
       );
       popoverEl.style.top = `${top}px`;
       popoverEl.style.left = `${appliedLeft}px`;
+
+      // anchor="offsetParent" conceptually places the popover *inside*
+      // relativeContainer — if that container hides overflow, clip the
+      // popover to its visible bounds too, so it can't visually escape a
+      // container it's meant to live within. getBoundingClientRect() for
+      // both, read fresh right after the assignments above, so this is a
+      // plain viewport-relative rect comparison — no scroll-offset
+      // conversion needed either way.
+      if (relativeContainer) {
+        const containerOverflow = getComputedStyle(relativeContainer);
+        const containerClips =
+          containerOverflow.overflowX !== "visible" ||
+          containerOverflow.overflowY !== "visible";
+        if (containerClips) {
+          const containerRect = relativeContainer.getBoundingClientRect();
+          const popoverRect = popoverEl.getBoundingClientRect();
+          popoverEl.style.setProperty(
+            "--popup-container-clip-top",
+            `${snapToPixel(Math.max(0, containerRect.top - popoverRect.top))}px`,
+          );
+          popoverEl.style.setProperty(
+            "--popup-container-clip-right",
+            `${snapToPixel(Math.max(0, popoverRect.right - containerRect.right))}px`,
+          );
+          popoverEl.style.setProperty(
+            "--popup-container-clip-bottom",
+            `${snapToPixel(Math.max(0, popoverRect.bottom - containerRect.bottom))}px`,
+          );
+          popoverEl.style.setProperty(
+            "--popup-container-clip-left",
+            `${snapToPixel(Math.max(0, containerRect.left - popoverRect.left))}px`,
+          );
+          popoverEl.style.setProperty(
+            "--popup-container-clip-radius",
+            containerOverflow.borderRadius,
+          );
+        } else {
+          popoverEl.style.removeProperty("--popup-container-clip-top");
+          popoverEl.style.removeProperty("--popup-container-clip-right");
+          popoverEl.style.removeProperty("--popup-container-clip-bottom");
+          popoverEl.style.removeProperty("--popup-container-clip-left");
+          popoverEl.style.removeProperty("--popup-container-clip-radius");
+        }
+      }
 
       if (resolvedAnimation !== "clip" || anchor) {
         // Anchored "clip" is vertical-only (see popup_animation.js): it

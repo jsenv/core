@@ -63,8 +63,15 @@
         align-items: center;
         justify-content: center;
         border: 1px dotted #999;
-        border-radius: 8px;
-        overflow: hidden;
+        /* overflow/border-radius are controlled inline — see
+           AnchorAreaOffsetParentDemo's own controls. */
+      }
+      .demo-container-controls {
+        display: flex;
+        margin-bottom: 8px;
+        align-items: center;
+        gap: 16px;
+        font-size: 13px;
       }
       .demo-animate-controls {
         display: flex;
@@ -742,10 +749,38 @@
         const { animate, fade, animationDuration, Toggle } = useAnimateControls(
           "popover_demo_area_offset_parent",
         );
+        const [overflow, setOverflow] = useState("visible");
+        const [containerRadius, setContainerRadius] = useState(20);
         return (
           <>
             <PointModeNote referenceLabel="the container" />
-            <div class="demo-container">
+            <div class="demo-container-controls">
+              <label>
+                container overflow:{" "}
+                <select
+                  value={overflow}
+                  onChange={(e) => setOverflow(e.target.value)}
+                >
+                  <option value="visible">visible</option>
+                  <option value="hidden">hidden</option>
+                  <option value="auto">auto</option>
+                </select>
+              </label>
+              <label>
+                container border-radius: {containerRadius}px{" "}
+                <input
+                  type="range"
+                  min="0"
+                  max="50"
+                  value={containerRadius}
+                  onInput={(e) => setContainerRadius(Number(e.target.value))}
+                />
+              </label>
+            </div>
+            <div
+              class="demo-container"
+              style={{ overflow, borderRadius: `${containerRadius}px` }}
+            >
               <span class="demo-container-label">container</span>
               {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
                 ANCHOR_AREA_X_VALUES.map((x) => (
