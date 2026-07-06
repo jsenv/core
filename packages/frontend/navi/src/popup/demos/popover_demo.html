@@ -252,9 +252,28 @@
         return [value, setValue];
       };
 
+      // Same as useStoredBoolean, but for any value that round-trips through
+      // a plain string (numbers via `parse`, strings as-is by default).
+      const useStoredValue = (key, defaultValue, parse = (v) => v) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : parse(stored);
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+
       // Backs a section's own "Animate"/"Fade"/"Slow" checkboxes and computes
       // the animationDuration to pass down — storageKey scopes all three to
       // that one section, independent of every other section's own toggles.
+      // Returns plain values/setters (not a component) so the checkboxes
+      // stay one stable component across renders — a component created fresh
+      // on every call (as this used to return) gets a new identity each
+      // render, and Preact remounts it whenever anything in the parent
+      // re-renders, discarding whatever the user was in the middle of
+      // clicking.
       const useAnimateControls = (storageKey) => {
         const [animate, setAnimate] = useStoredBoolean(
           `${storageKey}_animate`,
@@ -267,27 +286,7 @@
           animate,
           fade,
           animationDuration,
-          Toggle: () => (
-            <div class="demo-animate-controls">
-              <AnimateToggle animate={animate} onChange={setAnimate} />
-              <label class="demo-animate-toggle">
-                <input
-                  type="checkbox"
-                  checked={fade}
-                  onChange={(e) => setFade(e.target.checked)}
-                />
-                Fade
-              </label>
-              <label class="demo-animate-toggle">
-                <input
-                  type="checkbox"
-                  checked={slow}
-                  onChange={(e) => setSlow(e.target.checked)}
-                />
-                Slow
-              </label>
-            </div>
-          ),
+          controlsProps: { animate, setAnimate, fade, setFade, slow, setSlow },
         };
       };
 
@@ -300,6 +299,35 @@
           />
           Animate
         </label>
+      );
+
+      const AnimateControls = ({
+        animate,
+        setAnimate,
+        fade,
+        setFade,
+        slow,
+        setSlow,
+      }) => (
+        <div class="demo-animate-controls">
+          <AnimateToggle animate={animate} onChange={setAnimate} />
+          <label class="demo-animate-toggle">
+            <input
+              type="checkbox"
+              checked={fade}
+              onChange={(e) => setFade(e.target.checked)}
+            />
+            Fade
+          </label>
+          <label class="demo-animate-toggle">
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow
+          </label>
+        </div>
       );
 
       const App = () => (
@@ -453,9 +481,8 @@
       );
 
       const PointerInteractionOutsideSection = () => {
-        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
-          "popover_demo_pointer_interaction_outside",
-        );
+        const { animate, fade, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
             <h2>6. pointerInteractionOutsideEffect</h2>
@@ -487,7 +514,7 @@
                 animationDuration={animationDuration}
               />
             </div>
-            <Toggle />
+            <AnimateControls {...controlsProps} />
           </section>
         );
       };
@@ -657,9 +684,8 @@
       // to (via navi-command-proxy-for) instead of to itself.
       const AnchorAreaDefaultDemo = () => {
         const anchorId = useId();
-        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
-          "popover_demo_area_anchor",
-        );
+        const { animate, fade, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_anchor");
         return (
           <>
             <div class="demo-static-anchor-wrapper">
@@ -687,7 +713,7 @@
                 />
               )}
             />
-            <Toggle />
+            <AnimateControls {...controlsProps} />
           </>
         );
       };
@@ -717,9 +743,8 @@
       );
 
       const AnchorAreaViewportDemo = () => {
-        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
-          "popover_demo_area_viewport",
-        );
+        const { animate, fade, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_viewport");
         return (
           <>
             <PointModeNote referenceLabel="the viewport" />
@@ -736,7 +761,7 @@
                 />
               )}
             />
-            <Toggle />
+            <AnimateControls {...controlsProps} />
           </>
         );
       };
@@ -746,11 +771,17 @@
       // they live outside it, in their own grid below.
       const AnchorAreaOffsetParentDemo = () => {
         const baseId = useId();
-        const { animate, fade, animationDuration, Toggle } = useAnimateControls(
-          "popover_demo_area_offset_parent",
+        const { animate, fade, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_offset_parent");
+        const [overflow, setOverflow] = useStoredValue(
+          "popover_demo_area_offset_parent_overflow",
+          "visible",
         );
-        const [overflow, setOverflow] = useState("visible");
-        const [containerRadius, setContainerRadius] = useState(20);
+        const [containerRadius, setContainerRadius] = useStoredValue(
+          "popover_demo_area_offset_parent_border_radius",
+          20,
+          Number,
+        );
         return (
           <>
             <PointModeNote referenceLabel="the container" />
@@ -813,7 +844,7 @@
                 </Button>
               )}
             />
-            <Toggle />
+            <AnimateControls {...controlsProps} />
           </>
         );
       };
