@@ -116,15 +116,6 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
-
-    /* spawnFromPointer: the "scale" animation grows from the click/pointer
-       position instead of its own center (see openEffect/positionPopover for
-       how --popup-spawn-origin-x/y are computed) — a static anchor point for
-       the scale transform, doesn't itself need to transition. */
-    &[navi-animation="scale"][data-spawn-from-pointer] {
-      transform-origin: var(--popup-spawn-origin-x, 50%)
-        var(--popup-spawn-origin-y, 50%);
-    }
   }
 
   /* Sibling top-layer element, not a descendant of .navi_popover — see this
@@ -328,14 +319,6 @@ const ControlledPopover = (props) => {
         }) ?? "slide-from-top";
     }
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    // A real anchor hints at "coming from that direction" with a small fixed
-    // distance; anchorReference/point mode has no anchor to be "close to", so
-    // it travels the full 100%-of-own-size default instead (see
-    // popup_animation.js).
-    popoverEl.style.setProperty(
-      "--popup-slide-distance",
-      anchor ? "20px" : "100%",
-    );
     // Only makes sense for a "scale" popup with no real anchor to grow out
     // of (a real anchor's own edge already reads fine as the grow point) —
     // see positionPopover's anchorReference branch for where the actual
@@ -991,18 +974,18 @@ const toSlideDirectionKey = (y, x) => {
  * that's `resolvedAnimation === "scale"` territory instead, see openEffect).
  *
  * Two distinct naming/value families, picked via `isRealAnchor` — not just a
- * cosmetic choice, `popup_animation.js` gives them independent CSS rules:
- * - anchorReference/point mode (`isRealAnchor: false`, 100%-of-own-size
- *   `--popup-slide-distance`): `slide-from-{top,bottom,left,right}` (+ the 4
- *   diagonals) — the word names *where it comes from*, matching the word
- *   as-is: placed "above" (a point/corner), it slides in from the top.
- * - a real anchor (`isRealAnchor: true`, a small fixed 20px
- *   `--popup-slide-distance` — a "from" that never varies enough to be
- *   worth naming) `slide-{up,down,left,right}` (+ the 4 diagonals) — the
- *   word names the *motion* instead: placed "above" the anchor, it slides
- *   *up*, away from the anchor (which sits below it) — the opposite
- *   direction of the point/corner case above, since there's an anchor to be
- *   "closer to" here.
+ * cosmetic choice, `popup_animation.js` gives them independent CSS rules
+ * with their own hardcoded distance:
+ * - anchorReference/point mode (`isRealAnchor: false`, 100%-of-own-size):
+ *   `slide-from-{top,bottom,left,right}` (+ the 4 diagonals) — the word
+ *   names *where it comes from*, matching the word as-is: placed "above" (a
+ *   point/corner), it slides in from the top.
+ * - a real anchor (`isRealAnchor: true`, a small fixed 20px — a "from" that
+ *   never varies enough to be worth naming) `slide-{up,down,left,right}`
+ *   (+ the 4 diagonals) — the word names the *motion* instead: placed
+ *   "above" the anchor, it slides *up*, away from the anchor (which sits
+ *   below it) — the opposite direction of the point/corner case above,
+ *   since there's an anchor to be "closer to" here.
  *
  * "aligned-*"/"center" contribute no direction on their axis either way.
  */

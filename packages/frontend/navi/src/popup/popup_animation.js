@@ -22,11 +22,13 @@
  * showModal()/close()) so this file can key off a single "is currently
  * open/shown" selector without needing to know which one it's styling.
  *
- * Timing/distance are CSS variables (with defaults below) rather than JS
- * constants, so any consumer can override them per-instance from CSS (or via
- * the `animationDuration` prop, wired to --popup-animation-duration through
+ * Timing is a CSS variable (with a default below) rather than a JS constant,
+ * so any consumer can override it per-instance from CSS (or via the
+ * `animationDuration` prop, wired to --popup-animation-duration through
  * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
- * `--popup-slide-distance`, `--popup-scale-from`, `--popup-border-radius`.
+ * `--popup-scale-from`, `--popup-border-radius`. Slide distances (100%/20px,
+ * see below) are hardcoded for now rather than exposed as variables — fine
+ * to revisit if a consumer ever needs to override them.
  *
  * Fading is a separate, independent concern from `animation` — see
  * `[navi-fade-animation]` below, driven by the `fadeAnimation` prop. It
@@ -39,28 +41,30 @@
  * looking flat while the popup is still moving.
  *
  * `animation="slide-from-*"`/`"slide-*"`: a real translate-based entrance,
- * one of two independent 8-direction (cardinal + 4 diagonals) families —
- * Popover always resolves `animation="auto"`/`"slide"` to one of these
- * concretely in JS (see popover.jsx's `resolveSlideDirection`), so there's
- * no `animation="slide"` (bare, no direction) selector here at all, only the
- * two resolved families below:
- * - `slide-from-{top,bottom,left,right}` (+ diagonals): anchorReference/
- *   point mode — no real anchor box, travels the full 100%-of-own-size
- *   `--popup-slide-distance` default. The word names *where it comes from*.
- * - `slide-{up,down,left,right}` (+ diagonals): a real anchor — a small
- *   fixed 20px `--popup-slide-distance` (popover.jsx sets it whenever
- *   there's a real anchor element), just enough to hint at "coming from
- *   that direction" without traveling far. The word names the *motion*
- *   instead, since it's the opposite compass direction from the
- *   point/corner family above (placed "above" a real anchor, it slides
- *   *up*, away from the anchor which sits below it — not "from the top").
+ * two independent 8-direction (cardinal + 4 diagonals) families, each with
+ * its own hardcoded distance — Popover always resolves
+ * `animation="auto"`/`"slide"` to one of these concretely in JS (see
+ * popover.jsx's `resolveSlideDirection`), so there's no `animation="slide"`
+ * (bare, no direction) selector here at all:
+ * - `slide-from-{top,bottom,left,right}` (+ diagonals), 100%-of-own-size:
+ *   anchorReference/point mode — no real anchor box to travel a short,
+ *   anchor-relative distance from. The word names *where it comes from*.
+ * - `slide-{up,down,left,right}` (+ diagonals), a small fixed 20px: a real
+ *   anchor — just enough to hint at "coming from that direction" without
+ *   traveling far. The word names the *motion* instead, since it's the
+ *   opposite compass direction from the point/corner family above (placed
+ *   "above" a real anchor, it slides *up*, away from the anchor which sits
+ *   below it — not "from the top").
  *
  * `animation="scale"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`. Popover picks this automatically over "slide" for
  * `animation="auto"` whenever both anchorArea axes overlap the anchor —
  * there's no sensible direction to slide from in that case, e.g. a
  * dead-centered popover or one placed fully inside/against the anchor on
- * both axes.
+ * both axes. Popover's own `spawnFromPointer` prop (anchorReference/point
+ * mode + "scale" only) points `transform-origin` at the click/pointer
+ * position instead of the box's own center — see `--popup-spawn-origin-x/y`
+ * below, set by popover.jsx's `positionPopover`.
  *
  * `animation="view-transition"` (Popover only, experimental): none of the
  * CSS below applies — popover.jsx wraps its show/hide in
@@ -77,7 +81,6 @@ export const buildPopupAnimationCss = (selector) => {
     @layer navi {
       ${selector} {
         --popup-animation-duration: 0.18s;
-        --popup-slide-distance: 100%;
         --popup-scale-from: 0.9;
         --popup-border-radius: 0;
       }
@@ -112,18 +115,24 @@ export const buildPopupAnimationCss = (selector) => {
       }
 
       /* scale — grows from --popup-scale-from (default 0.9) to full size,
-         no direction involved. */
+         no direction involved. spawnFromPointer (Popover only, see this
+         file's top comment) points the growth at the click/pointer position
+         instead of the box's own center — a static anchor point for the
+         transform, doesn't itself need to transition. */
       &[navi-animation="scale"] {
         scale: 1;
         &[aria-expanded="false"] {
           scale: var(--popup-scale-from);
         }
+        &[data-spawn-from-pointer] {
+          transform-origin: var(--popup-spawn-origin-x, 50%)
+            var(--popup-spawn-origin-y, 50%);
+        }
       }
 
-      /* slide — direction multipliers, one per concrete navi-animation
-         value (see this file's top comment: popover.jsx always resolves to
-         one of these, distance/direction already accounting for
-         anchor-vs-anchorReference and any auto-flip). */
+      /* slide — anchorReference/point mode family: direction multipliers,
+         one per concrete navi-animation value, 100%-of-own-size distance
+         (see this file's top comment). */
       &[navi-animation="slide-from-top"] {
         --popup-slide-x: 0;
         --popup-slide-y: -1;
@@ -156,9 +165,25 @@ export const buildPopupAnimationCss = (selector) => {
         --popup-slide-x: 1;
         --popup-slide-y: 1;
       }
+      &[navi-animation="slide-from-top"],
+      &[navi-animation="slide-from-bottom"],
+      &[navi-animation="slide-from-left"],
+      &[navi-animation="slide-from-right"],
+      &[navi-animation="slide-from-top-left"],
+      &[navi-animation="slide-from-top-right"],
+      &[navi-animation="slide-from-bottom-left"],
+      &[navi-animation="slide-from-bottom-right"] {
+        translate: 0 0;
 
-      /* slide — real-anchor family (see this file's top comment for why
-         these mirror the *opposite* point/corner direction's values). */
+        &[aria-expanded="false"] {
+          translate: calc(var(--popup-slide-x, 0) * 100%)
+            calc(var(--popup-slide-y, -1) * 100%);
+        }
+      }
+
+      /* slide — real-anchor family: same idea, a small fixed 20px distance
+         instead, and the *opposite* compass direction's multipliers (see
+         this file's top comment for why). */
       &[navi-animation="slide-up"] {
         --popup-slide-x: 0;
         --popup-slide-y: 1;
@@ -191,15 +216,6 @@ export const buildPopupAnimationCss = (selector) => {
         --popup-slide-x: -1;
         --popup-slide-y: -1;
       }
-
-      &[navi-animation="slide-from-top"],
-      &[navi-animation="slide-from-bottom"],
-      &[navi-animation="slide-from-left"],
-      &[navi-animation="slide-from-right"],
-      &[navi-animation="slide-from-top-left"],
-      &[navi-animation="slide-from-top-right"],
-      &[navi-animation="slide-from-bottom-left"],
-      &[navi-animation="slide-from-bottom-right"],
       &[navi-animation="slide-up"],
       &[navi-animation="slide-down"],
       &[navi-animation="slide-left"],
@@ -211,8 +227,8 @@ export const buildPopupAnimationCss = (selector) => {
         translate: 0 0;
 
         &[aria-expanded="false"] {
-          translate: calc(var(--popup-slide-x, 0) * var(--popup-slide-distance))
-            calc(var(--popup-slide-y, -1) * var(--popup-slide-distance));
+          translate: calc(var(--popup-slide-x, 0) * 20px)
+            calc(var(--popup-slide-y, -1) * 20px);
         }
       }
     }
