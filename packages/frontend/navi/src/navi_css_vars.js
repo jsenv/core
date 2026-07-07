@@ -5,6 +5,10 @@ import { effect } from "@preact/signals";
 
 import {
   visualViewportHeightSignal,
+  visualViewportInsetBottomSignal,
+  visualViewportInsetLeftSignal,
+  visualViewportInsetRightSignal,
+  visualViewportInsetTopSignal,
   visualViewportWidthSignal,
 } from "./layout/responsive.js";
 
@@ -138,4 +142,42 @@ effect(() => {
     "--navi-vvh",
     `${visualViewportHeightSignal.value}px`,
   );
+});
+
+// Generic naming ("visual viewport inset"), but in practice today this is
+// almost always the on-screen keyboard on mobile shrinking the bottom one.
+// Always active (not gated behind any consumer opting in) since these are
+// page-wide facts, same spirit as --navi-vvw/--navi-vvh above — any
+// consumer's own CSS can reference these 4 vars directly with zero
+// per-instance JS of its own. Also dispatched as a "navi_vv_inset_change"
+// event on window (not just written as CSS vars) so a consumer whose own
+// positioning depends on these values can react imperatively too — Dialog's
+// own via-attribute renderer listens for this to re-dispatch
+// "navi_position_change" on itself, which visibleRectEffect (visible_rect.js)
+// already listens for on popover/dialog/details ancestors specifically for
+// this kind of "something repositioned, recheck" signal (so a Popover
+// anchored inside a Dialog stays correctly positioned if the dialog itself
+// shifts to stay clear of the keyboard).
+effect(() => {
+  const top = visualViewportInsetTopSignal.value;
+  const right = visualViewportInsetRightSignal.value;
+  const bottom = visualViewportInsetBottomSignal.value;
+  const left = visualViewportInsetLeftSignal.value;
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-inset-top",
+    `${top}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-inset-right",
+    `${right}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-inset-bottom",
+    `${bottom}px`,
+  );
+  document.documentElement.style.setProperty(
+    "--navi-visual-viewport-inset-left",
+    `${left}px`,
+  );
+  window.dispatchEvent(new CustomEvent("navi_vv_inset_change"));
 });
