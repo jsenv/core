@@ -406,7 +406,6 @@
           <AnchorSection />
           <ContentSizeSection />
           <AnchorAreaSection />
-          <CustomContainerSection />
           <AnchorSpacingSection />
           <MarginWithContainerSection />
           <PointerInteractionOutsideSection />
@@ -434,10 +433,10 @@
                 <li>
                   <a href="#anchor-area-without-anchor">Without anchor</a>
                 </li>
+                <li>
+                  <a href="#anchor-area-local-layer">local layer</a>
+                </li>
               </ol>
-            </li>
-            <li>
-              <a href="#custom-container">Custom container</a>
             </li>
             <li>
               <a href="#anchor-spacing">marginWithAnchor</a>
@@ -633,8 +632,8 @@
       };
 
       // 3.1 positions relative to a real anchor element; 3.2 positions
-      // relative to the container instead (viewport, since it's layer="top"
-      // — see the "Custom container" section below for layer="local").
+      // relative to the container instead (viewport for 3.2, the
+      // positioned ancestor for 3.3's own layer="local").
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
           <h2>3. Position</h2>
@@ -653,27 +652,25 @@
             <h3>3.2 Without anchor</h3>
             <AnchorAreaViewportDemo />
           </div>
-        </section>
-      );
 
-      const CustomContainerSection = () => (
-        <section id="custom-container" class="demo-section">
-          <h2>4. Custom container</h2>
-          <p>
-            <code>layer="local"</code> renders as a plain in-flow box relative
-            to its own positioned ancestor instead of the browser's top layer —
-            genuinely clipped by that container's own{" "}
-            <code>overflow: hidden</code>/<code>auto</code>. Focusing on the
-            anchorless use case below: no real anchor, just docked to a point on
-            the container's own edges/corners.
-          </p>
-          <AnchorAreaScrollContainerDemo />
+          <div id="anchor-area-local-layer" class="demo-subsection">
+            <h3>3.3 local layer</h3>
+            <p>
+              <code>layer="local"</code> renders as a plain in-flow box relative
+              to its own positioned ancestor instead of the browser's top layer
+              — genuinely clipped by that container's own{" "}
+              <code>overflow: hidden</code>/<code>auto</code>. Focusing on the
+              anchorless use case below: no real anchor, just docked to a point
+              on the container's own edges/corners.
+            </p>
+            <AnchorAreaScrollContainerDemo />
+          </div>
         </section>
       );
 
       const AnchorSpacingSection = () => (
         <section id="anchor-spacing" class="demo-section">
-          <h2>5. marginWithAnchor</h2>
+          <h2>4. marginWithAnchor</h2>
           <p>
             The gap between the popover and its anchor — defaults to{" "}
             <code>0</code> (touching).
@@ -722,7 +719,7 @@
 
       const MarginWithContainerSection = () => (
         <section id="layer-spacing" class="demo-section">
-          <h2>6. marginWithContainer</h2>
+          <h2>5. marginWithContainer</h2>
           <p>
             The gap kept from the container's own edges (the viewport for{" "}
             <code>layer="top"</code>, the positioned ancestor for{" "}
@@ -744,7 +741,7 @@
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>7. pointerInteractionOutsideEffect</h2>
+            <h2>6. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"none"</code> (default) — interactions outside the popover
               happen normally. <code>"close"</code> — a mousedown outside closes
@@ -797,7 +794,7 @@
 
       const CustomizationSection = () => (
         <section id="customization" class="demo-section">
-          <h2>8. Customization</h2>
+          <h2>7. Customization</h2>
           <p>
             Plain visual props, passed straight through to the popover's own box
             — <code>borderRadius</code> as its own convenience prop,{" "}
@@ -873,7 +870,7 @@
 
       const OpenAtStartSection = () => (
         <section id="open-from-start" class="demo-section">
-          <h2>9. Open from the start</h2>
+          <h2>8. Open from the start</h2>
           <p>
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the

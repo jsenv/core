@@ -30,6 +30,10 @@
         margin-bottom: 32px;
         scroll-margin-top: 16px;
       }
+      .demo-subsection {
+        margin-top: 20px;
+        margin-left: 8px;
+      }
       .demo-row {
         display: flex;
         margin-top: 8px;
@@ -276,7 +280,7 @@
           useAnimateControls("dialog_demo_animation");
         return (
           <section id="animation" class="demo-section">
-            <h2>3. Animation</h2>
+            <h2>4. Animation</h2>
             <p>
               <code>animation</code> or <code>animation="auto"</code> resolves
               to <code>"scaling"</code> — a dialog has no anchor to grow out of
@@ -301,7 +305,7 @@
         );
         return (
           <section id="sliding" class="demo-section">
-            <h2>4. sliding</h2>
+            <h2>5. sliding</h2>
             <p>
               Explicit direction only — a dialog is always centered, with no
               anchor to auto-resolve a direction from.
@@ -338,7 +342,7 @@
           useAnimateControls("dialog_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>5. pointerInteractionOutsideEffect</h2>
+            <h2>6. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
               <code>"capture"</code>/<code>"none"</code> both just absorb it —
@@ -364,56 +368,6 @@
           </section>
         );
       };
-
-      // layer="local" — a real <dialog>, but shown via .show() instead of
-      // showModal(), so it stays in normal document flow: position: absolute
-      // relative to its own positioned ancestor (here, .demo-container),
-      // genuinely clipped by that ancestor's own overflow: hidden — same
-      // idea as Popover's own "Custom container" section. Focus trap and
-      // Escape-to-close are both reimplemented in JS for this renderer (see
-      // dialog.jsx's own top comment) — try Tab/Shift+Tab and Escape to
-      // confirm both still work despite there being no real showModal().
-      const LocalDialog = ({ label }) => {
-        const dialogId = useId();
-        return (
-          <>
-            <Button command="--navi-toggle" commandFor={dialogId}>
-              {label}
-            </Button>
-            <Dialog
-              id={dialogId}
-              layer="local"
-              animation
-              animationDuration="0.6s"
-              className="demo_dialog_box"
-            >
-              <p style={{ marginTop: 0 }}>{label}</p>
-              <input placeholder="focusable input" />
-              <div>
-                <Button command="--navi-close">Close</Button>
-              </div>
-            </Dialog>
-          </>
-        );
-      };
-
-      const CustomContainerSection = () => (
-        <section id="custom-container" class="demo-section">
-          <h2>6. Custom container (layer="local")</h2>
-          <p>
-            Confined to the container below instead of the whole viewport —
-            genuinely clipped by its <code>overflow: hidden</code>. Trades away
-            one thing a real <code>showModal()</code> dialog gets for free:
-            there is no way to reimplement the hardware/gesture back button
-            closing it (e.g. Android's system back gesture) — a known, accepted
-            limitation of <code>layer="local"</code>, not a bug.
-          </p>
-          <div class="demo-container">
-            <span class="demo-container-label">container</span>
-            <LocalDialog label="Open local dialog" />
-          </div>
-        </section>
-      );
 
       // Mounting a component with its dialog already open is only
       // interesting to test *on demand* — rendered directly in the page's
@@ -656,6 +610,120 @@
         );
       };
 
+      // All 5 values positionArea actually accepts for Dialog (see
+      // dialog.jsx's own top comment) — a deliberately small subset of
+      // Popover's own vocabulary: no "aligned-*", no two-word combos. A
+      // dock always means flush to that edge, full-length along the other
+      // axis, never a partial overlap.
+      const DIALOG_POSITION_AREA_VALUES = [
+        "center",
+        "above",
+        "below",
+        "on-the-left",
+        "on-the-right",
+      ];
+
+      const PositionDialog = ({ label, positionArea, layer }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              layer={layer}
+              positionArea={positionArea}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      // layer="top" (default) — the browser's own top layer, so no
+      // container needed at all: each button just opens the same dialog
+      // docked to (or centered in) the whole viewport.
+      const TopLayerPositionSection = () => (
+        <div id="position-top-layer" class="demo-subsection">
+          <h3>3.1 top layer</h3>
+          <div class="demo-row">
+            {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+              <PositionDialog
+                key={positionArea}
+                label={positionArea}
+                positionArea={positionArea}
+              />
+            ))}
+          </div>
+        </div>
+      );
+
+      // layer="local" needs the dialogs rendered *inside* the positioned
+      // container to find it (DialogCustom, a plain in-flow div — see
+      // dialog.jsx's own top comment) — the trigger buttons don't, so they
+      // live outside it, in their own row below (same pattern as
+      // popover_demo.html's own "local layer" subsection).
+      const LocalLayerPositionSection = () => {
+        const baseId = useId();
+        return (
+          <div id="position-local-layer" class="demo-subsection">
+            <h3>3.2 local layer</h3>
+            <p>
+              Confined to the container below instead of the whole viewport —
+              genuinely clipped by its <code>overflow: hidden</code>. Focus trap
+              and Escape-to-close are both reimplemented in JS for this renderer
+              (try Tab/Shift+Tab and Escape) — the one thing traded away is the
+              hardware/gesture back button closing it (e.g. Android's system
+              back gesture), a known, accepted limitation of{" "}
+              <code>layer="local"</code>, not a bug.
+            </p>
+            <div class="demo-container">
+              <span class="demo-container-label">container</span>
+              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+                <Dialog
+                  key={positionArea}
+                  id={`${baseId}-${positionArea}`}
+                  layer="local"
+                  positionArea={positionArea}
+                  className="demo_dialog_box"
+                >
+                  <p style={{ marginTop: 0 }}>{positionArea}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Dialog>
+              ))}
+            </div>
+            <div class="demo-row">
+              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+                <Button
+                  key={positionArea}
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${positionArea}`}
+                >
+                  {positionArea}
+                </Button>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const PositionSection = () => (
+        <section id="position" class="demo-section">
+          <h2>3. Position</h2>
+          <p>
+            All 5 valid <code>positionArea</code> values — <code>"center"</code>{" "}
+            (default), <code>"above"</code>/<code>"below"</code> (flush to that
+            edge, full width), <code>"on-the-left"</code>/
+            <code>"on-the-right"</code> (flush to that edge, full height).
+          </p>
+          <TopLayerPositionSection />
+          <LocalLayerPositionSection />
+        </section>
+      );
+
       const TableOfContents = () => (
         <nav class="demo-toc">
           <strong>Contents</strong>
@@ -667,6 +735,17 @@
               <a href="#content-size">Content dimensions</a>
             </li>
             <li>
+              <a href="#position">Position</a>
+              <ol>
+                <li>
+                  <a href="#position-top-layer">top layer</a>
+                </li>
+                <li>
+                  <a href="#position-local-layer">local layer</a>
+                </li>
+              </ol>
+            </li>
+            <li>
               <a href="#animation">Animation</a>
             </li>
             <li>
@@ -676,9 +755,6 @@
               <a href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
               </a>
-            </li>
-            <li>
-              <a href="#custom-container">Custom container (layer="local")</a>
             </li>
             <li>
               <a href="#open-from-start">Open from the start</a>
@@ -695,10 +771,10 @@
 
           <ControlledByButtonSection />
           <ContentSizeSection />
+          <PositionSection />
           <AnimationSection />
           <SlidingSection />
           <PointerInteractionOutsideSection />
-          <CustomContainerSection />
           <OpenFromStartSection />
         </div>
       );
