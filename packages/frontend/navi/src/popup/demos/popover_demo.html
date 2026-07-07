@@ -260,8 +260,8 @@
         return `${y} ${x}`;
       };
 
-      // Pinned to a point/corner (anchor="viewport" or "scrollContainer" —
-      // no real anchor box), overlap and no-overlap collapse to the same
+      // Pinned to a point/corner (anchorFallback="viewport" or "auto" — no
+      // real anchor box), overlap and no-overlap collapse to the same
       // placement, so "aligned-top" lands exactly where "above" does (ditto
       // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
       // "aligned-right"/"on-the-right").
@@ -603,10 +603,10 @@
         <section id="anchor-ignore" class="demo-section">
           <h2>4. Ignoring the anchor</h2>
           <p>
-            Leaving <code>anchor</code> unset still lets the toggle button's
-            own anchor take over when present (the event's own carried anchor
-            takes priority over the <code>anchorFallback</code> docked
-            placement unless told otherwise) —{" "}
+            Leaving <code>anchor</code> unset still lets the toggle button's own
+            anchor take over when present (the event's own carried anchor takes
+            priority over the <code>anchorFallback</code> docked placement
+            unless told otherwise) —{" "}
             <code>anchorCustomEventDetail="ignore"</code> (with{" "}
             <code>anchorArea="center"</code>) is what forces the popover to
             ignore the toggle button as its anchor and center itself in the
@@ -912,8 +912,8 @@
             <AreaGrid
               renderCell={(y, x) => (
                 <AnchorAreaPopover
-                  anchor="viewport"
-                  ignoreEventAnchor
+                  anchorFallback="viewport"
+                  anchorCustomEventDetail="ignore"
                   anchorArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
@@ -927,7 +927,7 @@
         );
       };
 
-      // anchor="scrollContainer" needs the popovers rendered *inside* the
+      // anchorFallback="auto" needs the popovers rendered *inside* the
       // positioned container to find it (PopoverCustom, a plain
       // position: absolute div — see popover.jsx's top comment) — the
       // trigger buttons don't, so they live outside it, in their own grid
@@ -940,11 +940,12 @@
           <>
             <PointModeNote referenceLabel="the container" />
             <p class="demo-important-note">
-              Unlike <code>anchor="viewport"</code> (promoted to the top layer),{" "}
-              <code>anchor="scrollContainer"</code> renders as a plain in-flow
-              box relative to its own positioned ancestor — genuinely clipped by
-              the container's own <code>overflow: hidden</code>/
-              <code>auto</code>, the same as any other in-flow content would be.
+              Unlike the default <code>anchorFallback="viewport"</code>{" "}
+              (promoted to the top layer), <code>anchorFallback="auto"</code>{" "}
+              renders as a plain in-flow box relative to its own positioned
+              ancestor — genuinely clipped by the container's own{" "}
+              <code>overflow: hidden</code>/<code>auto</code>, the same as any
+              other in-flow content would be.
             </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
@@ -956,7 +957,7 @@
                     animation={animation}
                     animationDuration={animationDuration}
                     borderRadius="8px"
-                    anchor="scrollContainer"
+                    anchorFallback="auto"
                     anchorArea={`${y} ${x}`}
                     className="demo_popover_box"
                   >
