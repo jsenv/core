@@ -66,6 +66,10 @@ export const SidePanel = ({
   import.meta.css = css;
   const anchorArea = SIDE_TO_ANCHOR_AREA[side];
   const isHorizontalDock = side === "left" || side === "right";
+  // Preact doesn't auto-append "px" to bare numeric style values the way
+  // React does — an unsuffixed number is an invalid CSS length, silently
+  // rejected by the browser (leaving width/height unset instead of sized).
+  const sizeValue = typeof size === "number" ? `${size}px` : size;
 
   return (
     <Popup
@@ -95,8 +99,15 @@ export const SidePanel = ({
         "--dialog-maxmax-height": "100dvh",
         "--dialog-maxmax-width": "100dvw",
         "--dialog-viewport-spacing": "0",
-        "width": isHorizontalDock ? size : "100%",
-        "height": isHorizontalDock ? "100%" : size,
+        // Dialog's own `min-width: var(--anchor-width, 0px)` exists so a
+        // dialog naturally matches the width of whatever triggered it
+        // (picker_custom.jsx's dialog mode relies on this) — SidePanel's own
+        // "anchor" is just the viewport itself, so --anchor-width would
+        // otherwise force min-width to the full viewport width, overriding
+        // `size` below entirely.
+        "--anchor-width": "0px",
+        "width": isHorizontalDock ? sizeValue : "100%",
+        "height": isHorizontalDock ? "100%" : sizeValue,
       }}
       {...rest}
     >

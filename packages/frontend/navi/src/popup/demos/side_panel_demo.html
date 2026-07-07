@@ -81,6 +81,8 @@
         const [isOpenWide, setIsOpenWide] = useState(false);
         const [isOpenClickOutside, setIsOpenClickOutside] = useState(false);
         const [isOpenTall, setIsOpenTall] = useState(false);
+        const [isOpenLeft, setIsOpenLeft] = useState(false);
+        const [isOpenTop, setIsOpenTop] = useState(false);
 
         return (
           <div>
@@ -112,7 +114,7 @@
               <SidePanel
                 isOpen={isOpenWide}
                 onClose={() => setIsOpenWide(false)}
-                width={600}
+                size={600}
               >
                 <PanelContent />
               </SidePanel>
@@ -142,6 +144,37 @@
                 onClose={() => setIsOpenTall(false)}
               >
                 <TallPanelContent />
+              </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>side="left", animated (slide-from-left)</h3>
+              <button onClick={() => setIsOpenLeft(true)}>
+                Open panel from the left
+              </button>
+              <SidePanel
+                isOpen={isOpenLeft}
+                onClose={() => setIsOpenLeft(false)}
+                side="left"
+                animation
+              >
+                <PanelContent />
+              </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>side="top", animated (slide-from-top)</h3>
+              <button onClick={() => setIsOpenTop(true)}>
+                Open panel from the top
+              </button>
+              <SidePanel
+                isOpen={isOpenTop}
+                onClose={() => setIsOpenTop(false)}
+                side="top"
+                size={220}
+                animation
+              >
+                <PanelContent />
               </SidePanel>
             </div>
           </div>
