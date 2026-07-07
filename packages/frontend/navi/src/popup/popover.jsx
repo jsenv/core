@@ -104,6 +104,14 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 
 const css = /* css */ `
+  @layer navi {
+    .navi_popover {
+      --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
+      --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
+      --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+    }
+  }
+
   .navi_popover {
     /* absolute, not fixed: a fixed element stays pinned to the viewport by
        default, so scrolling instantly drags it out of sync with its
@@ -114,6 +122,15 @@ const css = /* css */ `
        flips/resizes, not to chase the anchor on every scroll tick. */
     position: absolute;
     inset: unset;
+    max-width: min(
+      var(--popover-max-width, var(--popover-maxmax-width)),
+      var(--popover-maxmax-width)
+    );
+    max-height: min(
+      var(--popover-max-height),
+      var(--space-available, var(--popover-maxmax-height)),
+      var(--popover-maxmax-height)
+    );
     border-radius: var(--popup-border-radius, 0);
 
     /* Neither anchorReference case has a real anchor to stay in

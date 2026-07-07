@@ -186,6 +186,30 @@
       .demo-legend-example[data-duplicate] {
         opacity: 0.35;
       }
+      .demo_popover_flex_box {
+        /* No fixed size, unlike .demo_popover_box above — sizes to its
+           content, so this section can show how Popover copes with small
+           vs. large content instead of hiding it behind a fixed box. */
+        max-width: 320px;
+        padding: 10px 14px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+      .demo-content-wide-block {
+        width: 460px;
+        max-width: none;
+        height: 22px;
+        margin: 4px 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
+      .demo-content-tall-block {
+        height: 46px;
+        margin: 4px 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
     </style>
   </head>
   <body>
@@ -350,6 +374,7 @@
           <AnchorIgnoreSection />
           <AnchorSpacingSection />
           <PointerInteractionOutsideSection />
+          <ContentSizeSection />
         </div>
       );
 
@@ -373,6 +398,9 @@
               <a href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
               </a>
+            </li>
+            <li>
+              <a href="#content-size">Adapting to content size</a>
             </li>
           </ol>
         </nav>
@@ -838,6 +866,120 @@
           </>
         );
       };
+
+      // No fixed size on the popover itself (see .demo_popover_flex_box) —
+      // each button below opens the same anchored popover with a different
+      // amount of content, small to large enough to exceed the viewport, to
+      // see how positioning/flipping reacts. All anchored "below" the same
+      // way an ordinary consumer would use it (not anchorAreaFixed).
+      const ContentSizePopover = ({ label, content }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+            >
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
+              {content}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Same idea, but the content grows/shrinks *while already open* (via
+      // local state, not a different popover instance) — shows whether the
+      // popover reacts to its own size changing after it's already
+      // positioned, as opposed to being sized differently from the start.
+      const ExpandCollapsePopover = ({ label }) => {
+        const popoverId = useId();
+        const [expanded, setExpanded] = useState(false);
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+            >
+              <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
+              <Button onClick={() => setExpanded((v) => !v)}>
+                {expanded ? "Collapse" : "Expand"}
+              </Button>
+              {expanded &&
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const ContentSizeSection = () => (
+        <section id="content-size" class="demo-section">
+          <h2>6. Adapting to content size</h2>
+          <p>
+            Popover has no fixed size of its own — it sizes to whatever's inside
+            it, from a short line of text to content that exceeds the viewport,
+            and repositions/flips as needed when it doesn't fit where first
+            requested.
+          </p>
+          <div class="demo-row">
+            <ContentSizePopover
+              label="small"
+              content={<p style={{ margin: 0 }}>Just a short line.</p>}
+            />
+            <ContentSizePopover
+              label="tall"
+              content={Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} class="demo-content-tall-block" />
+              ))}
+            />
+            <ContentSizePopover
+              label="wide"
+              content={<div class="demo-content-wide-block" />}
+            />
+            <ContentSizePopover
+              label="tall + wide"
+              content={
+                <>
+                  <div class="demo-content-wide-block" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+            <ContentSizePopover
+              label="exceeds viewport"
+              content={
+                <>
+                  <div
+                    class="demo-content-wide-block"
+                    style={{ width: "1400px" }}
+                  />
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+          </div>
+
+          <h3>Expanding/collapsing content while open</h3>
+          <div class="demo-row">
+            <ExpandCollapsePopover label="expand/collapse" />
+          </div>
+        </section>
+      );
 
       render(
         <NaviDebug debugAll>

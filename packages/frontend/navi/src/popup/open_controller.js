@@ -15,7 +15,7 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  *
  * `controller.openEffect` is implemented by the controlled element (Dialog or
  * Popover), reassigned on every render so it always closes over the latest
- * props (scrollLock, anchorRef, etc.). It performs whatever DOM side effects
+ * props (scrollCapture, anchor, etc.). It performs whatever DOM side effects
  * are needed to make the element actually open (`showModal()`/`showPopover()`,
  * focus transfer, positioning, traps...) and returns its cleanup —
  * the matching side effects to sync back to closed (`close()`/

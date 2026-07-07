@@ -89,7 +89,13 @@ const UncontrolledDialog = (props) => {
 const ControlledDialog = (props) => {
   const {
     openController,
-    anchorRef,
+    // Same shape as Popover's own `anchor` prop (a ref, a DOM element, or
+    // "viewport"/"offsetParent") for API parity — but unlike Popover, Dialog
+    // never repositions/docks relative to it (always centered regardless),
+    // so "viewport"/"offsetParent" are accepted and behave identically to no
+    // anchor at all: only a real ref/element actually changes anything (the
+    // --anchor-width/--anchor-height vars below).
+    anchor: anchorProp,
     children,
     scrollCapture,
     // "none"/"capture" collapse to the same behavior for Dialog: unlike
@@ -138,11 +144,23 @@ const ControlledDialog = (props) => {
       return undefined;
     }
     const [cleanup, addCleanup] = createPubSub(true);
-    // anchorRef (set by the parent component) wins; otherwise fall back to
-    // the anchor carried by the request (e.g. the button that triggered a
-    // --navi-toggle/--navi-open command, forwarded as detail.source).
-    const anchor =
-      anchorRef?.current ?? e.detail?.anchor ?? e.detail?.source ?? null;
+    let anchor;
+    if (anchorProp === "viewport" || anchorProp === "offsetParent") {
+      // No special handling — see this component's own destructuring
+      // comment for why these two are accepted but behave like no anchor.
+    } else if (typeof anchorProp === "string") {
+      console.warn(
+        `Dialog: unknown anchor="${anchorProp}" (expected "viewport", "offsetParent", a ref, or a DOM element)`,
+      );
+    } else if (anchorProp) {
+      // anchor prop is a ref or a DOM element
+      anchor = anchorProp.current ?? anchorProp;
+    } else if (e.detail.anchor) {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command,
+      // already resolved from detail.anchor/detail.source by the caller
+      // (see UncontrolledDialog's onnavi_request_open).
+      anchor = e.detail.anchor;
+    }
     const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
     const { width, height } = effectiveAnchor.getBoundingClientRect();
