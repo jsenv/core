@@ -53,6 +53,43 @@
         border-radius: 10px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
       }
+      .demo_dialog_flex_box {
+        /* No fixed size, unlike .demo_dialog_box above — sizes to its
+           content, so this section can show how Dialog copes with small
+           vs. large content instead of hiding it behind a fixed box. */
+        max-width: 320px;
+        padding: 20px 24px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .demo-container {
+        position: relative;
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        height: 240px;
+        margin-bottom: 8px;
+        align-items: center;
+        justify-content: center;
+        border: 1px dotted #999;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .demo-container-label {
+        color: #999;
+        font-size: 12px;
+      }
+      .demo-important-note {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #7a5b00;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
+      }
       .demo-content-wide-block {
         width: 460px;
         max-width: none;
@@ -302,6 +339,96 @@
         );
       };
 
+      // layer="local" — a real <dialog>, but shown via .show() instead of
+      // showModal(), so it stays in normal document flow: position: absolute
+      // relative to its own positioned ancestor (here, .demo-container),
+      // genuinely clipped by that ancestor's own overflow: hidden — same
+      // idea as Popover's own "Custom container" section. Focus trap and
+      // Escape-to-close are both reimplemented in JS for this renderer (see
+      // dialog.jsx's own top comment) — try Tab/Shift+Tab and Escape to
+      // confirm both still work despite there being no real showModal().
+      const LocalDialog = ({ label }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              layer="local"
+              animation
+              animationDuration="0.6s"
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <input placeholder="focusable input" />
+              <div>
+                <Button command="--navi-close">Close</Button>
+              </div>
+            </Dialog>
+          </>
+        );
+      };
+
+      const CustomContainerSection = () => (
+        <section id="custom-container" class="demo-section">
+          <h2>5. Custom container (layer="local")</h2>
+          <p>
+            Confined to the container below instead of the whole viewport —
+            genuinely clipped by its <code>overflow: hidden</code>. Trades away
+            one thing a real <code>showModal()</code> dialog gets for free:
+            there is no way to reimplement the hardware/gesture back button
+            closing it (e.g. Android's system back gesture) — a known, accepted
+            limitation of <code>layer="local"</code>, not a bug.
+          </p>
+          <div class="demo-container">
+            <span class="demo-container-label">container</span>
+            <LocalDialog label="Open local dialog" />
+          </div>
+        </section>
+      );
+
+      // Both mount already open, with animation on — the entrance animation
+      // should NOT play in either case (same idea as popover_demo.html's own
+      // "Open from the start" section — see its comment there for why).
+      const OpenFromStartDialog = ({ label, ...props }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation
+              animationDuration="0.6s"
+              className="demo_dialog_box"
+              {...props}
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const OpenFromStartSection = () => (
+        <section id="open-from-start" class="demo-section">
+          <h2>6. Open from the start</h2>
+          <p>
+            <code>open={"{true}"}</code> (controlled) or{" "}
+            <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
+            already open — animation is on for both below, but it should never
+            actually play on mount, only on a later close/reopen.
+          </p>
+          <div class="demo-row">
+            <OpenFromStartDialog label={"open={true}"} open />
+            <OpenFromStartDialog label="defaultOpen" defaultOpen />
+          </div>
+        </section>
+      );
+
       // No fixed size on the dialog itself (see .demo_dialog_flex_box) —
       // each button below opens the same dialog with a different amount of
       // content, small to large enough to exceed the viewport, to see how
@@ -431,6 +558,12 @@
                 pointerInteractionOutsideEffect
               </a>
             </li>
+            <li>
+              <a href="#custom-container">Custom container (layer="local")</a>
+            </li>
+            <li>
+              <a href="#open-from-start">Open from the start</a>
+            </li>
           </ol>
         </nav>
       );
@@ -445,6 +578,8 @@
           <AnimationSection />
           <SlidingSection />
           <PointerInteractionOutsideSection />
+          <CustomContainerSection />
+          <OpenFromStartSection />
         </div>
       );
 

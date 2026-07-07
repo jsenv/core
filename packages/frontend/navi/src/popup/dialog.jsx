@@ -6,17 +6,61 @@
  * explicit kind (`"fading"`, `"scaling"`, or a literal
  * `"slide-from-{top,bottom,left,right}"` + diagonals) is passed straight
  * through as-is: these are all self-contained CSS selectors in the shared
- * popup_animation.js, so unlike Popover there's no direction to resolve in
- * JS — Dialog never needs to flip anything after measuring.
+ * popup_css.js, so unlike Popover there's no direction to resolve in JS —
+ * Dialog never needs to flip anything after measuring.
  *
- * `positionArea` (default `"center"`) can dock the dialog flush to a viewport
- * edge instead: `"on-the-left"`/`"on-the-right"`/`"above"`/`"below"` — a
+ * `positionArea` (default `"center"`) can dock the dialog flush to an edge
+ * instead: `"on-the-left"`/`"on-the-right"`/`"above"`/`"below"` — a
  * deliberately small subset of Popover's own positionArea vocabulary (no
  * `"aligned-*"`, no two-word combos): a dialog dock always means "flush to
  * that edge, full-length along the other axis", never a partial overlap, so
  * the richer grammar wouldn't add anything here. The docked axis's own size
  * stays whatever the consumer's own CSS/width/height says — only the
  * perpendicular axis is forced to 100%.
+ *
+ * `anchor` only ever affects the `--anchor-width`/`--anchor-height` CSS vars
+ * (used to size the dialog relative to whatever opened it, e.g. `min-width:
+ * var(--anchor-width, 0px)`) — Dialog's own positioning (`positionArea`
+ * above) is never relative to it, unlike Popover.
+ *
+ * Two rendering strategies, picked via `layer` (`"top"` default | `"local"`,
+ * same prop/values as Popover): `DialogViaAttribute` (a real `<dialog>`,
+ * `showModal()`/`close()`, promoted to the top layer — gets a native focus
+ * trap, `Escape`-to-cancel via the browser's own "cancel" event, and (on
+ * platforms that support it) hardware/gesture back-button dismissal, all for
+ * free) and `DialogCustom` (`layer="local"` — also a real `<dialog>`, for
+ * its free implicit ARIA `role="dialog"`, but shown via the non-modal
+ * `.show()` instead of `showModal()`, so it stays in normal document flow —
+ * `position: absolute` relative to its own positioned ancestor, genuinely
+ * clipped by that ancestor's own `overflow: hidden`/`auto`, the same
+ * motivation as Popover's own `PopoverCustom`).
+ *
+ * `.show()` gives up everything `showModal()` gets for free, which
+ * `DialogCustom` has to reimplement itself: a focus trap (`trapFocusInside`,
+ * unconditional — a dialog is always modal, unlike Popover's opt-in
+ * `focusCapture`), `Escape`-to-close (a `keydown` shortcut, since `.show()`
+ * dialogs don't fire "cancel" on Escape the way a modal one does), and a
+ * real backdrop sibling element (since `.show()` dialogs don't get a
+ * `::backdrop` either) — see `useDialogProps`'s own `isCustom` branches
+ * below for each. **Deliberately NOT reimplemented: hardware/gesture
+ * back-button dismissal** (e.g. Android's system back gesture closing the
+ * top-most modal) — there is no public web API to hook into that gesture at
+ * all outside of the browser's own native modal-dismissal stack, which only
+ * a genuinely `showModal()`-shown, top-layer element participates in. A
+ * `layer="local"` dialog trades that away in exchange for being confined to
+ * a local container instead of the whole viewport — an accepted,
+ * intentional limitation, not an oversight.
+ *
+ * `DialogCustom` wraps its own dialog element in a `.navi_dialog_clip_wrapper`
+ * (mirroring Popover's `.navi_popover_clip_wrapper` — see popover.jsx's own
+ * comment on it for the underlying browser quirk it works around), and
+ * positions/centers/docks the dialog via plain flexbox on that wrapper
+ * (`align-items`/`justify-content`, keyed off `data-position-area`) rather
+ * than `pickPositionRelativeTo`-style measurement — a dialog's own
+ * positioning is always flush-to-edge-or-centered, never partial/anchor-
+ * relative, so plain CSS alignment covers 100% of the vocabulary above with
+ * no JS math needed at all (unlike Popover, which genuinely needs
+ * per-anchor measurement).
  */
 
 import {
@@ -24,6 +68,7 @@ import {
   dispatchCustomEvent,
   getElementSignature,
   snapToPixel,
+  trapFocusInside,
   trapScrollInside,
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -32,9 +77,18 @@ import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { onRequestInteraction } from "../control/rules/control_interaction.js";
-import { useDebugInteraction, useDebugPopup } from "../navi_debug.jsx";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import {
+  useDebugFocus,
+  useDebugInteraction,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
+import {
+  armPointerDownOutsideClose,
+  suppressPointerEventsDuringTransition,
+} from "./popup_shared.js";
 
 const css = /* css */ `
   @layer navi {
@@ -71,7 +125,8 @@ const css = /* css */ `
     );
     /* When centerInVisualViewport is enabled, --dialog-top-inset is set
          dynamically to keep the dialog centered in the visual viewport
-         (accounts for the virtual keyboard on mobile). */
+         (accounts for the virtual keyboard on mobile). Via-attribute only —
+         see useDialogProps' own comment on centerInVisualViewport. */
     margin-top: var(--dialog-top-inset, auto);
     margin-bottom: auto;
     flex-direction: column;
@@ -97,32 +152,117 @@ const css = /* css */ `
       display: flex;
     }
 
-    /* positionArea docking (see this file's top comment) — each rule only
-       touches the axis perpendicular to the dock direction; the docked
-       axis's own size is left to the consumer. */
-    &[data-anchor-area="on-the-right"] {
+    /* positionArea docking, via-attribute renderer (see this file's top
+       comment) — each rule only touches the axis perpendicular to the dock
+       direction; the docked axis's own size is left to the consumer.
+       position: fixed since a top-layer element always uses the initial
+       containing block regardless of DOM position (see popover.jsx's own
+       top comment for the same reasoning, applied there to Popover). */
+    &[data-position-area="on-the-right"] {
       position: fixed;
       inset: 0 0 0 auto;
       height: 100%;
       margin: 0;
     }
-    &[data-anchor-area="on-the-left"] {
+    &[data-position-area="on-the-left"] {
       position: fixed;
       inset: 0 auto 0 0;
       height: 100%;
       margin: 0;
     }
-    &[data-anchor-area="above"] {
+    &[data-position-area="above"] {
       position: fixed;
       inset: 0 0 auto 0;
       width: 100%;
       margin: 0;
     }
-    &[data-anchor-area="below"] {
+    &[data-position-area="below"] {
       position: fixed;
       inset: auto 0 0 0;
       width: 100%;
       margin: 0;
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — same purpose as
+     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
+     to exactly match the dialog's own positioned ancestor, absorbing any
+     scrollable-overflow growth a translate/scale entrance transition can
+     cause in some browsers before it ever reaches the real container. Also
+     doubles as the positioning mechanism itself — flexbox alignment,
+     keyed off data-position-area, covers every value of positionArea's
+     vocabulary (always flush-to-edge-or-centered, never partial) with no
+     JS measurement needed. */
+  .navi_dialog_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_dialog {
+      /* Neutralized here — centering/docking is entirely the wrapper's own
+         flexbox alignment above/below, not margin:auto (which only exists
+         on .navi_dialog for the via-attribute renderer's own native
+         top-layer centering, see above). */
+      margin: 0;
+      pointer-events: auto;
+    }
+
+    &[data-position-area="on-the-left"] {
+      align-items: stretch;
+      justify-content: flex-start;
+    }
+    &[data-position-area="on-the-right"] {
+      align-items: stretch;
+      justify-content: flex-end;
+    }
+    &[data-position-area="above"] {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+    }
+    &[data-position-area="below"] {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-end;
+    }
+  }
+
+  /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
+     a real sibling element instead, same idea/CSS shape as Popover's own
+     .navi_popover_backdrop (see popover.jsx's top comment for the design
+     this mirrors). Always rendered (never skipped like Popover's own
+     "none" case): a dialog is always modal, so there's always at least a
+     click-absorbing backdrop, matching what showModal() already gives the
+     via-attribute renderer for free regardless of
+     pointerInteractionOutsideEffect. */
+  .navi_dialog_backdrop {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    background: rgba(0, 0, 0, 0.4);
+    border: none;
+    pointer-events: none;
+    --popup-animation-duration: 0.18s;
+
+    &[aria-expanded="true"] {
+      pointer-events: auto;
+    }
+
+    &[navi-animation] {
+      opacity: 1;
+      transition-property: display, opacity;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
+      }
     }
   }
 
@@ -145,8 +285,8 @@ export const Dialog = (props) => {
 };
 
 // No openController passed: this Dialog is used declaratively (e.g. driven
-// by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
-// rather than owned by a parent component.
+// by --navi-toggle/--navi-open/--navi-close commands, the `open` prop, or
+// `defaultOpen`) rather than owned by a parent component.
 const UncontrolledDialog = (props) => {
   const openController = useOpenControllerByProps(props);
 
@@ -168,26 +308,79 @@ const UncontrolledDialog = (props) => {
   );
 };
 
+// Picks which rendering strategy actually mounts, from `layer` alone — see
+// this file's top comment. Done after the controlled/uncontrolled split
+// above, so an openController is always already resolved by the time
+// DialogViaAttribute/DialogCustom (and the useDialogProps hook they share)
+// ever run.
 const ControlledDialog = (props) => {
+  if (props.layer === "local") {
+    return <DialogCustom {...props} />;
+  }
+  return <DialogViaAttribute {...props} />;
+};
+
+const DialogViaAttribute = (props) => {
+  const [backdropProps, contentProps] = useDialogProps(props);
+
+  return (
+    <>
+      {backdropProps && <Box {...backdropProps} />}
+      <Box {...contentProps} />
+    </>
+  );
+};
+
+const DialogCustom = (props) => {
+  const [backdropProps, contentProps, resolvedPositionArea] =
+    useDialogProps(props);
+
+  return (
+    <>
+      {backdropProps && <Box {...backdropProps} />}
+      <div
+        className="navi_dialog_clip_wrapper"
+        data-position-area={
+          resolvedPositionArea === "center" ? undefined : resolvedPositionArea
+        }
+      >
+        <Box {...contentProps} />
+      </div>
+    </>
+  );
+};
+
+/**
+ * Everything both rendering strategies share once an `openController` is
+ * already resolved: focus/debug/id plumbing, the open-commit sequence, the
+ * close handler — inlined in `openEffect`, branching on `isCustom` at each
+ * point the two renderers genuinely differ (same pattern as popover.jsx's
+ * own usePopoverProps — see its top comment for why this stays inline
+ * rather than split into two functions). Returns `[backdropProps,
+ * contentProps, resolvedPositionArea]`.
+ */
+const useDialogProps = (props) => {
   const {
     openController,
-    // Same shape as Popover's own `anchor` prop (a ref, a DOM element, or
-    // "viewport"/"offsetParent") for API parity — but unlike Popover,
-    // Dialog's own positioning (positionArea below) is never relative to it:
-    // "viewport"/"offsetParent" are accepted and behave identically to no
-    // anchor at all here, only a real ref/element actually changes anything
-    // (the --anchor-width/--anchor-height vars below, used to size the
-    // dialog relative to whatever opened it).
+    // Only ever affects --anchor-width/--anchor-height (see this file's top
+    // comment) — Dialog's own positioning is never relative to it.
     anchor: anchorProp,
+    // "top" (default) → real <dialog>, showModal(), the browser's own top
+    // layer. "local" → also a real <dialog>, but shown via the non-modal
+    // .show() instead, staying in normal document flow, position: absolute
+    // relative to its own positioned ancestor. See this file's top comment.
+    layer = "top",
     // See this file's top comment — a deliberately small subset of
     // Popover's own positionArea vocabulary.
     positionArea = "center",
     children,
     scrollCapture,
-    // "none"/"capture" collapse to the same behavior for Dialog: unlike
-    // Popover, showModal() already makes the rest of the page inert, so
-    // there's nothing for a click to reach behind the backdrop regardless of
-    // this prop — only "close" changes anything observable.
+    // "close" (default) closes on an outside click. "capture"/"none" both
+    // just absorb it without closing — for the via-attribute renderer,
+    // showModal() already makes the rest of the page inert, so there's
+    // nothing for a click to reach either way; for the custom renderer,
+    // there's no native inert-ing, so the real backdrop below is what
+    // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     animation,
     centerInVisualViewport: centerInVisualViewportProp,
@@ -202,9 +395,15 @@ const ControlledDialog = (props) => {
     autoFocus = "fallback",
     ...rest
   } = props;
+  const isCustom = layer === "local";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const backdropRef = useRef();
+  // Disarms a still-pending backdrop hide from a previous close (see
+  // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
+  const disarmBackdropHideRef = useRef(null);
   const debugPopup = useDebugPopup();
+  const debugFocus = useDebugFocus();
   const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   const isAutoAnimation = animation === true || animation === "auto";
@@ -216,13 +415,27 @@ const ControlledDialog = (props) => {
     );
     resolvedPositionArea = "center";
   }
+  // A local dialog is confined to its own container, not the viewport — the
+  // virtual-keyboard-aware visualViewport centering below only makes sense
+  // for the via-attribute renderer's own full-viewport placement.
+  const centerInVisualViewport = !isCustom && centerInVisualViewportProp;
+  if (isCustom && centerInVisualViewportProp) {
+    console.warn(
+      `Dialog: centerInVisualViewport has no effect when layer="local" (the dialog is confined to its own container, not the viewport)`,
+    );
+  }
 
   // aria-expanded lives on the dialog element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
-  // with showModal()/close(), see below) so popup_animation.js can key its
-  // CSS off a single selector regardless of Popover vs Dialog.
+  // with showModal()/close() or .show()/close(), see below) so popup_css.js
+  // can key its CSS off a single selector regardless of Popover vs Dialog.
   useLayoutEffect(() => {
-    ref.current?.setAttribute("aria-expanded", "false");
+    if (ref.current) {
+      ref.current.setAttribute("aria-expanded", "false");
+    }
+    if (backdropRef.current) {
+      backdropRef.current.setAttribute("aria-expanded", "false");
+    }
   }, []);
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
@@ -233,17 +446,21 @@ const ControlledDialog = (props) => {
   // pub/sub.
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
+    const backdropEl = backdropRef.current;
     if (!dialogEl) {
       return undefined;
     }
+
+    // Set by useOpenControllerByProps for the very first open triggered by
+    // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
+    // own openEffect for the full reasoning, mirrored here identically.
+    const silent = Boolean(e.detail.silent);
+
     const [cleanup, addCleanup] = createPubSub(true);
     let anchor;
-    if (anchorProp === "viewport" || anchorProp === "offsetParent") {
-      // No special handling — see this component's own destructuring
-      // comment for why these two are accepted but behave like no anchor.
-    } else if (typeof anchorProp === "string") {
+    if (typeof anchorProp === "string") {
       console.warn(
-        `Dialog: unknown anchor="${anchorProp}" (expected "viewport", "offsetParent", a ref, or a DOM element)`,
+        `Dialog: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`,
       );
     } else if (anchorProp) {
       // anchor prop is a ref or a DOM element
@@ -261,16 +478,46 @@ const ControlledDialog = (props) => {
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     if (resolvedAnimation) {
       dialogEl.setAttribute("navi-animation", resolvedAnimation);
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {
       dialogEl.removeAttribute("navi-animation");
+      backdropEl?.removeAttribute("navi-animation");
     }
-    dialogEl.showModal();
-    dialogEl.setAttribute("aria-expanded", "true");
-    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
+
+    // Suppressed until committed below — same @starting-style-avoidance
+    // reasoning as popover.jsx's own openEffect (see its top comment), even
+    // though Dialog never needs to measure/flip anything: it still needs a
+    // genuinely rendered "closed" frame to transition from, not a jump
+    // straight from not-shown to aria-expanded="true".
+    dialogEl.style.transitionProperty = "none";
+
+    if (backdropEl) {
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
+      backdropEl.style.transitionProperty = "none";
+      backdropEl.style.display = "";
+      backdropEl.getBoundingClientRect();
+      // aria-expanded stays "false" here — flipped below, alongside
+      // dialogEl's own flip, once transitions are back on (or, for
+      // `silent`, deliberately not — see below). Setting it here (before
+      // navi-animation is guaranteed to already apply) would risk the same
+      // bug already fixed once for Popover's own backdrop.
+    }
+
+    if (isCustom) {
+      dialogEl.show();
+    } else {
+      dialogEl.showModal();
+    }
+
+    if (isCustom) {
+      addCleanup(trapFocusInside(dialogEl, { debug: debugFocus }));
+    }
     if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
     }
-    if (centerInVisualViewportProp && window.visualViewport) {
+
+    if (centerInVisualViewport && window.visualViewport) {
       const updatePosition = () => {
         const vv = window.visualViewport;
         const dialogHeight = dialogEl.offsetHeight;
@@ -313,69 +560,163 @@ const ControlledDialog = (props) => {
       });
     }
 
+    // Final commit — see popover.jsx's own openEffect for the full
+    // reasoning behind the `silent` ordering swap (forced reflow between
+    // the flip and re-enabling transitions is what actually matters, not
+    // just the JS statement order).
+    dialogEl.getBoundingClientRect();
+    if (silent) {
+      dialogEl.setAttribute("aria-expanded", "true");
+      backdropEl?.setAttribute("aria-expanded", "true");
+      dialogEl.getBoundingClientRect();
+      dialogEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    } else {
+      dialogEl.style.transitionProperty = "";
+      dialogEl.setAttribute("aria-expanded", "true");
+      backdropEl?.setAttribute("aria-expanded", "true");
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
+    const hasCssTransitionAnimation = Boolean(resolvedAnimation);
+    const cancelOpenInteractionSuppression =
+      !silent && hasCssTransitionAnimation
+        ? suppressPointerEventsDuringTransition(dialogEl)
+        : null;
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
+
     return (closeEvent) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       dialogEl.setAttribute("aria-expanded", "false");
       dialogEl.close();
+      cancelOpenInteractionSuppression?.();
+      if (hasCssTransitionAnimation) {
+        suppressPointerEventsDuringTransition(dialogEl);
+      }
+      if (backdropEl) {
+        backdropEl.setAttribute("aria-expanded", "false");
+        disarmBackdropHideRef.current = armPointerDownOutsideClose(
+          closeEvent,
+          () => {
+            backdropEl.style.display = "none";
+          },
+        );
+      }
       restoreFocus(closeEvent);
       cleanup();
     };
   };
 
-  return (
-    <Box
-      tabIndex={tabIndex}
-      {...rest}
-      {...autoFocusProps}
-      as="dialog"
-      ref={ref}
-      styleCSSVars={DIALOG_STYLE_CSS_VARS}
-      baseClassName="navi_dialog"
-      pseudoClasses={DIALOG_PSEUDO_CLASSES}
-      data-pointer-interaction-outside={pointerInteractionOutsideEffect}
-      data-anchor-area={
-        resolvedPositionArea === "center" ? undefined : resolvedPositionArea
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    escape: (e) => {
+      // Only the custom renderer needs this — a modal <dialog> already
+      // fires "cancel" (handled via onCancel below) on Escape natively; a
+      // non-modal .show()'d one doesn't.
+      if (!isCustom || !openController.opened) {
+        return null;
       }
-      onnavi_command={(e) => {
-        onNaviCommand(e);
-      }}
-      onnavi_request_interaction={(e) => {
-        onRequestInteraction(e, { debugInteraction });
-      }}
-      onMouseDown={(e) => {
-        rest.onMouseDown?.(e);
-        if (pointerInteractionOutsideEffect !== "close") {
-          return;
-        }
-        if (e.button !== 0) {
-          return;
-        }
-        // Detect backdrop click: the click must land outside the dialog's
-        // bounding rect. Checking coordinates is necessary because clicking
-        // on the dialog's own padding also sets e.target === ref.current.
-        if (e.target !== ref.current) {
-          return;
-        }
-        const rect = ref.current.getBoundingClientRect();
-        const isOutside =
-          e.clientX < rect.left ||
-          e.clientX > rect.right ||
-          e.clientY < rect.top ||
-          e.clientY > rect.bottom;
-        if (!isOutside) {
-          return;
-        }
-        openController.requestClose(e, { isCancel: true });
-      }}
-      onCancel={(e) => {
-        openController.requestClose(e, { isCancel: true });
-      }}
-    >
-      {children}
-    </Box>
-  );
+      return {
+        name: "escape_to_cancel",
+        allowed: () => {
+          openController.requestClose(e, { isCancel: true });
+        },
+      };
+    },
+  });
+
+  const hasBackdrop = isCustom;
+  const backdropProps = hasBackdrop
+    ? {
+        "ref": backdropRef,
+        "baseClassName": "navi_dialog_backdrop",
+        "aria-hidden": "true",
+        "styleCSSVars": DIALOG_STYLE_CSS_VARS,
+        "animationDuration": rest.animationDuration,
+        "onMouseDown": (mouseDownEvent) => {
+          if (mouseDownEvent.button !== 0) {
+            return;
+          }
+          if (pointerInteractionOutsideEffect === "close") {
+            openController.requestClose(mouseDownEvent, { isCancel: true });
+          }
+          // "capture"/"none" both just absorb the click without closing —
+          // see this hook's own destructuring comment for why the two
+          // collapse to the same behavior for Dialog.
+        },
+      }
+    : null;
+
+  const contentProps = {
+    tabIndex,
+    "navi-animation": isAutoAnimation ? undefined : animation,
+    "styleCSSVars": DIALOG_STYLE_CSS_VARS,
+    ...rest,
+    ...autoFocusProps,
+    "as": "dialog",
+    ref,
+    "baseClassName": "navi_dialog",
+    "pseudoClasses": DIALOG_PSEUDO_CLASSES,
+    "aria-modal": "true",
+    "data-position-area": isCustom
+      ? undefined
+      : resolvedPositionArea === "center"
+        ? undefined
+        : resolvedPositionArea,
+    "onnavi_command": (e) => {
+      onNaviCommand(e);
+    },
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e, { debugInteraction });
+    },
+    "onKeyDown": onKeyDownShortcuts,
+    "onMouseDown": (e) => {
+      rest.onMouseDown?.(e);
+      if (isCustom) {
+        // The custom renderer's own real backdrop (above) already handles
+        // outside clicks — this element itself only ever receives clicks
+        // that land inside it (the wrapper's flex layout means there's no
+        // "padding area outside the box" the way the via-attribute
+        // renderer's own full-viewport <dialog> has).
+        return;
+      }
+      if (pointerInteractionOutsideEffect !== "close") {
+        return;
+      }
+      if (e.button !== 0) {
+        return;
+      }
+      // Detect backdrop click: the click must land outside the dialog's
+      // bounding rect. Checking coordinates is necessary because clicking
+      // on the dialog's own padding also sets e.target === ref.current.
+      if (e.target !== ref.current) {
+        return;
+      }
+      const rect = ref.current.getBoundingClientRect();
+      const isOutside =
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom;
+      if (!isOutside) {
+        return;
+      }
+      openController.requestClose(e, { isCancel: true });
+    },
+    "onCancel": (e) => {
+      // Native "cancel" (Escape) only ever fires for a modal (showModal())
+      // dialog — the custom renderer's own Escape handling lives in
+      // onKeyDownShortcuts above instead.
+      openController.requestClose(e, { isCancel: true });
+    },
+    children,
+  };
+
+  return [backdropProps, contentProps, resolvedPositionArea];
 };
 
 const DIALOG_PSEUDO_CLASSES = [
