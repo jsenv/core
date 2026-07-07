@@ -64,6 +64,7 @@
         justify-content: center;
         border: 1px dotted #999;
         border-radius: 8px;
+        overflow: hidden;
       }
       .demo-important-note {
         margin: 8px 0;
@@ -259,8 +260,8 @@
         return `${y} ${x}`;
       };
 
-      // Pinned to a point/corner (anchor="viewport" or "offsetParent" — no
-      // real anchor box), overlap and no-overlap collapse to the same
+      // Pinned to a point/corner (anchor="viewport" or "scrollContainer" —
+      // no real anchor box), overlap and no-overlap collapse to the same
       // placement, so "aligned-top" lands exactly where "above" does (ditto
       // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
       // "aligned-right"/"on-the-right").
@@ -571,9 +572,9 @@
       };
 
       // This section is always relative to *an* anchor — a real element by
-      // default, or "viewport"/"offsetParent" (see the 2nd/3rd subsections
-      // below) — so it's anchorArea itself that's worth documenting, not
-      // "placement" as some separate idea.
+      // default, or "viewport"/"scrollContainer" (see the 2nd/3rd
+      // subsections below) — so it's anchorArea itself that's worth
+      // documenting, not "placement" as some separate idea.
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
           <h2>3. anchorArea</h2>
@@ -592,9 +593,9 @@
           <AnchorAreaViewportDemo />
 
           <h3>
-            anchor<code>="offsetParent"</code>
+            anchor<code>="scrollContainer"</code>
           </h3>
-          <AnchorAreaOffsetParentDemo />
+          <AnchorAreaScrollContainerDemo />
         </section>
       );
 
@@ -602,14 +603,17 @@
         <section id="anchor-ignore" class="demo-section">
           <h2>4. Ignoring the anchor</h2>
           <p>
-            Setting <code>anchor="viewport"</code> (with{" "}
-            <code>anchorArea="center"</code>) forces the popover to ignore the
-            toggle button as its anchor and center itself in the viewport
-            instead — once <code>anchor</code> is set to anything, the event's
-            own carried anchor is never consulted.
+            Setting <code>anchor="viewport"</code> alone still lets the toggle
+            button's own anchor take over when present (the event's own carried
+            anchor takes priority over the fallback
+            <code>"viewport"</code> value unless told otherwise) —{" "}
+            <code>ignoreEventAnchor</code> (with{" "}
+            <code>anchorArea="center"</code>) is what forces the popover to
+            ignore the toggle button as its anchor and center itself in the
+            viewport instead.
           </p>
           <div class="demo-row">
-            <AnchorlessPopover label='anchor="viewport"' />
+            <AnchorlessPopover label='anchor="viewport" ignoreEventAnchor' />
             <AnchorlessPopover
               label="animated"
               animation
@@ -729,9 +733,10 @@
         );
       };
 
-      // Still command-driven (--navi-toggle), but anchor="viewport" tells
-      // the popover not to use the toggle button as its anchor, so it
-      // centers itself in the viewport instead (anchorArea="center").
+      // Still command-driven (--navi-toggle), but anchor="viewport" +
+      // ignoreEventAnchor tells the popover not to use the toggle button as
+      // its anchor, so it centers itself in the viewport instead
+      // (anchorArea="center").
       const AnchorlessPopover = ({ label, ...rest }) => {
         const popoverId = useId();
 
@@ -744,6 +749,7 @@
               id={popoverId}
               borderRadius="8px"
               anchor="viewport"
+              ignoreEventAnchor
               anchorArea="center"
               className="demo_popover_box"
               {...rest}
@@ -790,7 +796,7 @@
       };
 
       // anchor is left undefined (real anchor, from the toggle event) unless
-      // explicitly passed as "viewport"/"offsetParent". Always uses the
+      // explicitly passed as "viewport"/"scrollContainer". Always uses the
       // flexible anchorArea (never anchorAreaFixed): what you'd actually use
       // day to day. commandProxyFor redirects the trigger button's anchor to
       // another element (see navi-command-proxy-for on the Button below) —
@@ -798,6 +804,7 @@
       // shared static box instead of to itself.
       const AnchorAreaPopover = ({
         anchor,
+        ignoreEventAnchor,
         anchorArea,
         label = anchorArea,
         duplicate = false,
@@ -826,6 +833,7 @@
               spawnFromPointer={spawnFromPointer}
               borderRadius="8px"
               anchor={anchor}
+              ignoreEventAnchor={ignoreEventAnchor}
               anchorArea={anchorArea}
               className="demo_popover_box"
             >
@@ -836,7 +844,7 @@
         );
       };
 
-      // Only meaningful for anchor="viewport"/"offsetParent" + "scale" (see
+      // Only meaningful for anchor="viewport"/"scrollContainer" + "scale" (see
       // Popover's own spawnFromPointer doc) — a small local toggle rather
       // than folded into useAnimateControls/AnimateControls, since it's
       // specific to these two point-mode sections.
@@ -898,7 +906,7 @@
         );
       };
 
-      // Shared by both point-mode subsections (viewport and offsetParent):
+      // Shared by both point-mode subsections (viewport and scrollContainer):
       // pinned to a point/corner of referenceLabel instead of a real anchor
       // box, the popover can only sit flush against its edges — never
       // floating outside with a gap the way "above"/"below" do against a
@@ -940,6 +948,7 @@
               renderCell={(y, x) => (
                 <AnchorAreaPopover
                   anchor="viewport"
+                  ignoreEventAnchor
                   anchorArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
@@ -955,24 +964,26 @@
         );
       };
 
-      // anchor="offsetParent" needs the popovers rendered *inside* the
-      // positioned container to find it — the trigger buttons don't, so
-      // they live outside it, in their own grid below.
-      const AnchorAreaOffsetParentDemo = () => {
+      // anchor="scrollContainer" needs the popovers rendered *inside* the
+      // positioned container to find it (PopoverCustom, a plain
+      // position: absolute div — see popover.jsx's top comment) — the
+      // trigger buttons don't, so they live outside it, in their own grid
+      // below.
+      const AnchorAreaScrollContainerDemo = () => {
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
-          useAnimateControls("popover_demo_area_offset_parent");
+          useAnimateControls("popover_demo_area_scroll_container");
         const { spawnFromPointer, toggle: spawnFromPointerToggle } =
-          useSpawnFromPointerToggle("popover_demo_area_offset_parent");
+          useSpawnFromPointerToggle("popover_demo_area_scroll_container");
         return (
           <>
             <PointModeNote referenceLabel="the container" />
             <p class="demo-important-note">
-              The popover is promoted to the top layer once shown, so it isn't
-              actually clipped by the container's own{" "}
-              <code>overflow: hidden</code>/<code>auto</code> the way normal
-              in-flow content would be — it can render outside the container
-              regardless of what the container's overflow is set to.
+              Unlike <code>anchor="viewport"</code> (promoted to the top layer),{" "}
+              <code>anchor="scrollContainer"</code> renders as a plain in-flow
+              box relative to its own positioned ancestor — genuinely clipped by
+              the container's own <code>overflow: hidden</code>/
+              <code>auto</code>, the same as any other in-flow content would be.
             </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
@@ -985,7 +996,7 @@
                     animationDuration={animationDuration}
                     spawnFromPointer={spawnFromPointer}
                     borderRadius="8px"
-                    anchor="offsetParent"
+                    anchor="scrollContainer"
                     anchorArea={`${y} ${x}`}
                     className="demo_popover_box"
                   >

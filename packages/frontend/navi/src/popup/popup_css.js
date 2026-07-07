@@ -71,10 +71,7 @@
  * Popover picks this automatically for `animation="auto"` for any real
  * anchor, or a point/corner placed dead-center (both anchorArea axes
  * overlapping the anchor — there's no sensible direction to slide from in
- * that case). Popover's own `spawnFromPointer` prop (anchorReference/point
- * mode + "scaling" only) adds a `translate` from the click/pointer position
- * to `0 0` alongside the same centered scale — see
- * `--popup-spawn-origin-x/y` below, set by popover.jsx's `positionPopover`.
+ * that case).
  */
 
 export const popupCss = /* css */ `
@@ -120,15 +117,7 @@ export const popupCss = /* css */ `
     }
 
     /* scaling — grows from --popup-scale-from (default 0.9) to full size,
-         centered, no direction involved. spawnFromPointer (Popover only, see
-         this file's top comment) adds a translate from the click/pointer
-         position to 0 0 alongside it, instead of moving transform-origin
-         there: growing from an off-center transform-origin only reads as
-         "coming from there" if the scale range is dramatic enough to
-         visibly displace the box by that much — translate conveys the
-         traveled distance directly, at any scale range, so scaling can stay
-         centered and keep the same subtle --popup-scale-from as plain
-         "scaling". */
+         centered, no direction involved. */
     &[navi-animation="scaling"] {
       opacity: 1;
       translate: 0 0;
@@ -136,13 +125,6 @@ export const popupCss = /* css */ `
       &[aria-expanded="false"] {
         opacity: 0;
         scale: var(--popup-scale-from);
-
-        &[data-spawn-from-pointer] {
-          --popup-scale-from: 0.5;
-
-          translate: var(--popup-spawn-origin-x, 0px)
-            var(--popup-spawn-origin-y, 0px);
-        }
       }
     }
 
