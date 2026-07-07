@@ -347,7 +347,6 @@ const UncontrolledPopover = (props) => {
     />
   );
 };
-
 // Picks which rendering strategy actually mounts, from the `anchor` prop
 // alone (see this file's top comment) — done here, after the
 // controlled/uncontrolled split above, so an openController is always
@@ -365,6 +364,7 @@ const ControlledPopover = (props) => {
 // internally.
 const PopoverViaAttribute = (props) => {
   const [backdropProps, contentProps] = usePopoverProps(props);
+
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
@@ -372,9 +372,9 @@ const PopoverViaAttribute = (props) => {
     </>
   );
 };
-
 const PopoverCustom = (props) => {
   const [backdropProps, contentProps] = usePopoverProps(props);
+
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
