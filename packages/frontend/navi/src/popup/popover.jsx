@@ -615,19 +615,6 @@ const usePopoverProps = (props) => {
     // shown).
     popoverEl.style.transitionProperty = "none";
 
-    if (isCustom) {
-      // Not "showPopover()" — just making it visible again, synchronously,
-      // so it's measurable below even though aria-expanded is still
-      // "false" (see this file's top comment for why the two are
-      // deliberately decoupled).
-      popoverEl.style.display = "";
-    } else {
-      popoverEl.showPopover();
-      // aria-expanded stays "false" here — transitions are still
-      // suppressed, so this doesn't matter yet — and only flips once
-      // positioned below.
-    }
-
     if (backdropEl) {
       // Disarm a still-pending hide from a previous close: a click
       // arriving later must not hide the fresh instance this open is
@@ -645,7 +632,7 @@ const usePopoverProps = (props) => {
         // the close handler below) hasn't run yet — showPopover() throws
         // on an already-open element. Showing it fresh here (rather than
         // reusing an older still-open instance) resets its top-layer
-        // position to right below the real popover, which matters when
+        // position to right below whatever shows next, which matters when
         // other popovers already opened in between.
         if (backdropEl.matches(":popover-open")) {
           backdropEl.hidePopover();
@@ -653,13 +640,29 @@ const usePopoverProps = (props) => {
         // Same reflow trick as the real popover below (no @starting-style):
         // the backdrop's own fade needs a genuinely rendered "closed" frame
         // to transition from, not a jump straight from not-rendered to
-        // aria-expanded="true".
+        // aria-expanded="true". Shown *before* popoverEl below — the top
+        // layer stacks later showPopover() calls above earlier ones, so the
+        // backdrop must go first for the real popover to end up on top.
         backdropEl.style.transitionProperty = "none";
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
         backdropEl.style.transitionProperty = "";
         backdropEl.setAttribute("aria-expanded", "true");
       }
+    }
+
+    if (isCustom) {
+      // Not "showPopover()" — just making it visible again, synchronously,
+      // so it's measurable below even though aria-expanded is still
+      // "false" (see this file's top comment for why the two are
+      // deliberately decoupled).
+      popoverEl.style.display = "";
+    } else {
+      popoverEl.showPopover();
+      // aria-expanded stays "false" here — transitions are still
+      // suppressed, so this doesn't matter yet — and only flips once
+      // positioned below. Shown *after* the backdrop above so it stacks on
+      // top of it in the top layer.
     }
 
     // What we observe for repositioning on resize/scroll/visibility
