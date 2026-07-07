@@ -1005,6 +1005,23 @@ const usePopoverProps = (props) => {
       }
       restoreFocus(closeEvent);
 
+      // pickPositionRelativeTo (visible_rect.js) writes data-position-y/x-
+      // current unconditionally on every call, and treats their mere
+      // *presence* as "already positioned this session — stay on this
+      // side unless it no longer fits" (its own anti-oscillation guard for
+      // repositioning mid-open, e.g. on scroll/resize). Popover's own CSS
+      // doesn't read these anymore (slide direction is resolved in JS now,
+      // see resolveDirectionValue), which is why the clearing that used to
+      // live here was removed — but that removal missed this second,
+      // still-live purpose: without clearing them on close, a later reopen
+      // sees a stale, "already positioned" value left over from a
+      // *previous* open (e.g. the container-aligned collapse from an
+      // anchorless silent open) and wrongly stays sticky to it instead of
+      // resolving fresh from the current positionArea/anchor — a real,
+      // reproduced bug, not just a leftover no-op.
+      popoverEl.removeAttribute("data-position-y-current");
+      popoverEl.removeAttribute("data-position-x-current");
+
       cleanup();
     };
   };
