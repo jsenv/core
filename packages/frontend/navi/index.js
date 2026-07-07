@@ -214,6 +214,7 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 export { Dialog } from "./src/popup/dialog.jsx";
 export { Popover } from "./src/popup/popover.jsx";
 export { SidePanel } from "./src/popup/side_panel.jsx";
+export { createSlot } from "./src/popup/slot.jsx";
 
 // Responsivness
 export { windowWidthSignal } from "./src/layout/responsive.js";

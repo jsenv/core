@@ -205,8 +205,15 @@
         border: 1px solid #cfe0f5;
       }
       .demo-content-tall-block {
-        height: 46px;
+        /* flex-shrink: 0 (+ matching min-height) so a flex/column ancestor
+           can't shrink these back down — the whole point is to force the
+           popup taller, not to be squeezed to fit. Tall enough on its own
+           (8 of them) to overflow most viewports and exercise the same
+           overflow handling as the dedicated "exceeds viewport" example. */
+        height: 120px;
+        min-height: 120px;
         margin: 4px 0;
+        flex-shrink: 0;
         background: #eef3fb;
         border: 1px solid #cfe0f5;
       }
