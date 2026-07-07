@@ -1,12 +1,17 @@
 /**
  * A drawer docked flush to a viewport edge — built entirely on top of
  * `Popup` (which itself picks Popover vs Dialog), relying on capabilities
- * those two already have: `anchor="viewport"` + `anchorArea` for the actual
- * docking (Popover natively, Dialog via its own small anchorArea subset —
- * see dialog.jsx's top comment), the shared `slide-from-*` animation kind,
- * native Escape handling, and Popover/Dialog's own `onClose` prop (so this
- * component doesn't need to own an openController just to observe a
- * self-initiated close).
+ * those two already have: `anchorFallback="viewport"` (Popover's default,
+ * set explicitly here for clarity) + `anchorCustomEventDetail="ignore"` +
+ * `anchorArea` for the actual docking (Popover natively, Dialog via its own
+ * small anchorArea subset — see dialog.jsx's top comment), the shared
+ * `slide-from-*` animation kind, native Escape handling, and Popover/
+ * Dialog's own `onClose` prop (so this component doesn't need to own an
+ * openController just to observe a self-initiated close).
+ * `anchorCustomEventDetail="ignore"` matters here specifically: without it,
+ * Popover would use the triggering button as a real anchor whenever one is
+ * available, docking the panel next to *it* instead of flush against the
+ * viewport edge — the opposite of what a side panel is for.
  *
  * `animation` only applies when explicitly requested — SidePanel doesn't
  * animate by default.
@@ -76,7 +81,8 @@ export const SidePanel = ({
       mode={mode}
       open={isOpen}
       onClose={onClose}
-      anchor="viewport"
+      anchorFallback="viewport"
+      anchorCustomEventDetail="ignore"
       anchorArea={anchorArea}
       animation={animation ? `slide-from-${side}` : undefined}
       pointerInteractionOutsideEffect={

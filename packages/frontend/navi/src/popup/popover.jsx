@@ -14,9 +14,10 @@
  * `useOpenControllerByProps` (a whole controller instance) is only ever
  * created when actually needed, not unconditionally on every render.
  * `ControlledPopover` then picks which rendering strategy actually mounts,
- * from the `anchor` prop alone (`anchor === "scrollContainer"` →
- * `PopoverCustom`, everything else → `PopoverViaAttribute`) — by this
- * point an `openController` is always already resolved.
+ * from the `anchor`/`anchorFallback` props alone (no `anchor` given *and*
+ * `anchorFallback="auto"` → `PopoverCustom`, everything else →
+ * `PopoverViaAttribute`) — by this point an `openController` is always
+ * already resolved.
  *
  * Both components share the exact same `usePopoverProps(props)` hook for
  * everything that doesn't genuinely differ between them, once an
@@ -38,31 +39,46 @@
  * wrapper), so collapsing them into one now would just mean re-splitting
  * them apart again once that need arrives.
  *
- * - `anchor="scrollContainer"` → the custom renderer, docked to the
- *   popover's own positioned ancestor. Always ignores whatever the
- *   triggering event carried as `detail.anchor`/`.source` — that's the only
- *   thing this value does, and it's unconditional (unlike the via-attribute
- *   cases below, it's not affected by `ignoreEventAnchor`, since this
- *   renderer never has a real-anchor case to begin with — a ref/DOM element
- *   `anchor` always selects the via-attribute renderer instead, never this
- *   one).
- * - Anything else (`undefined`, `"viewport"`, a ref, a DOM element) → the
- *   via-attribute renderer. `anchor="viewport"` and `anchor={undefined}`
- *   both mean "no real anchor supplied via the prop" — by default that
- *   falls back to the triggering event's own carried anchor
- *   (`detail.anchor`/`.source`) if present, else docks to the viewport;
- *   `ignoreEventAnchor` skips that fallback, forcing the viewport-dock
- *   placement regardless of what triggered the open (used by the demo's
- *   "Ignoring the anchor" section). A ref/DOM element is always used as a
- *   real anchor directly, regardless of `ignoreEventAnchor`. Resolved down
- *   to a single value inline in `openEffect` (only one call site, not
- *   worth a standalone function): either a real anchor element, or
- *   `undefined` — `hasAnchorElement` (just `Boolean(anchor)`) is what the
- *   rest of the code branches on from there. ("Real anchor" isn't quite the
- *   right word for that boolean either, since a container being docked to
- *   is arguably a real anchor in its own right too — `hasAnchorElement` is
- *   meant narrowly: is there a specific *element* being positioned
- *   against, as opposed to sticking to a container's own rect.)
+ * `anchor` (a ref or a DOM element — no other value is accepted anymore; a
+ * plain string is a near-certain leftover from an older API and gets a dev
+ * warning, then treated the same as omitting it) is the only way to
+ * request a real anchor. When it's omitted, `anchorFallback` decides both
+ * what to dock against instead *and* which rendering strategy handles it:
+ *
+ * - `anchorFallback="viewport"` (default) → the via-attribute renderer,
+ *   docked to the viewport itself.
+ * - `anchorFallback="auto"` → the custom renderer, docked to the popover's
+ *   own positioned ancestor instead — respects that ancestor's own
+ *   `overflow: hidden`/`auto`, unlike the top layer (see
+ *   `getPositioningContainer` in visible_rect.js/offset_parent.js for how
+ *   it's found).
+ *
+ * A real `anchor` always wins over `anchorFallback` regardless of its
+ * value — the custom renderer structurally never has a real-anchor case
+ * (its popover is `position: absolute` relative to its own ancestor, not
+ * the document root — a real anchor's own coordinate math assumes the
+ * latter), so `anchorFallback="auto"` together with a real `anchor` would
+ * be a contradiction; `anchor` simply takes priority, same as it always
+ * did.
+ *
+ * When there's no `anchor` prop, the triggering event's own carried anchor
+ * (`detail.anchor`/`.source`) is used instead, *only* for the via-attribute
+ * renderer (the custom renderer never considers it, unconditionally — its
+ * own docked positioning can't use a real anchor either way) — unless
+ * `anchorCustomEventDetail="ignore"` (default `"override"`), which skips
+ * that fallback entirely, forcing the `anchorFallback` docked placement
+ * regardless of what triggered the open (used by the demo's "Ignoring the
+ * anchor" section).
+ *
+ * All of this is resolved down to a single value inline in `openEffect`
+ * (only one call site, not worth a standalone function): either a real
+ * anchor element, or `undefined` — `hasAnchorElement` (just
+ * `Boolean(anchor)`) is what the rest of the code branches on from there.
+ * ("Real anchor" isn't quite the right word for that boolean either, since
+ * a container being docked to is arguably a real anchor in its own right
+ * too — `hasAnchorElement` is meant narrowly: is there a specific *element*
+ * being positioned against, as opposed to sticking to a container's own
+ * rect.)
  *
  * `aria-expanded` lives on the popover element itself, toggled imperatively
  * in sync with showPopover()/hidePopover() (or, for the custom renderer, a
@@ -387,13 +403,16 @@ const UncontrolledPopover = (props) => {
   );
 };
 
-// Picks which rendering strategy actually mounts, from the `anchor` prop
-// alone (see this file's top comment) — done here, after the
-// controlled/uncontrolled split above, so an openController is always
-// already resolved by the time PopoverViaAttribute/PopoverCustom (and the
-// usePopoverProps hook they share) ever run.
+// Picks which rendering strategy actually mounts, from the
+// `anchor`/`anchorFallback` props alone (see this file's top comment) —
+// done here, after the controlled/uncontrolled split above, so an
+// openController is always already resolved by the time
+// PopoverViaAttribute/PopoverCustom (and the usePopoverProps hook they
+// share) ever run. A real `anchor` always wins over `anchorFallback`,
+// regardless of its value — the custom renderer structurally never has a
+// real-anchor case (see this file's top comment).
 const ControlledPopover = (props) => {
-  if (props.anchor === "scrollContainer") {
+  if (!props.anchor && props.anchorFallback === "auto") {
     return <PopoverCustom {...props} />;
   }
   return <PopoverViaAttribute {...props} />;
@@ -434,16 +453,23 @@ const PopoverCustom = (props) => {
  * backdrop/content element each.
  *
  * `options.usesCustomRenderer` overrides the default derivation from the
- * `anchor` prop — nothing passes it yet; it exists so a future caller can
- * force a strategy without relying on `anchor`'s own value.
+ * `anchor`/`anchorFallback` props — nothing passes it yet; it exists so a
+ * future caller can force a strategy without relying on their value.
  */
 const usePopoverProps = (props, options = {}) => {
   const {
     openController,
     anchor: anchorProp,
-    // Only meaningful when anchorProp isn't a real ref/DOM element — see
+    // "viewport" (default) → via-attribute, docked to the viewport;
+    // "auto" → custom, docked to the popover's own positioned ancestor.
+    // Only consulted when anchorProp isn't a real ref/DOM element — see
     // this file's top comment.
-    ignoreEventAnchor = false,
+    anchorFallback = "viewport",
+    // "override" (default) lets the triggering event's own carried anchor
+    // serve as the real anchor when anchorProp itself is absent; "ignore"
+    // skips that fallback. Only meaningful for the via-attribute renderer
+    // — see this file's top comment.
+    anchorCustomEventDetail = "override",
     // see the anchorArea grammar in the file's top comment
     anchorArea = "below",
     anchorAreaFixed,
@@ -466,10 +492,11 @@ const usePopoverProps = (props, options = {}) => {
     ...rest
   } = props;
 
-  // Decided once per render from the raw prop (never from the
-  // event-carried anchor) — see this file's top comment.
+  // Decided once per render from the raw props (never from the
+  // event-carried anchor) — a real anchorProp always wins regardless of
+  // anchorFallback, see this file's top comment.
   const isCustom =
-    options.usesCustomRenderer ?? anchorProp === "scrollContainer";
+    options.usesCustomRenderer ?? (!anchorProp && anchorFallback === "auto");
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
@@ -527,21 +554,24 @@ const usePopoverProps = (props, options = {}) => {
     let anchor;
     if (isCustom) {
       anchor = undefined;
-    } else if (anchorProp === "viewport") {
-      anchor =
-        !ignoreEventAnchor && e.detail.anchor ? e.detail.anchor : undefined;
     } else if (typeof anchorProp === "string") {
+      // A plain string is a near-certain leftover from an older API
+      // (anchor used to accept "viewport"/"scrollContainer" directly) —
+      // anchor is a ref or a DOM element only now; anchorFallback/
+      // anchorCustomEventDetail cover what those strings used to mean.
       console.warn(
-        `Popover: unknown anchor="${anchorProp}" (expected "viewport", "scrollContainer", a ref, or a DOM element)`,
+        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use anchorFallback="auto" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
       );
       anchor = undefined;
     } else if (anchorProp) {
       // anchor prop is a ref or a DOM element — always a real anchor,
-      // regardless of ignoreEventAnchor.
+      // regardless of anchorCustomEventDetail.
       anchor = anchorProp.current ?? anchorProp;
     } else {
       anchor =
-        !ignoreEventAnchor && e.detail.anchor ? e.detail.anchor : undefined;
+        anchorCustomEventDetail !== "ignore" && e.detail.anchor
+          ? e.detail.anchor
+          : undefined;
     }
     const hasAnchorElement = Boolean(anchor);
     const positionedAncestor = isCustom ? getPositionedParent(popoverEl) : null;

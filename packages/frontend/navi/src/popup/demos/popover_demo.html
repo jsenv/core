@@ -572,9 +572,9 @@
       };
 
       // This section is always relative to *an* anchor — a real element by
-      // default, or "viewport"/"scrollContainer" (see the 2nd/3rd
-      // subsections below) — so it's anchorArea itself that's worth
-      // documenting, not "placement" as some separate idea.
+      // default, or a fallback docked to the viewport/positioned ancestor
+      // (see the 2nd/3rd subsections below) — so it's anchorArea itself
+      // that's worth documenting, not "placement" as some separate idea.
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
           <h2>3. anchorArea</h2>
@@ -588,12 +588,12 @@
           <AnchorAreaDefaultDemo />
 
           <h3>
-            anchor<code>="viewport"</code>
+            anchorFallback<code>="viewport"</code> (default)
           </h3>
           <AnchorAreaViewportDemo />
 
           <h3>
-            anchor<code>="scrollContainer"</code>
+            anchorFallback<code>="auto"</code>
           </h3>
           <AnchorAreaScrollContainerDemo />
         </section>
@@ -603,17 +603,17 @@
         <section id="anchor-ignore" class="demo-section">
           <h2>4. Ignoring the anchor</h2>
           <p>
-            Setting <code>anchor="viewport"</code> alone still lets the toggle
-            button's own anchor take over when present (the event's own carried
-            anchor takes priority over the fallback
-            <code>"viewport"</code> value unless told otherwise) —{" "}
-            <code>ignoreEventAnchor</code> (with{" "}
+            Leaving <code>anchor</code> unset still lets the toggle button's
+            own anchor take over when present (the event's own carried anchor
+            takes priority over the <code>anchorFallback</code> docked
+            placement unless told otherwise) —{" "}
+            <code>anchorCustomEventDetail="ignore"</code> (with{" "}
             <code>anchorArea="center"</code>) is what forces the popover to
             ignore the toggle button as its anchor and center itself in the
             viewport instead.
           </p>
           <div class="demo-row">
-            <AnchorlessPopover label='anchor="viewport" ignoreEventAnchor' />
+            <AnchorlessPopover label='anchorCustomEventDetail="ignore"' />
             <AnchorlessPopover
               label="animated"
               animation
@@ -727,10 +727,10 @@
         );
       };
 
-      // Still command-driven (--navi-toggle), but anchor="viewport" +
-      // ignoreEventAnchor tells the popover not to use the toggle button as
-      // its anchor, so it centers itself in the viewport instead
-      // (anchorArea="center").
+      // Still command-driven (--navi-toggle), but
+      // anchorCustomEventDetail="ignore" tells the popover not to use the
+      // toggle button as its anchor, so it centers itself in the viewport
+      // instead (anchorArea="center").
       const AnchorlessPopover = ({ label, ...rest }) => {
         const popoverId = useId();
 
@@ -742,8 +742,7 @@
             <Popover
               id={popoverId}
               borderRadius="8px"
-              anchor="viewport"
-              ignoreEventAnchor
+              anchorCustomEventDetail="ignore"
               anchorArea="center"
               className="demo_popover_box"
               {...rest}
@@ -790,15 +789,15 @@
       };
 
       // anchor is left undefined (real anchor, from the toggle event) unless
-      // explicitly passed as "viewport"/"scrollContainer". Always uses the
-      // flexible anchorArea (never anchorAreaFixed): what you'd actually use
-      // day to day. commandProxyFor redirects the trigger button's anchor to
-      // another element (see navi-command-proxy-for on the Button below) —
-      // used by the default-anchor subsection so every button anchors to one
-      // shared static box instead of to itself.
+      // anchorFallback/anchorCustomEventDetail are explicitly passed. Always
+      // uses the flexible anchorArea (never anchorAreaFixed): what you'd
+      // actually use day to day. commandProxyFor redirects the trigger
+      // button's anchor to another element (see navi-command-proxy-for on
+      // the Button below) — used by the default-anchor subsection so every
+      // button anchors to one shared static box instead of to itself.
       const AnchorAreaPopover = ({
-        anchor,
-        ignoreEventAnchor,
+        anchorFallback,
+        anchorCustomEventDetail,
         anchorArea,
         label = anchorArea,
         duplicate = false,
@@ -824,8 +823,8 @@
               animation={animation}
               animationDuration={animationDuration}
               borderRadius="8px"
-              anchor={anchor}
-              ignoreEventAnchor={ignoreEventAnchor}
+              anchorFallback={anchorFallback}
+              anchorCustomEventDetail={anchorCustomEventDetail}
               anchorArea={anchorArea}
               className="demo_popover_box"
             >
