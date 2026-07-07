@@ -272,7 +272,6 @@ export const Popover = (props) => {
   }
   return <UncontrolledPopover {...props} />;
 };
-
 // No openController passed: this Popover is used declaratively (e.g. driven
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
@@ -296,7 +295,6 @@ const UncontrolledPopover = (props) => {
     />
   );
 };
-
 const ControlledPopover = (props) => {
   const {
     openController,
