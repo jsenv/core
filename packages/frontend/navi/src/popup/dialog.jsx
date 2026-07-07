@@ -471,12 +471,11 @@ const useDialogProps = (props) => {
     // own openEffect for the full reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
 
-    // Dialog is never really anchored for positioning purposes (see this
-    // file's top comment) — this is the container pickPositionRelativeTo
-    // docks against below, and the container trapFocusInside's own
-    // mousedown/keydown listeners are scoped to for the non-modal case
-    // (see below), instead of document.
-    const positionedAncestor = isModal ? null : getPositionedParent(dialogEl);
+    const positionedAncestor = isModal
+      ? null
+      : getPositionedParent(
+          dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
+        );
 
     const [cleanup, addCleanup] = createPubSub(true);
     let anchor;
