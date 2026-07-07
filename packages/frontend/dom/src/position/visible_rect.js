@@ -623,7 +623,7 @@ export const pickPositionRelativeTo = (
     positionYFixed,
     alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    spacing = 0,
+    anchorSpacing = 0,
     alignToAnchorBox = "border-box",
     containerSpacing = 0,
     anchorIsContainer = false,
@@ -751,13 +751,13 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove - spacing - containerSpacing;
+        return spaceAbove - anchorSpacing - containerSpacing;
       }
       if (y === "aligned-bottom") {
         return spaceAbove + anchorHeight - containerSpacing;
       }
       if (y === "below") {
-        return spaceBelow - spacing - containerSpacing;
+        return spaceBelow - anchorSpacing - containerSpacing;
       }
       if (y === "aligned-top") {
         return spaceBelow + anchorHeight - containerSpacing;
@@ -812,7 +812,7 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "on-the-left") {
-        return spaceLeft - spacing - containerSpacing;
+        return spaceLeft - anchorSpacing - containerSpacing;
       }
       if (x === "aligned-left") {
         return viewportWidth - anchorLeft - containerSpacing;
@@ -821,7 +821,7 @@ export const pickPositionRelativeTo = (
         return anchorRight - containerSpacing;
       }
       if (x === "on-the-right") {
-        return spaceRight - spacing - containerSpacing;
+        return spaceRight - anchorSpacing - containerSpacing;
       }
       return Infinity; // center
     };
@@ -858,7 +858,7 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "on-the-left") {
-      elementPositionLeft = effectiveAnchorLeft - elementWidth - spacing;
+      elementPositionLeft = effectiveAnchorLeft - elementWidth - anchorSpacing;
     } else if (finalX === "aligned-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
@@ -901,7 +901,7 @@ export const pickPositionRelativeTo = (
       elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
       // "on-the-right"
-      elementPositionLeft = effectiveAnchorRight + spacing;
+      elementPositionLeft = effectiveAnchorRight + anchorSpacing;
     }
     // Constrain horizontal position to the available area's boundaries
     // (with containerSpacing margin).
@@ -919,8 +919,8 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      // top is always anchorTop + insetTop - elementHeight - spacing — max-height truncates if needed.
-      const idealTop = anchorTop + insetTop - elementHeight - spacing;
+      // top is always anchorTop + insetTop - elementHeight - anchorSpacing — max-height truncates if needed.
+      const idealTop = anchorTop + insetTop - elementHeight - anchorSpacing;
       elementPositionTop =
         idealTop < containerSpacing ? containerSpacing : idealTop;
     } else if (finalY === "aligned-bottom") {
@@ -935,9 +935,9 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      // top is always anchorBottom - insetBottom + spacing — max-height (via --space-available) truncates
+      // top is always anchorBottom - insetBottom + anchorSpacing — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom - insetBottom + spacing;
+      const idealTop = anchorBottom - insetBottom + anchorSpacing;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -1006,15 +1006,15 @@ export const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
-  // spacing (gap between anchor and element) and containerSpacing are subtracted
+  // anchorSpacing (gap between anchor and element) and containerSpacing are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "aligned-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? spacing : 0) -
+    (finalY === "above" ? anchorSpacing : 0) -
     containerSpacing;
   const effectiveSpaceBelow =
     (finalY === "aligned-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? spacing : 0) -
+    (finalY === "below" ? anchorSpacing : 0) -
     containerSpacing;
 
   return {

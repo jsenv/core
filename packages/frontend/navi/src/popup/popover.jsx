@@ -688,7 +688,7 @@ const usePopoverProps = (props, options = {}) => {
           positionY: parsedAnchorArea.y,
           positionXFixed: effectivePositionXFixed,
           positionYFixed: effectivePositionYFixed,
-          spacing: resolveSpacingSize(anchorSpacing),
+          anchorSpacing: resolveSpacingSize(anchorSpacing),
           containerSpacing: resolveSpacingSize(containerSpacing),
           minLeft,
         });

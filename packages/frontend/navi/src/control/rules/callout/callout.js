@@ -1061,7 +1061,7 @@ const stickCalloutToAnchor = (
         positionX: "center",
         positionY: getAnchorAttribute("data-callout-position") || "below",
         positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
-        spacing: ARROW_HEIGHT,
+        anchorSpacing: ARROW_HEIGHT,
         alignToAnchorBox,
         containerSpacing:
           originalAnchorElement.hasAttribute("data-callout-viewport-spacing") ||
@@ -1158,7 +1158,7 @@ const stickCalloutToAnchor = (
           : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
       const paddingY = paddingSizes.top + paddingSizes.bottom;
-      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via spacing: ARROW_HEIGHT passed to pickPositionRelativeTo)
+      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via anchorSpacing: ARROW_HEIGHT passed to pickPositionRelativeTo)
       const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
       const spaceAvailableForContent =
         spaceAvailable - spaceNeededAroundContent;
