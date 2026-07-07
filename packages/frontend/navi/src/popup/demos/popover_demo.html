@@ -43,7 +43,7 @@
       .demo_popover_box {
         /* Fixed size — content (a label of varying length + a Close button)
            must not influence it, so every popover in a grid demo is
-           directly comparable regardless of which anchorArea it shows. */
+           directly comparable regardless of which positionArea it shows. */
         width: 130px;
         height: 70px;
         padding: 6px 8px;
@@ -227,17 +227,17 @@
       import { useId, useState, useEffect } from "preact/hooks";
       import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
-      // Every value anchorArea's Y/X axes accept — the grid below shows all
+      // Every value positionArea's Y/X axes accept — the grid below shows all
       // 25 combinations (order-independent: "above on-the-left" and
       // "on-the-left above" mean the same thing).
-      const ANCHOR_AREA_Y_VALUES = [
+      const POSITION_AREA_Y_VALUES = [
         "above",
         "aligned-top",
         "center",
         "aligned-bottom",
         "below",
       ];
-      const ANCHOR_AREA_X_VALUES = [
+      const POSITION_AREA_X_VALUES = [
         "on-the-left",
         "aligned-left",
         "center",
@@ -260,8 +260,8 @@
         return `${y} ${x}`;
       };
 
-      // Pinned to a point/corner (anchorFallback="viewport" or "auto" — no
-      // real anchor box), overlap and no-overlap collapse to the same
+      // Pinned to a point/corner (layer="top" or "auto" — no real anchor
+      // box), overlap and no-overlap collapse to the same
       // placement, so "aligned-top" lands exactly where "above" does (ditto
       // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
       // "aligned-right"/"on-the-right").
@@ -398,7 +398,7 @@
               <a href="#anchor">Anchor</a>
             </li>
             <li>
-              <a href="#anchor-area">anchorArea</a>
+              <a href="#anchor-area">positionArea</a>
             </li>
             <li>
               <a href="#anchor-ignore">Ignoring the anchor</a>
@@ -422,7 +422,7 @@
       // each button below opens the same anchored popover with a different
       // amount of content, small to large enough to exceed the viewport, to
       // see how positioning/flipping reacts. All anchored "below" the same
-      // way an ordinary consumer would use it (not anchorAreaFixed).
+      // way an ordinary consumer would use it (not positionAreaFixed).
       const ContentSizePopover = ({ label, content }) => {
         const popoverId = useId();
         return (
@@ -573,11 +573,11 @@
 
       // This section is always relative to *an* anchor — a real element by
       // default, or a fallback docked to the viewport/positioned ancestor
-      // (see the 2nd/3rd subsections below) — so it's anchorArea itself
+      // (see the 2nd/3rd subsections below) — so it's positionArea itself
       // that's worth documenting, not "placement" as some separate idea.
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
-          <h2>3. anchorArea</h2>
+          <h2>3. positionArea</h2>
 
           <h3>default (anchor is trigger button)</h3>
           <p>
@@ -588,12 +588,12 @@
           <AnchorAreaDefaultDemo />
 
           <h3>
-            anchorFallback<code>="viewport"</code> (default)
+            layer<code>="top"</code> (default)
           </h3>
           <AnchorAreaViewportDemo />
 
           <h3>
-            anchorFallback<code>="auto"</code>
+            layer<code>="auto"</code>
           </h3>
           <AnchorAreaScrollContainerDemo />
         </section>
@@ -605,10 +605,10 @@
           <p>
             Leaving <code>anchor</code> unset still lets the toggle button's own
             anchor take over when present (the event's own carried anchor takes
-            priority over the <code>anchorFallback</code> docked placement
+            priority over the <code>layer</code>-resolved container placement
             unless told otherwise) —{" "}
             <code>anchorCustomEventDetail="ignore"</code> (with{" "}
-            <code>anchorArea="center"</code>) is what forces the popover to
+            <code>positionArea="center"</code>) is what forces the popover to
             ignore the toggle button as its anchor and center itself in the
             viewport instead.
           </p>
@@ -684,8 +684,8 @@
       // (rows = Y values top to bottom, columns = X values left to right).
       const AreaGrid = ({ renderCell }) => (
         <div class="demo-area-grid">
-          {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
-            ANCHOR_AREA_X_VALUES.map((x) => (
+          {POSITION_AREA_Y_VALUES.flatMap((y) =>
+            POSITION_AREA_X_VALUES.map((x) => (
               <div key={`${y} ${x}`} class="demo-area-cell">
                 {renderCell(y, x)}
               </div>
@@ -730,7 +730,7 @@
       // Still command-driven (--navi-toggle), but
       // anchorCustomEventDetail="ignore" tells the popover not to use the
       // toggle button as its anchor, so it centers itself in the viewport
-      // instead (anchorArea="center").
+      // instead (positionArea="center").
       const AnchorlessPopover = ({ label, ...rest }) => {
         const popoverId = useId();
 
@@ -743,7 +743,7 @@
               id={popoverId}
               borderRadius="8px"
               anchorCustomEventDetail="ignore"
-              anchorArea="center"
+              positionArea="center"
               className="demo_popover_box"
               {...rest}
             >
@@ -789,17 +789,17 @@
       };
 
       // anchor is left undefined (real anchor, from the toggle event) unless
-      // anchorFallback/anchorCustomEventDetail are explicitly passed. Always
-      // uses the flexible anchorArea (never anchorAreaFixed): what you'd
-      // actually use day to day. commandProxyFor redirects the trigger
-      // button's anchor to another element (see navi-command-proxy-for on
-      // the Button below) — used by the default-anchor subsection so every
-      // button anchors to one shared static box instead of to itself.
+      // layer/anchorCustomEventDetail are explicitly passed. Always uses the
+      // flexible positionArea (never positionAreaFixed): what you'd actually
+      // use day to day. commandProxyFor redirects the trigger button's
+      // anchor to another element (see navi-command-proxy-for on the Button
+      // below) — used by the default-anchor subsection so every button
+      // anchors to one shared static box instead of to itself.
       const AnchorAreaPopover = ({
-        anchorFallback,
+        layer,
         anchorCustomEventDetail,
-        anchorArea,
-        label = anchorArea,
+        positionArea,
+        label = positionArea,
         duplicate = false,
         commandProxyFor,
         animation,
@@ -823,9 +823,9 @@
               animation={animation}
               animationDuration={animationDuration}
               borderRadius="8px"
-              anchorFallback={anchorFallback}
+              layer={layer}
               anchorCustomEventDetail={anchorCustomEventDetail}
-              anchorArea={anchorArea}
+              positionArea={positionArea}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -860,7 +860,7 @@
             <AreaGrid
               renderCell={(y, x) => (
                 <AnchorAreaPopover
-                  anchorArea={`${y} ${x}`}
+                  positionArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animation}
@@ -912,9 +912,9 @@
             <AreaGrid
               renderCell={(y, x) => (
                 <AnchorAreaPopover
-                  anchorFallback="viewport"
+                  layer="top"
                   anchorCustomEventDetail="ignore"
-                  anchorArea={`${y} ${x}`}
+                  positionArea={`${y} ${x}`}
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animation}
@@ -927,11 +927,10 @@
         );
       };
 
-      // anchorFallback="auto" needs the popovers rendered *inside* the
-      // positioned container to find it (PopoverCustom, a plain
-      // position: absolute div — see popover.jsx's top comment) — the
-      // trigger buttons don't, so they live outside it, in their own grid
-      // below.
+      // layer="auto" needs the popovers rendered *inside* the positioned
+      // container to find it (PopoverCustom, a plain position: absolute div
+      // — see popover.jsx's top comment) — the trigger buttons don't, so
+      // they live outside it, in their own grid below.
       const AnchorAreaScrollContainerDemo = () => {
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
@@ -940,25 +939,24 @@
           <>
             <PointModeNote referenceLabel="the container" />
             <p class="demo-important-note">
-              Unlike the default <code>anchorFallback="viewport"</code>{" "}
-              (promoted to the top layer), <code>anchorFallback="auto"</code>{" "}
-              renders as a plain in-flow box relative to its own positioned
-              ancestor — genuinely clipped by the container's own{" "}
-              <code>overflow: hidden</code>/<code>auto</code>, the same as any
-              other in-flow content would be.
+              Unlike the default <code>layer="top"</code> (promoted to the top
+              layer), <code>layer="auto"</code> renders as a plain in-flow box
+              relative to its own positioned ancestor — genuinely clipped by the
+              container's own <code>overflow: hidden</code>/<code>auto</code>,
+              the same as any other in-flow content would be.
             </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
-              {ANCHOR_AREA_Y_VALUES.flatMap((y) =>
-                ANCHOR_AREA_X_VALUES.map((x) => (
+              {POSITION_AREA_Y_VALUES.flatMap((y) =>
+                POSITION_AREA_X_VALUES.map((x) => (
                   <Popover
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
                     animation={animation}
                     animationDuration={animationDuration}
                     borderRadius="8px"
-                    anchorFallback="auto"
-                    anchorArea={`${y} ${x}`}
+                    layer="auto"
+                    positionArea={`${y} ${x}`}
                     className="demo_popover_box"
                   >
                     <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>

@@ -659,7 +659,7 @@ const PickerContentInsidePopover = (props) => {
       <Popover
         {...popupProps}
         className="navi_picker_popover"
-        anchorArea={
+        positionArea={
           popoverMode === "nearby"
             ? "below aligned-left"
             : "aligned-top aligned-left"

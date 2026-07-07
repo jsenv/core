@@ -12,9 +12,9 @@
  * cycle — simpler, since this component doesn't own an openController the
  * way the picker does to hook a reset into its own onClose.
  *
- * `anchorFallback`/`anchorCustomEventDetail` (Popover-only props) pass
- * through untouched via `...rest` to whichever of Popover/Dialog actually
- * renders — Dialog simply ignores them.
+ * `layer`/`anchorCustomEventDetail` (Popover-only props) pass through
+ * untouched via `...rest` to whichever of Popover/Dialog actually renders —
+ * Dialog simply ignores them.
  */
 
 import { useRef } from "preact/hooks";

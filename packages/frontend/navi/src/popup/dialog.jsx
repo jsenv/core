@@ -9,9 +9,9 @@
  * popup_animation.js, so unlike Popover there's no direction to resolve in
  * JS — Dialog never needs to flip anything after measuring.
  *
- * `anchorArea` (default `"center"`) can dock the dialog flush to a viewport
+ * `positionArea` (default `"center"`) can dock the dialog flush to a viewport
  * edge instead: `"on-the-left"`/`"on-the-right"`/`"above"`/`"below"` — a
- * deliberately small subset of Popover's own anchorArea vocabulary (no
+ * deliberately small subset of Popover's own positionArea vocabulary (no
  * `"aligned-*"`, no two-word combos): a dialog dock always means "flush to
  * that edge, full-length along the other axis", never a partial overlap, so
  * the richer grammar wouldn't add anything here. The docked axis's own size
@@ -97,7 +97,7 @@ const css = /* css */ `
       display: flex;
     }
 
-    /* anchorArea docking (see this file's top comment) — each rule only
+    /* positionArea docking (see this file's top comment) — each rule only
        touches the axis perpendicular to the dock direction; the docked
        axis's own size is left to the consumer. */
     &[data-anchor-area="on-the-right"] {
@@ -173,15 +173,15 @@ const ControlledDialog = (props) => {
     openController,
     // Same shape as Popover's own `anchor` prop (a ref, a DOM element, or
     // "viewport"/"offsetParent") for API parity — but unlike Popover,
-    // Dialog's own positioning (anchorArea below) is never relative to it:
+    // Dialog's own positioning (positionArea below) is never relative to it:
     // "viewport"/"offsetParent" are accepted and behave identically to no
     // anchor at all here, only a real ref/element actually changes anything
     // (the --anchor-width/--anchor-height vars below, used to size the
     // dialog relative to whatever opened it).
     anchor: anchorProp,
     // See this file's top comment — a deliberately small subset of
-    // Popover's own anchorArea vocabulary.
-    anchorArea = "center",
+    // Popover's own positionArea vocabulary.
+    positionArea = "center",
     children,
     scrollCapture,
     // "none"/"capture" collapse to the same behavior for Dialog: unlike
@@ -209,12 +209,12 @@ const ControlledDialog = (props) => {
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   const isAutoAnimation = animation === true || animation === "auto";
   const resolvedAnimation = isAutoAnimation ? "scaling" : animation;
-  let resolvedAnchorArea = anchorArea;
-  if (!DIALOG_ANCHOR_AREA_VALUES.has(anchorArea)) {
+  let resolvedPositionArea = positionArea;
+  if (!DIALOG_POSITION_AREA_VALUES.has(positionArea)) {
     console.warn(
-      `Dialog: unknown anchorArea="${anchorArea}" (expected "center", "on-the-left", "on-the-right", "above", or "below")`,
+      `Dialog: unknown positionArea="${positionArea}" (expected "center", "on-the-left", "on-the-right", "above", or "below")`,
     );
-    resolvedAnchorArea = "center";
+    resolvedPositionArea = "center";
   }
 
   // aria-expanded lives on the dialog element itself (not driven through
@@ -336,7 +336,7 @@ const ControlledDialog = (props) => {
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
       data-pointer-interaction-outside={pointerInteractionOutsideEffect}
       data-anchor-area={
-        resolvedAnchorArea === "center" ? undefined : resolvedAnchorArea
+        resolvedPositionArea === "center" ? undefined : resolvedPositionArea
       }
       onnavi_command={(e) => {
         onNaviCommand(e);
@@ -386,8 +386,8 @@ const DIALOG_PSEUDO_CLASSES = [
   ":focus-within",
 ];
 
-// See this file's top comment for the anchorArea docking subset.
-const DIALOG_ANCHOR_AREA_VALUES = new Set([
+// See this file's top comment for the positionArea docking subset.
+const DIALOG_POSITION_AREA_VALUES = new Set([
   "center",
   "on-the-left",
   "on-the-right",

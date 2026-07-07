@@ -1,10 +1,10 @@
 /**
  * A drawer docked flush to a viewport edge — built entirely on top of
  * `Popup` (which itself picks Popover vs Dialog), relying on capabilities
- * those two already have: `anchorFallback="viewport"` (Popover's default,
- * set explicitly here for clarity) + `anchorCustomEventDetail="ignore"` +
- * `anchorArea` for the actual docking (Popover natively, Dialog via its own
- * small anchorArea subset — see dialog.jsx's top comment), the shared
+ * those two already have: `layer="top"` (Popover's default, set explicitly
+ * here for clarity) + `anchorCustomEventDetail="ignore"` + `positionArea`
+ * for the actual docking (Popover natively, Dialog via its own small
+ * positionArea subset — see dialog.jsx's top comment), the shared
  * `slide-from-*` animation kind, native Escape handling, and Popover/
  * Dialog's own `onClose` prop (so this component doesn't need to own an
  * openController just to observe a self-initiated close).
@@ -46,7 +46,7 @@ const css = /* css */ `
   }
 `;
 
-const SIDE_TO_ANCHOR_AREA = {
+const SIDE_TO_POSITION_AREA = {
   left: "on-the-left",
   right: "on-the-right",
   top: "above",
@@ -69,7 +69,7 @@ export const SidePanel = ({
   ...rest
 }) => {
   import.meta.css = css;
-  const anchorArea = SIDE_TO_ANCHOR_AREA[side];
+  const positionArea = SIDE_TO_POSITION_AREA[side];
   const isHorizontalDock = side === "left" || side === "right";
   // Preact doesn't auto-append "px" to bare numeric style values the way
   // React does — an unsuffixed number is an invalid CSS length, silently
@@ -81,9 +81,9 @@ export const SidePanel = ({
       mode={mode}
       open={isOpen}
       onClose={onClose}
-      anchorFallback="viewport"
+      layer="top"
       anchorCustomEventDetail="ignore"
-      anchorArea={anchorArea}
+      positionArea={positionArea}
       animation={animation ? `slide-from-${side}` : undefined}
       pointerInteractionOutsideEffect={
         closeOnClickOutside ? "close" : "capture"

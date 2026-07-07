@@ -1,5 +1,5 @@
 /**
- * A popup positioned via `anchor`/`anchorArea`, driven either by
+ * A popup positioned via `anchor`/`positionArea`, driven either by
  * --navi-toggle/--navi-open/--navi-close commands or the `open` prop.
  *
  * Two entirely separate rendering strategies exist in this one file, each
@@ -14,10 +14,9 @@
  * `useOpenControllerByProps` (a whole controller instance) is only ever
  * created when actually needed, not unconditionally on every render.
  * `ControlledPopover` then picks which rendering strategy actually mounts,
- * from the `anchor`/`anchorFallback` props alone (no `anchor` given *and*
- * `anchorFallback="auto"` → `PopoverCustom`, everything else →
- * `PopoverViaAttribute`) — by this point an `openController` is always
- * already resolved.
+ * from the `anchor`/`layer` props alone (no `anchor` given *and*
+ * `layer="auto"` → `PopoverCustom`, everything else → `PopoverViaAttribute`)
+ * — by this point an `openController` is always already resolved.
  *
  * Both components share the exact same `usePopoverProps(props)` hook for
  * everything that doesn't genuinely differ between them, once an
@@ -39,46 +38,55 @@
  * wrapper), so collapsing them into one now would just mean re-splitting
  * them apart again once that need arrives.
  *
- * `anchor` (a ref or a DOM element — no other value is accepted anymore; a
- * plain string is a near-certain leftover from an older API and gets a dev
- * warning, then treated the same as omitting it) is the only way to
- * request a real anchor. When it's omitted, `anchorFallback` decides both
- * what to dock against instead *and* which rendering strategy handles it:
+ * `layer` (`"top"` default | `"auto"`) picks the rendering strategy
+ * directly — it's *not* about anchor resolution at all, deliberately: it
+ * answers "which layer does this popup live in", not "what do we fall back
+ * to when there's no anchor". `"top"` → the via-attribute renderer, in the
+ * browser's own top layer. `"auto"` → the custom renderer, resolved to the
+ * popover's own positioned ancestor instead — respects that ancestor's own
+ * `overflow: hidden`/`auto`, unlike the top layer (see
+ * `getPositioningContainer` in visible_rect.js/offset_parent.js for how
+ * it's found). `anchor` (a ref or a DOM element — no other value is
+ * accepted anymore; a plain string is a near-certain leftover from an
+ * older API and gets a dev warning, then treated the same as omitting it)
+ * always wins over `layer` regardless of its value — the custom renderer
+ * structurally never has a real-anchor case (its popover is `position:
+ * absolute` relative to its own ancestor, not the document root — a real
+ * anchor's own coordinate math assumes the latter), so `layer="auto"`
+ * together with a real `anchor` would be a contradiction; `anchor` simply
+ * takes priority, same as it always did.
  *
- * - `anchorFallback="viewport"` (default) → the via-attribute renderer,
- *   docked to the viewport itself.
- * - `anchorFallback="auto"` → the custom renderer, docked to the popover's
- *   own positioned ancestor instead — respects that ancestor's own
- *   `overflow: hidden`/`auto`, unlike the top layer (see
- *   `getPositioningContainer` in visible_rect.js/offset_parent.js for how
- *   it's found).
- *
- * A real `anchor` always wins over `anchorFallback` regardless of its
- * value — the custom renderer structurally never has a real-anchor case
- * (its popover is `position: absolute` relative to its own ancestor, not
- * the document root — a real anchor's own coordinate math assumes the
- * latter), so `anchorFallback="auto"` together with a real `anchor` would
- * be a contradiction; `anchor` simply takes priority, same as it always
- * did.
+ * The logic that a *container* (the viewport, or the positioned ancestor —
+ * whichever `layer` resolves to) stands in *as* the thing `element` is
+ * positioned relative to whenever there's no real anchor belongs entirely
+ * to `pickPositionRelativeTo` itself (its own `container` option, used
+ * whenever its own `anchor` argument is omitted — see its own doc in
+ * visible_rect.js) — not to this file. `layer` only ever decides the
+ * rendering strategy and which container to hand `pickPositionRelativeTo`;
+ * it has no opinion on anchor resolution, which is a fully separate
+ * question answered below.
  *
  * When there's no `anchor` prop, the triggering event's own carried anchor
  * (`detail.anchor`/`.source`) is used instead, *only* for the via-attribute
  * renderer (the custom renderer never considers it, unconditionally — its
- * own docked positioning can't use a real anchor either way) — unless
- * `anchorCustomEventDetail="ignore"` (default `"override"`), which skips
- * that fallback entirely, forcing the `anchorFallback` docked placement
- * regardless of what triggered the open (used by the demo's "Ignoring the
- * anchor" section).
+ * own container-relative positioning can't use a real anchor either way) —
+ * unless `anchorCustomEventDetail="ignore"` (default `"override"`), which
+ * skips that fallback entirely, forcing the `layer`-resolved container
+ * placement regardless of what triggered the open (used by the demo's
+ * "Ignoring the anchor" section).
  *
  * All of this is resolved down to a single value inline in `openEffect`
  * (only one call site, not worth a standalone function): either a real
  * anchor element, or `undefined` — `hasAnchorElement` (just
- * `Boolean(anchor)`) is what the rest of the code branches on from there.
- * ("Real anchor" isn't quite the right word for that boolean either, since
- * a container being docked to is arguably a real anchor in its own right
- * too — `hasAnchorElement` is meant narrowly: is there a specific *element*
- * being positioned against, as opposed to sticking to a container's own
- * rect.)
+ * `Boolean(anchor)`) is what the rest of the code branches on from there,
+ * and what gets handed (or not) to `pickPositionRelativeTo`'s own `anchor`
+ * argument. Whether we have one or not is now explicit and unambiguous:
+ * either there's a real anchor element, or we're positioned relative to the
+ * container instead — there's no "anchor fallback" blurring the two.
+ * ("Real anchor" isn't quite the right word for `hasAnchorElement` either,
+ * since a container being positioned relative to is arguably a real anchor
+ * in its own right too — it's meant narrowly: is there a specific *element*
+ * being positioned against, as opposed to the container's own rect.)
  *
  * `aria-expanded` lives on the popover element itself, toggled imperatively
  * in sync with showPopover()/hidePopover() (or, for the custom renderer, a
@@ -116,30 +124,33 @@
  * anything right away even while it's still pending. Not rendered at all
  * when the effect is "none" (`backdropProps` is `null` in that case).
  *
- * anchorArea's grammar (loosely inspired by CSS position-area): two
- * space-separated words, order-independent. y: above/aligned-top/center/
- * aligned-bottom/below. x: on-the-left/aligned-left/center/aligned-right/
- * on-the-right. A bare word means no overlap with the anchor; "aligned-"
+ * `positionArea` (named for what it actually is — not `anchorArea` — since
+ * what it positions relative to isn't always a real anchor; loosely
+ * inspired by CSS `position-area`) grammar: two space-separated words,
+ * order-independent. y: above/aligned-top/center/aligned-bottom/below. x:
+ * on-the-left/aligned-left/center/aligned-right/on-the-right. A bare word
+ * means no overlap with whatever it's positioned relative to; "aligned-"
  * means edges touching. A single word implies "center" on the other axis.
- * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
- * for the "aligned-" pair on both axes.
+ * The 4 corners (top-left, top-right, bottom-left, bottom-right) are
+ * presets for the "aligned-" pair on both axes.
  *
  * When there's no real anchor element (`!hasAnchorElement`, true for the
  * custom renderer always, and for the via-attribute renderer whenever no
- * anchor was resolved), both renderers dock against a container instead —
- * the viewport itself for via-attribute, this popover's own positioned
- * ancestor for the custom renderer — via the *same* `pickPositionRelativeTo`
- * call either way, simply omitting its `anchor` argument (see that
- * function's own doc in visible_rect.js for what its own no-anchor,
- * container-docked mode changes: the "float away with a gap" bare
- * directions collapse to their "aligned-*" equivalent internally, flipping
- * is skipped entirely, and the coordinate space/clamp bounds become the
- * container's own instead of the document's). The via-attribute renderer
- * leaves `container` unspecified — `pickPositionRelativeTo` resolves it to
- * the viewport on its own, since the popover element's own `[popover]`
- * attribute signals that (see `getPositioningContainer`); the custom
- * renderer passes its own positioned ancestor explicitly, already computed
- * above for `visibleRectEffect`'s own observation target.
+ * anchor was resolved), both renderers position relative to a container
+ * instead — the viewport itself for via-attribute, this popover's own
+ * positioned ancestor for the custom renderer — via the *same*
+ * `pickPositionRelativeTo` call either way, simply omitting its `anchor`
+ * argument (see that function's own doc in visible_rect.js for what its
+ * own no-anchor, container-relative mode changes: the "float away with a
+ * gap" bare directions collapse to their "aligned-*" equivalent
+ * internally, flipping is skipped entirely, and the coordinate space/clamp
+ * bounds become the container's own instead of the document's). The
+ * via-attribute renderer leaves `container` unspecified —
+ * `pickPositionRelativeTo` resolves it to the viewport on its own, since
+ * the popover element's own `[popover]` attribute signals that (see
+ * `getPositioningContainer`); the custom renderer passes its own
+ * positioned ancestor explicitly, already computed above for
+ * `visibleRectEffect`'s own observation target.
  *
  * `animation="auto"` resolves to "scaling" for any real anchor, or for a
  * point/corner placed dead-center (an "aligned-"/"center" axis means the
@@ -185,7 +196,7 @@
  * flipping `aria-expanded`) — `position: fixed` never contributes to
  * document scroll size, sidestepping it. Since `resolvedAnimationKind ===
  * "sliding"` (the only kind that can ever resolve to `slide-from-*` — see
- * `resolveDirectionValue`) is knowable immediately from `parsedAnchorArea`
+ * `resolveDirectionValue`) is knowable immediately from `parsedPositionArea`
  * alone, before positioning ever runs, `navi-animation` is given an early,
  * placeholder `slide-from-*` value (any one works — only the attribute's
  * own `slide-from` *prefix* matters for the CSS selector above) right after
@@ -403,16 +414,15 @@ const UncontrolledPopover = (props) => {
   );
 };
 
-// Picks which rendering strategy actually mounts, from the
-// `anchor`/`anchorFallback` props alone (see this file's top comment) —
-// done here, after the controlled/uncontrolled split above, so an
-// openController is always already resolved by the time
-// PopoverViaAttribute/PopoverCustom (and the usePopoverProps hook they
-// share) ever run. A real `anchor` always wins over `anchorFallback`,
-// regardless of its value — the custom renderer structurally never has a
-// real-anchor case (see this file's top comment).
+// Picks which rendering strategy actually mounts, from the `anchor`/`layer`
+// props alone (see this file's top comment) — done here, after the
+// controlled/uncontrolled split above, so an openController is always
+// already resolved by the time PopoverViaAttribute/PopoverCustom (and the
+// usePopoverProps hook they share) ever run. A real `anchor` always wins
+// over `layer`, regardless of its value — the custom renderer structurally
+// never has a real-anchor case (see this file's top comment).
 const ControlledPopover = (props) => {
-  if (!props.anchor && props.anchorFallback === "auto") {
+  if (!props.anchor && props.layer === "auto") {
     return <PopoverCustom {...props} />;
   }
   return <PopoverViaAttribute {...props} />;
@@ -453,26 +463,27 @@ const PopoverCustom = (props) => {
  * backdrop/content element each.
  *
  * `options.usesCustomRenderer` overrides the default derivation from the
- * `anchor`/`anchorFallback` props — nothing passes it yet; it exists so a
- * future caller can force a strategy without relying on their value.
+ * `anchor`/`layer` props — nothing passes it yet; it exists so a future
+ * caller can force a strategy without relying on their value.
  */
 const usePopoverProps = (props, options = {}) => {
   const {
     openController,
     anchor: anchorProp,
-    // "viewport" (default) → via-attribute, docked to the viewport;
-    // "auto" → custom, docked to the popover's own positioned ancestor.
-    // Only consulted when anchorProp isn't a real ref/DOM element — see
-    // this file's top comment.
-    anchorFallback = "viewport",
+    // "top" (default) → via-attribute, in the browser's own top layer;
+    // "auto" → custom, resolved to the popover's own positioned ancestor.
+    // Picks the rendering strategy directly — not an "anchor fallback", see
+    // this file's top comment for why that distinction matters. Only
+    // consulted when anchorProp isn't a real ref/DOM element.
+    layer = "top",
     // "override" (default) lets the triggering event's own carried anchor
     // serve as the real anchor when anchorProp itself is absent; "ignore"
     // skips that fallback. Only meaningful for the via-attribute renderer
     // — see this file's top comment.
     anchorCustomEventDetail = "override",
-    // see the anchorArea grammar in the file's top comment
-    anchorArea = "below",
-    anchorAreaFixed,
+    // see the positionArea grammar in the file's top comment
+    positionArea = "below",
+    positionAreaFixed,
     scrollCapture,
     pointerInteractionOutsideEffect = "none",
     focusCapture,
@@ -494,9 +505,9 @@ const usePopoverProps = (props, options = {}) => {
 
   // Decided once per render from the raw props (never from the
   // event-carried anchor) — a real anchorProp always wins regardless of
-  // anchorFallback, see this file's top comment.
+  // layer, see this file's top comment.
   const isCustom =
-    options.usesCustomRenderer ?? (!anchorProp && anchorFallback === "auto");
+    options.usesCustomRenderer ?? (!anchorProp && layer === "auto");
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
@@ -557,10 +568,10 @@ const usePopoverProps = (props, options = {}) => {
     } else if (typeof anchorProp === "string") {
       // A plain string is a near-certain leftover from an older API
       // (anchor used to accept "viewport"/"scrollContainer" directly) —
-      // anchor is a ref or a DOM element only now; anchorFallback/
+      // anchor is a ref or a DOM element only now; layer/
       // anchorCustomEventDetail cover what those strings used to mean.
       console.warn(
-        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use anchorFallback="auto" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
+        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="auto" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
       );
       anchor = undefined;
     } else if (anchorProp) {
@@ -576,9 +587,9 @@ const usePopoverProps = (props, options = {}) => {
     const hasAnchorElement = Boolean(anchor);
     const positionedAncestor = isCustom ? getPositionedParent(popoverEl) : null;
 
-    const { parsedAnchorArea, resolvedAnimationKind } =
-      resolveAnchorAreaAndAnimationKind({
-        anchorArea,
+    const { parsedPositionArea, resolvedAnimationKind } =
+      resolvePositionAreaAndAnimationKind({
+        positionArea,
         isAutoAnimation,
         animation,
         animationAnchor: anchor,
@@ -691,15 +702,15 @@ const usePopoverProps = (props, options = {}) => {
         popoverEl.style.removeProperty("--space-available");
         let effectivePositionXFixed;
         let effectivePositionYFixed;
-        if (anchorAreaFixed) {
-          const parsedAnchorAreaFixed = parseAnchorArea(anchorAreaFixed);
-          if (!parsedAnchorAreaFixed) {
+        if (positionAreaFixed) {
+          const parsedPositionAreaFixed = parsePositionArea(positionAreaFixed);
+          if (!parsedPositionAreaFixed) {
             console.warn(
-              `Popover: invalid anchorAreaFixed="${anchorAreaFixed}"`,
+              `Popover: invalid positionAreaFixed="${positionAreaFixed}"`,
             );
           } else {
-            effectivePositionXFixed = parsedAnchorAreaFixed.x;
-            effectivePositionYFixed = parsedAnchorAreaFixed.y;
+            effectivePositionXFixed = parsedPositionAreaFixed.x;
+            effectivePositionYFixed = parsedPositionAreaFixed.y;
           }
         }
         const {
@@ -709,8 +720,8 @@ const usePopoverProps = (props, options = {}) => {
           spaceAbove,
           spaceBelow,
         } = pickPositionRelativeTo(popoverEl, anchor, {
-          positionX: parsedAnchorArea.x,
-          positionY: parsedAnchorArea.y,
+          positionX: parsedPositionArea.x,
+          positionY: parsedPositionArea.y,
           positionXFixed: effectivePositionXFixed,
           positionYFixed: effectivePositionYFixed,
           anchorSpacing: resolveSpacingSize(anchorSpacing),
@@ -743,8 +754,8 @@ const usePopoverProps = (props, options = {}) => {
           popoverEl,
           null,
           {
-            positionX: parsedAnchorArea.x,
-            positionY: parsedAnchorArea.y,
+            positionX: parsedPositionArea.x,
+            positionY: parsedPositionArea.y,
             container: isCustom ? positionedAncestor : undefined,
             containerSpacing: resolveSpacingSize(anchorSpacing),
           },
@@ -815,7 +826,7 @@ const usePopoverProps = (props, options = {}) => {
     let resolvedAnimation = resolvedAnimationKind;
     if (resolvedAnimationKind === "sliding") {
       resolvedAnimation =
-        resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
+        resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
           isRealAnchor: false,
           prefix: "slide-from",
         }) ?? "slide-from-top";
@@ -1006,22 +1017,22 @@ const POPUP_STYLE_CSS_VARS = {
   maxHeight: "--popover-max-height",
 };
 
-// See the anchorArea grammar in this file's top comment.
-const ANCHOR_AREA_X_VALUES = new Set([
+// See the positionArea grammar in this file's top comment.
+const POSITION_AREA_X_VALUES = new Set([
   "on-the-left",
   "aligned-left",
   "center",
   "aligned-right",
   "on-the-right",
 ]);
-const ANCHOR_AREA_Y_VALUES = new Set([
+const POSITION_AREA_Y_VALUES = new Set([
   "above",
   "aligned-top",
   "center",
   "aligned-bottom",
   "below",
 ]);
-const ANCHOR_AREA_PRESETS = {
+const POSITION_AREA_PRESETS = {
   "top-left": { y: "aligned-top", x: "aligned-left" },
   "top-right": { y: "aligned-top", x: "aligned-right" },
   "bottom-left": { y: "aligned-bottom", x: "aligned-left" },
@@ -1029,15 +1040,15 @@ const ANCHOR_AREA_PRESETS = {
 };
 
 /**
- * Parses an anchorArea string into a { y, x } pair, or null if it's not a
+ * Parses an positionArea string into a { y, x } pair, or null if it's not a
  * recognized preset/word/pair.
  */
-const parseAnchorArea = (
+const parsePositionArea = (
   value,
   { defaultX = "center", defaultY = "center" } = {},
 ) => {
-  if (ANCHOR_AREA_PRESETS[value]) {
-    return ANCHOR_AREA_PRESETS[value];
+  if (POSITION_AREA_PRESETS[value]) {
+    return POSITION_AREA_PRESETS[value];
   }
   const tokens = value.split(" ");
   if (tokens.length === 1) {
@@ -1045,10 +1056,10 @@ const parseAnchorArea = (
     if (token === "center") {
       return { y: "center", x: "center" };
     }
-    if (ANCHOR_AREA_Y_VALUES.has(token)) {
+    if (POSITION_AREA_Y_VALUES.has(token)) {
       return { y: token, x: defaultX };
     }
-    if (ANCHOR_AREA_X_VALUES.has(token)) {
+    if (POSITION_AREA_X_VALUES.has(token)) {
       return { y: defaultY, x: token };
     }
     return null;
@@ -1057,10 +1068,10 @@ const parseAnchorArea = (
     const [a, b] = tokens;
     // Every value but "center" is unique to one axis, so either order
     // works — whichever token is the Y value becomes y, the other x.
-    if (ANCHOR_AREA_Y_VALUES.has(a) && ANCHOR_AREA_X_VALUES.has(b)) {
+    if (POSITION_AREA_Y_VALUES.has(a) && POSITION_AREA_X_VALUES.has(b)) {
       return { y: a, x: b };
     }
-    if (ANCHOR_AREA_X_VALUES.has(a) && ANCHOR_AREA_Y_VALUES.has(b)) {
+    if (POSITION_AREA_X_VALUES.has(a) && POSITION_AREA_Y_VALUES.has(b)) {
       return { y: b, x: a };
     }
   }
@@ -1068,34 +1079,34 @@ const parseAnchorArea = (
 };
 
 /**
- * Shared by both renderers: parses `anchorArea` and resolves
+ * Shared by both renderers: parses `positionArea` and resolves
  * `animation="auto"`/`true`. `animationAnchor` is the real anchor element
  * for the via-attribute renderer's auto-animation resolution, or
  * `undefined` for the custom renderer (which never has one — see
  * resolveAutoAnimationKind's own comment).
  */
-const resolveAnchorAreaAndAnimationKind = ({
-  anchorArea,
+const resolvePositionAreaAndAnimationKind = ({
+  positionArea,
   isAutoAnimation,
   animation,
   animationAnchor,
 }) => {
-  const anchorAreaParseResult = parseAnchorArea(anchorArea);
-  if (!anchorAreaParseResult) {
-    console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
+  const positionAreaParseResult = parsePositionArea(positionArea);
+  if (!positionAreaParseResult) {
+    console.warn(`Popover: invalid positionArea="${positionArea}"`);
   }
-  const parsedAnchorArea = anchorAreaParseResult ?? {
+  const parsedPositionArea = positionAreaParseResult ?? {
     y: "below",
     x: "center",
   };
   const resolvedAnimationKind = isAutoAnimation
-    ? resolveAutoAnimationKind(animationAnchor, parsedAnchorArea)
+    ? resolveAutoAnimationKind(animationAnchor, parsedPositionArea)
     : animation;
-  return { parsedAnchorArea, resolvedAnimationKind };
+  return { parsedPositionArea, resolvedAnimationKind };
 };
 
 /**
- * Maps an anchorArea y/x pair to a concrete `navi-animation` value (a
+ * Maps an positionArea y/x pair to a concrete `navi-animation` value (a
  * `prefix` plus a direction word), or `null` if both axes overlap the anchor
  * (no direction at all — that's `resolvedAnimation === "scaling"` territory
  * instead, see the "sliding"/"expanding" resolution step in `openEffect`).
@@ -1134,19 +1145,19 @@ const resolveDirectionValue = (y, x, { isRealAnchor, prefix }) => {
 /**
  * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
  * (see this file's top comment) — picked for any real anchor, or for a
- * point/corner placed dead-center (both anchorArea axes overlapping —
+ * point/corner placed dead-center (both positionArea axes overlapping —
  * there's no sensible direction to slide from in that case). "sliding"
  * otherwise. `anchor` is always `undefined` for the custom renderer (it
  * never has a real anchor — see this file's top comment), so this
  * collapses to "scaling" there only for the dead-center case, "sliding"
  * otherwise.
  */
-const resolveAutoAnimationKind = (anchor, parsedAnchorArea) => {
+const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
   const yOverlapsAnchor =
-    parsedAnchorArea.y !== "above" && parsedAnchorArea.y !== "below";
+    parsedPositionArea.y !== "above" && parsedPositionArea.y !== "below";
   const xOverlapsAnchor =
-    parsedAnchorArea.x !== "on-the-left" &&
-    parsedAnchorArea.x !== "on-the-right";
+    parsedPositionArea.x !== "on-the-left" &&
+    parsedPositionArea.x !== "on-the-right";
   return anchor || (yOverlapsAnchor && xOverlapsAnchor) ? "scaling" : "sliding";
 };
 

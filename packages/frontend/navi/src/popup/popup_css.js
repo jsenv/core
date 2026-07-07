@@ -69,7 +69,7 @@
  * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.
  * Popover picks this automatically for `animation="auto"` for any real
- * anchor, or a point/corner placed dead-center (both anchorArea axes
+ * anchor, or a point/corner placed dead-center (both positionArea axes
  * overlapping the anchor — there's no sensible direction to slide from in
  * that case).
  */
