@@ -40,10 +40,21 @@
         flex-wrap: wrap;
         gap: 12px;
       }
-      .demo-lazy-placeholder {
+      .demo-lazy-mount {
+        /* Fixed footprint, kept identical whether showing the placeholder
+           or the actually-rendered content — swapping between them (on
+           "Render") must not shift the rest of the page's own layout. */
         display: flex;
         width: 220px;
         height: 90px;
+        align-items: center;
+        justify-content: center;
+      }
+      .demo-lazy-placeholder {
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
         padding: 8px 12px;
         flex-direction: column;
         align-items: flex-start;
@@ -818,15 +829,18 @@
       // `renderContent()` until clicked.
       const LazyMount = ({ label, renderContent }) => {
         const [mounted, setMounted] = useState(false);
-        if (!mounted) {
-          return (
-            <div class="demo-lazy-placeholder">
-              <span>{label}</span>
-              <Button onClick={() => setMounted(true)}>Render</Button>
-            </div>
-          );
-        }
-        return renderContent();
+        return (
+          <div class="demo-lazy-mount">
+            {mounted ? (
+              renderContent()
+            ) : (
+              <div class="demo-lazy-placeholder">
+                <span>{label}</span>
+                <Button onClick={() => setMounted(true)}>Render</Button>
+              </div>
+            )}
+          </div>
+        );
       };
 
       // Mounts already open, with animation on — the entrance animation
