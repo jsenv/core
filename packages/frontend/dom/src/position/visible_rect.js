@@ -462,18 +462,18 @@ export const visibleRectEffect = (
           };
           ancestor.addEventListener("toggle", onToggle);
 
-          const onNaviPositionUpdate = (e) => {
+          const onNaviPositionChange = (e) => {
             autoCheck(e);
           };
           ancestor.addEventListener(
-            "navi_position_update",
-            onNaviPositionUpdate,
+            "navi_position_change",
+            onNaviPositionChange,
           );
           addTeardown(() => {
             ancestor.removeEventListener("toggle", onToggle);
             ancestor.removeEventListener(
-              "navi_position_update",
-              onNaviPositionUpdate,
+              "navi_position_change",
+              onNaviPositionChange,
             );
           });
         }

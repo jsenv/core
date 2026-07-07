@@ -89,7 +89,6 @@ export const Popup = (props) => {
         {...rest}
         maxWidth={maxWidth}
         className={withPropsClassName("navi_popup", className)}
-        centerInVisualViewport
         data-expand-x={expandXResolved ? "" : undefined}
         data-expand-y={expandYResolved ? "" : undefined}
       >

@@ -60,12 +60,38 @@
  * positioning is always flush-to-edge-or-centered, never partial/anchor-
  * relative, so plain CSS alignment covers 100% of the vocabulary above with
  * no JS math needed at all (unlike Popover, which genuinely needs
- * per-anchor measurement).
+ * per-anchor measurement). Confined to its own local container instead of
+ * the viewport, so the visual-viewport concept below doesn't apply to it at
+ * all — a container resizing (for whatever reason) is handled for free by
+ * the wrapper's own flexbox reflowing, no JS needed there either.
+ *
+ * `DialogViaAttribute`'s own positioning (any `positionArea`, including the
+ * default "center") always uses `visual_viewport_insets.js`'s own 4 CSS
+ * vars, unconditionally — not behind an opt-in prop the way an earlier
+ * version of this file had (`centerInVisualViewport`). The insight: the
+ * *need* (stay correctly positioned relative to what's actually visible,
+ * not the layout viewport, which can differ once a mobile on-screen
+ * keyboard is up) is never something a consumer would want to opt out of —
+ * there's no reason `position: fixed; inset: 0` should ever mean "the
+ * layout viewport's 0, even if that's now covered by a keyboard" instead of
+ * "the actually-visible area's edge." Implemented as `inset: var(...)` (all
+ * 4 sides, defaulting to `0px` when nothing shrinks the visual viewport)
+ * instead of the old margin-only, top-only `--dialog-top-inset` hack —
+ * `margin: auto` still centers *within* that (now correctly-sized) virtual
+ * box for `positionArea="center"`; a docked value overrides one pair of
+ * insets to `auto` (matching Popover's own docking asymmetry) while keeping
+ * the other two generic-and-tracked, so a dock flush to the *bottom* still
+ * correctly rises above an on-screen keyboard even though it's not
+ * centered. Popover doesn't need any of this: its own `visibleRectEffect`
+ * (`@jsenv/dom`) already listens to `window.visualViewport` unconditionally
+ * as part of its general-purpose repositioning, no separate mechanism at
+ * all — Dialog just didn't have an equivalent generic "reposition on
+ * relevant resize" story of its own until now, since its own positioning
+ * used to be pure CSS with no JS driving it whatsoever.
  */
 
 import {
   createPubSub,
-  dispatchCustomEvent,
   getElementSignature,
   snapToPixel,
   trapFocusInside,
@@ -89,6 +115,7 @@ import {
   armPointerDownOutsideClose,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
+import { ensureVisualViewportInsetsTracked } from "./visual_viewport_insets.js";
 
 const css = /* css */ `
   @layer navi {
@@ -114,6 +141,19 @@ const css = /* css */ `
   }
 
   .navi_dialog {
+    /* position: fixed + inset here (not left to the native :modal UA
+       stylesheet's own default) so the visual-viewport vars below apply
+       uniformly to every positionArea value, this one (center, via margin:
+       auto) included — see this file's top comment for why this is
+       unconditional now, not behind a prop. Overridden back to a plain,
+       in-flow position for the custom renderer below (.navi_dialog_clip_wrapper
+       .navi_dialog), which needs to stay a real flex item for its own
+       wrapper's alignment to have any effect. */
+    position: fixed;
+    inset: var(--navi-visual-viewport-inset-top, 0px)
+      var(--navi-visual-viewport-inset-right, 0px)
+      var(--navi-visual-viewport-inset-bottom, 0px)
+      var(--navi-visual-viewport-inset-left, 0px);
     min-width: var(--anchor-width, 0px);
     max-width: min(
       var(--dialog-max-width, var(--dialog-maxmax-width)),
@@ -123,12 +163,7 @@ const css = /* css */ `
       var(--dialog-max-height, var(--dialog-maxmax-height)),
       var(--dialog-maxmax-height)
     );
-    /* When centerInVisualViewport is enabled, --dialog-top-inset is set
-         dynamically to keep the dialog centered in the visual viewport
-         (accounts for the virtual keyboard on mobile). Via-attribute only —
-         see useDialogProps' own comment on centerInVisualViewport. */
-    margin-top: var(--dialog-top-inset, auto);
-    margin-bottom: auto;
+    margin: auto;
     flex-direction: column;
     border-width: var(--dialog-border-width);
     border-style: solid;
@@ -138,7 +173,7 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    transition: margin-top 0.1s ease-in-out;
+    transition: inset 0.1s ease-in-out;
 
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
@@ -153,33 +188,36 @@ const css = /* css */ `
     }
 
     /* positionArea docking, via-attribute renderer (see this file's top
-       comment) — each rule only touches the axis perpendicular to the dock
-       direction; the docked axis's own size is left to the consumer.
-       position: fixed since a top-layer element always uses the initial
-       containing block regardless of DOM position (see popover.jsx's own
-       top comment for the same reasoning, applied there to Popover). */
+       comment) — each rule only overrides the axis perpendicular to the
+       dock direction to "auto" (so margin: auto's own centering there
+       collapses to flush-against-the-tracked-edge instead); the docked
+       pair itself stays the same tracked var as the base rule above, so a
+       "below" dock still correctly rises above an on-screen keyboard, not
+       just the "center" case. Setting both insets of the *other* axis
+       (rather than a bare 0) is what stretches the box to fill it — no
+       separate width/height: 100% needed. */
     &[data-position-area="on-the-right"] {
-      position: fixed;
-      inset: 0 0 0 auto;
-      height: 100%;
+      inset: var(--navi-visual-viewport-inset-top, 0px)
+        var(--navi-visual-viewport-inset-right, 0px)
+        var(--navi-visual-viewport-inset-bottom, 0px) auto;
       margin: 0;
     }
     &[data-position-area="on-the-left"] {
-      position: fixed;
-      inset: 0 auto 0 0;
-      height: 100%;
+      inset: var(--navi-visual-viewport-inset-top, 0px) auto
+        var(--navi-visual-viewport-inset-bottom, 0px)
+        var(--navi-visual-viewport-inset-left, 0px);
       margin: 0;
     }
     &[data-position-area="above"] {
-      position: fixed;
-      inset: 0 0 auto 0;
-      width: 100%;
+      inset: var(--navi-visual-viewport-inset-top, 0px)
+        var(--navi-visual-viewport-inset-right, 0px) auto
+        var(--navi-visual-viewport-inset-left, 0px);
       margin: 0;
     }
     &[data-position-area="below"] {
-      position: fixed;
-      inset: auto 0 0 0;
-      width: 100%;
+      inset: auto var(--navi-visual-viewport-inset-right, 0px)
+        var(--navi-visual-viewport-inset-bottom, 0px)
+        var(--navi-visual-viewport-inset-left, 0px);
       margin: 0;
     }
   }
@@ -204,9 +242,14 @@ const css = /* css */ `
 
     .navi_dialog {
       /* Neutralized here — centering/docking is entirely the wrapper's own
-         flexbox alignment above/below, not margin:auto (which only exists
-         on .navi_dialog for the via-attribute renderer's own native
-         top-layer centering, see above). */
+         flexbox alignment above/below, not the base rule's own position:
+         fixed + visual-viewport-tracked inset + margin: auto (all
+         via-attribute/viewport concerns, irrelevant once confined to a
+         local container instead). position back to a plain in-flow value
+         so this stays a real flex item — align-items/justify-content have
+         no effect on an absolutely/fixed-positioned child at all. */
+      position: static;
+      inset: unset;
       margin: 0;
       pointer-events: auto;
     }
@@ -383,7 +426,6 @@ const useDialogProps = (props) => {
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
     animation,
-    centerInVisualViewport: centerInVisualViewportProp,
     // Makes the dialog itself a valid focus target so autoFocus="fallback"
     // below has somewhere to land when it contains nothing focusable of its
     // own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -414,15 +456,6 @@ const useDialogProps = (props) => {
       `Dialog: unknown positionArea="${positionArea}" (expected "center", "on-the-left", "on-the-right", "above", or "below")`,
     );
     resolvedPositionArea = "center";
-  }
-  // A local dialog is confined to its own container, not the viewport — the
-  // virtual-keyboard-aware visualViewport centering below only makes sense
-  // for the via-attribute renderer's own full-viewport placement.
-  const centerInVisualViewport = !isCustom && centerInVisualViewportProp;
-  if (isCustom && centerInVisualViewportProp) {
-    console.warn(
-      `Dialog: centerInVisualViewport has no effect when layer="local" (the dialog is confined to its own container, not the viewport)`,
-    );
   }
 
   // aria-expanded lives on the dialog element itself (not driven through
@@ -517,47 +550,12 @@ const useDialogProps = (props) => {
       addCleanup(trapScrollInside(dialogEl));
     }
 
-    if (centerInVisualViewport && window.visualViewport) {
-      const updatePosition = () => {
-        const vv = window.visualViewport;
-        const dialogHeight = dialogEl.offsetHeight;
-        const availableHeight = vv.height;
-        const topOffset = vv.offsetTop;
-        const marginTop =
-          availableHeight > dialogHeight
-            ? topOffset + (availableHeight - dialogHeight) / 2
-            : topOffset;
-        dialogEl.style.setProperty(
-          "--dialog-top-inset",
-          `${snapToPixel(marginTop)}px`,
-        );
-        dispatchCustomEvent(dialogEl, "navi_position_change");
-      };
-      const onScroll = () => {
-        updatePosition();
-      };
-      let resizeTimeout;
-      const cancelDelayedUpdatePosition = () => {
-        clearTimeout(resizeTimeout);
-      };
-      const onResize = () => {
-        // On mobile, tapping from one input to another triggers a resize because
-        // the virtual keyboard briefly starts to close before the new input receives
-        // focus and the keyboard reopens. Debouncing prevents repositioning the
-        // dialog during that transient state, which would cause a visible flicker.
-        cancelDelayedUpdatePosition();
-        resizeTimeout = setTimeout(updatePosition, 100);
-      };
-
-      updatePosition();
-      window.visualViewport.addEventListener("resize", onResize);
-      window.visualViewport.addEventListener("scroll", onScroll);
-      addCleanup(() => {
-        cancelDelayedUpdatePosition();
-        window.visualViewport.removeEventListener("resize", onResize);
-        window.visualViewport.removeEventListener("scroll", onScroll);
-        dialogEl.style.removeProperty("--dialog-top-inset");
-      });
+    if (!isCustom) {
+      // Idempotent — only ever registers the underlying visualViewport
+      // listener once for the whole page, regardless of how many dialogs
+      // call this. See this file's top comment for why this is
+      // unconditional now, not behind a centerInVisualViewport prop.
+      ensureVisualViewportInsetsTracked();
     }
 
     // Final commit — see popover.jsx's own openEffect for the full

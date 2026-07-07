@@ -714,7 +714,6 @@ const PickerContentInsideDialog = (props) => {
         className="navi_picker_dialog"
         scrollLock={scrollLock}
         pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
-        centerInVisualViewport
         data-expand-x={expandX ? "" : undefined}
         data-expand-y={expandY ? "" : undefined}
       >
