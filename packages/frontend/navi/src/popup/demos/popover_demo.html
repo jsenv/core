@@ -619,12 +619,6 @@
               animation
               animationDuration="0.6s"
             />
-            <AnchorlessPopover
-              label="animated from pointer"
-              animation
-              animationDuration="0.6s"
-              spawnFromPointer
-            />
           </div>
         </section>
       );
@@ -811,7 +805,6 @@
         commandProxyFor,
         animation,
         animationDuration,
-        spawnFromPointer,
       }) => {
         const popoverId = useId();
 
@@ -830,7 +823,6 @@
               id={popoverId}
               animation={animation}
               animationDuration={animationDuration}
-              spawnFromPointer={spawnFromPointer}
               borderRadius="8px"
               anchor={anchor}
               ignoreEventAnchor={ignoreEventAnchor}
@@ -842,30 +834,6 @@
             </Popover>
           </>
         );
-      };
-
-      // Only meaningful for anchor="viewport"/"scrollContainer" + "scale" (see
-      // Popover's own spawnFromPointer doc) — a small local toggle rather
-      // than folded into useAnimateControls/AnimateControls, since it's
-      // specific to these two point-mode sections.
-      const useSpawnFromPointerToggle = (storageKey) => {
-        const [spawnFromPointer, setSpawnFromPointer] = useStoredBoolean(
-          `${storageKey}_spawn_from_pointer`,
-          false,
-        );
-        return {
-          spawnFromPointer,
-          toggle: (
-            <label class="demo-animate-toggle">
-              <input
-                type="checkbox"
-                checked={spawnFromPointer}
-                onChange={(e) => setSpawnFromPointer(e.target.checked)}
-              />
-              Spawn from pointer (scale only)
-            </label>
-          ),
-        };
       };
 
       // A single static box, with faint labels hinting at the four
@@ -939,8 +907,6 @@
       const AnchorAreaViewportDemo = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_viewport");
-        const { spawnFromPointer, toggle: spawnFromPointerToggle } =
-          useSpawnFromPointerToggle("popover_demo_area_viewport");
         return (
           <>
             <PointModeNote referenceLabel="the viewport" />
@@ -954,12 +920,10 @@
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animation}
                   animationDuration={animationDuration}
-                  spawnFromPointer={spawnFromPointer}
                 />
               )}
             />
             <AnimateControls {...controlsProps} />
-            {spawnFromPointerToggle}
           </>
         );
       };
@@ -973,8 +937,6 @@
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_scroll_container");
-        const { spawnFromPointer, toggle: spawnFromPointerToggle } =
-          useSpawnFromPointerToggle("popover_demo_area_scroll_container");
         return (
           <>
             <PointModeNote referenceLabel="the container" />
@@ -994,7 +956,6 @@
                     id={`${baseId}-${y}-${x}`}
                     animation={animation}
                     animationDuration={animationDuration}
-                    spawnFromPointer={spawnFromPointer}
                     borderRadius="8px"
                     anchor="scrollContainer"
                     anchorArea={`${y} ${x}`}
@@ -1019,7 +980,6 @@
               )}
             />
             <AnimateControls {...controlsProps} />
-            {spawnFromPointerToggle}
           </>
         );
       };

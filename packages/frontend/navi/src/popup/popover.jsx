@@ -10,9 +10,11 @@
  * itself picks which one actually renders, from the `anchor` prop alone,
  * once per open (`usesCustomRenderer = anchorProp === "scrollContainer"`) —
  * everything *around* that choice (the open controller, focus/debug/id
- * plumbing, the JSX shape) is shared, written once; only the positioning
- * math and the show/hide mechanism genuinely differ between the two, kept
- * in their own dedicated functions (`runOpenEffectViaAttribute`/
+ * plumbing, the JSX shape, capture setup, animation-attribute resolution,
+ * the open-commit sequence, the close handler) is shared, written once, via
+ * a handful of small helper functions; only the positioning math and the
+ * "make it actually visible/hidden" mechanics genuinely differ between the
+ * two, kept in their own dedicated functions (`runOpenEffectViaAttribute`/
  * `runOpenEffectCustom`) rather than interleaved.
  *
  * - `anchor="scrollContainer"` → the custom renderer, docked to the
@@ -95,17 +97,32 @@
  * own edge) comes close, but "scaling" still does it better, hence staying
  * explicit-only rather than becoming a second auto-pick.
  *
- * `spawnFromPointer` is conceptually appealing — it tells the user where
- * the popover is emerging from, tying it to the click/pointer that opened
- * it — but in practice the extra motion it adds is more distracting than
- * informative, which is why it's opt-in rather than bundled into "scaling"
- * by default.
+ * A `spawnFromPointer`-style option (growing from the click/pointer position
+ * instead of the anchor/center) was tried and dropped: it's a tempting idea
+ * on paper, but in practice it adds motion that competes for attention with
+ * the popover's own content, which is what should actually draw the eye
+ * once it opens — not where it came from.
  *
  * Each `navi-animation` value's own CSS rule (popup_css.js) includes its
  * own fade in/out — no separate `fadeAnimation` prop or attribute.
  * `resolvedAnimation` is mirrored onto the backdrop's own `navi-animation`
  * too, which only ever fades regardless of which kind it is (see the
  * backdrop's own CSS comment for why).
+ *
+ * Neither renderer needs any JS-driven "wait for the transition, then
+ * actually remove it" bookkeeping to hide correctly: both `.navi_popover`
+ * (popup_css.js) and `.navi_popover_backdrop` (below) include `display` in
+ * their own `transition-property`, alongside `transition-behavior:
+ * allow-discrete` — the browser itself keeps a `display: none` change
+ * (whether it comes from `hidePopover()`'s own UA stylesheet rule, or from
+ * a plain `el.style.display = "none"` set directly for the custom
+ * renderer) rendered until the rest of the transition settles, then applies
+ * it. Reopening while a close transition is still pending works for the
+ * same reason `suppressPointerEventsDuringTransition`'s own reopen already
+ * relied on: `transitionProperty = "none"` at the start of every open
+ * interrupts whatever transition (including a still-pending discrete
+ * `display` change) was in flight, before the fresh open's own values are
+ * set.
  *
  * `data-anchor-mode="scroll-container"` marks the no-real-anchor case for
  * both renderers (absent when anchored to a real element).
@@ -212,20 +229,30 @@ const css = /* css */ `
   /* Sibling element, not a descendant of .navi_popover — see this file's
      top comment for why. */
   .navi_popover_backdrop {
-    position: absolute;
-    inset: 0;
+    margin: 0;
     padding: 0;
+    background: transparent;
+    border: none;
     pointer-events: none;
     --popup-animation-duration: 0.18s;
 
+    /* The via-attribute renderer's backdrop: a top-layer sibling, so it
+       needs to cover the whole viewport itself (width/height: auto
+       overrides the [popover] UA default sizing). */
     &[popover] {
       position: fixed;
       inset: 0;
-      width: auto; /* Override user-agent */
-      height: auto; /* Override user-agent */
-      background: transparent; /* Override user-agent */
-      border: none; /* Override user-agent */
+      width: auto;
+      height: auto;
     }
+    /* The custom renderer's backdrop: a plain sibling confined to the same
+       positioned ancestor as its popover (see this file's top comment) —
+       inset: 0 within that ancestor, not the viewport. */
+    &:not([popover]) {
+      position: absolute;
+      inset: 0;
+    }
+
     &[aria-expanded="true"] {
       pointer-events: auto;
 
@@ -240,12 +267,16 @@ const css = /* css */ `
 
     /* navi-animation mirrors the content popover's own resolved value (set
        imperatively in openEffect) — the backdrop only ever fades, regardless
-       of which kind it is (translate/scale wouldn't mean anything on it). */
+       of which kind it is (translate/scale wouldn't mean anything on it).
+       display is included alongside opacity (+ allow-discrete) for the same
+       reason popup_css.js's own .navi_popover rule includes it — see this
+       file's top comment. */
     &[navi-animation] {
       opacity: 1;
-      transition-property: opacity;
+      transition-property: display, opacity;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
+      transition-behavior: allow-discrete;
 
       &[aria-expanded="false"] {
         opacity: 0;
@@ -272,6 +303,7 @@ export const Popover = (props) => {
   }
   return <UncontrolledPopover {...props} />;
 };
+
 // No openController passed: this Popover is used declaratively (e.g. driven
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
@@ -295,6 +327,7 @@ const UncontrolledPopover = (props) => {
     />
   );
 };
+
 const ControlledPopover = (props) => {
   const {
     openController,
@@ -309,9 +342,6 @@ const ControlledPopover = (props) => {
     pointerInteractionOutsideEffect = "none",
     focusCapture,
     animation,
-    // only meaningful with no real anchor + a "scaling" animation — see
-    // each openEffect for why it's a no-op otherwise.
-    spawnFromPointer,
     children,
     anchorSpacing = 0,
     containerSpacing = 0,
@@ -339,11 +369,6 @@ const ControlledPopover = (props) => {
   // open, two separate invocations of openEffect that don't otherwise share
   // any scope, hence the ref.
   const disarmBackdropHideRef = useRef(null);
-  // The custom renderer's own equivalent of showPopover()/hidePopover() +
-  // allow-discrete (see runOpenEffectCustom) — unused by the via-attribute
-  // renderer.
-  const cancelHidePopoverRef = useRef(null);
-  const cancelHideBackdropRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
   const backdropId = `${id}-backdrop`;
@@ -394,14 +419,11 @@ const ControlledPopover = (props) => {
       focusCapture,
       isAutoAnimation,
       animation,
-      spawnFromPointer,
       anchorSpacing,
       containerSpacing,
       debugPopup,
       debugFocus,
       disarmBackdropHideRef,
-      cancelHidePopoverRef,
-      cancelHideBackdropRef,
       openController,
     };
     return usesCustomRenderer
@@ -512,7 +534,6 @@ const runOpenEffectViaAttribute = (ctx) => {
     focusCapture,
     isAutoAnimation,
     animation,
-    spawnFromPointer,
     anchorSpacing,
     containerSpacing,
     debugPopup,
@@ -527,41 +548,13 @@ const runOpenEffectViaAttribute = (ctx) => {
     e,
     { ignoreEventAnchor, noRealAnchorValue: "viewport" },
   );
-  const anchorAreaParseResult = parseAnchorArea(anchorArea);
-  if (!anchorAreaParseResult) {
-    console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
-  }
-  const parsedAnchorArea = anchorAreaParseResult ?? {
-    y: "below",
-    x: "center",
-  };
-  const slideDirectionKey = toSlideDirectionKey(
-    parsedAnchorArea.y,
-    parsedAnchorArea.x,
-  );
-  const resolvedAnimationKind = isAutoAnimation
-    ? resolveAutoAnimationKind(anchor, parsedAnchorArea)
-    : animation;
-  // Only makes sense for a "scaling" popup with no real anchor to grow out
-  // of (a real anchor's own edge already reads fine as the grow point) —
-  // see positionPopover's isScrollContainerAnchor branch for where the
-  // actual click/pointer position gets translated into
-  // --popup-spawn-origin-x/y.
-  const useSpawnFromPointer =
-    Boolean(spawnFromPointer) &&
-    isScrollContainerAnchor &&
-    resolvedAnimationKind === "scaling";
-  if (useSpawnFromPointer) {
-    popoverEl.setAttribute("data-spawn-from-pointer", "");
-  } else {
-    popoverEl.removeAttribute("data-spawn-from-pointer");
-    popoverEl.style.removeProperty("--popup-spawn-origin-x");
-    popoverEl.style.removeProperty("--popup-spawn-origin-y");
-  }
-  // Whether there's an actual CSS transition to wait for below
-  // (suppressPointerEventsDuringTransition) — skipped entirely otherwise,
-  // so a popover with no animation at all stays instantly interactive.
-  const hasCssTransitionAnimation = Boolean(resolvedAnimationKind);
+  const { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind } =
+    resolveAnchorAreaAndAnimationKind({
+      anchorArea,
+      isAutoAnimation,
+      animation,
+      animationAnchor: anchor,
+    });
   // Keys the CSS that switches to position: fixed (see the CSS comment
   // above for why) — absent when anchored to a real element.
   if (isScrollContainerAnchor) {
@@ -710,12 +703,13 @@ const runOpenEffectViaAttribute = (ctx) => {
     popoverEl.style.left = `${appliedLeft}px`;
   };
 
-  if (scrollCapture) {
-    addCleanup(trapScrollInside(popoverEl));
-  }
-  if (focusCapture) {
-    addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
-  }
+  setupPositionalCaptures(popoverEl, {
+    scrollCapture,
+    focusCapture,
+    debugFocus,
+    addCleanup,
+  });
+
   const rectEffect = visibleRectEffect(
     effectiveAnchor,
     ({ visibilityRatio }, { event }) => {
@@ -746,122 +740,37 @@ const runOpenEffectViaAttribute = (ctx) => {
     rectEffect.disconnect();
   });
 
-  // "sliding"/"expanding" need a concrete direction (see
-  // resolveDirectionValue) — resolved here, once, now that rectEffect's
-  // own setup has already called positionPopover() above and the actual
-  // position is known: scroll-container/point mode ("sliding") has no
-  // auto-flip, so `parsedAnchorArea` itself is already final;
-  // pickPositionRelativeTo (called from positionPopover, for a real
-  // anchor) may have picked a different side than requested, written
-  // onto data-position-y/x-current — reading that back here instead of
-  // the originally-requested `parsedAnchorArea` is what makes
-  // "expanding" point the right way. Both need to happen before
-  // transitions are re-enabled below, same constraint as positioning
-  // itself.
-  let resolvedAnimation = resolvedAnimationKind;
-  if (resolvedAnimationKind === "sliding") {
-    resolvedAnimation =
-      resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
-        isRealAnchor: false,
-        prefix: "slide-from",
-      }) ?? "slide-from-top";
-  } else if (resolvedAnimationKind === "expanding") {
-    resolvedAnimation =
-      resolveDirectionValue(
-        popoverEl.getAttribute("data-position-y-current"),
-        popoverEl.getAttribute("data-position-x-current"),
-        { isRealAnchor: true, prefix: "expand" },
-      ) ?? "expand-up";
-  }
-  if (resolvedAnimation) {
-    popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    // The backdrop mirrors the same value, but only ever fades
-    // regardless of which kind it is — see the backdrop's own CSS
-    // comment for why.
-    backdropEl?.setAttribute("navi-animation", resolvedAnimation);
-  } else {
-    popoverEl.removeAttribute("navi-animation");
-    backdropEl?.removeAttribute("navi-animation");
-  }
-
-  // rectEffect's own setup already called positionPopover() once above,
-  // synchronously, so popoverEl.style.left/top already hold the resting
-  // position the click/pointer position needs to be expressed relative
-  // to — read from the original open-triggering event `e`, not
-  // recomputed on later repositions (scroll/resize), which wouldn't
-  // carry a meaningful click position anyway and shouldn't move the
-  // spawn point once it's been set. Must still run before transitions
-  // are re-enabled below, same as the positioning itself.
-  if (useSpawnFromPointer) {
-    const pointerEvent = findEvent(
-      e,
-      (candidate) => typeof candidate.clientX === "number",
-    );
-    if (pointerEvent) {
-      // popoverEl is position: fixed in scroll-container mode, so
-      // style.left/top are already viewport-relative, same coordinate
-      // space as clientX/clientY — no scroll conversion needed. Offset
-      // from the box's own center (not its top-left corner), since
-      // that's the point popup_css.js's translate settles back to
-      // 0 0 (the box's resting position) while scale stays centered.
-      const boxCenterX =
-        parseFloat(popoverEl.style.left) + popoverEl.offsetWidth / 2;
-      const boxCenterY =
-        parseFloat(popoverEl.style.top) + popoverEl.offsetHeight / 2;
-      popoverEl.style.setProperty(
-        "--popup-spawn-origin-x",
-        `${pointerEvent.clientX - boxCenterX}px`,
-      );
-      popoverEl.style.setProperty(
-        "--popup-spawn-origin-y",
-        `${pointerEvent.clientY - boxCenterY}px`,
-      );
-    }
-  }
-
-  // The reflow forces the browser to actually commit the correctly
-  // positioned "closed" frame set up above as a real rendered state,
-  // before transitions are re-enabled and aria-expanded flips to "true" —
-  // only then does the CSS transition play, from that just-committed
-  // frame to the open one, with no @starting-style involved at all.
-  popoverEl.getBoundingClientRect();
-  popoverEl.style.transitionProperty = "";
-  popoverEl.setAttribute("aria-expanded", "true");
-  // Not interactive again until it settles into its resting state.
-  const cancelOpenInteractionSuppression = hasCssTransitionAnimation
-    ? suppressPointerEventsDuringTransition(popoverEl)
-    : null;
-
-  const restoreFocus = openController.transferFocusOnOpen(popoverEl);
-  debugPopup(
-    e,
-    `openPopover() -> anchor: ${anchor?.tagName}, isScrollContainerAnchor: ${isScrollContainerAnchor}`,
+  // Resolved here, once, now that rectEffect's own setup has already called
+  // positionPopover() above and the actual position is known — see
+  // applyResolvedAnimation's own comment for why this timing matters.
+  const hasCssTransitionAnimation = applyResolvedAnimation(
+    popoverEl,
+    backdropEl,
+    resolvedAnimationKind,
+    parsedAnchorArea,
   );
 
-  return (closeEvent) => {
-    debugPopup(closeEvent, `closePopover()`);
-    popoverEl.setAttribute("aria-expanded", "false");
-    popoverEl.hidePopover();
-    // Not interactive while it's leaving either — cancel the open side's
-    // still-pending suppression first, since a fresh one below fully
-    // replaces it (nothing ever needs to cancel this one in turn: a closed
-    // popover can stay non-interactive indefinitely, and the next open is
-    // its own separate call with no way to reach back into this one).
-    cancelOpenInteractionSuppression?.();
-    if (hasCssTransitionAnimation) {
-      suppressPointerEventsDuringTransition(popoverEl);
-    }
-    if (backdropEl) {
-      backdropEl.setAttribute("aria-expanded", "false");
-      disarmBackdropHideRef.current = armPointerDownOutsideClose(
-        closeEvent,
-        () => backdropEl.hidePopover(),
-      );
-    }
-    restoreFocus(closeEvent);
+  const { cancelOpenInteractionSuppression, restoreFocus } = commitOpen({
+    popoverEl,
+    hasCssTransitionAnimation,
+    openController,
+    e,
+    debugPopup,
+    logMessage: `openPopover() -> anchor: ${anchor?.tagName}, isScrollContainerAnchor: ${isScrollContainerAnchor}`,
+  });
 
-    cleanup();
-  };
+  return buildCloseHandler({
+    popoverEl,
+    backdropEl,
+    cancelOpenInteractionSuppression,
+    hasCssTransitionAnimation,
+    disarmBackdropHideRef,
+    restoreFocus,
+    cleanup,
+    debugPopup,
+    hidePopoverImpl: () => popoverEl.hidePopover(),
+    hideBackdropImpl: () => backdropEl.hidePopover(),
+  });
 };
 
 /**
@@ -870,6 +779,15 @@ const runOpenEffectViaAttribute = (ctx) => {
  * `anchor="scrollContainer"` (see this file's top comment) — there is no
  * real-anchor case here at all: a ref/DOM element `anchor` always selects
  * `runOpenEffectViaAttribute` instead.
+ *
+ * No native show/hide mechanism to lean on (no `showPopover()`/
+ * `hidePopover()`) — `display` is managed directly via JS: set to `""`
+ * synchronously on open (before measurement, so the element is actually
+ * measurable while `aria-expanded` is still `"false"` during the pre-open
+ * positioning pass — same "measure closed frame, then flip to true" pattern
+ * as the via-attribute case), set to `"none"` directly on close. No JS-side
+ * deferral is needed for that close-time change to actually wait for the
+ * animation — see this file's top comment for why.
  */
 const runOpenEffectCustom = (ctx) => {
   const {
@@ -881,13 +799,10 @@ const runOpenEffectCustom = (ctx) => {
     focusCapture,
     isAutoAnimation,
     animation,
-    spawnFromPointer,
     anchorSpacing,
     debugPopup,
     debugFocus,
     disarmBackdropHideRef,
-    cancelHidePopoverRef,
-    cancelHideBackdropRef,
     openController,
   } = ctx;
 
@@ -896,40 +811,16 @@ const runOpenEffectCustom = (ctx) => {
   // relative to, and what it sticks against (always: see this function's
   // own top comment, there is no real-anchor case here).
   const positionedAncestor = getPositionedParent(popoverEl);
-  const anchorAreaParseResult = parseAnchorArea(anchorArea);
-  if (!anchorAreaParseResult) {
-    console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
-  }
-  const parsedAnchorArea = anchorAreaParseResult ?? {
-    y: "below",
-    x: "center",
-  };
-  const slideDirectionKey = toSlideDirectionKey(
-    parsedAnchorArea.y,
-    parsedAnchorArea.x,
-  );
-  const resolvedAnimationKind = isAutoAnimation
-    ? resolveAutoAnimationKind(undefined, parsedAnchorArea)
-    : animation;
-  const useSpawnFromPointer =
-    Boolean(spawnFromPointer) && resolvedAnimationKind === "scaling";
-  if (useSpawnFromPointer) {
-    popoverEl.setAttribute("data-spawn-from-pointer", "");
-  } else {
-    popoverEl.removeAttribute("data-spawn-from-pointer");
-    popoverEl.style.removeProperty("--popup-spawn-origin-x");
-    popoverEl.style.removeProperty("--popup-spawn-origin-y");
-  }
-  const hasCssTransitionAnimation = Boolean(resolvedAnimationKind);
+  const { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind } =
+    resolveAnchorAreaAndAnimationKind({
+      anchorArea,
+      isAutoAnimation,
+      animation,
+      animationAnchor: undefined,
+    });
   popoverEl.setAttribute("data-anchor-mode", "scroll-container");
 
   popoverEl.style.transitionProperty = "none";
-  // Cancel a still-pending deferred hide from a previous close (see
-  // hideOnceTransitionSettles below) before making it visible again —
-  // otherwise that stale callback could hide this fresh instance once its
-  // own timer/transitionend eventually fires.
-  cancelHidePopoverRef.current?.();
-  cancelHidePopoverRef.current = null;
   // Not "showPopover()" — just making it visible again, synchronously, so
   // it's measurable below even though aria-expanded is still "false" (see
   // this file's top comment for why the two are deliberately decoupled).
@@ -938,8 +829,6 @@ const runOpenEffectCustom = (ctx) => {
   if (backdropEl) {
     disarmBackdropHideRef.current?.();
     disarmBackdropHideRef.current = null;
-    cancelHideBackdropRef.current?.();
-    cancelHideBackdropRef.current = null;
     backdropEl.style.transitionProperty = "none";
     backdropEl.style.display = "";
     backdropEl.setAttribute("aria-expanded", "true");
@@ -984,12 +873,13 @@ const runOpenEffectCustom = (ctx) => {
     popoverEl.style.left = `${stickPosition.left}px`;
   };
 
-  if (scrollCapture) {
-    addCleanup(trapScrollInside(popoverEl));
-  }
-  if (focusCapture) {
-    addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
-  }
+  setupPositionalCaptures(popoverEl, {
+    scrollCapture,
+    focusCapture,
+    debugFocus,
+    addCleanup,
+  });
+
   const rectEffect = visibleRectEffect(
     positionedAncestor,
     (_, { event }) => {
@@ -1005,93 +895,38 @@ const runOpenEffectCustom = (ctx) => {
     rectEffect.disconnect();
   });
 
-  let resolvedAnimation = resolvedAnimationKind;
-  if (resolvedAnimationKind === "sliding") {
-    resolvedAnimation =
-      resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
-        isRealAnchor: false,
-        prefix: "slide-from",
-      }) ?? "slide-from-top";
-  }
-  if (resolvedAnimation) {
-    popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    backdropEl?.setAttribute("navi-animation", resolvedAnimation);
-  } else {
-    popoverEl.removeAttribute("navi-animation");
-    backdropEl?.removeAttribute("navi-animation");
-  }
+  const hasCssTransitionAnimation = applyResolvedAnimation(
+    popoverEl,
+    backdropEl,
+    resolvedAnimationKind,
+    parsedAnchorArea,
+  );
 
-  if (useSpawnFromPointer) {
-    const pointerEvent = findEvent(
-      e,
-      (candidate) => typeof candidate.clientX === "number",
-    );
-    if (pointerEvent) {
-      // Unlike the via-attribute renderer's scroll-container case (always
-      // position: fixed, so clientX/clientY are already in the same
-      // coordinate space as style.left/top), this renderer is genuinely
-      // position: absolute — convert the pointer's viewport coordinates
-      // into the same ancestor-local space positionPopover already put
-      // style.left/top in, before diffing against the box's own center.
-      const ancestorRect = positionedAncestor.getBoundingClientRect();
-      const localPointerX = pointerEvent.clientX - ancestorRect.left;
-      const localPointerY = pointerEvent.clientY - ancestorRect.top;
-      const boxCenterX =
-        parseFloat(popoverEl.style.left) + popoverEl.offsetWidth / 2;
-      const boxCenterY =
-        parseFloat(popoverEl.style.top) + popoverEl.offsetHeight / 2;
-      popoverEl.style.setProperty(
-        "--popup-spawn-origin-x",
-        `${localPointerX - boxCenterX}px`,
-      );
-      popoverEl.style.setProperty(
-        "--popup-spawn-origin-y",
-        `${localPointerY - boxCenterY}px`,
-      );
-    }
-  }
+  const { cancelOpenInteractionSuppression, restoreFocus } = commitOpen({
+    popoverEl,
+    hasCssTransitionAnimation,
+    openController,
+    e,
+    debugPopup,
+    logMessage: `openPopover() -> scroll-container (local)`,
+  });
 
-  popoverEl.getBoundingClientRect();
-  popoverEl.style.transitionProperty = "";
-  popoverEl.setAttribute("aria-expanded", "true");
-  const cancelOpenInteractionSuppression = hasCssTransitionAnimation
-    ? suppressPointerEventsDuringTransition(popoverEl)
-    : null;
-
-  const restoreFocus = openController.transferFocusOnOpen(popoverEl);
-  debugPopup(e, `openPopover() -> scroll-container (local)`);
-
-  return (closeEvent) => {
-    debugPopup(closeEvent, `closePopover()`);
-    popoverEl.setAttribute("aria-expanded", "false");
-    cancelOpenInteractionSuppression?.();
-    if (hasCssTransitionAnimation) {
-      suppressPointerEventsDuringTransition(popoverEl);
-      // No native hidePopover()/allow-discrete to lean on for a plain div
-      // — defer display:none ourselves until the fade/slide/scale-out
-      // actually finishes, so it doesn't just vanish mid-transition.
-      cancelHidePopoverRef.current = hideOnceTransitionSettles(popoverEl);
-    } else {
+  return buildCloseHandler({
+    popoverEl,
+    backdropEl,
+    cancelOpenInteractionSuppression,
+    hasCssTransitionAnimation,
+    disarmBackdropHideRef,
+    restoreFocus,
+    cleanup,
+    debugPopup,
+    hidePopoverImpl: () => {
       popoverEl.style.display = "none";
-    }
-    if (backdropEl) {
-      backdropEl.setAttribute("aria-expanded", "false");
-      disarmBackdropHideRef.current = armPointerDownOutsideClose(
-        closeEvent,
-        () => {
-          if (hasCssTransitionAnimation) {
-            cancelHideBackdropRef.current =
-              hideOnceTransitionSettles(backdropEl);
-          } else {
-            backdropEl.style.display = "none";
-          }
-        },
-      );
-    }
-    restoreFocus(closeEvent);
-
-    cleanup();
-  };
+    },
+    hideBackdropImpl: () => {
+      backdropEl.style.display = "none";
+    },
+  });
 };
 
 /* ============================================================
@@ -1245,10 +1080,42 @@ const toSlideDirectionKey = (y, x) => {
 };
 
 /**
+ * Shared by both renderers: parses `anchorArea`, derives the compass-point
+ * key `computeStickToPosition` needs, and resolves `animation="auto"`/
+ * `true`. `animationAnchor` is the real anchor element for the
+ * via-attribute renderer's auto-animation resolution, or `undefined` for
+ * the custom renderer (which never has one — see resolveAutoAnimationKind's
+ * own comment).
+ */
+const resolveAnchorAreaAndAnimationKind = ({
+  anchorArea,
+  isAutoAnimation,
+  animation,
+  animationAnchor,
+}) => {
+  const anchorAreaParseResult = parseAnchorArea(anchorArea);
+  if (!anchorAreaParseResult) {
+    console.warn(`Popover: invalid anchorArea="${anchorArea}"`);
+  }
+  const parsedAnchorArea = anchorAreaParseResult ?? {
+    y: "below",
+    x: "center",
+  };
+  const slideDirectionKey = toSlideDirectionKey(
+    parsedAnchorArea.y,
+    parsedAnchorArea.x,
+  );
+  const resolvedAnimationKind = isAutoAnimation
+    ? resolveAutoAnimationKind(animationAnchor, parsedAnchorArea)
+    : animation;
+  return { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind };
+};
+
+/**
  * Maps an anchorArea y/x pair to a concrete `navi-animation` value (a
  * `prefix` plus a direction word), or `null` if both axes overlap the anchor
  * (no direction at all — that's `resolvedAnimation === "scaling"` territory
- * instead, see each renderer's own openEffect).
+ * instead, see applyResolvedAnimation).
  *
  * `isRealAnchor: false` (no real anchor, used only with `prefix:
  * "slide-from"`) keeps the word as the compass direction the popover comes
@@ -1279,6 +1146,50 @@ const resolveDirectionValue = (y, x, { isRealAnchor, prefix }) => {
   return yWord && xWord
     ? `${prefix}-${yWord}-${xWord}`
     : `${prefix}-${yWord || xWord}`;
+};
+
+/**
+ * "sliding"/"expanding" need a concrete direction (see
+ * resolveDirectionValue) — must be called only once the popover has
+ * actually been positioned (pickPositionRelativeTo, for a real anchor, may
+ * have picked a different side than requested, written onto
+ * data-position-y/x-current — reading that back is what makes "expanding"
+ * point the right way), and before transitions are re-enabled (same
+ * constraint as positioning itself). Mirrors the resolved value onto the
+ * backdrop too (see the backdrop's own CSS comment for why it only ever
+ * fades regardless of which kind it is). Returns whether there's an actual
+ * CSS transition to account for elsewhere (pointer-event suppression,
+ * commitOpen/buildCloseHandler).
+ */
+const applyResolvedAnimation = (
+  popoverEl,
+  backdropEl,
+  resolvedAnimationKind,
+  parsedAnchorArea,
+) => {
+  let resolvedAnimation = resolvedAnimationKind;
+  if (resolvedAnimationKind === "sliding") {
+    resolvedAnimation =
+      resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
+        isRealAnchor: false,
+        prefix: "slide-from",
+      }) ?? "slide-from-top";
+  } else if (resolvedAnimationKind === "expanding") {
+    resolvedAnimation =
+      resolveDirectionValue(
+        popoverEl.getAttribute("data-position-y-current"),
+        popoverEl.getAttribute("data-position-x-current"),
+        { isRealAnchor: true, prefix: "expand" },
+      ) ?? "expand-up";
+  }
+  if (resolvedAnimation) {
+    popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+  } else {
+    popoverEl.removeAttribute("navi-animation");
+    backdropEl?.removeAttribute("navi-animation");
+  }
+  return Boolean(resolvedAnimationKind);
 };
 
 /**
@@ -1368,6 +1279,98 @@ const resolveAutoAnimationKind = (anchor, parsedAnchorArea) => {
 };
 
 /**
+ * Shared by both renderers: arms scroll/focus capture on the popover
+ * element, registering cleanup via the caller's own `addCleanup`
+ * (createPubSub, scoped to this one open/close cycle).
+ */
+const setupPositionalCaptures = (
+  popoverEl,
+  { scrollCapture, focusCapture, debugFocus, addCleanup },
+) => {
+  if (scrollCapture) {
+    addCleanup(trapScrollInside(popoverEl));
+  }
+  if (focusCapture) {
+    addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
+  }
+};
+
+/**
+ * Shared by both renderers: the final step of every open — commits the
+ * correctly positioned "closed" frame set up by the caller as a real
+ * rendered state (the reflow), re-enables transitions, flips
+ * `aria-expanded="true"` (only then does the CSS transition play, from
+ * that just-committed frame to the open one, with no @starting-style
+ * involved at all — see this file's top comment), suppresses pointer
+ * events until it settles, and transfers focus in. Returns the two values
+ * the caller's own close handler needs later.
+ */
+const commitOpen = ({
+  popoverEl,
+  hasCssTransitionAnimation,
+  openController,
+  e,
+  debugPopup,
+  logMessage,
+}) => {
+  popoverEl.getBoundingClientRect();
+  popoverEl.style.transitionProperty = "";
+  popoverEl.setAttribute("aria-expanded", "true");
+  const cancelOpenInteractionSuppression = hasCssTransitionAnimation
+    ? suppressPointerEventsDuringTransition(popoverEl)
+    : null;
+  const restoreFocus = openController.transferFocusOnOpen(popoverEl);
+  debugPopup(e, logMessage);
+  return { cancelOpenInteractionSuppression, restoreFocus };
+};
+
+/**
+ * Shared by both renderers: builds the close callback `openEffect` returns.
+ * `hidePopoverImpl`/`hideBackdropImpl` are the one thing that genuinely
+ * differs — `hidePopover()` for the via-attribute renderer, a plain
+ * `style.display = "none"` for the custom one (see this file's top comment
+ * for why neither needs extra JS-side deferral to still animate out
+ * correctly).
+ */
+const buildCloseHandler = ({
+  popoverEl,
+  backdropEl,
+  cancelOpenInteractionSuppression,
+  hasCssTransitionAnimation,
+  disarmBackdropHideRef,
+  restoreFocus,
+  cleanup,
+  debugPopup,
+  hidePopoverImpl,
+  hideBackdropImpl,
+}) => {
+  return (closeEvent) => {
+    debugPopup(closeEvent, `closePopover()`);
+    popoverEl.setAttribute("aria-expanded", "false");
+    hidePopoverImpl();
+    // Not interactive while it's leaving either — cancel the open side's
+    // still-pending suppression first, since a fresh one below fully
+    // replaces it (nothing ever needs to cancel this one in turn: a closed
+    // popover can stay non-interactive indefinitely, and the next open is
+    // its own separate call with no way to reach back into this one).
+    cancelOpenInteractionSuppression?.();
+    if (hasCssTransitionAnimation) {
+      suppressPointerEventsDuringTransition(popoverEl);
+    }
+    if (backdropEl) {
+      backdropEl.setAttribute("aria-expanded", "false");
+      disarmBackdropHideRef.current = armPointerDownOutsideClose(
+        closeEvent,
+        hideBackdropImpl,
+      );
+    }
+    restoreFocus(closeEvent);
+
+    cleanup();
+  };
+};
+
+/**
  * Disables pointer-events on `el` until its current CSS transition settles
  * (via `transitionend`, with a safety `setTimeout` fallback matching the
  * longest `transition-duration` in case nothing actually transitions or an
@@ -1382,27 +1385,6 @@ const resolveAutoAnimationKind = (anchor, parsedAnchorArea) => {
  */
 const suppressPointerEventsDuringTransition = (el) => {
   el.style.pointerEvents = "none";
-  return runOnceTransitionSettles(el, () => {
-    el.style.pointerEvents = "";
-  });
-};
-
-/**
- * The custom renderer's own equivalent of the native Popover API's
- * showPopover()/hidePopover() + allow-discrete combo (see this file's top
- * comment): runs `callback` once the element's current CSS transition
- * settles (same transitionend + timeout-fallback timing as
- * suppressPointerEventsDuringTransition above), so display:none only
- * applies once the fade/slide/scale-out has actually finished playing.
- * Returns a "cancel" function with the same semantics.
- */
-const hideOnceTransitionSettles = (el) => {
-  return runOnceTransitionSettles(el, () => {
-    el.style.display = "none";
-  });
-};
-
-const runOnceTransitionSettles = (el, callback) => {
   let settled = false;
   const onTransitionEnd = (transitionEvent) => {
     if (transitionEvent.target === el) {
@@ -1414,7 +1396,7 @@ const runOnceTransitionSettles = (el, callback) => {
       return;
     }
     settled = true;
-    callback();
+    el.style.pointerEvents = "";
     el.removeEventListener("transitionend", onTransitionEnd);
     clearTimeout(safetyTimeoutId);
   };
@@ -1447,9 +1429,9 @@ const runOnceTransitionSettles = (el, callback) => {
  * downstream, so no fallback timer is needed.
  *
  * `hide` is the caller's own way to actually hide the backdrop
- * (`hidePopover()` for the via-attribute renderer's top-layer backdrop,
- * deferring further until the transition settles for the custom renderer's
- * plain div) — this helper only owns the mousedown/click timing.
+ * (`hidePopover()` for the via-attribute renderer's top-layer backdrop, a
+ * plain `style.display = "none"` for the custom renderer's plain div) —
+ * this helper only owns the mousedown/click timing.
  *
  * Returns a disarm function (or undefined if hidden immediately), so a
  * fresh open can cancel a pending hide it's about to make redundant.
