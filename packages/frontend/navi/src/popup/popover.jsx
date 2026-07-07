@@ -490,8 +490,8 @@ const usePopoverProps = (props) => {
     focusCapture,
     animation,
     children,
-    anchorSpacing = 0,
-    layerSpacing = 0,
+    marginWithAnchor = 0,
+    marginWithContainer = 0,
     // Makes the popover itself a valid focus target so autoFocus="fallback"
     // below has somewhere to land when it contains nothing focusable of its
     // own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -730,8 +730,8 @@ const usePopoverProps = (props) => {
           positionY: parsedPositionArea.y,
           positionXFixed: effectivePositionXFixed,
           positionYFixed: effectivePositionYFixed,
-          anchorSpacing: resolveSpacingSize(anchorSpacing),
-          containerSpacing: resolveSpacingSize(layerSpacing),
+          marginWithAnchor: resolveSpacingSize(marginWithAnchor),
+          marginWithContainer: resolveSpacingSize(marginWithContainer),
           // Only meaningful for the custom renderer: popoverEl is always
           // position: absolute relative to its own positioned ancestor,
           // real anchor or not — this tells pickPositionRelativeTo to
@@ -770,7 +770,7 @@ const usePopoverProps = (props) => {
             positionX: parsedPositionArea.x,
             positionY: parsedPositionArea.y,
             container: isCustom ? positionedAncestor : undefined,
-            containerSpacing: resolveSpacingSize(anchorSpacing),
+            marginWithContainer: resolveSpacingSize(marginWithAnchor),
           },
         );
         appliedLeft = left;

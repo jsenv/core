@@ -664,9 +664,9 @@ export const pickPositionRelativeTo = (
     positionYFixed,
     alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    anchorSpacing = 0,
+    marginWithAnchor = 0,
     alignToAnchorBox = "border-box",
-    containerSpacing = 0,
+    marginWithContainer = 0,
     container,
   } = {},
 ) => {
@@ -794,16 +794,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove - anchorSpacing - containerSpacing;
+        return spaceAbove - marginWithAnchor - marginWithContainer;
       }
       if (y === "aligned-bottom") {
-        return spaceAbove + anchorHeight - containerSpacing;
+        return spaceAbove + anchorHeight - marginWithContainer;
       }
       if (y === "below") {
-        return spaceBelow - anchorSpacing - containerSpacing;
+        return spaceBelow - marginWithAnchor - marginWithContainer;
       }
       if (y === "aligned-top") {
-        return spaceBelow + anchorHeight - containerSpacing;
+        return spaceBelow + anchorHeight - marginWithContainer;
       }
       return Infinity; // center
     };
@@ -855,16 +855,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "on-the-left") {
-        return spaceLeft - anchorSpacing - containerSpacing;
+        return spaceLeft - marginWithAnchor - marginWithContainer;
       }
       if (x === "aligned-left") {
-        return viewportWidth - anchorLeft - containerSpacing;
+        return viewportWidth - anchorLeft - marginWithContainer;
       }
       if (x === "aligned-right") {
-        return anchorRight - containerSpacing;
+        return anchorRight - marginWithContainer;
       }
       if (x === "on-the-right") {
-        return spaceRight - anchorSpacing - containerSpacing;
+        return spaceRight - marginWithAnchor - marginWithContainer;
       }
       return Infinity; // center
     };
@@ -901,7 +901,7 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "on-the-left") {
-      elementPositionLeft = effectiveAnchorLeft - elementWidth - anchorSpacing;
+      elementPositionLeft = effectiveAnchorLeft - elementWidth - marginWithAnchor;
     } else if (finalX === "aligned-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
@@ -944,17 +944,17 @@ export const pickPositionRelativeTo = (
       elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
       // "on-the-right"
-      elementPositionLeft = effectiveAnchorRight + anchorSpacing;
+      elementPositionLeft = effectiveAnchorRight + marginWithAnchor;
     }
     // Constrain horizontal position to the available area's boundaries
-    // (with containerSpacing margin).
-    if (elementPositionLeft < clampLeftBound + containerSpacing) {
-      elementPositionLeft = clampLeftBound + containerSpacing;
+    // (with marginWithContainer margin).
+    if (elementPositionLeft < clampLeftBound + marginWithContainer) {
+      elementPositionLeft = clampLeftBound + marginWithContainer;
     } else if (
       elementPositionLeft + elementWidth >
-      clampRightBound - containerSpacing
+      clampRightBound - marginWithContainer
     ) {
-      elementPositionLeft = clampRightBound - containerSpacing - elementWidth;
+      elementPositionLeft = clampRightBound - marginWithContainer - elementWidth;
     }
   }
 
@@ -962,14 +962,14 @@ export const pickPositionRelativeTo = (
   let elementPositionTop;
   {
     if (finalY === "above") {
-      // top is always anchorTop + insetTop - elementHeight - anchorSpacing — max-height truncates if needed.
-      const idealTop = anchorTop + insetTop - elementHeight - anchorSpacing;
+      // top is always anchorTop + insetTop - elementHeight - marginWithAnchor — max-height truncates if needed.
+      const idealTop = anchorTop + insetTop - elementHeight - marginWithAnchor;
       elementPositionTop =
-        idealTop < containerSpacing ? containerSpacing : idealTop;
+        idealTop < marginWithContainer ? marginWithContainer : idealTop;
     } else if (finalY === "aligned-bottom") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop =
-        idealTop < containerSpacing ? containerSpacing : idealTop;
+        idealTop < marginWithContainer ? marginWithContainer : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (finalY === "aligned-top") {
@@ -978,9 +978,9 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "below"
-      // top is always anchorBottom - insetBottom + anchorSpacing — max-height (via --space-available) truncates
+      // top is always anchorBottom - insetBottom + marginWithAnchor — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom - insetBottom + anchorSpacing;
+      const idealTop = anchorBottom - insetBottom + marginWithAnchor;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
@@ -993,13 +993,13 @@ export const pickPositionRelativeTo = (
     // (container-docked) case, where it's new and safe: a container is
     // always meant to be respected on both axes.
     if (!hasAnchor) {
-      if (elementPositionTop < anchorTop + containerSpacing) {
-        elementPositionTop = anchorTop + containerSpacing;
+      if (elementPositionTop < anchorTop + marginWithContainer) {
+        elementPositionTop = anchorTop + marginWithContainer;
       } else if (
         elementPositionTop + elementHeight >
-        anchorBottom - containerSpacing
+        anchorBottom - marginWithContainer
       ) {
-        elementPositionTop = anchorBottom - containerSpacing - elementHeight;
+        elementPositionTop = anchorBottom - marginWithContainer - elementHeight;
       }
     }
   }
@@ -1075,16 +1075,16 @@ export const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
-  // anchorSpacing (gap between anchor and element) and containerSpacing are subtracted
+  // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "aligned-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? anchorSpacing : 0) -
-    containerSpacing;
+    (finalY === "above" ? marginWithAnchor : 0) -
+    marginWithContainer;
   const effectiveSpaceBelow =
     (finalY === "aligned-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? anchorSpacing : 0) -
-    containerSpacing;
+    (finalY === "below" ? marginWithAnchor : 0) -
+    marginWithContainer;
 
   return {
     positionX: finalX,
@@ -1097,8 +1097,8 @@ export const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft: spaceLeft - containerSpacing,
-    spaceRight: spaceRight - containerSpacing,
+    spaceLeft: spaceLeft - marginWithContainer,
+    spaceRight: spaceRight - marginWithContainer,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };

@@ -382,7 +382,7 @@
           <AnchorAreaSection />
           <CustomContainerSection />
           <AnchorSpacingSection />
-          <LayerSpacingSection />
+          <MarginWithContainerSection />
           <PointerInteractionOutsideSection />
           <CustomizationSection />
         </div>
@@ -639,17 +639,20 @@
 
       const AnchorSpacingSection = () => (
         <section id="anchor-spacing" class="demo-section">
-          <h2>5. anchorSpacing</h2>
+          <h2>5. marginWithAnchor</h2>
           <p>
             The gap between the popover and its anchor — defaults to{" "}
             <code>0</code> (touching).
           </p>
           <div class="demo-row">
-            <AnchoredPopover label="anchorSpacing={0} (default)" />
-            <AnchoredPopover label="anchorSpacing={16}" anchorSpacing={16} />
+            <AnchoredPopover label="marginWithAnchor={0} (default)" />
+            <AnchoredPopover
+              label="marginWithAnchor={16}"
+              marginWithAnchor={16}
+            />
             <AnchoredPopover
               label="animated"
-              anchorSpacing={16}
+              marginWithAnchor={16}
               animation
               animationDuration="0.6s"
             />
@@ -658,10 +661,10 @@
       );
 
       // Docked to the viewport's top-left corner (no real anchor) so the
-      // clamp-to-edge effect of layerSpacing is directly visible: with the
-      // default 0 the popover touches the corner; with a larger value it
+      // clamp-to-edge effect of marginWithContainer is directly visible: with
+      // the default 0 the popover touches the corner; with a larger value it
       // keeps a gap from both edges instead.
-      const LayerSpacingPopover = ({ label, layerSpacing }) => {
+      const MarginWithContainerPopover = ({ label, marginWithContainer }) => {
         const popoverId = useId();
         return (
           <>
@@ -673,7 +676,7 @@
               borderRadius="8px"
               anchorCustomEventDetail="ignore"
               positionArea="aligned-top aligned-left"
-              layerSpacing={layerSpacing}
+              marginWithContainer={marginWithContainer}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -683,9 +686,9 @@
         );
       };
 
-      const LayerSpacingSection = () => (
+      const MarginWithContainerSection = () => (
         <section id="layer-spacing" class="demo-section">
-          <h2>6. layerSpacing</h2>
+          <h2>6. marginWithContainer</h2>
           <p>
             The gap kept from the container's own edges (the viewport for{" "}
             <code>layer="top"</code>, the positioned ancestor for{" "}
@@ -693,8 +696,11 @@
             to <code>0</code> (touching).
           </p>
           <div class="demo-row">
-            <LayerSpacingPopover label="layerSpacing={0} (default)" />
-            <LayerSpacingPopover label="layerSpacing={24}" layerSpacing={24} />
+            <MarginWithContainerPopover label="marginWithContainer={0} (default)" />
+            <MarginWithContainerPopover
+              label="marginWithContainer={24}"
+              marginWithContainer={24}
+            />
           </div>
         </section>
       );
@@ -804,7 +810,7 @@
         label,
         animation,
         animationDuration,
-        anchorSpacing,
+        marginWithAnchor,
       }) => {
         const popoverId = useId();
 
@@ -817,7 +823,7 @@
               id={popoverId}
               animation={animation}
               animationDuration={animationDuration}
-              anchorSpacing={anchorSpacing}
+              marginWithAnchor={marginWithAnchor}
               borderRadius="8px"
               className="demo_popover_box"
             >
