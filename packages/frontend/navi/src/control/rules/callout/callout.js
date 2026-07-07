@@ -1063,7 +1063,7 @@ const stickCalloutToAnchor = (
         positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
         spacing: ARROW_HEIGHT,
         alignToAnchorBox,
-        viewportSpacing:
+        containerSpacing:
           originalAnchorElement.hasAttribute("data-callout-viewport-spacing") ||
           anchorElement.hasAttribute("data-callout-viewport-spacing")
             ? Number(getAnchorAttribute("data-callout-viewport-spacing"))

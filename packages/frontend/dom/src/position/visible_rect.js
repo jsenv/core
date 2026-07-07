@@ -595,6 +595,19 @@ export const visibleRectEffect = (
  * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
  *   edge when anchor is within this many px of the left edge and element is wider than anchor.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
+ * @param {boolean} [options.anchorIsContainer=false] - `anchor` is a container being
+ *   docked *within* (its own bounds are the available space, and `element` is expected
+ *   to be `position: absolute` relative to `anchor` itself — its own containing block —
+ *   rather than the document root) instead of a real anchor floating within the page
+ *   viewport. Changes two things: the viewport-boundary clamp uses `anchor`'s own
+ *   (padding-box) edges instead of the page viewport's, on both axes (the Y axis
+ *   otherwise has no such clamp at all — see the clamp's own comment); and the final
+ *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative
+ *   to `anchor`'s own padding-box origin plus its own scroll, instead of the document's.
+ *   `anchor === document.documentElement` is the degenerate case of this (the "container"
+ *   is the whole viewport) and produces identical output whether or not this is set,
+ *   since the document's own scroll and the viewport's own origin already coincide with
+ *   what this option computes generically for any other container element.
  * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
@@ -609,11 +622,13 @@ export const pickPositionRelativeTo = (
     minLeft = 0,
     spacing = 0,
     alignToAnchorBox = "border-box",
-    viewportSpacing = 0,
+    containerSpacing = 0,
+    anchorIsContainer = false,
   } = {},
 ) => {
   if (
     import.meta.dev &&
+    !anchorIsContainer &&
     getScrollContainer(element) !== document.documentElement
   ) {
     // The idea behind this warning is that pickPositionRelativeTo is meant to position a tooltip/dropdown etc
@@ -624,6 +639,8 @@ export const pickPositionRelativeTo = (
     // Which gives the best experience when user scrolls the page or the container
     // 2. The element can take more visible size in case target is within a scrollable container
     // or uses overflow: hidden somewhere in its ancestor chain
+    // (anchorIsContainer is the deliberate exception: element is expected to be
+    // absolute relative to anchor itself in that mode, not the document.)
     console.warn(
       "pickPositionRelativeTo should be used only for document-relative element",
     );
@@ -647,6 +664,14 @@ export const pickPositionRelativeTo = (
   const anchorTop = snapToPixel(anchorRect.top);
   const anchorRight = snapToPixel(anchorRect.right);
   const anchorBottom = snapToPixel(anchorRect.bottom);
+  // Only meaningful in anchorIsContainer mode — converts anchor's own
+  // border-box origin (anchorRect.left/top) to its padding-box origin,
+  // which is what a position: absolute child is actually placed relative
+  // to. document.documentElement (the anchorIsViewport case) has ~0 border,
+  // so this is a no-op there.
+  const containerBorders = anchorIsContainer
+    ? getBorderSizes(anchor)
+    : { left: 0, top: 0, right: 0, bottom: 0 };
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -716,16 +741,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
       if (y === "above") {
-        return spaceAbove - spacing - viewportSpacing;
+        return spaceAbove - spacing - containerSpacing;
       }
       if (y === "aligned-bottom") {
-        return spaceAbove + anchorHeight - viewportSpacing;
+        return spaceAbove + anchorHeight - containerSpacing;
       }
       if (y === "below") {
-        return spaceBelow - spacing - viewportSpacing;
+        return spaceBelow - spacing - containerSpacing;
       }
       if (y === "aligned-top") {
-        return spaceBelow + anchorHeight - viewportSpacing;
+        return spaceBelow + anchorHeight - containerSpacing;
       }
       return Infinity; // center
     };
@@ -777,16 +802,16 @@ export const pickPositionRelativeTo = (
     // Compute effective space for a given X value
     const spaceFor = (x) => {
       if (x === "on-the-left") {
-        return spaceLeft - spacing - viewportSpacing;
+        return spaceLeft - spacing - containerSpacing;
       }
       if (x === "aligned-left") {
-        return viewportWidth - anchorLeft - viewportSpacing;
+        return viewportWidth - anchorLeft - containerSpacing;
       }
       if (x === "aligned-right") {
-        return anchorRight - viewportSpacing;
+        return anchorRight - containerSpacing;
       }
       if (x === "on-the-right") {
-        return spaceRight - spacing - viewportSpacing;
+        return spaceRight - spacing - containerSpacing;
       }
       return Infinity; // center
     };
@@ -867,14 +892,19 @@ export const pickPositionRelativeTo = (
       // "on-the-right"
       elementPositionLeft = effectiveAnchorRight + spacing;
     }
-    // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
-    if (elementPositionLeft < viewportSpacing) {
-      elementPositionLeft = viewportSpacing;
+    // Constrain horizontal position to the available area's boundaries
+    // (with containerSpacing margin) — the page viewport normally, or
+    // anchor's own edges in anchorIsContainer mode (docking within a
+    // container, not floating above the whole page).
+    const clampLeftBound = anchorIsContainer ? anchorLeft : 0;
+    const clampRightBound = anchorIsContainer ? anchorRight : viewportWidth;
+    if (elementPositionLeft < clampLeftBound + containerSpacing) {
+      elementPositionLeft = clampLeftBound + containerSpacing;
     } else if (
       elementPositionLeft + elementWidth >
-      viewportWidth - viewportSpacing
+      clampRightBound - containerSpacing
     ) {
-      elementPositionLeft = viewportWidth - viewportSpacing - elementWidth;
+      elementPositionLeft = clampRightBound - containerSpacing - elementWidth;
     }
   }
 
@@ -885,11 +915,11 @@ export const pickPositionRelativeTo = (
       // top is always anchorTop + insetTop - elementHeight - spacing — max-height truncates if needed.
       const idealTop = anchorTop + insetTop - elementHeight - spacing;
       elementPositionTop =
-        idealTop < viewportSpacing ? viewportSpacing : idealTop;
+        idealTop < containerSpacing ? containerSpacing : idealTop;
     } else if (finalY === "aligned-bottom") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop =
-        idealTop < viewportSpacing ? viewportSpacing : idealTop;
+        idealTop < containerSpacing ? containerSpacing : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
     } else if (finalY === "aligned-top") {
@@ -904,6 +934,24 @@ export const pickPositionRelativeTo = (
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
+    // Unlike the horizontal clamp above, there's normally no universal
+    // vertical boundary clamp at all — "above"/"below" already clamp their
+    // own idealTop inline, "aligned-*"/"center" don't, and changing that
+    // for every existing consumer (real-anchor "below" near the viewport
+    // bottom relies on --space-available/max-height truncation instead of
+    // repositioning) is out of scope here. Scoped strictly to
+    // anchorIsContainer, where it's new and safe: a container is always
+    // meant to be respected on both axes.
+    if (anchorIsContainer) {
+      if (elementPositionTop < anchorTop + containerSpacing) {
+        elementPositionTop = anchorTop + containerSpacing;
+      } else if (
+        elementPositionTop + elementHeight >
+        anchorBottom - containerSpacing
+      ) {
+        elementPositionTop = anchorBottom - containerSpacing - elementHeight;
+      }
+    }
   }
 
   // Persist resolved X/Y so subsequent calls start from here (avoids
@@ -917,15 +965,31 @@ export const pickPositionRelativeTo = (
   element.setAttribute("data-position-y-current", finalY);
 
   // Convert the viewport-relative math above into whatever coordinate space
-  // `element.style.top/left` actually needs: none added for position: fixed
-  // (already viewport-relative — adding scroll would double-count it), the
-  // current scroll offset added for position: absolute (relative to the
-  // initial containing block, i.e. document-relative) — including when
-  // anchorIsViewport, so the result lands at the visual center of the
-  // viewport at its current scroll position. visibleRectEffect recomputes
-  // this on every scroll tick, which is what keeps it looking anchored as
-  // the page scrolls either way.
-  const { scrollLeft, scrollTop } = getPositioningScrollOffset(element);
+  // `element.style.top/left` actually needs. Normally: none added for
+  // position: fixed (already viewport-relative — adding scroll would
+  // double-count it), the current scroll offset added for position:
+  // absolute (relative to the initial containing block, i.e.
+  // document-relative) — including when anchorIsViewport, so the result
+  // lands at the visual center of the viewport at its current scroll
+  // position. In anchorIsContainer mode, `element` is instead expected to
+  // be position: absolute relative to `anchor` itself (its own containing
+  // block, not the document root) — the conversion subtracts anchor's own
+  // border-box origin and border (getting to its padding-box origin, which
+  // is what a positioned child is actually placed relative to) and adds
+  // anchor's own scroll instead of the document's. anchor ===
+  // document.documentElement collapses to the exact same numbers as the
+  // non-container path either way (see anchorIsContainer's own doc
+  // comment). visibleRectEffect recomputes this on every scroll tick,
+  // which is what keeps it looking anchored as the page (or the container)
+  // scrolls either way.
+  let scrollLeft;
+  let scrollTop;
+  if (anchorIsContainer) {
+    scrollLeft = -anchorRect.left - containerBorders.left + anchor.scrollLeft;
+    scrollTop = -anchorRect.top - containerBorders.top + anchor.scrollTop;
+  } else {
+    ({ scrollLeft, scrollTop } = getPositioningScrollOffset(element));
+  }
   const elementDocumentLeft = snapToPixel(elementPositionLeft + scrollLeft);
   const elementDocumentTop = snapToPixel(elementPositionTop + scrollTop);
   const anchorDocumentLeft = anchorLeft + scrollLeft;
@@ -935,16 +999,16 @@ export const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
-  // spacing (gap between anchor and element) and viewportSpacing are subtracted
+  // spacing (gap between anchor and element) and containerSpacing are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
     (finalY === "aligned-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
     (finalY === "above" ? spacing : 0) -
-    viewportSpacing;
+    containerSpacing;
   const effectiveSpaceBelow =
     (finalY === "aligned-top" ? spaceBelow + anchorHeight : spaceBelow) -
     (finalY === "below" ? spacing : 0) -
-    viewportSpacing;
+    containerSpacing;
 
   return {
     positionX: finalX,
@@ -957,8 +1021,8 @@ export const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft: spaceLeft - viewportSpacing,
-    spaceRight: spaceRight - viewportSpacing,
+    spaceLeft: spaceLeft - containerSpacing,
+    spaceRight: spaceRight - containerSpacing,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };
