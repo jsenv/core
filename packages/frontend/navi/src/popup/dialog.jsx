@@ -54,6 +54,7 @@ const css = /* css */ `
  */
 export const Dialog = (props) => {
   import.meta.css = css;
+
   if (props.openController) {
     return <ControlledDialog {...props} />;
   }
@@ -88,7 +89,7 @@ const ControlledDialog = (props) => {
     openController,
     anchorRef,
     children,
-    scrollLock,
+    scrollCapture,
     // "none"/"capture" collapse to the same behavior for Dialog: unlike
     // Popover, showModal() already makes the rest of the page inert, so
     // there's nothing for a click to reach behind the backdrop regardless of
@@ -152,7 +153,7 @@ const ControlledDialog = (props) => {
     dialogEl.showModal();
     dialogEl.setAttribute("aria-expanded", "true");
     const restoreFocus = openController.transferFocusOnOpen(dialogEl);
-    if (scrollLock) {
+    if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
     }
     if (centerInVisualViewportProp && window.visualViewport) {
@@ -225,24 +226,28 @@ const ControlledDialog = (props) => {
       }}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
+        if (pointerInteractionOutsideEffect !== "close") {
+          return;
+        }
+        if (e.button !== 0) {
+          return;
+        }
         // Detect backdrop click: the click must land outside the dialog's
         // bounding rect. Checking coordinates is necessary because clicking
         // on the dialog's own padding also sets e.target === ref.current.
-        if (
-          pointerInteractionOutsideEffect === "close" &&
-          e.button === 0 &&
-          e.target === ref.current
-        ) {
-          const rect = ref.current.getBoundingClientRect();
-          const isBackdrop =
-            e.clientX < rect.left ||
-            e.clientX > rect.right ||
-            e.clientY < rect.top ||
-            e.clientY > rect.bottom;
-          if (isBackdrop) {
-            openController.requestClose(e, { isCancel: true });
-          }
+        if (e.target !== ref.current) {
+          return;
         }
+        const rect = ref.current.getBoundingClientRect();
+        const isOutside =
+          e.clientX < rect.left ||
+          e.clientX > rect.right ||
+          e.clientY < rect.top ||
+          e.clientY > rect.bottom;
+        if (!isOutside) {
+          return;
+        }
+        openController.requestClose(e, { isCancel: true });
       }}
       onCancel={(e) => {
         openController.requestClose(e, { isCancel: true });
