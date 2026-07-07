@@ -649,12 +649,11 @@
           <div id="anchor-area-local-layer" class="demo-subsection">
             <h3>3.3 local layer</h3>
             <p>
-              <code>layer="local"</code> renders as a plain in-flow box relative
-              to its own positioned ancestor instead of the browser's top layer
-              — genuinely clipped by that container's own{" "}
-              <code>overflow: hidden</code>/<code>auto</code>. Focusing on the
-              anchorless use case below: no real anchor, just docked to a point
-              on the container's own edges/corners.
+              Renders where it is instead of the top layer, respecting the
+              positioned parent's own dimensions and clipping (
+              <code>overflow: hidden</code>/<code>auto</code>). Focuses solely
+              on the without-anchor use case below, but a real anchor inside the
+              container would work too.
             </p>
             <AnchorAreaScrollContainerDemo />
           </div>
@@ -664,10 +663,6 @@
       const AnchorSpacingSection = () => (
         <section id="anchor-spacing" class="demo-section">
           <h2>4. marginWithAnchor</h2>
-          <p>
-            The gap between the popover and its anchor — defaults to{" "}
-            <code>0</code> (touching).
-          </p>
           <div class="demo-row">
             <AnchoredPopover label="marginWithAnchor={0} (default)" />
             <AnchoredPopover
@@ -713,12 +708,6 @@
       const MarginWithContainerSection = () => (
         <section id="layer-spacing" class="demo-section">
           <h2>5. marginWithContainer</h2>
-          <p>
-            The gap kept from the container's own edges (the viewport for{" "}
-            <code>layer="top"</code>, the positioned ancestor for{" "}
-            <code>layer="local"</code>) when there's no real anchor — defaults
-            to <code>0</code> (touching).
-          </p>
           <div class="demo-row">
             <MarginWithContainerPopover label="marginWithContainer={0} (default)" />
             <MarginWithContainerPopover
@@ -735,12 +724,6 @@
         return (
           <section id="pointer-interaction-outside" class="demo-section">
             <h2>6. pointerInteractionOutsideEffect</h2>
-            <p>
-              <code>"none"</code> (default) — interactions outside the popover
-              happen normally. <code>"close"</code> — a mousedown outside closes
-              it. <code>"capture"</code> — pointer interactions outside the
-              popover don't reach the page at all.
-            </p>
             <div class="demo-row">
               <PointerInteractionOutsideDemo
                 label="none (default)"
@@ -788,13 +771,6 @@
       const CustomizationSection = () => (
         <section id="customization" class="demo-section">
           <h2>7. Customization</h2>
-          <p>
-            Plain visual props, passed straight through to the popover's own box
-            — <code>borderRadius</code> as its own convenience prop,{" "}
-            <code>borderWidth</code>/<code>borderColor</code>/
-            <code>backgroundColor</code> via the regular <code>style</code>{" "}
-            prop.
-          </p>
           <div class="demo-row">
             <CustomizationPopover label="default" borderRadius="8px" />
             <CustomizationPopover
@@ -864,14 +840,6 @@
       const OpenAtStartSection = () => (
         <section id="open-from-start" class="demo-section">
           <h2>8. Open from the start</h2>
-          <p>
-            <code>open={"{true}"}</code> (controlled) or{" "}
-            <code>defaultOpen</code> (uncontrolled, mount-only) mount the
-            popover already open — animation is on for both below, but it should
-            never actually play on mount, only on a later close/reopen. Click
-            "Render" below to actually mount each one (rather than forcing it
-            open on every page load).
-          </p>
           <div class="demo-row">
             <LazyMount
               label={"open={true}"}
@@ -886,7 +854,11 @@
             <LazyMount
               label="defaultOpen"
               renderContent={() => (
-                <OpenAtStartPopover label="defaultOpen" defaultOpen />
+                <OpenAtStartPopover
+                  label="defaultOpen"
+                  defaultOpen
+                  positionArea="on-the-right below"
+                />
               )}
             />
           </div>
