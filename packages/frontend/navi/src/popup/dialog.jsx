@@ -169,23 +169,26 @@ const css = /* css */ `
       background: rgba(0, 0, 0, 0.4);
     }
 
-    /* Attribute selectors must come before ::backdrop, not after — a
+    /* Nested under &[navi-animation] (not the other way around) so every
+       attribute selector compiles *before* ::backdrop, not after — a
        pseudo-element can't be qualified by an attribute of its own
        (::backdrop[navi-animation] would never match anything), only by an
        attribute of the *originating* element it's generated for. */
-    &[navi-animation]::backdrop {
-      opacity: 1;
-      transition-property: display, overlay, opacity;
-      transition-duration: var(--popup-animation-duration, 0.18s);
-      transition-timing-function: ease;
-      transition-behavior: allow-discrete;
+    &[navi-animation] {
+      &::backdrop {
+        opacity: 1;
+        transition-property: display, overlay, opacity;
+        transition-duration: var(--popup-animation-duration, 0.18s);
+        transition-timing-function: ease;
+        transition-behavior: allow-discrete;
 
-      @starting-style {
+        @starting-style {
+          opacity: 0;
+        }
+      }
+      &[aria-expanded="false"]::backdrop {
         opacity: 0;
       }
-    }
-    &[navi-animation][aria-expanded="false"]::backdrop {
-      opacity: 0;
     }
 
     &[data-focus-visible] {
@@ -238,12 +241,14 @@ const css = /* css */ `
     padding: 0;
     background: rgba(0, 0, 0, 0.4);
     border: none;
-    pointer-events: none;
+    /* Always clickable while actually rendered (display: none while
+       genuinely closed already makes it non-interactive on its own) — an
+       outside click should close the dialog even while it's still
+       animating in, not just once the entrance transition settles. Only
+       the content itself (.navi_dialog, via suppressPointerEventsDuringTransition
+       in openEffect) gets pointer-events: none mid-transition. */
+    pointer-events: auto;
     --popup-animation-duration: 0.18s;
-
-    &[aria-expanded="true"] {
-      pointer-events: auto;
-    }
 
     &[navi-animation] {
       opacity: 1;

@@ -355,7 +355,13 @@ const css = /* css */ `
     padding: 0;
     background: transparent;
     border: none;
-    pointer-events: none;
+    /* Always clickable while actually rendered (display: none/hidePopover()
+       while genuinely closed already makes it non-interactive on its own)
+       — an outside click should close the popover even while it's still
+       animating in, not just once the entrance transition settles. Only
+       the content itself (.navi_popover, via suppressPointerEventsDuringTransition
+       in openEffect) gets pointer-events: none mid-transition. */
+    pointer-events: auto;
     --popup-animation-duration: 0.18s;
 
     /* The via-attribute renderer's backdrop: a top-layer sibling, so it
@@ -375,20 +381,16 @@ const css = /* css */ `
       inset: 0;
     }
 
-    &[aria-expanded="true"] {
-      pointer-events: auto;
-
-      /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-      &[data-pointer-interaction-outside="close"] {
-        background: rgba(0, 0, 0, 0.1);
-      }
-      &[data-pointer-interaction-outside="capture"] {
-        /* "capture" means the rest of the page is fully non-interactive —
-           blurred, not just dimmed, so it reads as clearly secondary and
-           pulls visual focus onto the popover's own content. */
-        background: rgb(255 255 255 / 0.08);
-        backdrop-filter: blur(30px) saturate(180%);
-      }
+    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
+    &[data-pointer-interaction-outside="close"] {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    &[data-pointer-interaction-outside="capture"] {
+      /* "capture" means the rest of the page is fully non-interactive —
+         blurred, not just dimmed, so it reads as clearly secondary and
+         pulls visual focus onto the popover's own content. */
+      background: rgb(255 255 255 / 0.08);
+      backdrop-filter: blur(30px) saturate(180%);
     }
 
     /* navi-animation mirrors the content popover's own resolved value (set
