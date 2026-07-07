@@ -208,12 +208,17 @@
         return [value, setValue];
       };
 
-      // "none" maps to no `animation` prop at all. "sliding" isn't offered
-      // here — a dialog has no anchor to auto-resolve a direction from, so
-      // sliding only makes sense as an explicit slide-from-* value, which
-      // isn't exercised by this demo (each Position subsection's own
-      // animate controls cover the kinds that matter there).
-      const ANIMATION_CHOICES = ["none", "auto", "fading", "scaling"];
+      // "none" maps to no `animation` prop at all. "sliding" resolves to a
+      // concrete slide-from-* direction from positionArea alone (Dialog
+      // never has a real anchor — see dialog.jsx's own top comment), same
+      // as "auto" does whenever positionArea isn't dead-center.
+      const ANIMATION_CHOICES = [
+        "none",
+        "auto",
+        "fading",
+        "scaling",
+        "sliding",
+      ];
 
       const useAnimateControls = (storageKey) => {
         const [animationChoice, setAnimationChoice] = useStoredString(

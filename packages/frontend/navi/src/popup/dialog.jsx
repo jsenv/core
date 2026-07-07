@@ -400,21 +400,21 @@ const useDialogProps = (props) => {
     x: "center",
   };
   const isAutoAnimation = animation === true || animation === "auto";
-  let resolvedAnimation = animation;
-  if (isAutoAnimation) {
-    // Dialog never has a real anchor (see this file's top comment), so this
-    // is always the "no anchor" path — the same one Popover's own custom
-    // renderer falls into when it has no real anchor either.
-    const animationKind = resolveAutoAnimationKind(
-      undefined,
-      parsedPositionArea,
-    );
+  // Dialog never has a real anchor (see this file's top comment), so this
+  // is always the "no anchor" path — the same one Popover's own custom
+  // renderer falls into when it has no real anchor either.
+  const resolvedAnimationKind = isAutoAnimation
+    ? resolveAutoAnimationKind(undefined, parsedPositionArea)
+    : animation;
+  // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
+  // concrete direction just as much as an auto-resolved one does (same as
+  // Popover's own "sliding"/"expanding" resolution step in openEffect).
+  let resolvedAnimation = resolvedAnimationKind;
+  if (resolvedAnimationKind === "sliding") {
     resolvedAnimation =
-      animationKind === "sliding"
-        ? (resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
-            prefix: "slide-from",
-          }) ?? "slide-from-top")
-        : "scaling";
+      resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
+        prefix: "slide-from",
+      }) ?? "slide-from-top";
   }
 
   // aria-expanded lives on the dialog element itself (not driven through

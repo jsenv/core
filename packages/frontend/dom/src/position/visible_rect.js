@@ -56,7 +56,14 @@ export const visibleRectEffect = (
   } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
-  const scrollContainer = getScrollContainer(element);
+  // getScrollContainer(document.documentElement) returns null specifically
+  // when the document itself has no overflow to scroll (e.g. a small
+  // dialog/popover on an otherwise short page) — document.documentElement
+  // is still a perfectly valid fallback in that case (scrollLeft/scrollTop
+  // are just 0), so this never needs to crash the way a bare
+  // `getScrollContainer(element)` result would below.
+  const scrollContainer =
+    getScrollContainer(element) ?? document.documentElement;
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
   let lastMeasuredWidth;
