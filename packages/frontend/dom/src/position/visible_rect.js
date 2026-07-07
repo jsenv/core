@@ -722,9 +722,20 @@ export const pickPositionRelativeTo = (
   // The available area's own boundaries — the page viewport normally, or
   // the container's own edges when docking (no real anchor). Used both by
   // the alignToContainerEdgeWhenAnchorNearEdge snap below and the final
-  // boundary clamp further down.
-  const clampLeftBound = !hasAnchor ? anchorLeft : 0;
-  const clampRightBound = !hasAnchor ? anchorRight : viewportWidth;
+  // boundary clamp further down. Narrowed by the container's own border
+  // width on each side (containerBorders, above) — the clamp is meant to
+  // keep `element` within the container's *padding* box, which is what a
+  // position: absolute child is actually placed relative to (and what the
+  // coordinate conversion further down shifts its origin to match); leaving
+  // the border out here would let `element` sit flush with the border-box
+  // edge instead, `borderWidth` px past the padding box's own edge once
+  // converted into the container's local coordinate space — a real,
+  // previously unnoticed 1px overflow (any container with a visible border)
+  // that this fixes.
+  const clampLeftBound = !hasAnchor ? anchorLeft + containerBorders.left : 0;
+  const clampRightBound = !hasAnchor
+    ? anchorRight - containerBorders.right
+    : viewportWidth;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -995,13 +1006,18 @@ export const pickPositionRelativeTo = (
     // (container-docked) case, where it's new and safe: a container is
     // always meant to be respected on both axes.
     if (!hasAnchor) {
-      if (elementPositionTop < anchorTop + marginWithContainer) {
-        elementPositionTop = anchorTop + marginWithContainer;
+      // Narrowed by the container's own top/bottom border, same reasoning
+      // as clampLeftBound/clampRightBound above.
+      const clampTopBound = anchorTop + containerBorders.top;
+      const clampBottomBound = anchorBottom - containerBorders.bottom;
+      if (elementPositionTop < clampTopBound + marginWithContainer) {
+        elementPositionTop = clampTopBound + marginWithContainer;
       } else if (
         elementPositionTop + elementHeight >
-        anchorBottom - marginWithContainer
+        clampBottomBound - marginWithContainer
       ) {
-        elementPositionTop = anchorBottom - marginWithContainer - elementHeight;
+        elementPositionTop =
+          clampBottomBound - marginWithContainer - elementHeight;
       }
     }
   }
