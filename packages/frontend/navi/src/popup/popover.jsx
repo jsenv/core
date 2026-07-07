@@ -93,8 +93,13 @@ import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
+import { onRequestInteraction } from "../control/rules/control_interaction.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
+import {
+  useDebugFocus,
+  useDebugInteraction,
+  useDebugPopup,
+} from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
@@ -252,6 +257,7 @@ const ControlledPopover = (props) => {
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
+  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see the resolvedAnimationKind ternary in openEffect below).
@@ -728,6 +734,9 @@ const ControlledPopover = (props) => {
         pseudoClasses={POPOVER_PSEUDO_CLASSES}
         onnavi_command={(e) => {
           onNaviCommand(e);
+        }}
+        onnavi_request_interaction={(e) => {
+          onRequestInteraction(e, { debugInteraction });
         }}
         onKeyDown={onKeyDownShortcuts}
       >

@@ -10,7 +10,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
-import { useDebugPopup } from "../navi_debug.jsx";
+import { onRequestInteraction } from "../control/rules/control_interaction.js";
+import { useDebugInteraction, useDebugPopup } from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
@@ -111,6 +112,7 @@ const ControlledDialog = (props) => {
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
+  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   const isAutoAnimation = animation === true || animation === "auto";
   const resolvedAnimation = isAutoAnimation ? "scaling" : animation;
@@ -223,6 +225,9 @@ const ControlledDialog = (props) => {
       data-pointer-interaction-outside={pointerInteractionOutsideEffect}
       onnavi_command={(e) => {
         onNaviCommand(e);
+      }}
+      onnavi_request_interaction={(e) => {
+        onRequestInteraction(e, { debugInteraction });
       }}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
