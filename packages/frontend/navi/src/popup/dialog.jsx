@@ -214,22 +214,6 @@ const css = /* css */ `
     }
   }
 
-  /* Custom renderer only (see this file's top comment) — same purpose as
-     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
-     to exactly match the dialog's own positioned ancestor, absorbing any
-     scrollable-overflow growth a translate/scale entrance transition can
-     cause in some browsers before it ever reaches the real container. */
-  .navi_dialog_clip_wrapper {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    overflow: hidden;
-
-    .navi_dialog {
-      pointer-events: auto;
-    }
-  }
-
   /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
      a real sibling element instead, same idea/CSS shape as Popover's own
      .navi_popover_backdrop (see popover.jsx's top comment for the design
@@ -271,6 +255,22 @@ const css = /* css */ `
       &[aria-expanded="false"] {
         opacity: 0;
       }
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — same purpose as
+     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
+     to exactly match the dialog's own positioned ancestor, absorbing any
+     scrollable-overflow growth a translate/scale entrance transition can
+     cause in some browsers before it ever reaches the real container. */
+  .navi_dialog_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_dialog {
+      pointer-events: auto;
     }
   }
 
