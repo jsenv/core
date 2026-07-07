@@ -22,19 +22,21 @@
  * everything that doesn't genuinely differ between them, once an
  * `openController` is already resolved: focus/debug/id plumbing, capture
  * setup, animation-attribute resolution, the open-commit sequence, the
- * close handler — which returns
- * `[backdropProps, contentProps]`, two plain prop objects each component
- * just spreads onto its own backdrop/content element. Right now both
- * components' JSX bodies are identical (spread the two prop objects onto a
- * `Box` each) — kept as two separate components anyway, rather than one,
- * because they're expected to diverge in DOM structure later (e.g. one of
- * them needing an extra wrapper) once that need actually arrives; don't
- * collapse them back into one just because they look redundant today.
- * `usePopoverProps` derives which rendering strategy's *effect logic*
- * (`runOpenEffectViaAttribute`/`runOpenEffectCustom`) to run from the same
- * `anchor` prop by default; its second argument exists so a caller can
- * override that later if a genuine need for it shows up, but nothing
- * passes it yet.
+ * close handler, and — inlined directly in the hook's own `openEffect`,
+ * branching on a single `isCustom` flag rather than living in two separate
+ * functions — the open/position/close sequence itself. Keeping it inline
+ * (instead of splitting into two functions the way an earlier version of
+ * this file did) makes the actual, genuine differences between the two
+ * renderers easier to see at each point they occur — backdrop show/hide
+ * mechanics and anchor-positioning math — rather than having to diff two
+ * separately-scrolled functions to find them; everything else in the
+ * sequence (capture setup, animation resolution, the commit/close steps)
+ * is one shared call either way. `PopoverViaAttribute`/`PopoverCustom`
+ * themselves stay two separate, real components (see below) even though
+ * their own JSX bodies are trivial and identical today — they're expected
+ * to diverge in DOM structure later (e.g. one of them needing an extra
+ * wrapper), so collapsing them into one now would just mean re-splitting
+ * them apart again once that need arrives.
  *
  * - `anchor="scrollContainer"` → the custom renderer, docked to the
  *   popover's own positioned ancestor. Always ignores whatever the
@@ -48,17 +50,25 @@
  *   via-attribute renderer. `anchor="viewport"` and `anchor={undefined}`
  *   both mean "no real anchor supplied via the prop" — by default that
  *   falls back to the triggering event's own carried anchor
- *   (`detail.anchor`/`.source`) if present, else sticks to the viewport;
- *   `ignoreEventAnchor` skips that fallback, forcing the viewport-stick
+ *   (`detail.anchor`/`.source`) if present, else docks to the viewport;
+ *   `ignoreEventAnchor` skips that fallback, forcing the viewport-dock
  *   placement regardless of what triggered the open (used by the demo's
  *   "Ignoring the anchor" section). A ref/DOM element is always used as a
  *   real anchor directly, regardless of `ignoreEventAnchor`.
+ *   `resolvePositioningAnchor` resolves this down to a single value: either
+ *   a real anchor element, or `undefined` — `hasAnchorElement` (just
+ *   `Boolean(anchor)`) is what the rest of the code branches on from there.
+ *   ("Real anchor" isn't quite the right word for that boolean either,
+ *   since a container being docked to is arguably a real anchor in its own
+ *   right too — `hasAnchorElement` is meant narrowly: is there a specific
+ *   *element* being positioned against, as opposed to sticking to a
+ *   container's own rect.)
  *
  * `aria-expanded` lives on the popover element itself, toggled imperatively
  * in sync with showPopover()/hidePopover() (or, for the custom renderer, a
- * plain inline `display` toggle — see `runOpenEffectCustom`'s own comment)
- * so popup_css.js can key its CSS off one selector for both Popover and
- * Dialog. Both renderers share the exact same `.navi_popover`/
+ * plain inline `display` toggle — see the custom branch's own comments
+ * below) so popup_css.js can key its CSS off one selector for both Popover
+ * and Dialog. Both renderers share the exact same `.navi_popover`/
  * `.navi_popover_backdrop` classes — CSS that differs between them keys off
  * the native popover element's own `[popover]` attribute (present only for
  * the via-attribute renderer) rather than an extra class.
@@ -96,15 +106,35 @@
  * on-the-right. A bare word means no overlap with the anchor; "aligned-"
  * means edges touching. A single word implies "center" on the other axis.
  * The 4 corners (top-left, top-right, bottom-left, bottom-right) are presets
- * for the "aligned-" pair on both axes. `animation="auto"` resolves to
- * "scaling" for any real anchor, or for a point/corner placed dead-center
- * (an "aligned-"/"center" axis means the popover overlaps the anchor there,
- * so a translate reads oddly — see resolveDirectionValue below); "sliding"
- * otherwise (a point/corner with a direction, no anchor edge to grow out
- * of) — concretely as one of popup_css.js's `slide-from-*` values, computed
- * here in JS (not left for CSS to puzzle out from raw position attributes)
- * so there's a single, inspectable `navi-animation` value driving one
- * direct CSS rule per direction, no attribute-cascade indirection.
+ * for the "aligned-" pair on both axes.
+ *
+ * When there's no real anchor element (`!hasAnchorElement`), the
+ * via-attribute renderer docks against the viewport itself by feeding
+ * `pickPositionRelativeTo` its own `document.documentElement` sentinel
+ * value (see that function's own comment in visible_rect.js) — the same
+ * function a real anchor uses, not a separate implementation. Docking
+ * doesn't have a "float away with a gap" concept the way a real anchor's
+ * "above"/"below" do, so `toDockPosition` first collapses the bare
+ * directions to their "aligned-*" equivalent (`above` → `aligned-top`,
+ * etc.) and passes them as both `positionX/Y` *and* `positionX/YFixed`,
+ * skipping `pickPositionRelativeTo`'s own flip-on-overflow check entirely —
+ * a docked corner/edge never flips to the other side. The custom renderer
+ * never reaches `pickPositionRelativeTo` at all: it's genuinely relative to
+ * its own ancestor rather than the viewport, a different coordinate space
+ * that function isn't built for (see its own "should be used only for
+ * document-relative element" warning) — it keeps its own
+ * `computeStickToPosition` doing the equivalent math in ancestor-local
+ * coordinates instead.
+ *
+ * `animation="auto"` resolves to "scaling" for any real anchor, or for a
+ * point/corner placed dead-center (an "aligned-"/"center" axis means the
+ * popover overlaps the anchor there, so a translate reads oddly — see
+ * resolveDirectionValue below); "sliding" otherwise (a point/corner with a
+ * direction, no anchor edge to grow out of) — concretely as one of
+ * popup_css.js's `slide-from-*` values, computed here in JS (not left for
+ * CSS to puzzle out from raw position attributes) so there's a single,
+ * inspectable `navi-animation` value driving one direct CSS rule per
+ * direction, no attribute-cascade indirection.
  * `animation="expanding"` (grows out of a real anchor's own edge, `expand-*`
  * concretely — via-attribute only, since the custom renderer never has a
  * real anchor) and `animation="fading"` (opacity only, no motion) are both
@@ -128,23 +158,38 @@
  * too, which only ever fades regardless of which kind it is (see the
  * backdrop's own CSS comment for why).
  *
- * Neither renderer needs any JS-driven "wait for the transition, then
- * actually remove it" bookkeeping to hide correctly: both `.navi_popover`
- * (popup_css.js) and `.navi_popover_backdrop` (below) include `display` in
- * their own `transition-property`, alongside `transition-behavior:
- * allow-discrete` — the browser itself keeps a `display: none` change
- * (whether it comes from `hidePopover()`'s own UA stylesheet rule, or from
- * a plain `el.style.display = "none"` set directly for the custom
- * renderer) rendered until the rest of the transition settles, then applies
- * it. Reopening while a close transition is still pending works for the
- * same reason `suppressPointerEventsDuringTransition`'s own reopen already
- * relied on: `transitionProperty = "none"` at the start of every open
- * interrupts whatever transition (including a still-pending discrete
- * `display` change) was in flight, before the fresh open's own values are
- * set.
+ * The via-attribute renderer's own `.navi_popover` switches to
+ * `position: fixed` whenever the resolved animation is a `slide-from-*`
+ * value (`&[popover][navi-animation^="slide-from"]` below) — regardless of
+ * whether there's a real anchor or not. The point is avoiding a scrollbar:
+ * a `slide-from-*` entrance genuinely translates the box up to 100% of its
+ * own size off past one edge for the *closed* frame, which, for a
+ * `position: absolute` box, would contribute to the document's scrollable
+ * area while that frame is committed (the same "closed" frame this file's
+ * `commitOpen`/reflow-trick machinery always briefly renders before
+ * flipping `aria-expanded`) — `position: fixed` never contributes to
+ * document scroll size, sidestepping it. Since `resolvedAnimationKind ===
+ * "sliding"` (the only kind that can ever resolve to `slide-from-*` — see
+ * `resolveDirectionValue`) is knowable immediately from `parsedAnchorArea`
+ * alone, before positioning ever runs, `navi-animation` is given an early,
+ * placeholder `slide-from-*` value (any one works — only the attribute's
+ * own `slide-from` *prefix* matters for the CSS selector above) right after
+ * `resolvedAnimationKind` is known, so `position: fixed` is already in
+ * effect by the time the first `pickPositionRelativeTo` call measures
+ * scroll offset — getting this order wrong would measure/position the
+ * popover as if it were still `absolute`, one frame before the CSS
+ * actually made it `fixed`, visibly offsetting it by the page's scroll
+ * amount on that first paint. `applyResolvedAnimation` (further down, after
+ * positioning) then overwrites that placeholder with the real, final
+ * direction — "expanding" is the only other kind resolved that late (it
+ * needs `pickPositionRelativeTo`'s own already-resolved
+ * `data-position-y/x-current`), but it can never produce a `slide-from-*`
+ * value, so its own later timing is never a problem for `position: fixed`.
  *
- * `data-anchor-mode="scroll-container"` marks the no-real-anchor case for
- * both renderers (absent when anchored to a real element).
+ * `data-anchor-out-of-view` marks a real anchor that's scrolled out of view
+ * (`visibilityRatio <= 0.2`) — never set at all when `!hasAnchorElement`,
+ * since visibility ratio is meaningless for something docked to the
+ * viewport/ancestor rather than a specific element.
  */
 
 import {
@@ -152,7 +197,6 @@ import {
   findEvent,
   getBorderSizes,
   getPositionedParent,
-  getPositioningScrollOffset,
   pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
@@ -197,10 +241,10 @@ const css = /* css */ `
        than fixed by default because an element in the top layer always uses
        the initial containing block regardless of "position", and an
        absolute element scrolls in lockstep with the document with no JS
-       involved, unlike fixed (see the [popover][data-anchor-mode] override
-       below for the one case that actually wants fixed). The custom
-       renderer is *always* absolute for real: its containing block is
-       genuinely its nearest positioned ancestor. */
+       involved, unlike fixed (see the [popover][navi-animation^="slide-from"]
+       override below for the one case that actually wants fixed). The
+       custom renderer is *always* absolute for real: its containing block
+       is genuinely its nearest positioned ancestor. */
     position: absolute;
     inset: unset;
     max-width: min(
@@ -227,15 +271,11 @@ const css = /* css */ `
       outline-style: solid;
     }
 
-    /* Only the via-attribute renderer's no-real-anchor case wants this:
-       pinned to the viewport itself, exactly what position: fixed already
-       does natively — staying absolute would instead let it contribute to
-       the document's own scrollable area once it extends past the current
-       viewport edge, growing the page's scrollbar for no reason. The custom
-       renderer (no [popover] attribute) never matches this — it's always
-       absolute, relative to its own positioned ancestor, real anchor or
-       not. */
-    &[popover][data-anchor-mode="scroll-container"] {
+    /* See this file's top comment for why a slide-from-* animation forces
+       the via-attribute renderer into position: fixed regardless of anchor
+       mode (avoiding a scrollbar) — the custom renderer (no [popover]
+       attribute) never matches this, it's always absolute. */
+    &[popover][navi-animation^="slide-from"] {
       position: fixed;
     }
 
@@ -347,6 +387,7 @@ const UncontrolledPopover = (props) => {
     />
   );
 };
+
 // Picks which rendering strategy actually mounts, from the `anchor` prop
 // alone (see this file's top comment) — done here, after the
 // controlled/uncontrolled split above, so an openController is always
@@ -364,7 +405,6 @@ const ControlledPopover = (props) => {
 // internally.
 const PopoverViaAttribute = (props) => {
   const [backdropProps, contentProps] = usePopoverProps(props);
-
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
@@ -372,9 +412,9 @@ const PopoverViaAttribute = (props) => {
     </>
   );
 };
+
 const PopoverCustom = (props) => {
   const [backdropProps, contentProps] = usePopoverProps(props);
-
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
@@ -387,11 +427,12 @@ const PopoverCustom = (props) => {
  * Everything both rendering strategies share once an `openController` is
  * already resolved (by `ControlledPopover`'s callers above): focus/debug/id
  * plumbing, capture setup, animation-attribute resolution, the open-commit
- * sequence, the close handler. Dispatches to `runOpenEffectViaAttribute`/
- * `runOpenEffectCustom` for the one thing that genuinely differs (backdrop
- * show/hide mechanics, anchor-positioning math) and returns
- * `[backdropProps, contentProps]` — two plain prop objects ready to spread
- * onto a backdrop/content element each.
+ * sequence, the close handler, and the open/position/close sequence itself
+ * — inlined here, branching on `isCustom` at each point the two renderers
+ * genuinely differ (see this file's top comment for why it's inlined
+ * rather than split into two functions). Returns `[backdropProps,
+ * contentProps]` — two plain prop objects ready to spread onto a
+ * backdrop/content element each.
  *
  * `options.usesCustomRenderer` overrides the default derivation from the
  * `anchor` prop — nothing passes it yet; it exists so a future caller can
@@ -428,7 +469,7 @@ const usePopoverProps = (props, options = {}) => {
 
   // Decided once per render from the raw prop (never from the
   // event-carried anchor) — see this file's top comment.
-  const usesCustomRenderer =
+  const isCustom =
     options.usesCustomRenderer ?? anchorProp === "scrollContainer";
 
   const defaultRef = useRef();
@@ -456,18 +497,18 @@ const usePopoverProps = (props, options = {}) => {
       ref.current.setAttribute("aria-expanded", "false");
       // The custom renderer has no native show/hide mechanism to lean on —
       // starts hidden via a plain inline style instead, managed entirely in
-      // JS from here on (runOpenEffectCustom).
-      if (usesCustomRenderer) {
+      // JS from here on (see the isCustom branch below).
+      if (isCustom) {
         ref.current.style.display = "none";
       }
     }
     if (backdropRef.current) {
       backdropRef.current.setAttribute("aria-expanded", "false");
-      if (usesCustomRenderer) {
+      if (isCustom) {
         backdropRef.current.style.display = "none";
       }
     }
-  }, [usesCustomRenderer]);
+  }, [isCustom]);
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
@@ -477,28 +518,317 @@ const usePopoverProps = (props, options = {}) => {
     if (!popoverEl) {
       return undefined;
     }
-    const ctx = {
-      e,
-      popoverEl,
-      backdropEl,
-      anchorProp,
-      ignoreEventAnchor,
-      anchorArea,
-      anchorAreaFixed,
+
+    const [cleanup, addCleanup] = createPubSub(true);
+
+    // Anchor resolution is the first genuine fork: the custom renderer
+    // never has a real anchor at all (see this file's top comment) — it
+    // always sticks to its own positioned ancestor instead.
+    const anchor = isCustom
+      ? undefined
+      : resolvePositioningAnchor(anchorProp, e, {
+          ignoreEventAnchor,
+          noRealAnchorValue: "viewport",
+        });
+    const hasAnchorElement = Boolean(anchor);
+    const positionedAncestor = isCustom ? getPositionedParent(popoverEl) : null;
+
+    const { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind } =
+      resolveAnchorAreaAndAnimationKind({
+        anchorArea,
+        isAutoAnimation,
+        animation,
+        animationAnchor: anchor,
+      });
+
+    // Must be resolved (at least the "is this going to be a slide-from-*
+    // value" fact) before the popover is ever measured/positioned below —
+    // see this file's top comment for why.
+    if (!isCustom) {
+      if (resolvedAnimationKind === "sliding") {
+        popoverEl.setAttribute("navi-animation", "slide-from-top");
+      } else {
+        popoverEl.removeAttribute("navi-animation");
+      }
+    }
+
+    // Suppressed until the popover is actually measured/positioned below —
+    // see this file's top comment for why @starting-style can't drive the
+    // opening transition (it needs the popover's actual resting position
+    // already in place, which requires a layout box that only exists once
+    // shown).
+    popoverEl.style.transitionProperty = "none";
+
+    if (isCustom) {
+      // Not "showPopover()" — just making it visible again, synchronously,
+      // so it's measurable below even though aria-expanded is still
+      // "false" (see this file's top comment for why the two are
+      // deliberately decoupled).
+      popoverEl.style.display = "";
+    } else {
+      popoverEl.showPopover();
+      // aria-expanded stays "false" here — transitions are still
+      // suppressed, so this doesn't matter yet — and only flips once
+      // positioned below.
+    }
+
+    if (backdropEl) {
+      // Disarm a still-pending hide from a previous close: a click
+      // arriving later must not hide the fresh instance this open is
+      // about to show.
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
+      if (isCustom) {
+        backdropEl.style.transitionProperty = "none";
+        backdropEl.style.display = "";
+        backdropEl.setAttribute("aria-expanded", "true");
+        backdropEl.getBoundingClientRect();
+        backdropEl.style.transitionProperty = "";
+      } else {
+        // Hidden first if a previous close's deferred hidePopover() (see
+        // the close handler below) hasn't run yet — showPopover() throws
+        // on an already-open element. Showing it fresh here (rather than
+        // reusing an older still-open instance) resets its top-layer
+        // position to right below the real popover, which matters when
+        // other popovers already opened in between.
+        if (backdropEl.matches(":popover-open")) {
+          backdropEl.hidePopover();
+        }
+        // Same reflow trick as the real popover below (no @starting-style):
+        // the backdrop's own fade needs a genuinely rendered "closed" frame
+        // to transition from, not a jump straight from not-rendered to
+        // aria-expanded="true".
+        backdropEl.style.transitionProperty = "none";
+        backdropEl.showPopover();
+        backdropEl.getBoundingClientRect();
+        backdropEl.style.transitionProperty = "";
+        backdropEl.setAttribute("aria-expanded", "true");
+      }
+    }
+
+    // What we observe for repositioning on resize/scroll/visibility
+    // changes: the positioned ancestor for the custom renderer, the anchor
+    // when anchored, otherwise the whole document.
+    const effectiveAnchor = isCustom
+      ? positionedAncestor
+      : anchor || document.documentElement;
+
+    const positionPopover = (positionEvent) => {
+      let appliedLeft;
+      let top;
+
+      if (isCustom) {
+        const ancestorRect = positionedAncestor.getBoundingClientRect();
+        const ancestorBorders = getBorderSizes(positionedAncestor);
+        // Container rect already expressed in the ancestor's own local
+        // coordinate space (origin at its own padding-box top-left) — no
+        // document-relative conversion needed, unlike the via-attribute
+        // renderer.
+        const containerRect = {
+          left: 0,
+          top: 0,
+          right:
+            ancestorRect.width - ancestorBorders.left - ancestorBorders.right,
+          bottom:
+            ancestorRect.height - ancestorBorders.top - ancestorBorders.bottom,
+          width:
+            ancestorRect.width - ancestorBorders.left - ancestorBorders.right,
+          height:
+            ancestorRect.height - ancestorBorders.top - ancestorBorders.bottom,
+        };
+        const spacingPx = resolveSpacingSize(anchorSpacing);
+        const stickPosition = computeStickToPosition(
+          popoverEl,
+          containerRect,
+          slideDirectionKey,
+          spacingPx,
+          {
+            scrollLeft: positionedAncestor.scrollLeft,
+            scrollTop: positionedAncestor.scrollTop,
+          },
+        );
+        appliedLeft = stickPosition.left;
+        top = stickPosition.top;
+      } else if (hasAnchorElement) {
+        const { width, height } = anchor.getBoundingClientRect();
+        const {
+          left: borderLeft,
+          right: borderRight,
+          top: borderTop,
+          bottom: borderBottom,
+        } = getBorderSizes(anchor);
+        popoverEl.style.setProperty(
+          "--anchor-width",
+          `${snapToPixel(width)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-height",
+          `${snapToPixel(height)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-width",
+          `${snapToPixel(width - borderLeft - borderRight)}px`,
+        );
+        popoverEl.style.setProperty(
+          "--anchor-inner-height",
+          `${snapToPixel(height - borderTop - borderBottom)}px`,
+        );
+        const minLeft = 1;
+        // Remove max-height constraint so pickPositionRelativeTo measures the natural
+        // (unconstrained) height of the popover. This ensures the 60% flip threshold
+        // compares against the real content height, not the already-truncated one.
+        popoverEl.style.removeProperty("--space-available");
+        let effectivePositionXFixed;
+        let effectivePositionYFixed;
+        if (anchorAreaFixed) {
+          const parsedAnchorAreaFixed = parseAnchorArea(anchorAreaFixed);
+          if (!parsedAnchorAreaFixed) {
+            console.warn(
+              `Popover: invalid anchorAreaFixed="${anchorAreaFixed}"`,
+            );
+          } else {
+            effectivePositionXFixed = parsedAnchorAreaFixed.x;
+            effectivePositionYFixed = parsedAnchorAreaFixed.y;
+          }
+        }
+        const {
+          left,
+          top: pickedTop,
+          positionY: pickedPositionY,
+          spaceAbove,
+          spaceBelow,
+        } = pickPositionRelativeTo(popoverEl, anchor, {
+          positionX: parsedAnchorArea.x,
+          positionY: parsedAnchorArea.y,
+          positionXFixed: effectivePositionXFixed,
+          positionYFixed: effectivePositionYFixed,
+          spacing: resolveSpacingSize(anchorSpacing),
+          viewportSpacing: resolveSpacingSize(containerSpacing),
+          minLeft,
+        });
+        const spaceAvailable =
+          pickedPositionY === "above" || pickedPositionY === "aligned-bottom"
+            ? spaceAbove
+            : spaceBelow;
+        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+        appliedLeft = Math.max(left, minLeft);
+        top = pickedTop;
+      } else {
+        // No real anchor: dock against the viewport itself, via
+        // pickPositionRelativeTo's own document.documentElement sentinel —
+        // see this file's top comment for why (and for toDockPosition's
+        // own role). --space-available is deliberately left untouched here
+        // (cleared, not set) — a docked popover always relies on the CSS's
+        // own --popover-maxmax-height ceiling instead, same as before this
+        // reused pickPositionRelativeTo for this case.
+        popoverEl.style.removeProperty("--space-available");
+        const dockX = toDockPosition(parsedAnchorArea.x);
+        const dockY = toDockPosition(parsedAnchorArea.y);
+        const { left, top: pickedTop } = pickPositionRelativeTo(
+          popoverEl,
+          document.documentElement,
+          {
+            positionX: dockX,
+            positionY: dockY,
+            positionXFixed: dockX,
+            positionYFixed: dockY,
+            viewportSpacing: resolveSpacingSize(anchorSpacing),
+          },
+        );
+        appliedLeft = left;
+        top = pickedTop;
+      }
+
+      debugPopup(
+        positionEvent,
+        `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
+      );
+      popoverEl.style.top = `${top}px`;
+      popoverEl.style.left = `${appliedLeft}px`;
+    };
+
+    setupPositionalCaptures(popoverEl, {
       scrollCapture,
       focusCapture,
-      isAutoAnimation,
-      animation,
-      anchorSpacing,
-      containerSpacing,
-      debugPopup,
       debugFocus,
-      disarmBackdropHideRef,
+      addCleanup,
+    });
+
+    const rectEffect = visibleRectEffect(
+      effectiveAnchor,
+      ({ visibilityRatio }, { event }) => {
+        // Only a real anchor can meaningfully go "out of view" — gating on
+        // document.documentElement's own visibilityRatio (used for
+        // anchorless/docked popups) would wrongly skip positioning on a
+        // tall page, since its ratio is often low even when nothing's
+        // hidden. hasAnchorElement is already false for the custom
+        // renderer, so this never triggers for it either.
+        if (hasAnchorElement && visibilityRatio <= 0.2) {
+          popoverEl.setAttribute("data-anchor-out-of-view", "");
+          return;
+        }
+        popoverEl.removeAttribute("data-anchor-out-of-view");
+        positionPopover(event);
+      },
+      {
+        event: e,
+        // it's ok for the popover to become unsync with the anchor size
+        // (we could even argue it's a feature as it helps to keep the popover position stable)
+        skipElementResize: true,
+      },
+    );
+    // Re-run positioning whenever the popover's own content changes size
+    // while open (e.g. an expand/collapse toggle inside it) — not just when
+    // the anchor itself moves/resizes/re-anchors.
+    rectEffect.observeSize(popoverEl);
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
+
+    // Resolved here, once, now that rectEffect's own setup has already
+    // called positionPopover() above and the actual position is known —
+    // see applyResolvedAnimation's own comment for why this timing matters,
+    // and this file's top comment for why the "is it slide-from-*"
+    // question was already answered earlier, before positioning, for
+    // position: fixed's own sake.
+    const hasCssTransitionAnimation = applyResolvedAnimation(
+      popoverEl,
+      backdropEl,
+      resolvedAnimationKind,
+      parsedAnchorArea,
+    );
+
+    const { cancelOpenInteractionSuppression, restoreFocus } = commitOpen({
+      popoverEl,
+      hasCssTransitionAnimation,
       openController,
-    };
-    return usesCustomRenderer
-      ? runOpenEffectCustom(ctx)
-      : runOpenEffectViaAttribute(ctx);
+      e,
+      debugPopup,
+      logMessage: isCustom
+        ? `openPopover() -> scroll-container (local)`
+        : `openPopover() -> anchor: ${anchor?.tagName}, hasAnchorElement: ${hasAnchorElement}`,
+    });
+
+    return buildCloseHandler({
+      popoverEl,
+      backdropEl,
+      cancelOpenInteractionSuppression,
+      hasCssTransitionAnimation,
+      disarmBackdropHideRef,
+      restoreFocus,
+      cleanup,
+      debugPopup,
+      hidePopoverImpl: isCustom
+        ? () => {
+            popoverEl.style.display = "none";
+          }
+        : () => popoverEl.hidePopover(),
+      hideBackdropImpl: isCustom
+        ? () => {
+            backdropEl.style.display = "none";
+          }
+        : () => backdropEl.hidePopover(),
+    });
   };
 
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
@@ -524,7 +854,7 @@ const usePopoverProps = (props, options = {}) => {
         // via-attribute renderer, top-layer promotion (not DOM position) is
         // what puts it above normal page content; for the custom renderer,
         // it's a plain sibling confined to the same positioned ancestor.
-        "popover": usesCustomRenderer ? undefined : "manual",
+        "popover": isCustom ? undefined : "manual",
         "baseClassName": "navi_popover_backdrop",
         "aria-hidden": "true",
         "styleCSSVars": POPUP_STYLE_CSS_VARS,
@@ -563,7 +893,7 @@ const usePopoverProps = (props, options = {}) => {
 
   const contentProps = {
     id,
-    "popover": usesCustomRenderer ? undefined : "manual",
+    "popover": isCustom ? undefined : "manual",
     tabIndex,
     "navi-animation": isAutoAnimation ? undefined : animation,
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
@@ -591,418 +921,6 @@ const usePopoverProps = (props, options = {}) => {
   return [backdropProps, contentProps];
 };
 
-/**
- * Native Popover API rendering strategy: `popover="manual"`,
- * `showPopover()`/`hidePopover()`, promoted to the top layer.
- */
-const runOpenEffectViaAttribute = (ctx) => {
-  const {
-    e,
-    popoverEl,
-    backdropEl,
-    anchorProp,
-    ignoreEventAnchor,
-    anchorArea,
-    anchorAreaFixed,
-    scrollCapture,
-    focusCapture,
-    isAutoAnimation,
-    animation,
-    anchorSpacing,
-    containerSpacing,
-    debugPopup,
-    debugFocus,
-    disarmBackdropHideRef,
-    openController,
-  } = ctx;
-
-  const [cleanup, addCleanup] = createPubSub(true);
-  const { anchor, isScrollContainerAnchor } = resolvePositioningAnchor(
-    anchorProp,
-    e,
-    { ignoreEventAnchor, noRealAnchorValue: "viewport" },
-  );
-  const { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind } =
-    resolveAnchorAreaAndAnimationKind({
-      anchorArea,
-      isAutoAnimation,
-      animation,
-      animationAnchor: anchor,
-    });
-  // Keys the CSS that switches to position: fixed (see the CSS comment
-  // above for why) — absent when anchored to a real element.
-  if (isScrollContainerAnchor) {
-    popoverEl.setAttribute("data-anchor-mode", "scroll-container");
-  } else {
-    popoverEl.removeAttribute("data-anchor-mode");
-  }
-  // anchorArea's y/x vocabulary is pickPositionRelativeTo's own
-  // positionY/positionX vocabulary (see visible_rect.js) — no translation
-  // needed, only meaningful against a real anchor (pickPositionRelativeTo
-  // below); the scroll-container case uses slideDirectionKey directly
-  // instead, feeding computeStickToPosition, which speaks the
-  // 9-compass-point vocabulary natively.
-  const effectivePositionX = parsedAnchorArea.x;
-  const effectivePositionY = parsedAnchorArea.y;
-  let effectivePositionXFixed;
-  let effectivePositionYFixed;
-  if (anchorAreaFixed) {
-    const parsedAnchorAreaFixed = parseAnchorArea(anchorAreaFixed);
-    if (!parsedAnchorAreaFixed) {
-      console.warn(`Popover: invalid anchorAreaFixed="${anchorAreaFixed}"`);
-    } else {
-      effectivePositionXFixed = parsedAnchorAreaFixed.x;
-      effectivePositionYFixed = parsedAnchorAreaFixed.y;
-    }
-  }
-  // Suppressed until the popover is actually measured/positioned below —
-  // see this file's top comment for why @starting-style can't drive the
-  // opening transition (it needs the popover's actual resting position
-  // already in place, which requires a layout box that only exists once
-  // shown).
-  popoverEl.style.transitionProperty = "none";
-
-  if (backdropEl) {
-    // Disarm a still-pending hide from a previous close: a click arriving
-    // later must not hide the fresh instance this open is about to show.
-    disarmBackdropHideRef.current?.();
-    disarmBackdropHideRef.current = null;
-    // Hidden first if a previous close's deferred hidePopover() (see the
-    // close cleanup below) hasn't run yet — showPopover() throws on an
-    // already-open element. Showing it fresh here (rather than reusing an
-    // older still-open instance) resets its top-layer position to right
-    // below the real popover, which matters when other popovers already
-    // opened in between.
-    if (backdropEl.matches(":popover-open")) {
-      backdropEl.hidePopover();
-    }
-    // Same reflow trick as the real popover below (no @starting-style):
-    // the backdrop's own fade needs a genuinely rendered "closed" frame
-    // to transition from, not a jump straight from not-rendered to
-    // aria-expanded="true".
-    backdropEl.style.transitionProperty = "none";
-    backdropEl.showPopover();
-    backdropEl.getBoundingClientRect();
-    backdropEl.style.transitionProperty = "";
-    backdropEl.setAttribute("aria-expanded", "true");
-  }
-  popoverEl.showPopover();
-  // aria-expanded stays "false" here — transitions are still
-  // suppressed, so this doesn't matter yet — and only flips once
-  // positioned below.
-
-  // What we observe for repositioning on resize/scroll/visibility changes:
-  // the anchor when anchored, otherwise the whole document.
-  const effectiveAnchor = anchor || document.documentElement;
-
-  const positionPopover = (positionEvent) => {
-    let appliedLeft;
-    let top;
-
-    if (isScrollContainerAnchor) {
-      const containerRect = {
-        left: 0,
-        top: 0,
-        right: document.documentElement.clientWidth,
-        bottom: document.documentElement.clientHeight,
-        width: document.documentElement.clientWidth,
-        height: document.documentElement.clientHeight,
-      };
-      const spacingPx = resolveSpacingSize(anchorSpacing);
-      const stickPosition = computeStickToPosition(
-        popoverEl,
-        containerRect,
-        slideDirectionKey,
-        spacingPx,
-        getPositioningScrollOffset(popoverEl),
-      );
-      appliedLeft = stickPosition.left;
-      top = stickPosition.top;
-    } else {
-      const { width, height } = effectiveAnchor.getBoundingClientRect();
-      const {
-        left: borderLeft,
-        right: borderRight,
-        top: borderTop,
-        bottom: borderBottom,
-      } = getBorderSizes(effectiveAnchor);
-      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-      popoverEl.style.setProperty(
-        "--anchor-height",
-        `${snapToPixel(height)}px`,
-      );
-      popoverEl.style.setProperty(
-        "--anchor-inner-width",
-        `${snapToPixel(width - borderLeft - borderRight)}px`,
-      );
-      popoverEl.style.setProperty(
-        "--anchor-inner-height",
-        `${snapToPixel(height - borderTop - borderBottom)}px`,
-      );
-      const minLeft = 1;
-      // Remove max-height constraint so pickPositionRelativeTo measures the natural
-      // (unconstrained) height of the popover. This ensures the 60% flip threshold
-      // compares against the real content height, not the already-truncated one.
-      popoverEl.style.removeProperty("--space-available");
-      const {
-        left,
-        top: pickedTop,
-        positionY: pickedPositionY,
-        spaceAbove,
-        spaceBelow,
-      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionX: effectivePositionX,
-        positionY: effectivePositionY,
-        positionXFixed: effectivePositionXFixed,
-        positionYFixed: effectivePositionYFixed,
-        spacing: resolveSpacingSize(anchorSpacing),
-        viewportSpacing: resolveSpacingSize(containerSpacing),
-        minLeft,
-      });
-      const finalPositionY = pickedPositionY;
-      const spaceAvailable =
-        finalPositionY === "above" || finalPositionY === "aligned-bottom"
-          ? spaceAbove
-          : spaceBelow;
-      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
-      appliedLeft = Math.max(left, minLeft);
-      top = pickedTop;
-    }
-
-    debugPopup(
-      positionEvent,
-      `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
-    );
-    popoverEl.style.top = `${top}px`;
-    popoverEl.style.left = `${appliedLeft}px`;
-  };
-
-  setupPositionalCaptures(popoverEl, {
-    scrollCapture,
-    focusCapture,
-    debugFocus,
-    addCleanup,
-  });
-
-  const rectEffect = visibleRectEffect(
-    effectiveAnchor,
-    ({ visibilityRatio }, { event }) => {
-      // Only a real anchor can meaningfully go "out of view" — gating on
-      // document.documentElement's own visibilityRatio (used for
-      // anchorless/anchor-point popups) would wrongly skip positioning on
-      // a tall page, since its ratio is often low even when nothing's
-      // hidden.
-      if (anchor && visibilityRatio <= 0.2) {
-        popoverEl.setAttribute("data-anchor-out-of-view", "");
-        return;
-      }
-      popoverEl.removeAttribute("data-anchor-out-of-view");
-      positionPopover(event);
-    },
-    {
-      event: e,
-      // it's ok for the popover to become unsync with the anchor size
-      // (we could even argue it's a feature as it helps to keep the popover position stable)
-      skipElementResize: true,
-    },
-  );
-  // Re-run positioning whenever the popover's own content changes size
-  // while open (e.g. an expand/collapse toggle inside it) — not just when
-  // the anchor itself moves/resizes/re-anchors.
-  rectEffect.observeSize(popoverEl);
-  addCleanup(() => {
-    rectEffect.disconnect();
-  });
-
-  // Resolved here, once, now that rectEffect's own setup has already called
-  // positionPopover() above and the actual position is known — see
-  // applyResolvedAnimation's own comment for why this timing matters.
-  const hasCssTransitionAnimation = applyResolvedAnimation(
-    popoverEl,
-    backdropEl,
-    resolvedAnimationKind,
-    parsedAnchorArea,
-  );
-
-  const { cancelOpenInteractionSuppression, restoreFocus } = commitOpen({
-    popoverEl,
-    hasCssTransitionAnimation,
-    openController,
-    e,
-    debugPopup,
-    logMessage: `openPopover() -> anchor: ${anchor?.tagName}, isScrollContainerAnchor: ${isScrollContainerAnchor}`,
-  });
-
-  return buildCloseHandler({
-    popoverEl,
-    backdropEl,
-    cancelOpenInteractionSuppression,
-    hasCssTransitionAnimation,
-    disarmBackdropHideRef,
-    restoreFocus,
-    cleanup,
-    debugPopup,
-    hidePopoverImpl: () => popoverEl.hidePopover(),
-    hideBackdropImpl: () => backdropEl.hidePopover(),
-  });
-};
-
-/**
- * Plain `position: absolute` div rendering strategy, genuinely relative to
- * its nearest positioned ancestor. Only ever reached via
- * `anchor="scrollContainer"` (see this file's top comment) — there is no
- * real-anchor case here at all: a ref/DOM element `anchor` always selects
- * `runOpenEffectViaAttribute` instead.
- *
- * No native show/hide mechanism to lean on (no `showPopover()`/
- * `hidePopover()`) — `display` is managed directly via JS: set to `""`
- * synchronously on open (before measurement, so the element is actually
- * measurable while `aria-expanded` is still `"false"` during the pre-open
- * positioning pass — same "measure closed frame, then flip to true" pattern
- * as the via-attribute case), set to `"none"` directly on close. No JS-side
- * deferral is needed for that close-time change to actually wait for the
- * animation — see this file's top comment for why.
- */
-const runOpenEffectCustom = (ctx) => {
-  const {
-    e,
-    popoverEl,
-    backdropEl,
-    anchorArea,
-    scrollCapture,
-    focusCapture,
-    isAutoAnimation,
-    animation,
-    anchorSpacing,
-    debugPopup,
-    debugFocus,
-    disarmBackdropHideRef,
-    openController,
-  } = ctx;
-
-  const [cleanup, addCleanup] = createPubSub(true);
-  // This popover's own containing block — where local coordinates are
-  // relative to, and what it sticks against (always: see this function's
-  // own top comment, there is no real-anchor case here).
-  const positionedAncestor = getPositionedParent(popoverEl);
-  const { parsedAnchorArea, slideDirectionKey, resolvedAnimationKind } =
-    resolveAnchorAreaAndAnimationKind({
-      anchorArea,
-      isAutoAnimation,
-      animation,
-      animationAnchor: undefined,
-    });
-  popoverEl.setAttribute("data-anchor-mode", "scroll-container");
-
-  popoverEl.style.transitionProperty = "none";
-  // Not "showPopover()" — just making it visible again, synchronously, so
-  // it's measurable below even though aria-expanded is still "false" (see
-  // this file's top comment for why the two are deliberately decoupled).
-  popoverEl.style.display = "";
-
-  if (backdropEl) {
-    disarmBackdropHideRef.current?.();
-    disarmBackdropHideRef.current = null;
-    backdropEl.style.transitionProperty = "none";
-    backdropEl.style.display = "";
-    backdropEl.setAttribute("aria-expanded", "true");
-    backdropEl.getBoundingClientRect();
-    backdropEl.style.transitionProperty = "";
-  }
-
-  const positionPopover = (positionEvent) => {
-    const ancestorRect = positionedAncestor.getBoundingClientRect();
-    const ancestorBorders = getBorderSizes(positionedAncestor);
-    // Container rect already expressed in the ancestor's own local
-    // coordinate space (origin at its own padding-box top-left) — no
-    // document-relative conversion needed, unlike the via-attribute
-    // renderer.
-    const containerRect = {
-      left: 0,
-      top: 0,
-      right: ancestorRect.width - ancestorBorders.left - ancestorBorders.right,
-      bottom:
-        ancestorRect.height - ancestorBorders.top - ancestorBorders.bottom,
-      width: ancestorRect.width - ancestorBorders.left - ancestorBorders.right,
-      height:
-        ancestorRect.height - ancestorBorders.top - ancestorBorders.bottom,
-    };
-    const spacingPx = resolveSpacingSize(anchorSpacing);
-    const stickPosition = computeStickToPosition(
-      popoverEl,
-      containerRect,
-      slideDirectionKey,
-      spacingPx,
-      {
-        scrollLeft: positionedAncestor.scrollLeft,
-        scrollTop: positionedAncestor.scrollTop,
-      },
-    );
-
-    debugPopup(
-      positionEvent,
-      `positionPopover() -> left: ${stickPosition.left}, top: ${stickPosition.top}`,
-    );
-    popoverEl.style.top = `${stickPosition.top}px`;
-    popoverEl.style.left = `${stickPosition.left}px`;
-  };
-
-  setupPositionalCaptures(popoverEl, {
-    scrollCapture,
-    focusCapture,
-    debugFocus,
-    addCleanup,
-  });
-
-  const rectEffect = visibleRectEffect(
-    positionedAncestor,
-    (_, { event }) => {
-      positionPopover(event);
-    },
-    {
-      event: e,
-      skipElementResize: true,
-    },
-  );
-  rectEffect.observeSize(popoverEl);
-  addCleanup(() => {
-    rectEffect.disconnect();
-  });
-
-  const hasCssTransitionAnimation = applyResolvedAnimation(
-    popoverEl,
-    backdropEl,
-    resolvedAnimationKind,
-    parsedAnchorArea,
-  );
-
-  const { cancelOpenInteractionSuppression, restoreFocus } = commitOpen({
-    popoverEl,
-    hasCssTransitionAnimation,
-    openController,
-    e,
-    debugPopup,
-    logMessage: `openPopover() -> scroll-container (local)`,
-  });
-
-  return buildCloseHandler({
-    popoverEl,
-    backdropEl,
-    cancelOpenInteractionSuppression,
-    hasCssTransitionAnimation,
-    disarmBackdropHideRef,
-    restoreFocus,
-    cleanup,
-    debugPopup,
-    hidePopoverImpl: () => {
-      popoverEl.style.display = "none";
-    },
-    hideBackdropImpl: () => {
-      backdropEl.style.display = "none";
-    },
-  });
-};
-
 /* ============================================================
  * Shared helpers
  * ============================================================ */
@@ -1026,12 +944,13 @@ const POPUP_STYLE_CSS_VARS = {
 
 /**
  * Resolves the `anchor` prop (and, unless `ignoreEventAnchor`, the event's
- * own carried anchor) into either a real element or "no real anchor, stick
- * to the container instead". `noRealAnchorValue` is the one string value
- * this renderer accepts for that ("viewport" for the via-attribute renderer
- * — the custom renderer never calls this at all, since it never has a
- * real-anchor case, see runOpenEffectCustom's own top comment).
- * @returns {{ anchor: HTMLElement|undefined, isScrollContainerAnchor: boolean }}
+ * own carried anchor) into a real anchor element, or `undefined` — the
+ * caller derives `hasAnchorElement`/`Boolean(anchor)` from that itself, see
+ * this file's top comment for why it isn't named "isRealAnchor"/similar.
+ * `noRealAnchorValue` is the one string value this renderer accepts for
+ * "no anchor" ("viewport" for the via-attribute renderer — the custom
+ * renderer never calls this at all, since it never has a real-anchor case).
+ * @returns {HTMLElement|undefined}
  */
 const resolvePositioningAnchor = (
   anchorProp,
@@ -1040,28 +959,25 @@ const resolvePositioningAnchor = (
 ) => {
   if (anchorProp === noRealAnchorValue) {
     if (!ignoreEventAnchor && e.detail.anchor) {
-      return { anchor: e.detail.anchor, isScrollContainerAnchor: false };
+      return e.detail.anchor;
     }
-    return { anchor: undefined, isScrollContainerAnchor: true };
+    return undefined;
   }
   if (typeof anchorProp === "string") {
     console.warn(
       `Popover: unknown anchor="${anchorProp}" (expected "${noRealAnchorValue}", "scrollContainer", a ref, or a DOM element)`,
     );
-    return { anchor: undefined, isScrollContainerAnchor: true };
+    return undefined;
   }
   if (anchorProp) {
     // anchor prop is a ref or a DOM element — always a real anchor,
     // regardless of ignoreEventAnchor.
-    return {
-      anchor: anchorProp.current ?? anchorProp,
-      isScrollContainerAnchor: false,
-    };
+    return anchorProp.current ?? anchorProp;
   }
   if (!ignoreEventAnchor && e.detail.anchor) {
-    return { anchor: e.detail.anchor, isScrollContainerAnchor: false };
+    return e.detail.anchor;
   }
-  return { anchor: undefined, isScrollContainerAnchor: true };
+  return undefined;
 };
 
 // See the anchorArea grammar in this file's top comment.
@@ -1126,10 +1042,35 @@ const parseAnchorArea = (
 };
 
 /**
+ * Collapses a bare anchorArea value ("above"/"below"/"on-the-left"/
+ * "on-the-right") to its "aligned-*" equivalent — "aligned-*"/"center"
+ * values pass through unchanged. Used only by the via-attribute renderer's
+ * own docked (no real anchor) positioning case — see this file's top
+ * comment for why: docking has no "float away with a gap" concept, so the
+ * bare/aligned distinction (meaningful only against a real anchor box)
+ * would be nonsensical left as-is.
+ */
+const toDockPosition = (value) => {
+  if (value === "above") {
+    return "aligned-top";
+  }
+  if (value === "below") {
+    return "aligned-bottom";
+  }
+  if (value === "on-the-left") {
+    return "aligned-left";
+  }
+  if (value === "on-the-right") {
+    return "aligned-right";
+  }
+  return value;
+};
+
+/**
  * Collapses an anchorArea y/x pair into the 8-compass-point + "center"
- * vocabulary popup_css.js's slide CSS and computeStickToPosition key off —
- * the overlap distinction (above/aligned-top, etc.) doesn't apply to a
- * point/corner, which has no anchor box to overlap with.
+ * vocabulary computeStickToPosition keys off — the overlap distinction
+ * (above/aligned-top, etc.) doesn't apply to the custom renderer's own
+ * docked positioning (it has no anchor box to overlap with).
  */
 const toSlideDirectionKey = (y, x) => {
   const yKey =
@@ -1155,11 +1096,11 @@ const toSlideDirectionKey = (y, x) => {
 
 /**
  * Shared by both renderers: parses `anchorArea`, derives the compass-point
- * key `computeStickToPosition` needs, and resolves `animation="auto"`/
- * `true`. `animationAnchor` is the real anchor element for the
- * via-attribute renderer's auto-animation resolution, or `undefined` for
- * the custom renderer (which never has one — see resolveAutoAnimationKind's
- * own comment).
+ * key the custom renderer's own `computeStickToPosition` needs, and
+ * resolves `animation="auto"`/`true`. `animationAnchor` is the real anchor
+ * element for the via-attribute renderer's auto-animation resolution, or
+ * `undefined` for the custom renderer (which never has one — see
+ * resolveAutoAnimationKind's own comment).
  */
 const resolveAnchorAreaAndAnimationKind = ({
   anchorArea,
@@ -1258,6 +1199,9 @@ const applyResolvedAnimation = (
   }
   if (resolvedAnimation) {
     popoverEl.setAttribute("navi-animation", resolvedAnimation);
+    // The backdrop mirrors the same value, but only ever fades
+    // regardless of which kind it is — see the backdrop's own CSS
+    // comment for why.
     backdropEl?.setAttribute("navi-animation", resolvedAnimation);
   } else {
     popoverEl.removeAttribute("navi-animation");
@@ -1267,16 +1211,11 @@ const applyResolvedAnimation = (
 };
 
 /**
- * Places the popover pinned to an anchor point of `containerRect` (the
- * viewport for the via-attribute renderer's scroll-container case, or the
- * custom renderer's own positioned ancestor) instead of relative to a real
- * anchor. Returns { left, top } in whatever coordinate space popoverEl's
- * own computed position needs — viewport rect math, converted at the very
- * end via `scrollOffset` (document scroll for the via-attribute renderer,
- * the positioned ancestor's own scroll for the custom renderer — each
- * caller supplies the one that matches its own containing block, see each
- * renderer's own call site), continuously recomputed by visibleRectEffect
- * on scroll/resize.
+ * Places the popover pinned to an anchor point of `containerRect` — the
+ * custom renderer's own positioned ancestor, in its own local coordinate
+ * space (see this file's top comment for why the via-attribute renderer's
+ * equivalent docked case uses `pickPositionRelativeTo` directly instead, via
+ * its `document.documentElement` sentinel, rather than this function).
  */
 const computeStickToPosition = (
   popoverEl,
@@ -1339,9 +1278,9 @@ const computeStickToPosition = (
  * point/corner placed dead-center (both anchorArea axes overlapping —
  * there's no sensible direction to slide from in that case). "sliding"
  * otherwise. `anchor` is always `undefined` for the custom renderer (it
- * never has a real anchor — see runOpenEffectCustom's own top comment), so
- * this collapses to "scaling" there only for the dead-center case,
- * "sliding" otherwise.
+ * never has a real anchor — see this file's top comment), so this
+ * collapses to "scaling" there only for the dead-center case, "sliding"
+ * otherwise.
  */
 const resolveAutoAnimationKind = (anchor, parsedAnchorArea) => {
   const yOverlapsAnchor =
