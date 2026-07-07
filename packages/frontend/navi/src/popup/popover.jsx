@@ -1,6 +1,11 @@
 /**
  * A popup positioned via `anchor`/`positionArea`, driven either by
- * --navi-toggle/--navi-open/--navi-close commands or the `open` prop.
+ * --navi-toggle/--navi-open/--navi-close commands, the `open` prop
+ * (controlled), or `defaultOpen` (uncontrolled, mount-only — see
+ * useOpenControllerByProps in open_controller.js). Whichever of these
+ * starts the popover already open at mount plays no entrance animation —
+ * nothing was ever shown as "closed" for the user to see it transition away
+ * from (see openEffect's own `silent` handling below).
  *
  * Two entirely separate rendering strategies exist in this one file, each
  * its own real component: `PopoverViaAttribute` (native Popover API,
@@ -346,7 +351,11 @@ const css = /* css */ `
         background: rgba(0, 0, 0, 0.1);
       }
       &[data-pointer-interaction-outside="capture"] {
-        background: rgba(0, 0, 0, 0.7);
+        /* "capture" means the rest of the page is fully non-interactive —
+           blurred, not just dimmed, so it reads as clearly secondary and
+           pulls visual focus onto the popover's own content. */
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
       }
     }
 
@@ -556,6 +565,14 @@ const usePopoverProps = (props) => {
       return undefined;
     }
 
+    // Set by useOpenControllerByProps for the very first open triggered by
+    // `open`/`defaultOpen` already being truthy at mount — there's nothing
+    // to visually transition away from (nothing was ever shown as "closed"
+    // to the user), so this open skips the animation entirely instead of
+    // playing it against a closed frame that was never actually seen. See
+    // the final commit step below for how that's done.
+    const silent = Boolean(e.detail.silent);
+
     const [cleanup, addCleanup] = createPubSub(true);
 
     // Anchor resolution is the first genuine fork: a real anchorProp works
@@ -621,11 +638,15 @@ const usePopoverProps = (props) => {
       // about to show.
       disarmBackdropHideRef.current?.();
       disarmBackdropHideRef.current = null;
+      // transitionProperty stays "none" here for both — reset later, in the
+      // final commit step alongside popoverEl's own (not resumed early the
+      // way it briefly was), so a `silent` open (see above) can keep both
+      // elements' transitions suppressed right up until after their
+      // aria-expanded flip, the same way it does for popoverEl.
+      backdropEl.style.transitionProperty = "none";
       if (isCustom) {
-        backdropEl.style.transitionProperty = "none";
         backdropEl.style.display = "";
         backdropEl.getBoundingClientRect();
-        backdropEl.style.transitionProperty = "";
       } else {
         // Hidden first if a previous close's deferred hidePopover() (see
         // the close handler below) hasn't run yet — showPopover() throws
@@ -642,10 +663,8 @@ const usePopoverProps = (props) => {
         // aria-expanded="true". Shown *before* popoverEl below — the top
         // layer stacks later showPopover() calls above earlier ones, so the
         // backdrop must go first for the real popover to end up on top.
-        backdropEl.style.transitionProperty = "none";
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
-        backdropEl.style.transitionProperty = "";
       }
       // aria-expanded stays "false" here — flipped later, once
       // navi-animation has actually been set on the backdrop (see the final
@@ -872,16 +891,38 @@ const usePopoverProps = (props) => {
     // comment), suppresses pointer events until it settles, and transfers
     // focus in. Inlined rather than a standalone function since it only
     // has this one call site.
+    //
+    // `silent` (mounting already open via `open`/`defaultOpen`) flips the
+    // order instead: aria-expanded first, *then* re-enable transitions —
+    // the flip itself happens while transitionProperty is still "none", so
+    // nothing is transition-able yet when it changes, and no animation
+    // plays even though a reflow still runs in between (forced anyway by
+    // the positioning math above, real anchor or not).
     popoverEl.getBoundingClientRect();
-    popoverEl.style.transitionProperty = "";
+    if (!silent) {
+      // Re-enabled before the flip below, so the change is genuinely
+      // transition-able when it happens. For `silent`, this happens further
+      // down instead — after, not before, the flip.
+      popoverEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
     popoverEl.setAttribute("aria-expanded", "true");
     // Backdrop flips here too, not in the earlier show block above — by now
     // navi-animation has already been set on it (right above), so this is
     // the first point its own opacity transition can actually fire.
     backdropEl?.setAttribute("aria-expanded", "true");
-    const cancelOpenInteractionSuppression = hasCssTransitionAnimation
-      ? suppressPointerEventsDuringTransition(popoverEl)
-      : null;
+    if (silent) {
+      popoverEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
+    const cancelOpenInteractionSuppression =
+      !silent && hasCssTransitionAnimation
+        ? suppressPointerEventsDuringTransition(popoverEl)
+        : null;
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,

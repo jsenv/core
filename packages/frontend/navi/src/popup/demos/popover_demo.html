@@ -385,6 +385,7 @@
           <MarginWithContainerSection />
           <PointerInteractionOutsideSection />
           <CustomizationSection />
+          <OpenAtStartSection />
         </div>
       );
 
@@ -425,6 +426,9 @@
             </li>
             <li>
               <a href="#customization">Customization</a>
+            </li>
+            <li>
+              <a href="#open-from-start">Open from the start</a>
             </li>
           </ol>
         </nav>
@@ -786,6 +790,54 @@
                 backgroundColor: "#fff8e1",
               }}
             />
+          </div>
+        </section>
+      );
+
+      // Both mount already open, with animation on — the entrance animation
+      // should NOT play in either case (nothing was ever shown as "closed"
+      // for the user to see it transition away from). "controlled" passes a
+      // literal open={true} from the start; "uncontrolled" uses defaultOpen
+      // instead (mount-only, like defaultChecked/defaultValue — toggling
+      // later has no effect on it).
+      const OpenAtStartPopover = ({ label, ...props }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation
+              animationDuration="0.6s"
+              borderRadius="8px"
+              className="demo_popover_box"
+              {...props}
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const OpenAtStartSection = () => (
+        <section id="open-from-start" class="demo-section">
+          <h2>9. Open from the start</h2>
+          <p>
+            <code>open={"{true}"}</code> (controlled) or{" "}
+            <code>defaultOpen</code> (uncontrolled, mount-only) mount the
+            popover already open — animation is on for both below, but it should
+            never actually play on mount, only on a later close/reopen.
+          </p>
+          <div class="demo-row">
+            <OpenAtStartPopover
+              label={"open={true}"}
+              open
+              positionArea="to-the-left bottom"
+            />
+            <OpenAtStartPopover label="defaultOpen" defaultOpen />
           </div>
         </section>
       );

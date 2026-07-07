@@ -260,7 +260,7 @@ export const useOpenController = (openHandler) => {
 };
 
 export const useOpenControllerByProps = (props) => {
-  const { open, onClose } = props;
+  const { open, defaultOpen, onClose } = props;
   // Lets an uncontrolled consumer (no openController of its own) still react
   // to a self-initiated close (Escape, backdrop click, its own close button)
   // without having to own a controller just to observe it — onClose is
@@ -270,7 +270,29 @@ export const useOpenControllerByProps = (props) => {
     onClose ? { onClose } : undefined,
   );
 
+  // Tracks whether the effect below has ever run before — only the very
+  // first run gets the "mount already open" treatment (`open` truthy from
+  // the start, or the uncontrolled, mount-only `defaultOpen`); every
+  // subsequent `open` change is a real, later toggle and should animate
+  // normally like any other interactive open/close.
+  const isFirstRunRef = useRef(true);
+
   useLayoutEffect(() => {
+    const isFirstRun = isFirstRunRef.current;
+    isFirstRunRef.current = false;
+
+    if (isFirstRun) {
+      if (open || defaultOpen) {
+        // silent: true — nothing was ever shown as "closed" for the user to
+        // see transition away from, so this first open skips the entrance
+        // animation entirely (see popover.jsx's own openEffect for how).
+        openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+          silent: true,
+        });
+      }
+      return;
+    }
+
     if (open === undefined) {
       return;
     }
