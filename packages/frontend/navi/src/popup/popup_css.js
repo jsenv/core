@@ -83,7 +83,6 @@ export const popupCss = /* css */ `
     .navi_dialog {
       --popup-animation-duration: 0.18s;
       --popup-scale-from: 0.9;
-      --popup-border-radius: 0;
 
       --popup-opacity-duration: var(--popup-animation-duration);
       --popup-translate-duration: var(--popup-animation-duration);

@@ -40,6 +40,12 @@ const css = /* css */ `
       --dialog-maxmax-height: calc(
         var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
       );
+
+      --dialog-border-radius: 8px;
+      --dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
+      --dialog-outline-width: var(--navi-focus-outline-width);
+      --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
+      --dialog-outline-color: var(--navi-focus-outline-color);
     }
   }
 
@@ -59,10 +65,21 @@ const css = /* css */ `
     margin-top: var(--dialog-top-inset, auto);
     margin-bottom: auto;
     flex-direction: column;
+    border-width: var(--dialog-border-width);
+    border-style: solid;
+    border-color: var(--dialog-border-color);
+    border-radius: var(--dialog-border-radius);
+    outline-width: var(--dialog-outline-width);
+    outline-color: var(--dialog-outline-color);
+    outline-offset: 0;
     transition: margin-top 0.1s ease-in-out;
 
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
+    }
+
+    &[data-focus-visible] {
+      outline-style: solid;
     }
 
     &[open] {

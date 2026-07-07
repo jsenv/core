@@ -22,28 +22,25 @@ import { Popover } from "./popover.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_popup {
-      --popup-border-radius: 0px;
-      --popup-border-width: 0px;
+      --popup-border-radius: 8px;
+      --popup-border-width: 1px;
+      --popup-border-color: #d0d0d0;
+
+      &.navi_popover {
+        --popover-border-radius: var(--popup-border-radius);
+        --popover-border-width: var(--popup-border-width);
+        --popover-border-color: var(--popup-border-color);
+      }
+
+      &.navi_dialog {
+        --dialog-border-radius: var(--popup-border-radius);
+        --dialog-border-color: var(--popup-border-color);
+      }
     }
   }
 
   .navi_popup {
-    &.navi_popover {
-      margin: 0;
-      border-width: var(--popup-border-width);
-      border-color: var(--popup-border-color);
-      border-radius: var(--popup-border-radius);
-      overflow: auto;
-      overscroll-behavior: none;
-    }
-
     &.navi_dialog {
-      --popup-border-width: 0px;
-
-      border-width: var(--popup-border-width);
-      border-color: var(--popup-border-color);
-      border-radius: var(--popup-border-radius);
-
       &[data-expand-x] {
         width: var(--dialog-maxmax-width);
       }

@@ -109,6 +109,13 @@ const css = /* css */ `
       --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
       --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
       --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+
+      --popover-border-radius: 8px;
+      --popover-border-width: 1px;
+      --popover-border-color: #d0d0d0;
+      --popover-outline-width: var(--navi-focus-outline-width);
+      --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
+      --popover-outline-color: var(--navi-focus-outline-color);
     }
   }
 
@@ -131,6 +138,22 @@ const css = /* css */ `
       var(--space-available, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
+    border-width: var(--popover-border-width);
+    border-style: solid;
+    border-color: var(--popover-border-color);
+    border-radius: var(--popover-border-radius);
+    outline-width: var(--popover-outline-width);
+    outline-color: var(--popover-outline-color);
+    outline-offset: 0px;
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.08),
+      0 12px 40px rgba(0, 0, 0, 0.22);
+    overflow: auto;
+    overscroll-behavior: none;
+
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
 
     /* Neither anchorReference case has a real anchor to stay in
        scroll-lockstep with: anchor="viewport" is meant to stay pinned to the
