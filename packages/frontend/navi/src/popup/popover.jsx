@@ -624,7 +624,6 @@ const usePopoverProps = (props) => {
       if (isCustom) {
         backdropEl.style.transitionProperty = "none";
         backdropEl.style.display = "";
-        backdropEl.setAttribute("aria-expanded", "true");
         backdropEl.getBoundingClientRect();
         backdropEl.style.transitionProperty = "";
       } else {
@@ -647,8 +646,13 @@ const usePopoverProps = (props) => {
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
         backdropEl.style.transitionProperty = "";
-        backdropEl.setAttribute("aria-expanded", "true");
       }
+      // aria-expanded stays "false" here — flipped later, once
+      // navi-animation has actually been set on the backdrop (see the final
+      // commit step below): flipping it here, before that attribute exists,
+      // would mean the "closed"→"open" opacity change happens while the
+      // CSS's own [navi-animation] rule doesn't match yet, so no transition
+      // would ever play.
     }
 
     if (isCustom) {
@@ -871,6 +875,10 @@ const usePopoverProps = (props) => {
     popoverEl.getBoundingClientRect();
     popoverEl.style.transitionProperty = "";
     popoverEl.setAttribute("aria-expanded", "true");
+    // Backdrop flips here too, not in the earlier show block above — by now
+    // navi-animation has already been set on it (right above), so this is
+    // the first point its own opacity transition can actually fire.
+    backdropEl?.setAttribute("aria-expanded", "true");
     const cancelOpenInteractionSuppression = hasCssTransitionAnimation
       ? suppressPointerEventsDuringTransition(popoverEl)
       : null;
