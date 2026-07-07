@@ -718,6 +718,13 @@
             </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
+              {/* Focusable but outside any dialog — with a dialog open, Tab
+                  from inside it should never reach these (wraps back into
+                  the dialog instead), and clicking either directly should
+                  fail to steal focus away from the dialog too (both are
+                  what boundaryElement + pointerTrap: true, in dialog.jsx's
+                  own trapFocusInside call, are for). */}
+              <button type="button">Focusable before</button>
               {POSITION_AREA_Y_VALUES.flatMap((y) =>
                 POSITION_AREA_X_VALUES.map((x) => (
                   <Dialog
@@ -734,6 +741,7 @@
                   </Dialog>
                 )),
               )}
+              <button type="button">Focusable after</button>
             </div>
             <AreaGrid
               renderCell={(y, x) => (

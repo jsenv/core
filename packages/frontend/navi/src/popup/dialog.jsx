@@ -169,6 +169,17 @@ const css = /* css */ `
       background: rgba(0, 0, 0, 0.4);
     }
 
+    /* "capture" means the rest of the page is fully non-interactive —
+       blurred, not just dimmed, so it reads as clearly secondary and pulls
+       visual focus onto the dialog's own content, same aesthetic as
+       Popover's own backdrop (see popover.jsx's top comment). Attribute
+       before ::backdrop, not after — same reasoning as &[navi-animation]
+       below. */
+    &[data-pointer-interaction-outside="capture"]::backdrop {
+      background: rgb(255 255 255 / 0.08);
+      backdrop-filter: blur(30px) saturate(180%);
+    }
+
     /* Nested under &[navi-animation] (not the other way around) so every
        attribute selector compiles *before* ::backdrop, not after — a
        pseudo-element can't be qualified by an attribute of its own
@@ -250,6 +261,13 @@ const css = /* css */ `
     pointer-events: auto;
     --popup-animation-duration: 0.18s;
 
+    /* Same aesthetic as the via-attribute renderer's own native ::backdrop
+       above, and Popover's own backdrop (see popover.jsx's top comment). */
+    &[data-pointer-interaction-outside="capture"] {
+      background: rgb(255 255 255 / 0.08);
+      backdrop-filter: blur(30px) saturate(180%);
+    }
+
     &[navi-animation] {
       opacity: 1;
       transition-property: display, opacity;
@@ -317,15 +335,12 @@ const ControlledDialog = (props) => {
   return <DialogViaAttribute {...props} />;
 };
 
+// backdropProps is always null here — the via-attribute renderer's own
+// backdrop is native (::backdrop), not a real element useDialogProps ever
+// builds one for us to render.
 const DialogViaAttribute = (props) => {
-  const [backdropProps, contentProps] = useDialogProps(props);
-
-  return (
-    <>
-      {backdropProps && <Box {...backdropProps} />}
-      <Box {...contentProps} />
-    </>
-  );
+  const [, contentProps] = useDialogProps(props);
+  return <Box {...contentProps} />;
 };
 
 const DialogCustom = (props) => {
@@ -435,6 +450,13 @@ const useDialogProps = (props) => {
     }
     if (backdropRef.current) {
       backdropRef.current.setAttribute("aria-expanded", "false");
+      // Only ever rendered by the custom renderer (a plain div, unlike
+      // dialogEl itself, which is a real <dialog> and so already starts
+      // display: none natively until .show()/.showModal() adds [open]) —
+      // needs the same starting-hidden treatment explicitly, or it covers
+      // everything from the moment it mounts, well before the dialog is
+      // ever opened.
+      backdropRef.current.style.display = "none";
     }
   }, []);
 
@@ -525,6 +547,11 @@ const useDialogProps = (props) => {
         trapFocusInside(dialogEl, {
           debug: debugFocus,
           boundaryElement: positionedAncestor,
+          // A dialog is always modal (see this file's top comment) — a
+          // mousedown on some other focusable element inside the same
+          // container (but outside the dialog) must not steal focus away
+          // from it either, not just a Tab press.
+          pointerTrap: true,
         }),
       );
     }
@@ -608,6 +635,67 @@ const useDialogProps = (props) => {
         : null;
     const restoreFocus = openController.transferFocusOnOpen(dialogEl);
 
+    // isModal + "close"/"capture", only while pointer-events is actually
+    // suppressed above (!silent && hasCssTransitionAnimation — the exact
+    // same condition cancelOpenInteractionSuppression itself was just
+    // computed from): a native ::backdrop click is dispatched with target
+    // === dialogEl, and pointer-events is inherited by ::backdrop from its
+    // originating element — so suppressPointerEventsDuringTransition above
+    // (dialogEl.style.pointerEvents = "none" mid-transition) makes
+    // dialogEl (and its ::backdrop) unable to receive or forward a click
+    // at all during that window. inert already keeps that click from
+    // reaching anything real behind the dialog either way, but nothing is
+    // left to actually detect it and either request a close ("close") or
+    // confirm it was swallowed rather than silently doing nothing
+    // ("capture"). A real, temporary backdrop div — same idea as the
+    // custom renderer's own permanent one, just scoped to this window —
+    // plugs that gap: appended to the document only for the suppressed
+    // window, removed once the dialog closes (a bit longer than strictly
+    // needed, since the native ::backdrop always wins the hit-test first
+    // once its own pointer-events is restored, so a lingering shim past
+    // that point is simply never reached again). Outside of this window,
+    // the plain contentProps.onMouseDown below (target-based) already
+    // handles it directly on dialogEl — no shim needed there.
+    if (
+      isModal &&
+      pointerInteractionOutsideEffect !== "none" &&
+      !silent &&
+      hasCssTransitionAnimation
+    ) {
+      const shimBackdropEl = document.createElement("div");
+      shimBackdropEl.style.position = "fixed";
+      shimBackdropEl.style.inset = "0";
+      shimBackdropEl.style.background = "transparent";
+      shimBackdropEl.style.pointerEvents = "auto";
+      document.body.appendChild(shimBackdropEl);
+      shimBackdropEl.addEventListener("mousedown", (mouseDownEvent) => {
+        if (mouseDownEvent.button !== 0) {
+          return;
+        }
+        // Same as dialogEl's own contentProps.onMouseDown below: a click
+        // landing on the dialog's own (temporarily non-interactive)
+        // content must not be treated as an outside click either.
+        const rect = dialogEl.getBoundingClientRect();
+        const isOutside =
+          mouseDownEvent.clientX < rect.left ||
+          mouseDownEvent.clientX > rect.right ||
+          mouseDownEvent.clientY < rect.top ||
+          mouseDownEvent.clientY > rect.bottom;
+        if (!isOutside) {
+          return;
+        }
+        if (pointerInteractionOutsideEffect === "close") {
+          openController.requestClose(mouseDownEvent, { isCancel: true });
+        }
+        // "capture" absorbs the click without closing — see
+        // backdropProps.onMouseDown's own comment for why the two collapse
+        // to the same behavior for Dialog otherwise.
+      });
+      addCleanup(() => {
+        shimBackdropEl.remove();
+      });
+    }
+
     return (closeEvent) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
@@ -663,6 +751,7 @@ const useDialogProps = (props) => {
     "aria-hidden": "true",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
   });
   Object.assign(contentProps, {
     tabIndex,
@@ -672,6 +761,14 @@ const useDialogProps = (props) => {
     // after measuring (see this file's top comment) — so there's no reason
     // to withhold the attribute for the auto case the way Popover has to.
     "navi-animation": resolvedAnimation,
+    // Only meaningful for the via-attribute renderer's own native
+    // ::backdrop (see this file's CSS for the "capture" glass effect) — a
+    // pseudo-element can't carry its own attributes, so this has to live on
+    // the originating .navi_dialog element instead, same reasoning as
+    // navi-animation above. Harmless for the custom renderer too (its own
+    // real backdrop element already gets the same attribute via
+    // backdropProps above, which is what its own CSS actually keys off).
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -701,9 +798,11 @@ const useDialogProps = (props) => {
   });
 
   // Outside-click handling lives on whichever element actually receives the
-  // click: the via-attribute renderer's own backdrop is native (::backdrop,
-  // not a real element we can attach a listener to), so its own <dialog>
-  // element is what receives the click instead; the custom renderer's own
+  // click: the via-attribute renderer has no real backdrop element to
+  // attach a listener to, so its own <dialog> element is what receives the
+  // click instead — reliable whenever dialogEl's own pointer-events hasn't
+  // been touched (i.e. outside the brief suppressed window openEffect's
+  // own document-level listener above covers). The custom renderer's own
   // real backdrop element (a sibling, since a .show()'d dialog has no
   // native inert-ing to lean on) receives it directly.
   if (isModal) {
@@ -744,12 +843,6 @@ const useDialogProps = (props) => {
       // this hook's own destructuring comment for why the two collapse to
       // the same behavior for Dialog.
     };
-    // Only meaningful for the custom renderer — a showModal()'d dialog is
-    // already implicitly aria-modal="true" per the HTML/ARIA mapping, so
-    // setting it explicitly there would be redundant; a .show()'d one has
-    // no such implicit mapping at all despite behaving modally (focus trap,
-    // real backdrop), so it needs to be stated explicitly.
-    contentProps["aria-modal"] = "true";
   }
 
   return [isModal ? null : backdropProps, contentProps];
