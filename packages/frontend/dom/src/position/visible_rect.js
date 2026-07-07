@@ -592,8 +592,11 @@ export const visibleRectEffect = (
  *   "below"          — element.top    = anchor.bottom (sits below, no overlap)  (default)
  * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
  * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
- * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
- *   edge when anchor is within this many px of the left edge and element is wider than anchor.
+ * @param {number} [options.alignToContainerEdgeWhenAnchorNearEdge=0] - When centering
+ *   (positionX="center") an element wider than its anchor, snap to the available area's own
+ *   left edge (the page viewport normally, or anchor's own edge in anchorIsContainer mode)
+ *   instead of centering, once the anchor is within this many px of that same edge — avoids
+ *   the (wider) element overflowing past it. 0 disables the snap entirely.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
  * @param {boolean} [options.anchorIsContainer=false] - `anchor` is a container being
  *   docked *within* (its own bounds are the available space, and `element` is expected
@@ -618,7 +621,7 @@ export const pickPositionRelativeTo = (
     positionY = "below",
     positionXFixed,
     positionYFixed,
-    alignToViewportEdgeWhenAnchorNearEdge = 0,
+    alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     spacing = 0,
     alignToAnchorBox = "border-box",
@@ -672,6 +675,13 @@ export const pickPositionRelativeTo = (
   const containerBorders = anchorIsContainer
     ? getBorderSizes(anchor)
     : { left: 0, top: 0, right: 0, bottom: 0 };
+  // The available area's own boundaries — the page viewport normally, or
+  // anchor's own edges in anchorIsContainer mode (docking within a
+  // container, not floating above the whole page). Used both by the
+  // alignToContainerEdgeWhenAnchorNearEdge snap below and the final
+  // boundary clamp further down.
+  const clampLeftBound = anchorIsContainer ? anchorLeft : 0;
+  const clampRightBound = anchorIsContainer ? anchorRight : viewportWidth;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -852,7 +862,7 @@ export const pickPositionRelativeTo = (
     } else if (finalX === "aligned-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
-      // Complex logic handles wide anchors and viewport-edge snapping
+      // Complex logic handles wide anchors and container-edge snapping
       const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
       if (anchorIsWiderThanViewport) {
         const anchorLeftIsVisible = effectiveAnchorLeft >= 0;
@@ -875,14 +885,15 @@ export const pickPositionRelativeTo = (
           effectiveAnchorLeft +
           (effectiveAnchorRight - effectiveAnchorLeft) / 2 -
           elementWidth / 2;
-        if (alignToViewportEdgeWhenAnchorNearEdge) {
+        if (alignToContainerEdgeWhenAnchorNearEdge) {
           const effectiveAnchorWidth =
             effectiveAnchorRight - effectiveAnchorLeft;
           const elementIsWiderThanAnchor = elementWidth > effectiveAnchorWidth;
-          const anchorIsNearLeftEdge =
-            effectiveAnchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
-          if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
-            elementPositionLeft = minLeft;
+          const anchorIsNearContainerEdge =
+            effectiveAnchorLeft - clampLeftBound <
+            alignToContainerEdgeWhenAnchorNearEdge;
+          if (elementIsWiderThanAnchor && anchorIsNearContainerEdge) {
+            elementPositionLeft = clampLeftBound + minLeft;
           }
         }
       }
@@ -893,11 +904,7 @@ export const pickPositionRelativeTo = (
       elementPositionLeft = effectiveAnchorRight + spacing;
     }
     // Constrain horizontal position to the available area's boundaries
-    // (with containerSpacing margin) — the page viewport normally, or
-    // anchor's own edges in anchorIsContainer mode (docking within a
-    // container, not floating above the whole page).
-    const clampLeftBound = anchorIsContainer ? anchorLeft : 0;
-    const clampRightBound = anchorIsContainer ? anchorRight : viewportWidth;
+    // (with containerSpacing margin).
     if (elementPositionLeft < clampLeftBound + containerSpacing) {
       elementPositionLeft = clampLeftBound + containerSpacing;
     } else if (

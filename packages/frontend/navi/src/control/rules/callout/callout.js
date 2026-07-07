@@ -1056,7 +1056,7 @@ const stickCalloutToAnchor = (
         spaceAbove,
         spaceBelow,
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-        alignToViewportEdgeWhenAnchorNearEdge: 20,
+        alignToContainerEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
         positionX: "center",
         positionY: getAnchorAttribute("data-callout-position") || "below",

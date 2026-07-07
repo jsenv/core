@@ -183,8 +183,8 @@
  * scroll offset — getting this order wrong would measure/position the
  * popover as if it were still `absolute`, one frame before the CSS
  * actually made it `fixed`, visibly offsetting it by the page's scroll
- * amount on that first paint. `applyResolvedAnimation` (further down, after
- * positioning) then overwrites that placeholder with the real, final
+ * amount on that first paint. The final resolution step (further down,
+ * after positioning) then overwrites that placeholder with the real, final
  * direction — "expanding" is the only other kind resolved that late (it
  * needs `pickPositionRelativeTo`'s own already-resolved
  * `data-position-y/x-current`), but it can never produce a `slide-from-*`
@@ -778,18 +778,42 @@ const usePopoverProps = (props, options = {}) => {
       rectEffect.disconnect();
     });
 
-    // Resolved here, once, now that rectEffect's own setup has already
-    // called positionPopover() above and the actual position is known —
-    // see applyResolvedAnimation's own comment for why this timing matters,
-    // and this file's top comment for why the "is it slide-from-*"
-    // question was already answered earlier, before positioning, for
-    // position: fixed's own sake.
-    const hasCssTransitionAnimation = applyResolvedAnimation(
-      popoverEl,
-      backdropEl,
-      resolvedAnimationKind,
-      parsedAnchorArea,
-    );
+    // "sliding"/"expanding" need a concrete direction (see
+    // resolveDirectionValue) — resolved here, once, now that rectEffect's
+    // own setup has already called positionPopover() above and the actual
+    // position is known (pickPositionRelativeTo, for a real anchor, may
+    // have picked a different side than requested, written onto
+    // data-position-y/x-current — reading that back is what makes
+    // "expanding" point the right way), and before transitions are
+    // re-enabled below (same constraint as positioning itself). This file's
+    // top comment explains why the "is it slide-from-*" question was
+    // already answered earlier, before positioning, for position: fixed's
+    // own sake — this is the *final*, authoritative resolution, mirrored
+    // onto the backdrop too (see the backdrop's own CSS comment for why it
+    // only ever fades regardless of which kind it is).
+    let resolvedAnimation = resolvedAnimationKind;
+    if (resolvedAnimationKind === "sliding") {
+      resolvedAnimation =
+        resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
+          isRealAnchor: false,
+          prefix: "slide-from",
+        }) ?? "slide-from-top";
+    } else if (resolvedAnimationKind === "expanding") {
+      resolvedAnimation =
+        resolveDirectionValue(
+          popoverEl.getAttribute("data-position-y-current"),
+          popoverEl.getAttribute("data-position-x-current"),
+          { isRealAnchor: true, prefix: "expand" },
+        ) ?? "expand-up";
+    }
+    if (resolvedAnimation) {
+      popoverEl.setAttribute("navi-animation", resolvedAnimation);
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      popoverEl.removeAttribute("navi-animation");
+      backdropEl?.removeAttribute("navi-animation");
+    }
+    const hasCssTransitionAnimation = Boolean(resolvedAnimationKind);
 
     // The final step of open — commits the correctly positioned "closed"
     // frame set up above as a real rendered state (the reflow), re-enables
@@ -1078,7 +1102,7 @@ const resolveAnchorAreaAndAnimationKind = ({
  * Maps an anchorArea y/x pair to a concrete `navi-animation` value (a
  * `prefix` plus a direction word), or `null` if both axes overlap the anchor
  * (no direction at all — that's `resolvedAnimation === "scaling"` territory
- * instead, see applyResolvedAnimation).
+ * instead, see the "sliding"/"expanding" resolution step in `openEffect`).
  *
  * `isRealAnchor: false` (no real anchor, used only with `prefix:
  * "slide-from"`) keeps the word as the compass direction the popover comes
@@ -1109,53 +1133,6 @@ const resolveDirectionValue = (y, x, { isRealAnchor, prefix }) => {
   return yWord && xWord
     ? `${prefix}-${yWord}-${xWord}`
     : `${prefix}-${yWord || xWord}`;
-};
-
-/**
- * "sliding"/"expanding" need a concrete direction (see
- * resolveDirectionValue) — must be called only once the popover has
- * actually been positioned (pickPositionRelativeTo, for a real anchor, may
- * have picked a different side than requested, written onto
- * data-position-y/x-current — reading that back is what makes "expanding"
- * point the right way), and before transitions are re-enabled (same
- * constraint as positioning itself). Mirrors the resolved value onto the
- * backdrop too (see the backdrop's own CSS comment for why it only ever
- * fades regardless of which kind it is). Returns whether there's an actual
- * CSS transition to account for elsewhere (pointer-event suppression, the
- * open-commit/close sequences further down in `openEffect`).
- */
-const applyResolvedAnimation = (
-  popoverEl,
-  backdropEl,
-  resolvedAnimationKind,
-  parsedAnchorArea,
-) => {
-  let resolvedAnimation = resolvedAnimationKind;
-  if (resolvedAnimationKind === "sliding") {
-    resolvedAnimation =
-      resolveDirectionValue(parsedAnchorArea.y, parsedAnchorArea.x, {
-        isRealAnchor: false,
-        prefix: "slide-from",
-      }) ?? "slide-from-top";
-  } else if (resolvedAnimationKind === "expanding") {
-    resolvedAnimation =
-      resolveDirectionValue(
-        popoverEl.getAttribute("data-position-y-current"),
-        popoverEl.getAttribute("data-position-x-current"),
-        { isRealAnchor: true, prefix: "expand" },
-      ) ?? "expand-up";
-  }
-  if (resolvedAnimation) {
-    popoverEl.setAttribute("navi-animation", resolvedAnimation);
-    // The backdrop mirrors the same value, but only ever fades
-    // regardless of which kind it is — see the backdrop's own CSS
-    // comment for why.
-    backdropEl?.setAttribute("navi-animation", resolvedAnimation);
-  } else {
-    popoverEl.removeAttribute("navi-animation");
-    backdropEl?.removeAttribute("navi-animation");
-  }
-  return Boolean(resolvedAnimationKind);
 };
 
 /**
