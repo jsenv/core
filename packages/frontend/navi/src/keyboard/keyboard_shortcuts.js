@@ -178,7 +178,20 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
       ...shortcutCandidate,
       handler: (keyboardEvent) => {
         if (shortcutCandidate.handler) {
-          return shortcutCandidate.handler(keyboardEvent);
+          const returnValue = shortcutCandidate.handler(keyboardEvent);
+          // A shortcut handler returns either a plain false/null/undefined
+          // (no interaction to dispatch — e.g. the shortcut didn't apply
+          // given some runtime check), or the same { name, allowed,
+          // prevented, ... } shape dispatchRequestInteraction itself takes,
+          // which needs an actual dispatch to ever run its `allowed`/
+          // `prevented` callbacks.
+          if (!returnValue || typeof returnValue !== "object") {
+            return returnValue;
+          }
+          return dispatchRequestInteraction(keyboardEvent.currentTarget, {
+            event: keyboardEvent,
+            ...returnValue,
+          });
         }
         if (busyRef?.current) {
           return false;

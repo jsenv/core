@@ -669,9 +669,6 @@ const PickerContentInsidePopover = (props) => {
         scrollLock={scrollLock}
         pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
         focusTrap={focusTrap}
-        /* make popover focusable so it can be the first focus target when opening */
-        tabIndex={-1}
-        autoFocus="fallback"
       >
         {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
             and the list with a unified border/shadow. The clone is not
@@ -716,9 +713,8 @@ const PickerContentInsideDialog = (props) => {
         {...popupProps}
         className="navi_picker_dialog"
         scrollLock={scrollLock}
-        pointerLock={pointerLock}
+        pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
         centerInVisualViewport
-        autoFocus="fallback"
         data-expand-x={expandX ? "" : undefined}
         data-expand-y={expandY ? "" : undefined}
       >

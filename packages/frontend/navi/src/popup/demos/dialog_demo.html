@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dialog animation demo</title>
+    <title>Dialog demo</title>
     <style>
       body {
         margin: 20px;
@@ -40,7 +40,11 @@
 
       // No openController here: without one, Dialog creates its own and
       // self-wires to --navi-toggle/--navi-close commands.
-      const TriggeredDialog = ({ label, animation, fadeAnimation }) => {
+      const TriggeredDialog = ({
+        label,
+        animation,
+        pointerInteractionOutsideEffect,
+      }) => {
         const dialogId = useId();
 
         return (
@@ -51,7 +55,7 @@
             <Dialog
               id={dialogId}
               animation={animation}
-              fadeAnimation={fadeAnimation}
+              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
               className="demo_dialog_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -64,7 +68,7 @@
       const App = () => {
         return (
           <div>
-            <h1>Dialog animation demo</h1>
+            <h1>Dialog demo</h1>
 
             <div class="demo-section">
               <h3>none (default)</h3>
@@ -74,31 +78,32 @@
             </div>
 
             <div class="demo-section">
+              <h3>fading — opacity only, no motion</h3>
+              <div class="demo-row">
+                <TriggeredDialog label="fading" animation="fading" />
+              </div>
+            </div>
+
+            <div class="demo-section">
               <h3>
-                fadeAnimation — controls opacity fading independently of
-                animation; defaults to true
+                scaling — the auto default (<code>animation</code> or
+                <code>animation="auto"</code>), grows from the dialog's own
+                center. Reads best overall — same conclusion as Popover's own
+                dead-center case.
               </h3>
               <div class="demo-row">
-                <TriggeredDialog label="fade only (default)" />
+                <TriggeredDialog label="scaling (auto)" animation />
                 <TriggeredDialog
-                  label="fadeAnimation={false} (pops instantly)"
-                  fadeAnimation={false}
+                  label="scaling (explicit)"
+                  animation="scaling"
                 />
               </div>
             </div>
 
             <div class="demo-section">
-              <h3>clip (grows from the dialog's own center)</h3>
-              <div class="demo-row">
-                <TriggeredDialog label="clip" animation="clip" />
-              </div>
-            </div>
-
-            <div class="demo-section">
               <h3>
-                slide — explicit direction (dialogs are centered, so "auto"
-                direction from an anchor doesn't apply — only explicit
-                directions are supported)
+                sliding — explicit direction only (a dialog is always centered,
+                with no anchor to auto-resolve a direction from)
               </h3>
               <div class="demo-row">
                 <TriggeredDialog
@@ -116,6 +121,27 @@
                 <TriggeredDialog
                   label="slide-from-right"
                   animation="slide-from-right"
+                />
+              </div>
+            </div>
+
+            <div class="demo-section">
+              <h3>
+                pointerInteractionOutsideEffect — "close" (default) closes on an
+                outside click; "capture"/"none" both just absorb it (showModal()
+                already makes the rest of the page inert, so there's nothing for
+                the click to reach either way)
+              </h3>
+              <div class="demo-row">
+                <TriggeredDialog
+                  label="close (default)"
+                  animation="fading"
+                  pointerInteractionOutsideEffect="close"
+                />
+                <TriggeredDialog
+                  label="capture"
+                  animation="fading"
+                  pointerInteractionOutsideEffect="capture"
                 />
               </div>
             </div>

@@ -7,17 +7,24 @@ import {
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
+import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
-import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
-import {
-  getFocusedBeforeTransfer,
-  markAutofocusRestoreOnClose,
-  transferFocus,
-} from "../utils/focus/focus_transfer.js";
-import { useOpenController } from "./open_controller.js";
+import { useDebugPopup } from "../navi_debug.jsx";
+import { useOpenControllerByProps } from "./open_controller.js";
 import { buildPopupAnimationCss } from "./popup_animation.js";
 
+/**
+ * A dialog is always centered in the viewport, with no anchor to grow out of
+ * or slide in from — `animation={true}`/`"auto"` resolves to `"scaling"`
+ * (see popover.jsx's own top comment for why that reads best), the same kind
+ * Popover picks for a dead-center placement. Any other explicit kind
+ * (`"fading"`, `"scaling"`, or a literal `"slide-from-{top,bottom,left,
+ * right}"` + diagonals) is passed straight through as-is: these are all
+ * self-contained CSS selectors in the shared popup_animation.js, so unlike
+ * Popover there's no direction to resolve in JS — Dialog never needs to flip
+ * anything after measuring, since it's always centered.
+ */
 const css = /* css */ `
   .navi_dialog {
     &[open] {
@@ -36,12 +43,7 @@ const css = /* css */ `
     }
   }
 
-  ${buildPopupAnimationCss(
-    ".navi_dialog",
-  )}/* Dialogs aren't anchored the same way popovers are (they're centered in
-     the viewport) — "clip" always uses data-clip-axis="xy" (see below) and
-     always grows from the dialog's own center, not an anchor's or the
-     pointer's, so no --popup-animation-origin-x/y wiring is needed here. */
+  ${buildPopupAnimationCss(".navi_dialog")}
 `;
 
 /**
@@ -62,29 +64,12 @@ export const Dialog = (props) => {
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
 const UncontrolledDialog = (props) => {
-  const { open, ...rest } = props;
-  const openController = useOpenController(() => undefined);
-
-  useLayoutEffect(() => {
-    if (open === undefined) {
-      return;
-    }
-    if (open === openController.opened) {
-      return;
-    }
-    if (open) {
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
-    } else {
-      openController.requestClose(
-        new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
-      );
-    }
-  }, [open]);
+  const openController = useOpenControllerByProps(props);
 
   return (
     <ControlledDialog
-      {...rest}
+      {...props}
+      open={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {
@@ -104,21 +89,30 @@ const ControlledDialog = (props) => {
     anchorRef,
     children,
     scrollLock,
-    pointerLock,
+    // "none"/"capture" collapse to the same behavior for Dialog: unlike
+    // Popover, showModal() already makes the rest of the page inert, so
+    // there's nothing for a click to reach behind the backdrop regardless of
+    // this prop — only "close" changes anything observable.
+    pointerInteractionOutsideEffect = "close",
     animation,
-    fadeAnimation = true,
     centerInVisualViewport: centerInVisualViewportProp,
+    // Makes the dialog itself a valid focus target so autoFocus="fallback"
+    // below has somewhere to land when it contains nothing focusable of its
+    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // programmatically). <dialog> has no default tabindex of its own.
+    tabIndex = -1,
+    // See use_auto_focus.js's own docs for why this must never reach the DOM
+    // as a plain `autofocus` attribute — useAutoFocus below takes over
+    // instead, so it's read here rather than left in `rest`.
+    autoFocus = "fallback",
     ...rest
   } = props;
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const debugPopup = useDebugPopup();
-  const debugFocus = useDebugFocus();
-  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
-  // animation={true} or "auto" always resolves to "clip": dialogs are
-  // always centered in the viewport (unlike Popover, they don't track an
-  // anchor edge to grow out of or a side to "slide" in from).
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
   const isAutoAnimation = animation === true || animation === "auto";
+  const resolvedAnimation = isAutoAnimation ? "scaling" : animation;
 
   // aria-expanded lives on the dialog element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
@@ -150,16 +144,14 @@ const ControlledDialog = (props) => {
     const { width, height } = effectiveAnchor.getBoundingClientRect();
     dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
     dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
-    if (isAutoAnimation) {
-      dialogEl.setAttribute("navi-animation", "clip");
+    if (resolvedAnimation) {
+      dialogEl.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      dialogEl.removeAttribute("navi-animation");
     }
-    // "clip" always clips both axes for a dialog (see popup_animation.js) —
-    // there's no anchor edge to grow out of the way a Popover has.
-    dialogEl.setAttribute("data-clip-axis", "xy");
-    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
     dialogEl.showModal();
     dialogEl.setAttribute("aria-expanded", "true");
-    transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
     if (scrollLock) {
       addCleanup(trapScrollInside(dialogEl));
     }
@@ -205,38 +197,42 @@ const ControlledDialog = (props) => {
         dialogEl.style.removeProperty("--dialog-top-inset");
       });
     }
-    // Picker's openController.open() reads this back synchronously right
-    // after openEffect() returns (see picker_custom.jsx useOpenController).
-    e.detail.focusedBeforeOpen = focusedBeforeOpen;
 
-    return () => {
+    return (closeEvent) => {
       debugPopup(
-        `"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`,
+        `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
-      markAutofocusRestoreOnClose(dialogEl);
       dialogEl.setAttribute("aria-expanded", "false");
       dialogEl.close();
+      restoreFocus(closeEvent);
       cleanup();
     };
   };
 
   return (
     <Box
+      tabIndex={tabIndex}
       {...rest}
       {...autoFocusProps}
       as="dialog"
       ref={ref}
-      navi-animation={isAutoAnimation ? undefined : animation}
-      navi-fade-animation={fadeAnimation ? "" : undefined}
       styleCSSVars={DIALOG_STYLE_CSS_VARS}
       baseClassName="navi_dialog"
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
+      data-pointer-interaction-outside={pointerInteractionOutsideEffect}
+      onnavi_command={(e) => {
+        onNaviCommand(e);
+      }}
       onMouseDown={(e) => {
         rest.onMouseDown?.(e);
         // Detect backdrop click: the click must land outside the dialog's
         // bounding rect. Checking coordinates is necessary because clicking
         // on the dialog's own padding also sets e.target === ref.current.
-        if (!pointerLock && e.button === 0 && e.target === ref.current) {
+        if (
+          pointerInteractionOutsideEffect === "close" &&
+          e.button === 0 &&
+          e.target === ref.current
+        ) {
           const rect = ref.current.getBoundingClientRect();
           const isBackdrop =
             e.clientX < rect.left ||

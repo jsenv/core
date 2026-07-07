@@ -217,9 +217,9 @@ const ControlledPopover = (props) => {
     // see the anchorArea grammar in the file's top comment
     anchorArea = "below",
     anchorAreaFixed,
-    scrollLock,
+    scrollCapture,
     pointerInteractionOutsideEffect = "none",
-    focusTrap,
+    focusCapture,
     animation,
     // only meaningful with anchor="viewport"/"offsetParent" + a "scaling"
     // animation — see openEffect for why it's a no-op otherwise.
@@ -227,6 +227,15 @@ const ControlledPopover = (props) => {
     children,
     anchorSpacing = 0,
     viewportSpacing = 0,
+    // Makes the popover itself a valid focus target so autoFocus="fallback"
+    // below has somewhere to land when it contains nothing focusable of its
+    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // programmatically).
+    tabIndex = -1,
+    // See use_auto_focus.js's own docs for why this must never reach the DOM
+    // as a plain `autofocus` attribute — useAutoFocus below takes over
+    // instead, so it's read here rather than left in `rest`.
+    autoFocus = "fallback",
     ...rest
   } = props;
 
@@ -243,7 +252,7 @@ const ControlledPopover = (props) => {
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see the resolvedAnimationKind ternary in openEffect below).
   const isAutoAnimation = animation === true || animation === "auto";
@@ -497,10 +506,10 @@ const ControlledPopover = (props) => {
       popoverEl.style.left = `${appliedLeft}px`;
     };
 
-    if (scrollLock) {
+    if (scrollCapture) {
       addCleanup(trapScrollInside(popoverEl));
     }
-    if (focusTrap) {
+    if (focusCapture) {
       addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
     }
     const rectEffect = visibleRectEffect(
@@ -709,6 +718,7 @@ const ControlledPopover = (props) => {
       <Box
         id={id}
         popover="manual"
+        tabIndex={tabIndex}
         navi-animation={isAutoAnimation ? undefined : animation}
         styleCSSVars={POPUP_STYLE_CSS_VARS}
         {...rest}
