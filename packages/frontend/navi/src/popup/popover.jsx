@@ -101,7 +101,7 @@ import {
   useDebugPopup,
 } from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
-import { buildPopupAnimationCss } from "./popup_animation.js";
+import { popupCss } from "./popup_css.js";
 
 const css = /* css */ `
   .navi_popover {
@@ -174,7 +174,7 @@ const css = /* css */ `
     }
   }
 
-  ${buildPopupAnimationCss(".navi_popover")}
+  ${popupCss}
 `;
 
 /**

@@ -77,49 +77,50 @@
  * `--popup-spawn-origin-x/y` below, set by popover.jsx's `positionPopover`.
  */
 
-export const buildPopupAnimationCss = (selector) => {
-  return /* css */ `
-    @layer navi {
-      ${selector} {
-        --popup-animation-duration: 0.18s;
-        --popup-scale-from: 0.9;
-        --popup-border-radius: 0;
+export const popupCss = /* css */ `
+  @layer navi {
+    .navi_popover,
+    .navi_dialog {
+      --popup-animation-duration: 0.18s;
+      --popup-scale-from: 0.9;
+      --popup-border-radius: 0;
 
-        --popup-opacity-duration: var(--popup-animation-duration);
-        --popup-translate-duration: var(--popup-animation-duration);
-        --popup-scale-duration: var(--popup-animation-duration);
+      --popup-opacity-duration: var(--popup-animation-duration);
+      --popup-translate-duration: var(--popup-animation-duration);
+      --popup-scale-duration: var(--popup-animation-duration);
+    }
+  }
+
+  .navi_popover,
+  .navi_dialog {
+    &[navi-animation] {
+      transition-property:
+        display, overlay, opacity, translate, scale, box-shadow;
+      transition-duration:
+        var(--popup-animation-duration), var(--popup-animation-duration),
+        var(--popup-opacity-duration), var(--popup-translate-duration),
+        var(--popup-scale-duration), var(--popup-animation-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+    }
+
+    /* box-shadow fades in/out alongside any animation kind, instead of
+         staying flat while the popup is still moving. */
+    &[aria-expanded="false"] {
+      &[navi-animation] {
+        box-shadow: none;
       }
     }
 
-    ${selector} {
-      &[navi-animation] {
-        transition-property:
-          display, overlay, opacity, translate, scale, box-shadow;
-        transition-duration:
-          var(--popup-animation-duration), var(--popup-animation-duration),
-          var(--popup-opacity-duration), var(--popup-translate-duration),
-          var(--popup-scale-duration), var(--popup-animation-duration);
-        transition-timing-function: ease;
-        transition-behavior: allow-discrete;
-      }
-
-      /* box-shadow fades in/out alongside any animation kind, instead of
-         staying flat while the popup is still moving. */
+    /* fading — opacity only, no motion. */
+    &[navi-animation="fading"] {
+      opacity: 1;
       &[aria-expanded="false"] {
-        &[navi-animation] {
-          box-shadow: none;
-        }
+        opacity: 0;
       }
+    }
 
-      /* fading — opacity only, no motion. */
-      &[navi-animation="fading"] {
-        opacity: 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-        }
-      }
-
-      /* scaling — grows from --popup-scale-from (default 0.9) to full size,
+    /* scaling — grows from --popup-scale-from (default 0.9) to full size,
          centered, no direction involved. spawnFromPointer (Popover only, see
          this file's top comment) adds a translate from the click/pointer
          position to 0 0 alongside it, instead of moving transform-origin
@@ -129,77 +130,78 @@ export const buildPopupAnimationCss = (selector) => {
          traveled distance directly, at any scale range, so scaling can stay
          centered and keep the same subtle --popup-scale-from as plain
          "scaling". */
-      &[navi-animation="scaling"] {
-        opacity: 1;
-        translate: 0 0;
-        scale: 1;
-        &[aria-expanded="false"] {
-          opacity: 0;
-          scale: var(--popup-scale-from);
+    &[navi-animation="scaling"] {
+      opacity: 1;
+      translate: 0 0;
+      scale: 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
 
-          &[data-spawn-from-pointer] {
-            --popup-scale-from: 0.5;
+        &[data-spawn-from-pointer] {
+          --popup-scale-from: 0.5;
 
-            translate: var(--popup-spawn-origin-x, 0px)
-              var(--popup-spawn-origin-y, 0px);
-          }
-        }
-      }
-
-      /* slide — anchorReference/point mode family: direction multipliers,
-         one per concrete navi-animation value, 100%-of-own-size distance
-         (see this file's top comment). */
-      &[navi-animation="slide-from-top"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-from-bottom"] {
-        --popup-slide-x: 0;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-from-left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 0;
-      }
-      &[navi-animation="slide-from-right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 0;
-      }
-      &[navi-animation="slide-from-top-left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-from-top-right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: -1;
-      }
-      &[navi-animation="slide-from-bottom-left"] {
-        --popup-slide-x: -1;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-from-bottom-right"] {
-        --popup-slide-x: 1;
-        --popup-slide-y: 1;
-      }
-      &[navi-animation="slide-from-top"],
-      &[navi-animation="slide-from-bottom"],
-      &[navi-animation="slide-from-left"],
-      &[navi-animation="slide-from-right"],
-      &[navi-animation="slide-from-top-left"],
-      &[navi-animation="slide-from-top-right"],
-      &[navi-animation="slide-from-bottom-left"],
-      &[navi-animation="slide-from-bottom-right"] {
-        opacity: 1;
-        translate: 0 0;
-
-        &[aria-expanded="false"] {
-          opacity: 0;
-          translate: calc(var(--popup-slide-x, 0) * 100%)
-            calc(var(--popup-slide-y, -1) * 100%);
+          translate: var(--popup-spawn-origin-x, 0px)
+            var(--popup-spawn-origin-y, 0px);
         }
       }
     }
 
+    /* slide — anchorReference/point mode family: direction multipliers,
+         one per concrete navi-animation value, 100%-of-own-size distance
+         (see this file's top comment). */
+    &[navi-animation="slide-from-top"] {
+      --popup-slide-x: 0;
+      --popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-bottom"] {
+      --popup-slide-x: 0;
+      --popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-left"] {
+      --popup-slide-x: -1;
+      --popup-slide-y: 0;
+    }
+    &[navi-animation="slide-from-right"] {
+      --popup-slide-x: 1;
+      --popup-slide-y: 0;
+    }
+    &[navi-animation="slide-from-top-left"] {
+      --popup-slide-x: -1;
+      --popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-top-right"] {
+      --popup-slide-x: 1;
+      --popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-bottom-left"] {
+      --popup-slide-x: -1;
+      --popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-bottom-right"] {
+      --popup-slide-x: 1;
+      --popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-top"],
+    &[navi-animation="slide-from-bottom"],
+    &[navi-animation="slide-from-left"],
+    &[navi-animation="slide-from-right"],
+    &[navi-animation="slide-from-top-left"],
+    &[navi-animation="slide-from-top-right"],
+    &[navi-animation="slide-from-bottom-left"],
+    &[navi-animation="slide-from-bottom-right"] {
+      opacity: 1;
+      translate: 0 0;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
+        translate: calc(var(--popup-slide-x, 0) * 100%)
+          calc(var(--popup-slide-y, -1) * 100%);
+      }
+    }
+  }
+
+  .navi_popover {
     /* expand — real-anchor family (see this file's top comment): grows
          out of the anchor's own edge via transform-origin + scale.
          Cardinal directions scale a single axis only; diagonals scale
@@ -276,5 +278,5 @@ export const buildPopupAnimationCss = (selector) => {
         scale: var(--popup-scale-from);
       }
     }
-  `;
-};
+  }
+`;

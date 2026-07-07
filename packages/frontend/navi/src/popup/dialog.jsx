@@ -1,3 +1,15 @@
+/**
+ * A dialog is always centered in the viewport, with no anchor to grow out of
+ * or slide in from — `animation={true}`/`"auto"` resolves to `"scaling"`
+ * (see popover.jsx's own top comment for why that reads best), the same kind
+ * Popover picks for a dead-center placement. Any other explicit kind
+ * (`"fading"`, `"scaling"`, or a literal `"slide-from-{top,bottom,left,
+ * right}"` + diagonals) is passed straight through as-is: these are all
+ * self-contained CSS selectors in the shared popup_animation.js, so unlike
+ * Popover there's no direction to resolve in JS — Dialog never needs to flip
+ * anything after measuring, since it's always centered.
+ */
+
 import {
   createPubSub,
   dispatchCustomEvent,
@@ -13,19 +25,8 @@ import { Box } from "../box/box.jsx";
 import { onRequestInteraction } from "../control/rules/control_interaction.js";
 import { useDebugInteraction, useDebugPopup } from "../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
-import { buildPopupAnimationCss } from "./popup_animation.js";
+import { popupCss } from "./popup_css.js";
 
-/**
- * A dialog is always centered in the viewport, with no anchor to grow out of
- * or slide in from — `animation={true}`/`"auto"` resolves to `"scaling"`
- * (see popover.jsx's own top comment for why that reads best), the same kind
- * Popover picks for a dead-center placement. Any other explicit kind
- * (`"fading"`, `"scaling"`, or a literal `"slide-from-{top,bottom,left,
- * right}"` + diagonals) is passed straight through as-is: these are all
- * self-contained CSS selectors in the shared popup_animation.js, so unlike
- * Popover there's no direction to resolve in JS — Dialog never needs to flip
- * anything after measuring, since it's always centered.
- */
 const css = /* css */ `
   .navi_dialog {
     &[open] {
@@ -44,7 +45,7 @@ const css = /* css */ `
     }
   }
 
-  ${buildPopupAnimationCss(".navi_dialog")}
+  ${popupCss}
 `;
 
 /**
