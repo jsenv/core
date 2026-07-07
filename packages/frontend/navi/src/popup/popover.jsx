@@ -513,6 +513,8 @@ const PopoverCustom = (props) => {
  * backdrop/content element each.
  */
 const usePopoverProps = (props) => {
+  const backdropProps = {};
+  const contentProps = {};
   const {
     openController,
     anchor: anchorProp,
@@ -548,12 +550,10 @@ const usePopoverProps = (props) => {
     autoFocus = "fallback",
     ...rest
   } = props;
-
   // Decided once per render from `layer` alone (never from the
   // event-carried anchor) — see this file's top comment for why anchorProp
   // doesn't factor in here.
   const isCustom = layer === "local";
-
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
@@ -635,7 +635,7 @@ const usePopoverProps = (props) => {
       // anchor prop is a ref or a DOM element — always a real anchor,
       // regardless of anchorCustomEventDetail.
       anchor = anchorProp.current ?? anchorProp;
-    } else if (!isCustom && anchorCustomEventDetail !== "ignore") {
+    } else if (anchorCustomEventDetail === "override") {
       anchor = e.detail.anchor;
     } else {
       anchor = undefined;
@@ -899,7 +899,6 @@ const usePopoverProps = (props) => {
     if (resolvedAnimationKind === "sliding") {
       resolvedAnimation =
         resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
-          isRealAnchor: false,
           prefix: "slide-from",
         }) ?? "slide-from-top";
     } else if (resolvedAnimationKind === "expanding") {
@@ -907,7 +906,7 @@ const usePopoverProps = (props) => {
         resolveDirectionValue(
           popoverEl.getAttribute("data-position-y-current"),
           popoverEl.getAttribute("data-position-x-current"),
-          { isRealAnchor: true, prefix: "expand" },
+          { prefix: "expand" },
         ) ?? "expand-up";
     }
     if (resolvedAnimation) {
@@ -1024,53 +1023,50 @@ const usePopoverProps = (props) => {
     },
   });
 
-  const backdropProps = hasBackdrop
-    ? {
-        "ref": backdropRef,
-        "id": backdropId,
-        // See this file's top comment for the backdrop's design. No
-        // document.body/createPortal needed either way: for the
-        // via-attribute renderer, top-layer promotion (not DOM position) is
-        // what puts it above normal page content; for the custom renderer,
-        // it's a plain sibling confined to the same positioned ancestor.
-        "popover": isCustom ? undefined : "manual",
-        "baseClassName": "navi_popover_backdrop",
-        "aria-hidden": "true",
-        "styleCSSVars": POPUP_STYLE_CSS_VARS,
-        "animationDuration": rest.animationDuration,
-        "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
-        "onMouseDown": (mouseDownEvent) => {
-          if (mouseDownEvent.button !== 0) {
-            return;
-          }
-          // Ignore clicks that land inside the popover's bounding rect
-          // (padding and border area are part of the popover box but can
-          // forward pointer events to the backdrop behind them).
-          const rect = ref.current.getBoundingClientRect();
-          const isOutside =
-            mouseDownEvent.clientX < rect.left ||
-            mouseDownEvent.clientX > rect.right ||
-            mouseDownEvent.clientY < rect.top ||
-            mouseDownEvent.clientY > rect.bottom;
-          if (!isOutside) {
-            return;
-          }
-          // "capture" absorbs the click so it doesn't reach whatever's
-          // behind the popover, without closing it. "none" never reaches
-          // here at all — the backdrop isn't rendered in that case.
-          if (pointerInteractionOutsideEffect === "capture") {
-            mouseDownEvent.preventDefault();
-            return;
-          }
-          if (pointerInteractionOutsideEffect === "close") {
-            openController.requestClose(mouseDownEvent, { isCancel: true });
-            return;
-          }
-        },
+  Object.assign(backdropProps, {
+    "ref": backdropRef,
+    "id": backdropId,
+    // See this file's top comment for the backdrop's design. No
+    // document.body/createPortal needed either way: for the
+    // via-attribute renderer, top-layer promotion (not DOM position) is
+    // what puts it above normal page content; for the custom renderer,
+    // it's a plain sibling confined to the same positioned ancestor.
+    "popover": isCustom ? undefined : "manual",
+    "baseClassName": "navi_popover_backdrop",
+    "aria-hidden": "true",
+    "styleCSSVars": POPUP_STYLE_CSS_VARS,
+    "animationDuration": rest.animationDuration,
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "onMouseDown": (mouseDownEvent) => {
+      if (mouseDownEvent.button !== 0) {
+        return;
       }
-    : null;
-
-  const contentProps = {
+      // Ignore clicks that land inside the popover's bounding rect
+      // (padding and border area are part of the popover box but can
+      // forward pointer events to the backdrop behind them).
+      const rect = ref.current.getBoundingClientRect();
+      const isOutside =
+        mouseDownEvent.clientX < rect.left ||
+        mouseDownEvent.clientX > rect.right ||
+        mouseDownEvent.clientY < rect.top ||
+        mouseDownEvent.clientY > rect.bottom;
+      if (!isOutside) {
+        return;
+      }
+      // "capture" absorbs the click so it doesn't reach whatever's
+      // behind the popover, without closing it. "none" never reaches
+      // here at all — the backdrop isn't rendered in that case.
+      if (pointerInteractionOutsideEffect === "capture") {
+        mouseDownEvent.preventDefault();
+        return;
+      }
+      if (pointerInteractionOutsideEffect === "close") {
+        openController.requestClose(mouseDownEvent, { isCancel: true });
+        return;
+      }
+    },
+  });
+  Object.assign(contentProps, {
     id,
     "popover": isCustom ? undefined : "manual",
     tabIndex,
@@ -1095,9 +1091,9 @@ const usePopoverProps = (props) => {
     // {...props} spread) — nothing extra to add here. A controlled caller
     // (picker_custom.jsx/side_panel.jsx) wires its own equivalent handling
     // directly against its own openController instead.
-  };
+  });
 
-  return [backdropProps, contentProps];
+  return [hasBackdrop ? backdropProps : null, contentProps];
 };
 
 /* ============================================================
@@ -1215,14 +1211,14 @@ const resolvePositionAreaAndAnimationKind = ({
  *
  * "aligned-*"/"center" contribute no direction on their axis either way.
  */
-const resolveDirectionValue = (y, x, { isRealAnchor, prefix }) => {
+const resolveDirectionValue = (y, x, { prefix }) => {
   const yWord =
     y === "above"
-      ? isRealAnchor
+      ? prefix === "expand"
         ? "up"
         : "top"
       : y === "below"
-        ? isRealAnchor
+        ? prefix === "expand"
           ? "down"
           : "bottom"
         : null;
