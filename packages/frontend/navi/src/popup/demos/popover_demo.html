@@ -413,10 +413,10 @@
               <a href="#custom-container">Custom container</a>
             </li>
             <li>
-              <a href="#anchor-spacing">anchorSpacing</a>
+              <a href="#anchor-spacing">marginWithAnchor</a>
             </li>
             <li>
-              <a href="#layer-spacing">layerSpacing</a>
+              <a href="#layer-spacing">marginWithContainer</a>
             </li>
             <li>
               <a href="#pointer-interaction-outside">
@@ -806,12 +806,7 @@
       // commands, and the button that triggers --navi-toggle is forwarded
       // as the anchor automatically (the command's "source" ends up as
       // navi_request_open's detail.source).
-      const AnchoredPopover = ({
-        label,
-        animation,
-        animationDuration,
-        marginWithAnchor,
-      }) => {
+      const AnchoredPopover = ({ label, ...props }) => {
         const popoverId = useId();
 
         return (
@@ -821,9 +816,7 @@
             </Button>
             <Popover
               id={popoverId}
-              animation={animation}
-              animationDuration={animationDuration}
-              marginWithAnchor={marginWithAnchor}
+              {...props}
               borderRadius="8px"
               className="demo_popover_box"
             >

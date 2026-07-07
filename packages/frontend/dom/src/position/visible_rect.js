@@ -901,7 +901,8 @@ export const pickPositionRelativeTo = (
   let elementPositionLeft;
   {
     if (finalX === "on-the-left") {
-      elementPositionLeft = effectiveAnchorLeft - elementWidth - marginWithAnchor;
+      elementPositionLeft =
+        effectiveAnchorLeft - elementWidth - marginWithAnchor;
     } else if (finalX === "aligned-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
@@ -954,7 +955,8 @@ export const pickPositionRelativeTo = (
       elementPositionLeft + elementWidth >
       clampRightBound - marginWithContainer
     ) {
-      elementPositionLeft = clampRightBound - marginWithContainer - elementWidth;
+      elementPositionLeft =
+        clampRightBound - marginWithContainer - elementWidth;
     }
   }
 

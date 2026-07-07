@@ -770,7 +770,7 @@ const usePopoverProps = (props) => {
             positionX: parsedPositionArea.x,
             positionY: parsedPositionArea.y,
             container: isCustom ? positionedAncestor : undefined,
-            marginWithContainer: resolveSpacingSize(marginWithAnchor),
+            marginWithContainer: resolveSpacingSize(marginWithContainer),
           },
         );
         appliedLeft = left;
