@@ -260,7 +260,7 @@
         return `${y} ${x}`;
       };
 
-      // Pinned to a point/corner (layer="top" or "auto" — no real anchor
+      // Pinned to a point/corner (layer="top" or "local" — no real anchor
       // box), overlap and no-overlap collapse to the same
       // placement, so "aligned-top" lands exactly where "above" does (ditto
       // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
@@ -377,13 +377,14 @@
 
           <TableOfContents />
 
-          <ContentSizeSection />
           <AnchorSection />
-          <AnchorAreaSection />
-          <AnchorIgnoreSection />
-          <AnchorSpacingSection />
-          <PointerInteractionOutsideSection />
           <ContentSizeSection />
+          <AnchorAreaSection />
+          <CustomContainerSection />
+          <AnchorSpacingSection />
+          <LayerSpacingSection />
+          <PointerInteractionOutsideSection />
+          <CustomizationSection />
         </div>
       );
 
@@ -392,19 +393,30 @@
           <strong>Contents</strong>
           <ol>
             <li>
-              <a href="#content-size">Adapting to content size</a>
+              <a href="#anchor">Controlled by button</a>
             </li>
             <li>
-              <a href="#anchor">Anchor</a>
+              <a href="#content-size">Content dimensions</a>
             </li>
             <li>
-              <a href="#anchor-area">positionArea</a>
+              <a href="#anchor-area">Position</a>
+              <ol>
+                <li>
+                  <a href="#anchor-area-with-anchor">With anchor</a>
+                </li>
+                <li>
+                  <a href="#anchor-area-without-anchor">Without anchor</a>
+                </li>
+              </ol>
             </li>
             <li>
-              <a href="#anchor-ignore">Ignoring the anchor</a>
+              <a href="#custom-container">Custom container</a>
             </li>
             <li>
               <a href="#anchor-spacing">anchorSpacing</a>
+            </li>
+            <li>
+              <a href="#layer-spacing">layerSpacing</a>
             </li>
             <li>
               <a href="#pointer-interaction-outside">
@@ -412,7 +424,7 @@
               </a>
             </li>
             <li>
-              <a href="#content-size">Adapting to content size</a>
+              <a href="#customization">Customization</a>
             </li>
           </ol>
         </nav>
@@ -477,7 +489,7 @@
 
       const ContentSizeSection = () => (
         <section id="content-size" class="demo-section">
-          <h2>1. Adapting to content size</h2>
+          <h2>2. Content dimensions</h2>
           <p>
             Popover has no fixed size of its own — it sizes to whatever's inside
             it, from a short line of text to content that exceeds the viewport,
@@ -558,7 +570,13 @@
           useAnimateControls("popover_demo_anchor");
         return (
           <section id="anchor" class="demo-section">
-            <h2>2. Anchor</h2>
+            <h2>1. Controlled by button</h2>
+            <p>
+              Leaving <code>anchor</code> unset still lets the toggle button
+              take over as the anchor automatically (the triggering event's own
+              carried anchor) — no need to pass a ref back to the button that
+              opened it.
+            </p>
             <div class="demo-row">
               <AnchoredPopover
                 label="Button commanding popover"
@@ -567,59 +585,55 @@
               />
             </div>
             <AnimateControls {...controlsProps} />
+
+            <p>
+              To ignore the button's own anchor entirely (e.g. to center the
+              popover in the viewport instead), pass{" "}
+              <code>anchorCustomEventDetail="ignore"</code>:
+            </p>
+            <div class="demo-row">
+              <AnchorlessPopover label='anchorCustomEventDetail="ignore"' />
+            </div>
           </section>
         );
       };
 
-      // This section is always relative to *an* anchor — a real element by
-      // default, or a fallback docked to the viewport/positioned ancestor
-      // (see the 2nd/3rd subsections below) — so it's positionArea itself
-      // that's worth documenting, not "placement" as some separate idea.
+      // 3.1 positions relative to a real anchor element; 3.2 positions
+      // relative to the container instead (viewport, since it's layer="top"
+      // — see the "Custom container" section below for layer="local").
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
-          <h2>3. positionArea</h2>
+          <h2>3. Position</h2>
 
-          <h3>default (anchor is trigger button)</h3>
-          <p>
-            The buttons below are wired to the anchor above (via{" "}
-            <code>navi-command-proxy-for</code>) instead of anchoring to
-            themselves — useful for this demo, but also in practice.
-          </p>
-          <AnchorAreaDefaultDemo />
+          <div id="anchor-area-with-anchor" class="demo-subsection">
+            <h3>3.1 With anchor</h3>
+            <p>
+              The buttons below are wired to the anchor above (via{" "}
+              <code>navi-command-proxy-for</code>) instead of anchoring to
+              themselves — useful for this demo, but also in practice.
+            </p>
+            <AnchorAreaDefaultDemo />
+          </div>
 
-          <h3>
-            layer<code>="top"</code> (default)
-          </h3>
-          <AnchorAreaViewportDemo />
-
-          <h3>
-            layer<code>="auto"</code>
-          </h3>
-          <AnchorAreaScrollContainerDemo />
+          <div id="anchor-area-without-anchor" class="demo-subsection">
+            <h3>3.2 Without anchor</h3>
+            <AnchorAreaViewportDemo />
+          </div>
         </section>
       );
 
-      const AnchorIgnoreSection = () => (
-        <section id="anchor-ignore" class="demo-section">
-          <h2>4. Ignoring the anchor</h2>
+      const CustomContainerSection = () => (
+        <section id="custom-container" class="demo-section">
+          <h2>4. Custom container</h2>
           <p>
-            Leaving <code>anchor</code> unset still lets the toggle button's own
-            anchor take over when present (the event's own carried anchor takes
-            priority over the <code>layer</code>-resolved container placement
-            unless told otherwise) —{" "}
-            <code>anchorCustomEventDetail="ignore"</code> (with{" "}
-            <code>positionArea="center"</code>) is what forces the popover to
-            ignore the toggle button as its anchor and center itself in the
-            viewport instead.
+            <code>layer="local"</code> renders as a plain in-flow box relative
+            to its own positioned ancestor instead of the browser's top layer —
+            genuinely clipped by that container's own{" "}
+            <code>overflow: hidden</code>/<code>auto</code>. Focusing on the
+            anchorless use case below: no real anchor, just docked to a point on
+            the container's own edges/corners.
           </p>
-          <div class="demo-row">
-            <AnchorlessPopover label='anchorCustomEventDetail="ignore"' />
-            <AnchorlessPopover
-              label="animated"
-              animation
-              animationDuration="0.6s"
-            />
-          </div>
+          <AnchorAreaScrollContainerDemo />
         </section>
       );
 
@@ -643,12 +657,54 @@
         </section>
       );
 
+      // Docked to the viewport's top-left corner (no real anchor) so the
+      // clamp-to-edge effect of layerSpacing is directly visible: with the
+      // default 0 the popover touches the corner; with a larger value it
+      // keeps a gap from both edges instead.
+      const LayerSpacingPopover = ({ label, layerSpacing }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              anchorCustomEventDetail="ignore"
+              positionArea="aligned-top aligned-left"
+              layerSpacing={layerSpacing}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const LayerSpacingSection = () => (
+        <section id="layer-spacing" class="demo-section">
+          <h2>6. layerSpacing</h2>
+          <p>
+            The gap kept from the container's own edges (the viewport for{" "}
+            <code>layer="top"</code>, the positioned ancestor for{" "}
+            <code>layer="local"</code>) when there's no real anchor — defaults
+            to <code>0</code> (touching).
+          </p>
+          <div class="demo-row">
+            <LayerSpacingPopover label="layerSpacing={0} (default)" />
+            <LayerSpacingPopover label="layerSpacing={24}" layerSpacing={24} />
+          </div>
+        </section>
+      );
+
       const PointerInteractionOutsideSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>6. pointerInteractionOutsideEffect</h2>
+            <h2>7. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"none"</code> (default) — interactions outside the popover
               happen normally. <code>"close"</code> — a mousedown outside closes
@@ -678,6 +734,51 @@
           </section>
         );
       };
+
+      const CustomizationPopover = ({ label, borderRadius, style }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius={borderRadius}
+              style={style}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const CustomizationSection = () => (
+        <section id="customization" class="demo-section">
+          <h2>8. Customization</h2>
+          <p>
+            Plain visual props, passed straight through to the popover's own box
+            — <code>borderRadius</code> as its own convenience prop,{" "}
+            <code>borderWidth</code>/<code>borderColor</code>/
+            <code>backgroundColor</code> via the regular <code>style</code>{" "}
+            prop.
+          </p>
+          <div class="demo-row">
+            <CustomizationPopover label="default" borderRadius="8px" />
+            <CustomizationPopover
+              label="custom"
+              borderRadius="16px"
+              style={{
+                borderWidth: "3px",
+                borderColor: "#7a5b00",
+                backgroundColor: "#fff8e1",
+              }}
+            />
+          </div>
+        </section>
+      );
 
       // Renders all 25 Y × X combinations, row-major (Y varies per row, X
       // per column) so the grid visually reads the same as the prose above
@@ -927,7 +1028,7 @@
         );
       };
 
-      // layer="auto" needs the popovers rendered *inside* the positioned
+      // layer="local" needs the popovers rendered *inside* the positioned
       // container to find it (PopoverCustom, a plain position: absolute div
       // — see popover.jsx's top comment) — the trigger buttons don't, so
       // they live outside it, in their own grid below.
@@ -938,13 +1039,6 @@
         return (
           <>
             <PointModeNote referenceLabel="the container" />
-            <p class="demo-important-note">
-              Unlike the default <code>layer="top"</code> (promoted to the top
-              layer), <code>layer="auto"</code> renders as a plain in-flow box
-              relative to its own positioned ancestor — genuinely clipped by the
-              container's own <code>overflow: hidden</code>/<code>auto</code>,
-              the same as any other in-flow content would be.
-            </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {POSITION_AREA_Y_VALUES.flatMap((y) =>
@@ -955,7 +1049,7 @@
                     animation={animation}
                     animationDuration={animationDuration}
                     borderRadius="8px"
-                    layer="auto"
+                    layer="local"
                     positionArea={`${y} ${x}`}
                     className="demo_popover_box"
                   >

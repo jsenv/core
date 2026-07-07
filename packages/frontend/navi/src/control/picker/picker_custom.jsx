@@ -621,7 +621,7 @@ const PickerContentInsidePopover = (props) => {
     focusTrap = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    containerSpacing = 10,
+    layerSpacing = 10,
     closeOnFocusOut = false,
     ...rest
   } = props;
@@ -665,7 +665,7 @@ const PickerContentInsidePopover = (props) => {
             : "aligned-top aligned-left"
         }
         anchorSpacing={popoverSpacing}
-        containerSpacing={containerSpacing}
+        layerSpacing={layerSpacing}
         scrollLock={scrollLock}
         pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
         focusTrap={focusTrap}

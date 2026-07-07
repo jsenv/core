@@ -632,22 +632,26 @@ const toContainerAlignedPosition = (value) => {
  *   `position: absolute` relative to (its own containing block) — decoupled from whether
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
  *   custom renderer in popover.jsx, always relative to its own positioned ancestor whether
- *   or not it also has a real anchor). Changes the final `left`/`top` (and the returned
- *   `anchorLeft/Top/Right/Bottom`) to be expressed relative to the container's own
- *   padding-box origin plus its own scroll, instead of the document's — `element`'s own
- *   computed `position` is *not* consulted in that case, unlike the default path below.
- *   When `anchor` is omitted (no real anchor — see above), an unspecified `container` is
- *   resolved automatically via `getPositioningContainer(element)` instead, and — the one
- *   thing that's *not* decoupled from `hasAnchor` — the boundary clamp then also uses the
- *   container's own (padding-box) edges instead of the page viewport's, on both axes (the Y
- *   axis otherwise has no such clamp at all — see the clamp's own comment); `null` from
- *   `getPositioningContainer` (an `element` with a `popover` attribute, or a `<dialog>`)
- *   falls back to the viewport, since both are promoted to the top layer once shown and
- *   always use the initial containing block regardless of DOM position — a container that
- *   resolves to `document.documentElement` this way produces identical output to the plain
- *   real-anchor case (no `container` at all), since the document's own scroll and the
- *   viewport's own origin already coincide with what this generically computes for any
- *   other container element.
+ *   or not it also has a real anchor). Whenever not explicitly given, this is always
+ *   resolved automatically via `getPositioningContainer(element)` instead — regardless of
+ *   `hasAnchor` — so a caller that never thinks about `container` at all still gets the
+ *   right behavior on its own: `null` from `getPositioningContainer` (an `element` with a
+ *   `popover` attribute, or a `<dialog>` — e.g. Callout's own element) falls back to the
+ *   traditional document-relative path below, exactly as if `container` genuinely didn't
+ *   apply; anything else `getPositioningContainer` finds (a real positioned ancestor) is
+ *   used the same way an explicit `container` would be. A container that resolves to
+ *   `document.documentElement` (the viewport) produces identical output to the plain
+ *   document-relative path either way, since the document's own scroll and the viewport's
+ *   own origin already coincide with what this generically computes for any other container
+ *   element. When there's a real container (explicit or resolved) either way: the final
+ *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative to
+ *   its own padding-box origin plus its own scroll, instead of the document's — `element`'s
+ *   own computed `position` is *not* consulted in that case, unlike the traditional path.
+ *   When `anchor` is also omitted (no real anchor at all), the container additionally
+ *   becomes what's positioned against, and the boundary clamp uses its own (padding-box)
+ *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
+ *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasAnchor`,
+ *   unlike the coordinate-space conversion itself.
  * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
@@ -676,31 +680,18 @@ export const pickPositionRelativeTo = (
     positionXFixed = positionX;
     positionYFixed = positionY;
   }
+  // Auto-resolved (via getPositioningContainer) whenever not explicitly
+  // given, regardless of hasAnchor — this is what makes the function
+  // always know what to do on its own (no dev warning needed, unlike
+  // earlier versions of this function): `null` from getPositioningContainer
+  // (a popover/dialog element, e.g. Callout's own) falls through to the
+  // traditional document-relative path below all the same, so an existing
+  // caller that never thinks about `container` at all keeps behaving
+  // exactly as before.
+  const resolvedContainer = container ?? getPositioningContainer(element);
   const effectiveAnchor = hasAnchor
     ? anchor
-    : container || getPositioningContainer(element) || document.documentElement;
-
-  if (
-    import.meta.dev &&
-    hasAnchor &&
-    !container &&
-    getScrollContainer(element) !== document.documentElement
-  ) {
-    // The idea behind this warning is that pickPositionRelativeTo is meant to position a tooltip/dropdown etc
-    // And for this use case the element to position should be document-relative
-    // (position: absolute with first scrollable parent being the document)
-    // Because this is how you achieve the best results:
-    // 1. The element naturally follow document scroll
-    // Which gives the best experience when user scrolls the page or the container
-    // 2. The element can take more visible size in case target is within a scrollable container
-    // or uses overflow: hidden somewhere in its ancestor chain
-    // (the no-anchor/container-docked mode, and an explicit `container` alongside a real
-    // anchor, are the deliberate exceptions: element is expected to be absolute relative to
-    // the container itself in those modes, not the document.)
-    console.warn(
-      "pickPositionRelativeTo should be used only for document-relative element",
-    );
-  }
+    : resolvedContainer || document.documentElement;
 
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
@@ -1029,11 +1020,12 @@ export const pickPositionRelativeTo = (
   // absolute` relative to some container regardless (e.g. the custom
   // renderer in popover.jsx, which is always relative to its own
   // positioned ancestor whether or not it also has a real anchor) — that's
-  // what an explicit `container` communicates even when `anchor` is also
-  // given. The container to convert into is `container` when explicitly
-  // given, or (in the no-anchor case only) `effectiveAnchor` itself, since
-  // there the container *is* what's being positioned against.
-  const coordinateContainer = hasAnchor ? container : effectiveAnchor;
+  // what `resolvedContainer` (explicit or auto-resolved above) communicates
+  // even when `anchor` is also given. The container to convert into is
+  // `resolvedContainer` when there's a real anchor, or (in the no-anchor
+  // case) `effectiveAnchor` itself, since there the container *is* what's
+  // being positioned against.
+  const coordinateContainer = hasAnchor ? resolvedContainer : effectiveAnchor;
   let scrollLeft;
   let scrollTop;
   if (coordinateContainer && coordinateContainer !== document.documentElement) {

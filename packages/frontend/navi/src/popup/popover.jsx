@@ -15,7 +15,7 @@
  * created when actually needed, not unconditionally on every render.
  * `ControlledPopover` then picks which rendering strategy actually mounts,
  * from the `anchor`/`layer` props alone (no `anchor` given *and*
- * `layer="auto"` → `PopoverCustom`, everything else → `PopoverViaAttribute`)
+ * `layer="local"` → `PopoverCustom`, everything else → `PopoverViaAttribute`)
  * — by this point an `openController` is always already resolved.
  *
  * Both components share the exact same `usePopoverProps(props)` hook for
@@ -38,23 +38,26 @@
  * wrapper), so collapsing them into one now would just mean re-splitting
  * them apart again once that need arrives.
  *
- * `layer` (`"top"` default | `"auto"`) picks the rendering strategy
+ * `layer` (`"top"` default | `"local"`) picks the rendering strategy
  * directly — it's *not* about anchor resolution at all, deliberately: it
  * answers "which layer does this popup live in", not "what do we fall back
  * to when there's no anchor". `"top"` → the via-attribute renderer, in the
- * browser's own top layer. `"auto"` → the custom renderer, resolved to the
+ * browser's own top layer. `"local"` → the custom renderer, resolved to the
  * popover's own positioned ancestor instead — respects that ancestor's own
  * `overflow: hidden`/`auto`, unlike the top layer (see
  * `getPositioningContainer` in visible_rect.js/offset_parent.js for how
  * it's found). `anchor` (a ref or a DOM element — no other value is
  * accepted anymore; a plain string is a near-certain leftover from an
  * older API and gets a dev warning, then treated the same as omitting it)
- * always wins over `layer` regardless of its value — the custom renderer
- * structurally never has a real-anchor case (its popover is `position:
- * absolute` relative to its own ancestor, not the document root — a real
- * anchor's own coordinate math assumes the latter), so `layer="auto"`
- * together with a real `anchor` would be a contradiction; `anchor` simply
- * takes priority, same as it always did.
+ * always wins over `layer` regardless of its value — a real anchor works
+ * with either renderer. The custom renderer's popover is still `position:
+ * absolute` relative to its own positioned ancestor either way; when a
+ * real anchor is also given, it positions against that anchor's own edges
+ * instead of the ancestor's, with `pickPositionRelativeTo`'s own
+ * `container` option (see visible_rect.js) doing the ancestor-relative
+ * coordinate conversion regardless. Whether that anchor happens to live in
+ * the same layer as the popover's own container is the integrating dev's
+ * own responsibility, not something guarded against here.
  *
  * The logic that a *container* (the viewport, or the positioned ancestor —
  * whichever `layer` resolves to) stands in *as* the thing `element` is
@@ -67,10 +70,12 @@
  * question answered below.
  *
  * When there's no `anchor` prop, the triggering event's own carried anchor
- * (`detail.anchor`/`.source`) is used instead, *only* for the via-attribute
- * renderer (the custom renderer never considers it, unconditionally — its
- * own container-relative positioning can't use a real anchor either way) —
- * unless `anchorCustomEventDetail="ignore"` (default `"override"`), which
+ * (`detail.anchor`/`.source`) is used instead, for either renderer — the
+ * custom renderer is allowed to be relative to an anchor too, even though
+ * it isn't in the top layer; if that anchor turns out to live in a
+ * different layer than the popover's own container, that's the
+ * integrating dev's own responsibility, not something guarded against here
+ * — unless `anchorCustomEventDetail="ignore"` (default `"override"`), which
  * skips that fallback entirely, forcing the `layer`-resolved container
  * placement regardless of what triggered the open (used by the demo's
  * "Ignoring the anchor" section).
@@ -134,9 +139,9 @@
  * (e.g. a corner is spelled out as "aligned-top aligned-left", no
  * dedicated corner presets).
  *
- * When there's no real anchor element (`!hasAnchorElement`, true for the
- * custom renderer always, and for the via-attribute renderer whenever no
- * anchor was resolved), both renderers position relative to a container
+ * When there's no real anchor element (`!hasAnchorElement`, for either
+ * renderer whenever no anchor was resolved), both renderers position
+ * relative to a container
  * instead — the viewport itself for via-attribute, this popover's own
  * positioned ancestor for the custom renderer — via the *same*
  * `pickPositionRelativeTo` call either way, simply omitting its `anchor`
@@ -162,8 +167,8 @@
  * inspectable `navi-animation` value driving one direct CSS rule per
  * direction, no attribute-cascade indirection.
  * `animation="expanding"` (grows out of a real anchor's own edge, `expand-*`
- * concretely — via-attribute only, since the custom renderer never has a
- * real anchor) and `animation="fading"` (opacity only, no motion) are both
+ * concretely — works with either renderer, since a real anchor works with
+ * either) and `animation="fading"` (opacity only, no motion) are both
  * explicit-only — never auto-picked.
  *
  * A genuinely satisfying popup-opening animation is hard to pull off —
@@ -422,7 +427,7 @@ const UncontrolledPopover = (props) => {
 // visible_rect.js for how the ancestor-relative coordinate conversion
 // still applies regardless).
 const ControlledPopover = (props) => {
-  if (props.layer === "auto") {
+  if (props.layer === "local") {
     return <PopoverCustom {...props} />;
   }
   return <PopoverViaAttribute {...props} />;
@@ -467,15 +472,15 @@ const usePopoverProps = (props) => {
     openController,
     anchor: anchorProp,
     // "top" (default) → via-attribute, in the browser's own top layer;
-    // "auto" → custom, resolved to the popover's own positioned ancestor.
+    // "local" → custom, resolved to the popover's own positioned ancestor.
     // Picks the rendering strategy directly — not an "anchor fallback", see
     // this file's top comment for why that distinction matters. Independent
     // of anchorProp — a real anchor works with either renderer.
     layer = "top",
     // "override" (default) lets the triggering event's own carried anchor
     // serve as the real anchor when anchorProp itself is absent; "ignore"
-    // skips that fallback. Only meaningful for the via-attribute renderer
-    // — see this file's top comment.
+    // skips that fallback. Applies to either renderer — see this file's
+    // top comment.
     anchorCustomEventDetail = "override",
     // see the positionArea grammar in the file's top comment
     positionArea = "below",
@@ -486,7 +491,7 @@ const usePopoverProps = (props) => {
     animation,
     children,
     anchorSpacing = 0,
-    containerSpacing = 0,
+    layerSpacing = 0,
     // Makes the popover itself a valid focus target so autoFocus="fallback"
     // below has somewhere to land when it contains nothing focusable of its
     // own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -502,7 +507,7 @@ const usePopoverProps = (props) => {
   // Decided once per render from `layer` alone (never from the
   // event-carried anchor) — see this file's top comment for why anchorProp
   // doesn't factor in here.
-  const isCustom = layer === "auto";
+  const isCustom = layer === "local";
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
@@ -570,7 +575,7 @@ const usePopoverProps = (props) => {
       // anchor is a ref or a DOM element only now; layer/
       // anchorCustomEventDetail cover what those strings used to mean.
       console.warn(
-        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="auto" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
+        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
       );
       anchor = undefined;
     } else if (anchorProp) {
@@ -726,7 +731,7 @@ const usePopoverProps = (props) => {
           positionXFixed: effectivePositionXFixed,
           positionYFixed: effectivePositionYFixed,
           anchorSpacing: resolveSpacingSize(anchorSpacing),
-          containerSpacing: resolveSpacingSize(containerSpacing),
+          containerSpacing: resolveSpacingSize(layerSpacing),
           // Only meaningful for the custom renderer: popoverEl is always
           // position: absolute relative to its own positioned ancestor,
           // real anchor or not — this tells pickPositionRelativeTo to
