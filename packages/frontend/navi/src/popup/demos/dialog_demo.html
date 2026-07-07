@@ -36,6 +36,21 @@
         flex-wrap: wrap;
         gap: 12px;
       }
+      .demo-lazy-placeholder {
+        display: flex;
+        width: 220px;
+        height: 90px;
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        color: #777;
+        font-size: 12px;
+        background: #f0f0f0;
+        border: 1px dashed #bbb;
+        border-radius: 8px;
+      }
       .demo-animate-controls {
         display: flex;
         margin-top: 8px;
@@ -389,9 +404,27 @@
         </section>
       );
 
-      // Both mount already open, with animation on — the entrance animation
-      // should NOT play in either case (same idea as popover_demo.html's own
-      // "Open from the start" section — see its comment there for why).
+      // Mounting a component with its dialog already open is only
+      // interesting to test *on demand* — rendered directly in the page's
+      // own initial render, every reload would pop it open immediately
+      // (even more disruptive for a Dialog than a Popover). This
+      // placeholder defers rendering `renderContent()` until clicked.
+      const LazyMount = ({ label, renderContent }) => {
+        const [mounted, setMounted] = useState(false);
+        if (!mounted) {
+          return (
+            <div class="demo-lazy-placeholder">
+              <span>{label}</span>
+              <Button onClick={() => setMounted(true)}>Render</Button>
+            </div>
+          );
+        }
+        return renderContent();
+      };
+
+      // Mounts already open, with animation on — the entrance animation
+      // should NOT play (same idea as popover_demo.html's own "Open from
+      // the start" section — see its comment there for why).
       const OpenFromStartDialog = ({ label, ...props }) => {
         const dialogId = useId();
         return (
@@ -420,11 +453,23 @@
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
             already open — animation is on for both below, but it should never
-            actually play on mount, only on a later close/reopen.
+            actually play on mount, only on a later close/reopen. Click "Render"
+            below to actually mount each one (rather than forcing it open on
+            every page load).
           </p>
           <div class="demo-row">
-            <OpenFromStartDialog label={"open={true}"} open />
-            <OpenFromStartDialog label="defaultOpen" defaultOpen />
+            <LazyMount
+              label={"open={true}"}
+              renderContent={() => (
+                <OpenFromStartDialog label={"open={true}"} open />
+              )}
+            />
+            <LazyMount
+              label="defaultOpen"
+              renderContent={() => (
+                <OpenFromStartDialog label="defaultOpen" defaultOpen />
+              )}
+            />
           </div>
         </section>
       );

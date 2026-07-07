@@ -40,6 +40,21 @@
         flex-wrap: wrap;
         gap: 12px;
       }
+      .demo-lazy-placeholder {
+        display: flex;
+        width: 220px;
+        height: 90px;
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        color: #777;
+        font-size: 12px;
+        background: #f0f0f0;
+        border: 1px dashed #bbb;
+        border-radius: 8px;
+      }
       .demo_popover_box {
         /* Fixed size — content (a label of varying length + a Close button)
            must not influence it, so every popover in a grid demo is
@@ -794,12 +809,32 @@
         </section>
       );
 
-      // Both mount already open, with animation on — the entrance animation
-      // should NOT play in either case (nothing was ever shown as "closed"
-      // for the user to see it transition away from). "controlled" passes a
-      // literal open={true} from the start; "uncontrolled" uses defaultOpen
-      // instead (mount-only, like defaultChecked/defaultValue — toggling
-      // later has no effect on it).
+      // Mounting a component with its popover already open is only
+      // interesting to test *on demand* — rendered directly in the page's
+      // own initial render, every reload would pop it open immediately,
+      // which is exactly the annoying case an "Open from the start" demo
+      // should let you trigger deliberately instead of forcing on you every
+      // single time the page loads. This placeholder defers rendering
+      // `renderContent()` until clicked.
+      const LazyMount = ({ label, renderContent }) => {
+        const [mounted, setMounted] = useState(false);
+        if (!mounted) {
+          return (
+            <div class="demo-lazy-placeholder">
+              <span>{label}</span>
+              <Button onClick={() => setMounted(true)}>Render</Button>
+            </div>
+          );
+        }
+        return renderContent();
+      };
+
+      // Mounts already open, with animation on — the entrance animation
+      // should NOT play (nothing was ever shown as "closed" for the user to
+      // see it transition away from). "controlled" passes a literal
+      // open={true} from the start; "uncontrolled" uses defaultOpen instead
+      // (mount-only, like defaultChecked/defaultValue — toggling later has
+      // no effect on it).
       const OpenAtStartPopover = ({ label, ...props }) => {
         const popoverId = useId();
         return (
@@ -829,15 +864,27 @@
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the
             popover already open — animation is on for both below, but it should
-            never actually play on mount, only on a later close/reopen.
+            never actually play on mount, only on a later close/reopen. Click
+            "Render" below to actually mount each one (rather than forcing it
+            open on every page load).
           </p>
           <div class="demo-row">
-            <OpenAtStartPopover
+            <LazyMount
               label={"open={true}"}
-              open
-              positionArea="on-the-left below"
+              renderContent={() => (
+                <OpenAtStartPopover
+                  label={"open={true}"}
+                  open
+                  positionArea="on-the-left below"
+                />
+              )}
             />
-            <OpenAtStartPopover label="defaultOpen" defaultOpen />
+            <LazyMount
+              label="defaultOpen"
+              renderContent={() => (
+                <OpenAtStartPopover label="defaultOpen" defaultOpen />
+              )}
+            />
           </div>
         </section>
       );
