@@ -676,7 +676,12 @@ const useDialogProps = (props) => {
   };
   const contentProps = {
     tabIndex,
-    "navi-animation": isAutoAnimation ? undefined : animation,
+    // Unlike Popover (which genuinely can't resolve "auto" until it
+    // measures against a real anchor), resolvedAnimation is already fully
+    // known synchronously here — a dialog never needs to flip anything
+    // after measuring (see this file's top comment) — so there's no reason
+    // to withhold the attribute for the auto case the way Popover has to.
+    "navi-animation": resolvedAnimation,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,
@@ -684,7 +689,12 @@ const useDialogProps = (props) => {
     ref,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
-    "aria-modal": "true",
+    // Only meaningful for the custom renderer — a showModal()'d dialog is
+    // already implicitly aria-modal="true" per the HTML/ARIA mapping, so
+    // setting it explicitly there would be redundant; a .show()'d one has
+    // no such implicit mapping at all despite behaving modally (focus trap,
+    // real backdrop), so it needs to be stated explicitly.
+    "aria-modal": isCustom ? "true" : undefined,
     // Always present now, center included (no longer hidden behind a
     // === "center" ? undefined : ... check) — DialogCustom's own wrapper
     // just copies this same value onto its own data-position-area instead
