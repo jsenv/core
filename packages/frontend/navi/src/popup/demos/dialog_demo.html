@@ -276,7 +276,7 @@
           useAnimateControls("dialog_demo_animation");
         return (
           <section id="animation" class="demo-section">
-            <h2>2. Animation</h2>
+            <h2>3. Animation</h2>
             <p>
               <code>animation</code> or <code>animation="auto"</code> resolves
               to <code>"scaling"</code> — a dialog has no anchor to grow out of
@@ -301,7 +301,7 @@
         );
         return (
           <section id="sliding" class="demo-section">
-            <h2>3. sliding</h2>
+            <h2>4. sliding</h2>
             <p>
               Explicit direction only — a dialog is always centered, with no
               anchor to auto-resolve a direction from.
@@ -338,7 +338,7 @@
           useAnimateControls("dialog_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>4. pointerInteractionOutsideEffect</h2>
+            <h2>5. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
               <code>"capture"</code>/<code>"none"</code> both just absorb it —
@@ -399,7 +399,7 @@
 
       const CustomContainerSection = () => (
         <section id="custom-container" class="demo-section">
-          <h2>5. Custom container (layer="local")</h2>
+          <h2>6. Custom container (layer="local")</h2>
           <p>
             Confined to the container below instead of the whole viewport —
             genuinely clipped by its <code>overflow: hidden</code>. Trades away
@@ -462,7 +462,7 @@
 
       const OpenFromStartSection = () => (
         <section id="open-from-start" class="demo-section">
-          <h2>6. Open from the start</h2>
+          <h2>7. Open from the start</h2>
           <p>
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
@@ -488,11 +488,41 @@
         </section>
       );
 
+      // Basic --navi-toggle-driven open/close, no anchor concept at all
+      // (unlike Popover — Dialog is never positioned relative to whatever
+      // triggered it).
+      const ControlledByButtonSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_controlled_by_button");
+        return (
+          <section id="controlled-by-button" class="demo-section">
+            <h2>1. Controlled by button</h2>
+            <p>
+              A button commanding <code>--navi-toggle</code> opens/closes the
+              dialog.
+            </p>
+            <div class="demo-row">
+              <TriggeredDialog
+                label="Button commanding dialog"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
       // No fixed size on the dialog itself (see .demo_dialog_flex_box) —
       // each button below opens the same dialog with a different amount of
       // content, small to large enough to exceed the viewport, to see how
       // Dialog's default (always-centered) sizing copes.
-      const ContentSizeDialog = ({ label, content }) => {
+      const ContentSizeDialog = ({
+        label,
+        content,
+        animation,
+        animationDuration,
+      }) => {
         const dialogId = useId();
         return (
           <>
@@ -502,6 +532,8 @@
             <Dialog
               id={dialogId}
               scrollCapture
+              animation={animation}
+              animationDuration={animationDuration}
               className="demo_dialog_flex_box"
             >
               <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
@@ -515,7 +547,11 @@
       // Same idea, but the content grows/shrinks *while already open* (via
       // local state, not a different dialog instance) — shows whether the
       // dialog reacts to its own size changing after it's already shown.
-      const ExpandCollapseDialog = ({ label }) => {
+      const ExpandCollapseDialog = ({
+        label,
+        animation,
+        animationDuration,
+      }) => {
         const dialogId = useId();
         const [expanded, setExpanded] = useState(false);
         return (
@@ -526,6 +562,8 @@
             <Dialog
               id={dialogId}
               scrollCapture
+              animation={animation}
+              animationDuration={animationDuration}
               className="demo_dialog_flex_box"
             >
               <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
@@ -542,69 +580,91 @@
         );
       };
 
-      const ContentSizeSection = () => (
-        <section id="content-size" class="demo-section">
-          <h2>1. Adapting to content size</h2>
-          <p>
-            Dialog has no fixed size of its own either — always centered, it
-            sizes to whatever's inside it, from a short line of text to content
-            that exceeds the viewport.
-          </p>
-          <div class="demo-row">
-            <ContentSizeDialog
-              label="small"
-              content={<p style={{ margin: 0 }}>Just a short line.</p>}
-            />
-            <ContentSizeDialog
-              label="tall"
-              content={Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} class="demo-content-tall-block" />
-              ))}
-            />
-            <ContentSizeDialog
-              label="wide"
-              content={<div class="demo-content-wide-block" />}
-            />
-            <ContentSizeDialog
-              label="tall + wide"
-              content={
-                <>
-                  <div class="demo-content-wide-block" />
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} class="demo-content-tall-block" />
-                  ))}
-                </>
-              }
-            />
-            <ContentSizeDialog
-              label="exceeds viewport"
-              content={
-                <>
-                  <div
-                    class="demo-content-wide-block"
-                    style={{ width: "1400px" }}
-                  />
-                  {Array.from({ length: 20 }).map((_, i) => (
-                    <div key={i} class="demo-content-tall-block" />
-                  ))}
-                </>
-              }
-            />
-          </div>
+      const ContentSizeSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_content_size");
+        return (
+          <section id="content-size" class="demo-section">
+            <h2>2. Content dimensions</h2>
+            <p>
+              Dialog has no fixed size of its own either — always centered, it
+              sizes to whatever's inside it, from a short line of text to
+              content that exceeds the viewport.
+            </p>
+            <div class="demo-row">
+              <ContentSizeDialog
+                label="small"
+                content={<p style={{ margin: 0 }}>Just a short line.</p>}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="tall"
+                content={Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="wide"
+                content={<div class="demo-content-wide-block" />}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="tall + wide"
+                content={
+                  <>
+                    <div class="demo-content-wide-block" />
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} class="demo-content-tall-block" />
+                    ))}
+                  </>
+                }
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="exceeds viewport"
+                content={
+                  <>
+                    <div
+                      class="demo-content-wide-block"
+                      style={{ width: "1400px" }}
+                    />
+                    {Array.from({ length: 20 }).map((_, i) => (
+                      <div key={i} class="demo-content-tall-block" />
+                    ))}
+                  </>
+                }
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
 
-          <h3>Expanding/collapsing content while open</h3>
-          <div class="demo-row">
-            <ExpandCollapseDialog label="expand/collapse" />
-          </div>
-        </section>
-      );
+            <h3>Expanding/collapsing content while open</h3>
+            <div class="demo-row">
+              <ExpandCollapseDialog
+                label="expand/collapse"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
 
       const TableOfContents = () => (
         <nav class="demo-toc">
           <strong>Contents</strong>
           <ol>
             <li>
-              <a href="#content-size">Adapting to content size</a>
+              <a href="#controlled-by-button">Controlled by button</a>
+            </li>
+            <li>
+              <a href="#content-size">Content dimensions</a>
             </li>
             <li>
               <a href="#animation">Animation</a>
@@ -633,6 +693,7 @@
 
           <TableOfContents />
 
+          <ControlledByButtonSection />
           <ContentSizeSection />
           <AnimationSection />
           <SlidingSection />
