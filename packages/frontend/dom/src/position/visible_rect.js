@@ -492,6 +492,9 @@ export const visibleRectEffect = (
   const observeSize = (elementToObserve) => {
     let lastWidth;
     let lastHeight;
+    // Set right before a deferred check() runs, read right after — see
+    // below for why a pending frame needs to be cancelable.
+    let pendingFrame = null;
     const resizeObserver = new ResizeObserver((entries) => {
       const [entry] = entries;
       const { width, height } = entry.contentRect;
@@ -506,19 +509,37 @@ export const visibleRectEffect = (
       }
       lastWidth = width;
       lastHeight = height;
-      // Calls check() directly, not autoCheck: this observer's own trigger
-      // must not re-enter the onBeforeAutoCheck dance below (registered to
-      // guard against *other* auto-triggers reflowing elementToObserve, e.g.
-      // the anchor scrolling/resizing) — doing so would unobserve/re-observe
-      // this same ResizeObserver synchronously from inside its own
-      // callback, which the browser reports as "ResizeObserver loop
-      // completed with undelivered notifications." The debounce above is
-      // what keeps this path itself from looping.
-      check(
-        new CustomEvent("observed_element_size_change", {
-          detail: { width, height },
-        }),
-      );
+      // Deferred to the next frame rather than calling check() here
+      // directly: check() (via update()) commonly mutates
+      // elementToObserve's own size again as a side effect of repositioning
+      // it (e.g. a popover clearing then re-setting its own max-height
+      // while reconsidering "above" vs "below" once it no longer fits where
+      // it was) — when elementToObserve is the very element this observer
+      // watches (a popover watching its own content, not some other
+      // element), doing that synchronously from inside this callback is a
+      // same-frame observer-triggers-itself loop, which the browser detects
+      // and reports as "ResizeObserver loop completed with undelivered
+      // notifications." The debounce above only guards against oscillation
+      // across separate ResizeObserver deliveries — it does nothing for
+      // this single legitimate resize-causes-a-reposition-causes-another-
+      // resize step, since each individual size change here is real, not
+      // sub-pixel noise. Deferring one frame breaks the synchronous chain:
+      // by the time the reposition runs, this callback has already
+      // returned, so any size change it causes is observed as a fresh,
+      // later delivery instead of a nested one. Cancels/replaces any
+      // still-pending frame from an earlier, superseded delivery, so only
+      // the latest size ever actually gets checked.
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
+      pendingFrame = requestAnimationFrame(() => {
+        pendingFrame = null;
+        check(
+          new CustomEvent("observed_element_size_change", {
+            detail: { width, height },
+          }),
+        );
+      });
     });
     resizeObserver.observe(elementToObserve);
     const cleanupAutoCheck = onBeforeAutoCheck(() => {
@@ -528,10 +549,16 @@ export const visibleRectEffect = (
       };
     });
     addTeardown(() => {
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
       resizeObserver.disconnect();
     });
     return () => {
       cleanupAutoCheck();
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
       resizeObserver.disconnect();
     };
   };
