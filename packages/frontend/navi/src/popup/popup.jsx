@@ -22,9 +22,9 @@ import { Popover } from "./popover.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_popup {
-      --popup-border-radius: 8px;
+      --popup-border-radius: var(--navi-popup-border-radius);
       --popup-border-width: 1px;
-      --popup-border-color: #d0d0d0;
+      --popup-border-color: var(--navi-popup-border-color);
 
       &.navi_popover {
         --popover-border-radius: var(--popup-border-radius);

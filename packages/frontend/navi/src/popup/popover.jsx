@@ -110,9 +110,9 @@ const css = /* css */ `
       --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
       --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
 
-      --popover-border-radius: 8px;
+      --popover-border-radius: var(--navi-popup-border-radius);
       --popover-border-width: 1px;
-      --popover-border-color: #d0d0d0;
+      --popover-border-color: var(--navi-popup-border-color);
       --popover-outline-width: var(--navi-focus-outline-width);
       --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
       --popover-outline-color: var(--navi-focus-outline-color);

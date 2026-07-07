@@ -47,6 +47,9 @@ const css = /* css */ `
       --navi-picker-padding-x-default: var(--navi-control-padding-x-default);
       --navi-picker-padding-y-default: var(--navi-control-padding-y-default);
 
+      --navi-popup-border-radius: 8px;
+      --navi-popup-border-color: light-dark(#d0d0d0, #3b3b3b);
+
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;
       /* Accent color — used for call-to-action buttons and selected list items.

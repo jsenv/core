@@ -41,7 +41,7 @@ const css = /* css */ `
         var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
       );
 
-      --dialog-border-radius: 8px;
+      --dialog-border-radius: var(--navi-popup-border-radius);
       --dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
       --dialog-outline-width: var(--navi-focus-outline-width);
       --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
@@ -52,12 +52,12 @@ const css = /* css */ `
   .navi_dialog {
     min-width: var(--anchor-width, 0px);
     max-width: min(
-      var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
-      var(--picker-dialog-maxmax-width)
+      var(--dialog-max-width, var(--dialog-maxmax-width)),
+      var(--dialog-maxmax-width)
     );
     max-height: min(
-      var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
-      var(--picker-dialog-maxmax-height)
+      var(--dialog-max-height, var(--dialog-maxmax-height)),
+      var(--dialog-maxmax-height)
     );
     /* When centerInVisualViewport is enabled, --dialog-top-inset is set
          dynamically to keep the dialog centered in the visual viewport
