@@ -380,8 +380,8 @@ const css = /* css */ `
         /* "capture" means the rest of the page is fully non-interactive —
            blurred, not just dimmed, so it reads as clearly secondary and
            pulls visual focus onto the popover's own content. */
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
+        background: rgb(255 255 255 / 0.08);
+        backdrop-filter: blur(30px) saturate(180%);
       }
     }
 
