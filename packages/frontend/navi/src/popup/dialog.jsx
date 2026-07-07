@@ -167,22 +167,25 @@ const css = /* css */ `
 
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
+    }
 
-      &[navi-animation] {
-        @starting-style {
-          opacity: 0;
-        }
+    /* Attribute selectors must come before ::backdrop, not after — a
+       pseudo-element can't be qualified by an attribute of its own
+       (::backdrop[navi-animation] would never match anything), only by an
+       attribute of the *originating* element it's generated for. */
+    &[navi-animation]::backdrop {
+      opacity: 1;
+      transition-property: display, overlay, opacity;
+      transition-duration: var(--popup-animation-duration, 0.18s);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
 
-        opacity: 1;
-        transition-property: display, overlay, opacity;
-        transition-duration: var(--popup-animation-duration, 0.18s);
-        transition-timing-function: ease;
-        transition-behavior: allow-discrete;
-
-        &[aria-expanded="false"] {
-          opacity: 0;
-        }
+      @starting-style {
+        opacity: 0;
       }
+    }
+    &[navi-animation][aria-expanded="false"]::backdrop {
+      opacity: 0;
     }
 
     &[data-focus-visible] {
