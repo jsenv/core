@@ -29,19 +29,20 @@ import { popupCss } from "./popup_css.js";
 
 const css = /* css */ `
   .navi_dialog {
-    &[open] {
-      display: flex;
-      /* When centerInVisualViewport is enabled, --dialog-top-inset is set
+    /* When centerInVisualViewport is enabled, --dialog-top-inset is set
          dynamically to keep the dialog centered in the visual viewport
          (accounts for the virtual keyboard on mobile). */
-      margin-top: var(--dialog-top-inset, auto);
-      margin-bottom: auto;
-      flex-direction: column;
-      transition: margin-top 0.1s ease-in-out;
-    }
+    margin-top: var(--dialog-top-inset, auto);
+    margin-bottom: auto;
+    flex-direction: column;
+    transition: margin-top 0.1s ease-in-out;
 
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
+    }
+
+    &[open] {
+      display: flex;
     }
   }
 

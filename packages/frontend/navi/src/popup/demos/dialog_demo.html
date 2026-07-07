@@ -217,7 +217,7 @@
           useAnimateControls("dialog_demo_animation");
         return (
           <section id="animation" class="demo-section">
-            <h2>1. Animation</h2>
+            <h2>2. Animation</h2>
             <p>
               <code>animation</code> or <code>animation="auto"</code> resolves
               to <code>"scaling"</code> — a dialog has no anchor to grow out of
@@ -242,7 +242,7 @@
         );
         return (
           <section id="sliding" class="demo-section">
-            <h2>2. sliding</h2>
+            <h2>3. sliding</h2>
             <p>
               Explicit direction only — a dialog is always centered, with no
               anchor to auto-resolve a direction from.
@@ -279,7 +279,7 @@
           useAnimateControls("dialog_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>3. pointerInteractionOutsideEffect</h2>
+            <h2>4. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
               <code>"capture"</code>/<code>"none"</code> both just absorb it —
@@ -362,7 +362,7 @@
 
       const ContentSizeSection = () => (
         <section id="content-size" class="demo-section">
-          <h2>4. Adapting to content size</h2>
+          <h2>1. Adapting to content size</h2>
           <p>
             Dialog has no fixed size of its own either — always centered, it
             sizes to whatever's inside it, from a short line of text to content
@@ -422,6 +422,9 @@
           <strong>Contents</strong>
           <ol>
             <li>
+              <a href="#content-size">Adapting to content size</a>
+            </li>
+            <li>
               <a href="#animation">Animation</a>
             </li>
             <li>
@@ -431,9 +434,6 @@
               <a href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
               </a>
-            </li>
-            <li>
-              <a href="#content-size">Adapting to content size</a>
             </li>
           </ol>
         </nav>
@@ -445,10 +445,10 @@
 
           <TableOfContents />
 
+          <ContentSizeSection />
           <AnimationSection />
           <SlidingSection />
           <PointerInteractionOutsideSection />
-          <ContentSizeSection />
         </div>
       );
 
