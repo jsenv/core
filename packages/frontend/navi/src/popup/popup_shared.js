@@ -85,3 +85,64 @@ export const armPointerDownOutsideClose = (closeEvent, hide) => {
     document.removeEventListener("click", onClick, { capture: true });
   };
 };
+
+/**
+ * The `positionArea` grammar shared by Popover and Dialog: two
+ * space-separated words, order-independent (every value but "center"
+ * belongs to exactly one axis). y: above/aligned-top/center/aligned-bottom/
+ * below. x: on-the-left/aligned-left/center/aligned-right/on-the-right. A
+ * bare word means no overlap with whatever it's positioned relative to;
+ * "aligned-" means edges touching. A single word implies "center" on the
+ * other axis (e.g. a corner is spelled out as "aligned-top aligned-left",
+ * no dedicated corner presets). Loosely inspired by CSS `position-area`.
+ */
+export const POSITION_AREA_X_VALUES = new Set([
+  "on-the-left",
+  "aligned-left",
+  "center",
+  "aligned-right",
+  "on-the-right",
+]);
+export const POSITION_AREA_Y_VALUES = new Set([
+  "above",
+  "aligned-top",
+  "center",
+  "aligned-bottom",
+  "below",
+]);
+
+/**
+ * Parses a positionArea string into a { y, x } pair, or null if it's not a
+ * recognized word/pair.
+ */
+export const parsePositionArea = (
+  value,
+  { defaultX = "center", defaultY = "center" } = {},
+) => {
+  const tokens = value.split(" ");
+  if (tokens.length === 1) {
+    const [token] = tokens;
+    if (token === "center") {
+      return { y: "center", x: "center" };
+    }
+    if (POSITION_AREA_Y_VALUES.has(token)) {
+      return { y: token, x: defaultX };
+    }
+    if (POSITION_AREA_X_VALUES.has(token)) {
+      return { y: defaultY, x: token };
+    }
+    return null;
+  }
+  if (tokens.length === 2) {
+    const [a, b] = tokens;
+    // Every value but "center" is unique to one axis, so either order
+    // works — whichever token is the Y value becomes y, the other x.
+    if (POSITION_AREA_Y_VALUES.has(a) && POSITION_AREA_X_VALUES.has(b)) {
+      return { y: a, x: b };
+    }
+    if (POSITION_AREA_X_VALUES.has(a) && POSITION_AREA_Y_VALUES.has(b)) {
+      return { y: b, x: a };
+    }
+  }
+  return null;
+};

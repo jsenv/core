@@ -41,7 +41,7 @@
  * `focusCapture`), `Escape`-to-close (a `keydown` shortcut, since `.show()`
  * dialogs don't fire "cancel" on Escape the way a modal one does), and a
  * real backdrop sibling element (since `.show()` dialogs don't get a
- * `::backdrop` either) — see `useDialogProps`'s own `isCustom` branches
+ * `::backdrop` either) — see `useDialogProps`'s own `isLocal` branches
  * below for each. **Deliberately NOT reimplemented: hardware/gesture
  * back-button dismissal** (e.g. Android's system back gesture closing the
  * top-most modal) — there is no public web API to hook into that gesture at
@@ -409,7 +409,7 @@ const DialogCustom = (props) => {
 /**
  * Everything both rendering strategies share once an `openController` is
  * already resolved: focus/debug/id plumbing, the open-commit sequence, the
- * close handler — inlined in `openEffect`, branching on `isCustom` at each
+ * close handler — inlined in `openEffect`, branching on `isLocal` at each
  * point the two renderers genuinely differ (same pattern as popover.jsx's
  * own usePopoverProps — see its top comment for why this stays inline
  * rather than split into two functions). Returns `[backdropProps,
@@ -453,7 +453,7 @@ const useDialogProps = (props) => {
     autoFocus = "fallback",
     ...rest
   } = props;
-  const isCustom = layer === "local";
+  const isLocal = layer === "local";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
@@ -553,20 +553,20 @@ const useDialogProps = (props) => {
       // bug already fixed once for Popover's own backdrop.
     }
 
-    if (isCustom) {
+    if (isLocal) {
       dialogEl.show();
     } else {
       dialogEl.showModal();
     }
 
-    if (isCustom) {
+    if (isLocal) {
       addCleanup(trapFocusInside(dialogEl, { debug: debugFocus }));
     }
     if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
     }
 
-    if (!isCustom) {
+    if (!isLocal) {
       // navi_css_vars.js already tracks the 4 --navi-visual-viewport-inset-*
       // vars our own CSS reads, unconditionally, page-wide — this just
       // re-dispatches its own "navi_vv_inset_change" as "navi_position_change"
@@ -647,7 +647,7 @@ const useDialogProps = (props) => {
       // Only the custom renderer needs this — a modal <dialog> already
       // fires "cancel" (handled via onCancel below) on Escape natively; a
       // non-modal .show()'d one doesn't.
-      if (!isCustom || !openController.opened) {
+      if (!isLocal || !openController.opened) {
         return null;
       }
       return {
@@ -663,8 +663,8 @@ const useDialogProps = (props) => {
   // most fields are shared: renderer-specific bits (the outside-click
   // handler below, in particular) are just assigned onto whichever of the
   // two actually owns that concern for a given renderer, instead of one
-  // object's own field branching internally on isCustom. backdropProps only
-  // gets returned (see the bottom of this function) when isCustom — the
+  // object's own field branching internally on isLocal. backdropProps only
+  // gets returned (see the bottom of this function) when isLocal — the
   // via-attribute renderer's own backdrop is native (::backdrop), not a
   // real element we render ourselves.
   const backdropProps = {
@@ -694,12 +694,12 @@ const useDialogProps = (props) => {
     // setting it explicitly there would be redundant; a .show()'d one has
     // no such implicit mapping at all despite behaving modally (focus trap,
     // real backdrop), so it needs to be stated explicitly.
-    "aria-modal": isCustom ? "true" : undefined,
+    "aria-modal": isLocal ? "true" : undefined,
     // Always present now, center included (no longer hidden behind a
     // === "center" ? undefined : ... check) — DialogCustom's own wrapper
     // just copies this same value onto its own data-position-area instead
     // of a separate return value (see the bottom of this function). Present
-    // on both renderers' own dialog element regardless of isCustom too
+    // on both renderers' own dialog element regardless of isLocal too
     // (previously via-attribute-only) — the CSS above guards its own
     // via-attribute-only rules with :not([data-layer="local"]) specifically
     // so this being present here for the custom renderer too is safe.
@@ -731,7 +731,7 @@ const useDialogProps = (props) => {
   // element is what receives the click instead; the custom renderer's own
   // real backdrop element (a sibling, since a .show()'d dialog has no
   // native inert-ing to lean on) receives it directly.
-  if (isCustom) {
+  if (isLocal) {
     backdropProps.onMouseDown = (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
         return;
@@ -771,7 +771,7 @@ const useDialogProps = (props) => {
     };
   }
 
-  return [isCustom ? backdropProps : null, contentProps];
+  return [isLocal ? backdropProps : null, contentProps];
 };
 
 const DIALOG_PSEUDO_CLASSES = [

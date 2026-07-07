@@ -247,6 +247,7 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
+  parsePositionArea,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
 
@@ -1134,56 +1135,8 @@ const POPUP_STYLE_CSS_VARS = {
   maxHeight: "--popover-max-height",
 };
 
-// See the positionArea grammar in this file's top comment.
-const POSITION_AREA_X_VALUES = new Set([
-  "on-the-left",
-  "aligned-left",
-  "center",
-  "aligned-right",
-  "on-the-right",
-]);
-const POSITION_AREA_Y_VALUES = new Set([
-  "above",
-  "aligned-top",
-  "center",
-  "aligned-bottom",
-  "below",
-]);
-/**
- * Parses a positionArea string into a { y, x } pair, or null if it's not a
- * recognized word/pair.
- */
-const parsePositionArea = (
-  value,
-  { defaultX = "center", defaultY = "center" } = {},
-) => {
-  const tokens = value.split(" ");
-  if (tokens.length === 1) {
-    const [token] = tokens;
-    if (token === "center") {
-      return { y: "center", x: "center" };
-    }
-    if (POSITION_AREA_Y_VALUES.has(token)) {
-      return { y: token, x: defaultX };
-    }
-    if (POSITION_AREA_X_VALUES.has(token)) {
-      return { y: defaultY, x: token };
-    }
-    return null;
-  }
-  if (tokens.length === 2) {
-    const [a, b] = tokens;
-    // Every value but "center" is unique to one axis, so either order
-    // works — whichever token is the Y value becomes y, the other x.
-    if (POSITION_AREA_Y_VALUES.has(a) && POSITION_AREA_X_VALUES.has(b)) {
-      return { y: a, x: b };
-    }
-    if (POSITION_AREA_X_VALUES.has(a) && POSITION_AREA_Y_VALUES.has(b)) {
-      return { y: b, x: a };
-    }
-  }
-  return null;
-};
+// parsePositionArea/POSITION_AREA_X/Y_VALUES moved to popup_shared.js — same
+// grammar Dialog's own layer="local"/"top" now shares.
 
 /**
  * Shared by both renderers: parses `positionArea` and resolves

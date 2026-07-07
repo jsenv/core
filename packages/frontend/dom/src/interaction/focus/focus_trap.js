@@ -23,11 +23,22 @@ import { performTabNavigation } from "./tab_navigation.js";
  *   Backdrop clicks (target is a `<dialog>` element) only receive `preventDefault`
  *   and still propagate, allowing the dialog to react to them (e.g. close itself).
  * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @param {Document|HTMLElement} [options.boundaryElement=document] - Where the
+ *   mousedown/keydown listeners are attached. Defaults to `document` (a genuinely
+ *   page-wide modal — the usual case). Pass a specific container element instead
+ *   for a trap that should only apply *within* that container: a Tab press or
+ *   click occurring entirely outside it never reaches a listener attached there
+ *   at all (events only bubble through their own ancestor chain), so the rest of
+ *   the page keeps its normal tab order/interactions untouched — only Tab/clicks
+ *   that occur *inside* the container (whether on `element` itself or some other
+ *   focusable sibling sharing it) get redirected back into `element`. Used by
+ *   Dialog's own `layer="local"` renderer, which is only meant to be modal
+ *   within its own positioned ancestor, not the whole document.
  * @returns {() => void} Cleanup function — call it to release the trap.
  */
 export const trapFocusInside = (
   element,
-  { debug, pointerTrap = false } = {},
+  { debug, pointerTrap = false, boundaryElement = document } = {},
 ) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
@@ -87,24 +98,24 @@ export const trapFocusInside = (
     };
 
     if (onmousedown) {
-      document.addEventListener("mousedown", onmousedown, {
+      boundaryElement.addEventListener("mousedown", onmousedown, {
         capture: true,
         passive: false,
       });
     }
-    document.addEventListener("keydown", onkeydown, {
+    boundaryElement.addEventListener("keydown", onkeydown, {
       capture: true,
       passive: false,
     });
 
     return () => {
       if (onmousedown) {
-        document.removeEventListener("mousedown", onmousedown, {
+        boundaryElement.removeEventListener("mousedown", onmousedown, {
           capture: true,
           passive: false,
         });
       }
-      document.removeEventListener("keydown", onkeydown, {
+      boundaryElement.removeEventListener("keydown", onkeydown, {
         capture: true,
         passive: false,
       });
