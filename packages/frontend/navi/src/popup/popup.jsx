@@ -1,10 +1,3 @@
-import { useRef } from "preact/hooks";
-
-import { windowWidthSignal } from "../layout/responsive.js";
-import { withPropsClassName } from "../utils/with_props_class_name.js";
-import { Dialog } from "./dialog.jsx";
-import { Popover } from "./popover.jsx";
-
 /**
  * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
  * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
@@ -19,6 +12,14 @@ import { Popover } from "./popover.jsx";
  * cycle — simpler, since this component doesn't own an openController the
  * way the picker does to hook a reset into its own onClose.
  */
+
+import { useRef } from "preact/hooks";
+
+import { windowWidthSignal } from "../layout/responsive.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Dialog } from "./dialog.jsx";
+import { Popover } from "./popover.jsx";
+
 const css = /* css */ `
   @layer navi {
     .navi_popup {
