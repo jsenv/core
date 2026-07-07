@@ -2,20 +2,39 @@
  * A popup positioned via `anchor`/`anchorArea`, driven either by
  * --navi-toggle/--navi-open/--navi-close commands or the `open` prop.
  *
- * Two entirely separate rendering strategies exist in this one file: the
- * native Popover API (`popover="manual"`, `showPopover()`/`hidePopover()`,
- * promoted to the top layer) and a plain `position: absolute` div, genuinely
+ * Two entirely separate rendering strategies exist in this one file, each
+ * its own real component: `PopoverViaAttribute` (native Popover API,
+ * `popover="manual"`, `showPopover()`/`hidePopover()`, promoted to the top
+ * layer) and `PopoverCustom` (a plain `position: absolute` div, genuinely
  * relative to its nearest positioned ancestor — clipped by that ancestor's
- * own `overflow: hidden`/`auto`, unlike the top layer. `ControlledPopover`
- * itself picks which one actually renders, from the `anchor` prop alone,
- * once per open (`usesCustomRenderer = anchorProp === "scrollContainer"`) —
- * everything *around* that choice (the open controller, focus/debug/id
- * plumbing, the JSX shape, capture setup, animation-attribute resolution,
- * the open-commit sequence, the close handler) is shared, written once, via
- * a handful of small helper functions; only the positioning math and the
- * "make it actually visible/hidden" mechanics genuinely differ between the
- * two, kept in their own dedicated functions (`runOpenEffectViaAttribute`/
- * `runOpenEffectCustom`) rather than interleaved.
+ * own `overflow: hidden`/`auto`, unlike the top layer). The exported
+ * `Popover` component first picks between an internally-managed open
+ * controller (Uncontrolled) and one owned by the caller (Controlled, used
+ * by picker_custom.jsx/side_panel.jsx) — kept as its own separate step so
+ * `useOpenControllerByProps` (a whole controller instance) is only ever
+ * created when actually needed, not unconditionally on every render.
+ * `ControlledPopover` then picks which rendering strategy actually mounts,
+ * from the `anchor` prop alone (`anchor === "scrollContainer"` →
+ * `PopoverCustom`, everything else → `PopoverViaAttribute`) — by this
+ * point an `openController` is always already resolved.
+ *
+ * Both components share the exact same `usePopoverProps(props)` hook for
+ * everything that doesn't genuinely differ between them, once an
+ * `openController` is already resolved: focus/debug/id plumbing, capture
+ * setup, animation-attribute resolution, the open-commit sequence, the
+ * close handler — which returns
+ * `[backdropProps, contentProps]`, two plain prop objects each component
+ * just spreads onto its own backdrop/content element. Right now both
+ * components' JSX bodies are identical (spread the two prop objects onto a
+ * `Box` each) — kept as two separate components anyway, rather than one,
+ * because they're expected to diverge in DOM structure later (e.g. one of
+ * them needing an extra wrapper) once that need actually arrives; don't
+ * collapse them back into one just because they look redundant today.
+ * `usePopoverProps` derives which rendering strategy's *effect logic*
+ * (`runOpenEffectViaAttribute`/`runOpenEffectCustom`) to run from the same
+ * `anchor` prop by default; its second argument exists so a caller can
+ * override that later if a genuine need for it shows up, but nothing
+ * passes it yet.
  *
  * - `anchor="scrollContainer"` → the custom renderer, docked to the
  *   popover's own positioned ancestor. Always ignores whatever the
@@ -69,7 +88,7 @@
  * open_controller.js, which depends on that click too) — aria-expanded is
  * still set to "false" immediately, so the backdrop stops intercepting
  * anything right away even while it's still pending. Not rendered at all
- * when the effect is "none".
+ * when the effect is "none" (`backdropProps` is `null` in that case).
  *
  * anchorArea's grammar (loosely inspired by CSS position-area): two
  * space-separated words, order-independent. y: above/aligned-top/center/
@@ -290,10 +309,11 @@ const css = /* css */ `
 /**
  * Entry point: picks between an internally-managed open controller
  * (Uncontrolled) and one owned by the caller (Controlled, used by
- * picker_custom.jsx/side_panel.jsx) so we don't instantiate a default
- * controller when it would just be thrown away. Which rendering strategy
- * (native Popover API vs. plain div) actually renders is decided later, in
- * `ControlledPopover` itself — see this file's top comment.
+ * picker_custom.jsx/side_panel.jsx) so `useOpenControllerByProps` — which
+ * creates a whole controller instance — is only ever called when it's
+ * actually needed, not on every render regardless. Which rendering strategy
+ * (native Popover API vs. plain div) mounts is decided one level further
+ * in, by `ControlledPopover` — see this file's top comment.
  */
 export const Popover = (props) => {
   import.meta.css = css;
@@ -328,7 +348,56 @@ const UncontrolledPopover = (props) => {
   );
 };
 
+// Picks which rendering strategy actually mounts, from the `anchor` prop
+// alone (see this file's top comment) — done here, after the
+// controlled/uncontrolled split above, so an openController is always
+// already resolved by the time PopoverViaAttribute/PopoverCustom (and the
+// usePopoverProps hook they share) ever run.
 const ControlledPopover = (props) => {
+  if (props.anchor === "scrollContainer") {
+    return <PopoverCustom {...props} />;
+  }
+  return <PopoverViaAttribute {...props} />;
+};
+
+// See this file's top comment for why this and PopoverCustom are two
+// components sharing one hook, rather than one component branching
+// internally.
+const PopoverViaAttribute = (props) => {
+  const [backdropProps, contentProps] = usePopoverProps(props);
+  return (
+    <>
+      {backdropProps && <Box {...backdropProps} />}
+      <Box {...contentProps} />
+    </>
+  );
+};
+
+const PopoverCustom = (props) => {
+  const [backdropProps, contentProps] = usePopoverProps(props);
+  return (
+    <>
+      {backdropProps && <Box {...backdropProps} />}
+      <Box {...contentProps} />
+    </>
+  );
+};
+
+/**
+ * Everything both rendering strategies share once an `openController` is
+ * already resolved (by `ControlledPopover`'s callers above): focus/debug/id
+ * plumbing, capture setup, animation-attribute resolution, the open-commit
+ * sequence, the close handler. Dispatches to `runOpenEffectViaAttribute`/
+ * `runOpenEffectCustom` for the one thing that genuinely differs (backdrop
+ * show/hide mechanics, anchor-positioning math) and returns
+ * `[backdropProps, contentProps]` — two plain prop objects ready to spread
+ * onto a backdrop/content element each.
+ *
+ * `options.usesCustomRenderer` overrides the default derivation from the
+ * `anchor` prop — nothing passes it yet; it exists so a future caller can
+ * force a strategy without relying on `anchor`'s own value.
+ */
+const usePopoverProps = (props, options = {}) => {
   const {
     openController,
     anchor: anchorProp,
@@ -359,7 +428,8 @@ const ControlledPopover = (props) => {
 
   // Decided once per render from the raw prop (never from the
   // event-carried anchor) — see this file's top comment.
-  const usesCustomRenderer = anchorProp === "scrollContainer";
+  const usesCustomRenderer =
+    options.usesCustomRenderer ?? anchorProp === "scrollContainer";
 
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
@@ -402,7 +472,7 @@ const ControlledPopover = (props) => {
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
     // backdropEl is null when pointerInteractionOutsideEffect is "none" —
-    // the backdrop isn't rendered at all in that case (see the JSX below).
+    // the backdrop isn't rendered at all in that case.
     const backdropEl = backdropRef.current;
     if (!popoverEl) {
       return undefined;
@@ -445,76 +515,80 @@ const ControlledPopover = (props) => {
     },
   });
 
-  return (
-    <>
-      {/* See this file's top comment for the backdrop's design. No
-          document.body/createPortal needed either way: for the
-          via-attribute renderer, top-layer promotion (not DOM position) is
-          what puts it above normal page content; for the custom renderer,
-          it's a plain sibling confined to the same positioned ancestor. */}
-      {hasBackdrop && (
-        <Box
-          ref={backdropRef}
-          id={backdropId}
-          popover={usesCustomRenderer ? undefined : "manual"}
-          baseClassName="navi_popover_backdrop"
-          aria-hidden="true"
-          styleCSSVars={POPUP_STYLE_CSS_VARS}
-          animationDuration={rest.animationDuration}
-          data-pointer-interaction-outside={pointerInteractionOutsideEffect}
-          onMouseDown={(e) => {
-            if (e.button !== 0) {
-              return;
-            }
-            // Ignore clicks that land inside the popover's bounding rect
-            // (padding and border area are part of the popover box but can
-            // forward pointer events to the backdrop behind them).
-            const rect = ref.current.getBoundingClientRect();
-            const isOutside =
-              e.clientX < rect.left ||
-              e.clientX > rect.right ||
-              e.clientY < rect.top ||
-              e.clientY > rect.bottom;
-            if (!isOutside) {
-              return;
-            }
-            // "capture" absorbs the click so it doesn't reach whatever's
-            // behind the popover, without closing it. "none" never reaches
-            // here at all — the backdrop isn't rendered in that case.
-            if (pointerInteractionOutsideEffect === "capture") {
-              e.preventDefault();
-              return;
-            }
-            if (pointerInteractionOutsideEffect === "close") {
-              openController.requestClose(e, { isCancel: true });
-              return;
-            }
-          }}
-        />
-      )}
-      <Box
-        id={id}
-        popover={usesCustomRenderer ? undefined : "manual"}
-        tabIndex={tabIndex}
-        navi-animation={isAutoAnimation ? undefined : animation}
-        styleCSSVars={POPUP_STYLE_CSS_VARS}
-        {...rest}
-        {...autoFocusProps}
-        ref={ref}
-        baseClassName="navi_popover"
-        pseudoClasses={POPOVER_PSEUDO_CLASSES}
-        onnavi_command={(e) => {
-          onNaviCommand(e);
-        }}
-        onnavi_request_interaction={(e) => {
-          onRequestInteraction(e, { debugInteraction });
-        }}
-        onKeyDown={onKeyDownShortcuts}
-      >
-        {children}
-      </Box>
-    </>
-  );
+  const backdropProps = hasBackdrop
+    ? {
+        "ref": backdropRef,
+        "id": backdropId,
+        // See this file's top comment for the backdrop's design. No
+        // document.body/createPortal needed either way: for the
+        // via-attribute renderer, top-layer promotion (not DOM position) is
+        // what puts it above normal page content; for the custom renderer,
+        // it's a plain sibling confined to the same positioned ancestor.
+        "popover": usesCustomRenderer ? undefined : "manual",
+        "baseClassName": "navi_popover_backdrop",
+        "aria-hidden": "true",
+        "styleCSSVars": POPUP_STYLE_CSS_VARS,
+        "animationDuration": rest.animationDuration,
+        "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+        "onMouseDown": (mouseDownEvent) => {
+          if (mouseDownEvent.button !== 0) {
+            return;
+          }
+          // Ignore clicks that land inside the popover's bounding rect
+          // (padding and border area are part of the popover box but can
+          // forward pointer events to the backdrop behind them).
+          const rect = ref.current.getBoundingClientRect();
+          const isOutside =
+            mouseDownEvent.clientX < rect.left ||
+            mouseDownEvent.clientX > rect.right ||
+            mouseDownEvent.clientY < rect.top ||
+            mouseDownEvent.clientY > rect.bottom;
+          if (!isOutside) {
+            return;
+          }
+          // "capture" absorbs the click so it doesn't reach whatever's
+          // behind the popover, without closing it. "none" never reaches
+          // here at all — the backdrop isn't rendered in that case.
+          if (pointerInteractionOutsideEffect === "capture") {
+            mouseDownEvent.preventDefault();
+            return;
+          }
+          if (pointerInteractionOutsideEffect === "close") {
+            openController.requestClose(mouseDownEvent, { isCancel: true });
+            return;
+          }
+        },
+      }
+    : null;
+
+  const contentProps = {
+    id,
+    "popover": usesCustomRenderer ? undefined : "manual",
+    tabIndex,
+    "navi-animation": isAutoAnimation ? undefined : animation,
+    "styleCSSVars": POPUP_STYLE_CSS_VARS,
+    ...rest,
+    ...autoFocusProps,
+    ref,
+    "baseClassName": "navi_popover",
+    "pseudoClasses": POPOVER_PSEUDO_CLASSES,
+    "onnavi_command": (e) => {
+      onNaviCommand(e);
+    },
+    "onnavi_request_interaction": (e) => {
+      onRequestInteraction(e, { debugInteraction });
+    },
+    "onKeyDown": onKeyDownShortcuts,
+    children,
+    // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
+    // already arrive here as plain props via ...rest (wired by
+    // UncontrolledPopover above, forwarded through ControlledPopover's own
+    // {...props} spread) — nothing extra to add here. A controlled caller
+    // (picker_custom.jsx/side_panel.jsx) wires its own equivalent handling
+    // directly against its own openController instead.
+  };
+
+  return [backdropProps, contentProps];
 };
 
 /**
