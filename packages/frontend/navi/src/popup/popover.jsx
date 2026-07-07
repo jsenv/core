@@ -37,11 +37,13 @@
  * separately-scrolled functions to find them; everything else in the
  * sequence (capture setup, animation resolution, the commit/close steps)
  * is one shared call either way. `PopoverViaAttribute`/`PopoverCustom`
- * themselves stay two separate, real components (see below) even though
- * their own JSX bodies are trivial and identical today — they're expected
- * to diverge in DOM structure later (e.g. one of them needing an extra
- * wrapper), so collapsing them into one now would just mean re-splitting
- * them apart again once that need arrives.
+ * themselves stay two separate, real components (see below) rather than one
+ * component branching internally on `isCustom` — their JSX bodies already
+ * diverge (`PopoverCustom` wraps its content box in an extra
+ * `.navi_popover_clip_wrapper` div, see its own CSS comment for why;
+ * `PopoverViaAttribute` doesn't need one), and collapsing them into one
+ * would just mean re-splitting them apart again the next time that
+ * divergence grows.
  *
  * `layer` (`"top"` default | `"local"`) picks the rendering strategy
  * directly — it's *not* about anchor resolution at all, deliberately: it
@@ -316,6 +318,30 @@ const css = /* css */ `
     }
   }
 
+  /* Custom renderer only (see this file's top comment) — a plain,
+     borderless div sized to exactly match the popover's own positioned
+     ancestor (inset: 0 relative to it), existing solely to absorb the
+     scrollable-overflow growth some browsers attribute to a translate/scale
+     transform mid-animation: without this, a container with overflow:
+     hidden/auto can transiently gain a scrollbar while the popover slides
+     or scales into/out of place, even though the transform never actually
+     moves its layout box. overflow: hidden here clips that growth before it
+     ever reaches the real container, whose own geometry this wrapper
+     matches exactly, so the wrapper itself never overflows in turn.
+     pointer-events: none so the otherwise-empty space around the popover
+     doesn't intercept clicks meant for whatever else lives in the same
+     container — .navi_popover re-enables it below. */
+  .navi_popover_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_popover {
+      pointer-events: auto;
+    }
+  }
+
   /* Sibling element, not a descendant of .navi_popover — see this file's
      top comment for why. */
   .navi_popover_backdrop {
@@ -460,7 +486,14 @@ const PopoverCustom = (props) => {
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
-      <Box {...contentProps} />
+      {/* Own positioned ancestor for the popover below, not the backdrop —
+          the backdrop only ever fades (no translate/scale), so it can never
+          contribute overflow the way the popover's own slide/scale
+          animation can (see this file's top comment for why that clip
+          wrapper exists at all). */}
+      <div className="navi_popover_clip_wrapper">
+        <Box {...contentProps} />
+      </div>
     </>
   );
 };
