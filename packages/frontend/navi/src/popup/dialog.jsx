@@ -167,6 +167,22 @@ const css = /* css */ `
 
     &::backdrop {
       background: rgba(0, 0, 0, 0.4);
+
+      &[navi-animation] {
+        @starting-style {
+          opacity: 0;
+        }
+
+        opacity: 1;
+        transition-property: display, overlay, opacity;
+        transition-duration: var(--popup-animation-duration, 0.18s);
+        transition-timing-function: ease;
+        transition-behavior: allow-discrete;
+
+        &[aria-expanded="false"] {
+          opacity: 0;
+        }
+      }
     }
 
     &[data-focus-visible] {
