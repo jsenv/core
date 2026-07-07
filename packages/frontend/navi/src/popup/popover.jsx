@@ -110,6 +110,7 @@ const css = /* css */ `
       --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
       --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
 
+      --popover-box-shadow: var(--navi-popup-box-shadow);
       --popover-border-radius: var(--navi-popup-border-radius);
       --popover-border-width: 1px;
       --popover-border-color: var(--navi-popup-border-color);
@@ -145,9 +146,7 @@ const css = /* css */ `
     outline-width: var(--popover-outline-width);
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.08),
-      0 12px 40px rgba(0, 0, 0, 0.22);
+    box-shadow: var(--popover-box-shadow);
     overflow: auto;
     overscroll-behavior: none;
 

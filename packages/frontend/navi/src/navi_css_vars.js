@@ -49,6 +49,8 @@ const css = /* css */ `
 
       --navi-popup-border-radius: 8px;
       --navi-popup-border-color: light-dark(#d0d0d0, #3b3b3b);
+      --navi-popup-box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;

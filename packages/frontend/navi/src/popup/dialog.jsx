@@ -46,6 +46,7 @@ const css = /* css */ `
       --dialog-outline-width: var(--navi-focus-outline-width);
       --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
       --dialog-outline-color: var(--navi-focus-outline-color);
+      --dialog-box-shadow: var(--navi-popup-box-shadow);
     }
   }
 
@@ -72,9 +73,7 @@ const css = /* css */ `
     outline-width: var(--dialog-outline-width);
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
-    box-shadow:
-      0 4px 8px rgba(0, 0, 0, 0.08),
-      0 12px 40px rgba(0, 0, 0, 0.22);
+    box-shadow: var(--dialog-box-shadow);
     transition: margin-top 0.1s ease-in-out;
 
     &::backdrop {
