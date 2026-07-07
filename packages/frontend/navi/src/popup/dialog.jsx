@@ -53,7 +53,7 @@
  * `Escape`-to-close (a `keydown` shortcut, since `.show()` dialogs don't
  * fire "cancel" on Escape the way a modal one does), and a real backdrop
  * sibling element (since `.show()` dialogs don't get a `::backdrop`
- * either) — see `useDialogProps`'s own `isLocal` branches below for each.
+ * either) — see `useDialogProps`'s own `isModal` branches below for each.
  * **Deliberately NOT reimplemented: hardware/gesture back-button
  * dismissal** (e.g. Android's system back gesture closing the top-most
  * modal) — there is no public web API to hook into that gesture at all
@@ -81,6 +81,7 @@
 
 import {
   createPubSub,
+  dispatchCustomEvent,
   getElementSignature,
   getPositionedParent,
   pickPositionRelativeTo,
@@ -319,7 +320,7 @@ const DialogCustom = (props) => {
 /**
  * Everything both rendering strategies share once an `openController` is
  * already resolved: focus/debug/id plumbing, the open-commit sequence, the
- * close handler — inlined in `openEffect`, branching on `isLocal` at each
+ * close handler — inlined in `openEffect`, branching on `isModal` at each
  * point the two renderers genuinely differ (same pattern as popover.jsx's
  * own usePopoverProps — see its top comment for why this stays inline
  * rather than split into two functions). Returns `[backdropProps,
@@ -327,6 +328,8 @@ const DialogCustom = (props) => {
  * (its own backdrop is native, not a real element).
  */
 const useDialogProps = (props) => {
+  const backdropProps = {};
+  const contentProps = {};
   const {
     openController,
     // Only ever affects --anchor-width/--anchor-height (see this file's top
@@ -361,7 +364,7 @@ const useDialogProps = (props) => {
     autoFocus = "fallback",
     ...rest
   } = props;
-  const isLocal = layer === "local";
+  const isModal = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
@@ -432,9 +435,9 @@ const useDialogProps = (props) => {
     // Dialog is never really anchored for positioning purposes (see this
     // file's top comment) — this is the container pickPositionRelativeTo
     // docks against below, and the container trapFocusInside's own
-    // mousedown/keydown listeners are scoped to (see the isLocal branch
-    // below), instead of document.
-    const positionedAncestor = isLocal ? getPositionedParent(dialogEl) : null;
+    // mousedown/keydown listeners are scoped to for the non-modal case
+    // (see below), instead of document.
+    const positionedAncestor = isModal ? null : getPositionedParent(dialogEl);
 
     const [cleanup, addCleanup] = createPubSub(true);
     let anchor;
@@ -484,13 +487,16 @@ const useDialogProps = (props) => {
       // bug already fixed once for Popover's own backdrop.
     }
 
-    if (isLocal) {
-      dialogEl.show();
-    } else {
+    if (isModal) {
       dialogEl.showModal();
+    } else {
+      dialogEl.show();
     }
 
-    if (isLocal) {
+    if (isModal) {
+      // Native focus trap — the browser's own top-layer modal already
+      // confines Tab/Shift+Tab, nothing to reimplement here.
+    } else {
       addCleanup(
         trapFocusInside(dialogEl, {
           debug: debugFocus,
@@ -505,31 +511,41 @@ const useDialogProps = (props) => {
     // Positioning: dialogEl is already shown (display: flex, per this
     // file's own [open] CSS) by this point, so its own dimensions are real
     // — pickPositionRelativeTo's own no-anchor/docked mode (no `anchor`
-    // argument at all) docks it against the viewport (layer="top") or its
-    // own positioned ancestor (layer="local", the same positionedAncestor
-    // computed above), same mechanism as Popover's own custom renderer.
-    // --space-available is deliberately left untouched (cleared, not set)
-    // — a docked dialog always relies on the CSS's own --dialog-maxmax-*
-    // ceiling instead, see popover.jsx's own comment on this.
+    // argument at all) docks it against the viewport (layer="top"/isModal)
+    // or its own positioned ancestor (layer="local", the same
+    // positionedAncestor computed above), same mechanism as Popover's own
+    // custom renderer. --space-available is deliberately left untouched
+    // (cleared, not set) — a docked dialog always relies on the CSS's own
+    // --dialog-maxmax-* ceiling instead, see popover.jsx's own comment on
+    // this.
     const positionDialog = () => {
       dialogEl.style.removeProperty("--space-available");
       const { left, top } = pickPositionRelativeTo(dialogEl, null, {
         positionX: parsedPositionArea.x,
         positionY: parsedPositionArea.y,
-        container: isLocal ? positionedAncestor : undefined,
+        container: isModal ? undefined : positionedAncestor,
       });
       dialogEl.style.left = `${left}px`;
       dialogEl.style.top = `${top}px`;
+      // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout anchored to something inside this Dialog) know to recheck
+      // its own position whenever this dialog itself moves — it already
+      // walks up the ancestor chain and listens for this event on any
+      // <dialog> ancestor specifically, no wiring needed on that side.
+      dispatchCustomEvent(dialogEl, "navi_position_change");
     };
     positionDialog();
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top" (watching document.documentElement), or the
-    // positioned ancestor's own resize for layer="local" (watching
-    // positionedAncestor) — see this file's top comment.
+    // changes for layer="top"/isModal (watching document.documentElement;
+    // visibleRectEffect already debounces visualViewport resize by 100ms
+    // to avoid the mobile tap-to-tap-input keyboard flicker, so no
+    // separate mechanism is needed here for that), or the positioned
+    // ancestor's own resize for layer="local" (watching positionedAncestor)
+    // — see this file's top comment.
     const rectEffect = visibleRectEffect(
-      isLocal ? positionedAncestor : document.documentElement,
+      isModal ? document.documentElement : positionedAncestor,
       () => {
         positionDialog();
       },
@@ -597,7 +613,7 @@ const useDialogProps = (props) => {
       // Only the custom renderer needs this — a modal <dialog> already
       // fires "cancel" (handled via onCancel below) on Escape natively; a
       // non-modal .show()'d one doesn't.
-      if (!isLocal || !openController.opened) {
+      if (isModal || !openController.opened) {
         return null;
       }
       return {
@@ -613,18 +629,18 @@ const useDialogProps = (props) => {
   // most fields are shared: renderer-specific bits (the outside-click
   // handler below, in particular) are just assigned onto whichever of the
   // two actually owns that concern for a given renderer, instead of one
-  // object's own field branching internally on isLocal. backdropProps only
-  // gets returned (see the bottom of this function) when isLocal — the
+  // object's own field branching internally on isModal. backdropProps only
+  // gets returned (see the bottom of this function) when !isModal — the
   // via-attribute renderer's own backdrop is native (::backdrop), not a
   // real element we render ourselves.
-  const backdropProps = {
+  Object.assign(backdropProps, {
     "ref": backdropRef,
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
-  };
-  const contentProps = {
+  });
+  Object.assign(contentProps, {
     tabIndex,
     // Unlike Popover (which genuinely can't resolve "auto" until it
     // measures against a real anchor), resolvedAnimation is already fully
@@ -639,12 +655,6 @@ const useDialogProps = (props) => {
     ref,
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
-    // Only meaningful for the custom renderer — a showModal()'d dialog is
-    // already implicitly aria-modal="true" per the HTML/ARIA mapping, so
-    // setting it explicitly there would be redundant; a .show()'d one has
-    // no such implicit mapping at all despite behaving modally (focus trap,
-    // real backdrop), so it needs to be stated explicitly.
-    "aria-modal": isLocal ? "true" : undefined,
     // Distinguishes the two renderers for the CSS above (position: fixed
     // vs. absolute) — positioning itself is entirely JS-driven now (see
     // openEffect's own positionDialog above), no data-position-area
@@ -664,7 +674,7 @@ const useDialogProps = (props) => {
       openController.requestClose(e, { isCancel: true });
     },
     children,
-  };
+  });
 
   // Outside-click handling lives on whichever element actually receives the
   // click: the via-attribute renderer's own backdrop is native (::backdrop,
@@ -672,19 +682,7 @@ const useDialogProps = (props) => {
   // element is what receives the click instead; the custom renderer's own
   // real backdrop element (a sibling, since a .show()'d dialog has no
   // native inert-ing to lean on) receives it directly.
-  if (isLocal) {
-    backdropProps.onMouseDown = (mouseDownEvent) => {
-      if (mouseDownEvent.button !== 0) {
-        return;
-      }
-      if (pointerInteractionOutsideEffect === "close") {
-        openController.requestClose(mouseDownEvent, { isCancel: true });
-      }
-      // "capture"/"none" both just absorb the click without closing — see
-      // this hook's own destructuring comment for why the two collapse to
-      // the same behavior for Dialog.
-    };
-  } else {
+  if (isModal) {
     contentProps.onMouseDown = (e) => {
       rest.onMouseDown?.(e);
       if (pointerInteractionOutsideEffect !== "close") {
@@ -710,9 +708,27 @@ const useDialogProps = (props) => {
       }
       openController.requestClose(e, { isCancel: true });
     };
+  } else {
+    backdropProps.onMouseDown = (mouseDownEvent) => {
+      if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      if (pointerInteractionOutsideEffect === "close") {
+        openController.requestClose(mouseDownEvent, { isCancel: true });
+      }
+      // "capture"/"none" both just absorb the click without closing — see
+      // this hook's own destructuring comment for why the two collapse to
+      // the same behavior for Dialog.
+    };
+    // Only meaningful for the custom renderer — a showModal()'d dialog is
+    // already implicitly aria-modal="true" per the HTML/ARIA mapping, so
+    // setting it explicitly there would be redundant; a .show()'d one has
+    // no such implicit mapping at all despite behaving modally (focus trap,
+    // real backdrop), so it needs to be stated explicitly.
+    contentProps["aria-modal"] = "true";
   }
 
-  return [isLocal ? backdropProps : null, contentProps];
+  return [isModal ? null : backdropProps, contentProps];
 };
 
 const DIALOG_PSEUDO_CLASSES = [

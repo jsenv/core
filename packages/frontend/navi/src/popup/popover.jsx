@@ -28,7 +28,7 @@
  * `openController` is already resolved: focus/debug/id plumbing, capture
  * setup, animation-attribute resolution, the open-commit sequence, the
  * close handler, and — inlined directly in the hook's own `openEffect`,
- * branching on a single `isCustom` flag rather than living in two separate
+ * branching on a single `isTopLayer` flag rather than living in two separate
  * functions — the open/position/close sequence itself. Keeping it inline
  * (instead of splitting into two functions the way an earlier version of
  * this file did) makes the actual, genuine differences between the two
@@ -38,7 +38,7 @@
  * sequence (capture setup, animation resolution, the commit/close steps)
  * is one shared call either way. `PopoverViaAttribute`/`PopoverCustom`
  * themselves stay two separate, real components (see below) rather than one
- * component branching internally on `isCustom` — their JSX bodies already
+ * component branching internally on `isTopLayer` — their JSX bodies already
  * diverge (`PopoverCustom` wraps its content box in an extra
  * `.navi_popover_clip_wrapper` div, see its own CSS comment for why;
  * `PopoverViaAttribute` doesn't need one), and collapsing them into one
@@ -509,7 +509,7 @@ const PopoverCustom = (props) => {
  * already resolved (by `ControlledPopover`'s callers above): focus/debug/id
  * plumbing, capture setup, animation-attribute resolution, the open-commit
  * sequence, the close handler, and the open/position/close sequence itself
- * — inlined here, branching on `isCustom` at each point the two renderers
+ * — inlined here, branching on `isTopLayer` at each point the two renderers
  * genuinely differ (see this file's top comment for why it's inlined
  * rather than split into two functions). Returns `[backdropProps,
  * contentProps]` — two plain prop objects ready to spread onto a
@@ -553,10 +553,7 @@ const usePopoverProps = (props) => {
     autoFocus = "fallback",
     ...rest
   } = props;
-  // Decided once per render from `layer` alone (never from the
-  // event-carried anchor) — see this file's top comment for why anchorProp
-  // doesn't factor in here.
-  const isCustom = layer === "local";
+  const isTopLayer = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   const backdropRef = useRef();
@@ -580,20 +577,23 @@ const usePopoverProps = (props) => {
   useLayoutEffect(() => {
     if (ref.current) {
       ref.current.setAttribute("aria-expanded", "false");
-      // The custom renderer has no native show/hide mechanism to lean on —
-      // starts hidden via a plain inline style instead, managed entirely in
-      // JS from here on (see the isCustom branch below).
-      if (isCustom) {
+      if (isTopLayer) {
+        // Native [popover] starts hidden automatically — nothing to do.
+      } else {
+        // No native show/hide mechanism to lean on — starts hidden via a
+        // plain inline style instead
         ref.current.style.display = "none";
       }
     }
     if (backdropRef.current) {
       backdropRef.current.setAttribute("aria-expanded", "false");
-      if (isCustom) {
+      if (isTopLayer) {
+        // Native [popover] starts hidden automatically — nothing to do.
+      } else {
         backdropRef.current.style.display = "none";
       }
     }
-  }, [isCustom]);
+  }, [isTopLayer]);
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
@@ -644,7 +644,9 @@ const usePopoverProps = (props) => {
       anchor = undefined;
     }
     const hasAnchorElement = Boolean(anchor);
-    const positionedAncestor = isCustom ? getPositionedParent(popoverEl) : null;
+    const positionedAncestor = isTopLayer
+      ? null
+      : getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
     // positioning/measurement runs, so there's no ordering subtlety to get
@@ -683,10 +685,7 @@ const usePopoverProps = (props) => {
       // elements' transitions suppressed right up until after their
       // aria-expanded flip, the same way it does for popoverEl.
       backdropEl.style.transitionProperty = "none";
-      if (isCustom) {
-        backdropEl.style.display = "";
-        backdropEl.getBoundingClientRect();
-      } else {
+      if (isTopLayer) {
         // Hidden first if a previous close's deferred hidePopover() (see
         // the close handler below) hasn't run yet — showPopover() throws
         // on an already-open element. Showing it fresh here (rather than
@@ -704,6 +703,9 @@ const usePopoverProps = (props) => {
         // backdrop must go first for the real popover to end up on top.
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
+      } else {
+        backdropEl.style.display = "";
+        backdropEl.getBoundingClientRect();
       }
       // aria-expanded stays "false" here — flipped later, once
       // navi-animation has actually been set on the backdrop (see the final
@@ -713,18 +715,18 @@ const usePopoverProps = (props) => {
       // would ever play.
     }
 
-    if (isCustom) {
-      // Not "showPopover()" — just making it visible again, synchronously,
-      // so it's measurable below even though aria-expanded is still
-      // "false" (see this file's top comment for why the two are
-      // deliberately decoupled).
-      popoverEl.style.display = "";
-    } else {
+    if (isTopLayer) {
       popoverEl.showPopover();
       // aria-expanded stays "false" here — transitions are still
       // suppressed, so this doesn't matter yet — and only flips once
       // positioned below. Shown *after* the backdrop above so it stacks on
       // top of it in the top layer.
+    } else {
+      // Not "showPopover()" — just making it visible again, synchronously,
+      // so it's measurable below even though aria-expanded is still
+      // "false" (see this file's top comment for why the two are
+      // deliberately decoupled).
+      popoverEl.style.display = "";
     }
 
     // What we observe for repositioning on resize/scroll/visibility
@@ -734,9 +736,9 @@ const usePopoverProps = (props) => {
     // via-attribute.
     const effectiveAnchor = hasAnchorElement
       ? anchor
-      : isCustom
-        ? positionedAncestor
-        : document.documentElement;
+      : isTopLayer
+        ? document.documentElement
+        : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
       let appliedLeft;
@@ -803,7 +805,7 @@ const usePopoverProps = (props) => {
           // convert the computed coordinates into that ancestor's own
           // local space instead of assuming document-relative absolute
           // (see its own doc in visible_rect.js).
-          container: isCustom ? positionedAncestor : undefined,
+          container: isTopLayer ? undefined : positionedAncestor,
           minLeft,
         });
         const spaceAvailable =
@@ -834,7 +836,7 @@ const usePopoverProps = (props) => {
           {
             positionX: parsedPositionArea.x,
             positionY: parsedPositionArea.y,
-            container: isCustom ? positionedAncestor : undefined,
+            container: isTopLayer ? undefined : positionedAncestor,
             marginWithContainer: resolveSpacingSize(marginWithContainer),
           },
         );
@@ -970,9 +972,9 @@ const usePopoverProps = (props) => {
     const restoreFocus = openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
-      isCustom
-        ? `openPopover() -> scroll-container (local)`
-        : `openPopover() -> anchor: ${anchor?.tagName}, hasAnchorElement: ${hasAnchorElement}`,
+      isTopLayer
+        ? `openPopover() -> anchor: ${anchor?.tagName}, hasAnchorElement: ${hasAnchorElement}`
+        : `openPopover() -> scroll-container (local)`,
     );
 
     // The close callback openEffect returns — also inlined for the same
@@ -980,10 +982,10 @@ const usePopoverProps = (props) => {
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
-      if (isCustom) {
-        popoverEl.style.display = "none";
-      } else {
+      if (isTopLayer) {
         popoverEl.hidePopover();
+      } else {
+        popoverEl.style.display = "none";
       }
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
@@ -999,11 +1001,11 @@ const usePopoverProps = (props) => {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
-          isCustom
-            ? () => {
+          isTopLayer
+            ? () => backdropEl.hidePopover()
+            : () => {
                 backdropEl.style.display = "none";
-              }
-            : () => backdropEl.hidePopover(),
+              },
         );
       }
       restoreFocus(closeEvent);
@@ -1043,15 +1045,13 @@ const usePopoverProps = (props) => {
     },
   });
 
+  if (isTopLayer) {
+    backdropProps["popover"] = "manual";
+    contentProps["popover"] = "manual";
+  }
   Object.assign(backdropProps, {
     "ref": backdropRef,
     "id": backdropId,
-    // See this file's top comment for the backdrop's design. No
-    // document.body/createPortal needed either way: for the
-    // via-attribute renderer, top-layer promotion (not DOM position) is
-    // what puts it above normal page content; for the custom renderer,
-    // it's a plain sibling confined to the same positioned ancestor.
-    "popover": isCustom ? undefined : "manual",
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
@@ -1088,7 +1088,6 @@ const usePopoverProps = (props) => {
   });
   Object.assign(contentProps, {
     id,
-    "popover": isCustom ? undefined : "manual",
     tabIndex,
     "navi-animation": isAutoAnimation ? undefined : animation,
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
