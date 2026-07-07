@@ -97,6 +97,7 @@ export const Popup = (props) => {
     return (
       <Dialog
         {...rest}
+        maxWidth={maxWidth}
         className={withPropsClassName("navi_popup", className)}
         centerInVisualViewport
         data-expand-x={expandXResolved ? "" : undefined}
@@ -107,7 +108,11 @@ export const Popup = (props) => {
     );
   }
   return (
-    <Popover {...rest} className={withPropsClassName("navi_popup", className)}>
+    <Popover
+      {...rest}
+      maxWidth={maxWidth}
+      className={withPropsClassName("navi_popup", className)}
+    >
       {children}
     </Popover>
   );

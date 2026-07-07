@@ -1,13 +1,22 @@
 /**
- * A dialog is always centered in the viewport, with no anchor to grow out of
- * or slide in from — `animation={true}`/`"auto"` resolves to `"scaling"`
- * (see popover.jsx's own top comment for why that reads best), the same kind
- * Popover picks for a dead-center placement. Any other explicit kind
- * (`"fading"`, `"scaling"`, or a literal `"slide-from-{top,bottom,left,
- * right}"` + diagonals) is passed straight through as-is: these are all
- * self-contained CSS selectors in the shared popup_animation.js, so unlike
- * Popover there's no direction to resolve in JS — Dialog never needs to flip
- * anything after measuring, since it's always centered.
+ * A dialog is centered in the viewport by default, with no anchor to grow
+ * out of or slide in from — `animation={true}`/`"auto"` resolves to
+ * `"scaling"` (see popover.jsx's own top comment for why that reads best),
+ * the same kind Popover picks for a dead-center placement. Any other
+ * explicit kind (`"fading"`, `"scaling"`, or a literal
+ * `"slide-from-{top,bottom,left,right}"` + diagonals) is passed straight
+ * through as-is: these are all self-contained CSS selectors in the shared
+ * popup_animation.js, so unlike Popover there's no direction to resolve in
+ * JS — Dialog never needs to flip anything after measuring.
+ *
+ * `anchorArea` (default `"center"`) can dock the dialog flush to a viewport
+ * edge instead: `"on-the-left"`/`"on-the-right"`/`"above"`/`"below"` — a
+ * deliberately small subset of Popover's own anchorArea vocabulary (no
+ * `"aligned-*"`, no two-word combos): a dialog dock always means "flush to
+ * that edge, full-length along the other axis", never a partial overlap, so
+ * the richer grammar wouldn't add anything here. The docked axis's own size
+ * stays whatever the consumer's own CSS/width/height says — only the
+ * perpendicular axis is forced to 100%.
  */
 
 import {
@@ -87,6 +96,34 @@ const css = /* css */ `
     &[open] {
       display: flex;
     }
+
+    /* anchorArea docking (see this file's top comment) — each rule only
+       touches the axis perpendicular to the dock direction; the docked
+       axis's own size is left to the consumer. */
+    &[data-anchor-area="on-the-right"] {
+      position: fixed;
+      inset: 0 0 0 auto;
+      height: 100%;
+      margin: 0;
+    }
+    &[data-anchor-area="on-the-left"] {
+      position: fixed;
+      inset: 0 auto 0 0;
+      height: 100%;
+      margin: 0;
+    }
+    &[data-anchor-area="above"] {
+      position: fixed;
+      inset: 0 0 auto 0;
+      width: 100%;
+      margin: 0;
+    }
+    &[data-anchor-area="below"] {
+      position: fixed;
+      inset: auto 0 0 0;
+      width: 100%;
+      margin: 0;
+    }
   }
 
   ${popupCss}
@@ -117,6 +154,7 @@ const UncontrolledDialog = (props) => {
     <ControlledDialog
       {...props}
       open={undefined}
+      onClose={undefined}
       openController={openController}
       onnavi_request_open={(e) => {
         openController.open(e, {
@@ -134,12 +172,16 @@ const ControlledDialog = (props) => {
   const {
     openController,
     // Same shape as Popover's own `anchor` prop (a ref, a DOM element, or
-    // "viewport"/"offsetParent") for API parity — but unlike Popover, Dialog
-    // never repositions/docks relative to it (always centered regardless),
-    // so "viewport"/"offsetParent" are accepted and behave identically to no
-    // anchor at all: only a real ref/element actually changes anything (the
-    // --anchor-width/--anchor-height vars below).
+    // "viewport"/"offsetParent") for API parity — but unlike Popover,
+    // Dialog's own positioning (anchorArea below) is never relative to it:
+    // "viewport"/"offsetParent" are accepted and behave identically to no
+    // anchor at all here, only a real ref/element actually changes anything
+    // (the --anchor-width/--anchor-height vars below, used to size the
+    // dialog relative to whatever opened it).
     anchor: anchorProp,
+    // See this file's top comment — a deliberately small subset of
+    // Popover's own anchorArea vocabulary.
+    anchorArea = "center",
     children,
     scrollCapture,
     // "none"/"capture" collapse to the same behavior for Dialog: unlike
@@ -167,6 +209,13 @@ const ControlledDialog = (props) => {
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   const isAutoAnimation = animation === true || animation === "auto";
   const resolvedAnimation = isAutoAnimation ? "scaling" : animation;
+  let resolvedAnchorArea = anchorArea;
+  if (!DIALOG_ANCHOR_AREA_VALUES.has(anchorArea)) {
+    console.warn(
+      `Dialog: unknown anchorArea="${anchorArea}" (expected "center", "on-the-left", "on-the-right", "above", or "below")`,
+    );
+    resolvedAnchorArea = "center";
+  }
 
   // aria-expanded lives on the dialog element itself (not driven through
   // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
@@ -286,6 +335,9 @@ const ControlledDialog = (props) => {
       baseClassName="navi_dialog"
       pseudoClasses={DIALOG_PSEUDO_CLASSES}
       data-pointer-interaction-outside={pointerInteractionOutsideEffect}
+      data-anchor-area={
+        resolvedAnchorArea === "center" ? undefined : resolvedAnchorArea
+      }
       onnavi_command={(e) => {
         onNaviCommand(e);
       }}
@@ -333,6 +385,15 @@ const DIALOG_PSEUDO_CLASSES = [
   ":focus-visible",
   ":focus-within",
 ];
+
+// See this file's top comment for the anchorArea docking subset.
+const DIALOG_ANCHOR_AREA_VALUES = new Set([
+  "center",
+  "on-the-left",
+  "on-the-right",
+  "above",
+  "below",
+]);
 
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).

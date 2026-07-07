@@ -1,76 +1,25 @@
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
-
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
-import { useOpenController } from "./open_controller.js";
-import { Popover } from "./popover.jsx";
+/**
+ * A drawer docked flush to a viewport edge — built entirely on top of
+ * `Popup` (which itself picks Popover vs Dialog), relying on capabilities
+ * those two already have: `anchor="viewport"` + `anchorArea` for the actual
+ * docking (Popover natively, Dialog via its own small anchorArea subset —
+ * see dialog.jsx's top comment), the shared `slide-from-*` animation kind,
+ * native Escape handling, and Popover/Dialog's own `onClose` prop (so this
+ * component doesn't need to own an openController just to observe a
+ * self-initiated close).
+ *
+ * `animation` only applies when explicitly requested — SidePanel doesn't
+ * animate by default.
+ */
+import { Button } from "../control/input/button.jsx";
+import { Popup } from "./popup.jsx";
 
 const css = /* css */ `
-  @layer navi {
-    .navi_side_panel {
-      --side-panel-width: 400px;
-      --side-panel-background: white;
-      --side-panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
-      --side-panel-animation-duration: 250ms;
-    }
-  }
-
-  .navi_side_panel {
-    /* Popover.jsx positions itself relative to an anchor (inline top/left,
-       recomputed via ResizeObserver/positionPopover). The side panel has no
-       anchor — it always docks full-height to the right edge — so override
-       with !important to win over those inline styles. */
-    position: fixed !important;
-    top: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    left: auto !important;
-    width: auto;
-    height: auto;
-    margin: 0;
-    padding: 0;
-    color: inherit;
-    background: none;
-    border: none;
-    pointer-events: none;
-    overflow: visible;
-
-    /* Popover's own backdrop always becomes pointer-events:auto while open,
-       which would block interaction with the rest of the page. Restore
-       click-through unless the panel is acting as a modal. */
-    &:not([data-close-on-click-outside]) .navi_popover_backdrop {
-      pointer-events: none !important;
-    }
-
-    .navi_side_panel_dialog {
-      position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      width: var(--side-panel-width);
-      background: var(--side-panel-background);
-      outline: none;
-      box-shadow: var(--side-panel-shadow);
-      animation-duration: var(--side-panel-animation-duration);
-      animation-timing-function: ease-out;
-      animation-fill-mode: both;
-      pointer-events: auto;
-      overflow-y: auto;
-    }
-
-    &[data-opening] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_in;
-      }
-    }
-  }
-
   .navi_side_panel_close_button {
     position: absolute;
     top: 12px;
     right: 12px;
-
-    z-index: 1; /* For some reason required to interact properly with the button */
+    z-index: 1; /* sits above the panel's own content */
     display: flex;
     width: 28px;
     height: 28px;
@@ -90,132 +39,77 @@ const css = /* css */ `
       background: #f0f0f0;
     }
   }
-
-  @keyframes navi_side_panel_slide_in {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
 `;
 
-const SidePanelStyleCSSVars = {
-  width: "--side-panel-width",
+const SIDE_TO_ANCHOR_AREA = {
+  left: "on-the-left",
+  right: "on-the-right",
+  top: "above",
+  bottom: "below",
 };
 
 export const SidePanel = ({
   isOpen,
   onClose,
   children,
+  side = "right",
+  // Size along the docked axis (width for left/right, height for top/bottom)
+  // — the perpendicular axis is always forced to 100%.
+  size = 400,
+  animation,
   closeOnClickOutside = false,
   hideCloseButton = false,
-  width,
+  mode,
+  style,
   ...rest
 }) => {
   import.meta.css = css;
-  onClose = useStableCallback(onClose);
-  const panelRef = useRef(null);
-  const dialogRef = useRef(null);
-  const [phase, setPhase] = useState(isOpen ? "open" : "closed");
-  const isMountedRef = useRef(false);
-
-  // openController centralizes open/close decision-making (focus transfer on
-  // open via Popover, focus restore on close here) — same contract as
-  // picker_custom.jsx's controller, duplicated for now.
-  const openController = useOpenController((openEvent) => {
-    const focusedBeforeOpen = openEvent.detail.focusedBeforeOpen;
-    return {
-      onRequestClose: () => {
-        // The side panel never denies a close request.
-      },
-      onClose: (closeEvent) => {
-        setPhase("closed");
-        onClose(closeEvent);
-        if (focusedBeforeOpen && document.contains(focusedBeforeOpen)) {
-          focusedBeforeOpen.focus({ preventScroll: true });
-        }
-      },
-    };
-  });
-
-  useLayoutEffect(() => {
-    if (!isMountedRef.current) {
-      isMountedRef.current = true;
-      if (isOpen) {
-        openController.open(new CustomEvent("open_on_mount", { detail: {} }));
-      }
-      return;
-    }
-    if (isOpen === openController.opened) {
-      return;
-    }
-    if (isOpen) {
-      setPhase("opening");
-      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
-    } else {
-      openController.requestClose(
-        new CustomEvent("close_by_prop", { detail: {} }),
-        { isCancel: true },
-      );
-    }
-  }, [isOpen]);
-
-  useKeyboardShortcuts(dialogRef, [
-    {
-      key: "escape",
-      handler: (e) => {
-        openController.requestClose(e, { isCancel: true });
-        return true;
-      },
-    },
-  ]);
-
-  const onAnimationEnd = () => {
-    if (phase === "opening") {
-      setPhase("open");
-    }
-  };
+  const anchorArea = SIDE_TO_ANCHOR_AREA[side];
+  const isHorizontalDock = side === "left" || side === "right";
 
   return (
-    <Popover
-      ref={panelRef}
-      openController={openController}
-      className="navi_side_panel"
-      styleCSSVars={SidePanelStyleCSSVars}
-      width={width}
+    <Popup
+      mode={mode}
+      open={isOpen}
+      onClose={onClose}
+      anchor="viewport"
+      anchorArea={anchorArea}
+      animation={animation ? `slide-from-${side}` : undefined}
       pointerInteractionOutsideEffect={
         closeOnClickOutside ? "close" : "capture"
       }
-      focusTrap={closeOnClickOutside}
-      autoFocus="fallback"
-      data-opening={phase === "opening" ? "" : undefined}
-      data-close-on-click-outside={closeOnClickOutside ? "" : undefined}
-      onnavi_request_close={(e) => {
-        openController.requestClose(e, { isCancel: e.detail?.isCancel });
+      focusCapture={closeOnClickOutside}
+      style={{
+        ...style,
+        // Popover/Dialog both reserve a soft margin/cap around their own
+        // popup by default (Popover's 300px --popover-max-height, its 0.95×
+        // viewport --popover-maxmax-height/width hard ceiling, Dialog's
+        // --dialog-viewport-spacing gap and matching --dialog-maxmax-*) —
+        // all meant for a centered/dropdown-sized popup, none of which makes
+        // sense once docked flush to an edge. Overridden regardless of
+        // which of the two Popup actually renders; each ignores the
+        // variable that isn't its own.
+        "--popover-max-height": "100dvh",
+        "--popover-maxmax-height": "100dvh",
+        "--popover-maxmax-width": "100dvw",
+        "--dialog-maxmax-height": "100dvh",
+        "--dialog-maxmax-width": "100dvw",
+        "--dialog-viewport-spacing": "0",
+        "width": isHorizontalDock ? size : "100%",
+        "height": isHorizontalDock ? "100%" : size,
       }}
       {...rest}
     >
-      <div
-        ref={dialogRef}
-        className="navi_side_panel_dialog"
-        tabIndex={-1}
-        role={closeOnClickOutside ? "dialog" : "complementary"}
-        aria-modal={closeOnClickOutside ? "true" : undefined}
-        onAnimationEnd={onAnimationEnd}
-      >
-        {!hideCloseButton && (
-          <button
-            className="navi_side_panel_close_button"
-            aria-label="Close panel"
-            onClick={(e) => openController.requestClose(e, { isCancel: true })}
-          >
-            ×
-          </button>
-        )}
-        {children}
-      </div>
-    </Popover>
+      {!hideCloseButton && (
+        <Button
+          className="navi_side_panel_close_button"
+          aria-label="Close panel"
+          command="--navi-close"
+        >
+          ×
+        </Button>
+      )}
+      {children}
+    </Popup>
   );
 };
