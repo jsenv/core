@@ -154,10 +154,10 @@
         position: relative;
         display: flex;
         width: fit-content;
-        /* Left/right margin gives "on-the-left"/"on-the-right" popovers
-           (130px wide) room to render without being clipped by the
-           viewport edge. */
-        margin: 16px 150px 44px;
+        /* auto left/right centers it above the grid below; also gives
+           "on-the-left"/"on-the-right" popovers (130px wide) room to render
+           without being clipped by the viewport edge. */
+        margin: 16px auto 44px;
         align-items: center;
         justify-content: center;
       }
@@ -520,10 +520,8 @@
         <section id="content-size" class="demo-section">
           <h2>2. Content dimensions</h2>
           <p>
-            Popover has no fixed size of its own — it sizes to whatever's inside
-            it, from a short line of text to content that exceeds the viewport,
-            and repositions/flips as needed when it doesn't fit where first
-            requested.
+            Popover's dimensions follow its content. When it can better fit on
+            another side, it flips to that side.
           </p>
           <div class="demo-row">
             <ContentSizePopover
@@ -600,12 +598,6 @@
         return (
           <section id="anchor" class="demo-section">
             <h2>1. Controlled by button</h2>
-            <p>
-              Leaving <code>anchor</code> unset still lets the toggle button
-              take over as the anchor automatically (the triggering event's own
-              carried anchor) — no need to pass a ref back to the button that
-              opened it.
-            </p>
             <div class="demo-row">
               <AnchoredPopover
                 label="Button commanding popover"
@@ -640,12 +632,13 @@
 
           <div id="anchor-area-with-anchor" class="demo-subsection">
             <h3>3.1 With anchor</h3>
-            <p>
-              The buttons below are wired to the anchor above (via{" "}
-              <code>navi-command-proxy-for</code>) instead of anchoring to
-              themselves — useful for this demo, but also in practice.
-            </p>
             <AnchorAreaDefaultDemo />
+            <p class="demo-important-note">
+              The popover appears on the anchor above, not on the button that
+              opens it — each button is wired to it via{" "}
+              <code>navi-command-proxy-for</code> instead of anchoring to itself
+              (useful for this demo, but also in practice).
+            </p>
           </div>
 
           <div id="anchor-area-without-anchor" class="demo-subsection">
@@ -1096,23 +1089,16 @@
       const PointModeNote = ({ referenceLabel }) => (
         <>
           <p>
-            Pinned to a point/corner of {referenceLabel} instead of a real
-            anchor box, the popover can only sit flush against its edges — never
-            floating outside with a gap. That collapses the overlap distinction:
-            some positions below are equivalent (faded) in terms of where they
-            land, but with "Animate" on they still pick a different animation
-            (slide vs scale) — a side effect of the pair still choosing the
-            animation independently of the actual position, which turns out to
-            be a handy way to control it directly (e.g. "on-the-left" slides in
-            from the side, "aligned-left" scales in place, same spot either
-            way).
+            Pinned to a point/corner of {referenceLabel}, not a real anchor box
+            — the popover always sits flush against its edges, so some positions
+            below land in the same spot (faded).
           </p>
           <p class="demo-legend">
             <span class="demo-legend-example">on-the-left</span>
             <span class="demo-legend-example" data-duplicate="">
               aligned-left
             </span>
-            <span>same placement as each other.</span>
+            <span>result in same position (but different animation).</span>
           </p>
         </>
       );
