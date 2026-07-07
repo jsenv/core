@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popup demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-row {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId } from "preact/hooks";
+      import { Button, Popup } from "@jsenv/navi";
+
+      const TriggeredPopup = ({ label, ...rest }) => {
+        const popupId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popupId}>
+              {label}
+            </Button>
+            <Popup id={popupId} {...rest}>
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popup>
+          </>
+        );
+      };
+
+      const App = () => (
+        <div>
+          <h1>Popup demo</h1>
+          <div class="demo-row">
+            <TriggeredPopup label="auto (wide screen -> popover)" />
+            <TriggeredPopup label="mode=dialog forced" mode="dialog" />
+            <TriggeredPopup label="mode=popover forced" mode="popover" />
+            <TriggeredPopup label="dialog with expand" mode="dialog" expand />
+          </div>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
