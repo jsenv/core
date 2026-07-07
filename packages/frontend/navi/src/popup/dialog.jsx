@@ -319,4 +319,6 @@ const DIALOG_PSEUDO_CLASSES = [
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  maxWidth: "--dialog-max-width",
+  maxHeight: "--dialog-max-height",
 };
