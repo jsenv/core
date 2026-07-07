@@ -72,6 +72,9 @@ const css = /* css */ `
     outline-width: var(--dialog-outline-width);
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
+    box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.08),
+      0 12px 40px rgba(0, 0, 0, 0.22);
     transition: margin-top 0.1s ease-in-out;
 
     &::backdrop {
