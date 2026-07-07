@@ -893,11 +893,13 @@ const usePopoverProps = (props) => {
     // has this one call site.
     //
     // `silent` (mounting already open via `open`/`defaultOpen`) flips the
-    // order instead: aria-expanded first, *then* re-enable transitions —
-    // the flip itself happens while transitionProperty is still "none", so
-    // nothing is transition-able yet when it changes, and no animation
-    // plays even though a reflow still runs in between (forced anyway by
-    // the positioning math above, real anchor or not).
+    // order instead: aria-expanded first, *then* re-enable transitions, with
+    // its own forced reflow in between the two — without that reflow, the
+    // browser coalesces "flip aria-expanded" and "re-enable transitions"
+    // into a single style recalculation where, by the time anything is
+    // actually computed, transitions are already back on — which is
+    // transition-eligible against the earlier "closed" frame below and
+    // plays the animation anyway, JS statement order notwithstanding.
     popoverEl.getBoundingClientRect();
     if (!silent) {
       // Re-enabled before the flip below, so the change is genuinely
@@ -914,6 +916,10 @@ const usePopoverProps = (props) => {
     // the first point its own opacity transition can actually fire.
     backdropEl?.setAttribute("aria-expanded", "true");
     if (silent) {
+      // Commits the just-applied "open" state as its own observed frame,
+      // still with transitions fully suppressed, before re-enabling them —
+      // see the comment above for why this forced reflow can't be skipped.
+      popoverEl.getBoundingClientRect();
       popoverEl.style.transitionProperty = "";
       if (backdropEl) {
         backdropEl.style.transitionProperty = "";
