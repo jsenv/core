@@ -582,6 +582,7 @@
                 label="Button commanding popover"
                 animation={animation}
                 animationDuration={animationDuration}
+                pointerInteractionOutsideEffect="close"
               />
             </div>
             <AnimateControls {...controlsProps} />
@@ -592,7 +593,10 @@
               <code>anchorCustomEventDetail="ignore"</code>:
             </p>
             <div class="demo-row">
-              <AnchorlessPopover label='anchorCustomEventDetail="ignore"' />
+              <AnchorlessPopover
+                label='anchorCustomEventDetail="ignore"'
+                pointerInteractionOutsideEffect="close"
+              />
             </div>
           </section>
         );
