@@ -15,6 +15,16 @@ export const performTabNavigation = (
     outsideOfElement = null,
     debug = () => {},
     excludeAriaHidden,
+    // When reaching the edge of rootElement would normally wrap back
+    // around inside it, escapeRoot changes that: Tab instead continues
+    // past escapeRoot's *entire* subtree (not just rootElement's), landing
+    // on the next/previous focusable element in the document beyond it.
+    // Used by focus_trap.js when boundaryElement is a real container
+    // (not document) — a trapped element nested inside a bigger container
+    // (e.g. a local-layer Dialog) shouldn't just wrap on itself; Tab should
+    // exit the whole container, skipping over any other focusable
+    // siblings inside it (they're not part of what's actually trapped).
+    escapeRoot = null,
   } = {},
 ) => {
   if (!isTabEvent(event)) {
@@ -127,6 +137,18 @@ export const performTabNavigation = (
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
+    if (escapeRoot) {
+      // Skip escapeRoot's own children entirely — anything else still
+      // inside it (a sibling of rootElement) isn't part of what's
+      // trapped, so it must never become the next Tab stop either.
+      const nextOutsideEscapeRoot = findAfter(escapeRoot, predicate, {
+        skipChildren: true,
+      });
+      if (nextOutsideEscapeRoot) {
+        return onTargetToFocus(nextOutsideEscapeRoot);
+      }
+      return false;
+    }
     // Wrap around: go back to the first focusable element in root.
     const firstFocusableElement = findDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
@@ -158,6 +180,16 @@ export const performTabNavigation = (
     });
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
+    }
+    if (escapeRoot) {
+      // findBefore already searches strictly *before* escapeRoot's own
+      // position (previous sibling / ancestor's previous sibling), never
+      // descending into its children — exactly "outside its subtree".
+      const previousOutsideEscapeRoot = findBefore(escapeRoot, predicate);
+      if (previousOutsideEscapeRoot) {
+        return onTargetToFocus(previousOutsideEscapeRoot);
+      }
+      return false;
     }
     // Wrap around: go back to the last focusable element in root.
     const lastFocusableElement = findLastDescendant(rootElement, predicate, {

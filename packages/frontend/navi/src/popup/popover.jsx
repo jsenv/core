@@ -383,14 +383,11 @@ const css = /* css */ `
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"] {
-      background: rgba(0, 0, 0, 0.1);
+      background: var(--navi-backdrop-close-background);
     }
     &[data-pointer-interaction-outside="capture"] {
-      /* "capture" means the rest of the page is fully non-interactive —
-         blurred, not just dimmed, so it reads as clearly secondary and
-         pulls visual focus onto the popover's own content. */
-      background: rgb(255 255 255 / 0.08);
-      backdrop-filter: blur(30px) saturate(180%);
+      background: var(--navi-backdrop-capture-background);
+      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
     /* navi-animation mirrors the content popover's own resolved value (set

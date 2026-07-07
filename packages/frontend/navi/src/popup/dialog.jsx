@@ -166,18 +166,11 @@ const css = /* css */ `
     box-shadow: var(--dialog-box-shadow);
 
     &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
+      background: var(--navi-backdrop-close-background);
     }
-
-    /* "capture" means the rest of the page is fully non-interactive —
-       blurred, not just dimmed, so it reads as clearly secondary and pulls
-       visual focus onto the dialog's own content, same aesthetic as
-       Popover's own backdrop (see popover.jsx's top comment). Attribute
-       before ::backdrop, not after — same reasoning as &[navi-animation]
-       below. */
     &[data-pointer-interaction-outside="capture"]::backdrop {
-      background: rgb(255 255 255 / 0.08);
-      backdrop-filter: blur(30px) saturate(180%);
+      background: var(--navi-backdrop-capture-background);
+      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
     }
 
     /* Nested under &[navi-animation] (not the other way around) so every
