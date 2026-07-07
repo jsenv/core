@@ -11,6 +11,22 @@
  * switch between Popover and Dialog mid-session) rather than per open/close
  * cycle — simpler, since this component doesn't own an openController the
  * way the picker does to hook a reset into its own onClose.
+ *
+ * Note for later:
+ *
+ * At some point we might want to change what we do we want the content to be displayed
+ * relative to something else than top layer (viewport)
+ * Right now we have an imperfect anchor="offsetParent"
+ * which we don't have use case for and can't really respect overflow: hidden from offsetParent
+ *
+ * The idea would be to:
+ *
+ * - Use an other prop like layer="topLayer|viewport|offsetParent"
+ * - When offsetParent is used we can't use popover nor dialog so we use a regular div
+ * absolutely positioned (implementing scrollCatpure, backdrop etc)
+ * - This div must be within a container with overflow: hidden following the offset parent
+ * dimensions and position (like we do in table.jsx)
+ * so when we animate translations it doesn't create scrollbars on the scrollable container.
  */
 
 import { useRef } from "preact/hooks";
