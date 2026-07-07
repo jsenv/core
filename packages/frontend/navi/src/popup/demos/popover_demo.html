@@ -369,6 +369,7 @@
 
           <TableOfContents />
 
+          <ContentSizeSection />
           <AnchorSection />
           <AnchorAreaSection />
           <AnchorIgnoreSection />
@@ -382,6 +383,9 @@
         <nav class="demo-toc">
           <strong>Contents</strong>
           <ol>
+            <li>
+              <a href="#content-size">Adapting to content size</a>
+            </li>
             <li>
               <a href="#anchor">Anchor</a>
             </li>
@@ -406,12 +410,147 @@
         </nav>
       );
 
+      // No fixed size on the popover itself (see .demo_popover_flex_box) —
+      // each button below opens the same anchored popover with a different
+      // amount of content, small to large enough to exceed the viewport, to
+      // see how positioning/flipping reacts. All anchored "below" the same
+      // way an ordinary consumer would use it (not anchorAreaFixed).
+      const ContentSizePopover = ({ label, content }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+              pointerInteractionOutsideEffect="close"
+            >
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
+              {content}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Same idea, but the content grows/shrinks *while already open* (via
+      // local state, not a different popover instance) — shows whether the
+      // popover reacts to its own size changing after it's already
+      // positioned, as opposed to being sized differently from the start.
+      const ExpandCollapsePopover = ({ label }) => {
+        const popoverId = useId();
+        const [expanded, setExpanded] = useState(false);
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+            >
+              <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
+              <Button onClick={() => setExpanded((v) => !v)}>
+                {expanded ? "Collapse" : "Expand"}
+              </Button>
+              {expanded &&
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const ContentSizeSection = () => (
+        <section id="content-size" class="demo-section">
+          <h2>1. Adapting to content size</h2>
+          <p>
+            Popover has no fixed size of its own — it sizes to whatever's inside
+            it, from a short line of text to content that exceeds the viewport,
+            and repositions/flips as needed when it doesn't fit where first
+            requested.
+          </p>
+          <div class="demo-row">
+            <ContentSizePopover
+              label="small"
+              content={<p style={{ margin: 0 }}>Just a short line.</p>}
+            />
+            <ContentSizePopover
+              label="tall"
+              content={Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} class="demo-content-tall-block" />
+              ))}
+            />
+            <ContentSizePopover
+              label="wide"
+              content={<div class="demo-content-wide-block" />}
+            />
+            <ContentSizePopover
+              label="tall + wide"
+              content={
+                <>
+                  <div class="demo-content-wide-block" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+            <ContentSizePopover
+              label="exceeds viewport"
+              content={
+                <>
+                  <div
+                    class="demo-content-wide-block"
+                    style={{ width: "1400px" }}
+                  />
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+          </div>
+
+          <p class="demo-important-note">
+            A popover this wide is unlikely in practice — content usually wraps
+            and flows <em>down</em> instead of pushing the box wider once
+            horizontal space runs out, so you'd rarely see anything close to
+            this. Shown anyway to see what actually happens when something
+            forces it regardless (e.g. a single unbreakable block, a wide image,
+            a table with many columns).
+          </p>
+          <div class="demo-row">
+            <ContentSizePopover
+              label="very wide"
+              content={
+                <div
+                  class="demo-content-wide-block"
+                  style={{ width: "2200px" }}
+                />
+              }
+            />
+          </div>
+
+          <h3>Expanding/collapsing content while open</h3>
+          <div class="demo-row">
+            <ExpandCollapsePopover label="expand/collapse" />
+          </div>
+        </section>
+      );
+
       const AnchorSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_anchor");
         return (
           <section id="anchor" class="demo-section">
-            <h2>1. Anchor</h2>
+            <h2>2. Anchor</h2>
             <div class="demo-row">
               <AnchoredPopover
                 label="Button commanding popover"
@@ -430,7 +569,7 @@
       // "placement" as some separate idea.
       const AnchorAreaSection = () => (
         <section id="anchor-area" class="demo-section">
-          <h2>2. anchorArea</h2>
+          <h2>3. anchorArea</h2>
 
           <h3>default (anchor is trigger button)</h3>
           <p>
@@ -454,7 +593,7 @@
 
       const AnchorIgnoreSection = () => (
         <section id="anchor-ignore" class="demo-section">
-          <h2>3. Ignoring the anchor</h2>
+          <h2>4. Ignoring the anchor</h2>
           <p>
             Setting <code>anchor="viewport"</code> (with{" "}
             <code>anchorArea="center"</code>) forces the popover to ignore the
@@ -481,7 +620,7 @@
 
       const AnchorSpacingSection = () => (
         <section id="anchor-spacing" class="demo-section">
-          <h2>4. anchorSpacing</h2>
+          <h2>5. anchorSpacing</h2>
           <p>
             The gap between the popover and its anchor — defaults to{" "}
             <code>0</code> (touching).
@@ -504,7 +643,7 @@
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>5. pointerInteractionOutsideEffect</h2>
+            <h2>6. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"none"</code> (default) — interactions outside the popover
               happen normally. <code>"close"</code> — a mousedown outside closes

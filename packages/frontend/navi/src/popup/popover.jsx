@@ -557,6 +557,10 @@ const ControlledPopover = (props) => {
         skipElementResize: true,
       },
     );
+    // Re-run positioning whenever the popover's own content changes size
+    // while open (e.g. an expand/collapse toggle inside it) — not just when
+    // the anchor itself moves/resizes/re-anchors.
+    rectEffect.observeSize(popoverEl);
     addCleanup(() => {
       rectEffect.disconnect();
     });

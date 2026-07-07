@@ -1216,61 +1216,17 @@ const stickCalloutToAnchor = (
       });
     },
   );
-  const calloutSizeChangeObserver = observeCalloutSizeChange(
-    calloutMessageElement,
-    (width, height) => {
-      anchorVisibleRectEffect.check(
-        new CustomEvent(`callout_size_change (${width}x${height})`),
-      );
-    },
-  );
-  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
-    // prevent feedback loop because check triggers size change which triggers check...
-    calloutSizeChangeObserver.disable();
-    return () => {
-      calloutSizeChangeObserver.enable();
-    };
-  });
+  // Re-measures/repositions the callout whenever its own message body
+  // changes size (e.g. async content loading in, a filter narrowing the
+  // list) — not just when the anchor itself moves/resizes. The feedback-loop
+  // guard (re-checking can itself change the message body's size) is handled
+  // internally by observeSize.
+  anchorVisibleRectEffect.observeSize(calloutMessageElement);
 
   return {
     update: anchorVisibleRectEffect.check,
     stop: () => {
-      calloutSizeChangeObserver.disconnect();
       anchorVisibleRectEffect.disconnect();
-    },
-  };
-};
-
-const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
-  let lastContentWidth;
-  let lastContentHeight;
-  const resizeObserver = new ResizeObserver((entries) => {
-    const [entry] = entries;
-    const { width, height } = entry.contentRect;
-    // Debounce tiny changes that are likely sub-pixel rounding
-    if (lastContentWidth !== undefined) {
-      const widthDiff = Math.abs(width - lastContentWidth);
-      const heightDiff = Math.abs(height - lastContentHeight);
-      const threshold = 1; // Ignore changes smaller than 1px
-      if (widthDiff < threshold && heightDiff < threshold) {
-        return;
-      }
-    }
-    lastContentWidth = width;
-    lastContentHeight = height;
-    callback(width, height);
-  });
-  resizeObserver.observe(elementSizeToObserve);
-
-  return {
-    disable: () => {
-      resizeObserver.unobserve(elementSizeToObserve);
-    },
-    enable: () => {
-      resizeObserver.observe(elementSizeToObserve);
-    },
-    disconnect: () => {
-      resizeObserver.disconnect();
     },
   };
 };

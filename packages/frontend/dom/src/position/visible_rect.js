@@ -214,16 +214,16 @@ export const visibleRectEffect = (
   check(initialEvent);
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
-  auto_check: {
-    const autoCheck = (event) => {
-      const beforeCheckResults = publishBeforeAutoCheck(event);
-      check(event);
-      for (const beforeCheckResult of beforeCheckResults) {
-        if (typeof beforeCheckResult === "function") {
-          beforeCheckResult();
-        }
+  const autoCheck = (event) => {
+    const beforeCheckResults = publishBeforeAutoCheck(event);
+    check(event);
+    for (const beforeCheckResult of beforeCheckResults) {
+      if (typeof beforeCheckResult === "function") {
+        beforeCheckResult();
       }
-    };
+    }
+  };
+  auto_check: {
     // let rafId = null;
     // const scheduleCheck = (reason) => {
     //   cancelAnimationFrame(rafId);
@@ -481,9 +481,64 @@ export const visibleRectEffect = (
     }
   }
 
+  // Re-checks whenever `elementToObserve` (some other element than the one
+  // this effect tracks — e.g. a popover/callout's own content) changes size,
+  // not just when `element` itself is scrolled/resized/re-anchored. Useful
+  // when the tracked element's *position* depends on a size that lives
+  // elsewhere (a callout re-measuring itself against its message body, a
+  // popover reconsidering "above" vs "below" once its own content grows).
+  // Can be called more than once, once per element worth watching.
+  const observeSize = (elementToObserve) => {
+    let lastWidth;
+    let lastHeight;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      const { width, height } = entry.contentRect;
+      // Debounce tiny changes that are likely sub-pixel rounding.
+      if (lastWidth !== undefined) {
+        const widthDiff = Math.abs(width - lastWidth);
+        const heightDiff = Math.abs(height - lastHeight);
+        const threshold = 1;
+        if (widthDiff < threshold && heightDiff < threshold) {
+          return;
+        }
+      }
+      lastWidth = width;
+      lastHeight = height;
+      // Calls check() directly, not autoCheck: this observer's own trigger
+      // must not re-enter the onBeforeAutoCheck dance below (registered to
+      // guard against *other* auto-triggers reflowing elementToObserve, e.g.
+      // the anchor scrolling/resizing) — doing so would unobserve/re-observe
+      // this same ResizeObserver synchronously from inside its own
+      // callback, which the browser reports as "ResizeObserver loop
+      // completed with undelivered notifications." The debounce above is
+      // what keeps this path itself from looping.
+      check(
+        new CustomEvent("observed_element_size_change", {
+          detail: { width, height },
+        }),
+      );
+    });
+    resizeObserver.observe(elementToObserve);
+    const cleanupAutoCheck = onBeforeAutoCheck(() => {
+      resizeObserver.unobserve(elementToObserve);
+      return () => {
+        resizeObserver.observe(elementToObserve);
+      };
+    });
+    addTeardown(() => {
+      resizeObserver.disconnect();
+    });
+    return () => {
+      cleanupAutoCheck();
+      resizeObserver.disconnect();
+    };
+  };
+
   return {
     check,
     onBeforeAutoCheck,
+    observeSize,
     disconnect: () => {
       teardown();
     },
