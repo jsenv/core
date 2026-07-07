@@ -112,23 +112,18 @@
  * custom renderer always, and for the via-attribute renderer whenever no
  * anchor was resolved), both renderers dock against a container instead —
  * the viewport itself for via-attribute, this popover's own positioned
- * ancestor for the custom renderer — via the *same*
- * `pickPositionRelativeTo` call either way, using its `anchorIsContainer`
- * option (see that option's own doc in visible_rect.js for the coordinate-
- * space/clamp details it changes). `document.documentElement` (the
- * via-attribute case) is itself just the degenerate "container is the
- * whole viewport" instance of this, not a separate code path — passing it
- * as `anchor` with `anchorIsContainer: true` produces identical output to
- * the traditional (non-container) path, since the document's own scroll
- * and the viewport's own origin already coincide with what
- * `anchorIsContainer` computes generically for any other container
- * element. Docking doesn't have a "float away with a gap" concept the way
- * a real anchor's "above"/"below" do, so `toDockPosition` first collapses
- * the bare directions to their "aligned-*" equivalent (`above` →
- * `aligned-top`, etc.) and passes them as both `positionX/Y` *and*
- * `positionX/YFixed`, skipping `pickPositionRelativeTo`'s own
- * flip-on-overflow check entirely — a docked corner/edge never flips to
- * the other side.
+ * ancestor for the custom renderer — via the *same* `pickPositionRelativeTo`
+ * call either way, simply omitting its `anchor` argument (see that
+ * function's own doc in visible_rect.js for what its own no-anchor,
+ * container-docked mode changes: the "float away with a gap" bare
+ * directions collapse to their "aligned-*" equivalent internally, flipping
+ * is skipped entirely, and the coordinate space/clamp bounds become the
+ * container's own instead of the document's). The via-attribute renderer
+ * leaves `container` unspecified — `pickPositionRelativeTo` resolves it to
+ * the viewport on its own, since the popover element's own `[popover]`
+ * attribute signals that (see `getPositioningContainer`); the custom
+ * renderer passes its own positioned ancestor explicitly, already computed
+ * above for `visibleRectEffect`'s own observation target.
  *
  * `animation="auto"` resolves to "scaling" for any real anchor, or for a
  * point/corner placed dead-center (an "aligned-"/"center" axis means the
@@ -700,32 +695,28 @@ const usePopoverProps = (props, options = {}) => {
         appliedLeft = Math.max(left, minLeft);
         top = pickedTop;
       } else {
-        // No real anchor: dock against a container instead — the viewport
-        // itself for the via-attribute renderer, this popover's own
-        // positioned ancestor for the custom renderer — via
-        // pickPositionRelativeTo's anchorIsContainer mode (see this file's
-        // top comment, and that option's own doc in visible_rect.js, for
-        // why one function handles both: document.documentElement is
-        // itself just the degenerate "container is the whole viewport"
-        // case). --space-available is deliberately left untouched here
-        // (cleared, not set) — a docked popover always relies on the CSS's
-        // own --popover-maxmax-height ceiling instead.
+        // No real anchor: dock against a container instead — omitting
+        // pickPositionRelativeTo's own `anchor` argument entirely puts it
+        // in its own container-docked mode (see its own doc for what that
+        // changes). For the via-attribute renderer, its `container` is
+        // left unspecified too — pickPositionRelativeTo auto-resolves it
+        // to the viewport on its own, since popoverEl's own [popover]
+        // attribute signals that (see getPositioningContainer). For the
+        // custom renderer, its own positioned ancestor is passed
+        // explicitly instead, since it's already computed above for
+        // visibleRectEffect's own observation target. --space-available is
+        // deliberately left untouched here (cleared, not set) — a docked
+        // popover always relies on the CSS's own --popover-maxmax-height
+        // ceiling instead.
         popoverEl.style.removeProperty("--space-available");
-        const dockAnchor = isCustom
-          ? positionedAncestor
-          : document.documentElement;
-        const dockX = toDockPosition(parsedAnchorArea.x);
-        const dockY = toDockPosition(parsedAnchorArea.y);
         const { left, top: pickedTop } = pickPositionRelativeTo(
           popoverEl,
-          dockAnchor,
+          null,
           {
-            positionX: dockX,
-            positionY: dockY,
-            positionXFixed: dockX,
-            positionYFixed: dockY,
+            positionX: parsedAnchorArea.x,
+            positionY: parsedAnchorArea.y,
+            container: isCustom ? positionedAncestor : undefined,
             containerSpacing: resolveSpacingSize(anchorSpacing),
-            anchorIsContainer: true,
           },
         );
         appliedLeft = left;
@@ -1044,31 +1035,6 @@ const parseAnchorArea = (
     }
   }
   return null;
-};
-
-/**
- * Collapses a bare anchorArea value ("above"/"below"/"on-the-left"/
- * "on-the-right") to its "aligned-*" equivalent — "aligned-*"/"center"
- * values pass through unchanged. Used only by the via-attribute renderer's
- * own docked (no real anchor) positioning case — see this file's top
- * comment for why: docking has no "float away with a gap" concept, so the
- * bare/aligned distinction (meaningful only against a real anchor box)
- * would be nonsensical left as-is.
- */
-const toDockPosition = (value) => {
-  if (value === "above") {
-    return "aligned-top";
-  }
-  if (value === "below") {
-    return "aligned-bottom";
-  }
-  if (value === "on-the-left") {
-    return "aligned-left";
-  }
-  if (value === "on-the-right") {
-    return "aligned-right";
-  }
-  return value;
 };
 
 /**

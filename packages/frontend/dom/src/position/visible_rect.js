@@ -4,6 +4,7 @@ import { getBorderSizes } from "../size/get_border_sizes.js";
 import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
+import { getPositioningContainer } from "./offset_parent.js";
 
 const DEBUG = false;
 
@@ -546,6 +547,28 @@ export const visibleRectEffect = (
 };
 
 /**
+ * Collapses a bare position value ("above"/"below"/"on-the-left"/
+ * "on-the-right") to its "aligned-*" equivalent — "aligned-*"/"center"
+ * values pass through unchanged. Only used by pickPositionRelativeTo's own
+ * no-anchor (container-docked) mode — see its own doc for why.
+ */
+const toContainerAlignedPosition = (value) => {
+  if (value === "above") {
+    return "aligned-top";
+  }
+  if (value === "below") {
+    return "aligned-bottom";
+  }
+  if (value === "on-the-left") {
+    return "aligned-left";
+  }
+  if (value === "on-the-right") {
+    return "aligned-right";
+  }
+  return value;
+};
+
+/**
  * Places element relative to anchor with independent control of horizontal and vertical axes.
  *
  * Horizontal axis — positionX / positionXFixed (left → right):
@@ -576,7 +599,13 @@ export const visibleRectEffect = (
  *
  * @param {HTMLElement} element - The element to position (position: absolute or
  *   fixed — detected from its own computed style, see the scroll offset comment below)
- * @param {HTMLElement} anchor - The anchor element to position against
+ * @param {HTMLElement} [anchor] - The anchor element to position against. Omit (or pass
+ *   `null`/`undefined`) when there's no real anchor to dock `element` against a *container*
+ *   instead — see `container` below; in that mode, "above"/"below"/"on-the-left"/
+ *   "on-the-right" are collapsed to their "aligned-*" equivalent internally (docking has no
+ *   "float away with a gap" concept the way a real anchor does) and positionX/Y always
+ *   behave as if positionX/YFixed were set (a docked edge/corner never flips to the other
+ *   side — there's no "other side" of a container the way there is of a real anchor).
  * @param {object} [options]
  * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
  *   "on-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
@@ -594,23 +623,27 @@ export const visibleRectEffect = (
  * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
  * @param {number} [options.alignToContainerEdgeWhenAnchorNearEdge=0] - When centering
  *   (positionX="center") an element wider than its anchor, snap to the available area's own
- *   left edge (the page viewport normally, or anchor's own edge in anchorIsContainer mode)
- *   instead of centering, once the anchor is within this many px of that same edge — avoids
- *   the (wider) element overflowing past it. 0 disables the snap entirely.
+ *   left edge (the page viewport normally, or the container's edge — see `container` below —
+ *   whenever there's no real `anchor`) instead of centering, once the anchor is within this
+ *   many px of that same edge — avoids the (wider) element overflowing past it. 0 disables
+ *   the snap entirely.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
- * @param {boolean} [options.anchorIsContainer=false] - `anchor` is a container being
- *   docked *within* (its own bounds are the available space, and `element` is expected
- *   to be `position: absolute` relative to `anchor` itself — its own containing block —
- *   rather than the document root) instead of a real anchor floating within the page
- *   viewport. Changes two things: the viewport-boundary clamp uses `anchor`'s own
- *   (padding-box) edges instead of the page viewport's, on both axes (the Y axis
- *   otherwise has no such clamp at all — see the clamp's own comment); and the final
- *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative
- *   to `anchor`'s own padding-box origin plus its own scroll, instead of the document's.
- *   `anchor === document.documentElement` is the degenerate case of this (the "container"
- *   is the whole viewport) and produces identical output whether or not this is set,
- *   since the document's own scroll and the viewport's own origin already coincide with
- *   what this option computes generically for any other container element.
+ * @param {HTMLElement|null} [options.container] - Only consulted when `anchor` is omitted:
+ *   the container `element` is being docked *within* — its own bounds become the available
+ *   space, and `element` is expected to be `position: absolute` relative to `container`
+ *   itself (its own containing block), not the document root. When omitted too, resolved
+ *   automatically via `getPositioningContainer(element)` — `null` from that (an `element`
+ *   with a `popover` attribute, or a `<dialog>`) falls back to the viewport, since both are
+ *   promoted to the top layer once shown and always use the initial containing block
+ *   regardless of DOM position. Changes two things versus the plain viewport-relative case:
+ *   the boundary clamp uses the container's own (padding-box) edges instead of the page
+ *   viewport's, on both axes (the Y axis otherwise has no such clamp at all — see the
+ *   clamp's own comment); and the final `left`/`top` (and the returned
+ *   `anchorLeft/Top/Right/Bottom`) are expressed relative to the container's own padding-box
+ *   origin plus its own scroll, instead of the document's. A container that resolves to
+ *   `document.documentElement` (the viewport) produces identical output to the plain
+ *   real-anchor case, since the document's own scroll and the viewport's own origin already
+ *   coincide with what this generically computes for any other container element.
  * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
@@ -626,12 +659,26 @@ export const pickPositionRelativeTo = (
     anchorSpacing = 0,
     alignToAnchorBox = "border-box",
     containerSpacing = 0,
-    anchorIsContainer = false,
+    container,
   } = {},
 ) => {
+  // No real anchor: dock against a container instead (the page viewport,
+  // or an explicit/auto-resolved container element) — see this function's
+  // own doc for what changes in that mode.
+  const hasAnchor = Boolean(anchor);
+  if (!hasAnchor) {
+    positionX = toContainerAlignedPosition(positionX);
+    positionY = toContainerAlignedPosition(positionY);
+    positionXFixed = positionX;
+    positionYFixed = positionY;
+  }
+  const effectiveAnchor = hasAnchor
+    ? anchor
+    : container || getPositioningContainer(element) || document.documentElement;
+
   if (
     import.meta.dev &&
-    !anchorIsContainer &&
+    hasAnchor &&
     getScrollContainer(element) !== document.documentElement
   ) {
     // The idea behind this warning is that pickPositionRelativeTo is meant to position a tooltip/dropdown etc
@@ -642,8 +689,9 @@ export const pickPositionRelativeTo = (
     // Which gives the best experience when user scrolls the page or the container
     // 2. The element can take more visible size in case target is within a scrollable container
     // or uses overflow: hidden somewhere in its ancestor chain
-    // (anchorIsContainer is the deliberate exception: element is expected to be
-    // absolute relative to anchor itself in that mode, not the document.)
+    // (the no-anchor/container-docked mode is the deliberate exception: element is
+    // expected to be absolute relative to the container itself in that mode, not the
+    // document.)
     console.warn(
       "pickPositionRelativeTo should be used only for document-relative element",
     );
@@ -651,37 +699,36 @@ export const pickPositionRelativeTo = (
 
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = document.documentElement.clientHeight;
-  // document.documentElement is used as a sentinel "no real anchor" value
-  // (see popover.jsx's effectiveAnchor fallback): an anchorless popup should
-  // center/place itself against the visual viewport, not against <html>'s own
-  // box — which, unlike the viewport, grows with document content and can be
-  // far taller than what's on screen (its top is also negative once the page
-  // is scrolled). Using the viewport rect here fixes that; the scroll offset
-  // is still applied below like any other case (see getPositioningScrollOffset).
-  const anchorIsViewport = anchor === document.documentElement;
+  // document.documentElement is used as a sentinel "the viewport" value: an
+  // anchorless popup should center/place itself against the visual
+  // viewport, not against <html>'s own box — which, unlike the viewport,
+  // grows with document content and can be far taller than what's on
+  // screen (its top is also negative once the page is scrolled). Using the
+  // viewport rect here fixes that; the scroll offset is still applied
+  // below like any other case (see getPositioningScrollOffset).
+  const anchorIsViewport = effectiveAnchor === document.documentElement;
   // Get viewport-relative positions
   const anchorRect = anchorIsViewport
     ? { left: 0, top: 0, right: viewportWidth, bottom: viewportHeight }
-    : anchor.getBoundingClientRect();
+    : effectiveAnchor.getBoundingClientRect();
   const anchorLeft = snapToPixel(anchorRect.left);
   const anchorTop = snapToPixel(anchorRect.top);
   const anchorRight = snapToPixel(anchorRect.right);
   const anchorBottom = snapToPixel(anchorRect.bottom);
-  // Only meaningful in anchorIsContainer mode — converts anchor's own
-  // border-box origin (anchorRect.left/top) to its padding-box origin,
-  // which is what a position: absolute child is actually placed relative
-  // to. document.documentElement (the anchorIsViewport case) has ~0 border,
-  // so this is a no-op there.
-  const containerBorders = anchorIsContainer
-    ? getBorderSizes(anchor)
+  // Only meaningful when docking (no real anchor) — converts the
+  // container's own border-box origin (anchorRect.left/top) to its
+  // padding-box origin, which is what a position: absolute child is
+  // actually placed relative to. document.documentElement (the
+  // anchorIsViewport case) has ~0 border, so this is a no-op there.
+  const containerBorders = !hasAnchor
+    ? getBorderSizes(effectiveAnchor)
     : { left: 0, top: 0, right: 0, bottom: 0 };
   // The available area's own boundaries — the page viewport normally, or
-  // anchor's own edges in anchorIsContainer mode (docking within a
-  // container, not floating above the whole page). Used both by the
-  // alignToContainerEdgeWhenAnchorNearEdge snap below and the final
+  // the container's own edges when docking (no real anchor). Used both by
+  // the alignToContainerEdgeWhenAnchorNearEdge snap below and the final
   // boundary clamp further down.
-  const clampLeftBound = anchorIsContainer ? anchorLeft : 0;
-  const clampRightBound = anchorIsContainer ? anchorRight : viewportWidth;
+  const clampLeftBound = !hasAnchor ? anchorLeft : 0;
+  const clampRightBound = !hasAnchor ? anchorRight : viewportWidth;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -705,8 +752,8 @@ export const pickPositionRelativeTo = (
   let insetLeft = 0;
   let insetRight = 0;
   if (alignToAnchorBox === "content-box") {
-    const anchorBorderSizes = getBorderSizes(anchor);
-    const anchorPaddingSizes = getPaddingSizes(anchor);
+    const anchorBorderSizes = getBorderSizes(effectiveAnchor);
+    const anchorPaddingSizes = getPaddingSizes(effectiveAnchor);
     insetTop = anchorBorderSizes.top + anchorPaddingSizes.top;
     insetBottom = anchorBorderSizes.bottom + anchorPaddingSizes.bottom;
     insetLeft = anchorBorderSizes.left + anchorPaddingSizes.left;
@@ -946,10 +993,10 @@ export const pickPositionRelativeTo = (
     // own idealTop inline, "aligned-*"/"center" don't, and changing that
     // for every existing consumer (real-anchor "below" near the viewport
     // bottom relies on --space-available/max-height truncation instead of
-    // repositioning) is out of scope here. Scoped strictly to
-    // anchorIsContainer, where it's new and safe: a container is always
-    // meant to be respected on both axes.
-    if (anchorIsContainer) {
+    // repositioning) is out of scope here. Scoped strictly to the no-anchor
+    // (container-docked) case, where it's new and safe: a container is
+    // always meant to be respected on both axes.
+    if (!hasAnchor) {
       if (elementPositionTop < anchorTop + containerSpacing) {
         elementPositionTop = anchorTop + containerSpacing;
       } else if (
@@ -978,22 +1025,25 @@ export const pickPositionRelativeTo = (
   // absolute (relative to the initial containing block, i.e.
   // document-relative) — including when anchorIsViewport, so the result
   // lands at the visual center of the viewport at its current scroll
-  // position. In anchorIsContainer mode, `element` is instead expected to
-  // be position: absolute relative to `anchor` itself (its own containing
-  // block, not the document root) — the conversion subtracts anchor's own
-  // border-box origin and border (getting to its padding-box origin, which
-  // is what a positioned child is actually placed relative to) and adds
-  // anchor's own scroll instead of the document's. anchor ===
+  // position. In the no-anchor (container-docked) case, `element` is
+  // instead expected to be position: absolute relative to the container
+  // itself (its own containing block, not the document root) — the
+  // conversion subtracts the container's own border-box origin and border
+  // (getting to its padding-box origin, which is what a positioned child
+  // is actually placed relative to) and adds the container's own scroll
+  // instead of the document's. A container that resolves to
   // document.documentElement collapses to the exact same numbers as the
-  // non-container path either way (see anchorIsContainer's own doc
-  // comment). visibleRectEffect recomputes this on every scroll tick,
-  // which is what keeps it looking anchored as the page (or the container)
-  // scrolls either way.
+  // real-anchor path either way (see this function's own doc comment).
+  // visibleRectEffect recomputes this on every scroll tick, which is what
+  // keeps it looking anchored as the page (or the container) scrolls
+  // either way.
   let scrollLeft;
   let scrollTop;
-  if (anchorIsContainer) {
-    scrollLeft = -anchorRect.left - containerBorders.left + anchor.scrollLeft;
-    scrollTop = -anchorRect.top - containerBorders.top + anchor.scrollTop;
+  if (!hasAnchor) {
+    scrollLeft =
+      -anchorRect.left - containerBorders.left + effectiveAnchor.scrollLeft;
+    scrollTop =
+      -anchorRect.top - containerBorders.top + effectiveAnchor.scrollTop;
   } else {
     ({ scrollLeft, scrollTop } = getPositioningScrollOffset(element));
   }
