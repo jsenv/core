@@ -248,6 +248,8 @@ import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
   parsePositionArea,
+  resolveAutoAnimationKind,
+  resolveDirectionValue,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
 
@@ -1165,65 +1167,9 @@ const resolvePositionAreaAndAnimationKind = ({
   return { parsedPositionArea, resolvedAnimationKind };
 };
 
-/**
- * Maps an positionArea y/x pair to a concrete `navi-animation` value (a
- * `prefix` plus a direction word), or `null` if both axes overlap the anchor
- * (no direction at all — that's `resolvedAnimation === "scaling"` territory
- * instead, see the "sliding"/"expanding" resolution step in `openEffect`).
- *
- * `isRealAnchor: false` (no real anchor, used only with `prefix:
- * "slide-from"`) keeps the word as the compass direction the popover comes
- * from: placed "above" (a point/corner), it slides in from the top.
- * `isRealAnchor: true` (a real anchor, used only with `prefix: "expand"` —
- * via-attribute only) uses the motion/growth direction instead, the
- * opposite compass point: placed "above" the anchor, it moves/grows up,
- * away from the anchor (which sits below it).
- *
- * "aligned-*"/"center" contribute no direction on their axis either way.
- */
-const resolveDirectionValue = (y, x, { prefix }) => {
-  const yWord =
-    y === "above"
-      ? prefix === "expand"
-        ? "up"
-        : "top"
-      : y === "below"
-        ? prefix === "expand"
-          ? "down"
-          : "bottom"
-        : null;
-  const xWord =
-    x === "on-the-left" ? "left" : x === "on-the-right" ? "right" : null;
-  if (!yWord && !xWord) {
-    return null;
-  }
-  return yWord && xWord
-    ? `${prefix}-${yWord}-${xWord}`
-    : `${prefix}-${yWord || xWord}`;
-};
-
-/**
- * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
- * (see this file's top comment) — picked for any real anchor, or for a
- * point/corner placed dead-center (both positionArea axes overlapping —
- * there's no sensible direction to slide from in that case). "sliding"
- * otherwise. `anchor` is always `undefined` for the custom renderer (it
- * never has a real anchor — see this file's top comment), so this
- * collapses to "scaling" there only for the dead-center case, "sliding"
- * otherwise. The two "overlapping" booleans below describe the
- * *positionArea* itself (a bare word vs. "aligned-"/"center"), not
- * anything about the anchor — they'd mean exactly the same thing even with
- * no anchor at all, since it's the position strategy, not the anchor, that
- * decides whether there's a direction to slide from.
- */
-const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
-  const yIsOverlapping =
-    parsedPositionArea.y !== "above" && parsedPositionArea.y !== "below";
-  const xIsOverlapping =
-    parsedPositionArea.x !== "on-the-left" &&
-    parsedPositionArea.x !== "on-the-right";
-  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
-};
+// resolveDirectionValue/resolveAutoAnimationKind moved to popup_shared.js —
+// same logic Dialog's own auto-animation resolution now shares, since it
+// never has a real anchor either (always the "anchor === undefined" path).
 
 // suppressPointerEventsDuringTransition/armPointerDownOutsideClose moved to
 // popup_shared.js — same helpers Dialog's own custom renderer needs, no

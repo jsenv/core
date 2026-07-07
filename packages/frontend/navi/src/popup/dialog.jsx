@@ -1,27 +1,35 @@
 /**
  * A dialog is centered in the viewport by default, with no anchor to grow
- * out of or slide in from — `animation={true}`/`"auto"` resolves to
- * `"scaling"` (see popover.jsx's own top comment for why that reads best),
- * the same kind Popover picks for a dead-center placement. Any other
- * explicit kind (`"fading"`, `"scaling"`, or a literal
+ * out of or slide in from — `animation={true}`/`"auto"` resolves the same
+ * way Popover's own auto-animation resolution does (see popover.jsx's own
+ * top comment and popup_shared.js's `resolveAutoAnimationKind`/
+ * `resolveDirectionValue`), just always through the "no real anchor" path:
+ * a dead-center `positionArea` picks `"scaling"`, anything off-center picks
+ * a `"slide-from-*"` direction matching that placement. Any other explicit
+ * kind (`"fading"`, `"scaling"`, or a literal
  * `"slide-from-{top,bottom,left,right}"` + diagonals) is passed straight
- * through as-is: these are all self-contained CSS selectors in the shared
- * popup_css.js, so unlike Popover there's no direction to resolve in JS —
- * Dialog never needs to flip anything after measuring.
+ * through as-is.
  *
- * `positionArea` (default `"center"`) can dock the dialog flush to an edge
- * instead: `"on-the-left"`/`"on-the-right"`/`"above"`/`"below"` — a
- * deliberately small subset of Popover's own positionArea vocabulary (no
- * `"aligned-*"`, no two-word combos): a dialog dock always means "flush to
- * that edge, full-length along the other axis", never a partial overlap, so
- * the richer grammar wouldn't add anything here. The docked axis's own size
- * stays whatever the consumer's own CSS/width/height says — only the
- * perpendicular axis is forced to 100%.
+ * `positionArea` (default `"center"`) accepts the *same* grammar Popover
+ * does — see popup_shared.js's own `parsePositionArea`/
+ * `POSITION_AREA_X/Y_VALUES` doc for the full vocabulary (two
+ * space-separated words, order-independent, "aligned-*" for edge-touching
+ * vs. a bare word for flush-to-edge/no-overlap). Dialog is never really
+ * anchored (see below), so several combinations produce the exact same
+ * final position (e.g. `"above"` and `"above center"` land identically) —
+ * they're kept distinct anyway because `positionArea` still selects which
+ * animation direction plays, and being able to test that whole combination
+ * space (see `dialog_demo.html`'s own Position section) is the entire
+ * reason for sharing Popover's richer grammar instead of the old flat
+ * 5-value one.
  *
  * `anchor` only ever affects the `--anchor-width`/`--anchor-height` CSS vars
  * (used to size the dialog relative to whatever opened it, e.g. `min-width:
  * var(--anchor-width, 0px)`) — Dialog's own positioning (`positionArea`
- * above) is never relative to it, unlike Popover.
+ * above) is never relative to it, unlike Popover: `pickPositionRelativeTo`
+ * is always called in its own no-anchor/docked mode (see popover.jsx's own
+ * top comment on that mode), docking against the viewport for `layer=
+ * "top"` or the dialog's own positioned ancestor for `layer="local"`.
  *
  * Two rendering strategies, picked via `layer` (`"top"` default | `"local"`,
  * same prop/values as Popover): `DialogViaAttribute` (a real `<dialog>`,
@@ -38,74 +46,48 @@
  * `.show()` gives up everything `showModal()` gets for free, which
  * `DialogCustom` has to reimplement itself: a focus trap (`trapFocusInside`,
  * unconditional — a dialog is always modal, unlike Popover's opt-in
- * `focusCapture`), `Escape`-to-close (a `keydown` shortcut, since `.show()`
- * dialogs don't fire "cancel" on Escape the way a modal one does), and a
- * real backdrop sibling element (since `.show()` dialogs don't get a
- * `::backdrop` either) — see `useDialogProps`'s own `isLocal` branches
- * below for each. **Deliberately NOT reimplemented: hardware/gesture
- * back-button dismissal** (e.g. Android's system back gesture closing the
- * top-most modal) — there is no public web API to hook into that gesture at
- * all outside of the browser's own native modal-dismissal stack, which only
- * a genuinely `showModal()`-shown, top-layer element participates in. A
+ * `focusCapture` — and scoped to its own positioned ancestor via
+ * `boundaryElement`, not `document`: a Tab press or click occurring
+ * entirely outside that container never reaches this trap at all, only
+ * interactions within the container get redirected back into the dialog),
+ * `Escape`-to-close (a `keydown` shortcut, since `.show()` dialogs don't
+ * fire "cancel" on Escape the way a modal one does), and a real backdrop
+ * sibling element (since `.show()` dialogs don't get a `::backdrop`
+ * either) — see `useDialogProps`'s own `isLocal` branches below for each.
+ * **Deliberately NOT reimplemented: hardware/gesture back-button
+ * dismissal** (e.g. Android's system back gesture closing the top-most
+ * modal) — there is no public web API to hook into that gesture at all
+ * outside of the browser's own native modal-dismissal stack, which only a
+ * genuinely `showModal()`-shown, top-layer element participates in. A
  * `layer="local"` dialog trades that away in exchange for being confined to
  * a local container instead of the whole viewport — an accepted,
  * intentional limitation, not an oversight.
  *
  * `DialogCustom` wraps its own dialog element in a `.navi_dialog_clip_wrapper`
  * (mirroring Popover's `.navi_popover_clip_wrapper` — see popover.jsx's own
- * comment on it for the underlying browser quirk it works around), and
- * positions/centers/docks the dialog via plain flexbox on that wrapper
- * (`align-items`/`justify-content`, keyed off `data-position-area`) rather
- * than `pickPositionRelativeTo`-style measurement — a dialog's own
- * positioning is always flush-to-edge-or-centered, never partial/anchor-
- * relative, so plain CSS alignment covers 100% of the vocabulary above with
- * no JS math needed at all (unlike Popover, which genuinely needs
- * per-anchor measurement). Confined to its own local container instead of
- * the viewport, so the visual-viewport concept below doesn't apply to it at
- * all — a container resizing (for whatever reason) is handled for free by
- * the wrapper's own flexbox reflowing, no JS needed there either.
+ * comment on it for the underlying browser quirk it works around) purely to
+ * absorb overflow growth from a translate/scale entrance transition before
+ * it ever reaches the real container — positioning itself is entirely
+ * `pickPositionRelativeTo`-driven (JS-computed `top`/`left`), the exact same
+ * no-anchor/docked mechanism Popover's own custom renderer uses, not
+ * flexbox alignment.
  *
- * `DialogViaAttribute`'s own positioning (any `positionArea`, including the
- * default "center") always uses `navi_css_vars.js`'s own 4
- * `--navi-visual-viewport-inset-*` CSS vars, unconditionally — not behind an
- * opt-in prop the way an earlier version of this file had
- * (`centerInVisualViewport`). The insight: the *need* (stay correctly
- * positioned relative to what's actually visible, not the layout viewport,
- * which can differ once a mobile on-screen keyboard is up) is never
- * something a consumer would want to opt out of — there's no reason
- * `position: fixed; inset: 0` should ever mean "the layout viewport's 0,
- * even if that's now covered by a keyboard" instead of "the actually-visible
- * area's edge." Implemented as `inset: var(...)` (all 4 sides, defaulting to
- * `0px` when nothing shrinks the visual viewport) instead of the old
- * margin-only, top-only `--dialog-top-inset` hack — `margin: auto` still
- * centers *within* that (now correctly-sized) virtual box for
- * `positionArea="center"`; a docked value overrides one pair of insets to
- * `auto` (matching Popover's own docking asymmetry) while keeping the other
- * two generic-and-tracked, so a dock flush to the *bottom* still correctly
- * rises above an on-screen keyboard even though it's not centered.
- *
- * These 4 vars are computed once, globally, in `navi_css_vars.js` (always
- * active — a page-wide fact, not a per-Dialog concern) rather than by a
- * mechanism this file owns — Dialog only listens for the
- * `"navi_vv_inset_change"` event that file dispatches whenever they change,
- * re-dispatching `"navi_position_change"` on its own dialog element so that
- * `visibleRectEffect` (`@jsenv/dom`, already listening for that event on
- * popover/dialog/details ancestors specifically) knows to recheck any
- * Popover anchored inside this Dialog. Popover itself doesn't need any of
- * this: its own `visibleRectEffect` already listens to
- * `window.visualViewport` directly as part of its general-purpose
- * repositioning — Dialog just didn't have an equivalent generic "reposition
- * on relevant resize" story of its own until now, since its own positioning
- * used to be pure CSS with no JS driving it whatsoever.
+ * Both renderers reposition on the same triggers Popover's own
+ * `visibleRectEffect` already reacts to generically (window resize/scroll,
+ * visual-viewport changes for `layer="top"` — it listens to
+ * `window.visualViewport` directly, no bespoke CSS-var/event mechanism
+ * needed — or the positioned ancestor's own resize for `layer="local"`).
  */
 
 import {
   createPubSub,
-  dispatchCustomEvent,
   getElementSignature,
+  getPositionedParent,
+  pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
   trapScrollInside,
+  visibleRectEffect,
 } from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
@@ -123,6 +105,9 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
+  parsePositionArea,
+  resolveAutoAnimationKind,
+  resolveDirectionValue,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
 
@@ -150,6 +135,15 @@ const css = /* css */ `
   }
 
   .navi_dialog {
+    /* Base default: also the custom renderer's own permanent value — its
+       containing block is genuinely its nearest positioned ancestor,
+       regardless of positionArea. See the [data-layer="top"] rule below for
+       why the via-attribute renderer overrides this. Position is always
+       JS-driven (pickPositionRelativeTo sets top/left directly, see
+       useDialogProps below) — no CSS alignment/inset math here at all,
+       unlike an earlier version of this file. */
+    position: absolute;
+    inset: unset;
     min-width: var(--anchor-width, 0px);
     max-width: min(
       var(--dialog-max-width, var(--dialog-maxmax-width)),
@@ -159,6 +153,7 @@ const css = /* css */ `
       var(--dialog-max-height, var(--dialog-maxmax-height)),
       var(--dialog-maxmax-height)
     );
+    margin: 0;
     flex-direction: column;
     border-width: var(--dialog-border-width);
     border-style: solid;
@@ -181,61 +176,14 @@ const css = /* css */ `
       display: flex;
     }
 
-    /* Via-attribute renderer only — explicitly guarded by :not([data-layer=
-       "local"]) rather than relying on the custom renderer's own wrapper
-       override (below) to win a specificity tie: data-position-area is now
-       always present on .navi_dialog regardless of renderer (see this
-       file's top comment on useDialogProps), so without this guard these
-       selectors would also structurally match the custom dialog — wrong,
-       not just redundant, since position: fixed would take it back out of
-       its own wrapper's flex layout entirely.
-       position: fixed + inset here (not left to the native :modal UA
-       stylesheet's own default) so the visual-viewport vars below apply
-       uniformly to every positionArea value, this one (center, via margin:
-       auto) included — see this file's top comment for why this is
-       unconditional now, not behind a prop. */
-    &:not([data-layer="local"]) {
+    /* Via-attribute renderer only — promoted to the top layer, so its
+       containing block is the viewport rather than any positioned
+       ancestor. Not left to the native :modal UA stylesheet's own default
+       (also position: fixed, but with its own margin/inset assumptions) so
+       that JS-set top/left (see useDialogProps below) always wins
+       cleanly. */
+    &[data-layer="top"] {
       position: fixed;
-      inset: var(--navi-visual-viewport-inset-top, 0px)
-        var(--navi-visual-viewport-inset-right, 0px)
-        var(--navi-visual-viewport-inset-bottom, 0px)
-        var(--navi-visual-viewport-inset-left, 0px);
-      margin: auto;
-      transition: inset 0.1s ease-in-out;
-
-      /* positionArea docking (see this file's top comment) — each rule
-         only overrides the axis perpendicular to the dock direction to
-         "auto" (so margin: auto's own centering there collapses to
-         flush-against-the-tracked-edge instead); the docked pair itself
-         stays the same tracked var as the base rule above, so a "below"
-         dock still correctly rises above an on-screen keyboard, not just
-         the "center" case. Setting both insets of the *other* axis
-         (rather than a bare 0) is what stretches the box to fill it — no
-         separate width/height: 100% needed. */
-      &[data-position-area="on-the-right"] {
-        inset: var(--navi-visual-viewport-inset-top, 0px)
-          var(--navi-visual-viewport-inset-right, 0px)
-          var(--navi-visual-viewport-inset-bottom, 0px) auto;
-        margin: 0;
-      }
-      &[data-position-area="on-the-left"] {
-        inset: var(--navi-visual-viewport-inset-top, 0px) auto
-          var(--navi-visual-viewport-inset-bottom, 0px)
-          var(--navi-visual-viewport-inset-left, 0px);
-        margin: 0;
-      }
-      &[data-position-area="above"] {
-        inset: var(--navi-visual-viewport-inset-top, 0px)
-          var(--navi-visual-viewport-inset-right, 0px) auto
-          var(--navi-visual-viewport-inset-left, 0px);
-        margin: 0;
-      }
-      &[data-position-area="below"] {
-        inset: auto var(--navi-visual-viewport-inset-right, 0px)
-          var(--navi-visual-viewport-inset-bottom, 0px)
-          var(--navi-visual-viewport-inset-left, 0px);
-        margin: 0;
-      }
     }
   }
 
@@ -243,50 +191,15 @@ const css = /* css */ `
      Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
      to exactly match the dialog's own positioned ancestor, absorbing any
      scrollable-overflow growth a translate/scale entrance transition can
-     cause in some browsers before it ever reaches the real container. Also
-     doubles as the positioning mechanism itself — flexbox alignment,
-     keyed off data-position-area, covers every value of positionArea's
-     vocabulary (always flush-to-edge-or-centered, never partial) with no
-     JS measurement needed. */
+     cause in some browsers before it ever reaches the real container. */
   .navi_dialog_clip_wrapper {
     position: absolute;
     inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     pointer-events: none;
     overflow: hidden;
 
     .navi_dialog {
-      /* The base rule's own position: fixed + visual-viewport-tracked inset
-         + margin: auto is already guarded by :not([data-layer="local"])
-         above, so it never applies here — this dialog stays a plain,
-         in-flow flex item the whole time, which is what lets the wrapper's
-         own align-items/justify-content actually position/dock it (an
-         absolutely/fixed-positioned child ignores both entirely).
-         Centering/docking here is entirely the wrapper's own flexbox
-         alignment below. */
-      margin: 0;
       pointer-events: auto;
-    }
-
-    &[data-position-area="on-the-left"] {
-      align-items: stretch;
-      justify-content: flex-start;
-    }
-    &[data-position-area="on-the-right"] {
-      align-items: stretch;
-      justify-content: flex-end;
-    }
-    &[data-position-area="above"] {
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: flex-start;
-    }
-    &[data-position-area="below"] {
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: flex-end;
     }
   }
 
@@ -396,10 +309,7 @@ const DialogCustom = (props) => {
   return (
     <>
       {backdropProps && <Box {...backdropProps} />}
-      <div
-        className="navi_dialog_clip_wrapper"
-        data-position-area={contentProps["data-position-area"]}
-      >
+      <div className="navi_dialog_clip_wrapper">
         <Box {...contentProps} />
       </div>
     </>
@@ -414,9 +324,7 @@ const DialogCustom = (props) => {
  * own usePopoverProps — see its top comment for why this stays inline
  * rather than split into two functions). Returns `[backdropProps,
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
- * (its own backdrop is native, not a real element). `contentProps["data-
- * position-area"]` is DialogCustom's own source of truth for what to copy
- * onto its wrapper's own attribute, rather than a separate 3rd return value.
+ * (its own backdrop is native, not a real element).
  */
 const useDialogProps = (props) => {
   const {
@@ -429,8 +337,8 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    // See this file's top comment — a deliberately small subset of
-    // Popover's own positionArea vocabulary.
+    // Same grammar as Popover's own positionArea — see this file's top
+    // comment and popup_shared.js's parsePositionArea.
     positionArea = "center",
     children,
     scrollCapture,
@@ -464,14 +372,30 @@ const useDialogProps = (props) => {
   const debugFocus = useDebugFocus();
   const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
+  const positionAreaParseResult = parsePositionArea(positionArea);
+  if (!positionAreaParseResult) {
+    console.warn(`Dialog: invalid positionArea="${positionArea}"`);
+  }
+  const parsedPositionArea = positionAreaParseResult ?? {
+    y: "center",
+    x: "center",
+  };
   const isAutoAnimation = animation === true || animation === "auto";
-  const resolvedAnimation = isAutoAnimation ? "scaling" : animation;
-  let resolvedPositionArea = positionArea;
-  if (!DIALOG_POSITION_AREA_VALUES.has(positionArea)) {
-    console.warn(
-      `Dialog: unknown positionArea="${positionArea}" (expected "center", "on-the-left", "on-the-right", "above", or "below")`,
+  let resolvedAnimation = animation;
+  if (isAutoAnimation) {
+    // Dialog never has a real anchor (see this file's top comment), so this
+    // is always the "no anchor" path — the same one Popover's own custom
+    // renderer falls into when it has no real anchor either.
+    const animationKind = resolveAutoAnimationKind(
+      undefined,
+      parsedPositionArea,
     );
-    resolvedPositionArea = "center";
+    resolvedAnimation =
+      animationKind === "sliding"
+        ? (resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
+            prefix: "slide-from",
+          }) ?? "slide-from-top")
+        : "scaling";
   }
 
   // aria-expanded lives on the dialog element itself (not driven through
@@ -504,6 +428,13 @@ const useDialogProps = (props) => {
     // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
     // own openEffect for the full reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
+
+    // Dialog is never really anchored for positioning purposes (see this
+    // file's top comment) — this is the container pickPositionRelativeTo
+    // docks against below, and the container trapFocusInside's own
+    // mousedown/keydown listeners are scoped to (see the isLocal branch
+    // below), instead of document.
+    const positionedAncestor = isLocal ? getPositionedParent(dialogEl) : null;
 
     const [cleanup, addCleanup] = createPubSub(true);
     let anchor;
@@ -560,35 +491,54 @@ const useDialogProps = (props) => {
     }
 
     if (isLocal) {
-      addCleanup(trapFocusInside(dialogEl, { debug: debugFocus }));
+      addCleanup(
+        trapFocusInside(dialogEl, {
+          debug: debugFocus,
+          boundaryElement: positionedAncestor,
+        }),
+      );
     }
     if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
     }
 
-    if (!isLocal) {
-      // navi_css_vars.js already tracks the 4 --navi-visual-viewport-inset-*
-      // vars our own CSS reads, unconditionally, page-wide — this just
-      // re-dispatches its own "navi_vv_inset_change" as "navi_position_change"
-      // on this dialog element specifically, so visibleRectEffect (which
-      // listens for that event on popover/dialog/details ancestors) knows
-      // to recheck any Popover anchored inside this Dialog when it shifts.
-      // See this file's top comment for why this is unconditional now, not
-      // behind a centerInVisualViewport prop.
-      const onVisualViewportInsetChange = () => {
-        dispatchCustomEvent(dialogEl, "navi_position_change");
-      };
-      window.addEventListener(
-        "navi_vv_inset_change",
-        onVisualViewportInsetChange,
-      );
-      addCleanup(() => {
-        window.removeEventListener(
-          "navi_vv_inset_change",
-          onVisualViewportInsetChange,
-        );
+    // Positioning: dialogEl is already shown (display: flex, per this
+    // file's own [open] CSS) by this point, so its own dimensions are real
+    // — pickPositionRelativeTo's own no-anchor/docked mode (no `anchor`
+    // argument at all) docks it against the viewport (layer="top") or its
+    // own positioned ancestor (layer="local", the same positionedAncestor
+    // computed above), same mechanism as Popover's own custom renderer.
+    // --space-available is deliberately left untouched (cleared, not set)
+    // — a docked dialog always relies on the CSS's own --dialog-maxmax-*
+    // ceiling instead, see popover.jsx's own comment on this.
+    const positionDialog = () => {
+      dialogEl.style.removeProperty("--space-available");
+      const { left, top } = pickPositionRelativeTo(dialogEl, null, {
+        positionX: parsedPositionArea.x,
+        positionY: parsedPositionArea.y,
+        container: isLocal ? positionedAncestor : undefined,
       });
-    }
+      dialogEl.style.left = `${left}px`;
+      dialogEl.style.top = `${top}px`;
+    };
+    positionDialog();
+
+    // Reposition on the same triggers Popover's own visibleRectEffect
+    // already reacts to generically — window resize/scroll/visual-viewport
+    // changes for layer="top" (watching document.documentElement), or the
+    // positioned ancestor's own resize for layer="local" (watching
+    // positionedAncestor) — see this file's top comment.
+    const rectEffect = visibleRectEffect(
+      isLocal ? positionedAncestor : document.documentElement,
+      () => {
+        positionDialog();
+      },
+      { event: e, skipElementResize: true },
+    );
+    rectEffect.observeSize(dialogEl);
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
 
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between
@@ -695,19 +645,10 @@ const useDialogProps = (props) => {
     // no such implicit mapping at all despite behaving modally (focus trap,
     // real backdrop), so it needs to be stated explicitly.
     "aria-modal": isLocal ? "true" : undefined,
-    // Always present now, center included (no longer hidden behind a
-    // === "center" ? undefined : ... check) — DialogCustom's own wrapper
-    // just copies this same value onto its own data-position-area instead
-    // of a separate return value (see the bottom of this function). Present
-    // on both renderers' own dialog element regardless of isLocal too
-    // (previously via-attribute-only) — the CSS above guards its own
-    // via-attribute-only rules with :not([data-layer="local"]) specifically
-    // so this being present here for the custom renderer too is safe.
-    "data-position-area": resolvedPositionArea,
-    // Distinguishes the two renderers for the CSS above — both a real
-    // <dialog>, both potentially carrying the same data-position-area
-    // value, so this is what keeps the via-attribute-only positioning
-    // rules from also matching the custom renderer's own dialog element.
+    // Distinguishes the two renderers for the CSS above (position: fixed
+    // vs. absolute) — positioning itself is entirely JS-driven now (see
+    // openEffect's own positionDialog above), no data-position-area
+    // attribute needed at all.
     "data-layer": layer,
     "onnavi_command": (e) => {
       onNaviCommand(e);
@@ -781,15 +722,6 @@ const DIALOG_PSEUDO_CLASSES = [
   ":focus-visible",
   ":focus-within",
 ];
-
-// See this file's top comment for the positionArea docking subset.
-const DIALOG_POSITION_AREA_VALUES = new Set([
-  "center",
-  "on-the-left",
-  "on-the-right",
-  "above",
-  "below",
-]);
 
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).

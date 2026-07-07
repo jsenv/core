@@ -41,15 +41,18 @@
         gap: 12px;
       }
       .demo-position-grid {
-        /* Same visual idea as popover_demo.html's own .demo-area-grid — a
-           single row here since Dialog's own positionArea vocabulary is a
-           flat list of 5 values, not a combinable Y×X grid the way
-           Popover's is. */
+        /* Same visual idea as popover_demo.html's own .demo-area-grid — the
+           full 5×5 Y×X grid Dialog's own positionArea grammar now shares
+           with Popover (see dialog.jsx's own top comment for why several
+           combinations still matter despite landing on the same final
+           position: positionArea alone picks which animation direction
+           plays). */
         display: grid;
         width: fit-content;
         margin-top: 8px;
         padding: 8px;
         grid-template-columns: repeat(5, 100px);
+        grid-template-rows: repeat(5, 48px);
         gap: 2px;
         border: 1px solid #999;
       }
@@ -60,14 +63,17 @@
       .demo-position-button {
         display: flex;
         width: 100%;
-        height: 48px;
+        height: 100%;
         padding: 2px;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
+        font-size: 9px;
         text-align: center;
         line-height: 1.2;
         white-space: normal;
+      }
+      .demo-position-button[data-duplicate] {
+        opacity: 0.35;
       }
       .demo-lazy-mount {
         /* Fixed footprint, kept identical whether showing the placeholder
@@ -559,18 +565,66 @@
         );
       };
 
-      // All 5 values positionArea actually accepts for Dialog (see
-      // dialog.jsx's own top comment) — a deliberately small subset of
-      // Popover's own vocabulary: no "aligned-*", no two-word combos. A
-      // dock always means flush to that edge, full-length along the other
-      // axis, never a partial overlap.
-      const DIALOG_POSITION_AREA_VALUES = [
-        "center",
+      // Every value positionArea's Y/X axes accept — same grammar Popover
+      // uses (see dialog.jsx's own top comment and popup_shared.js's
+      // parsePositionArea) — the grid below shows all 25 combinations
+      // (order-independent: "above on-the-left" and "on-the-left above"
+      // mean the same thing).
+      const POSITION_AREA_Y_VALUES = [
         "above",
+        "aligned-top",
+        "center",
+        "aligned-bottom",
         "below",
+      ];
+      const POSITION_AREA_X_VALUES = [
         "on-the-left",
+        "aligned-left",
+        "center",
+        "aligned-right",
         "on-the-right",
       ];
+
+      // Drops "center" from a label when the other axis already carries the
+      // real information — "center on-the-left" reads as "on-the-left".
+      const formatAreaLabel = (y, x) => {
+        if (y === "center" && x === "center") {
+          return "center";
+        }
+        if (y === "center") {
+          return x;
+        }
+        if (x === "center") {
+          return y;
+        }
+        return `${y} ${x}`;
+      };
+
+      // Dialog is never really anchored (see dialog.jsx's own top comment)
+      // — overlap and no-overlap collapse to the same placement, so
+      // "aligned-top" lands exactly where "above" does (ditto
+      // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
+      // "aligned-right"/"on-the-right"). Kept in the grid anyway since
+      // positionArea alone still picks which animation direction plays.
+      const isDuplicatePointArea = (y, x) =>
+        y === "aligned-top" ||
+        y === "aligned-bottom" ||
+        x === "aligned-left" ||
+        x === "aligned-right";
+
+      // Renders all 25 Y × X combinations, row-major (Y varies per row, X
+      // per column) — same layout popover_demo.html's own AreaGrid uses.
+      const AreaGrid = ({ renderCell }) => (
+        <div class="demo-position-grid">
+          {POSITION_AREA_Y_VALUES.flatMap((y) =>
+            POSITION_AREA_X_VALUES.map((x) => (
+              <div key={`${y} ${x}`} class="demo-position-cell">
+                {renderCell(y, x)}
+              </div>
+            )),
+          )}
+        </div>
+      );
 
       // The button itself is the grid cell's own content — the Dialog
       // (fixed/absolute either way) isn't a grid participant visually, only
@@ -578,17 +632,19 @@
       const PositionDialog = ({
         label,
         positionArea,
+        duplicate = false,
         layer,
         animation,
         animationDuration,
       }) => {
         const dialogId = useId();
         return (
-          <div class="demo-position-cell">
+          <>
             <Button
               command="--navi-toggle"
               commandFor={dialogId}
               className="demo-position-button"
+              data-duplicate={duplicate ? "" : undefined}
             >
               {label}
             </Button>
@@ -603,33 +659,30 @@
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Dialog>
-          </div>
+          </>
         );
       };
 
       // layer="top" (default) — the browser's own top layer, so no
       // container needed at all: each button just opens the same dialog
-      // docked to (or centered in) the whole viewport. Grid layout (a
-      // single row, since positionArea is a flat 5-value list, not a
-      // combinable Y×X grid the way Popover's is) purely for visual parity
-      // with Popover's own AreaGrid — same 5 values either way.
+      // docked to (or centered in) the whole viewport.
       const TopLayerPositionSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_position_top_layer");
         return (
           <div id="position-top-layer" class="demo-subsection">
             <h3>3.1 top layer</h3>
-            <div class="demo-position-grid">
-              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+            <AreaGrid
+              renderCell={(y, x) => (
                 <PositionDialog
-                  key={positionArea}
-                  label={positionArea}
-                  positionArea={positionArea}
+                  label={formatAreaLabel(y, x)}
+                  positionArea={`${y} ${x}`}
+                  duplicate={isDuplicatePointArea(y, x)}
                   animation={animation}
                   animationDuration={animationDuration}
                 />
-              ))}
-            </div>
+              )}
+            />
             <AnimateControls {...controlsProps} />
           </div>
         );
@@ -638,7 +691,7 @@
       // layer="local" needs the dialogs rendered *inside* the positioned
       // container to find it (DialogCustom, a plain in-flow div — see
       // dialog.jsx's own top comment) — the trigger buttons don't, so they
-      // live outside it, in their own row below (same pattern as
+      // live outside it, in their own grid below (same pattern as
       // popover_demo.html's own "local layer" subsection).
       const LocalLayerPositionSection = () => {
         const baseId = useId();
@@ -651,40 +704,44 @@
               Confined to the container below instead of the whole viewport —
               genuinely clipped by its <code>overflow: hidden</code>. Focus trap
               and Escape-to-close are both reimplemented in JS for this renderer
-              (try Tab/Shift+Tab and Escape) — the one thing traded away is the
+              (try Tab/Shift+Tab and Escape) — the trap is scoped to this
+              container specifically, not the whole document (a Tab press or
+              click outside it is untouched) — the one thing traded away is the
               hardware/gesture back button closing it (e.g. Android's system
               back gesture), a known, accepted limitation of{" "}
               <code>layer="local"</code>, not a bug.
             </p>
             <div class="demo-container">
               <span class="demo-container-label">container</span>
-              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
-                <Dialog
-                  key={positionArea}
-                  id={`${baseId}-${positionArea}`}
-                  layer="local"
-                  positionArea={positionArea}
-                  animation={animation}
-                  animationDuration={animationDuration}
-                  className="demo_dialog_box"
-                >
-                  <p style={{ marginTop: 0 }}>{positionArea}</p>
-                  <Button command="--navi-close">Close</Button>
-                </Dialog>
-              ))}
+              {POSITION_AREA_Y_VALUES.flatMap((y) =>
+                POSITION_AREA_X_VALUES.map((x) => (
+                  <Dialog
+                    key={`${y} ${x}`}
+                    id={`${baseId}-${y}-${x}`}
+                    layer="local"
+                    positionArea={`${y} ${x}`}
+                    animation={animation}
+                    animationDuration={animationDuration}
+                    className="demo_dialog_box"
+                  >
+                    <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>
+                    <Button command="--navi-close">Close</Button>
+                  </Dialog>
+                )),
+              )}
             </div>
-            <div class="demo-position-grid">
-              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+            <AreaGrid
+              renderCell={(y, x) => (
                 <Button
-                  key={positionArea}
                   command="--navi-toggle"
-                  commandFor={`${baseId}-${positionArea}`}
-                  className="demo-position-cell demo-position-button"
+                  commandFor={`${baseId}-${y}-${x}`}
+                  className="demo-position-button"
+                  data-duplicate={isDuplicatePointArea(y, x) ? "" : undefined}
                 >
-                  {positionArea}
+                  {formatAreaLabel(y, x)}
                 </Button>
-              ))}
-            </div>
+              )}
+            />
             <AnimateControls {...controlsProps} />
           </div>
         );
@@ -694,10 +751,17 @@
         <section id="position" class="demo-section">
           <h2>3. Position</h2>
           <p>
-            All 5 valid <code>positionArea</code> values — <code>"center"</code>{" "}
-            (default), <code>"above"</code>/<code>"below"</code> (flush to that
-            edge, full width), <code>"on-the-left"</code>/
-            <code>"on-the-right"</code> (flush to that edge, full height).
+            The full <code>positionArea</code> grammar Dialog now shares with
+            Popover — two space-separated words, order-independent, y from{" "}
+            <code>above</code>/<code>aligned-top</code>/<code>center</code>/
+            <code>aligned-bottom</code>/<code>below</code>, x from{" "}
+            <code>on-the-left</code>/<code>aligned-left</code>/
+            <code>center</code>/<code>aligned-right</code>/
+            <code>on-the-right</code>. Dialog is never really anchored, so
+            several combinations (dimmed below) land on the exact same final
+            position — kept anyway because <code>positionArea</code> alone still
+            picks which animation direction plays for{" "}
+            <code>animation="auto"</code>.
           </p>
           <TopLayerPositionSection />
           <LocalLayerPositionSection />

@@ -146,3 +146,62 @@ export const parsePositionArea = (
   }
   return null;
 };
+
+/**
+ * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
+ * `prefix` plus a direction word), or `null` if both axes overlap the anchor
+ * (no direction at all — that's `resolvedAnimationKind === "scaling"`
+ * territory instead, see resolveAutoAnimationKind below).
+ *
+ * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
+ * when docked) keeps the word as the compass direction the popup comes
+ * from: placed "above" (a point/corner), it slides in from the top.
+ * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
+ * direction instead, the opposite compass point: placed "above" the
+ * anchor, it moves/grows up, away from the anchor (which sits below it).
+ *
+ * "aligned-*"/"center" contribute no direction on their axis either way.
+ */
+export const resolveDirectionValue = (y, x, { prefix }) => {
+  const yWord =
+    y === "above"
+      ? prefix === "expand"
+        ? "up"
+        : "top"
+      : y === "below"
+        ? prefix === "expand"
+          ? "down"
+          : "bottom"
+        : null;
+  const xWord =
+    x === "on-the-left" ? "left" : x === "on-the-right" ? "right" : null;
+  if (!yWord && !xWord) {
+    return null;
+  }
+  return yWord && xWord
+    ? `${prefix}-${yWord}-${xWord}`
+    : `${prefix}-${yWord || xWord}`;
+};
+
+/**
+ * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
+ * — picked for any real anchor, or for a point/corner placed dead-center
+ * (both positionArea axes overlapping — there's no sensible direction to
+ * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
+ * for any no-anchor/docked case (Dialog always, Popover's own custom
+ * renderer when there's no real anchor), so this collapses to "scaling"
+ * there only for the dead-center case, "sliding" otherwise. The two
+ * "overlapping" booleans below describe the *positionArea* itself (a bare
+ * word vs. "aligned-"/"center"), not anything about the anchor — they'd
+ * mean exactly the same thing even with no anchor at all, since it's the
+ * position strategy, not the anchor, that decides whether there's a
+ * direction to slide from.
+ */
+export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
+  const yIsOverlapping =
+    parsedPositionArea.y !== "above" && parsedPositionArea.y !== "below";
+  const xIsOverlapping =
+    parsedPositionArea.x !== "on-the-left" &&
+    parsedPositionArea.x !== "on-the-right";
+  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
+};
