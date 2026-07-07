@@ -780,6 +780,7 @@ const POPOVER_PSEUDO_CLASSES = [
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   maxWidth: "--popover-max-width",
+  maxHeight: "--popover-max-height",
 };
 
 /**
