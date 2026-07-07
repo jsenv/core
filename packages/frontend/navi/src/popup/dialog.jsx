@@ -72,15 +72,16 @@
  * layer's own "later insertion stacks above" rule puts the real dialog
  * above it. The native `::backdrop` a modal `<dialog>` still gets for free
  * either way is deliberately left `background: transparent; pointer-events:
- * none;` — inert and invisible, so every click (including ones that would
- * otherwise land on it) falls through to the real backdrop underneath
- * instead. This is what makes outside-click detection reliable *throughout*
- * the entire open lifetime, transition included: unlike the native
- * `::backdrop` (whose clicks are dispatched with `target === dialogEl`, so
- * `suppressPointerEventsDuringTransition`'s own `dialogEl.style.pointerEvents
- * = "none"` mid-transition made them briefly undetectable), the real
- * backdrop is a fully separate element `dialogEl`'s own pointer-events never
- * touches — no transition-specific workaround needed at all.
+ * none;` — inert and invisible, so a click that would otherwise land on it
+ * falls through to the real backdrop underneath instead, whose own
+ * `onMouseDown` isn't affected by `suppressPointerEventsDuringTransition`'s
+ * `dialogEl.style.pointerEvents = "none"` mid-transition (a fully separate
+ * element, unlike the native `::backdrop` itself, whose clicks are
+ * dispatched with `target === dialogEl`). `DialogAsModal`'s own
+ * `contentProps.onMouseDown` (the older, target/coordinate-based check) is
+ * kept anyway, alongside the new backdrop-based one, as a defense-in-depth
+ * fallback for whatever the native `::backdrop`'s own `pointer-events: none`
+ * doesn't reliably suppress once `dialogEl`'s own is back to `"auto"`.
  *
  * `DialogLocal` wraps its own dialog element in a `.navi_dialog_clip_wrapper`
  * (mirroring Popover's `.navi_popover_clip_wrapper` — see popover.jsx's own
@@ -246,6 +247,8 @@ const css = /* css */ `
       inset: 0;
       width: auto;
       height: auto;
+      margin: 0;
+      padding: 0;
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
@@ -787,6 +790,43 @@ const useDialogProps = (props) => {
     // this hook's own destructuring comment for why the two collapse to
     // the same behavior for Dialog.
   };
+
+  if (isModal) {
+    // Defense in depth, isModal only: once dialogEl's own pointer-events
+    // is restored to "auto" (post-transition), the native ::backdrop
+    // resumes intercepting clicks too (its own CSS pointer-events: none
+    // doesn't reliably stick once dialogEl's own is back to normal) —
+    // dispatched with target === dialogEl, same as before the real
+    // backdrop existed. Kept alongside backdropProps.onMouseDown above
+    // (not instead of it) so outside clicks are still caught during the
+    // brief window the real backdrop is what actually receives them
+    // (dialogEl still suppressed) as well as afterward.
+    contentProps.onMouseDown = (e) => {
+      rest.onMouseDown?.(e);
+      if (pointerInteractionOutsideEffect !== "close") {
+        return;
+      }
+      if (e.button !== 0) {
+        return;
+      }
+      // Detect backdrop click: the click must land outside the dialog's
+      // bounding rect. Checking coordinates is necessary because clicking
+      // on the dialog's own padding also sets e.target === ref.current.
+      if (e.target !== ref.current) {
+        return;
+      }
+      const rect = ref.current.getBoundingClientRect();
+      const isOutside =
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom;
+      if (!isOutside) {
+        return;
+      }
+      openController.requestClose(e, { isCancel: true });
+    };
+  }
 
   return [backdropProps, contentProps];
 };
