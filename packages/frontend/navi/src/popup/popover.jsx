@@ -131,7 +131,6 @@ const css = /* css */ `
       var(--space-available, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
-    border-radius: var(--popup-border-radius, 0);
 
     /* Neither anchorReference case has a real anchor to stay in
        scroll-lockstep with: anchor="viewport" is meant to stay pinned to the
@@ -780,7 +779,7 @@ const POPOVER_PSEUDO_CLASSES = [
 // handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
-  borderRadius: "--popup-border-radius",
+  maxWidth: "--popover-max-width",
 };
 
 /**

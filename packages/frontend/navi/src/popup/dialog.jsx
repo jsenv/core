@@ -28,7 +28,31 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 
 const css = /* css */ `
+  @layer navi {
+    .navi_dialog {
+      /* min gap between dialog edges and viewport */
+      /* not named margin because it's not implemented with margins (which are needed for centering) */
+      --dialog-viewport-spacing: 3dvw;
+
+      --dialog-maxmax-width: calc(
+        var(--navi-vvw) - 2 * var(--dialog-viewport-spacing)
+      );
+      --dialog-maxmax-height: calc(
+        var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
+      );
+    }
+  }
+
   .navi_dialog {
+    min-width: var(--anchor-width, 0px);
+    max-width: min(
+      var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
+      var(--picker-dialog-maxmax-width)
+    );
+    max-height: min(
+      var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
+      var(--picker-dialog-maxmax-height)
+    );
     /* When centerInVisualViewport is enabled, --dialog-top-inset is set
          dynamically to keep the dialog centered in the visual viewport
          (accounts for the virtual keyboard on mobile). */

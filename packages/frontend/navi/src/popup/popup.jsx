@@ -1,6 +1,7 @@
 import { useRef } from "preact/hooks";
 
 import { windowWidthSignal } from "../layout/responsive.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 
@@ -19,80 +20,36 @@ import { Popover } from "./popover.jsx";
  * way the picker does to hook a reset into its own onClose.
  */
 const css = /* css */ `
-  .navi_popup_popover,
-  .navi_popup_dialog {
-    padding: var(--popup-padding, 16px 20px);
-    background: var(--popup-background-color, white);
-    border-radius: var(--popup-border-radius, 10px);
-    box-shadow: var(--popup-box-shadow, 0 12px 40px rgba(0, 0, 0, 0.22));
-    cursor: default; /* reset pointer cursor within the popup */
-  }
-
-  .navi_popup_popover {
-    min-width: var(--anchor-width, 0px);
-    max-width: min(
-      var(--popup-max-width, var(--popup-popover-maxmax-width)),
-      var(--popup-popover-maxmax-width, calc(0.95 * var(--navi-vvw)))
-    );
-    /* max-height covers the whole popover; content scrolls internally */
-    max-height: min(
-      var(--popup-popover-max-height, 300px),
-      var(
-        --space-available,
-        var(--popup-popover-maxmax-height, calc(0.95 * var(--navi-vvh)))
-      ),
-      var(--popup-popover-maxmax-height, calc(0.95 * var(--navi-vvh)))
-    );
-    margin: 0;
-    border: var(--popup-border-width, 1px) solid
-      var(--popup-border-color, #d0d0d0);
-    overflow: auto;
-    overscroll-behavior: none;
-
-    &[aria-expanded="true"] {
-      display: flex;
-      flex-direction: column;
+  @layer navi {
+    .navi_popup {
+      --popup-border-radius: 0px;
+      --popup-border-width: 0px;
     }
   }
 
-  .navi_popup_dialog {
-    min-width: var(--anchor-width, 0px);
-    max-width: min(
-      var(--popup-max-width, var(--popup-dialog-maxmax-width)),
-      var(
-        --popup-dialog-maxmax-width,
-        calc(var(--navi-vvw) - 2 * var(--popup-dialog-margin, 3dvw))
-      )
-    );
-    max-height: min(
-      var(--popup-max-height, var(--popup-dialog-maxmax-height)),
-      var(
-        --popup-dialog-maxmax-height,
-        calc(var(--navi-vvh) - 2 * var(--popup-dialog-margin, 3dvw))
-      )
-    );
-    border: none;
-
-    &[data-expand-x] {
-      width: var(
-        --popup-dialog-maxmax-width,
-        calc(var(--navi-vvw) - 2 * var(--popup-dialog-margin, 3dvw))
-      );
-    }
-    &[data-expand-y] {
-      height: var(
-        --popup-dialog-maxmax-height,
-        calc(var(--navi-vvh) - 2 * var(--popup-dialog-margin, 3dvw))
-      );
+  .navi_popup {
+    &.navi_popover {
+      margin: 0;
+      border-width: var(--popup-border-width);
+      border-color: var(--popup-border-color);
+      border-radius: var(--popup-border-radius);
+      overflow: auto;
+      overscroll-behavior: none;
     }
 
-    &[open] {
-      display: flex;
-      flex-direction: column;
-    }
+    &.navi_dialog {
+      --popup-border-width: 0px;
 
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
+      border-width: var(--popup-border-width);
+      border-color: var(--popup-border-color);
+      border-radius: var(--popup-border-radius);
+
+      &[data-expand-x] {
+        width: var(--dialog-maxmax-width);
+      }
+      &[data-expand-y] {
+        height: var(--dialog-maxmax-height);
+      }
     }
   }
 `;
@@ -106,7 +63,6 @@ export const Popup = (props) => {
     expandX,
     expandY,
     className,
-    style,
     children,
     ...rest
   } = props;
@@ -121,25 +77,13 @@ export const Popup = (props) => {
   }
   const mode = defaultModeRef.current;
 
-  const mergedStyle =
-    maxWidth === undefined
-      ? style
-      : {
-          ...style,
-          "--popup-max-width":
-            typeof maxWidth === "number" ? `${maxWidth}px` : maxWidth,
-        };
-
   if (mode === "dialog") {
     const expandXResolved = expand || expandX;
     const expandYResolved = expand || expandY;
     return (
       <Dialog
         {...rest}
-        className={
-          className ? `navi_popup_dialog ${className}` : "navi_popup_dialog"
-        }
-        style={mergedStyle}
+        className={withPropsClassName("navi_popup", className)}
         centerInVisualViewport
         data-expand-x={expandXResolved ? "" : undefined}
         data-expand-y={expandYResolved ? "" : undefined}
@@ -149,13 +93,7 @@ export const Popup = (props) => {
     );
   }
   return (
-    <Popover
-      {...rest}
-      className={
-        className ? `navi_popup_popover ${className}` : "navi_popup_popover"
-      }
-      style={mergedStyle}
-    >
+    <Popover {...rest} className={withPropsClassName("navi_popup", className)}>
       {children}
     </Popover>
   );
