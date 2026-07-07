@@ -40,6 +40,35 @@
         flex-wrap: wrap;
         gap: 12px;
       }
+      .demo-position-grid {
+        /* Same visual idea as popover_demo.html's own .demo-area-grid — a
+           single row here since Dialog's own positionArea vocabulary is a
+           flat list of 5 values, not a combinable Y×X grid the way
+           Popover's is. */
+        display: grid;
+        width: fit-content;
+        margin-top: 8px;
+        padding: 8px;
+        grid-template-columns: repeat(5, 100px);
+        gap: 2px;
+        border: 1px solid #999;
+      }
+      .demo-position-cell {
+        display: flex;
+        border: 1px solid #ccc;
+      }
+      .demo-position-button {
+        display: flex;
+        width: 100%;
+        height: 48px;
+        padding: 2px;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        text-align: center;
+        line-height: 1.2;
+        white-space: normal;
+      }
       .demo-lazy-mount {
         /* Fixed footprint, kept identical whether showing the placeholder
            or the actually-rendered content — swapping between them (on
@@ -174,9 +203,10 @@
       };
 
       // "none" maps to no `animation` prop at all. "sliding" isn't offered
-      // here — a dialog is always centered, with no anchor to auto-resolve a
-      // direction from, so sliding only makes sense as an explicit
-      // slide-from-* value (see its own dedicated section below).
+      // here — a dialog has no anchor to auto-resolve a direction from, so
+      // sliding only makes sense as an explicit slide-from-* value, which
+      // isn't exercised by this demo (each Position subsection's own
+      // animate controls cover the kinds that matter there).
       const ANIMATION_CHOICES = ["none", "auto", "fading", "scaling"];
 
       const useAnimateControls = (storageKey) => {
@@ -226,26 +256,6 @@
         </div>
       );
 
-      // Just the "Slow" half of the controls above, for sections where the
-      // animation kind itself is fixed per button (sliding's own explicit
-      // directions) rather than picked from a dropdown.
-      const useSlowToggle = (storageKey) => {
-        const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
-        return {
-          animationDuration: slow ? "0.6s" : undefined,
-          toggle: (
-            <label class="demo-animate-toggle">
-              <input
-                type="checkbox"
-                checked={slow}
-                onChange={(e) => setSlow(e.target.checked)}
-              />
-              Slow
-            </label>
-          ),
-        };
-      };
-
       // No openController here: without one, Dialog creates its own and
       // self-wires to --navi-toggle/--navi-close commands.
       const TriggeredDialog = ({
@@ -275,74 +285,12 @@
         );
       };
 
-      const AnimationSection = () => {
-        const { animation, animationDuration, controlsProps } =
-          useAnimateControls("dialog_demo_animation");
-        return (
-          <section id="animation" class="demo-section">
-            <h2>4. Animation</h2>
-            <p>
-              <code>animation</code> or <code>animation="auto"</code> resolves
-              to <code>"scaling"</code> — a dialog has no anchor to grow out of
-              or slide from, so scaling (from its own center) is the auto
-              default, same conclusion as Popover's own dead-center case.
-            </p>
-            <div class="demo-row">
-              <TriggeredDialog
-                label="animated"
-                animation={animation}
-                animationDuration={animationDuration}
-              />
-            </div>
-            <AnimateControls {...controlsProps} />
-          </section>
-        );
-      };
-
-      const SlidingSection = () => {
-        const { animationDuration, toggle } = useSlowToggle(
-          "dialog_demo_sliding",
-        );
-        return (
-          <section id="sliding" class="demo-section">
-            <h2>5. sliding</h2>
-            <p>
-              Explicit direction only — a dialog is always centered, with no
-              anchor to auto-resolve a direction from.
-            </p>
-            <div class="demo-row">
-              <TriggeredDialog
-                label="slide-from-top"
-                animation="slide-from-top"
-                animationDuration={animationDuration}
-              />
-              <TriggeredDialog
-                label="slide-from-bottom"
-                animation="slide-from-bottom"
-                animationDuration={animationDuration}
-              />
-              <TriggeredDialog
-                label="slide-from-left"
-                animation="slide-from-left"
-                animationDuration={animationDuration}
-              />
-              <TriggeredDialog
-                label="slide-from-right"
-                animation="slide-from-right"
-                animationDuration={animationDuration}
-              />
-            </div>
-            {toggle}
-          </section>
-        );
-      };
-
       const PointerInteractionOutsideSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_pointer_interaction_outside");
         return (
           <section id="pointer-interaction-outside" class="demo-section">
-            <h2>6. pointerInteractionOutsideEffect</h2>
+            <h2>4. pointerInteractionOutsideEffect</h2>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
               <code>"capture"</code>/<code>"none"</code> both just absorb it —
@@ -416,7 +364,7 @@
 
       const OpenFromStartSection = () => (
         <section id="open-from-start" class="demo-section">
-          <h2>7. Open from the start</h2>
+          <h2>5. Open from the start</h2>
           <p>
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
@@ -470,7 +418,7 @@
       // No fixed size on the dialog itself (see .demo_dialog_flex_box) —
       // each button below opens the same dialog with a different amount of
       // content, small to large enough to exceed the viewport, to see how
-      // Dialog's default (always-centered) sizing copes.
+      // Dialog's default (centered) sizing copes.
       const ContentSizeDialog = ({
         label,
         content,
@@ -541,9 +489,10 @@
           <section id="content-size" class="demo-section">
             <h2>2. Content dimensions</h2>
             <p>
-              Dialog has no fixed size of its own either — always centered, it
-              sizes to whatever's inside it, from a short line of text to
-              content that exceeds the viewport.
+              Dialog has no fixed size of its own either — centered by default,
+              it sizes to whatever's inside it, from a short line of text to
+              content that exceeds the viewport (see "Position" below for other
+              placements).
             </p>
             <div class="demo-row">
               <ContentSizeDialog
@@ -623,43 +572,68 @@
         "on-the-right",
       ];
 
-      const PositionDialog = ({ label, positionArea, layer }) => {
+      // The button itself is the grid cell's own content — the Dialog
+      // (fixed/absolute either way) isn't a grid participant visually, only
+      // rendered alongside it so each cell owns its own dialog instance.
+      const PositionDialog = ({
+        label,
+        positionArea,
+        layer,
+        animation,
+        animationDuration,
+      }) => {
         const dialogId = useId();
         return (
-          <>
-            <Button command="--navi-toggle" commandFor={dialogId}>
+          <div class="demo-position-cell">
+            <Button
+              command="--navi-toggle"
+              commandFor={dialogId}
+              className="demo-position-button"
+            >
               {label}
             </Button>
             <Dialog
               id={dialogId}
               layer={layer}
               positionArea={positionArea}
+              animation={animation}
+              animationDuration={animationDuration}
               className="demo_dialog_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
               <Button command="--navi-close">Close</Button>
             </Dialog>
-          </>
+          </div>
         );
       };
 
       // layer="top" (default) — the browser's own top layer, so no
       // container needed at all: each button just opens the same dialog
-      // docked to (or centered in) the whole viewport.
-      const TopLayerPositionSection = () => (
-        <div id="position-top-layer" class="demo-subsection">
-          <h3>3.1 top layer</h3>
-          <div class="demo-row">
-            {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
-              <PositionDialog
-                key={positionArea}
-                label={positionArea}
-                positionArea={positionArea}
-              />
-            ))}
+      // docked to (or centered in) the whole viewport. Grid layout (a
+      // single row, since positionArea is a flat 5-value list, not a
+      // combinable Y×X grid the way Popover's is) purely for visual parity
+      // with Popover's own AreaGrid — same 5 values either way.
+      const TopLayerPositionSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_position_top_layer");
+        return (
+          <div id="position-top-layer" class="demo-subsection">
+            <h3>3.1 top layer</h3>
+            <div class="demo-position-grid">
+              {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
+                <PositionDialog
+                  key={positionArea}
+                  label={positionArea}
+                  positionArea={positionArea}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                />
+              ))}
+            </div>
+            <AnimateControls {...controlsProps} />
           </div>
-        </div>
-      );
+        );
+      };
 
       // layer="local" needs the dialogs rendered *inside* the positioned
       // container to find it (DialogCustom, a plain in-flow div — see
@@ -668,6 +642,8 @@
       // popover_demo.html's own "local layer" subsection).
       const LocalLayerPositionSection = () => {
         const baseId = useId();
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_position_local_layer");
         return (
           <div id="position-local-layer" class="demo-subsection">
             <h3>3.2 local layer</h3>
@@ -688,6 +664,8 @@
                   id={`${baseId}-${positionArea}`}
                   layer="local"
                   positionArea={positionArea}
+                  animation={animation}
+                  animationDuration={animationDuration}
                   className="demo_dialog_box"
                 >
                   <p style={{ marginTop: 0 }}>{positionArea}</p>
@@ -695,17 +673,19 @@
                 </Dialog>
               ))}
             </div>
-            <div class="demo-row">
+            <div class="demo-position-grid">
               {DIALOG_POSITION_AREA_VALUES.map((positionArea) => (
                 <Button
                   key={positionArea}
                   command="--navi-toggle"
                   commandFor={`${baseId}-${positionArea}`}
+                  className="demo-position-button"
                 >
                   {positionArea}
                 </Button>
               ))}
             </div>
+            <AnimateControls {...controlsProps} />
           </div>
         );
       };
@@ -746,12 +726,6 @@
               </ol>
             </li>
             <li>
-              <a href="#animation">Animation</a>
-            </li>
-            <li>
-              <a href="#sliding">sliding</a>
-            </li>
-            <li>
               <a href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
               </a>
@@ -772,8 +746,6 @@
           <ControlledByButtonSection />
           <ContentSizeSection />
           <PositionSection />
-          <AnimationSection />
-          <SlidingSection />
           <PointerInteractionOutsideSection />
           <OpenFromStartSection />
         </div>
