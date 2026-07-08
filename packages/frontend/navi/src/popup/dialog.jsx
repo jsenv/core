@@ -511,11 +511,15 @@ const useDialogProps = (props) => {
       // (see UncontrolledDialog's onnavi_request_open).
       anchor = e.detail.anchor;
     }
-    const effectiveAnchor = anchor || document.documentElement;
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    const { width, height } = effectiveAnchor.getBoundingClientRect();
-    dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-    dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+    if (anchor) {
+      const { width, height } = anchor.getBoundingClientRect();
+      dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+      dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+    } else {
+      dialogEl.style.removeProperty("--anchor-width");
+      dialogEl.style.removeProperty("--anchor-height");
+    }
     if (resolvedAnimation) {
       dialogEl.setAttribute("navi-animation", resolvedAnimation);
       backdropEl?.setAttribute("navi-animation", resolvedAnimation);

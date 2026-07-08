@@ -382,7 +382,10 @@
             already open — animation is on for both below, but it should never
             actually play on mount, only on a later close/reopen. Click "Render"
             below to actually mount each one (rather than forcing it open on
-            every page load).
+            every page load). Neither has a real anchor (nothing triggered the
+            open, so there's no button to inherit one from) — regression
+            coverage for both staying their own natural width instead of
+            stretching to the viewport's.
           </p>
           <div class="demo-row">
             <LazyMount
@@ -493,6 +496,44 @@
         );
       };
 
+      // The triggering button doubles as the dialog's own anchor by default
+      // (no anchor prop set — see dialog.jsx's own openEffect), so a very
+      // wide button forces --anchor-width (and therefore .navi_dialog's own
+      // min-width) up accordingly. Regression coverage for two related
+      // fixes: min-width must never push the dialog's real, padding-
+      // included footprint past --dialog-maxmax-width (box-sizing:
+      // border-box), and an *anchorless* dialog (see "5. Open from the
+      // start" below) must not fall back to stretching to the viewport's
+      // own width/height instead of having no anchor-driven minimum at all.
+      const WideAnchorDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={dialogId}
+              style={{ width: "90vw", maxWidth: "900px" }}
+            >
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>
+                This dialog's own <code>min-width</code> is forced up by its
+                (very wide) anchor button above — should still never exceed the
+                viewport's own spacing, <code>demo_dialog_box</code>'s own
+                padding included.
+              </p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
       const ContentSizeSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_content_size");
@@ -552,6 +593,11 @@
                     ))}
                   </>
                 }
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <WideAnchorDialog
+                label="wide anchor"
                 animation={animation}
                 animationDuration={animationDuration}
               />
