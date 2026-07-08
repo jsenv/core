@@ -295,7 +295,7 @@ export const SidePanel = ({
           className="navi_side_panel_close_button"
           aria-label="Close panel"
           command="--navi-close"
-          navi-autofocus="fallback"
+          autoFocus="fallback"
         >
           ×
         </Button>
