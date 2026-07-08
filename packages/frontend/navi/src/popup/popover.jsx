@@ -352,6 +352,7 @@ const css = /* css */ `
        rules, it's always the base "position: absolute" above. */
     &[popover] {
       position: fixed;
+      padding: 0;
     }
     &[popover][data-anchor] {
       position: absolute;
@@ -366,6 +367,10 @@ const css = /* css */ `
   /* Sibling element, not a descendant of .navi_popover — see this file's
      top comment for why. */
   .navi_popover_backdrop {
+    --popup-animation-duration: 0.18s;
+
+    position: absolute;
+    inset: 0;
     margin: 0;
     padding: 0;
     background: transparent;
@@ -377,7 +382,6 @@ const css = /* css */ `
        the content itself (.navi_popover, via suppressPointerEventsDuringTransition
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
-    --popup-animation-duration: 0.18s;
 
     /* The via-attribute renderer's backdrop: a top-layer sibling, so it
        needs to cover the whole viewport itself (width/height: auto
@@ -387,13 +391,6 @@ const css = /* css */ `
       inset: 0;
       width: auto;
       height: auto;
-    }
-    /* The custom renderer's backdrop: a plain sibling confined to the same
-       positioned ancestor as its popover (see this file's top comment) —
-       inset: 0 within that ancestor, not the viewport. */
-    &:not([popover]) {
-      position: absolute;
-      inset: 0;
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
