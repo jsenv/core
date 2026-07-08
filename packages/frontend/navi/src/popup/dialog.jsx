@@ -112,6 +112,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
 import { onRequestInteraction } from "../control/rules/control_interaction.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import {
@@ -396,9 +397,6 @@ const useDialogProps = (props) => {
   const contentProps = {};
   const {
     openController,
-    // Only ever affects --anchor-width/--anchor-height (see this file's top
-    // comment) — Dialog's own positioning is never relative to it.
-    anchor: anchorProp,
     // "top" (default) → real <dialog>, showModal(), the browser's own top
     // layer. "local" → also a real <dialog>, but shown via the non-modal
     // .show() instead, staying in normal document flow, position: absolute
@@ -407,8 +405,7 @@ const useDialogProps = (props) => {
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea = "center",
-    children,
-    scrollCapture,
+    marginWithContainer = 0,
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -416,7 +413,11 @@ const useDialogProps = (props) => {
     // there's no native inert-ing, so the real backdrop below is what
     // actually makes "capture"/"none" behave the same way here too.
     pointerInteractionOutsideEffect = "close",
+    scrollCapture,
     animation,
+    // Only ever affects --anchor-width/--anchor-height (see this file's top
+    // comment) — Dialog's own positioning is never relative to it.
+    anchor,
     // Makes the dialog itself a valid focus target so autoFocus="fallback"
     // below has somewhere to land when it contains nothing focusable of its
     // own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -426,6 +427,7 @@ const useDialogProps = (props) => {
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "fallback",
+    children,
     ...rest
   } = props;
   const isModal = layer === "top";
@@ -510,23 +512,23 @@ const useDialogProps = (props) => {
         );
 
     const [cleanup, addCleanup] = createPubSub(true);
-    let anchor;
-    if (typeof anchorProp === "string") {
+    let anchorElement;
+    if (typeof anchor === "string") {
       console.warn(
-        `Dialog: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`,
+        `Dialog: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`,
       );
-    } else if (anchorProp) {
+    } else if (anchor) {
       // anchor prop is a ref or a DOM element
-      anchor = anchorProp.current ?? anchorProp;
+      anchorElement = anchor.current ?? anchor;
     } else if (e.detail.anchor) {
       // e.g. the button that triggered a --navi-toggle/--navi-open command,
       // already resolved from detail.anchor/detail.source by the caller
       // (see UncontrolledDialog's onnavi_request_open).
-      anchor = e.detail.anchor;
+      anchorElement = e.detail.anchor;
     }
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    if (anchor) {
-      const { width, height } = anchor.getBoundingClientRect();
+    if (anchorElement) {
+      const { width, height } = anchorElement.getBoundingClientRect();
       dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
       dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
     } else {
@@ -603,6 +605,7 @@ const useDialogProps = (props) => {
         positionX: parsedPositionArea.x,
         positionY: parsedPositionArea.y,
         container: isModal ? undefined : positionedAncestor,
+        marginWithContainer: resolveSpacingSize(marginWithContainer),
       });
       dialogEl.style.left = `${left}px`;
       dialogEl.style.top = `${top}px`;

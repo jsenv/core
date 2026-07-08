@@ -527,28 +527,23 @@ const usePopoverProps = (props) => {
   const contentProps = {};
   const {
     openController,
-    anchor: anchorProp,
     // "top" (default) → via-attribute, in the browser's own top layer;
     // "local" → custom, resolved to the popover's own positioned ancestor.
     // Picks the rendering strategy directly — not an "anchor fallback", see
     // this file's top comment for why that distinction matters. Independent
     // of anchorProp — a real anchor works with either renderer.
     layer = "top",
-    // "override" (default) lets the triggering event's own carried anchor
-    // serve as the real anchor when anchorProp itself is absent; "ignore"
-    // skips that fallback. Applies to either renderer — see this file's
-    // top comment.
-    anchorCustomEventDetail = "override",
     // see the positionArea grammar in the file's top comment
     positionArea = "below",
     positionAreaFixed,
-    scrollCapture,
+    marginWithContainer = 0,
     pointerInteractionOutsideEffect = "none",
+    scrollCapture,
     focusCapture,
     animation,
-    children,
+    anchor,
+    anchorCustomEventDetail = "override",
     marginWithAnchor = 0,
-    marginWithContainer = 0,
     // Makes the popover itself a valid focus target so autoFocus="fallback"
     // below has somewhere to land when it contains nothing focusable of its
     // own — -1 keeps it out of the normal Tab order (it's only ever reached
@@ -558,6 +553,7 @@ const usePopoverProps = (props) => {
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "fallback",
+    children,
     ...rest
   } = props;
   const isTopLayer = layer === "top";
@@ -631,26 +627,23 @@ const usePopoverProps = (props) => {
     // deliberate choice, not something to infer from whatever happened to
     // trigger the open. Inlined rather than a standalone function since it
     // only has this one call site.
-    let anchor;
-    if (typeof anchorProp === "string") {
+    let anchorElement;
+    if (typeof anchor === "string") {
       // A plain string is a near-certain leftover from an older API
       // (anchor used to accept "viewport"/"scrollContainer" directly) —
       // anchor is a ref or a DOM element only now; layer/
       // anchorCustomEventDetail cover what those strings used to mean.
       console.warn(
-        `Popover: anchor="${anchorProp}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
+        `Popover: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
       );
-      anchor = undefined;
-    } else if (anchorProp) {
+    } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
       // regardless of anchorCustomEventDetail.
-      anchor = anchorProp.current ?? anchorProp;
+      anchorElement = anchor.current ?? anchor;
     } else if (anchorCustomEventDetail === "override") {
-      anchor = e.detail.anchor;
-    } else {
-      anchor = undefined;
+      anchorElement = e.detail.anchor;
     }
-    const hasAnchorElement = Boolean(anchor);
+    const hasAnchorElement = Boolean(anchorElement);
     const positionedAncestor = isTopLayer
       ? null
       : getPositionedParent(popoverEl);
@@ -670,7 +663,7 @@ const usePopoverProps = (props) => {
         positionArea,
         isAutoAnimation,
         animation,
-        animationAnchor: anchor,
+        animationAnchor: anchorElement,
       });
 
     // Suppressed until the popover is actually measured/positioned below —
@@ -742,7 +735,7 @@ const usePopoverProps = (props) => {
     // positioned ancestor for the custom renderer, the document for
     // via-attribute.
     const effectiveAnchor = hasAnchorElement
-      ? anchor
+      ? anchorElement
       : isTopLayer
         ? document.documentElement
         : positionedAncestor;
@@ -752,13 +745,13 @@ const usePopoverProps = (props) => {
       let top;
 
       if (hasAnchorElement) {
-        const { width, height } = anchor.getBoundingClientRect();
+        const { width, height } = anchorElement.getBoundingClientRect();
         const {
           left: borderLeft,
           right: borderRight,
           top: borderTop,
           bottom: borderBottom,
-        } = getBorderSizes(anchor);
+        } = getBorderSizes(anchorElement);
         popoverEl.style.setProperty(
           "--anchor-width",
           `${snapToPixel(width)}px`,
@@ -799,7 +792,7 @@ const usePopoverProps = (props) => {
           positionY: pickedPositionY,
           spaceAbove,
           spaceBelow,
-        } = pickPositionRelativeTo(popoverEl, anchor, {
+        } = pickPositionRelativeTo(popoverEl, anchorElement, {
           positionX: parsedPositionArea.x,
           positionY: parsedPositionArea.y,
           positionXFixed: effectivePositionXFixed,
@@ -980,7 +973,7 @@ const usePopoverProps = (props) => {
     debugPopup(
       e,
       isTopLayer
-        ? `openPopover() -> anchor: ${anchor?.tagName}, hasAnchorElement: ${hasAnchorElement}`
+        ? `openPopover() -> anchor: ${anchorElement?.tagName}, hasAnchorElement: ${hasAnchorElement}`
         : `openPopover() -> scroll-container (local)`,
     );
 
