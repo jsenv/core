@@ -22,6 +22,9 @@ const css = /* css */ `
        container width, overriding \`width\`/\`height\` below entirely. Popover
        ignores this var. */
     --anchor-width: 0px;
+    /* Side panel create a barriere with the content that is full size */
+    /* So by default they don't have border-radius */
+    --popup-border-radius: 0px;
 
     /* Content-sized by default (each custom property is unset unless the
        matching \`width\`/\`height\` prop is passed, and var() falls back to
@@ -149,19 +152,6 @@ const css = /* css */ `
       &:hover {
         color: #212529;
         background: #f0f0f0;
-      }
-    }
-    /* Kept near (not touching) whichever edge the panel is flush against. */
-    &[navi-side="left"] {
-      .navi_side_panel_close_button {
-        right: auto;
-        left: 12px;
-      }
-    }
-    &[navi-side="bottom"] {
-      .navi_side_panel_close_button {
-        top: auto;
-        bottom: 12px;
       }
     }
   }
