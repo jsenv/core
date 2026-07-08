@@ -37,8 +37,21 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId, useState } from "preact/hooks";
+      import { useEffect, useId, useState } from "preact/hooks";
       import { Button, SidePanel } from "@jsenv/navi";
+
+      // Same pattern as dialog_demo.html/popover_demo.html: persisted so the
+      // choice survives a page reload while testing.
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
 
       const PanelContent = () => {
         const [innerCount, setInnerCount] = useState(0);
@@ -86,14 +99,14 @@
 
       // Purely command-driven — no isOpen/open/onClose at all, mirroring
       // Dialog/Popover's own uncontrolled id + --navi-toggle pattern.
-      const CommandDrivenPanelDemo = () => {
+      const CommandDrivenPanelDemo = ({ animation }) => {
         const panelId = useId();
         return (
           <>
             <Button command="--navi-toggle" commandFor={panelId}>
               Toggle side panel
             </Button>
-            <SidePanel id={panelId}>
+            <SidePanel id={panelId} animation={animation}>
               <PanelContent />
             </SidePanel>
           </>
@@ -103,7 +116,7 @@
       // layer="local" docks the panel against .demo-container below instead
       // of the viewport — confined to (and clipped by) it, at 100% of its
       // own height, rather than taking over the whole screen.
-      const LocalContainerPanelDemo = () => {
+      const LocalContainerPanelDemo = ({ animation }) => {
         const panelId = useId();
         return (
           <div class="demo-container">
@@ -113,10 +126,23 @@
             <Button command="--navi-toggle" commandFor={panelId}>
               Toggle local panel
             </Button>
-            <SidePanel id={panelId} layer="local">
+            <SidePanel id={panelId} layer="local" animation={animation}>
               <PanelContent />
             </SidePanel>
           </div>
+        );
+      };
+
+      // Mounted lazily (only once "Render" is clicked) so defaultOpen's
+      // no-entrance-animation guarantee is actually observable — mounting
+      // it unconditionally at page load would show it already-open before
+      // there's anything to compare against.
+      const LazyMount = ({ label, renderContent }) => {
+        const [mounted, setMounted] = useState(false);
+        return mounted ? (
+          renderContent()
+        ) : (
+          <Button onClick={() => setMounted(true)}>{label}</Button>
         );
       };
 
@@ -128,10 +154,25 @@
         const [isOpenTall, setIsOpenTall] = useState(false);
         const [isOpenLeft, setIsOpenLeft] = useState(false);
         const [isOpenTop, setIsOpenTop] = useState(false);
+        const [animationEnabled, setAnimationEnabled] = useStoredBoolean(
+          "side_panel_demo_animation",
+          false,
+        );
 
         return (
           <div>
             <h1>SidePanel demos</h1>
+
+            <div class="demo-section">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={animationEnabled}
+                  onChange={(e) => setAnimationEnabled(e.target.checked)}
+                />
+                Enable animations (applies to every panel below)
+              </label>
+            </div>
 
             <div class="demo-section">
               <span>Parent render counter: {parentCount}</span>
@@ -153,7 +194,11 @@
                 capped by the popup's own max-width).
               </p>
               <button onClick={() => setIsOpen(true)}>Open side panel</button>
-              <SidePanel isOpen={isOpen} onClose={() => setIsOpen(false)}>
+              <SidePanel
+                isOpen={isOpen}
+                onClose={() => setIsOpen(false)}
+                animation={animationEnabled}
+              >
                 <PanelContent />
               </SidePanel>
             </div>
@@ -170,6 +215,7 @@
                 onClose={() => setIsOpenWide(false)}
                 size={400}
                 minSize={250}
+                animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
@@ -182,7 +228,26 @@
                 panel — same declarative, id-driven pattern as
                 `Dialog`/`Popover` themselves, no controlled state needed.
               </p>
-              <CommandDrivenPanelDemo />
+              <CommandDrivenPanelDemo animation={animationEnabled} />
+            </div>
+
+            <div class="demo-section">
+              <h3>Open at start (defaultOpen)</h3>
+              <p>
+                Click "Render" to actually mount the panel (rather than forcing
+                it open on every page load) — it appears already open, with no
+                entrance animation even when animations are enabled above:
+                nothing was ever shown as "closed" for the user to see it
+                transition away from.
+              </p>
+              <LazyMount
+                label="Render"
+                renderContent={() => (
+                  <SidePanel defaultOpen animation={animationEnabled}>
+                    <PanelContent />
+                  </SidePanel>
+                )}
+              />
             </div>
 
             <div class="demo-section">
@@ -194,6 +259,7 @@
                 isOpen={isOpenClickOutside}
                 onClose={() => setIsOpenClickOutside(false)}
                 closeOnClickOutside
+                animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
@@ -207,37 +273,36 @@
               <SidePanel
                 isOpen={isOpenTall}
                 onClose={() => setIsOpenTall(false)}
+                animation={animationEnabled}
               >
                 <TallPanelContent />
               </SidePanel>
             </div>
 
             <div class="demo-section">
-              <h3>side="left", animated (slide-from-left)</h3>
+              <h3>Left panel</h3>
               <button onClick={() => setIsOpenLeft(true)}>
-                Open panel from the left
+                Open left panel
               </button>
               <SidePanel
                 isOpen={isOpenLeft}
                 onClose={() => setIsOpenLeft(false)}
                 side="left"
-                animation
+                animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
             </div>
 
             <div class="demo-section">
-              <h3>side="top", animated (slide-from-top)</h3>
-              <button onClick={() => setIsOpenTop(true)}>
-                Open panel from the top
-              </button>
+              <h3>Top panel</h3>
+              <button onClick={() => setIsOpenTop(true)}>Open top panel</button>
               <SidePanel
                 isOpen={isOpenTop}
                 onClose={() => setIsOpenTop(false)}
                 side="top"
                 size={220}
-                animation
+                animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
@@ -250,7 +315,7 @@
                 below instead of the viewport — 100% of *its* height, not the
                 screen's.
               </p>
-              <LocalContainerPanelDemo />
+              <LocalContainerPanelDemo animation={animationEnabled} />
             </div>
           </div>
         );

@@ -82,6 +82,15 @@
 - See `packages/frontend/navi/src/control/list/list.jsx` for a `@type`-only reference example
 - See `packages/frontend/navi/src/text/text.jsx` for a combined `@type` + `@param` example
 
+#### Top-level file comments
+
+A file's own top-of-file comment has exactly two jobs:
+
+1. **Orient a first-time reader**: give whoever just opened this file (a newcomer, the author back after a few days away, an AI with no memory of the conversation that wrote it) a quick overall picture of what the file does and how it's organized.
+2. **Justify surprising technical choices**: explain *why* a non-obvious decision was made, and warn about approaches that were tried and specifically must not be reintroduced.
+
+Nothing else belongs there. Other sources already cover everything else — the top-level comment must not restate what they say: the code itself (well-named functions/variables), inline comments (the *why* at one specific line), JSDoc (a prop's accepted values/semantics), external docs, demo files. If a paragraph in a top-level comment is really documenting a prop's grammar or "how to use this component," move it to JSDoc instead — don't duplicate it in both places. Before adding a paragraph to a top-level comment, ask: is this orientation, or a warning about a rejected approach? If neither, it belongs somewhere else (or nowhere).
+
 ### CSS
 
 - CSS-in-JS using `import.meta.css` for component styles
