@@ -195,7 +195,7 @@
               </p>
               <button onClick={() => setIsOpen(true)}>Open side panel</button>
               <SidePanel
-                isOpen={isOpen}
+                open={isOpen}
                 onClose={() => setIsOpen(false)}
                 animation={animationEnabled}
               >
@@ -209,7 +209,7 @@
                 Open wide panel
               </button>
               <SidePanel
-                isOpen={isOpenWide}
+                open={isOpenWide}
                 onClose={() => setIsOpenWide(false)}
                 size={400}
                 animation={animationEnabled}
@@ -253,7 +253,7 @@
                 Open panel (click outside to close)
               </button>
               <SidePanel
-                isOpen={isOpenClickOutside}
+                open={isOpenClickOutside}
                 onClose={() => setIsOpenClickOutside(false)}
                 closeOnClickOutside
                 animation={animationEnabled}
@@ -268,7 +268,7 @@
                 Open panel with tall content
               </button>
               <SidePanel
-                isOpen={isOpenTall}
+                open={isOpenTall}
                 onClose={() => setIsOpenTall(false)}
                 animation={animationEnabled}
               >
@@ -282,7 +282,7 @@
                 Open left panel
               </button>
               <SidePanel
-                isOpen={isOpenLeft}
+                open={isOpenLeft}
                 onClose={() => setIsOpenLeft(false)}
                 side="left"
                 animation={animationEnabled}
@@ -295,7 +295,7 @@
               <h3>Top panel</h3>
               <button onClick={() => setIsOpenTop(true)}>Open top panel</button>
               <SidePanel
-                isOpen={isOpenTop}
+                open={isOpenTop}
                 onClose={() => setIsOpenTop(false)}
                 side="top"
                 size={220}

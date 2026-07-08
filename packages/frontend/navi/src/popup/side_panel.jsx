@@ -177,14 +177,12 @@ const toCssLength = (value) =>
 /**
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
- *   `Popup`'s own `open`. `isOpen` (legacy alias, still supported) is used
- *   as a fallback when `open` isn't passed.
+ *   `Popup`'s own `open`.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
- *   open state, forwarded as-is to `Popup`. Neither this nor `open`/
- *   `isOpen` is required at all for a purely command-driven panel (an `id`
- *   plus a `<Button command="--navi-toggle" commandFor={id}>` elsewhere,
- *   same as `Dialog`/`Popover` themselves — see either's own doc).
- * @param {boolean} [props.isOpen] - Legacy alias for `open` (see above).
+ *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
+ *   required at all for a purely command-driven panel (an `id` plus a
+ *   `<Button command="--navi-toggle" commandFor={id}>` elsewhere, same as
+ *   `Dialog`/`Popover` themselves — see either's own doc).
  * @param {(event: Event) => void} [props.onClose] - Called when the panel
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
@@ -205,11 +203,12 @@ const toCssLength = (value) =>
  *   positioned DOM ancestor instead, confined to (and clipped by) it — for
  *   a drawer that only takes over part of the page rather than the whole
  *   viewport.
- * @param {boolean|"auto"|`slide-from-${string}`} [props.animation] - Off by
- *   default (unlike `Dialog`/`Popover` themselves) — SidePanel is commonly
- *   toggled instead of opened/closed as a one-off, where a slide transition
- *   is more often undesired noise than not. Pass `true`/`"auto"` (resolves
- *   to `slide-from-${side}`) or an explicit direction to opt in.
+ * @param {boolean|"fading"} [props.animation] - Off by default (unlike
+ *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
+ *   of opened/closed as a one-off, where a slide transition is more often
+ *   undesired noise than not. `true` slides in from `side`; `"fading"` is
+ *   the other common choice. Other values are forwarded as-is but not a
+ *   documented/encouraged part of this component's own API.
  * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
  *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
  *   backdrop at all, outside clicks pass straight through; in dialog mode,
@@ -231,14 +230,11 @@ const toCssLength = (value) =>
  *   always blocks interaction with the rest of the page one way or another
  *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
  *   popover's fully passive, click-through backdrop.
- * @param {string} [props.className] - Merged with the shared
- *   `"navi_side_panel"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const SidePanel = ({
   open,
   defaultOpen,
-  isOpen,
   onClose,
   children,
   side = "right",
@@ -261,13 +257,13 @@ export const SidePanel = ({
   return (
     <Popup
       mode={mode}
-      open={open ?? isOpen}
+      open={open}
       defaultOpen={defaultOpen}
       onClose={onClose}
       layer={layer}
       anchorCustomEventDetail="ignore"
       positionArea={positionArea}
-      animation={animation ? `slide-from-${side}` : undefined}
+      animation={animation === true ? `slide-from-${side}` : animation}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}
       minWidth={isHorizontalDock ? minSizeValue : undefined}
