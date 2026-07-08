@@ -297,6 +297,11 @@ const css = /* css */ `
   .navi_dialog_clip_wrapper {
     position: absolute;
     inset: 0;
+    /* Otherwise-invisible itself, but sits between the dialog and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the dialog itself (e.g. side_panel.jsx) would otherwise inherit this
+       wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
     pointer-events: none;
     overflow: hidden;
 

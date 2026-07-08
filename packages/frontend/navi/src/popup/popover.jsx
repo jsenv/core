@@ -348,6 +348,11 @@ const css = /* css */ `
   .navi_popover_clip_wrapper {
     position: absolute;
     inset: 0;
+    /* Otherwise-invisible itself, but sits between the popover and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the popover itself (e.g. side_panel.jsx) would otherwise inherit
+       this wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
     pointer-events: none;
     overflow: hidden;
 
@@ -1161,6 +1166,7 @@ const usePopoverProps = (props) => {
   Object.assign(contentProps, {
     id,
     tabIndex,
+    "data-layer": layer,
     "navi-animation": isAutoAnimation ? undefined : animation,
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,

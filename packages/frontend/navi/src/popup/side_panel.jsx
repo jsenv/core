@@ -1,37 +1,123 @@
 /**
- * A drawer docked flush to a viewport (or container) edge — built entirely
- * on top of `Popup` (which itself picks Popover vs Dialog), relying on
- * capabilities those two already have: `layer` + `anchorCustomEventDetail="ignore"`
- * + `positionArea` for the actual docking (Popover natively, Dialog via its
- * own small positionArea subset — see dialog.jsx's top comment), the shared
- * `slide-from-*` animation kind, native Escape handling, and Popover/
- * Dialog's own `onClose` prop (so this component doesn't need to own an
- * openController just to observe a self-initiated close).
- * `anchorCustomEventDetail="ignore"` matters here specifically: without it,
- * Popover would use the triggering button as a real anchor whenever one is
- * available, docking the panel next to *it* instead of flush against the
- * viewport edge — the opposite of what a side panel is for.
+ * A drawer docked flush to a viewport (or container) edge, built on top of
+ * `Popup`. Sizing, the perpendicular-axis fill, and the flush-edge
+ * border-radius are all resolved by this file's own CSS (keyed off the
+ * `navi-side`/`data-layer` attributes) rather than computed in JS — read
+ * the CSS block below instead of expecting a JS equivalent of it here.
  *
- * `animation` only applies when explicitly requested — SidePanel doesn't
- * animate by default.
- *
- * The perpendicular axis (the one *not* along `size`) is always forced to
- * fill its container, but *how* depends on `layer`: with `layer="top"`
- * (default) the container is the viewport itself, so `--navi-vvh`/
- * `--navi-vvw` (kept in sync with `window.visualViewport`, see
- * navi_css_vars.js) are used instead of a plain `100%`/`100dvh` — a plain
- * percentage there would resolve against the top layer's own initial
- * containing block (the *layout* viewport), which doesn't shrink when e.g.
- * the on-screen keyboard opens, unlike the *visible* one. With
- * `layer="local"` the container is a real DOM ancestor, so plain `100%`
- * already tracks it correctly — the popup's own default max-height/
- * max-width ceiling (meant for a centered/dropdown-sized popup) is instead
- * just removed, since that ancestor's own size is already the true limit.
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it,
+ * Popover would dock next to whatever triggered the open instead of flush
+ * against the edge, defeating the point of a side panel.
  */
 import { Button } from "../control/input/button.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
 
 const css = /* css */ `
+  .navi_side_panel {
+    /* Dialog's own \`min-width: var(--anchor-width, 0px)\` exists so a
+       dialog naturally matches whatever triggered it (picker_custom.jsx's
+       dialog mode relies on this) — SidePanel's own "anchor" is just its
+       container, so this would otherwise force min-width to the full
+       container width, overriding \`size\` below entirely. Popover ignores
+       this var. */
+    --anchor-width: 0px;
+
+    /* Docked-axis size: content-sized by default (the custom property is
+       unset unless the \`size\` prop is passed, and var() falls back to
+       "auto"), forced via \`size\` otherwise. */
+    &[navi-side="left"],
+    &[navi-side="right"] {
+      width: var(--navi-side-panel-size, auto);
+    }
+    &[navi-side="top"],
+    &[navi-side="bottom"] {
+      height: var(--navi-side-panel-size, auto);
+    }
+
+    /* layer="top": the container is the viewport itself, so the
+       perpendicular axis and the popup's own ceiling both use
+       \`--navi-vvh\`/\`--navi-vvw\` (kept in sync with window.visualViewport,
+       see navi_css_vars.js) instead of a plain 100%/100dvh, which tracks
+       the *layout* viewport instead — that doesn't shrink when e.g. the
+       on-screen keyboard opens, unlike the *visible* one. The viewport
+       itself has no border-radius to inherit, hence 0 below rather than
+       "inherit" (see layer="local" below). */
+    &[data-layer="top"] {
+      --popover-max-height: var(--navi-vvh);
+      --popover-maxmax-height: var(--navi-vvh);
+      --popover-maxmax-width: var(--navi-vvw);
+      --dialog-maxmax-height: var(--navi-vvh);
+      --dialog-maxmax-width: var(--navi-vvw);
+
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        height: var(--navi-vvh);
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        width: var(--navi-vvw);
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+    }
+
+    /* layer="local": the container is a real DOM ancestor, so plain 100%
+       already tracks it correctly, and the popup's own ceiling is
+       neutralized instead — a comfortably large but still valid length,
+       not "none": these vars feed a CSS min(), which treats "none" as
+       invalid and falls back to its own initial value rather than using
+       ours. The real container's own corner may itself be rounded, hence
+       "inherit" below rather than 0 (see layer="top" above) — border-radius
+       isn't naturally an inherited property, so this must be explicit. */
+    &[data-layer="local"] {
+      --popover-max-height: 100000px;
+      --popover-maxmax-height: 100000px;
+      --popover-maxmax-width: 100000px;
+      --dialog-maxmax-height: 100000px;
+      --dialog-maxmax-width: 100000px;
+
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        height: 100%;
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        width: 100%;
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+    }
+  }
+
   .navi_side_panel_close_button {
     position: absolute;
     top: 12px;
@@ -56,6 +142,15 @@ const css = /* css */ `
       background: #f0f0f0;
     }
   }
+  /* Kept near (not touching) whichever edge the panel is flush against. */
+  .navi_side_panel[navi-side="left"] .navi_side_panel_close_button {
+    right: auto;
+    left: 12px;
+  }
+  .navi_side_panel[navi-side="bottom"] .navi_side_panel_close_button {
+    top: auto;
+    bottom: 12px;
+  }
 `;
 
 const SIDE_TO_POSITION_AREA = {
@@ -63,17 +158,6 @@ const SIDE_TO_POSITION_AREA = {
   right: "on-the-right",
   top: "above",
   bottom: "below",
-};
-
-// The two corners flush against the docked edge — zeroed out (layer="top")
-// or made to inherit the real container's own radius (layer="local") below,
-// since a rounded corner makes no sense once it's touching the edge it's
-// flush against.
-const SIDE_TO_FLUSH_CORNERS = {
-  left: ["borderTopLeftRadius", "borderBottomLeftRadius"],
-  right: ["borderTopRightRadius", "borderBottomRightRadius"],
-  top: ["borderTopLeftRadius", "borderTopRightRadius"],
-  bottom: ["borderBottomLeftRadius", "borderBottomRightRadius"],
 };
 
 // Preact doesn't auto-append "px" to bare numeric style values the way React
@@ -106,8 +190,7 @@ const toCssLength = (value) =>
  *   treated as pixels. Omitted by default: the panel then sizes to its own
  *   content instead of a fixed size (still capped by the popup's own
  *   max-width/max-height, same as `Dialog`/`Popover`). The perpendicular
- *   axis always fills its container regardless (see this file's top
- *   comment for how, and why that differs by `layer`).
+ *   axis always fills its container regardless (see this file's own CSS).
  * @param {string|number} [props.minSize] - Floor for the docked axis (same
  *   unit rules as `size`) — forwarded as `Popup`'s own `minWidth`/
  *   `minHeight` (whichever matches the docked axis), so a content-sized
@@ -134,7 +217,8 @@ const toCssLength = (value) =>
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
  * @param {boolean} [props.hideCloseButton=false] - Omits the built-in ×
- *   button in the panel's own top-right corner.
+ *   button (positioned near — but never touching — the flush edge; see
+ *   this file's own CSS).
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
@@ -143,8 +227,8 @@ const toCssLength = (value) =>
  *   always blocks interaction with the rest of the page one way or another
  *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
  *   popover's fully passive, click-through backdrop.
- * @param {object} [props.style] - Merged with (and overridden by) this
- *   component's own sizing/border-radius styles below.
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const SidePanel = ({
@@ -161,26 +245,14 @@ export const SidePanel = ({
   hideCloseButton = false,
   mode,
   layer = "top",
-  style,
+  className,
   ...rest
 }) => {
   import.meta.css = css;
   const positionArea = SIDE_TO_POSITION_AREA[side];
   const isHorizontalDock = side === "left" || side === "right";
-  const isTopLayer = layer === "top";
   const sizeValue = toCssLength(size);
   const minSizeValue = toCssLength(minSize);
-  // See this file's top comment for why this differs by layer: the
-  // viewport itself (layer="top") needs the visual-viewport-synced vars,
-  // a real DOM ancestor (layer="local") already works with a plain 100%.
-  const perpendicularSize = isTopLayer
-    ? `var(${isHorizontalDock ? "--navi-vvh" : "--navi-vvw"})`
-    : "100%";
-  const perpendicularMaxProp = isHorizontalDock ? "maxHeight" : "maxWidth";
-  const flushCornerValue = isTopLayer ? "0" : "inherit";
-  const flushCornerStyle = Object.fromEntries(
-    SIDE_TO_FLUSH_CORNERS[side].map((corner) => [corner, flushCornerValue]),
-  );
 
   return (
     <Popup
@@ -196,44 +268,9 @@ export const SidePanel = ({
       focusCapture={closeOnClickOutside}
       minWidth={isHorizontalDock ? minSizeValue : undefined}
       minHeight={isHorizontalDock ? undefined : minSizeValue}
-      style={{
-        ...style,
-        ...(isTopLayer
-          ? // Popover/Dialog both reserve a soft margin/cap around their own
-            // popup by default (Popover's 300px --popover-max-height, its
-            // 0.95x-visible-viewport --popover-maxmax-height/width hard
-            // ceiling, Dialog's --dialog-viewport-spacing gap and matching
-            // --dialog-maxmax-*) — all meant for a centered/dropdown-sized
-            // popup, none of which makes sense once docked flush to a
-            // viewport edge. Overridden regardless of which of the two
-            // Popup actually renders; each ignores the variable that isn't
-            // its own. `--navi-vvh`/`--navi-vvw` (not `100dvh`/`100dvw`,
-            // which shares plain percentages' layout-viewport blind spot)
-            // so this stays accurate when the visible viewport shrinks
-            // (on-screen keyboard, mobile browser chrome).
-            {
-              "--popover-max-height": "var(--navi-vvh)",
-              "--popover-maxmax-height": "var(--navi-vvh)",
-              "--popover-maxmax-width": "var(--navi-vvw)",
-              "--dialog-maxmax-height": "var(--navi-vvh)",
-              "--dialog-maxmax-width": "var(--navi-vvw)",
-            }
-          : // The panel is confined to (and clipped by) a real DOM ancestor
-            // here, not the viewport — that ancestor's own size is already
-            // the true limit, so the popup's own ceiling (meant for a
-            // viewport-relative popup) is just removed instead.
-            { [perpendicularMaxProp]: "none" }),
-        // Dialog's own `min-width: var(--anchor-width, 0px)` exists so a
-        // dialog naturally matches the width of whatever triggered it
-        // (picker_custom.jsx's dialog mode relies on this) — SidePanel's own
-        // "anchor" is just its container, so --anchor-width would otherwise
-        // force min-width to the full container width, overriding `size`
-        // below entirely.
-        "--anchor-width": "0px",
-        "width": isHorizontalDock ? sizeValue : perpendicularSize,
-        "height": isHorizontalDock ? perpendicularSize : sizeValue,
-        ...flushCornerStyle,
-      }}
+      className={withPropsClassName("navi_side_panel", className)}
+      navi-side={side}
+      style={{ "--navi-side-panel-size": sizeValue }}
       {...rest}
     >
       {!hideCloseButton && (
@@ -241,6 +278,7 @@ export const SidePanel = ({
           className="navi_side_panel_close_button"
           aria-label="Close panel"
           command="--navi-close"
+          navi-autofocus="fallback"
         >
           ×
         </Button>
