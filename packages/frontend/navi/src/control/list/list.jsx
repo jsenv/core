@@ -263,6 +263,7 @@ const css = /* css */ `
   .navi_list_virtual_filler {
     display: inline-block;
     height: var(--size-to-fill, 0px);
+    flex-shrink: 0; /* prevent eventual flex parent from shrinking fillers */
     list-style: none;
     /* background: pink; */
   }
@@ -1081,19 +1082,42 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   }
   useLayoutEffect(() => {
     if (virtualSizeSignal.peek() !== 0) {
-      return;
+      return undefined;
     }
     const listEl = ref.current?.querySelector(".navi_list");
     if (!listEl) {
-      return;
+      return undefined;
     }
     const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (!firstListItem) {
-      return;
+      return undefined;
     }
     const rect = firstListItem.getBoundingClientRect();
     const measuredSize = horizontal ? rect.width : rect.height;
-    virtualSizeSignal.value = measuredSize;
+    if (measuredSize > 0) {
+      virtualSizeSignal.value = measuredSize;
+      return undefined;
+    }
+    // A real, mounted item never legitimately measures zero — this means
+    // it isn't actually visible yet (e.g. still inside a SidePanel/Popover/
+    // Dialog that hasn't finished opening), not that it's genuinely
+    // zero-height. Left as 0, this would otherwise latch permanently: the
+    // ancestor becoming visible is often a plain imperative DOM mutation
+    // (removing a hidden attribute), not a Preact re-render, so nothing
+    // would ever give this effect another chance to run. A ResizeObserver
+    // re-measures the moment it actually gets a real size instead.
+    const observer = new ResizeObserver(() => {
+      const rect = firstListItem.getBoundingClientRect();
+      const measuredSize = horizontal ? rect.width : rect.height;
+      if (measuredSize > 0) {
+        virtualSizeSignal.value = measuredSize;
+        observer.disconnect();
+      }
+    });
+    observer.observe(firstListItem);
+    return () => {
+      observer.disconnect();
+    };
   });
   return virtualSizeSignal;
 };
