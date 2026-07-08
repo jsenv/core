@@ -150,6 +150,28 @@ const css = /* css */ `
       --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
       --dialog-outline-color: var(--navi-focus-outline-color);
       --dialog-box-shadow: var(--navi-popup-box-shadow);
+      --dialog-background-color: var(--navi-popup-background-color);
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — same purpose as
+     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
+     to exactly match the dialog's own positioned ancestor, absorbing any
+     scrollable-overflow growth a translate/scale entrance transition can
+     cause in some browsers before it ever reaches the real container. */
+  .navi_dialog_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    /* Otherwise-invisible itself, but sits between the dialog and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the dialog itself (e.g. side_panel.jsx) would otherwise inherit this
+       wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_dialog {
+      pointer-events: auto;
     }
   }
 
@@ -187,6 +209,7 @@ const css = /* css */ `
     max-height: var(--x-dialog-max-height);
     margin: 0;
     flex-direction: column;
+    background-color: var(--dialog-background-color);
     border-width: var(--dialog-border-width);
     border-style: solid;
     border-color: var(--dialog-border-color);
@@ -286,27 +309,6 @@ const css = /* css */ `
       &[aria-expanded="false"] {
         opacity: 0;
       }
-    }
-  }
-
-  /* Custom renderer only (see this file's top comment) — same purpose as
-     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
-     to exactly match the dialog's own positioned ancestor, absorbing any
-     scrollable-overflow growth a translate/scale entrance transition can
-     cause in some browsers before it ever reaches the real container. */
-  .navi_dialog_clip_wrapper {
-    position: absolute;
-    inset: 0;
-    /* Otherwise-invisible itself, but sits between the dialog and its real
-       positioned ancestor — a consumer styling border-radius: inherit on
-       the dialog itself (e.g. side_panel.jsx) would otherwise inherit this
-       wrapper's own (unset) radius instead of the real ancestor's. */
-    border-radius: inherit;
-    pointer-events: none;
-    overflow: hidden;
-
-    .navi_dialog {
-      pointer-events: auto;
     }
   }
 

@@ -51,6 +51,7 @@ const css = /* css */ `
       --navi-popup-border-color: light-dark(#d0d0d0, #3b3b3b);
       --navi-popup-box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+      --navi-popup-background-color: light-dark(#ffffff, #1c1c1e);
       --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
       /* "capture" means the rest of the page is fully non-interactive —
          blurred, not just dimmed, so it reads as clearly secondary and

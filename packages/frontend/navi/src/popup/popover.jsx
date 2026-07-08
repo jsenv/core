@@ -267,6 +267,36 @@ const css = /* css */ `
       --popover-outline-width: var(--navi-focus-outline-width);
       --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
       --popover-outline-color: var(--navi-focus-outline-color);
+      --popover-background-color: var(--navi-popup-background-color);
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — a plain,
+     borderless div sized to exactly match the popover's own positioned
+     ancestor (inset: 0 relative to it), existing solely to absorb the
+     scrollable-overflow growth some browsers attribute to a translate/scale
+     transform mid-animation: without this, a container with overflow:
+     hidden/auto can transiently gain a scrollbar while the popover slides
+     or scales into/out of place, even though the transform never actually
+     moves its layout box. overflow: hidden here clips that growth before it
+     ever reaches the real container, whose own geometry this wrapper
+     matches exactly, so the wrapper itself never overflows in turn.
+     pointer-events: none so the otherwise-empty space around the popover
+     doesn't intercept clicks meant for whatever else lives in the same
+     container — .navi_popover re-enables it below. */
+  .navi_popover_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    /* Otherwise-invisible itself, but sits between the popover and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the popover itself (e.g. side_panel.jsx) would otherwise inherit
+       this wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_popover {
+      pointer-events: auto;
     }
   }
 
@@ -296,6 +326,7 @@ const css = /* css */ `
       var(--x-popover-max-height)
     );
     max-height: var(--x-popover-max-height);
+    background-color: var(--popover-background-color);
     border-width: var(--popover-border-width);
     border-style: solid;
     border-color: var(--popover-border-color);
@@ -329,35 +360,6 @@ const css = /* css */ `
     &[data-anchor-out-of-view] {
       opacity: 0;
       pointer-events: none;
-    }
-  }
-
-  /* Custom renderer only (see this file's top comment) — a plain,
-     borderless div sized to exactly match the popover's own positioned
-     ancestor (inset: 0 relative to it), existing solely to absorb the
-     scrollable-overflow growth some browsers attribute to a translate/scale
-     transform mid-animation: without this, a container with overflow:
-     hidden/auto can transiently gain a scrollbar while the popover slides
-     or scales into/out of place, even though the transform never actually
-     moves its layout box. overflow: hidden here clips that growth before it
-     ever reaches the real container, whose own geometry this wrapper
-     matches exactly, so the wrapper itself never overflows in turn.
-     pointer-events: none so the otherwise-empty space around the popover
-     doesn't intercept clicks meant for whatever else lives in the same
-     container — .navi_popover re-enables it below. */
-  .navi_popover_clip_wrapper {
-    position: absolute;
-    inset: 0;
-    /* Otherwise-invisible itself, but sits between the popover and its real
-       positioned ancestor — a consumer styling border-radius: inherit on
-       the popover itself (e.g. side_panel.jsx) would otherwise inherit
-       this wrapper's own (unset) radius instead of the real ancestor's. */
-    border-radius: inherit;
-    pointer-events: none;
-    overflow: hidden;
-
-    .navi_popover {
-      pointer-events: auto;
     }
   }
 
