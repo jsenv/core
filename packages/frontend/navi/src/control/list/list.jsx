@@ -551,9 +551,7 @@ const ListUI = (props) => {
         searchFallback={searchFallback}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
-        expandX={expandX}
-        expandY={expandY}
-        expand={expand}
+        expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
         tracker={tracker}
@@ -614,8 +612,6 @@ const ListContent = ({
   searchNoMatchMode,
   separator,
   expandX,
-  expandY,
-  expand,
   horizontal,
   spacing,
   tracker,
@@ -633,8 +629,20 @@ const ListContent = ({
         searchFallback={searchFallback}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
-        expandX={expandX || expand}
-        expandY={expandY || expand}
+        expandX={expandX}
+        // Deliberately not expandY here (unlike expandX above): the outer
+        // .navi_list_container already gets its own expandY treatment (see
+        // ListUI's own Box above) to fill whatever space its *own* parent
+        // gives it (e.g. a flex-column ancestor's flex-grow) — the <ul>
+        // itself must stay auto-height regardless, or it gets capped to
+        // match .navi_list_scroll_container's own (possibly much smaller)
+        // flex-resolved height instead of its real content height. That
+        // breaks two things at once: virtual scroll's own filler sizing
+        // (nothing to overflow into the scroll container in the first
+        // place) and any sticky List.Item header/footer inside it (their
+        // sticky "containing block" — the <ul>'s own box — would be
+        // artificially small, so they run out of room to stay stuck well
+        // before the user has actually scrolled through all the content).
         horizontal={horizontal}
         spacing={spacing}
         {...listProps}

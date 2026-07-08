@@ -9,39 +9,79 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Button, List, ListItem, SidePanel } from "@jsenv/navi";
+      import { List, ListItem, SidePanel } from "@jsenv/navi";
 
       const ITEMS = Array.from({ length: 500 }, (_, i) => ({
         id: `item-${i}`,
         label: `Item ${i + 1}`,
+        in: Math.floor(Math.random() * 20),
+        out: Math.floor(Math.random() * 20),
       }));
+      const TOTAL_IN = ITEMS.reduce((sum, item) => sum + item.in, 0);
+      const TOTAL_OUT = ITEMS.reduce((sum, item) => sum + item.out, 0);
 
-      // SidePanel + SidePanel.Head/Foot + List, combined: `flex="y"` on the
-      // panel + `expandY` on the List gives the List a genuine, flex-derived
-      // bounded height (not an explicit maxHeight) — its own scroll
-      // container actually overflows and scrolls itself, so the panel as a
-      // whole never needs to scroll (Head/Foot stay sticky for nothing, the
-      // List owns the only scrollable region). defaultOpen so the panel is
-      // already open on page load — just scroll the list and watch it
-      // behave (render window sliding, items scrolling into view, no
-      // stuck/frozen virtualization).
+      // Same 3-column row shape shared by the column-header row, every data
+      // row, and the totals row — the Name cell grows to fill whatever space
+      // isn't taken by the two fixed-width numeric columns. Column widths
+      // only stay aligned across all three because they're all real flex
+      // rows of the same List (same width as each other), not because
+      // anything explicitly synchronizes them.
+      const ROW_STYLE = {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        width: "100%",
+      };
+      const NAME_CELL_STYLE = {
+        flex: 1,
+        minWidth: 0,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "nowrap",
+      };
+      const NUMBER_CELL_STYLE = {
+        flexShrink: 0,
+        width: "48px",
+        textAlign: "right",
+      };
+
+      // `header`/`footer` on ListItem render as `position: sticky` rows
+      // inside the List itself (bypassing virtualization entirely — they're
+      // not part of the tracked/virtual item set) rather than living in
+      // SidePanel.Head/Foot: that's what keeps their own Name/In/Out cells
+      // real flex-row siblings of the data rows, so column widths track
+      // each other for free. A plain title has no columns to align, so it
+      // stays in SidePanel.Head instead, outside the List entirely.
       const App = () => (
-        <SidePanel defaultOpen width={320} flex="y">
+        <SidePanel defaultOpen width={360} flex="y">
           <SidePanel.Head closeButton>
-            <strong>
-              500 items, List owns its own scroll (flex + expandY)
-            </strong>
+            <strong>Inventory</strong>
           </SidePanel.Head>
           <List expandY border="none">
+            <ListItem header style={{ ...ROW_STYLE, fontWeight: "bold" }}>
+              <span style={NAME_CELL_STYLE}>Name</span>
+              <span style={NUMBER_CELL_STYLE}>In</span>
+              <span style={NUMBER_CELL_STYLE}>Out</span>
+            </ListItem>
             {ITEMS.map((item, i) => (
-              <ListItem key={item.id} index={i} id={item.id} value={item.label}>
-                {item.label}
+              <ListItem
+                key={item.id}
+                index={i}
+                id={item.id}
+                value={item.label}
+                style={ROW_STYLE}
+              >
+                <span style={NAME_CELL_STYLE}>{item.label}</span>
+                <span style={NUMBER_CELL_STYLE}>{item.in}</span>
+                <span style={NUMBER_CELL_STYLE}>{item.out}</span>
               </ListItem>
             ))}
+            <ListItem footer style={{ ...ROW_STYLE, fontWeight: "bold" }}>
+              <span style={NAME_CELL_STYLE}>Total</span>
+              <span style={NUMBER_CELL_STYLE}>{TOTAL_IN}</span>
+              <span style={NUMBER_CELL_STYLE}>{TOTAL_OUT}</span>
+            </ListItem>
           </List>
-          <SidePanel.Foot>
-            <Button command="--navi-close">Close</Button>
-          </SidePanel.Foot>
         </SidePanel>
       );
 
