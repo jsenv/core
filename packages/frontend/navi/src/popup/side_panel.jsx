@@ -65,18 +65,53 @@ const SIDE_TO_POSITION_AREA = {
   bottom: "below",
 };
 
+// The two corners flush against the docked edge — zeroed out (layer="top")
+// or made to inherit the real container's own radius (layer="local") below,
+// since a rounded corner makes no sense once it's touching the edge it's
+// flush against.
+const SIDE_TO_FLUSH_CORNERS = {
+  left: ["borderTopLeftRadius", "borderBottomLeftRadius"],
+  right: ["borderTopRightRadius", "borderBottomRightRadius"],
+  top: ["borderTopLeftRadius", "borderTopRightRadius"],
+  bottom: ["borderBottomLeftRadius", "borderBottomRightRadius"],
+};
+
+// Preact doesn't auto-append "px" to bare numeric style values the way React
+// does — an unsuffixed number is an invalid CSS length, silently rejected by
+// the browser (leaving the property unset instead of sized).
+const toCssLength = (value) =>
+  value === undefined || value === null
+    ? undefined
+    : typeof value === "number"
+      ? `${value}px`
+      : value;
+
 /**
  * @param {object} props
- * @param {boolean} props.isOpen - Controlled open state (mapped to `Popup`'s
- *   own `open`).
+ * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
+ *   `Popup`'s own `open`. `isOpen` (legacy alias, still supported) is used
+ *   as a fallback when `open` isn't passed.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state, forwarded as-is to `Popup`. Neither this nor `open`/
+ *   `isOpen` is required at all for a purely command-driven panel (an `id`
+ *   plus a `<Button command="--navi-toggle" commandFor={id}>` elsewhere,
+ *   same as `Dialog`/`Popover` themselves — see either's own doc).
+ * @param {boolean} [props.isOpen] - Legacy alias for `open` (see above).
  * @param {(event: Event) => void} [props.onClose] - Called when the panel
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
  *   viewport/container edge the panel is docked flush against.
- * @param {string|number} [props.size=400] - Size along the docked axis
- *   (width for `left`/`right`, height for `top`/`bottom`) — a bare number is
- *   treated as pixels. The perpendicular axis always fills its container
- *   (see this file's top comment for how, and why that differs by `layer`).
+ * @param {string|number} [props.size] - Size along the docked axis (width
+ *   for `left`/`right`, height for `top`/`bottom`) — a bare number is
+ *   treated as pixels. Omitted by default: the panel then sizes to its own
+ *   content instead of a fixed size (still capped by the popup's own
+ *   max-width/max-height, same as `Dialog`/`Popover`). The perpendicular
+ *   axis always fills its container regardless (see this file's top
+ *   comment for how, and why that differs by `layer`).
+ * @param {string|number} [props.minSize] - Floor for the docked axis (same
+ *   unit rules as `size`) — forwarded as `Popup`'s own `minWidth`/
+ *   `minHeight` (whichever matches the docked axis), so a content-sized
+ *   panel (no `size` given) never shrinks below this.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
  *   against the viewport (real top-layer rendering, matches a fixed,
  *   always-on-screen drawer). `"local"`: docks against the panel's own
@@ -109,15 +144,18 @@ const SIDE_TO_POSITION_AREA = {
  *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
  *   popover's fully passive, click-through backdrop.
  * @param {object} [props.style] - Merged with (and overridden by) this
- *   component's own sizing styles below.
+ *   component's own sizing/border-radius styles below.
  * @param {import("preact").ComponentChildren} props.children
  */
 export const SidePanel = ({
+  open,
+  defaultOpen,
   isOpen,
   onClose,
   children,
   side = "right",
-  size = 400,
+  size,
+  minSize,
   animation,
   closeOnClickOutside = false,
   hideCloseButton = false,
@@ -130,10 +168,8 @@ export const SidePanel = ({
   const positionArea = SIDE_TO_POSITION_AREA[side];
   const isHorizontalDock = side === "left" || side === "right";
   const isTopLayer = layer === "top";
-  // Preact doesn't auto-append "px" to bare numeric style values the way
-  // React does — an unsuffixed number is an invalid CSS length, silently
-  // rejected by the browser (leaving width/height unset instead of sized).
-  const sizeValue = typeof size === "number" ? `${size}px` : size;
+  const sizeValue = toCssLength(size);
+  const minSizeValue = toCssLength(minSize);
   // See this file's top comment for why this differs by layer: the
   // viewport itself (layer="top") needs the visual-viewport-synced vars,
   // a real DOM ancestor (layer="local") already works with a plain 100%.
@@ -141,11 +177,16 @@ export const SidePanel = ({
     ? `var(${isHorizontalDock ? "--navi-vvh" : "--navi-vvw"})`
     : "100%";
   const perpendicularMaxProp = isHorizontalDock ? "maxHeight" : "maxWidth";
+  const flushCornerValue = isTopLayer ? "0" : "inherit";
+  const flushCornerStyle = Object.fromEntries(
+    SIDE_TO_FLUSH_CORNERS[side].map((corner) => [corner, flushCornerValue]),
+  );
 
   return (
     <Popup
       mode={mode}
-      open={isOpen}
+      open={open ?? isOpen}
+      defaultOpen={defaultOpen}
       onClose={onClose}
       layer={layer}
       anchorCustomEventDetail="ignore"
@@ -153,6 +194,8 @@ export const SidePanel = ({
       animation={animation ? `slide-from-${side}` : undefined}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}
+      minWidth={isHorizontalDock ? minSizeValue : undefined}
+      minHeight={isHorizontalDock ? undefined : minSizeValue}
       style={{
         ...style,
         ...(isTopLayer
@@ -189,6 +232,7 @@ export const SidePanel = ({
         "--anchor-width": "0px",
         "width": isHorizontalDock ? sizeValue : perpendicularSize,
         "height": isHorizontalDock ? perpendicularSize : sizeValue,
+        ...flushCornerStyle,
       }}
       {...rest}
     >

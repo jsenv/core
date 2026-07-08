@@ -22,13 +22,22 @@
         cursor: pointer;
         user-select: none;
       }
+      .demo-container {
+        position: relative;
+        width: 500px;
+        height: 320px;
+        background: #f5f5f5;
+        border: 2px dashed #999;
+        border-radius: 12px;
+        overflow: hidden;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useId, useState } from "preact/hooks";
       import { Button, SidePanel } from "@jsenv/navi";
 
       const PanelContent = () => {
@@ -75,6 +84,42 @@
         </div>
       );
 
+      // Purely command-driven — no isOpen/open/onClose at all, mirroring
+      // Dialog/Popover's own uncontrolled id + --navi-toggle pattern.
+      const CommandDrivenPanelDemo = () => {
+        const panelId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={panelId}>
+              Toggle side panel
+            </Button>
+            <SidePanel id={panelId}>
+              <PanelContent />
+            </SidePanel>
+          </>
+        );
+      };
+
+      // layer="local" docks the panel against .demo-container below instead
+      // of the viewport — confined to (and clipped by) it, at 100% of its
+      // own height, rather than taking over the whole screen.
+      const LocalContainerPanelDemo = () => {
+        const panelId = useId();
+        return (
+          <div class="demo-container">
+            <p style={{ margin: "12px" }}>
+              This box is the panel's own positioned ancestor.
+            </p>
+            <Button command="--navi-toggle" commandFor={panelId}>
+              Toggle local panel
+            </Button>
+            <SidePanel id={panelId} layer="local">
+              <PanelContent />
+            </SidePanel>
+          </div>
+        );
+      };
+
       const App = () => {
         const [parentCount, setParentCount] = useState(0);
         const [isOpen, setIsOpen] = useState(false);
@@ -99,7 +144,14 @@
             </div>
 
             <div class="demo-section">
-              <h3>Default (400px, close on Escape only)</h3>
+              <h3>
+                Default (dynamic width — sized to content, close on Escape only)
+              </h3>
+              <p>
+                No <code>size</code> passed: the panel's docked-axis width just
+                follows its own content, same as `Dialog`/`Popover` would (still
+                capped by the popup's own max-width).
+              </p>
               <button onClick={() => setIsOpen(true)}>Open side panel</button>
               <SidePanel isOpen={isOpen} onClose={() => setIsOpen(false)}>
                 <PanelContent />
@@ -107,17 +159,30 @@
             </div>
 
             <div class="demo-section">
-              <h3>Custom width (600px)</h3>
+              <h3>
+                Forced width (size=400) and a min-size floor (minSize=250)
+              </h3>
               <button onClick={() => setIsOpenWide(true)}>
                 Open wide panel
               </button>
               <SidePanel
                 isOpen={isOpenWide}
                 onClose={() => setIsOpenWide(false)}
-                size={600}
+                size={400}
+                minSize={250}
               >
                 <PanelContent />
               </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>Opened via command (--navi-toggle), no isOpen/open at all</h3>
+              <p>
+                A button commanding <code>--navi-toggle</code> opens/closes the
+                panel — same declarative, id-driven pattern as
+                `Dialog`/`Popover` themselves, no controlled state needed.
+              </p>
+              <CommandDrivenPanelDemo />
             </div>
 
             <div class="demo-section">
@@ -176,6 +241,16 @@
               >
                 <PanelContent />
               </SidePanel>
+            </div>
+
+            <div class="demo-section">
+              <h3>layer="local" — docked inside a custom container</h3>
+              <p>
+                Same panel, but confined to (and clipped by) the dashed box
+                below instead of the viewport — 100% of *its* height, not the
+                screen's.
+              </p>
+              <LocalContainerPanelDemo />
             </div>
           </div>
         );
