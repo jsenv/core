@@ -77,26 +77,36 @@ const css = /* css */ `
     }
 
     /* layer="local": the container is a real DOM ancestor, so plain 100%
-       already tracks it correctly, and the popup's own ceiling is
-       neutralized instead — a comfortably large but still valid length,
-       not "none": these vars feed a CSS min(), which treats "none" as
-       invalid and falls back to its own initial value rather than using
-       ours. The real container's own corner may itself be rounded, hence
-       "inherit" below rather than 0 (see layer="top" above) — border-radius
-       isn't naturally an inherited property, so this must be explicit. */
+       already tracks it correctly on the perpendicular axis — the popup's
+       own ceiling there is neutralized instead (a comfortably large but
+       still valid length, not "none": these vars feed a CSS min(), which
+       treats "none" as invalid and falls back to its own initial value
+       rather than using ours). The *docked* axis keeps a real ceiling
+       though (90% of the container, a percentage resolving correctly here
+       since the popup's own containing block, .navi_popover_clip_wrapper/
+       .navi_dialog_clip_wrapper, is inset: 0 within that same container) —
+       an oversized explicit width/height prop should shrink to fit rather
+       than overflow the container or force it to scroll. The real
+       container's own corner may itself be rounded, hence "inherit" below
+       rather than 0 (see layer="top" above) — border-radius isn't
+       naturally an inherited property, so this must be explicit. */
     &[data-layer="local"] {
-      --popover-max-height: 100000px;
-      --popover-maxmax-height: 100000px;
-      --popover-maxmax-width: 100000px;
-      --dialog-maxmax-height: 100000px;
-      --dialog-maxmax-width: 100000px;
-
       &[navi-side="left"],
       &[navi-side="right"] {
+        --popover-maxmax-height: 100000px;
+        --dialog-maxmax-height: 100000px;
+        --popover-max-height: 100000px;
+        --popover-maxmax-width: 90%;
+        --dialog-maxmax-width: 90%;
         height: var(--navi-side-panel-height, 100%);
       }
       &[navi-side="top"],
       &[navi-side="bottom"] {
+        --popover-maxmax-width: 100000px;
+        --dialog-maxmax-width: 100000px;
+        --popover-maxmax-height: 90%;
+        --dialog-maxmax-height: 90%;
+        --popover-max-height: 90%;
         width: var(--navi-side-panel-width, 100%);
       }
       &[navi-side="left"] {

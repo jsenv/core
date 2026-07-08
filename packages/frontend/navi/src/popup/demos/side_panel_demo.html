@@ -29,7 +29,27 @@
         background: #f5f5f5;
         border: 2px dashed #999;
         border-radius: 12px;
-        overflow: hidden;
+        /* auto rather than hidden: a side panel that isn't actually
+           clamped by its own max-width/max-height would otherwise make
+           this container scroll, which is exactly what these demos are
+           checking for. */
+        overflow: auto;
+      }
+      .demo-toc {
+        margin-bottom: 24px;
+        padding: 12px 16px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .demo-toc ul {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
       }
     </style>
   </head>
@@ -138,6 +158,33 @@
         );
       };
 
+      // layer="local"'s docked axis still has a real ceiling (90% of the
+      // container) even though the perpendicular one is intentionally
+      // uncapped (see side_panel.jsx's own CSS) — an oversized width should
+      // shrink to fit rather than overflow the container or make it scroll.
+      const LocalContainerMaxWidthDemo = ({ width, animation }) => {
+        const panelId = useId();
+        return (
+          <div class="demo-container">
+            <p style={{ margin: "12px" }}>
+              width={width} requested. Container content should stay fully
+              visible either way — no overflow, no scrollbar.
+            </p>
+            <Button command="--navi-toggle" commandFor={panelId}>
+              Toggle panel (width={width})
+            </Button>
+            <SidePanel
+              id={panelId}
+              layer="local"
+              width={width}
+              animation={animation}
+            >
+              <PanelContent />
+            </SidePanel>
+          </div>
+        );
+      };
+
       // Mounted lazily (only once "Render" is clicked) so defaultOpen's
       // no-entrance-animation guarantee is actually observable — mounting
       // it unconditionally at page load would show it already-open before
@@ -168,6 +215,46 @@
           <div>
             <h1>SidePanel demos</h1>
 
+            <nav class="demo-toc">
+              <strong>Contents</strong>
+              <ul>
+                <li>
+                  <a href="#sizing-default">Default (content-sized)</a>
+                </li>
+                <li>
+                  <a href="#sizing-forced">Forced width</a>
+                </li>
+                <li>
+                  <a href="#command-driven">Opened via command</a>
+                </li>
+                <li>
+                  <a href="#open-at-start">Open at start (defaultOpen)</a>
+                </li>
+                <li>
+                  <a href="#click-outside">Close on click outside</a>
+                </li>
+                <li>
+                  <a href="#tall-content">Tall content (internal scroll)</a>
+                </li>
+                <li>
+                  <a href="#left-panel">Left panel</a>
+                </li>
+                <li>
+                  <a href="#top-panel">Top panel</a>
+                </li>
+                <li>
+                  <a href="#local-container">
+                    layer="local" — inside a custom container
+                  </a>
+                </li>
+                <li>
+                  <a href="#local-container-max-width">
+                    layer="local" — docked-axis max-width
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
             <div class="demo-section">
               <label>
                 <input
@@ -189,14 +276,14 @@
               </button>
             </div>
 
-            <div class="demo-section">
+            <div id="sizing-default" class="demo-section">
               <h3>
                 Default (dynamic width — sized to content, close on Escape only)
               </h3>
               <p>
                 No <code>width</code> passed: the panel sizes to its own
-                content, same as `Dialog`/`Popover` would (still capped by
-                the popup's own max-width).
+                content, same as `Dialog`/`Popover` would (still capped by the
+                popup's own max-width).
               </p>
               <button onClick={() => setIsOpen(true)}>Open side panel</button>
               <SidePanel
@@ -208,7 +295,7 @@
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="sizing-forced" class="demo-section">
               <h3>Forced width (width=400)</h3>
               <button onClick={() => setIsOpenWide(true)}>
                 Open wide panel
@@ -223,7 +310,7 @@
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="command-driven" class="demo-section">
               <h3>Opened via command (--navi-toggle), no isOpen/open at all</h3>
               <p>
                 A button commanding <code>--navi-toggle</code> opens/closes the
@@ -233,7 +320,7 @@
               <CommandDrivenPanelDemo animation={animationEnabled} />
             </div>
 
-            <div class="demo-section">
+            <div id="open-at-start" class="demo-section">
               <h3>Open at start (defaultOpen)</h3>
               <p>
                 Click "Render" to actually mount the panel (rather than forcing
@@ -245,14 +332,18 @@
               <LazyMount
                 label="Render"
                 renderContent={() => (
-                  <SidePanel defaultOpen animation={animationEnabled}>
+                  <SidePanel
+                    defaultOpen
+                    width={300}
+                    animation={animationEnabled}
+                  >
                     <PanelContent />
                   </SidePanel>
                 )}
               />
             </div>
 
-            <div class="demo-section">
+            <div id="click-outside" class="demo-section">
               <h3>Close on click outside</h3>
               <button onClick={() => setIsOpenClickOutside(true)}>
                 Open panel (click outside to close)
@@ -261,13 +352,14 @@
                 open={isOpenClickOutside}
                 onClose={() => setIsOpenClickOutside(false)}
                 closeOnClickOutside
+                width={300}
                 animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="tall-content" class="demo-section">
               <h3>Tall content (internal scroll)</h3>
               <button onClick={() => setIsOpenTall(true)}>
                 Open panel with tall content
@@ -275,13 +367,14 @@
               <SidePanel
                 open={isOpenTall}
                 onClose={() => setIsOpenTall(false)}
+                width={300}
                 animation={animationEnabled}
               >
                 <TallPanelContent />
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="left-panel" class="demo-section">
               <h3>Left panel</h3>
               <button onClick={() => setIsOpenLeft(true)}>
                 Open left panel
@@ -290,27 +383,28 @@
                 open={isOpenLeft}
                 onClose={() => setIsOpenLeft(false)}
                 side="left"
+                width={300}
                 animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="top-panel" class="demo-section">
               <h3>Top panel</h3>
               <button onClick={() => setIsOpenTop(true)}>Open top panel</button>
               <SidePanel
                 open={isOpenTop}
                 onClose={() => setIsOpenTop(false)}
                 side="top"
-                size={220}
+                height={220}
                 animation={animationEnabled}
               >
                 <PanelContent />
               </SidePanel>
             </div>
 
-            <div class="demo-section">
+            <div id="local-container" class="demo-section">
               <h3>layer="local" — docked inside a custom container</h3>
               <p>
                 Same panel, but confined to (and clipped by) the dashed box
@@ -318,6 +412,30 @@
                 screen's.
               </p>
               <LocalContainerPanelDemo animation={animationEnabled} />
+            </div>
+
+            <div id="local-container-max-width" class="demo-section">
+              <h3>layer="local" — docked-axis max-width</h3>
+              <p>
+                The perpendicular axis (height, here) is intentionally uncapped
+                in <code>layer="local"</code> — but the docked axis (width,
+                here) still has a real ceiling: 90% of the container. A
+                reasonable <code>width=100</code> below fits well within it; an
+                oversized <code>width=1000</code> gets clamped down instead of
+                overflowing the container or making it scroll (the container
+                below uses <code>overflow: auto</code> specifically so a
+                regression here would show up as a scrollbar).
+              </p>
+              <div class="demo-row">
+                <LocalContainerMaxWidthDemo
+                  width={100}
+                  animation={animationEnabled}
+                />
+                <LocalContainerMaxWidthDemo
+                  width={1000}
+                  animation={animationEnabled}
+                />
+              </div>
             </div>
           </div>
         );
