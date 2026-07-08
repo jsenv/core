@@ -224,7 +224,11 @@
         const listRef = useRef(null);
 
         const scrollTo = (position) => {
-          const scrollContainer = listRef.current.closest(
+          // querySelector, not closest: `ref` on <List> attaches to the
+          // outer .navi_list_container — .navi_list_scroll_container is a
+          // descendant of it, not an ancestor, so closest() (which only
+          // ever looks at self + ancestors) can never find it.
+          const scrollContainer = listRef.current.querySelector(
             ".navi_list_scroll_container",
           );
           if (!scrollContainer) {
@@ -244,7 +248,9 @@
           if (!el) {
             return;
           }
-          const scrollContainer = el.closest(".navi_list_scroll_container");
+          const scrollContainer = el.querySelector(
+            ".navi_list_scroll_container",
+          );
           const index = parseInt(scrollToIndex, 10);
           const estimated =
             (scrollContainer.scrollHeight / LARGE_LIST.length) * index;
