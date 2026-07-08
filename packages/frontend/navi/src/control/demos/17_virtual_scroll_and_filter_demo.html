@@ -115,7 +115,6 @@
         List,
         ListItem,
         Input,
-        ListItemHeader,
         useSearchText,
         NaviDebug,
       } from "@jsenv/navi";
@@ -247,11 +246,6 @@
           }
           const scrollContainer = el.closest(".navi_list_scroll_container");
           const index = parseInt(scrollToIndex, 10);
-          // el.dispatchEvent(
-          //   new CustomEvent("navi_list_request_nav", {
-          //     detail: { index },
-          //   }),
-          // );
           const estimated =
             (scrollContainer.scrollHeight / LARGE_LIST.length) * index;
           console.log("scroll to", estimated);
@@ -320,7 +314,7 @@
                 expandX
                 borderColor="#ccc"
                 value={searchText}
-                action={(text) => {
+                uiAction={(text) => {
                   setSearchText(text);
                 }}
                 marginBottom="s"
@@ -332,7 +326,7 @@
                 uiAction={setSelected}
                 expandX
                 renderBudget={30}
-                noMatchFallback={
+                searchFallback={
                   <span
                     style={{
                       display: "flex",
