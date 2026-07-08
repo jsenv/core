@@ -281,6 +281,14 @@ const css = /* css */ `
 
     position: absolute;
     inset: 0;
+    /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
+       by default until .show()/.showModal() adds [open]) — needs its own
+       starting-hidden default declared here rather than left to a layout
+       effect, or it'd flash visible for one frame on mount before that
+       effect ever gets a chance to run (see openEffect's own show/hide
+       steps below for why "" isn't used to show it again: clearing the
+       inline value would only defer back to this same default). */
+    display: none;
     border: none;
     /* Always clickable while actually rendered (display: none while
        genuinely closed already makes it non-interactive on its own) — an
@@ -546,13 +554,6 @@ const useDialogProps = (props) => {
     }
     if (backdropRef.current) {
       backdropRef.current.setAttribute("aria-expanded", "false");
-      // Only ever rendered by the custom renderer (a plain div, unlike
-      // dialogEl itself, which is a real <dialog> and so already starts
-      // display: none natively until .show()/.showModal() adds [open]) —
-      // needs the same starting-hidden treatment explicitly, or it covers
-      // everything from the moment it mounts, well before the dialog is
-      // ever opened.
-      backdropRef.current.style.display = "none";
     }
   }, []);
 
@@ -623,7 +624,10 @@ const useDialogProps = (props) => {
       disarmBackdropHideRef.current?.();
       disarmBackdropHideRef.current = null;
       backdropEl.style.transitionProperty = "none";
-      backdropEl.style.display = "";
+      // "block", not "" — clearing the inline value would defer back to
+      // .navi_dialog_backdrop's own stylesheet default (display: none),
+      // leaving it hidden instead of shown.
+      backdropEl.style.display = "block";
       backdropEl.getBoundingClientRect();
       // aria-expanded stays "false" here — flipped below, alongside
       // dialogEl's own flip, once transitions are back on (or, for

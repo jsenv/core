@@ -338,6 +338,18 @@ const css = /* css */ `
     overflow: auto;
     overscroll-behavior: none;
 
+    /* The via-attribute renderer starts hidden for free (native UA default
+       for any [popover] element, same as <dialog> without [open]) — the
+       custom renderer is a plain div with no such native default, so
+       without this it would flash visible for one frame on mount, before
+       openEffect's own JS ever gets a chance to hide it (see openEffect's
+       own show/hide steps below for why "" isn't used to show it again:
+       clearing the inline value here would only defer back to this same
+       default). */
+    &:not([popover]) {
+      display: none;
+    }
+
     &[data-focus-visible] {
       outline-style: solid;
     }
@@ -391,6 +403,12 @@ const css = /* css */ `
       inset: 0;
       width: auto;
       height: auto;
+    }
+
+    /* Same reasoning as .navi_popover's own &:not([popover]) rule above —
+       a plain div, no native starting-hidden default to lean on. */
+    &:not([popover]) {
+      display: none;
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
@@ -653,24 +671,22 @@ const usePopoverProps = (props) => {
   const isAutoAnimation = animation === true || animation === "auto";
 
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  // The custom renderer's own starting-hidden state is a stylesheet default
+  // now (&:not([popover]) { display: none } on .navi_popover/
+  // .navi_popover_backdrop above) rather than set here imperatively — a
+  // plain div has no native default the way [popover]/<dialog> do, so
+  // leaving this to a layout effect meant an actual (if narrow) window
+  // where the browser could paint it visible before this ever ran. Only
+  // aria-expanded is still set imperatively here; it isn't rendering-eligible
+  // on its own (nothing in either file's CSS shows/hides based on it directly
+  // — only mediates the [navi-animation] transition), so there's no
+  // equivalent flash risk for it.
   useLayoutEffect(() => {
     if (ref.current) {
       ref.current.setAttribute("aria-expanded", "false");
-      if (isTopLayer) {
-        // Native [popover] starts hidden automatically — nothing to do.
-      } else {
-        // No native show/hide mechanism to lean on — starts hidden via a
-        // plain inline style instead
-        ref.current.style.display = "none";
-      }
     }
     if (backdropRef.current) {
       backdropRef.current.setAttribute("aria-expanded", "false");
-      if (isTopLayer) {
-        // Native [popover] starts hidden automatically — nothing to do.
-      } else {
-        backdropRef.current.style.display = "none";
-      }
     }
   }, [isTopLayer]);
 
@@ -780,7 +796,10 @@ const usePopoverProps = (props) => {
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
       } else {
-        backdropEl.style.display = "";
+        // "block", not "" — clearing the inline value would defer back to
+        // the stylesheet's own &:not([popover]) { display: none } default
+        // (see its own comment), leaving it hidden instead of shown.
+        backdropEl.style.display = "block";
         backdropEl.getBoundingClientRect();
       }
       // aria-expanded stays "false" here — flipped later, once
@@ -801,8 +820,9 @@ const usePopoverProps = (props) => {
       // Not "showPopover()" — just making it visible again, synchronously,
       // so it's measurable below even though aria-expanded is still
       // "false" (see this file's top comment for why the two are
-      // deliberately decoupled).
-      popoverEl.style.display = "";
+      // deliberately decoupled). "block", not "" — see the backdrop's own
+      // identical case above for why.
+      popoverEl.style.display = "block";
     }
 
     // What we observe for repositioning on resize/scroll/visibility
