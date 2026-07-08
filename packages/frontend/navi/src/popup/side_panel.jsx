@@ -9,6 +9,7 @@
  * Popover would dock next to whatever triggered the open instead of flush
  * against the edge, defeating the point of a side panel.
  */
+import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
@@ -180,23 +181,6 @@ const css = /* css */ `
   }
 `;
 
-const SIDE_TO_POSITION_AREA = {
-  left: "on-the-left",
-  right: "on-the-right",
-  top: "above",
-  bottom: "below",
-};
-
-// Preact doesn't auto-append "px" to bare numeric style values the way React
-// does — an unsuffixed number is an invalid CSS length, silently rejected by
-// the browser (leaving the property unset instead of sized).
-const toCssLength = (value) =>
-  value === undefined || value === null
-    ? undefined
-    : typeof value === "number"
-      ? `${value}px`
-      : value;
-
 /**
  * @param {object} props
  * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
@@ -317,6 +301,21 @@ export const SidePanel = ({
     </Popup>
   );
 };
+const SIDE_TO_POSITION_AREA = {
+  left: "on-the-left",
+  right: "on-the-right",
+  top: "above",
+  bottom: "below",
+};
+// Preact doesn't auto-append "px" to bare numeric style values the way React
+// does — an unsuffixed number is an invalid CSS length, silently rejected by
+// the browser (leaving the property unset instead of sized).
+const toCssLength = (value) =>
+  value === undefined || value === null
+    ? undefined
+    : typeof value === "number"
+      ? `${value}px`
+      : value;
 
 /**
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
@@ -327,14 +326,9 @@ export const SidePanel = ({
  *   `"navi_side_panel_head"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
-const SidePanelHead = ({ className, ...rest }) => (
-  <div
-    className={withPropsClassName("navi_side_panel_head", className)}
-    {...rest}
-  />
+const SidePanelHead = (props) => (
+  <Box baseClassName="navi_side_panel_head" {...props} />
 );
-SidePanel.Head = SidePanelHead;
-
 /**
  * Stuck to the bottom of the panel's own scrollable area (`position:
  * sticky`) regardless of `side` — only the panel's content above scrolls.
@@ -344,10 +338,8 @@ SidePanel.Head = SidePanelHead;
  *   `"navi_side_panel_foot"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
-const SidePanelFoot = ({ className, ...rest }) => (
-  <div
-    className={withPropsClassName("navi_side_panel_foot", className)}
-    {...rest}
-  />
+const SidePanelFoot = (props) => (
+  <Box className="navi_side_panel_foot" {...props} />
 );
+SidePanel.Head = SidePanelHead;
 SidePanel.Foot = SidePanelFoot;
