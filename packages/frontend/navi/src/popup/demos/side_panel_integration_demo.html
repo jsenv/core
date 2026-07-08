@@ -16,18 +16,21 @@
         label: `Item ${i + 1}`,
       }));
 
-      // SidePanel + SidePanel.Head/Foot + List, combined: the List has no
-      // maxHeight of its own, so it's the SidePanel (its own .navi_popover/
-      // .navi_dialog, overflow: auto) that actually scrolls — this is the
-      // scenario list.jsx's own scroll-container delegation exists for (see
-      // resolveScrollContainer/getListVisibleRect there). defaultOpen so the
-      // panel is already open on page load — just scroll the list and watch
-      // it behave (render window sliding, items scrolling into view, no
+      // SidePanel + SidePanel.Head/Foot + List, combined: `flex="y"` on the
+      // panel + `expandY` on the List gives the List a genuine, flex-derived
+      // bounded height (not an explicit maxHeight) — its own scroll
+      // container actually overflows and scrolls itself, so the panel as a
+      // whole never needs to scroll (Head/Foot stay sticky for nothing, the
+      // List owns the only scrollable region). defaultOpen so the panel is
+      // already open on page load — just scroll the list and watch it
+      // behave (render window sliding, items scrolling into view, no
       // stuck/frozen virtualization).
       const App = () => (
         <SidePanel defaultOpen width={320} flex="y">
           <SidePanel.Head closeButton>
-            <strong>500 items, no maxHeight on the List</strong>
+            <strong>
+              500 items, List owns its own scroll (flex + expandY)
+            </strong>
           </SidePanel.Head>
           <List expandY border="none">
             {ITEMS.map((item, i) => (
