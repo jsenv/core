@@ -342,11 +342,15 @@ const css = /* css */ `
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
        without this it would flash visible for one frame on mount, before
-       openEffect's own JS ever gets a chance to hide it (see openEffect's
-       own show/hide steps below for why "" isn't used to show it again:
-       clearing the inline value here would only defer back to this same
-       default). */
-    &:not([popover]) {
+       openEffect's own JS ever gets a chance to hide it. [navi-hidden] is
+       set from usePopoverProps' own contentProps (recomputed from
+       openController.opened on every render, present from the very first
+       one — see there for why), then toggled by plain
+       removeAttribute/setAttribute in openEffect/close, never an explicit
+       display override: removing the attribute just lets this rule stop
+       matching, so whatever display the box would otherwise have applies
+       on its own. */
+    &:not([popover])[navi-hidden] {
       display: none;
     }
 
@@ -405,9 +409,9 @@ const css = /* css */ `
       height: auto;
     }
 
-    /* Same reasoning as .navi_popover's own &:not([popover]) rule above —
-       a plain div, no native starting-hidden default to lean on. */
-    &:not([popover]) {
+    /* Same reasoning/mechanism as .navi_popover's own rule above — a plain
+       div, no native starting-hidden default to lean on. */
+    &:not([popover])[navi-hidden] {
       display: none;
     }
 
@@ -796,10 +800,7 @@ const usePopoverProps = (props) => {
         backdropEl.showPopover();
         backdropEl.getBoundingClientRect();
       } else {
-        // "block", not "" — clearing the inline value would defer back to
-        // the stylesheet's own &:not([popover]) { display: none } default
-        // (see its own comment), leaving it hidden instead of shown.
-        backdropEl.style.display = "block";
+        backdropEl.removeAttribute("navi-hidden");
         backdropEl.getBoundingClientRect();
       }
       // aria-expanded stays "false" here — flipped later, once
@@ -820,9 +821,8 @@ const usePopoverProps = (props) => {
       // Not "showPopover()" — just making it visible again, synchronously,
       // so it's measurable below even though aria-expanded is still
       // "false" (see this file's top comment for why the two are
-      // deliberately decoupled). "block", not "" — see the backdrop's own
-      // identical case above for why.
-      popoverEl.style.display = "block";
+      // deliberately decoupled).
+      popoverEl.removeAttribute("navi-hidden");
     }
 
     // What we observe for repositioning on resize/scroll/visibility
@@ -1081,7 +1081,7 @@ const usePopoverProps = (props) => {
       if (isTopLayer) {
         popoverEl.hidePopover();
       } else {
-        popoverEl.style.display = "none";
+        popoverEl.setAttribute("navi-hidden", "");
       }
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
@@ -1100,7 +1100,7 @@ const usePopoverProps = (props) => {
           isTopLayer
             ? () => backdropEl.hidePopover()
             : () => {
-                backdropEl.style.display = "none";
+                backdropEl.setAttribute("navi-hidden", "");
               },
         );
       }
@@ -1150,6 +1150,11 @@ const usePopoverProps = (props) => {
     "id": backdropId,
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
+    // Read fresh on every render (not frozen at mount), so it stays
+    // correct even across a re-render that happens to occur while open —
+    // see contentProps' own identical prop just below for the full
+    // reasoning (kept once, not repeated here).
+    "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
@@ -1187,6 +1192,18 @@ const usePopoverProps = (props) => {
     tabIndex,
     "data-layer": layer,
     "navi-animation": isAutoAnimation ? undefined : animation,
+    // Only load-bearing for the custom renderer (see its own &:not([popover])
+    // CSS rule) — present from this very first render (unlike aria-expanded,
+    // deliberately kept out of any vdom-diffed prop so imperative toggling
+    // never fights a re-render — see openEffect's own mount-effect comment)
+    // specifically so there's no gap for the browser to ever paint the
+    // custom renderer visible before anything has actually opened it.
+    // Recomputed fresh on every render from openController.opened (not a
+    // frozen mount-time constant) — Preact only touches the DOM for a prop
+    // whose value actually changed since the last render, so as long as
+    // this always reflects the *current* truth, it never fights the
+    // imperative removeAttribute/setAttribute openEffect/close do directly.
+    "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
     ...autoFocusProps,

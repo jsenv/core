@@ -281,14 +281,6 @@ const css = /* css */ `
 
     position: absolute;
     inset: 0;
-    /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
-       by default until .show()/.showModal() adds [open]) — needs its own
-       starting-hidden default declared here rather than left to a layout
-       effect, or it'd flash visible for one frame on mount before that
-       effect ever gets a chance to run (see openEffect's own show/hide
-       steps below for why "" isn't used to show it again: clearing the
-       inline value would only defer back to this same default). */
-    display: none;
     border: none;
     /* Always clickable while actually rendered (display: none while
        genuinely closed already makes it non-interactive on its own) — an
@@ -297,6 +289,19 @@ const css = /* css */ `
        the content itself (.navi_dialog, via suppressPointerEventsDuringTransition
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
+
+    /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
+       by default until .show()/.showModal() adds [open]) — needs its own
+       starting-hidden mechanism. [navi-hidden] is set from useDialogProps'
+       own backdropProps (recomputed from openController.opened on every
+       render, present from the very first one), then toggled by plain
+       removeAttribute/setAttribute in openEffect/close, never an explicit
+       display override — removing the attribute just lets this rule stop
+       matching, so whatever display the box would otherwise have applies
+       on its own. */
+    &[navi-hidden] {
+      display: none;
+    }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
     &[data-pointer-interaction-outside="close"] {
@@ -624,10 +629,7 @@ const useDialogProps = (props) => {
       disarmBackdropHideRef.current?.();
       disarmBackdropHideRef.current = null;
       backdropEl.style.transitionProperty = "none";
-      // "block", not "" — clearing the inline value would defer back to
-      // .navi_dialog_backdrop's own stylesheet default (display: none),
-      // leaving it hidden instead of shown.
-      backdropEl.style.display = "block";
+      backdropEl.removeAttribute("navi-hidden");
       backdropEl.getBoundingClientRect();
       // aria-expanded stays "false" here — flipped below, alongside
       // dialogEl's own flip, once transitions are back on (or, for
@@ -784,7 +786,7 @@ const useDialogProps = (props) => {
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
           () => {
-            backdropEl.style.display = "none";
+            backdropEl.setAttribute("navi-hidden", "");
           },
         );
       }
@@ -822,6 +824,13 @@ const useDialogProps = (props) => {
     "ref": backdropRef,
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
+    // Present from this very first render (recomputed fresh on every one
+    // from openController.opened, not a frozen mount-time constant) so
+    // there's no gap for the browser to ever paint this plain-div backdrop
+    // visible before anything has actually opened it — see popover.jsx's
+    // own identical prop for the full reasoning, and this file's own CSS
+    // for the rule it drives.
+    "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     "animationDuration": rest.animationDuration,
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
