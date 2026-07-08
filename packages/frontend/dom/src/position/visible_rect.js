@@ -727,8 +727,26 @@ export const pickPositionRelativeTo = (
     ? anchor
     : resolvedContainer || document.documentElement;
 
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = document.documentElement.clientHeight;
+  // window.visualViewport, not document.documentElement.clientWidth/Height
+  // (the *layout* viewport) — the layout viewport never shrinks when a
+  // mobile on-screen keyboard opens, only the visual one does, so centering
+  // against the former left anchorless popups (Dialog's own docked case,
+  // always) either not reacting to the keyboard at all, or overlapping it
+  // outright. Falls back to the layout viewport on engines without
+  // visualViewport support.
+  const visualViewport = window.visualViewport;
+  const viewportWidth = visualViewport
+    ? visualViewport.width
+    : document.documentElement.clientWidth;
+  const viewportHeight = visualViewport
+    ? visualViewport.height
+    : document.documentElement.clientHeight;
+  // How far the visual viewport's own top/left edge sits from the layout
+  // viewport's (both in the same client-coordinate space getBoundingClientRect
+  // already uses everywhere else in this function) — usually 0/0, but not
+  // always once a keyboard or pinch-zoom has shifted things.
+  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
   // document.documentElement is used as a sentinel "the viewport" value: an
   // anchorless popup should center/place itself against the visual
   // viewport, not against <html>'s own box — which, unlike the viewport,
@@ -739,7 +757,12 @@ export const pickPositionRelativeTo = (
   const anchorIsViewport = effectiveAnchor === document.documentElement;
   // Get viewport-relative positions
   const anchorRect = anchorIsViewport
-    ? { left: 0, top: 0, right: viewportWidth, bottom: viewportHeight }
+    ? {
+        left: viewportLeft,
+        top: viewportTop,
+        right: viewportLeft + viewportWidth,
+        bottom: viewportTop + viewportHeight,
+      }
     : effectiveAnchor.getBoundingClientRect();
   const anchorLeft = snapToPixel(anchorRect.left);
   const anchorTop = snapToPixel(anchorRect.top);
@@ -766,10 +789,12 @@ export const pickPositionRelativeTo = (
   // converted into the container's local coordinate space — a real,
   // previously unnoticed 1px overflow (any container with a visible border)
   // that this fixes.
-  const clampLeftBound = !hasAnchor ? anchorLeft + containerBorders.left : 0;
+  const clampLeftBound = !hasAnchor
+    ? anchorLeft + containerBorders.left
+    : viewportLeft;
   const clampRightBound = !hasAnchor
     ? anchorRight - containerBorders.right
-    : viewportWidth;
+    : viewportLeft + viewportWidth;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -801,11 +826,11 @@ export const pickPositionRelativeTo = (
     insetRight = anchorBorderSizes.right + anchorPaddingSizes.right;
   }
   const spaceAbove = anchorTop + insetTop;
-  const spaceBelow = viewportHeight - anchorBottom + insetBottom;
+  const spaceBelow = viewportTop + viewportHeight - anchorBottom + insetBottom;
   const effectiveAnchorLeft = anchorLeft + insetLeft;
   const effectiveAnchorRight = anchorRight - insetRight;
   const spaceLeft = anchorLeft + insetLeft;
-  const spaceRight = viewportWidth - anchorRight + insetRight;
+  const spaceRight = viewportLeft + viewportWidth - anchorRight + insetRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -903,7 +928,7 @@ export const pickPositionRelativeTo = (
         return spaceLeft - marginWithAnchor - marginWithContainer;
       }
       if (x === "aligned-left") {
-        return viewportWidth - anchorLeft - marginWithContainer;
+        return viewportLeft + viewportWidth - anchorLeft - marginWithContainer;
       }
       if (x === "aligned-right") {
         return anchorRight - marginWithContainer;
