@@ -204,9 +204,7 @@
             </div>
 
             <div class="demo-section">
-              <h3>
-                Forced width (size=400) and a min-size floor (minSize=250)
-              </h3>
+              <h3>Forced width (size=400)</h3>
               <button onClick={() => setIsOpenWide(true)}>
                 Open wide panel
               </button>
@@ -214,7 +212,6 @@
                 isOpen={isOpenWide}
                 onClose={() => setIsOpenWide(false)}
                 size={400}
-                minSize={250}
                 animation={animationEnabled}
               >
                 <PanelContent />

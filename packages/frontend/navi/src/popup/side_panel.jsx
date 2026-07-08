@@ -116,40 +116,44 @@ const css = /* css */ `
         border-bottom-left-radius: inherit;
       }
     }
-  }
 
-  .navi_side_panel_close_button {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 1; /* sits above the panel's own content */
-    display: flex;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 18px;
-    line-height: 1;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
+    .navi_side_panel_close_button {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 1; /* sits above the panel's own content */
+      display: flex;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 18px;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
 
-    &:hover {
-      color: #212529;
-      background: #f0f0f0;
+      &:hover {
+        color: #212529;
+        background: #f0f0f0;
+      }
     }
-  }
-  /* Kept near (not touching) whichever edge the panel is flush against. */
-  .navi_side_panel[navi-side="left"] .navi_side_panel_close_button {
-    right: auto;
-    left: 12px;
-  }
-  .navi_side_panel[navi-side="bottom"] .navi_side_panel_close_button {
-    top: auto;
-    bottom: 12px;
+    /* Kept near (not touching) whichever edge the panel is flush against. */
+    &[navi-side="left"] {
+      .navi_side_panel_close_button {
+        right: auto;
+        left: 12px;
+      }
+    }
+    &[navi-side="bottom"] {
+      .navi_side_panel_close_button {
+        top: auto;
+        bottom: 12px;
+      }
+    }
   }
 `;
 
