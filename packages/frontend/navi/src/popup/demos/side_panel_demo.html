@@ -180,8 +180,11 @@
       // put (sticky) while this scrolls underneath is actually observable.
       const HeadFootContent = () => (
         <>
-          <SidePanel.Head>
-            <strong>Sticky head</strong>
+          <SidePanel.Head closeButton>
+            <strong>
+              Sticky head with a bit of extra text so the close button's float
+              actually has something to wrap around.
+            </strong>
           </SidePanel.Head>
           <div style={{ padding: "16px" }}>
             {Array.from({ length: 30 }, (_, i) => (
@@ -210,7 +213,6 @@
               id={panelId}
               layer="local"
               width={220}
-              hideCloseButton
               closeOnClickOutside
               animation={animation}
             >
@@ -537,7 +539,6 @@
                   <SidePanel
                     open={isOpenHeadFoot}
                     onClose={() => setIsOpenHeadFoot(false)}
-                    hideCloseButton
                     closeOnClickOutside
                     width={280}
                     animation={animationEnabled}

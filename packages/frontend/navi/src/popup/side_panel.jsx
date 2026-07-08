@@ -131,31 +131,6 @@ const css = /* css */ `
       }
     }
 
-    .navi_side_panel_close_button {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1; /* sits above the panel's own content */
-      display: flex;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      align-items: center;
-      justify-content: center;
-      color: #6c757d;
-      font-size: 18px;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-
-      &:hover {
-        color: #212529;
-        background: #f0f0f0;
-      }
-    }
-
     /* Sticky regardless of side: the panel's own content always stacks
        (and scrolls) top-to-bottom, whether the panel itself is docked to
        the left/right or the top/bottom of the viewport/container — so
@@ -177,6 +152,39 @@ const css = /* css */ `
     .navi_side_panel_foot {
       bottom: 0;
       border-top: 1px solid var(--navi-popup-border-color);
+    }
+
+    /* float, not absolute positioning: lets the head's own text content
+       wrap around it instead of sitting underneath/behind it — the first
+       line is narrower (however wide the button is, plus the margin
+       below), any line after the button's own height is full-width again.
+       Only really "just works" for plain inline/text content, though —
+       something more layout-heavy in the head (its own flex row, say)
+       won't shrink around a float this way. Rendered before children in
+       the JSX specifically so it comes first in DOM/source order, which
+       floats require to visually place them before the content that's
+       supposed to wrap around them. */
+    .navi_side_panel_head_close_button {
+      float: right;
+      display: flex;
+      width: 28px;
+      height: 28px;
+      margin-left: 8px;
+      padding: 0;
+      align-items: center;
+      justify-content: center;
+      color: #6c757d;
+      font-size: 18px;
+      line-height: 1;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+
+      &:hover {
+        color: #212529;
+        background: #f0f0f0;
+      }
     }
   }
 `;
@@ -231,9 +239,6 @@ const css = /* css */ `
  *   navigation inside the panel (`focusCapture`) — closing on outside
  *   interaction only makes sense paired with not letting focus silently
  *   leave the panel first.
- * @param {boolean} [props.hideCloseButton=false] - Omits the built-in ×
- *   button (positioned near — but never touching — the flush edge; see
- *   this file's own CSS).
  * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
  *   one underlying renderer instead of its automatic screen-size
  *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
@@ -242,7 +247,10 @@ const css = /* css */ `
  *   always blocks interaction with the rest of the page one way or another
  *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
  *   popover's fully passive, click-through backdrop.
- * @param {import("preact").ComponentChildren} props.children
+ * @param {import("preact").ComponentChildren} props.children - No built-in
+ *   close button — add one wherever it makes sense for the layout (e.g. a
+ *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
+ *   `closeButton` prop, or rely on `closeOnClickOutside`/Escape instead.
  */
 export const SidePanel = ({
   open,
@@ -256,7 +264,6 @@ export const SidePanel = ({
   minHeight,
   animation,
   closeOnClickOutside = false,
-  hideCloseButton = false,
   mode,
   layer = "top",
   className,
@@ -287,16 +294,6 @@ export const SidePanel = ({
       }}
       {...rest}
     >
-      {!hideCloseButton && (
-        <Button
-          className="navi_side_panel_close_button"
-          aria-label="Close panel"
-          command="--navi-close"
-          autoFocus="fallback"
-        >
-          ×
-        </Button>
-      )}
       {children}
     </Popup>
   );
@@ -322,12 +319,28 @@ const toCssLength = (value) =>
  * regardless of `side` — only the panel's content in between scrolls.
  *
  * @param {object} props
+ * @param {boolean} [props.closeButton=false] - Injects a `--navi-close`
+ *   button, floated to the right (see this file's own CSS) so plain
+ *   text/inline content wraps around it instead of sitting underneath it —
+ *   doesn't help layout-heavy head content (its own flex row, say), which
+ *   won't shrink around a float this way.
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_side_panel_head"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
-const SidePanelHead = (props) => (
-  <Box baseClassName="navi_side_panel_head" {...props} />
+const SidePanelHead = ({ closeButton = false, children, ...rest }) => (
+  <Box baseClassName="navi_side_panel_head" {...rest}>
+    {closeButton && (
+      <Button
+        className="navi_side_panel_head_close_button"
+        aria-label="Close panel"
+        command="--navi-close"
+      >
+        ×
+      </Button>
+    )}
+    {children}
+  </Box>
 );
 /**
  * Stuck to the bottom of the panel's own scrollable area (`position:

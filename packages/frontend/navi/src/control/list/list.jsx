@@ -1,6 +1,7 @@
 import {
   dispatchPublicCustomEvent,
   getElementSignature,
+  getScrollContainer,
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
@@ -724,9 +725,10 @@ const useListScrollSync = ({
       const listScrollContainerEl = ref.current.querySelector(
         `.navi_list_scroll_container`,
       );
+      const scrollContainerEl = resolveScrollContainer(listScrollContainerEl);
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
-        container: listScrollContainerEl,
+        container: scrollContainerEl,
         block,
       });
       const listEl = ref.current.querySelector(".navi_list");
@@ -769,8 +771,9 @@ const useListScrollSync = ({
     const listScrollContainerEl = ref.current.querySelector(
       `.navi_list_scroll_container`,
     );
-    const currentScrollLeft = listScrollContainerEl.scrollLeft;
-    const currentScrollTop = listScrollContainerEl.scrollTop;
+    const scrollContainerEl = resolveScrollContainer(listScrollContainerEl);
+    const currentScrollLeft = scrollContainerEl.scrollLeft;
+    const currentScrollTop = scrollContainerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
     currentScrollRef.current = {
       left: currentScrollLeft,
@@ -854,6 +857,7 @@ const useListScrollSync = ({
     if (!listScrollContainerEl) {
       return undefined;
     }
+    const scrollContainerEl = resolveScrollContainer(listScrollContainerEl);
     if (!searchText) {
       // no search -> try to restore scroll position
       topMatchScoresKeyRef.current = "";
@@ -883,13 +887,14 @@ const useListScrollSync = ({
         // so we do our best to give that item back
         const { item } = getScrollInfo(
           savedScroll,
+          scrollContainerEl,
           listScrollContainerEl,
           tracker,
           virtualItemSizeSignal,
           renderWindowRef,
           horizontal,
         );
-        listScrollContainerEl.scrollTo({
+        scrollContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top,
         });
@@ -939,6 +944,7 @@ const useListScrollSync = ({
     const listScrollContainerEl = listContainerEl.querySelector(
       `.navi_list_scroll_container`,
     );
+    const scrollContainerEl = resolveScrollContainer(listScrollContainerEl);
     const listEl = listContainerEl.querySelector(".navi_list");
     const onScroll = () => {
       updateCurrentScroll();
@@ -955,9 +961,10 @@ const useListScrollSync = ({
       let reason = "";
       const scrollInfo = getScrollInfo(
         {
-          left: listScrollContainerEl.scrollLeft,
-          top: listScrollContainerEl.scrollTop,
+          left: scrollContainerEl.scrollLeft,
+          top: scrollContainerEl.scrollTop,
         },
+        scrollContainerEl,
         listScrollContainerEl,
         tracker,
         virtualItemSizeSignal,
@@ -977,11 +984,11 @@ const useListScrollSync = ({
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
-    listScrollContainerEl.addEventListener("scroll", onScroll, {
+    scrollContainerEl.addEventListener("scroll", onScroll, {
       passive: true,
     });
     return () => {
-      listScrollContainerEl.removeEventListener("scroll", onScroll);
+      scrollContainerEl.removeEventListener("scroll", onScroll);
     };
   }, [renderBudget]);
 
@@ -992,12 +999,57 @@ const useListScrollSync = ({
     scrollToItem,
   };
 };
+
+// With no max-height of its own (--list-max-height: none, the default),
+// .navi_list_scroll_container never actually overflows — the list just
+// grows to fit its content, and whichever real ancestor scroll container it
+// sits inside (e.g. a SidePanel/Popover's own `overflow: auto` box) is what
+// the user actually scrolls instead. Detected once, from the scroll
+// container's own computed max-height rather than a live scrollHeight vs
+// clientHeight measurement — assumes no max-height ⇒ never self-scrolls,
+// true in practice and much cheaper than re-measuring on every resize.
+const resolveScrollContainer = (listScrollContainerEl) => {
+  const maxHeight = getComputedStyle(listScrollContainerEl).maxHeight;
+  if (maxHeight === "none") {
+    const ancestorScrollContainer = getScrollContainer(listScrollContainerEl);
+    if (ancestorScrollContainer) {
+      return ancestorScrollContainer;
+    }
+  }
+  return listScrollContainerEl;
+};
+
+// The portion of the scroll container's own visible viewport that's
+// actually dedicated to the list. Only differs from the scroll container's
+// own rect once it's a delegated ancestor (see resolveScrollContainer
+// above) rather than the list's own scroll div — other content sharing
+// that same ancestor (sibling elements, a sticky head/foot, ...) can occupy
+// part of it. Sticky elements are deliberately not special-cased: they're
+// assumed small enough that treating them like any other non-sticky content
+// (i.e. just letting them shrink the visible window by their own footprint)
+// is close enough — either way they only ever reduce the visible area, never
+// grow it.
+const getListVisibleRect = (scrollContainerEl, listScrollContainerEl) => {
+  const containerRect = scrollContainerEl.getBoundingClientRect();
+  if (scrollContainerEl === listScrollContainerEl) {
+    return containerRect;
+  }
+  const listRect = listScrollContainerEl.getBoundingClientRect();
+  return {
+    top: Math.max(containerRect.top, listRect.top),
+    bottom: Math.min(containerRect.bottom, listRect.bottom),
+    left: Math.max(containerRect.left, listRect.left),
+    right: Math.min(containerRect.right, listRect.right),
+  };
+};
+
 // Returns the item located at the current scroll position of a list container.
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
 // estimation via virtualItemSize or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = (
   scrollValues,
+  scrollContainerEl,
   listScrollContainerEl,
   tracker,
   virtualItemSizeSignal,
@@ -1006,7 +1058,10 @@ const getScrollInfo = (
 ) => {
   const listEl = listScrollContainerEl.querySelector(".navi_list");
   const items = tracker.itemsSignal.peek();
-  const containerRect = listScrollContainerEl.getBoundingClientRect();
+  const containerRect = getListVisibleRect(
+    scrollContainerEl,
+    listScrollContainerEl,
+  );
   let hitEl = null;
   let hitFiller = null;
   const scrollPos = horizontal ? scrollValues.left : scrollValues.top;

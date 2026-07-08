@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SidePanel Integration Demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Button, List, ListItem, SidePanel } from "@jsenv/navi";
+
+      const ITEMS = Array.from({ length: 500 }, (_, i) => ({
+        id: `item-${i}`,
+        label: `Item ${i + 1}`,
+      }));
+
+      // SidePanel + SidePanel.Head/Foot + List, combined: the List has no
+      // maxHeight of its own, so it's the SidePanel (its own .navi_popover/
+      // .navi_dialog, overflow: auto) that actually scrolls — this is the
+      // scenario list.jsx's own scroll-container delegation exists for (see
+      // resolveScrollContainer/getListVisibleRect there). defaultOpen so the
+      // panel is already open on page load — just scroll the list and watch
+      // it behave (render window sliding, items scrolling into view, no
+      // stuck/frozen virtualization).
+      const App = () => (
+        <SidePanel defaultOpen width={320}>
+          <SidePanel.Head closeButton>
+            <strong>500 items, no maxHeight on the List</strong>
+          </SidePanel.Head>
+          <List>
+            {ITEMS.map((item, i) => (
+              <ListItem key={item.id} index={i} id={item.id} value={item.label}>
+                {item.label}
+              </ListItem>
+            ))}
+          </List>
+          <SidePanel.Foot>
+            <Button command="--navi-close">Close</Button>
+          </SidePanel.Foot>
+        </SidePanel>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
