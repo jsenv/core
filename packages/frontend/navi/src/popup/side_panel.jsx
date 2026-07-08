@@ -154,6 +154,29 @@ const css = /* css */ `
         background: #f0f0f0;
       }
     }
+
+    /* Sticky regardless of side: the panel's own content always stacks
+       (and scrolls) top-to-bottom, whether the panel itself is docked to
+       the left/right or the top/bottom of the viewport/container — so
+       "top" for the head and "bottom" for the foot are the right offsets
+       either way, not something that needs to vary with navi-side. Each
+       needs its own opaque background since scrollable content otherwise
+       shows through underneath while stuck. */
+    .navi_side_panel_head,
+    .navi_side_panel_foot {
+      position: sticky;
+      z-index: 1;
+      padding: 12px 16px;
+      background-color: var(--navi-popup-background-color);
+    }
+    .navi_side_panel_head {
+      top: 0;
+      border-bottom: 1px solid var(--navi-popup-border-color);
+    }
+    .navi_side_panel_foot {
+      bottom: 0;
+      border-top: 1px solid var(--navi-popup-border-color);
+    }
   }
 `;
 
@@ -294,3 +317,37 @@ export const SidePanel = ({
     </Popup>
   );
 };
+
+/**
+ * Stuck to the top of the panel's own scrollable area (`position: sticky`)
+ * regardless of `side` — only the panel's content in between scrolls.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_head"` class this file's own CSS targets.
+ * @param {import("preact").ComponentChildren} props.children
+ */
+const SidePanelHead = ({ className, ...rest }) => (
+  <div
+    className={withPropsClassName("navi_side_panel_head", className)}
+    {...rest}
+  />
+);
+SidePanel.Head = SidePanelHead;
+
+/**
+ * Stuck to the bottom of the panel's own scrollable area (`position:
+ * sticky`) regardless of `side` — only the panel's content above scrolls.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_foot"` class this file's own CSS targets.
+ * @param {import("preact").ComponentChildren} props.children
+ */
+const SidePanelFoot = ({ className, ...rest }) => (
+  <div
+    className={withPropsClassName("navi_side_panel_foot", className)}
+    {...rest}
+  />
+);
+SidePanel.Foot = SidePanelFoot;

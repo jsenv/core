@@ -176,6 +176,50 @@
         );
       };
 
+      // Enough content to force scrolling, so SidePanel.Head/Foot staying
+      // put (sticky) while this scrolls underneath is actually observable.
+      const HeadFootContent = () => (
+        <>
+          <SidePanel.Head>
+            <strong>Sticky head</strong>
+          </SidePanel.Head>
+          <div style={{ padding: "16px" }}>
+            {Array.from({ length: 30 }, (_, i) => (
+              <p key={i}>Scrollable line {i + 1}.</p>
+            ))}
+          </div>
+          <SidePanel.Foot>
+            <Button command="--navi-close">Close</Button>
+          </SidePanel.Foot>
+        </>
+      );
+
+      // Same HeadFootContent, but docked inside .demo-container (layer="local")
+      // instead of the viewport, command-driven like LocalContainerDemo above.
+      const HeadFootLocalDemo = ({ animation }) => {
+        const panelId = useId();
+        return (
+          <div class="demo-container">
+            <p style={{ margin: "12px" }}>
+              This box is the panel's own positioned ancestor.
+            </p>
+            <Button command="--navi-toggle" commandFor={panelId}>
+              Toggle panel
+            </Button>
+            <SidePanel
+              id={panelId}
+              layer="local"
+              width={220}
+              hideCloseButton
+              closeOnClickOutside
+              animation={animation}
+            >
+              <HeadFootContent />
+            </SidePanel>
+          </div>
+        );
+      };
+
       // Mounted lazily (only once "Render" is clicked) so defaultOpen's
       // no-entrance-animation guarantee is actually observable — mounting
       // it unconditionally at page load would show it already-open before
@@ -199,6 +243,7 @@
         const [isOpenLeft, setIsOpenLeft] = useState(false);
         const [isOpenTop, setIsOpenTop] = useState(false);
         const [isOpenBottom, setIsOpenBottom] = useState(false);
+        const [isOpenHeadFoot, setIsOpenHeadFoot] = useState(false);
         const [animationEnabled, setAnimationEnabled] = useStoredBoolean(
           "side_panel_demo_animation",
           false,
@@ -231,6 +276,9 @@
                 </li>
                 <li>
                   <a href="#side">side (left/top/bottom/right)</a>
+                </li>
+                <li>
+                  <a href="#head-foot">SidePanel.Head / SidePanel.Foot</a>
                 </li>
               </ul>
             </nav>
@@ -471,6 +519,33 @@
                     <PanelContent />
                   </SidePanel>
                 </div>
+              </div>
+            </div>
+
+            <div id="head-foot" class="demo-section">
+              <h3>SidePanel.Head / SidePanel.Foot</h3>
+              <p>
+                Both are sticky within the panel's own scrollable area — only
+                the content between them scrolls. Enough lines below to force
+                scrolling in both a viewport panel and a container-docked one.
+              </p>
+              <div class="demo-row">
+                <div>
+                  <button onClick={() => setIsOpenHeadFoot(true)}>
+                    Open panel (in viewport)
+                  </button>
+                  <SidePanel
+                    open={isOpenHeadFoot}
+                    onClose={() => setIsOpenHeadFoot(false)}
+                    hideCloseButton
+                    closeOnClickOutside
+                    width={280}
+                    animation={animationEnabled}
+                  >
+                    <HeadFootContent />
+                  </SidePanel>
+                </div>
+                <HeadFootLocalDemo animation={animationEnabled} />
               </div>
             </div>
           </div>
