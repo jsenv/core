@@ -19,21 +19,19 @@ const css = /* css */ `
        dialog naturally matches whatever triggered it (picker_custom.jsx's
        dialog mode relies on this) — SidePanel's own "anchor" is just its
        container, so this would otherwise force min-width to the full
-       container width, overriding \`size\` below entirely. Popover ignores
-       this var. */
+       container width, overriding \`width\`/\`height\` below entirely. Popover
+       ignores this var. */
     --anchor-width: 0px;
 
-    /* Docked-axis size: content-sized by default (the custom property is
-       unset unless the \`size\` prop is passed, and var() falls back to
-       "auto"), forced via \`size\` otherwise. */
-    &[navi-side="left"],
-    &[navi-side="right"] {
-      width: var(--navi-side-panel-size, auto);
-    }
-    &[navi-side="top"],
-    &[navi-side="bottom"] {
-      height: var(--navi-side-panel-size, auto);
-    }
+    /* Content-sized by default (each custom property is unset unless the
+       matching \`width\`/\`height\` prop is passed, and var() falls back to
+       "auto") — forced otherwise. Both set unconditionally regardless of
+       \`side\`: whichever axis isn't the docked one gets overridden again
+       below by the perpendicular-fill rules, at higher specificity, unless
+       the corresponding prop was actually passed (see there for why an
+       explicit value still wins even on that axis). */
+    width: var(--navi-side-panel-width, auto);
+    height: var(--navi-side-panel-height, auto);
 
     /* layer="top": the container is the viewport itself, so the
        perpendicular axis and the popup's own ceiling both use
@@ -52,11 +50,13 @@ const css = /* css */ `
 
       &[navi-side="left"],
       &[navi-side="right"] {
-        height: var(--navi-vvh);
+        /* An explicit \`height\` prop still wins here (see the base rule
+           above) — only the fallback (no \`height\` given) differs by layer. */
+        height: var(--navi-side-panel-height, var(--navi-vvh));
       }
       &[navi-side="top"],
       &[navi-side="bottom"] {
-        width: var(--navi-vvw);
+        width: var(--navi-side-panel-width, var(--navi-vvw));
       }
       &[navi-side="left"] {
         border-top-left-radius: 0;
@@ -93,11 +93,11 @@ const css = /* css */ `
 
       &[navi-side="left"],
       &[navi-side="right"] {
-        height: 100%;
+        height: var(--navi-side-panel-height, 100%);
       }
       &[navi-side="top"],
       &[navi-side="bottom"] {
-        width: 100%;
+        width: var(--navi-side-panel-width, 100%);
       }
       &[navi-side="left"] {
         border-top-left-radius: inherit;
@@ -187,16 +187,21 @@ const toCssLength = (value) =>
  *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
  * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
  *   viewport/container edge the panel is docked flush against.
- * @param {string|number} [props.size] - Size along the docked axis (width
- *   for `left`/`right`, height for `top`/`bottom`) — a bare number is
- *   treated as pixels. Omitted by default: the panel then sizes to its own
- *   content instead of a fixed size (still capped by the popup's own
- *   max-width/max-height, same as `Dialog`/`Popover`). The perpendicular
- *   axis always fills its container regardless (see this file's own CSS).
- * @param {string|number} [props.minSize] - Floor for the docked axis (same
- *   unit rules as `size`) — forwarded as `Popup`'s own `minWidth`/
- *   `minHeight` (whichever matches the docked axis), so a content-sized
- *   panel (no `size` given) never shrinks below this.
+ * @param {string|number} [props.width] - Explicit width — a bare number is
+ *   treated as pixels. Relevant for a `left`/`right` panel (its docked
+ *   axis); omitted by default, so the panel sizes to its own content there
+ *   (still capped by the popup's own max-width, same as `Dialog`/
+ *   `Popover`). For a `top`/`bottom` panel (where width is the
+ *   perpendicular axis, normally filling the container) passing this
+ *   overrides that fill instead — `side` isn't expected to change at
+ *   runtime, so there's no need to guard against the "wrong axis" case.
+ * @param {string|number} [props.height] - Same as `width`, for the other
+ *   axis: docked (content-sized by default) for `top`/`bottom`,
+ *   perpendicular (container-filling by default) for `left`/`right`.
+ * @param {string|number} [props.minWidth] - Forwarded as-is to `Popup`'s
+ *   own `minWidth`.
+ * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
+ *   own `minHeight`.
  * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
  *   against the viewport (real top-layer rendering, matches a fixed,
  *   always-on-screen drawer). `"local"`: docks against the panel's own
@@ -238,8 +243,10 @@ export const SidePanel = ({
   onClose,
   children,
   side = "right",
-  size,
-  minSize,
+  width,
+  height,
+  minWidth,
+  minHeight,
   animation,
   closeOnClickOutside = false,
   hideCloseButton = false,
@@ -250,9 +257,6 @@ export const SidePanel = ({
 }) => {
   import.meta.css = css;
   const positionArea = SIDE_TO_POSITION_AREA[side];
-  const isHorizontalDock = side === "left" || side === "right";
-  const sizeValue = toCssLength(size);
-  const minSizeValue = toCssLength(minSize);
 
   return (
     <Popup
@@ -266,11 +270,14 @@ export const SidePanel = ({
       animation={animation === true ? `slide-from-${side}` : animation}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}
-      minWidth={isHorizontalDock ? minSizeValue : undefined}
-      minHeight={isHorizontalDock ? undefined : minSizeValue}
+      minWidth={toCssLength(minWidth)}
+      minHeight={toCssLength(minHeight)}
       className={withPropsClassName("navi_side_panel", className)}
       navi-side={side}
-      style={{ "--navi-side-panel-size": sizeValue }}
+      style={{
+        "--navi-side-panel-width": toCssLength(width),
+        "--navi-side-panel-height": toCssLength(height),
+      }}
       {...rest}
     >
       {!hideCloseButton && (

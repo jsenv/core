@@ -106,7 +106,7 @@
             <Button command="--navi-toggle" commandFor={panelId}>
               Toggle side panel
             </Button>
-            <SidePanel id={panelId} animation={animation}>
+            <SidePanel id={panelId} width={300} animation={animation}>
               <PanelContent />
             </SidePanel>
           </>
@@ -126,7 +126,12 @@
             <Button command="--navi-toggle" commandFor={panelId}>
               Toggle local panel
             </Button>
-            <SidePanel id={panelId} layer="local" animation={animation}>
+            <SidePanel
+              id={panelId}
+              layer="local"
+              width={200}
+              animation={animation}
+            >
               <PanelContent />
             </SidePanel>
           </div>
@@ -189,9 +194,9 @@
                 Default (dynamic width — sized to content, close on Escape only)
               </h3>
               <p>
-                No <code>size</code> passed: the panel's docked-axis width just
-                follows its own content, same as `Dialog`/`Popover` would (still
-                capped by the popup's own max-width).
+                No <code>width</code> passed: the panel sizes to its own
+                content, same as `Dialog`/`Popover` would (still capped by
+                the popup's own max-width).
               </p>
               <button onClick={() => setIsOpen(true)}>Open side panel</button>
               <SidePanel
@@ -204,14 +209,14 @@
             </div>
 
             <div class="demo-section">
-              <h3>Forced width (size=400)</h3>
+              <h3>Forced width (width=400)</h3>
               <button onClick={() => setIsOpenWide(true)}>
                 Open wide panel
               </button>
               <SidePanel
                 open={isOpenWide}
                 onClose={() => setIsOpenWide(false)}
-                size={400}
+                width={400}
                 animation={animationEnabled}
               >
                 <PanelContent />
