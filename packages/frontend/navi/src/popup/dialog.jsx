@@ -153,6 +153,18 @@ const css = /* css */ `
   }
 
   .navi_dialog {
+    /* Computed once, reused by both max-width itself and min-width's own
+       clamp below (see its comment for why) — avoids repeating the same
+       min(..., ...) expression twice. */
+    --x-dialog-max-width: min(
+      var(--dialog-max-width, var(--dialog-maxmax-width)),
+      var(--dialog-maxmax-width)
+    );
+    --x-dialog-max-height: min(
+      var(--dialog-max-height, var(--dialog-maxmax-height)),
+      var(--dialog-maxmax-height)
+    );
+
     /* Base default: also the custom renderer's own permanent value — its
        containing block is genuinely its nearest positioned ancestor,
        regardless of positionArea. See the [data-layer="top"] rule below for
@@ -162,15 +174,16 @@ const css = /* css */ `
        unlike an earlier version of this file. */
     position: absolute;
     inset: unset;
-    min-width: var(--anchor-width, 0px);
-    max-width: min(
-      var(--dialog-max-width, var(--dialog-maxmax-width)),
-      var(--dialog-maxmax-width)
+    min-width: min(
+      max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
+      var(--x-dialog-max-width)
     );
-    max-height: min(
-      var(--dialog-max-height, var(--dialog-maxmax-height)),
-      var(--dialog-maxmax-height)
+    max-width: var(--x-dialog-max-width);
+    min-height: min(
+      max(var(--anchor-height, 0px), var(--dialog-min-height, 0px)),
+      var(--x-dialog-max-height)
     );
+    max-height: var(--x-dialog-max-height);
     margin: 0;
     flex-direction: column;
     border-width: var(--dialog-border-width);
@@ -815,6 +828,8 @@ const DIALOG_PSEUDO_CLASSES = [
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
+  minHeight: "--dialog-min-height",
   maxHeight: "--dialog-max-height",
 };

@@ -271,6 +271,16 @@ const css = /* css */ `
   }
 
   .navi_popover {
+    --x-popover-max-width: min(
+      var(--popover-max-width, var(--popover-maxmax-width)),
+      var(--popover-maxmax-width)
+    );
+    --x-popover-max-height: min(
+      var(--popover-max-height),
+      var(--space-available, var(--popover-maxmax-height)),
+      var(--popover-maxmax-height)
+    );
+
     /* Base default: also the custom renderer's own permanent value — its
        containing block is genuinely its nearest positioned ancestor,
        regardless of anchor. See the [popover] rules below for why the
@@ -279,15 +289,13 @@ const css = /* css */ `
        reasoning. */
     position: absolute;
     inset: unset;
-    max-width: min(
-      var(--popover-max-width, var(--popover-maxmax-width)),
-      var(--popover-maxmax-width)
+    min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
+    max-width: var(--x-popover-max-width);
+    min-height: min(
+      var(--popover-min-height, 0px),
+      var(--x-popover-max-height)
     );
-    max-height: min(
-      var(--popover-max-height),
-      var(--space-available, var(--popover-maxmax-height)),
-      var(--popover-maxmax-height)
-    );
+    max-height: var(--x-popover-max-height);
     border-width: var(--popover-border-width);
     border-style: solid;
     border-color: var(--popover-border-color);
@@ -1131,7 +1139,9 @@ const POPOVER_PSEUDO_CLASSES = [
 // handling).
 const POPUP_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
+  minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",
+  minHeight: "--popover-min-height",
   maxHeight: "--popover-max-height",
 };
 

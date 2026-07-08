@@ -534,6 +534,38 @@
         );
       };
 
+      // minWidth/minHeight passed directly, way past any viewport — since
+      // min-width/height always wins over max-width/height when the two
+      // conflict (a CSS spec rule, not a bug), dialog.jsx clamps its own
+      // min-width/height with an outer min() against the exact same
+      // max-width/height ceiling instead of a bare var(). Without that
+      // clamp, this dialog would blow straight through
+      // --dialog-maxmax-width/height.
+      const MegaMinSizeDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              minWidth="3000px"
+              minHeight="3000px"
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>
+                <code>minWidth="3000px"</code> <code>minHeight="3000px"</code> —
+                should still never exceed the viewport's own spacing.
+              </p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
       const ContentSizeSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_content_size");
@@ -598,6 +630,11 @@
               />
               <WideAnchorDialog
                 label="wide anchor"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <MegaMinSizeDialog
+                label="mega minWidth/minHeight"
                 animation={animation}
                 animationDuration={animationDuration}
               />
