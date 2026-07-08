@@ -309,10 +309,72 @@ const css = /* css */ `
 `;
 
 /**
- * Entry point: picks between an internally-managed open controller
- * (UncontrolledDialog) and one owned by the caller (ControlledDialog, used
- * by picker_custom.jsx) so we don't instantiate a default controller when it
- * would just be thrown away.
+ * A dialog box — modal by default (real `<dialog>` + `showModal()`, browser
+ * top layer), or confined to a local container via `layer="local"`. See
+ * this file's own top comment for the full architecture (positionArea
+ * grammar, anchor's sizing-only role, backdrop mechanics).
+ *
+ * @param {object} props
+ * @param {"top"|"local"} [props.layer="top"] - `"top"`: `showModal()`'d
+ *   into the browser's own top layer (native focus trap, `Escape`-to-cancel,
+ *   hardware back-button dismissal, rest-of-document made inert). `"local"`:
+ *   shown via the non-modal `.show()` instead, staying in normal document
+ *   flow inside its own positioned ancestor — confined to (and clipped by)
+ *   that container instead of the whole viewport.
+ * @param {string} [props.positionArea="center"] - Where to dock the dialog
+ *   within its container (the viewport for `layer="top"`, the positioned
+ *   ancestor for `layer="local"`) — Dialog is never anchored to a real
+ *   element for positioning purposes. Same grammar as `Popover`'s own
+ *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): two
+ *   space-separated words, order-independent — y from `above`/
+ *   `aligned-top`/`center`/`aligned-bottom`/`below`, x from `on-the-left`/
+ *   `aligned-left`/`center`/`aligned-right`/`on-the-right`.
+ * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
+ *   between the dialog and the edges of its container.
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
+ *   both just absorb the click without closing (visually dimmed backdrop vs.
+ *   not) — a dialog is always modal one way or another, so there's always
+ *   at least a click-absorbing backdrop regardless of this prop.
+ * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
+ *   dialog so the page/container behind it can't scroll while it's open.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
+ *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
+ *   value is used as-is.
+ * @param {string} [props.animationDuration] - Maps to
+ *   `--popup-animation-duration`.
+ * @param {Element|{current: Element}} [props.anchor] - Only ever sizes the
+ *   dialog via the `--anchor-width`/`--anchor-height` CSS vars — never used
+ *   for positioning (see this file's top comment). Defaults to whatever
+ *   triggered the open (`e.detail.anchor`), if any.
+ * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
+ *   so it can never push the dialog past `--dialog-maxmax-width` (the
+ *   viewport/container-spacing ceiling) regardless of how large a value is
+ *   passed.
+ * @param {string} [props.maxWidth] - Maps to `--dialog-max-width`.
+ * @param {string} [props.minHeight] - Maps to `--dialog-min-height`, same
+ *   clamping as `minWidth`.
+ * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
+ * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
+ *   `autoFocus="fallback"` below has somewhere to land when the dialog has
+ *   no other focusable descendant of its own.
+ * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
+ *   `use_auto_focus.js` — `"fallback"` focuses the dialog itself if it has
+ *   no other focusable descendant.
+ * @param {boolean} [props.open] - Controlled open state.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state — plays no entrance animation (nothing was ever shown as
+ *   "closed" for the user to see it transition away from).
+ * @param {(event: Event) => void} [props.onClose] - Called when the dialog
+ *   actually closes — not preventable (see `open_controller.js`'s own
+ *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
+ *   veto a close instead).
+ * @param {object} [props.openController] - Advanced: an externally-owned
+ *   open controller (see `open_controller.js`) for a caller that wants to
+ *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
+ *   by `picker_custom.jsx`).
+ * @param {import("preact").ComponentChildren} props.children
  */
 export const Dialog = (props) => {
   import.meta.css = css;

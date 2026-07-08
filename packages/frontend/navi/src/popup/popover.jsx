@@ -421,13 +421,85 @@ const css = /* css */ `
 `;
 
 /**
- * Entry point: picks between an internally-managed open controller
- * (Uncontrolled) and one owned by the caller (Controlled, used by
- * picker_custom.jsx/side_panel.jsx) so `useOpenControllerByProps` — which
- * creates a whole controller instance — is only ever called when it's
- * actually needed, not on every render regardless. Which rendering strategy
- * (native Popover API vs. plain div) mounts is decided one level further
- * in, by `ControlledPopover` — see this file's top comment.
+ * An anchored (or container-docked) popup — via the native Popover API by
+ * default (`layer="top"`, real top-layer stacking), or a plain positioned
+ * div confined to a local container via `layer="local"`. See this file's
+ * own top comment for the full architecture (positionArea grammar, anchor
+ * resolution, backdrop mechanics, animation resolution).
+ *
+ * @param {object} props
+ * @param {"top"|"local"} [props.layer="top"] - `"top"`: rendered via the
+ *   native Popover API (`popover="manual"` + `showPopover()`), in the
+ *   browser's own top layer. `"local"`: a plain `position: absolute` div,
+ *   positioned relative to its own nearest positioned ancestor and clipped
+ *   by it — genuinely confined to (and by) that container instead of the
+ *   whole viewport. A real `anchor` works with either.
+ * @param {string} [props.positionArea="below"] - Where to place the popover
+ *   relative to its `anchor` (or its container, if there is none). Same
+ *   grammar as `Dialog`'s own `positionArea` (see `popup_shared.js`'s
+ *   `parsePositionArea`): two space-separated words, order-independent — y
+ *   from `above`/`aligned-top`/`center`/`aligned-bottom`/`below`, x from
+ *   `on-the-left`/`aligned-left`/`center`/`aligned-right`/`on-the-right`. A
+ *   bare word means no overlap with the anchor; `aligned-*` means edges
+ *   touching/overlapping.
+ * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
+ *   the popover has actually been positioned once, so a live reposition
+ *   (e.g. anchor moved) doesn't jump to a different side.
+ * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
+ *   between the popover and the edges of its container.
+ * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
+ *   between the popover and the edges of its anchor.
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
+ *   - `"none"` (default): no backdrop at all, outside clicks pass straight
+ *   through. `"close"` closes the popover on an outside click. `"capture"`
+ *   absorbs the click (dims the backdrop) without closing. Note this
+ *   default differs from `Dialog`'s own (`"close"`) — a popover is
+ *   typically a lightweight, non-modal affordance.
+ * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
+ *   popover so the page/container behind it can't scroll while it's open.
+ * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
+ *   popover (see `focus_trap.js`).
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
+ *   based on `positionArea`. Any other explicit value is used as-is.
+ * @param {string} [props.animationDuration] - Maps to
+ *   `--popup-animation-duration`.
+ * @param {Element|{current: Element}} [props.anchor] - The element the
+ *   popover is positioned relative to. Defaults to whatever triggered the
+ *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
+ *   all, the popover docks to its container instead (viewport for
+ *   `layer="top"`, positioned ancestor for `layer="local"`).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
+ *   Whether an explicit `anchor` prop takes precedence over
+ *   (`"override"`, default) or is ignored in favor of
+ *   (`"ignore"`) whatever anchor the triggering event itself carried.
+ * @param {string} [props.minWidth] - Maps to `--popover-min-width`; clamped
+ *   so it can never push the popover past `--popover-maxmax-width` (the
+ *   viewport/container-spacing ceiling) regardless of how large a value is
+ *   passed.
+ * @param {string} [props.maxWidth] - Maps to `--popover-max-width`.
+ * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
+ *   clamping as `minWidth`.
+ * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {number} [props.tabIndex=-1] - Set on the popover element itself
+ *   so `autoFocus="fallback"` below has somewhere to land when the popover
+ *   has no other focusable descendant of its own.
+ * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
+ *   `use_auto_focus.js` — `"fallback"` focuses the popover itself if it has
+ *   no other focusable descendant.
+ * @param {boolean} [props.open] - Controlled open state.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state — plays no entrance animation (nothing was ever shown as
+ *   "closed" for the user to see it transition away from).
+ * @param {(event: Event) => void} [props.onClose] - Called when the popover
+ *   actually closes — not preventable (see `open_controller.js`'s own
+ *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
+ *   veto a close instead).
+ * @param {object} [props.openController] - Advanced: an externally-owned
+ *   open controller (see `open_controller.js`) for a caller that wants to
+ *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
+ *   by `picker_custom.jsx`/`side_panel.jsx`).
+ * @param {import("preact").ComponentChildren} props.children
  */
 export const Popover = (props) => {
   import.meta.css = css;

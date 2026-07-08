@@ -58,6 +58,68 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * Renders a `Dialog` or a `Popover` behind one shared API, switching
+ * automatically based on screen size (small screen → dialog, otherwise →
+ * popover) unless `mode` is set explicitly. See this file's own top
+ * comment for the full mode-resolution/prop-forwarding rationale.
+ *
+ * @param {object} props
+ * @param {"dialog"|"popover"} [props.mode] - Forces one mode instead of the
+ *   automatic small-screen/large-screen resolution. Frozen for the
+ *   component instance's lifetime either way (see this file's top comment).
+ * @param {"top"|"local"} [props.layer] - Forwarded as-is to whichever of
+ *   `Dialog`/`Popover` renders — see either component's own doc.
+ * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
+ *   sizing-only for `Dialog`, positioning for `Popover` (see each
+ *   component's own doc for what it actually does there).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail] -
+ *   **Popover-only** (`Dialog` never resolves an anchor for positioning) —
+ *   never forwarded to `Dialog`, so it can't leak onto the real `<dialog>`
+ *   element as a stray DOM attribute when `mode="dialog"` is picked.
+ * @param {string} [props.marginWithAnchor] - **Popover-only**, same
+ *   Dialog-leak guard as `anchorCustomEventDetail` above.
+ * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
+ * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
+ * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
+ *   `Popover` have different own defaults (`"center"` vs. `"below"`),
+ *   deliberately not homogenized here (each reads best for its own typical
+ *   use case).
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ *   - Forwarded to whichever component renders, defaulted here to `"close"`
+ *   specifically to override `Popover`'s own different default (`"none"`)
+ *   — without this, the exact same `<Popup>` usage would behave
+ *   differently (close-on-outside-click or not) purely based on which mode
+ *   the screen-size check happens to pick, which defeats the point of
+ *   having one shared API in the first place.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
+ *   - Forwarded as-is.
+ * @param {string} [props.animationDuration] - Forwarded as-is.
+ * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
+ *   here directly to help decide the automatic `mode` (a small enough
+ *   `maxWidth` is treated as "compact", staying a popover even on a small
+ *   screen).
+ * @param {string} [props.minWidth] - Forwarded as-is.
+ * @param {string} [props.minHeight] - Forwarded as-is.
+ * @param {string} [props.maxHeight] - Forwarded as-is.
+ * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
+ *   `expandX`/`expandY` below. No effect in popover mode.
+ * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog
+ *   to `--dialog-maxmax-width` (`data-expand-x`).
+ * @param {boolean} [props.expandY] - Dialog-mode only: stretches the dialog
+ *   to `--dialog-maxmax-height` (`data-expand-y`).
+ * @param {boolean} [props.scrollCapture] - Forwarded as-is.
+ * @param {boolean} [props.open] - Forwarded as-is (controlled).
+ * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
+ *   mount-only).
+ * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
+ * @param {object} [props.openController] - Forwarded as-is (advanced —
+ *   see `open_controller.js`).
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_popup"` class (see this file's own CSS) rather than replacing
+ *   it.
+ * @param {import("preact").ComponentChildren} props.children
+ */
 export const Popup = (props) => {
   import.meta.css = css;
   const {
@@ -68,6 +130,19 @@ export const Popup = (props) => {
     expandY,
     className,
     children,
+    // Both default here (not left to each component's own, *different*
+    // default — Dialog's own is "close", Popover's own is "none") so the
+    // exact same <Popup> usage behaves identically regardless of which
+    // mode the automatic screen-size resolution happens to pick.
+    pointerInteractionOutsideEffect = "close",
+    // Popover-only (see this component's own doc) — destructured out so
+    // they're never part of ...rest, and therefore never forwarded to
+    // Dialog below, where they'd otherwise leak onto the real <dialog>
+    // element as stray, unrecognized DOM attributes.
+    anchorCustomEventDetail,
+    marginWithAnchor,
+    focusCapture,
+    positionAreaFixed,
     ...rest
   } = props;
 
@@ -88,6 +163,7 @@ export const Popup = (props) => {
       <Dialog
         {...rest}
         maxWidth={maxWidth}
+        pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
         className={withPropsClassName("navi_popup", className)}
         data-expand-x={expandXResolved ? "" : undefined}
         data-expand-y={expandYResolved ? "" : undefined}
@@ -100,6 +176,11 @@ export const Popup = (props) => {
     <Popover
       {...rest}
       maxWidth={maxWidth}
+      pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+      anchorCustomEventDetail={anchorCustomEventDetail}
+      marginWithAnchor={marginWithAnchor}
+      focusCapture={focusCapture}
+      positionAreaFixed={positionAreaFixed}
       className={withPropsClassName("navi_popup", className)}
     >
       {children}
