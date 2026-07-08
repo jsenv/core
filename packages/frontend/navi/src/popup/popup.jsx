@@ -91,7 +91,15 @@ const css = /* css */ `
  *   — without this, the exact same `<Popup>` usage would behave
  *   differently (close-on-outside-click or not) purely based on which mode
  *   the screen-size check happens to pick, which defeats the point of
- *   having one shared API in the first place.
+ *   having one shared API in the first place. Note this can only ever go so
+ *   far: in dialog mode, `"none"`/`"capture"` still absorb every outside
+ *   click (no visual effect vs. dimmed) rather than truly letting it
+ *   through, since a `<dialog>` is always modal one way or another (see
+ *   `dialog.jsx`'s own doc) — a popover's fully passive, click-through
+ *   backdrop has no dialog-mode equivalent. Whatever content `Popup` opens
+ *   is unavoidably *more* intrusive once it switches to dialog mode than
+ *   the exact same usage would be as a popover — worth keeping in mind for
+ *   anything that relies on `Popup` and can end up on a small screen.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
  *   - Forwarded as-is.
  * @param {string} [props.animationDuration] - Forwarded as-is.
