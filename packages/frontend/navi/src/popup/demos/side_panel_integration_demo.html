@@ -25,11 +25,11 @@
       // it behave (render window sliding, items scrolling into view, no
       // stuck/frozen virtualization).
       const App = () => (
-        <SidePanel defaultOpen width={320}>
+        <SidePanel defaultOpen width={320} flex="y">
           <SidePanel.Head closeButton>
             <strong>500 items, no maxHeight on the List</strong>
           </SidePanel.Head>
-          <List>
+          <List expandY border="none">
             {ITEMS.map((item, i) => (
               <ListItem key={item.id} index={i} id={item.id} value={item.label}>
                 {item.label}

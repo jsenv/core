@@ -335,6 +335,7 @@ const SidePanelHead = ({ closeButton = false, children, ...rest }) => (
         className="navi_side_panel_head_close_button"
         aria-label="Close panel"
         command="--navi-close"
+        variant="discrete"
       >
         ×
       </Button>
