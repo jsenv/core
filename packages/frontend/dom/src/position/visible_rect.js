@@ -979,20 +979,23 @@ export const pickPositionRelativeTo = (
       // Complex logic handles wide anchors and container-edge snapping
       const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
       if (anchorIsWiderThanViewport) {
-        const anchorLeftIsVisible = effectiveAnchorLeft >= 0;
-        const anchorRightIsVisible = effectiveAnchorRight <= viewportWidth;
+        const anchorLeftIsVisible = effectiveAnchorLeft >= viewportLeft;
+        const anchorRightIsVisible =
+          effectiveAnchorRight <= viewportLeft + viewportWidth;
         if (!anchorLeftIsVisible && anchorRightIsVisible) {
-          const viewportCenter = viewportWidth / 2;
-          const distanceFromRightEdge = viewportWidth - effectiveAnchorRight;
+          const viewportCenter = viewportLeft + viewportWidth / 2;
+          const distanceFromRightEdge =
+            viewportLeft + viewportWidth - effectiveAnchorRight;
           elementPositionLeft =
             viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
         } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
-          const viewportCenter = viewportWidth / 2;
-          const distanceFromLeftEdge = -effectiveAnchorLeft;
+          const viewportCenter = viewportLeft + viewportWidth / 2;
+          const distanceFromLeftEdge = viewportLeft - effectiveAnchorLeft;
           elementPositionLeft =
             viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
-          elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+          elementPositionLeft =
+            viewportLeft + viewportWidth / 2 - elementWidth / 2;
         }
       } else {
         elementPositionLeft =
