@@ -373,6 +373,7 @@ const UncontrolledPopover = (props) => {
     <ControlledPopover
       {...props}
       open={undefined}
+      defaultOpen={undefined}
       onClose={undefined}
       openController={openController}
       onnavi_request_open={(e) => {

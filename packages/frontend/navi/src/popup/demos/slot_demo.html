@@ -17,6 +17,7 @@
         createSlot,
         Link,
         Paragraph,
+        SidePanel,
         Text,
         Title,
       } from "@jsenv/navi";
@@ -25,6 +26,25 @@
       const [PanelSlot, PanelSlotFill] = createSlot();
       const [LeftSlot, LeftSlotFill] = createSlot();
       const [RightSlot, RightSlotFill] = createSlot();
+
+      // Each SlotRenderer here is a SidePanel preset to its own side —
+      // any button anywhere can open content into either one, without
+      // knowing about the other or about whatever else might already be
+      // open there.
+      const LeftSidePanel = (props) => (
+        <SidePanel side="left" layer="local" width={220} animation {...props} />
+      );
+      const [LeftPanelSlot, LeftPanelSlotFill] = createSlot(LeftSidePanel);
+      const RightSidePanel = (props) => (
+        <SidePanel
+          side="right"
+          layer="local"
+          width={220}
+          animation
+          {...props}
+        />
+      );
+      const [RightPanelSlot, RightPanelSlotFill] = createSlot(RightSidePanel);
 
       const TONE_COLORS = {
         info: { background: "#d0ebff", color: "#1864ab" },
@@ -166,13 +186,77 @@
         );
       };
 
+      const PANEL_CONTENT = {
+        settings: { title: "Settings", body: "Settings panel content." },
+        filters: { title: "Filters", body: "Filters panel content." },
+        details: { title: "Details", body: "Details panel content." },
+        help: { title: "Help", body: "Help panel content." },
+      };
+      const PanelContent = ({ item }) => (
+        <>
+          <SidePanel.Head flex spacing="m" paddingX="m" paddingY="m">
+            <Box expand>
+              <strong>{item.title}</strong>
+            </Box>
+            <Button command="--navi-close" variant="discrete">
+              ×
+            </Button>
+          </SidePanel.Head>
+          <Box padding="m">{item.body}</Box>
+        </>
+      );
+      const TwoPanelsDemo = () => {
+        const [leftItem, setLeftItem] = useState(null);
+        const [rightItem, setRightItem] = useState(null);
+        return (
+          <Box
+            border="1px solid #dee2e6"
+            borderRadius="m"
+            relative
+            style={{ height: "220px", overflow: "hidden" }}
+          >
+            <Box padding="m" flex="y" gap="8px">
+              <Box flex gap="8px">
+                <Button action={() => setLeftItem(PANEL_CONTENT.settings)}>
+                  Settings (left)
+                </Button>
+                <Button action={() => setLeftItem(PANEL_CONTENT.filters)}>
+                  Filters (left)
+                </Button>
+                <Button action={() => setRightItem(PANEL_CONTENT.details)}>
+                  Details (right)
+                </Button>
+                <Button action={() => setRightItem(PANEL_CONTENT.help)}>
+                  Help (right)
+                </Button>
+              </Box>
+            </Box>
+
+            <LeftPanelSlot />
+            <RightPanelSlot />
+
+            {leftItem && (
+              <LeftPanelSlotFill open onClose={() => setLeftItem(null)}>
+                <PanelContent item={leftItem} />
+              </LeftPanelSlotFill>
+            )}
+            {rightItem && (
+              <RightPanelSlotFill open onClose={() => setRightItem(null)}>
+                <PanelContent item={rightItem} />
+              </RightPanelSlotFill>
+            )}
+          </Box>
+        );
+      };
+
       const TableOfContents = () => (
         <Box as="nav" marginBottom="xl">
-          <Box flex="y" gap="xs">
+          <Box flex="y" spacing="xs">
             <Link href="#no-prop-drilling">1. No prop drilling</Link>
             <Link href="#passing-props">2. Passing props to the slot</Link>
             <Link href="#multiple-slots">3. Multiple independent slots</Link>
             <Link href="#custom-renderer">4. Custom SlotRenderer</Link>
+            <Link href="#two-side-panels">5. Two side-panel slots</Link>
           </Box>
         </Box>
       );
@@ -240,6 +324,19 @@
               <code>StatusBadge</code> instead of the default <code>Box</code>.
             </Paragraph>
             <StatusDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#two-side-panels" />
+              5. Two side-panel slots
+            </Title>
+            <Paragraph>
+              Each slot's <code>SlotRenderer</code> is a <code>SidePanel</code>
+              preset to its own side. Any button opens content into either one,
+              independently.
+            </Paragraph>
+            <TwoPanelsDemo />
           </Box>
         </div>
       );
