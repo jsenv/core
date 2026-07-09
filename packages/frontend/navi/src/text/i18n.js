@@ -62,6 +62,10 @@ import { langSignal } from "./lang_signal.js";
  */
 export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
+  // Bumped by addLangKeys — the only thing besides the active lang itself
+  // that could change what getActiveLang()/getResolvedFallbackLang() below
+  // resolve to, so it's what invalidates their own small caches.
+  let languageMapVersion = 0;
 
   // Explicit runtimeLang stays fixed for this instance's lifetime (matches
   // the previous behavior exactly). Without one, re-read langSignal.value
@@ -69,11 +73,47 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   // once — that would silently ignore setForcedLang() (see lang_signal.js)
   // for the rest of this instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
+
+  // matchBestLang does real work (a Map lookup per candidate, a possible
+  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
+  // format()/has() call in the common case, since what it resolves to only
+  // ever changes when languageMap itself changes (addLangKeys) or, for the
+  // non-explicit case, when langSignal.value itself changes (forcedLang/
+  // languagechange — see lang_signal.js) — comparing those two cheaply
+  // (===) is enough to know the cached result below is still valid.
+  let cachedActiveLang;
+  let cachedActiveLangRuntimeLang;
+  let cachedActiveLangVersion = -1;
   const getActiveLang = () => {
     const currentRuntimeLang = hasExplicitRuntimeLang
       ? runtimeLang
       : langSignal.value;
-    return matchBestLang(currentRuntimeLang, languageMap);
+    if (
+      cachedActiveLangVersion === languageMapVersion &&
+      cachedActiveLangRuntimeLang === currentRuntimeLang
+    ) {
+      return cachedActiveLang;
+    }
+    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
+    cachedActiveLangVersion = languageMapVersion;
+    cachedActiveLangRuntimeLang = currentRuntimeLang;
+    return cachedActiveLang;
+  };
+
+  // fallbackLang is a plain, never-reactive option set once at creation —
+  // its own resolution only ever needs recomputing when languageMap does.
+  let cachedResolvedFallbackLang;
+  let cachedResolvedFallbackLangVersion = -1;
+  const getResolvedFallbackLang = () => {
+    if (!fallbackLang) {
+      return null;
+    }
+    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
+      return cachedResolvedFallbackLang;
+    }
+    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
+    cachedResolvedFallbackLangVersion = languageMapVersion;
+    return cachedResolvedFallbackLang;
   };
 
   const addLangKeys = (lang, translations) => {
@@ -93,6 +133,7 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
       }
     }
     languageMap.set(lang, translations);
+    languageMapVersion++;
   };
 
   const add = (key, langTranslations) => {
@@ -124,14 +165,12 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
         return translated;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        const fallbackTranslated = fallbackTranslations[key];
-        if (fallbackTranslated !== undefined) {
-          return fallbackTranslated;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      const fallbackTranslated = fallbackTranslations[key];
+      if (fallbackTranslated !== undefined) {
+        return fallbackTranslated;
       }
     }
     // No translation found — return key as-is (opaque fallback)
@@ -151,13 +190,11 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
         return true;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        if (fallbackTranslations && key in fallbackTranslations) {
-          return true;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      if (fallbackTranslations && key in fallbackTranslations) {
+        return true;
       }
     }
     return false;
