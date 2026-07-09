@@ -104,7 +104,7 @@ const css = /* css */ `
         /* Popover itself has no opinion on its content's own layout (plain
            div, block by default) — the picker's content (anchor clone +
            list) needs to stack vertically. */
-        .navi_picker_popover {
+        .navi_popover {
           display: flex;
           flex-direction: column;
         }
@@ -268,7 +268,6 @@ const PickerCustom = (props) => {
         });
       },
     });
-
     // openController centralizes open/close decision-making (validation,
     // focus and value bookkeeping) for the picker. The returned
     // { onRequestClose, onClose } pair is the picker's reaction to close
