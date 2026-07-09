@@ -25,8 +25,14 @@ const ButtonCommandPropResolver = (props) => {
   }
   const command = props.command;
 
-  const commandDefaultProps = COMMAND_DEFAULT_PROPS[command];
-  if (commandDefaultProps) {
+  // Called fresh on every render (not a module-level object computed once
+  // at import time) — naviI18n(...) must be re-evaluated per call so a
+  // Button using a command's built-in default label actually follows
+  // setForcedLang()/a "languagechange" event instead of staying stuck with
+  // whatever language was active the first time this module was imported.
+  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
+  if (getCommandDefaultProps) {
+    const commandDefaultProps = getCommandDefaultProps();
     for (const key of Object.keys(commandDefaultProps)) {
       if (props[key] === undefined) {
         props[key] = commandDefaultProps[key];
@@ -36,29 +42,29 @@ const ButtonCommandPropResolver = (props) => {
 
   return <Next {...props} />;
 };
-const COMMAND_DEFAULT_PROPS = {
-  "--navi-clear": {
+const COMMAND_DEFAULT_PROPS_FACTORIES = {
+  "--navi-clear": () => ({
     children: naviI18n("button.clear"),
-  },
-  "--navi-reset": {
+  }),
+  "--navi-reset": () => ({
     children: naviI18n("button.reset"),
-  },
-  "--navi-define": {
+  }),
+  "--navi-define": () => ({
     children: naviI18n("button.define"),
-  },
-  "--navi-send": {
+  }),
+  "--navi-send": () => ({
     children: naviI18n("button.send"),
     cta: true,
-  },
-  "--navi-cancel": {
+  }),
+  "--navi-cancel": () => ({
     children: naviI18n("button.cancel"),
-  },
-  "--navi-close": {
+  }),
+  "--navi-close": () => ({
     children: naviI18n("button.close"),
-  },
-  "--navi-open": {
+  }),
+  "--navi-open": () => ({
     children: naviI18n("button.open"),
-  },
+  }),
 };
 
 export const Button = createComponentResolver([

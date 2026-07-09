@@ -112,7 +112,11 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   };
 
   const _getTemplate = (key, lang) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    // matchBestLang, not matchLang directly: lang can be an array (e.g.
+    // langSignal.value is [forcedLang, browserLang] once forced — see
+    // lang_signal.js) and matchLang alone assumes a plain string, throwing
+    // on .split() otherwise.
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       const translated = translations[key];
@@ -121,7 +125,7 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
       }
     }
     if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      const resolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
       if (resolvedFallbackLang) {
         const fallbackTranslations = languageMap.get(resolvedFallbackLang);
         const fallbackTranslated = fallbackTranslations[key];
@@ -140,7 +144,7 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   };
 
   const has = (key, { lang = getActiveLang() } = {}) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       if (translations && key in translations) {
@@ -148,7 +152,7 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
       }
     }
     if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
+      const resolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
       if (resolvedFallbackLang) {
         const fallbackTranslations = languageMap.get(resolvedFallbackLang);
         if (fallbackTranslations && key in fallbackTranslations) {
