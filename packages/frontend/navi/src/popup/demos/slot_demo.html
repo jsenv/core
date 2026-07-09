@@ -32,13 +32,21 @@
       // knowing about the other or about whatever else might already be
       // open there.
       const LeftSidePanel = (props) => (
-        <SidePanel side="left" layer="local" width={220} animation {...props} />
+        <SidePanel
+          layer="local"
+          side="left"
+          open
+          width={220}
+          animation
+          {...props}
+        />
       );
       const [LeftPanelSlot, LeftPanelSlotFill] = createSlot(LeftSidePanel);
       const RightSidePanel = (props) => (
         <SidePanel
-          side="right"
           layer="local"
+          side="right"
+          open
           width={220}
           animation
           {...props}
@@ -209,42 +217,48 @@
         const [leftItem, setLeftItem] = useState(null);
         const [rightItem, setRightItem] = useState(null);
         return (
-          <Box
-            border="1px solid #dee2e6"
-            borderRadius="m"
-            relative
-            style={{ height: "220px", overflow: "hidden" }}
-          >
-            <Box padding="m" flex="y" gap="8px">
-              <Box flex gap="8px">
-                <Button action={() => setLeftItem(PANEL_CONTENT.settings)}>
-                  Settings (left)
-                </Button>
-                <Button action={() => setLeftItem(PANEL_CONTENT.filters)}>
-                  Filters (left)
-                </Button>
-                <Button action={() => setRightItem(PANEL_CONTENT.details)}>
-                  Details (right)
-                </Button>
-                <Button action={() => setRightItem(PANEL_CONTENT.help)}>
-                  Help (right)
-                </Button>
-              </Box>
+          <Box flex="y" gap="8px">
+            <Box flex gap="8px">
+              <Button action={() => setLeftItem(PANEL_CONTENT.settings)}>
+                Settings (left)
+              </Button>
+              <Button action={() => setLeftItem(PANEL_CONTENT.filters)}>
+                Filters (left)
+              </Button>
+              <Button action={() => setRightItem(PANEL_CONTENT.details)}>
+                Details (right)
+              </Button>
+              <Button action={() => setRightItem(PANEL_CONTENT.help)}>
+                Help (right)
+              </Button>
             </Box>
 
-            <LeftPanelSlot />
-            <RightPanelSlot />
+            {/* Buttons live outside this container so the sliding panels
+                (confined to it) never cover their own triggers. */}
+            <Box
+              border="1px solid #dee2e6"
+              borderRadius="m"
+              relative
+              style={{ height: "220px", overflow: "hidden" }}
+            >
+              <LeftPanelSlot />
+              <RightPanelSlot />
 
-            {leftItem && (
-              <LeftPanelSlotFill open onClose={() => setLeftItem(null)}>
-                <PanelContent item={leftItem} />
-              </LeftPanelSlotFill>
-            )}
-            {rightItem && (
-              <RightPanelSlotFill open onClose={() => setRightItem(null)}>
-                <PanelContent item={rightItem} />
-              </RightPanelSlotFill>
-            )}
+              {leftItem && (
+                <LeftPanelSlotFill onClose={() => setLeftItem(null)}>
+                  <PanelContent item={leftItem} />
+                </LeftPanelSlotFill>
+              )}
+              {rightItem && (
+                <RightPanelSlotFill
+                  open
+                  animation
+                  onClose={() => setRightItem(null)}
+                >
+                  <PanelContent item={rightItem} />
+                </RightPanelSlotFill>
+              )}
+            </Box>
           </Box>
         );
       };
