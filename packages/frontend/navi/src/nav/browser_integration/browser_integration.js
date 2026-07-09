@@ -167,6 +167,18 @@ if (import.meta.hot) {
   });
 }
 
+// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
+// the mask is derived from render order within the nearest root/async
+// boundary — stable across re-renders of the *same* mount, but not across a
+// reload (render order can differ) or even across two mounts on the same
+// page (two components hitting useId() in the same relative order get the
+// same string). Storing one of these under type: "push" bakes it into a
+// history entry: reload the page and the entry's key may now belong to a
+// completely different component (or none), silently auto-opening whatever
+// happens to render at that same position instead.
+const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
+const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
+
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
@@ -197,6 +209,16 @@ const useNavStateBasic = (
     return NO_ID_GIVEN;
   }
 
+  let effectiveType = type;
+  if (type === "push" && isLikelyPreactGeneratedId(id)) {
+    if (import.meta.dev) {
+      console.warn(
+        `useNavState(${id}): this id looks auto-generated (e.g. preact's useId()) and type is "push" — falling back to "replace". A push history entry keyed by an unstable id won't survive a reload correctly, and could even collide with a different component's own auto-generated id. Pass a stable, explicit id to use type: "push".`,
+      );
+    }
+    effectiveType = "replace";
+  }
+
   const currentValue = keyInState ? state[id] : defaultValue;
 
   if (debug) {
@@ -215,7 +237,7 @@ const useNavStateBasic = (
     }
     currentStateCopy[id] = value;
     navTo(window.location.href, {
-      replace: type !== "push",
+      replace: effectiveType !== "push",
       state: currentStateCopy,
     });
   };
@@ -231,7 +253,7 @@ const useNavStateBasic = (
     if (!Object.hasOwn(currentStateCopy, id)) {
       return;
     }
-    if (type === "push" && isBack) {
+    if (effectiveType === "push" && isBack) {
       browserIntegration.navBack();
     } else {
       delete currentStateCopy[id];
@@ -257,6 +279,11 @@ const useNavStateBasic = (
  *   Controls how enter() adds the state to browser history.
  *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
  *   - "replace": updates the current history entry — no extra history entry is created.
+ *   Silently downgraded to "replace" (with a dev-only console.warn) when `id`
+ *   looks auto-generated (e.g. preact's own useId()) — an unstable id baked
+ *   into a pushed history entry won't survive a reload correctly, and could
+ *   even collide with a different component's own auto-generated id. Pass a
+ *   stable, explicit id to actually get "push" behavior.
  * @param {() => void} [options.onLeave]
  *   Called when the state key disappears **externally** — e.g. the user presses the browser
  *   back button. Not called when leave() is invoked programmatically.

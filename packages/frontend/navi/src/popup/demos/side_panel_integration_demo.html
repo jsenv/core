@@ -96,12 +96,6 @@
       // only stay aligned across all three because they're all real flex
       // rows of the same List (same width as each other), not because
       // anything explicitly synchronizes them.
-      const ROW_STYLE = {
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        width: "100%",
-      };
       const NAME_CELL_STYLE = {
         flex: 1,
         minWidth: 0,
@@ -210,14 +204,14 @@
                 ))}
                 <ListItem
                   footer
-                  paddingX="16px"
-                  paddingY="12px"
-                  style={{
-                    ...ROW_STYLE,
-                    fontWeight: 700,
-                    background: "#f1f3f5",
-                    borderTop: "2px solid #dee2e6",
-                  }}
+                  paddingX="m"
+                  paddingY="s"
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  bold
+                  background="#f1f3f5"
+                  borderTop="2px solid #dee2e6"
                 >
                   <span style={NAME_CELL_STYLE}>Total</span>
                   <span style={IN_CELL_STYLE}>+{totalIn}</span>

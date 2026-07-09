@@ -218,9 +218,14 @@ const PickerNative = (props) => {
 };
 
 const PickerCustom = (props) => {
-  const { ref, mode: modeProp } = props;
+  const { ref, mode: modeProp, open, defaultOpen } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
+  // Captured before the fallback chain below overwrites props.id — needed to
+  // know whether the id actually came from the caller (stable) or from
+  // useId()/ControlIdContext (not guaranteed stable across a reload), see
+  // pickerNavType below.
+  const hasExplicitId = Boolean(props.id);
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
@@ -234,6 +239,11 @@ const PickerCustom = (props) => {
   const pickerProps = {
     ...props,
   };
+  // Consumed right here (useNavState's own defaultValue above) — not a
+  // real DOM/Popup prop, so it must not travel any further down (would
+  // otherwise leak through PickerContentInsidePopup's own ...rest).
+  delete pickerProps.open;
+  delete pickerProps.defaultOpen;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -256,11 +266,19 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
-    // In "popover" mode, it replaces the current history state (no history entry added).
-    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    // In "dialog" mode with a stable, caller-provided id, enterExpanded()
+    // pushes a history entry so the back button closes it. Every other case
+    // (popover mode, or a dialog whose id was auto-generated via useId()/
+    // ControlIdContext) replaces the current history state instead — a
+    // generated id isn't stable across a reload, so pushing it would either
+    // silently drop the entry or, worse, collide with a different
+    // component's own generated id (see useNavState's own fallback for the
+    // same concern, applied here proactively for the id we control).
+    const pickerNavType =
+      mode === "dialog" && hasExplicitId ? "push" : "replace";
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
+      defaultValue: open || defaultOpen ? "on" : undefined,
       // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
       onLeave: () => {
         requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
