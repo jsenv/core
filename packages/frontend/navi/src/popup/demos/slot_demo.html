@@ -251,12 +251,12 @@
               <RightPanelSlot />
 
               {leftItem && (
-                <LeftPanelSlotFill onClose={() => setLeftItem(null)}>
+                <LeftPanelSlotFill>
                   <PanelContent item={leftItem} />
                 </LeftPanelSlotFill>
               )}
               {rightItem && (
-                <RightPanelSlotFill onClose={() => setRightItem(null)}>
+                <RightPanelSlotFill>
                   <PanelContent item={rightItem} />
                 </RightPanelSlotFill>
               )}
