@@ -266,6 +266,21 @@ const css = /* css */ `
     &[data-layer="top"] {
       position: fixed;
     }
+
+    /* [open] above is already scoped (display only turns on while shown),
+       but that alone isn't enough: a consumer whose own CSS also sets an
+       *unconditional* display (e.g. Popup's own flex prop, needed so
+       SidePanel + List can share a bounded height — see side_panel.jsx)
+       still competes for the same property while dialogEl is closed, and
+       CSS origin rules mean *any* author rule — including that unrelated
+       one — beats the UA stylesheet's own dialog:not([open]) default
+       regardless of specificity. [navi-hidden] (see useDialogProps'
+       contentProps, toggled in openEffect/close below) is the real,
+       load-bearing hide mechanism whenever that happens; harmless/
+       redundant the rest of the time. */
+    &[navi-hidden] {
+      display: none !important;
+    }
   }
 
   /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
@@ -643,6 +658,14 @@ const useDialogProps = (props) => {
     } else {
       dialogEl.show();
     }
+    // Regardless of isModal — see the backdrop's own [navi-hidden] CSS rule
+    // and popover.jsx's identical reasoning: showModal()/show() alone only
+    // wins over a stray, still-present [navi-hidden] { display: none }
+    // default when nothing else authored also sets display on dialogEl —
+    // a consumer combining layer="top" with another authored display
+    // property (e.g. Popup's own flex prop) defeats the UA stylesheet's own
+    // dialog:not([open]) default the same way it can for Popover.
+    dialogEl.removeAttribute("navi-hidden");
 
     if (isModal) {
       // Native focus trap — the browser's own top-layer modal already
@@ -776,6 +799,10 @@ const useDialogProps = (props) => {
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       dialogEl.setAttribute("aria-expanded", "false");
+      // See openEffect's own identical comment for why this is needed
+      // regardless of isModal, not just when a stray authored display
+      // property is actually present — harmless the rest of the time.
+      dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
       cancelOpenInteractionSuppression?.();
       if (hasCssTransitionAnimation) {
@@ -837,6 +864,14 @@ const useDialogProps = (props) => {
   });
   Object.assign(contentProps, {
     tabIndex,
+    // Present from the very first render (recomputed fresh from
+    // openController.opened every time, not a frozen mount-time constant —
+    // see popover.jsx's own identical prop for the full reasoning) so a
+    // consumer whose own CSS also sets display (e.g. Popup's flex prop)
+    // can't silently defeat showModal()/close()'s native open/close — see
+    // this file's own CSS rule for dialogEl and the open/close steps below
+    // for how it's toggled.
+    "navi-hidden": openController.opened ? undefined : "",
     // Unlike Popover (which genuinely can't resolve "auto" until it
     // measures against a real anchor), resolvedAnimation is already fully
     // known synchronously here — a dialog never needs to flip anything

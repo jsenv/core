@@ -349,9 +349,19 @@ const css = /* css */ `
        removeAttribute/setAttribute in openEffect/close, never an explicit
        display override: removing the attribute just lets this rule stop
        matching, so whatever display the box would otherwise have applies
-       on its own. */
-    &:not([popover])[navi-hidden] {
-      display: none;
+       on its own.
+
+       Applies regardless of [popover] (not scoped to the custom renderer
+       alone) and !important: CSS origin rules mean *any* author rule beats
+       the UA stylesheet's own [popover]:not(:popover-open) default,
+       regardless of specificity — a consumer combining layer="top" with
+       another authored display property (e.g. Popup's own flex prop)
+       silently defeats showPopover()/hidePopover()'s native hide otherwise,
+       since nothing then actually toggles display back off when closed.
+       This rule is the real, load-bearing hide mechanism whenever that
+       happens; harmless/redundant the rest of the time. */
+    &[navi-hidden] {
+      display: none !important;
     }
 
     &[data-focus-visible] {
@@ -409,10 +419,13 @@ const css = /* css */ `
       height: auto;
     }
 
-    /* Same reasoning/mechanism as .navi_popover's own rule above — a plain
-       div, no native starting-hidden default to lean on. */
-    &:not([popover])[navi-hidden] {
-      display: none;
+    /* Same reasoning/mechanism as .navi_popover's own rule above (including
+       the unconditional-plus-!important reasoning) — a plain div, no native
+       starting-hidden default to lean on for the custom renderer, and the
+       same authored-CSS-beats-the-UA-stylesheet risk for the via-attribute
+       one. */
+    &[navi-hidden] {
+      display: none !important;
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
@@ -798,6 +811,16 @@ const usePopoverProps = (props) => {
         // layer stacks later showPopover() calls above earlier ones, so the
         // backdrop must go first for the real popover to end up on top.
         backdropEl.showPopover();
+        // Also cleared here, not just in the custom-renderer branch below:
+        // showPopover() alone only wins over [navi-hidden] { display: none }
+        // (see that rule's own comment) when nothing *else* authored also
+        // sets display on this element — a consumer combining layer="top"
+        // with e.g. Popup's own flex prop does exactly that, and CSS origin
+        // rules mean *any* author rule beats the UA stylesheet's own
+        // [popover]:not(:popover-open) default regardless of specificity,
+        // so showPopover() toggling :popover-open alone isn't sufficient in
+        // that case — this is the actual, load-bearing hide mechanism then.
+        backdropEl.removeAttribute("navi-hidden");
         backdropEl.getBoundingClientRect();
       } else {
         backdropEl.removeAttribute("navi-hidden");
@@ -813,6 +836,10 @@ const usePopoverProps = (props) => {
 
     if (isTopLayer) {
       popoverEl.showPopover();
+      // See the backdrop's own identical call above for why this is
+      // needed even in the native/top-layer case, not just the custom
+      // renderer's own branch below.
+      popoverEl.removeAttribute("navi-hidden");
       // aria-expanded stays "false" here — transitions are still
       // suppressed, so this doesn't matter yet — and only flips once
       // positioned below. Shown *after* the backdrop above so it stacks on
@@ -1078,10 +1105,12 @@ const usePopoverProps = (props) => {
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
       popoverEl.setAttribute("aria-expanded", "false");
+      // Set regardless of isTopLayer — see the open side's own identical
+      // comment (openEffect above) for why hidePopover() alone isn't
+      // reliably sufficient once a consumer's own CSS also sets display.
+      popoverEl.setAttribute("navi-hidden", "");
       if (isTopLayer) {
         popoverEl.hidePopover();
-      } else {
-        popoverEl.setAttribute("navi-hidden", "");
       }
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
@@ -1097,11 +1126,14 @@ const usePopoverProps = (props) => {
         backdropEl.setAttribute("aria-expanded", "false");
         disarmBackdropHideRef.current = armPointerDownOutsideClose(
           closeEvent,
-          isTopLayer
-            ? () => backdropEl.hidePopover()
-            : () => {
-                backdropEl.setAttribute("navi-hidden", "");
-              },
+          () => {
+            // Set regardless of isTopLayer — see openEffect's own identical
+            // comment for why hidePopover() alone isn't reliably sufficient.
+            backdropEl.setAttribute("navi-hidden", "");
+            if (isTopLayer) {
+              backdropEl.hidePopover();
+            }
+          },
         );
       }
       restoreFocus(closeEvent);

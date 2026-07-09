@@ -1,12 +1,12 @@
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { useOpenController } from "@jsenv/navi/src/popup/open_controller.js";
 import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
+import { usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
@@ -282,18 +282,12 @@ const PickerCustom = (props) => {
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
-  // Freeze the mode for the lifetime of an opening: compute it when closed,
-  // keep it stable while open so a screen resize mid-session doesn't switch
-  // between Popover and Dialog.
-  const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    const isSmallScreen = windowWidthSignal.peek() <= 600;
-    const maxWidthPx = parseFloat(props.maxWidth);
-    const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-    defaultModeRef.current =
-      modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
-  }
-  const mode = defaultModeRef.current;
+  // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
+  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // (computed when closed, stable while open, so a screen resize mid-session
+  // doesn't switch between Popover and Dialog), with resetMode called from
+  // this picker's own onClose below to re-evaluate on the *next* open.
+  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
 
   const pickerProps = {
     ...props,
@@ -391,7 +385,7 @@ const PickerCustom = (props) => {
           }
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
-          defaultModeRef.current = null;
+          resetMode();
         },
       };
     });

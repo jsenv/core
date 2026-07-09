@@ -4,21 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SidePanel Integration Demo</title>
+    <style>
+      .demo-controls {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useMemo, useState } from "preact/hooks";
       import { List, ListItem, SidePanel } from "@jsenv/navi";
 
-      const ITEMS = Array.from({ length: 500 }, (_, i) => ({
-        id: `item-${i}`,
-        label: `Item ${i + 1}`,
-        in: Math.floor(Math.random() * 20),
-        out: Math.floor(Math.random() * 20),
-      }));
-      const TOTAL_IN = ITEMS.reduce((sum, item) => sum + item.in, 0);
-      const TOTAL_OUT = ITEMS.reduce((sum, item) => sum + item.out, 0);
+      const createItems = (count) =>
+        Array.from({ length: count }, (_, i) => ({
+          id: `item-${i}`,
+          label: `Item ${i + 1}`,
+          in: Math.floor(Math.random() * 20),
+          out: Math.floor(Math.random() * 20),
+        }));
 
       // Same 3-column row shape shared by the column-header row, every data
       // row, and the totals row — the Name cell grows to fill whatever space
@@ -52,38 +63,57 @@
       // real flex-row siblings of the data rows, so column widths track
       // each other for free. A plain title has no columns to align, so it
       // stays in SidePanel.Head instead, outside the List entirely.
-      const App = () => (
-        <SidePanel defaultOpen width={360} flex="y">
-          <SidePanel.Head closeButton>
-            <strong>Inventory</strong>
-          </SidePanel.Head>
-          <List expandY border="none">
-            <ListItem header style={{ ...ROW_STYLE, fontWeight: "bold" }}>
-              <span style={NAME_CELL_STYLE}>Name</span>
-              <span style={NUMBER_CELL_STYLE}>In</span>
-              <span style={NUMBER_CELL_STYLE}>Out</span>
-            </ListItem>
-            {ITEMS.map((item, i) => (
-              <ListItem
-                key={item.id}
-                index={i}
-                id={item.id}
-                value={item.label}
-                style={ROW_STYLE}
-              >
-                <span style={NAME_CELL_STYLE}>{item.label}</span>
-                <span style={NUMBER_CELL_STYLE}>{item.in}</span>
-                <span style={NUMBER_CELL_STYLE}>{item.out}</span>
-              </ListItem>
-            ))}
-            <ListItem footer style={{ ...ROW_STYLE, fontWeight: "bold" }}>
-              <span style={NAME_CELL_STYLE}>Total</span>
-              <span style={NUMBER_CELL_STYLE}>{TOTAL_IN}</span>
-              <span style={NUMBER_CELL_STYLE}>{TOTAL_OUT}</span>
-            </ListItem>
-          </List>
-        </SidePanel>
-      );
+      const App = () => {
+        // Small dataset (below the panel's own content, no overflow at all)
+        // vs. large (well beyond it, forcing virtual scroll) — toggled from
+        // outside the panel specifically to see where the sticky Total row
+        // ends up either way: pinned to the bottom of the *panel* when the
+        // list has no overflow of its own, vs. pinned to the bottom of the
+        // *list's own scroll* once it does.
+        const [itemCount, setItemCount] = useState(500);
+        const items = useMemo(() => createItems(itemCount), [itemCount]);
+        const totalIn = items.reduce((sum, item) => sum + item.in, 0);
+        const totalOut = items.reduce((sum, item) => sum + item.out, 0);
+
+        return (
+          <>
+            <div class="demo-controls">
+              <button onClick={() => setItemCount(5)}>5 items</button>
+              <button onClick={() => setItemCount(500)}>500 items</button>
+            </div>
+            <SidePanel defaultOpen width={360} flex="y">
+              <SidePanel.Head closeButton>
+                <strong>Inventory ({itemCount} items)</strong>
+              </SidePanel.Head>
+              <List expandY border="none">
+                <ListItem header style={{ ...ROW_STYLE, fontWeight: "bold" }}>
+                  <span style={NAME_CELL_STYLE}>Name</span>
+                  <span style={NUMBER_CELL_STYLE}>In</span>
+                  <span style={NUMBER_CELL_STYLE}>Out</span>
+                </ListItem>
+                {items.map((item, i) => (
+                  <ListItem
+                    key={item.id}
+                    index={i}
+                    id={item.id}
+                    value={item.label}
+                    style={ROW_STYLE}
+                  >
+                    <span style={NAME_CELL_STYLE}>{item.label}</span>
+                    <span style={NUMBER_CELL_STYLE}>{item.in}</span>
+                    <span style={NUMBER_CELL_STYLE}>{item.out}</span>
+                  </ListItem>
+                ))}
+                <ListItem footer style={{ ...ROW_STYLE, fontWeight: "bold" }}>
+                  <span style={NAME_CELL_STYLE}>Total</span>
+                  <span style={NUMBER_CELL_STYLE}>{totalIn}</span>
+                  <span style={NUMBER_CELL_STYLE}>{totalOut}</span>
+                </ListItem>
+              </List>
+            </SidePanel>
+          </>
+        );
+      };
 
       render(<App />, document.querySelector("#root"));
     </script>
