@@ -31,11 +31,18 @@
       // any button anywhere can open content into either one, without
       // knowing about the other or about whatever else might already be
       // open there.
+      // defaultOpen, not open: each SlotFill below only ever mounts a fresh
+      // instance of this renderer (conditional rendering, see TwoPanelsDemo),
+      // so "just mounted" already means "should show up open" — no need to
+      // separately track and re-derive an open/closed boolean over that
+      // instance's lifetime, and no onClose here either: closing is the
+      // *consumer's* concern (see TwoPanelsDemo's own onClose props) — this
+      // renderer only cares that it starts open when it exists at all.
       const LeftSidePanel = (props) => (
         <SidePanel
           layer="local"
           side="left"
-          open
+          defaultOpen
           width={220}
           animation
           {...props}
@@ -46,7 +53,7 @@
         <SidePanel
           layer="local"
           side="right"
-          open
+          defaultOpen
           width={220}
           animation
           {...props}
@@ -194,12 +201,6 @@
         );
       };
 
-      const PANEL_CONTENT = {
-        settings: { title: "Settings", body: "Settings panel content." },
-        filters: { title: "Filters", body: "Filters panel content." },
-        details: { title: "Details", body: "Details panel content." },
-        help: { title: "Help", body: "Help panel content." },
-      };
       const PanelContent = ({ item }) => (
         <>
           <SidePanel.Head
@@ -219,47 +220,77 @@
           <Box padding="m">{item.body}</Box>
         </>
       );
+
+      // Left panel: driven by "current nav item" state, the way a route
+      // would — only one item is ever active, "home" has no panel content
+      // at all. onClose doesn't unmount anything itself; it just resets the
+      // nav state back to "home", which then stops rendering
+      // LeftPanelSlotFill — that's what actually closes the panel.
+      const NAV_ITEMS = [
+        { key: "home", label: "Home", content: null },
+        { key: "a", label: "A", content: { title: "A", body: "Section A." } },
+        { key: "b", label: "B", content: { title: "B", body: "Section B." } },
+      ];
+
+      // Right panel: driven by "whatever was last clicked in the main
+      // area" — a one-off, no natural default to fall back to. onClose
+      // clears it back to null instead.
+      const RIGHT_ITEMS = {
+        details: { title: "Details", body: "Details content." },
+        help: { title: "Help", body: "Help content." },
+      };
+
       const TwoPanelsDemo = () => {
-        const [leftItem, setLeftItem] = useState(null);
+        const [navKey, setNavKey] = useState("home");
         const [rightItem, setRightItem] = useState(null);
+        const activeNav = NAV_ITEMS.find((item) => item.key === navKey);
+
         return (
-          <Box flex="y" gap="8px">
-            <Box flex gap="8px">
-              <Button action={() => setLeftItem(PANEL_CONTENT.settings)}>
-                Settings (left)
-              </Button>
-              <Button action={() => setLeftItem(PANEL_CONTENT.filters)}>
-                Filters (left)
-              </Button>
-              <Button action={() => setRightItem(PANEL_CONTENT.details)}>
-                Details (right)
-              </Button>
-              <Button action={() => setRightItem(PANEL_CONTENT.help)}>
-                Help (right)
-              </Button>
+          <Box flex gap="12px">
+            <Box flex="y" gap="4px">
+              {NAV_ITEMS.map((item) => (
+                <Button
+                  key={item.key}
+                  variant={navKey === item.key ? undefined : "discrete"}
+                  action={() => setNavKey(item.key)}
+                >
+                  {item.label}
+                </Button>
+              ))}
             </Box>
 
-            {/* Buttons live outside this container so the sliding panels
-                (confined to it) never cover their own triggers. */}
-            <Box
-              border="1px solid #dee2e6"
-              borderRadius="m"
-              relative
-              style={{ height: "220px", overflow: "hidden" }}
-            >
-              <LeftPanelSlot />
-              <RightPanelSlot />
+            <Box flex="y" gap="8px" expand>
+              <Box flex gap="8px">
+                <Button action={() => setRightItem(RIGHT_ITEMS.details)}>
+                  Show Details (right)
+                </Button>
+                <Button action={() => setRightItem(RIGHT_ITEMS.help)}>
+                  Show Help (right)
+                </Button>
+              </Box>
 
-              {leftItem && (
-                <LeftPanelSlotFill>
-                  <PanelContent item={leftItem} />
-                </LeftPanelSlotFill>
-              )}
-              {rightItem && (
-                <RightPanelSlotFill>
-                  <PanelContent item={rightItem} />
-                </RightPanelSlotFill>
-              )}
+              {/* Triggers live outside this box so the sliding panels
+                  (confined to it) never cover their own triggers. */}
+              <Box
+                border="1px solid #dee2e6"
+                borderRadius="m"
+                relative
+                style={{ height: "220px", overflow: "hidden" }}
+              >
+                <LeftPanelSlot />
+                <RightPanelSlot />
+
+                {activeNav.content && (
+                  <LeftPanelSlotFill onClose={() => setNavKey("home")}>
+                    <PanelContent item={activeNav.content} />
+                  </LeftPanelSlotFill>
+                )}
+                {rightItem && (
+                  <RightPanelSlotFill onClose={() => setRightItem(null)}>
+                    <PanelContent item={rightItem} />
+                  </RightPanelSlotFill>
+                )}
+              </Box>
             </Box>
           </Box>
         );
@@ -349,8 +380,11 @@
             </Title>
             <Paragraph>
               Each slot's <code>SlotRenderer</code> is a <code>SidePanel</code>
-              preset to its own side. Any button opens content into either one,
-              independently.
+              preset to its own side. Left is driven by a nav-item state (
+              <code>onClose</code> resets it to "Home"); right by a clicked-item
+              state (<code>onClose</code> clears it) — either way,{" "}
+              <code>onClose</code> only ever updates state, never touches the
+              slot directly.
             </Paragraph>
             <TwoPanelsDemo />
           </Box>
