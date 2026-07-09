@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slot Demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Caption,
+        createSlot,
+        Paragraph,
+        Text,
+        Title,
+      } from "@jsenv/navi";
+
+      // Slot pairs are normally module-level constants (created once, shared
+      // by whichever components need them) — that's what lets SlotFill be
+      // rendered anywhere in the tree without threading props/context down
+      // to reach the Slot's own location. Each createSlot() call is fully
+      // independent of the others.
+
+      // --- 1. Basic concept: no prop drilling ---
+      const [ToolbarSlot, ToolbarSlotFill] = createSlot();
+
+      // --- 2. Props reach the slot's content, and it can be unmounted ---
+      const [PanelSlot, PanelSlotFill] = createSlot();
+
+      // --- 3. Multiple independent slots ---
+      const [LeftSlot, LeftSlotFill] = createSlot();
+      const [RightSlot, RightSlotFill] = createSlot();
+
+      // --- 4. A custom SlotRenderer (not the default Box) ---
+      const TONE_COLORS = {
+        info: { background: "#d0ebff", color: "#1864ab" },
+        success: { background: "#d3f9d8", color: "#2b8a3e" },
+        error: { background: "#ffe3e3", color: "#c92a2a" },
+      };
+      const StatusBadge = ({ label, tone = "info" }) => (
+        <Text
+          style={{
+            display: "inline-block",
+            padding: "4px 10px",
+            borderRadius: "999px",
+            fontSize: "0.85em",
+            fontWeight: 600,
+            ...TONE_COLORS[tone],
+          }}
+        >
+          {label}
+        </Text>
+      );
+      const [StatusSlot, StatusSlotFill] = createSlot(StatusBadge);
+
+      // A component several levels deep in the tree, far from ToolbarSlot's
+      // own location, filling it directly — no props/context needed to
+      // reach up to wherever the toolbar actually renders.
+      const DeepChild = () => (
+        <ToolbarSlotFill flex gap="8px" alignY="center">
+          <Button variant="discrete">Save</Button>
+          <Button variant="discrete">Share</Button>
+          <Caption>
+            ← provided by a component 3 levels deep in the page, no props passed
+            down to get here
+          </Caption>
+        </ToolbarSlotFill>
+      );
+      const PageContent = () => (
+        <Box padding="m" flex="y" gap="8px">
+          <Text>Page content goes here…</Text>
+          <DeepChild />
+        </Box>
+      );
+      const ToolbarDemo = () => (
+        <Box border="1px solid #dee2e6" borderRadius="m">
+          <Box
+            as="header"
+            padding="s"
+            background="#f1f3f5"
+            borderBottom="1px solid #dee2e6"
+          >
+            <ToolbarSlot />
+          </Box>
+          <PageContent />
+        </Box>
+      );
+
+      const PanelDemo = () => {
+        const [variant, setVariant] = useState("red");
+        return (
+          <Box flex="y" gap="8px">
+            <Box flex gap="8px">
+              <Button action={() => setVariant("red")}>Red</Button>
+              <Button action={() => setVariant("green")}>Green</Button>
+              <Button action={() => setVariant("blue")}>Blue</Button>
+              <Button action={() => setVariant(null)}>
+                Clear (unmount SlotFill)
+              </Button>
+            </Box>
+            <Box
+              border="1px dashed #adb5bd"
+              padding="s"
+              style={{ minHeight: "48px" }}
+            >
+              <PanelSlot />
+            </Box>
+            {variant === "red" && (
+              <PanelSlotFill padding="m" background="#ffe3e3" borderRadius="m">
+                Red panel — background/padding/borderRadius were all passed as
+                props directly to PanelSlotFill.
+              </PanelSlotFill>
+            )}
+            {variant === "green" && (
+              <PanelSlotFill padding="m" background="#d3f9d8" borderRadius="m">
+                Green panel — same slot, different props this time.
+              </PanelSlotFill>
+            )}
+            {variant === "blue" && (
+              <PanelSlotFill padding="m" background="#d0ebff" borderRadius="m">
+                Blue panel.
+              </PanelSlotFill>
+            )}
+            {variant === null && (
+              <Caption>
+                No SlotFill mounted right now — the slot above renders nothing.
+              </Caption>
+            )}
+          </Box>
+        );
+      };
+
+      const MultiSlotDemo = () => (
+        <Box flex gap="12px">
+          <Box flex="y" gap="4px" expand>
+            <Caption>Left slot</Caption>
+            <Box
+              border="1px dashed #adb5bd"
+              padding="s"
+              style={{ minHeight: "40px" }}
+            >
+              <LeftSlot />
+            </Box>
+          </Box>
+          <Box flex="y" gap="4px" expand>
+            <Caption>Right slot</Caption>
+            <Box
+              border="1px dashed #adb5bd"
+              padding="s"
+              style={{ minHeight: "40px" }}
+            >
+              <RightSlot />
+            </Box>
+          </Box>
+          {/* Filling one slot has no effect on the other — each createSlot()
+              call is fully independent. */}
+          <LeftSlotFill>Only appears on the left.</LeftSlotFill>
+          <RightSlotFill background="#fff3bf" padding="s">
+            Only appears on the right, with its own background.
+          </RightSlotFill>
+        </Box>
+      );
+
+      const StatusDemo = () => {
+        const [status, setStatus] = useState("idle");
+        return (
+          <Box flex="y" gap="8px">
+            <Box flex gap="8px">
+              <Button action={() => setStatus("idle")}>Idle</Button>
+              <Button action={() => setStatus("saving")}>Saving</Button>
+              <Button action={() => setStatus("saved")}>Saved</Button>
+              <Button action={() => setStatus("error")}>Error</Button>
+            </Box>
+            <Box flex alignY="center" gap="8px">
+              <Caption>Status:</Caption>
+              <StatusSlot />
+            </Box>
+            {status === "idle" && <StatusSlotFill label="Idle" tone="info" />}
+            {status === "saving" && (
+              <StatusSlotFill label="Saving…" tone="info" />
+            )}
+            {status === "saved" && (
+              <StatusSlotFill label="Saved ✓" tone="success" />
+            )}
+            {status === "error" && (
+              <StatusSlotFill label="Error ✕" tone="error" />
+            )}
+          </Box>
+        );
+      };
+
+      const Demo = () => (
+        <div
+          style={{
+            padding: "20px",
+            fontFamily: "system-ui, sans-serif",
+            maxWidth: "760px",
+            lineHeight: "1.6",
+          }}
+        >
+          <Title as="h1">Slot Demo</Title>
+          <Paragraph>
+            <code>createSlot()</code> returns a linked{" "}
+            <code>[Slot, SlotFill]</code> pair: render{" "}
+            <code>&lt;Slot /&gt;</code> once wherever content should appear,
+            then render <code>&lt;SlotFill&gt;</code> anywhere else in the tree
+            to supply that content — a lightweight, signal-based alternative to
+            a DOM portal, with no prop drilling required to reach the slot's own
+            location.
+          </Paragraph>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">1. No prop drilling</Title>
+            <Paragraph>
+              The toolbar area below is a plain{" "}
+              <code>&lt;ToolbarSlot /&gt;</code>. Its content is supplied by a
+              component nested 3 levels deep in the page, with nothing passed
+              down to connect the two.
+            </Paragraph>
+            <ToolbarDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">2. Props reach the slot's content</Title>
+            <Paragraph>
+              Whatever props are passed to <code>&lt;SlotFill&gt;</code> (here:
+              <code>background</code>, <code>padding</code>,{" "}
+              <code>borderRadius</code>) flow straight to the underlying{" "}
+              <code>Box</code> rendered by the slot. Unmounting{" "}
+              <code>SlotFill</code> (the "Clear" button) empties the slot.
+            </Paragraph>
+            <PanelDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">3. Multiple independent slots</Title>
+            <Paragraph>
+              Each <code>createSlot()</code> call is its own, separate channel —
+              filling one never affects another.
+            </Paragraph>
+            <MultiSlotDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">4. A custom SlotRenderer</Title>
+            <Paragraph>
+              <code>createSlot(StatusBadge)</code> renders{" "}
+              <code>StatusBadge</code> instead of the default <code>Box</code> —{" "}
+              <code>SlotFill</code>'s props (<code>label</code>,{" "}
+              <code>tone</code>) match whatever that component expects, not
+              Box's own API.
+            </Paragraph>
+            <StatusDemo />
+          </Box>
+        </div>
+      );
+
+      render(<Demo />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
