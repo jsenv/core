@@ -30,6 +30,7 @@
       import {
         BadgeCount,
         Box,
+        Text,
         Button,
         List,
         ListItem,
@@ -150,8 +151,10 @@
             <SidePanel id={panelId} animation defaultOpen width={380} flex="y">
               <SidePanel.Head flex spacing="m" paddingX="m" paddingY="m">
                 <Box flex alignY="center" gap="8px" expand>
-                  <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
-                  <BadgeCount max="none">{itemCount}</BadgeCount>
+                  <Text>
+                    <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
+                    <BadgeCount max="none">{itemCount}</BadgeCount>
+                  </Text>
                 </Box>
                 <Button
                   className="navi_side_panel_head_close_button"
