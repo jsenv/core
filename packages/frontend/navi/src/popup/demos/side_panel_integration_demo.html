@@ -154,14 +154,7 @@
               <button onClick={() => setItemCount(500)}>500 items</button>
             </div>
             <SidePanel id={panelId} animation defaultOpen width={380} flex="y">
-              <SidePanel.Head
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "14px 18px",
-                }}
-              >
+              <SidePanel.Head flex spacing="m" paddingX="m" paddingY="m">
                 <Box flex alignY="center" gap="8px" expand>
                   <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
                   <BadgeCount max="none">{itemCount}</BadgeCount>
@@ -171,6 +164,8 @@
                   aria-label="Close panel"
                   command="--navi-close"
                   variant="discrete"
+                  autoFocus="fallback"
+                  marginRight="-s"
                 >
                   ×
                 </Button>
@@ -178,17 +173,17 @@
               <List expandY border="none">
                 <ListItem
                   header
-                  paddingX="16px"
-                  paddingY="10px"
+                  paddingX="m"
+                  paddingY="s"
+                  bold
+                  color="#495057"
+                  uppercase
+                  size="s"
+                  background="#f1f3f5"
+                  borderBottom="1px solid #dee2e6"
                   style={{
                     ...ROW_STYLE,
-                    fontWeight: 600,
-                    fontSize: "0.85em",
-                    color: "#495057",
-                    textTransform: "uppercase",
                     letterSpacing: "0.03em",
-                    background: "#f1f3f5",
-                    borderBottom: "1px solid #dee2e6",
                   }}
                 >
                   <span style={NAME_CELL_STYLE}>Name</span>
@@ -201,8 +196,8 @@
                     index={i}
                     id={item.id}
                     value={item.label}
-                    paddingX="16px"
-                    paddingY="8px"
+                    paddingX="m"
+                    paddingY="s"
                     style={{
                       ...ROW_STYLE,
                       background: i % 2 === 0 ? "#ffffff" : "#f8f9fa",
