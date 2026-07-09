@@ -107,7 +107,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -564,19 +564,6 @@ const useDialogProps = (props) => {
       }) ?? "slide-from-top";
   }
 
-  // aria-expanded lives on the dialog element itself (not driven through
-  // Preact's vdom — openEffect/its cleanup toggle it imperatively in sync
-  // with showModal()/close() or .show()/close(), see below) so popup_css.js
-  // can key its CSS off a single selector regardless of Popover vs Dialog.
-  useLayoutEffect(() => {
-    if (ref.current) {
-      ref.current.setAttribute("aria-expanded", "false");
-    }
-    if (backdropRef.current) {
-      backdropRef.current.setAttribute("aria-expanded", "false");
-    }
-  }, []);
-
   // Sync the DOM open and return how to sync it back closed, fresh on every
   // render so it closes over the latest props (scrollLock, etc.). The
   // controller (owned by the caller, or by UncontrolledDialog) decides
@@ -851,6 +838,15 @@ const useDialogProps = (props) => {
     "ref": backdropRef,
     "baseClassName": "navi_dialog_backdrop",
     "aria-hidden": "true",
+    // Recomputed fresh on every render from openController.opened (not
+    // driven through a mount-time layout effect, unlike this file's own
+    // imperative open/close toggling below) — present in the DOM
+    // synchronously from the very first commit, matching this file's own
+    // CSS (&[aria-expanded="false"]) which is genuinely rendering-eligible,
+    // and matching what a descendant relying on
+    // use_displayed_layout_effect.js's own aria-expanded-presence check
+    // needs — see popover.jsx's own identical prop for the full reasoning.
+    "aria-expanded": openController.opened ? "true" : "false",
     // Present from this very first render (recomputed fresh on every one
     // from openController.opened, not a frozen mount-time constant) so
     // there's no gap for the browser to ever paint this plain-div backdrop
@@ -864,6 +860,9 @@ const useDialogProps = (props) => {
   });
   Object.assign(contentProps, {
     tabIndex,
+    // See backdropProps' own identical prop above for the full reasoning
+    // (kept once, not repeated here).
+    "aria-expanded": openController.opened ? "true" : "false",
     // Present from the very first render (recomputed fresh from
     // openController.opened every time, not a frozen mount-time constant —
     // see popover.jsx's own identical prop for the full reasoning) so a

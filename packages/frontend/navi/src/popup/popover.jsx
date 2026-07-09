@@ -1184,21 +1184,23 @@ const usePopoverProps = (props) => {
     "id": backdropId,
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
-    // A constant, not derived from openController.opened (unlike
-    // navi-hidden just below) — its own actual open/close toggling is done
-    // entirely imperatively (setAttribute("aria-expanded", …) in
-    // openEffect/close), deliberately outside Preact's render cycle, for
-    // the same precise-ordering-relative-to-forced-reflows reasons as
-    // navi-animation. A constant JSX value never fights that: Preact only
-    // ever writes a prop to the DOM when it differs from the previous
-    // render's value (see diff/index.js's own oldProps[i] !== value check),
-    // so "false" here, unchanging across every render, is never
-    // re-applied once the imperative code has flipped the live attribute.
-    // What *does* matter is that it's present in the DOM synchronously
-    // from the very first commit (a plain prop is, no effect needed) —
-    // see use_displayed_layout_effect.js's own comments for why a
-    // descendant relying on aria-expanded's mere presence needs that.
-    "aria-expanded": "false",
+    // Recomputed fresh on every render from openController.opened (not a
+    // frozen mount-time constant, same pattern as navi-hidden just below)
+    // rather than driven through a mount-time layout effect — its own
+    // actual open/close toggling is still done entirely imperatively
+    // (setAttribute("aria-expanded", …) in openEffect/close), deliberately
+    // outside Preact's render cycle, for the same
+    // precise-ordering-relative-to-forced-reflows reasons as
+    // navi-animation. That doesn't fight this prop: Preact only ever
+    // writes a prop to the DOM when it differs from the previous render's
+    // value (see diff/index.js's own oldProps[i] !== value check), so as
+    // long as this always reflects the *current* truth, a re-render
+    // between imperative toggles never stomps on them. What *does* matter
+    // is that it's present in the DOM synchronously from the very first
+    // commit (a plain prop is, no effect needed) — see
+    // use_displayed_layout_effect.js's own comments for why a descendant
+    // relying on aria-expanded's mere presence needs that.
+    "aria-expanded": openController.opened ? "true" : "false",
     // Read fresh on every render (not frozen at mount), so it stays
     // correct even across a re-render that happens to occur while open —
     // see contentProps' own identical prop just below for the full
@@ -1242,21 +1244,17 @@ const usePopoverProps = (props) => {
     "data-layer": layer,
     "navi-animation": isAutoAnimation ? undefined : animation,
     // See backdropProps' own identical prop above for the full reasoning
-    // (kept once, not repeated here): a constant value here is safe
-    // alongside the imperative setAttribute("aria-expanded", …) toggling
-    // done elsewhere in this file (open/close), and needs to be present
-    // synchronously from the very first commit for
-    // use_displayed_layout_effect.js's own sake.
-    "aria-expanded": "false",
+    // (kept once, not repeated here).
+    "aria-expanded": openController.opened ? "true" : "false",
     // Only load-bearing for the custom renderer (see its own &:not([popover])
     // CSS rule) — present from this very first render so there's no gap for
     // the browser to ever paint the custom renderer visible before anything
     // has actually opened it. Recomputed fresh on every render from
-    // openController.opened (not a frozen mount-time constant, unlike
-    // aria-expanded just above) — Preact only touches the DOM for a prop
-    // whose value actually changed since the last render, so as long as
-    // this always reflects the *current* truth, it never fights the
-    // imperative removeAttribute/setAttribute openEffect/close do directly.
+    // openController.opened (not a frozen mount-time constant) — Preact
+    // only touches the DOM for a prop whose value actually changed since
+    // the last render, so as long as this always reflects the *current*
+    // truth, it never fights the imperative
+    // removeAttribute/setAttribute openEffect/close do directly.
     "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
