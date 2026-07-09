@@ -53,31 +53,44 @@
       // en live (transition du nombre affiché, passage du seuil 99+, etc.)
       // plutôt qu'à un rendu figé comme les autres sections de cette demo.
       const LiveUpdateSection = () => {
-        const [candyCount, setCandyCount] = useState(3);
+        const dottedBorder = { border: "1px dotted #999" };
+        const [smallFirst, setSmallFirst] = useState(true);
 
         return (
           <Box as="section" marginBottom="xl">
             <Title as="h2">Live : mise à jour du compte</Title>
-            <Paragraph>
-              Nombre de bonbons :
-              <BadgeCount circle background="#e91e63" color="white">
-                {candyCount}
-              </BadgeCount>
-            </Paragraph>
-            <Box row spacing="s">
+            <Box flex="y" alignX="start">
+              <Paragraph margin="0" size="xxl">
+                <Text style={dottedBorder}>Nombre</Text>
+                <BadgeCount
+                  background="#e91e63"
+                  color="white"
+                  style={dottedBorder}
+                  max="none"
+                >
+                  {smallFirst ? 5 : 500}
+                </BadgeCount>
+              </Paragraph>
+              <Paragraph margin="0" size="xxl">
+                <Text style={dottedBorder}>Nombre</Text>
+                <BadgeCount
+                  background="#e91e63"
+                  color="white"
+                  style={dottedBorder}
+                  max="none"
+                >
+                  {smallFirst ? 500 : 5}
+                </BadgeCount>
+              </Paragraph>
+
               <Button
-                action={() => setCandyCount((c) => Math.max(0, c - 1))}
-                disabled={candyCount === 0}
+                marginTop="m"
+                action={() => {
+                  setSmallFirst(!smallFirst);
+                }}
               >
-                -1 bonbon
+                Inverser
               </Button>
-              <Button action={() => setCandyCount((c) => c + 1)}>
-                +1 bonbon
-              </Button>
-              <Button action={() => setCandyCount((c) => c + 10)}>
-                +10 bonbons
-              </Button>
-              <Button action={() => setCandyCount(0)}>Reset</Button>
             </Box>
           </Box>
         );
