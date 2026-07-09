@@ -1,99 +1,47 @@
 /**
  * A dialog is centered in the viewport by default, with no anchor to grow
- * out of or slide in from — `animation={true}`/`"auto"` resolves the same
- * way Popover's own auto-animation resolution does (see popover.jsx's own
- * top comment and popup_shared.js's `resolveAutoAnimationKind`/
- * `resolveDirectionValue`), just always through the "no real anchor" path:
- * a dead-center `positionArea` picks `"scaling"`, anything off-center picks
- * a `"slide-from-*"` direction matching that placement. Any other explicit
- * kind (`"fading"`, `"scaling"`, or a literal
- * `"slide-from-{top,bottom,left,right}"` + diagonals) is passed straight
- * through as-is.
+ * out of or slide in from — `animation={true}`/`"auto"` resolves through
+ * Popover's own no-real-anchor path (see popover.jsx's own top comment).
+ * `positionArea` accepts the same grammar Popover does (see
+ * popup_shared.js), even though several combinations land identically here
+ * since Dialog is never really anchored — kept distinct anyway because
+ * `positionArea` still picks which animation direction plays. `anchor` only
+ * ever affects the `--anchor-width`/`--anchor-height` CSS vars (sizing the
+ * dialog relative to whatever opened it) — Dialog's own positioning is never
+ * relative to it, unlike Popover.
  *
- * `positionArea` (default `"center"`) accepts the *same* grammar Popover
- * does — see popup_shared.js's own `parsePositionArea`/
- * `POSITION_AREA_X/Y_VALUES` doc for the full vocabulary (two
- * space-separated words, order-independent, "aligned-*" for edge-touching
- * vs. a bare word for flush-to-edge/no-overlap). Dialog is never really
- * anchored (see below), so several combinations produce the exact same
- * final position (e.g. `"above"` and `"above center"` land identically) —
- * they're kept distinct anyway because `positionArea` still selects which
- * animation direction plays, and being able to test that whole combination
- * space (see `dialog_demo.html`'s own Position section) is the entire
- * reason for sharing Popover's richer grammar instead of the old flat
- * 5-value one.
- *
- * `anchor` only ever affects the `--anchor-width`/`--anchor-height` CSS vars
- * (used to size the dialog relative to whatever opened it, e.g. `min-width:
- * var(--anchor-width, 0px)`) — Dialog's own positioning (`positionArea`
- * above) is never relative to it, unlike Popover: `pickPositionRelativeTo`
- * is always called in its own no-anchor/docked mode (see popover.jsx's own
- * top comment on that mode), docking against the viewport for `layer=
- * "top"` or the dialog's own positioned ancestor for `layer="local"`.
- *
- * Two rendering strategies, picked via `layer` (`"top"` default | `"local"`,
- * same prop/values as Popover): `DialogAsModal` (a real `<dialog>`,
- * `showModal()`/`close()`, promoted to the top layer — gets a native focus
- * trap, `Escape`-to-cancel via the browser's own "cancel" event, and (on
- * platforms that support it) hardware/gesture back-button dismissal, all for
- * free) and `DialogLocal` (`layer="local"` — also a real `<dialog>`, for
- * its free implicit ARIA `role="dialog"`, but shown via the non-modal
- * `.show()` instead of `showModal()`, so it stays in normal document flow —
- * `position: absolute` relative to its own positioned ancestor, genuinely
- * clipped by that ancestor's own `overflow: hidden`/`auto`, the same
+ * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
+ * `<dialog>`, `showModal()`, top layer — native focus trap,
+ * `Escape`-to-cancel, hardware/gesture back-button dismissal, all for free)
+ * and `DialogLocal` (also a real `<dialog>`, shown via the non-modal
+ * `.show()` instead so it stays in normal document flow — `position:
+ * absolute` relative to its own positioned ancestor, clipped by it, same
  * motivation as Popover's own `PopoverCustom`).
  *
  * `.show()` gives up everything `showModal()` gets for free, which
- * `DialogLocal` has to reimplement itself: a focus trap (`trapFocusInside`,
- * unconditional — a dialog is always modal, unlike Popover's opt-in
- * `focusCapture` — and scoped to its own positioned ancestor via
- * `boundaryElement`, not `document`: a Tab press or click occurring
- * entirely outside that container never reaches this trap at all, only
- * interactions within the container get redirected back into the dialog)
- * and `Escape`-to-close (a `keydown` shortcut, since `.show()` dialogs don't
- * fire "cancel" on Escape the way a modal one does) — see `useDialogProps`'s
- * own `isModal` branches below for each. **Deliberately NOT reimplemented:
- * hardware/gesture back-button dismissal** (e.g. Android's system back
- * gesture closing the top-most modal) — there is no public web API to hook
- * into that gesture at all outside of the browser's own native
- * modal-dismissal stack, which only a genuinely `showModal()`-shown,
- * top-layer element participates in. A `layer="local"` dialog trades that
- * away in exchange for being confined to a local container instead of the
- * whole viewport — an accepted, intentional limitation, not an oversight.
+ * `DialogLocal` reimplements itself: a focus trap (scoped to its own
+ * positioned ancestor, not `document`) and `Escape`-to-close (`.show()`
+ * dialogs don't fire "cancel" on Escape the way a modal one does).
+ * **Deliberately NOT reimplemented: hardware/gesture back-button
+ * dismissal** — no public web API hooks into that outside the browser's own
+ * native modal-dismissal stack, which only a genuine `showModal()` element
+ * participates in. An accepted, intentional limitation of `layer="local"`,
+ * not an oversight.
  *
- * `DialogAsModal`'s own backdrop is the native `::backdrop` pseudo-element
- * (styled directly — fade transition, `"capture"` glass effect, same
- * `--navi-backdrop-*` vars `DialogLocal`'s own real backdrop div uses) —
- * simpler than rendering a real, separately-`popover`-promoted element
- * turned out to be: a `showModal()`-shown `<dialog>` makes the *rest of the
- * document* — including any other, separately-inserted top-layer element,
- * `[popover]` or not — genuinely non-interactive while it's open, not just
- * "stacked behind"; a real backdrop `<div popover="manual">` never actually
- * received a `mousedown` at all, tried and reverted. Outside-click
- * detection is instead a plain `document`-level `mousedown` listener
- * (capture phase, coordinate-based against `dialogEl`'s own rect — *not*
- * target-based: a backdrop click doesn't reliably fire `dialogEl`'s own
- * `mousedown` either), set up/torn down per open/close in `openEffect`,
- * active for the dialog's entire open lifetime (not just mid-transition —
- * an earlier, narrower version of this only needed to exist because a real
- * backdrop element's `pointer-events` briefly conflicted with
- * `suppressPointerEventsDuringTransition`; once that real element was
- * removed, so was the reason to scope this to just that window).
+ * `DialogAsModal`'s own backdrop is the native `::backdrop` pseudo-element,
+ * not a real rendered element — simpler than the alternative turned out to
+ * be: a `showModal()`-shown `<dialog>` makes the rest of the document
+ * genuinely non-interactive while open, so a real backdrop `<div
+ * popover="manual">` never actually received a `mousedown` at all (tried
+ * and reverted). Outside-click detection is instead a plain
+ * `document`-level `mousedown` listener, coordinate-based against
+ * `dialogEl`'s own rect rather than target-based (a backdrop click doesn't
+ * reliably fire `dialogEl`'s own `mousedown` either).
  *
- * `DialogLocal` wraps its own dialog element in a `.navi_dialog_clip_wrapper`
- * (mirroring Popover's `.navi_popover_clip_wrapper` — see popover.jsx's own
- * comment on it for the underlying browser quirk it works around) purely to
- * absorb overflow growth from a translate/scale entrance transition before
- * it ever reaches the real container — positioning itself is entirely
- * `pickPositionRelativeTo`-driven (JS-computed `top`/`left`), the exact same
- * no-anchor/docked mechanism Popover's own custom renderer uses, not
- * flexbox alignment.
- *
- * Both renderers reposition on the same triggers Popover's own
- * `visibleRectEffect` already reacts to generically (window resize/scroll,
- * visual-viewport changes for `layer="top"` — it listens to
- * `window.visualViewport` directly, no bespoke CSS-var/event mechanism
- * needed — or the positioned ancestor's own resize for `layer="local"`).
+ * `DialogLocal` wraps its dialog element in a `.navi_dialog_clip_wrapper`
+ * (mirrors Popover's own `.navi_popover_clip_wrapper`) purely to absorb
+ * overflow growth from a translate/scale entrance transition before it
+ * reaches the real container.
  */
 
 import {

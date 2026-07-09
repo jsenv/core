@@ -1,223 +1,37 @@
 /**
- * A popup positioned via `anchor`/`positionArea`, driven either by
- * --navi-toggle/--navi-open/--navi-close commands, the `open` prop
- * (controlled), or `defaultOpen` (uncontrolled, mount-only — see
- * useOpenControllerByProps in open_controller.js). Whichever of these
- * starts the popover already open at mount plays no entrance animation —
- * nothing was ever shown as "closed" for the user to see it transition away
- * from (see openEffect's own `silent` handling below).
+ * A popup positioned via `anchor`/`positionArea`. Two real rendering
+ * strategies live in this file, each its own component: `PopoverViaAttribute`
+ * (native Popover API, top layer) and `PopoverCustom` (`position: absolute`
+ * relative to its own nearest positioned ancestor, clipped by that
+ * ancestor's own `overflow` unlike the top layer). Kept as two separate
+ * components rather than one branching internally — their JSX already
+ * diverges (`PopoverCustom` wraps its content in an extra clip-wrapper div)
+ * and collapsing them would just mean re-splitting later. `layer` picks
+ * between them directly and has no opinion on anchor resolution — a real
+ * `anchor` always wins over `layer` and works with either renderer.
  *
- * Two entirely separate rendering strategies exist in this one file, each
- * its own real component: `PopoverViaAttribute` (native Popover API,
- * `popover="manual"`, `showPopover()`/`hidePopover()`, promoted to the top
- * layer) and `PopoverCustom` (a plain `position: absolute` div, genuinely
- * relative to its nearest positioned ancestor — clipped by that ancestor's
- * own `overflow: hidden`/`auto`, unlike the top layer). The exported
- * `Popover` component first picks between an internally-managed open
- * controller (Uncontrolled) and one owned by the caller (Controlled, used
- * by picker_custom.jsx/side_panel.jsx) — kept as its own separate step so
- * `useOpenControllerByProps` (a whole controller instance) is only ever
- * created when actually needed, not unconditionally on every render.
- * `ControlledPopover` then picks which rendering strategy actually mounts,
- * from the `anchor`/`layer` props alone (no `anchor` given *and*
- * `layer="local"` → `PopoverCustom`, everything else → `PopoverViaAttribute`)
- * — by this point an `openController` is always already resolved.
+ * The backdrop (`pointerInteractionOutsideEffect`) is a sibling, not a
+ * descendant, of the real popover — a stacking-context root's own
+ * background always paints below even its own negative-z-index children, so
+ * a z-index trick on a descendant backdrop could never sit behind the
+ * popover's own background. Its hide is deferred until the browser's
+ * matching "click" fires when close was triggered by a mousedown (an
+ * outside click) — hiding synchronously would make the mousedown's target
+ * vanish before mouseup, silently dropping that click.
  *
- * Both components share the exact same `usePopoverProps(props)` hook for
- * everything that doesn't genuinely differ between them, once an
- * `openController` is already resolved: focus/debug/id plumbing, capture
- * setup, animation-attribute resolution, the open-commit sequence, the
- * close handler, and — inlined directly in the hook's own `openEffect`,
- * branching on a single `isTopLayer` flag rather than living in two separate
- * functions — the open/position/close sequence itself. Keeping it inline
- * (instead of splitting into two functions the way an earlier version of
- * this file did) makes the actual, genuine differences between the two
- * renderers easier to see at each point they occur — backdrop show/hide
- * mechanics and anchor-positioning math — rather than having to diff two
- * separately-scrolled functions to find them; everything else in the
- * sequence (capture setup, animation resolution, the commit/close steps)
- * is one shared call either way. `PopoverViaAttribute`/`PopoverCustom`
- * themselves stay two separate, real components (see below) rather than one
- * component branching internally on `isTopLayer` — their JSX bodies already
- * diverge (`PopoverCustom` wraps its content box in an extra
- * `.navi_popover_clip_wrapper` div, see its own CSS comment for why;
- * `PopoverViaAttribute` doesn't need one), and collapsing them into one
- * would just mean re-splitting them apart again the next time that
- * divergence grows.
+ * `animation="auto"` resolves to "scaling" for a real anchor or a
+ * dead-center placement, "sliding" otherwise. "scaling" is the auto-pick
+ * (over "expanding") because it simply reads best in practice for a popup
+ * opening. A `spawnFromPointer`-style option (growing from the pointer
+ * position) was tried and dropped — it added motion that competed with the
+ * popover's own content for attention.
  *
- * `layer` (`"top"` default | `"local"`) picks the rendering strategy
- * directly — it's *not* about anchor resolution at all, deliberately: it
- * answers "which layer does this popup live in", not "what do we fall back
- * to when there's no anchor". `"top"` → the via-attribute renderer, in the
- * browser's own top layer. `"local"` → the custom renderer, resolved to the
- * popover's own positioned ancestor instead — respects that ancestor's own
- * `overflow: hidden`/`auto`, unlike the top layer (see
- * `getPositioningContainer` in visible_rect.js/offset_parent.js for how
- * it's found). `anchor` (a ref or a DOM element — no other value is
- * accepted anymore; a plain string is a near-certain leftover from an
- * older API and gets a dev warning, then treated the same as omitting it)
- * always wins over `layer` regardless of its value — a real anchor works
- * with either renderer. The custom renderer's popover is still `position:
- * absolute` relative to its own positioned ancestor either way; when a
- * real anchor is also given, it positions against that anchor's own edges
- * instead of the ancestor's, with `pickPositionRelativeTo`'s own
- * `container` option (see visible_rect.js) doing the ancestor-relative
- * coordinate conversion regardless. Whether that anchor happens to live in
- * the same layer as the popover's own container is the integrating dev's
- * own responsibility, not something guarded against here.
- *
- * The logic that a *container* (the viewport, or the positioned ancestor —
- * whichever `layer` resolves to) stands in *as* the thing `element` is
- * positioned relative to whenever there's no real anchor belongs entirely
- * to `pickPositionRelativeTo` itself (its own `container` option, used
- * whenever its own `anchor` argument is omitted — see its own doc in
- * visible_rect.js) — not to this file. `layer` only ever decides the
- * rendering strategy and which container to hand `pickPositionRelativeTo`;
- * it has no opinion on anchor resolution, which is a fully separate
- * question answered below.
- *
- * When there's no `anchor` prop, the triggering event's own carried anchor
- * (`detail.anchor`/`.source`) is used instead, for either renderer — the
- * custom renderer is allowed to be relative to an anchor too, even though
- * it isn't in the top layer; if that anchor turns out to live in a
- * different layer than the popover's own container, that's the
- * integrating dev's own responsibility, not something guarded against here
- * — unless `anchorCustomEventDetail="ignore"` (default `"override"`), which
- * skips that fallback entirely, forcing the `layer`-resolved container
- * placement regardless of what triggered the open (used by the demo's
- * "Ignoring the anchor" section).
- *
- * All of this is resolved down to a single value inline in `openEffect`
- * (only one call site, not worth a standalone function): either a real
- * anchor element, or `undefined` — `hasAnchorElement` (just
- * `Boolean(anchor)`) is what the rest of the code branches on from there,
- * and what gets handed (or not) to `pickPositionRelativeTo`'s own `anchor`
- * argument. Whether we have one or not is now explicit and unambiguous:
- * either there's a real anchor element, or we're positioned relative to the
- * container instead — there's no "anchor fallback" blurring the two.
- * ("Real anchor" isn't quite the right word for `hasAnchorElement` either,
- * since a container being positioned relative to is arguably a real anchor
- * in its own right too — it's meant narrowly: is there a specific *element*
- * being positioned against, as opposed to the container's own rect.)
- *
- * `aria-expanded` lives on the popover element itself, toggled imperatively
- * in sync with showPopover()/hidePopover() (or, for the custom renderer, a
- * plain inline `display` toggle — see the custom branch's own comments
- * below) so popup_css.js can key its CSS off one selector for both Popover
- * and Dialog. Both renderers share the exact same `.navi_popover`/
- * `.navi_popover_backdrop` classes — CSS that differs between them keys off
- * the native popover element's own `[popover]` attribute (present only for
- * the via-attribute renderer) rather than an extra class.
- *
- * `pointerInteractionOutsideEffect` ("none" default / "close" / "capture")
- * is implemented via a backdrop, a sibling element (not a descendant of the
- * real popover — a stacking-context root's own background/border always
- * paints *below* even its own negative-z-index children, so a z-index trick
- * on a *descendant* backdrop could never truly sit behind the real
- * popover's own background). For the via-attribute renderer it's a
- * top-layer sibling (promoted the same way, so it naturally stacks above
- * normal page content without needing z-index); for the custom renderer
- * it's a plain `position: absolute; inset: 0` sibling confined to the
- * *same* positioned ancestor as its popover (not the whole viewport —
- * natural DOM order alone puts it behind the popover content, both being
- * plain positioned siblings with no special stacking involved).
- * It opens/closes together with the real popover, freshly re-shown (hidden
- * first if still open) on every open so its top-layer position resets to
- * just below the real popover — this matters when several via-attribute
- * popovers are open at once, since an older backdrop left in its original
- * top-layer slot would sit above a more-recently-opened popover, and an
- * outside click on that popover would never reach it.
- * Hiding is deferred until the browser's matching "click" fires when the
- * close was triggered by a mousedown (an outside click): hiding it
- * synchronously would make the mousedown's target vanish before mouseup,
- * silently dropping that click (see armSuppressNextOpenRequest in
- * open_controller.js, which depends on that click too) — aria-expanded is
- * still set to "false" immediately, so the backdrop stops intercepting
- * anything right away even while it's still pending. Not rendered at all
- * when the effect is "none" (`backdropProps` is `null` in that case).
- *
- * `positionArea` (named for what it actually is — not `anchorArea` — since
- * what it positions relative to isn't always a real anchor; loosely
- * inspired by CSS `position-area`) grammar: two space-separated words,
- * order-independent. y: above/aligned-top/center/aligned-bottom/below. x:
- * on-the-left/aligned-left/center/aligned-right/on-the-right. A bare word
- * means no overlap with whatever it's positioned relative to; "aligned-"
- * means edges touching. A single word implies "center" on the other axis
- * (e.g. a corner is spelled out as "aligned-top aligned-left", no
- * dedicated corner presets).
- *
- * When there's no real anchor element (`!hasAnchorElement`, for either
- * renderer whenever no anchor was resolved), both renderers position
- * relative to a container
- * instead — the viewport itself for via-attribute, this popover's own
- * positioned ancestor for the custom renderer — via the *same*
- * `pickPositionRelativeTo` call either way, simply omitting its `anchor`
- * argument (see that function's own doc in visible_rect.js for what its
- * own no-anchor, container-relative mode changes: the "float away with a
- * gap" bare directions collapse to their "aligned-*" equivalent
- * internally, flipping is skipped entirely, and the coordinate space/clamp
- * bounds become the container's own instead of the document's). The
- * via-attribute renderer leaves `container` unspecified —
- * `pickPositionRelativeTo` resolves it to the viewport on its own, since
- * the popover element's own `[popover]` attribute signals that (see
- * `getPositioningContainer`); the custom renderer passes its own
- * positioned ancestor explicitly, already computed above for
- * `visibleRectEffect`'s own observation target.
- *
- * `animation="auto"` resolves to "scaling" for any real anchor, or for a
- * point/corner placed dead-center (an "aligned-"/"center" axis means the
- * popover overlaps the anchor there, so a translate reads oddly — see
- * resolveDirectionValue below); "sliding" otherwise (a point/corner with a
- * direction, no anchor edge to grow out of) — concretely as one of
- * popup_css.js's `slide-from-*` values, computed here in JS (not left for
- * CSS to puzzle out from raw position attributes) so there's a single,
- * inspectable `navi-animation` value driving one direct CSS rule per
- * direction, no attribute-cascade indirection.
- * `animation="expanding"` (grows out of a real anchor's own edge, `expand-*`
- * concretely — works with either renderer, since a real anchor works with
- * either) and `animation="fading"` (opacity only, no motion) are both
- * explicit-only — never auto-picked.
- *
- * A genuinely satisfying popup-opening animation is hard to pull off —
- * "scaling" is the kind that reads best in practice, which is why it's the
- * auto-pick for any real anchor. "expanding" (growing out of the anchor's
- * own edge) comes close, but "scaling" still does it better, hence staying
- * explicit-only rather than becoming a second auto-pick.
- *
- * A `spawnFromPointer`-style option (growing from the click/pointer position
- * instead of the anchor/center) was tried and dropped: it's a tempting idea
- * on paper, but in practice it adds motion that competes for attention with
- * the popover's own content, which is what should actually draw the eye
- * once it opens — not where it came from.
- *
- * Each `navi-animation` value's own CSS rule (popup_css.js) includes its
- * own fade in/out — no separate `fadeAnimation` prop or attribute.
- * `resolvedAnimation` is mirrored onto the backdrop's own `navi-animation`
- * too, which only ever fades regardless of which kind it is (see the
- * backdrop's own CSS comment for why).
- *
- * The via-attribute renderer's own `.navi_popover` is `position: fixed` by
- * default (`&[popover]` below) — genuinely anchored to a real element
- * overrides that back to `position: absolute` instead (`&[popover]
- * [data-anchor]`, `data-anchor` set/removed alongside `hasAnchorElement`,
- * well before any positioning ever runs, so there's no ordering subtlety
- * to get wrong here). The two need opposite defaults for opposite reasons:
- * a real anchor needs `position: absolute` so the popover scrolls in
- * lockstep with the document — and thus stays visually attached to its
- * anchor, which scrolls the same way — whereas `position: fixed` would
- * leave it pinned to the viewport while the anchor scrolls away
- * underneath it; docked-to-the-viewport (no real anchor) has no such
- * anchor to stay attached to, so `position: fixed` is simply the more
- * direct way to express "pinned to the viewport" (and incidentally avoids
- * ever contributing to the document's own scrollable area, which a
- * `position: absolute` box docked near an edge — or animating via a
- * `slide-from-*` entrance, briefly extending further still for its closed
- * frame — otherwise could).
- *
- * `data-anchor-out-of-view` marks a real anchor that's scrolled out of view
- * (`visibilityRatio <= 0.2`) — never set at all when `!hasAnchorElement`,
- * since visibility ratio is meaningless for something docked to the
- * viewport/ancestor rather than a specific element.
+ * The via-attribute renderer defaults to `position: fixed`, overridden to
+ * `absolute` only when there's a real anchor: a real anchor needs the
+ * popover to scroll in lockstep with the document to stay visually attached
+ * to it, whereas `fixed` is the more direct way to stay pinned to the
+ * viewport when there's none (and avoids ever extending the document's own
+ * scrollable area).
  */
 
 import {
