@@ -256,11 +256,7 @@
                 </LeftPanelSlotFill>
               )}
               {rightItem && (
-                <RightPanelSlotFill
-                  open
-                  animation
-                  onClose={() => setRightItem(null)}
-                >
+                <RightPanelSlotFill onClose={() => setRightItem(null)}>
                   <PanelContent item={rightItem} />
                 </RightPanelSlotFill>
               )}
