@@ -95,8 +95,11 @@
             <Paragraph>
               Left is driven by a nav-item state (<code>onClose</code> resets it
               to "Home"); right by a clicked-item state (<code>onClose</code>{" "}
-              clears it). Each <code>SidePanel</code> stays mounted permanently
-              — <code>useSlotFilled()</code> drives its <code>open</code> prop
+              clears it). <code>createSlot(LeftPanel)</code>/
+              <code>createSlot(RightPanel)</code> use <code>SidePanel</code>{" "}
+              itself as the <code>SlotRenderer</code> — it stays mounted
+              permanently and derives its <code>open</code> prop straight from
+              the <code>isFilled</code> prop <code>Slot</code> always passes it,
               instead of the panel itself being mounted/unmounted, so open/close
               actually animate.
             </Paragraph>
@@ -274,50 +277,48 @@
 
       // --- 5. Two side-panel slots ---
 
-      const [LeftPanelSlot, LeftPanelSlotFill, useLeftPanelFilled] =
-        createSlot();
-      const [RightPanelSlot, RightPanelSlotFill, useRightPanelFilled] =
-        createSlot();
-
-      // The SidePanel itself is rendered here, permanently — not by
-      // createSlot() (which would mount/unmount it alongside the filler,
-      // the way sections 1-4 do; fine for a plain Box, not for something
-      // that needs to animate open/close). useSlotFilled() instead drives
-      // its own `open` prop, so the same panel instance transitions
-      // between open/closed rather than being torn down and recreated.
-      // Known remaining gap: while closed, LeftPanelSlot itself still
-      // renders null (no filler mounted), so the panel's *content* goes
-      // blank immediately rather than staying visible through the close
-      // transition — a separate problem from today's "doesn't animate at
-      // all", left for later.
-      const LeftPanel = () => {
-        const filled = useLeftPanelFilled();
-        return (
-          <SidePanel
-            layer="local"
-            side="left"
-            open={filled}
-            width={220}
-            animation
-          >
-            <LeftPanelSlot />
-          </SidePanel>
-        );
-      };
-      const RightPanel = () => {
-        const filled = useRightPanelFilled();
-        return (
-          <SidePanel
-            layer="local"
-            side="right"
-            open={filled}
-            width={220}
-            animation
-          >
-            <RightPanelSlot />
-          </SidePanel>
-        );
-      };
+      // SidePanel itself is the SlotRenderer: Slot keeps it mounted
+      // permanently (even while unfilled) and always passes it
+      // `isFilled`, so `open` is driven straight from that instead of
+      // the panel being mounted/unmounted alongside the filler — the same
+      // instance transitions between open/closed rather than being torn
+      // down and recreated, which is what lets it actually animate.
+      //
+      // Because SidePanel receives SlotFill's props directly (spread by
+      // Slot), onClose given to LeftPanelSlotFill/RightPanelSlotFill below
+      // lands on the real SidePanel this time — no separate wrapper
+      // needed to make that wiring work.
+      //
+      // Known remaining gap: while closed, `children` is whatever the
+      // last SlotFill provided (or undefined before the first fill) —
+      // SidePanel doesn't currently keep rendering the *previous* content
+      // through its own close transition, left for later.
+      const LeftPanel = ({ isFilled, onClose, children }) => (
+        <SidePanel
+          layer="local"
+          side="left"
+          open={isFilled}
+          onClose={onClose}
+          width={220}
+          animation
+        >
+          {children}
+        </SidePanel>
+      );
+      const RightPanel = ({ isFilled, onClose, children }) => (
+        <SidePanel
+          layer="local"
+          side="right"
+          open={isFilled}
+          onClose={onClose}
+          width={220}
+          animation
+        >
+          {children}
+        </SidePanel>
+      );
+      const [LeftPanelSlot, LeftPanelSlotFill] = createSlot(LeftPanel);
+      const [RightPanelSlot, RightPanelSlotFill] = createSlot(RightPanel);
 
       const PanelContent = ({ item }) => (
         <>
@@ -409,8 +410,8 @@
                   ))}
                 </Box>
 
-                <LeftPanel />
-                <RightPanel />
+                <LeftPanelSlot />
+                <RightPanelSlot />
 
                 {activeNav.content && (
                   <LeftPanelSlotFill onClose={() => setNavKey("home")}>

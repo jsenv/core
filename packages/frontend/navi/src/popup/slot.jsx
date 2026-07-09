@@ -12,35 +12,37 @@ import { Box } from "../box/box.jsx";
  *
  * Holds at most one filler at a time — there is no stacking/queueing.
  * Mounting a second `SlotFill` (from this same `createSlot()` call)
- * overwrites whatever the previous one set; `Slot` renders `null` once the
- * mounted `SlotFill` unmounts (its own cleanup clears the shared signal).
+ * overwrites whatever the previous one set.
+ *
+ * `Slot` keeps `SlotRenderer` mounted permanently — even while unfilled it
+ * still renders it, with no props and `isFilled={false}` — instead of
+ * unmounting it. This lets `SlotRenderer` be a persistent wrapper that
+ * reacts to `isFilled` itself (e.g. a `SidePanel` deriving its `open`
+ * prop from it, so open/close actually animate instead of the panel being
+ * mounted/unmounted alongside the filler — see slot_demo.html's "two side
+ * panels" section). A `SlotRenderer` that wants the old
+ * render-nothing-when-unfilled behavior can opt back in with its own
+ * `if (!isFilled) return null;` (the default `Box` renderer doesn't do
+ * this — an unfilled default slot just renders an empty `<Box/>`).
  *
  * @param {import("preact").ComponentType} [SlotRenderer=Box] - Rendered by
- *   `Slot` with whatever props `SlotFill` last set. Swap this out to reuse
- *   the same slot mechanism for something other than a plain `Box` (e.g. a
- *   specific component expecting its own particular props).
- * @returns {[import("preact").ComponentType, import("preact").ComponentType<object>, () => boolean]}
- *   `[Slot, SlotFill, useSlotFilled]` — `Slot` takes no props, render it
- *   once wherever the content should appear. `SlotFill` takes whatever
- *   props `SlotRenderer` expects, render it anywhere else in the tree to
- *   supply/update that content. `useSlotFilled()` reactively reports
- *   whether a `SlotFill` is currently mounted — for a persistent wrapper
- *   around `<Slot/>` that needs to stay mounted itself (e.g. a `SidePanel`
- *   that should actually animate open/closed instead of being
- *   mounted/unmounted alongside the filler — see slot_demo.html's own
- *   "two side panels" section), since `Slot` unmounting `SlotRenderer`
- *   whenever it's unfilled means the wrapper can't rely on `<Slot/>`'s own
- *   presence for that.
+ *   `Slot`, always, with whatever props `SlotFill` last set (spread
+ *   directly) plus `isFilled`. Swap this out to reuse the same slot
+ *   mechanism for something other than a plain `Box` (e.g. a specific
+ *   component expecting its own particular props, or a persistent wrapper
+ *   like `SidePanel`).
+ * @returns {[import("preact").ComponentType, import("preact").ComponentType<object>]}
+ *   `[Slot, SlotFill]` — `Slot` takes no props, render it once wherever the
+ *   content should appear. `SlotFill` takes whatever props `SlotRenderer`
+ *   expects, render it anywhere else in the tree to supply/update that
+ *   content.
  */
 export const createSlot = (SlotRenderer = Box) => {
   const slotPropsSignal = signal();
 
   const Slot = () => {
     const props = slotPropsSignal.value;
-    if (!props) {
-      return null;
-    }
-    return <SlotRenderer {...props} />;
+    return <SlotRenderer {...props} isFilled={Boolean(props)} />;
   };
 
   const SlotFill = (props) => {
@@ -54,7 +56,5 @@ export const createSlot = (SlotRenderer = Box) => {
     return null;
   };
 
-  const useSlotFilled = () => Boolean(slotPropsSignal.value);
-
-  return [Slot, SlotFill, useSlotFilled];
+  return [Slot, SlotFill];
 };
