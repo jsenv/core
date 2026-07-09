@@ -6,8 +6,7 @@
     <title>SidePanel Integration Demo</title>
     <style>
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       .demo-controls {
         position: fixed;
@@ -28,7 +27,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useMemo, useState } from "preact/hooks";
-      import { BadgeCount, Box, Button, List, ListItem, SidePanel } from "@jsenv/navi";
+      import {
+        BadgeCount,
+        Box,
+        Button,
+        List,
+        ListItem,
+        SidePanel,
+      } from "@jsenv/navi";
 
       // A small, deterministic pool of adjective/noun combos reads far closer
       // to a real inventory than "Item 1"/"Item 2" — enough variety (12 * 26
@@ -147,13 +153,7 @@
               <button onClick={() => setItemCount(5)}>5 items</button>
               <button onClick={() => setItemCount(500)}>500 items</button>
             </div>
-            <SidePanel
-              id={panelId}
-              animation
-              defaultOpen
-              width={380}
-              flex="y"
-            >
+            <SidePanel id={panelId} animation defaultOpen width={380} flex="y">
               <SidePanel.Head
                 style={{
                   display: "flex",
@@ -164,7 +164,7 @@
               >
                 <Box flex alignY="center" gap="8px" expand>
                   <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
-                  <BadgeCount circle>{itemCount}</BadgeCount>
+                  <BadgeCount max="none">{itemCount}</BadgeCount>
                 </Box>
                 <Button
                   className="navi_side_panel_head_close_button"
