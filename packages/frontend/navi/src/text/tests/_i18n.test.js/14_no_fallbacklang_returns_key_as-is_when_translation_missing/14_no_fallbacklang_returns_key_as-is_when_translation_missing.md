@@ -1,7 +1,7 @@
 # [no fallbackLang: returns key as-is when translation missing](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 i18n.addLangKeys("en", { greeting: "Hello!" });
 // no fr translation
 

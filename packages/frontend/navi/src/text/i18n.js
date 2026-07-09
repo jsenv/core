@@ -26,9 +26,15 @@ import { langSignal } from "./lang_signal.js";
  *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
  *   ```
  *
- * @param {string|string[]} [options.systemLang]
- *   The active user language (BCP 47 tag or ordered array of tags).
- *   Defaults to `langSignal.peek()` (browser language at creation time).
+ * @param {string|string[]} [options.runtimeLang]
+ *   The active language (BCP 47 tag or ordered array of tags) — named
+ *   "runtime" rather than "system" because there is no actual access to the
+ *   OS/user's system language from a browser, only `navigator.language` (or
+ *   a forced override) at runtime. Defaults to `langSignal.value`, read
+ *   fresh on every `format()`/`has()` call (not frozen at creation time) —
+ *   so forcing the language app-wide via `setForcedLang()` (see
+ *   lang_signal.js) is picked up here too. Passing an explicit `runtimeLang`
+ *   opts out of that and stays fixed for this instance's whole lifetime.
  *
  * ---
  *
@@ -54,14 +60,21 @@ import { langSignal } from "./lang_signal.js";
  *   A callable function — `i18n(key, values?, { lang? })` — with the same
  *   signature as `i18n.format()`. `format` is kept as an alias.
  */
-export const createI18n = ({
-  keyLang,
-  fallbackLang,
-  systemLang = langSignal.peek(),
-} = {}) => {
+export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
 
-  let activeLang = systemLang;
+  // Explicit runtimeLang stays fixed for this instance's lifetime (matches
+  // the previous behavior exactly). Without one, re-read langSignal.value
+  // fresh on every call instead of freezing it here via langSignal.peek()
+  // once — that would silently ignore setForcedLang() (see lang_signal.js)
+  // for the rest of this instance's life.
+  const hasExplicitRuntimeLang = runtimeLang !== undefined;
+  const getActiveLang = () => {
+    const currentRuntimeLang = hasExplicitRuntimeLang
+      ? runtimeLang
+      : langSignal.value;
+    return matchBestLang(currentRuntimeLang, languageMap);
+  };
 
   const addLangKeys = (lang, translations) => {
     // Accumulate: merge with any existing translations for this lang
@@ -80,7 +93,6 @@ export const createI18n = ({
       }
     }
     languageMap.set(lang, translations);
-    activeLang = matchBestLang(systemLang, languageMap);
   };
 
   const add = (key, langTranslations) => {
@@ -122,12 +134,12 @@ export const createI18n = ({
     return key;
   };
 
-  const format = (key, values, { lang = activeLang } = {}) => {
+  const format = (key, values, { lang = getActiveLang() } = {}) => {
     const template = _getTemplate(key, lang);
     return interpolateText(template, values);
   };
 
-  const has = (key, { lang = activeLang } = {}) => {
+  const has = (key, { lang = getActiveLang() } = {}) => {
     const resolvedLang = lang ? matchLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);

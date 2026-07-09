@@ -183,7 +183,7 @@ export {
 export { Icon } from "./src/text/icon.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
 export { interpolateText } from "./src/text/interpolate_text.js";
-export { langSignal } from "./src/text/lang_signal.js";
+export { langSignal, setForcedLang } from "./src/text/lang_signal.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { naviI18n } from "./src/text/navi_i18n.js";

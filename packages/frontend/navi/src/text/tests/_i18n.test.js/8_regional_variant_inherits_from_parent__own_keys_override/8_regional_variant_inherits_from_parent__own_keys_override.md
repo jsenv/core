@@ -1,7 +1,7 @@
 # [regional variant inherits from parent, own keys override](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr-provencal" });
+const i18n = createI18n({ runtimeLang: "fr-provencal" });
 i18n.addLangKeys("fr", {
   "one minute": "une minute",
   "[x] minutes": "[x] minutes",

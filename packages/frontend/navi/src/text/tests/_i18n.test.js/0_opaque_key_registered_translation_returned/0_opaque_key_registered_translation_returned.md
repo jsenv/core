@@ -1,7 +1,7 @@
 # [opaque key: registered translation returned](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 i18n.add("one minute", { fr: "une minute" });
 return {
   result: i18n("one minute"),

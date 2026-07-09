@@ -1,7 +1,7 @@
 # [keyLang: regional variant of keyLang also uses key as template](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "en-GB", keyLang: "en" });
+const i18n = createI18n({ runtimeLang: "en-GB", keyLang: "en" });
 i18n.add("Hello!", { fr: "Bonjour !" });
 return {
   result: i18n("Hello!"),

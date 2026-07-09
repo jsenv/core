@@ -1,7 +1,7 @@
 # [keyLang: key doubles as translation for keyLang](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "en", keyLang: "en" });
+const i18n = createI18n({ runtimeLang: "en", keyLang: "en" });
 i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
 return {
   en: i18n("Hello [name]!", { name: "Alice" }),

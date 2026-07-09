@@ -1,7 +1,7 @@
 # [addAll registers multiple keys at once](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 i18n.addAll({
   "one minute": { fr: "une minute" },
   "one person": { fr: "une personne" },

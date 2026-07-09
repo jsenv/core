@@ -1,7 +1,7 @@
 # [opaque key: interpolation with [x] placeholders](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 i18n.add("[x] minutes", { fr: "[x] minutes" });
 return {
   "with value": i18n("[x] minutes", { x: 3 }),
