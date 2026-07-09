@@ -232,51 +232,65 @@
         { key: "b", label: "B", content: { title: "B", body: "Section B." } },
       ];
 
-      // Right panel: driven by "whatever was last clicked in the main
-      // area" — a one-off, no natural default to fall back to. onClose
+      // Right panel: driven by "whichever item was last clicked in the main
+      // content" — a one-off, no natural default to fall back to. onClose
       // clears it back to null instead.
-      const RIGHT_ITEMS = {
-        details: { title: "Details", body: "Details content." },
-        help: { title: "Help", body: "Help content." },
-      };
+      const WIDGETS = [
+        { key: "cpu", title: "CPU", body: "42% usage." },
+        { key: "memory", title: "Memory", body: "3.1 GB used." },
+        { key: "disk", title: "Disk", body: "128 GB free." },
+      ];
 
       const TwoPanelsDemo = () => {
         const [navKey, setNavKey] = useState("home");
-        const [rightItem, setRightItem] = useState(null);
+        const [widgetKey, setWidgetKey] = useState(null);
         const activeNav = NAV_ITEMS.find((item) => item.key === navKey);
+        const activeWidget = WIDGETS.find((item) => item.key === widgetKey);
 
         return (
-          <Box flex gap="12px">
-            <Box flex="y" gap="4px">
-              {NAV_ITEMS.map((item) => (
-                <Button
-                  key={item.key}
-                  variant={navKey === item.key ? undefined : "discrete"}
-                  action={() => setNavKey(item.key)}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </Box>
-
-            <Box flex="y" gap="8px" expand>
-              <Box flex gap="8px">
-                <Button action={() => setRightItem(RIGHT_ITEMS.details)}>
-                  Show Details (right)
-                </Button>
-                <Button action={() => setRightItem(RIGHT_ITEMS.help)}>
-                  Show Help (right)
-                </Button>
+          // The page itself: englobes the nav, the main content, and both
+          // side panels — flush edges, no border-radius, unlike the other
+          // demo boxes on this page.
+          <Box
+            border="1px solid #dee2e6"
+            relative
+            style={{ height: "260px", overflow: "hidden" }}
+          >
+            <Box flex style={{ height: "100%" }}>
+              <Box
+                as="nav"
+                flex="y"
+                gap="4px"
+                padding="s"
+                borderRight="1px solid #dee2e6"
+                style={{ width: "110px" }}
+              >
+                {NAV_ITEMS.map((item) => (
+                  <Button
+                    key={item.key}
+                    variant={navKey === item.key ? undefined : "discrete"}
+                    action={() => setNavKey(item.key)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
               </Box>
 
-              {/* Triggers live outside this box so the sliding panels
-                  (confined to it) never cover their own triggers. */}
-              <Box
-                border="1px solid #dee2e6"
-                borderRadius="m"
-                relative
-                style={{ height: "220px", overflow: "hidden" }}
-              >
+              {/* Both panels dock within this sub-container, not the page
+                  itself — so a sliding panel never covers the nav. */}
+              <Box relative expand style={{ overflow: "hidden" }}>
+                <Box as="main" padding="m" flex="y" gap="4px">
+                  {WIDGETS.map((widget) => (
+                    <Button
+                      key={widget.key}
+                      variant="discrete"
+                      action={() => setWidgetKey(widget.key)}
+                    >
+                      {widget.title}
+                    </Button>
+                  ))}
+                </Box>
+
                 <LeftPanelSlot />
                 <RightPanelSlot />
 
@@ -285,9 +299,9 @@
                     <PanelContent item={activeNav.content} />
                   </LeftPanelSlotFill>
                 )}
-                {rightItem && (
-                  <RightPanelSlotFill onClose={() => setRightItem(null)}>
-                    <PanelContent item={rightItem} />
+                {activeWidget && (
+                  <RightPanelSlotFill onClose={() => setWidgetKey(null)}>
+                    <PanelContent item={activeWidget} />
                   </RightPanelSlotFill>
                 )}
               </Box>
