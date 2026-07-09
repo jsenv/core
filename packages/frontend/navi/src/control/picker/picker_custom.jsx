@@ -325,11 +325,13 @@ const PickerCustom = (props) => {
         },
       };
     });
-    openController.openEffect = () => {
-      // scroll <button> of the picker into view when opening it
-      const pickerEl = ref.current;
-      pickerEl.scrollIntoView({ block: "nearest" });
-    };
+    // scroll <button> of the picker into view when opening it
+    // -> would be overriden by dialog.jsx or popover.jsx
+    // so ideally openEffect should be either protective or a pubSub to allow multiple callbacks
+    // openController.openEffect = () => {
+    //   const pickerEl = ref.current;
+    //   pickerEl.scrollIntoView({ block: "nearest" });
+    // };
     const requestOpen = openController.open;
     const requestClose = openController.requestClose;
     // Same skip-if-already-matching / open-or-requestClose control flow as
