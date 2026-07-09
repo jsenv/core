@@ -230,7 +230,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useId, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -693,19 +693,21 @@ const usePopoverProps = (props) => {
   // .navi_popover_backdrop above) rather than set here imperatively — a
   // plain div has no native default the way [popover]/<dialog> do, so
   // leaving this to a layout effect meant an actual (if narrow) window
-  // where the browser could paint it visible before this ever ran. Only
-  // aria-expanded is still set imperatively here; it isn't rendering-eligible
-  // on its own (nothing in either file's CSS shows/hides based on it directly
-  // — only mediates the [navi-animation] transition), so there's no
-  // equivalent flash risk for it.
-  useLayoutEffect(() => {
-    if (ref.current) {
-      ref.current.setAttribute("aria-expanded", "false");
-    }
-    if (backdropRef.current) {
-      backdropRef.current.setAttribute("aria-expanded", "false");
-    }
-  }, [isTopLayer]);
+  // where the browser could paint it visible before this ever ran.
+  // aria-expanded starts "false" the same way, but via a static literal
+  // JSX prop on contentProps/backdropProps below instead of a layout
+  // effect — see that prop's own comment for why a *constant* value there
+  // is safe to combine with the imperative setAttribute("aria-expanded", …)
+  // toggling done elsewhere in this file (open/close), and for why it
+  // needs to be present synchronously from the very first commit, not a
+  // layout effect later: a descendant relying on useDisplayedLayoutEffect
+  // (see that file) to detect "this ancestor just opened" checks for
+  // aria-expanded's mere presence at its own, earlier-firing layout effect
+  // (Preact fires child effects before parent effects) — if this file set
+  // it via its own layout effect instead, that check would run too early
+  // and see no aria-expanded at all yet, wrongly falling back to the
+  // slower, flash-prone `toggle` event instead of the fast, pre-paint
+  // MutationObserver path.
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
@@ -1182,6 +1184,21 @@ const usePopoverProps = (props) => {
     "id": backdropId,
     "baseClassName": "navi_popover_backdrop",
     "aria-hidden": "true",
+    // A constant, not derived from openController.opened (unlike
+    // navi-hidden just below) — its own actual open/close toggling is done
+    // entirely imperatively (setAttribute("aria-expanded", …) in
+    // openEffect/close), deliberately outside Preact's render cycle, for
+    // the same precise-ordering-relative-to-forced-reflows reasons as
+    // navi-animation. A constant JSX value never fights that: Preact only
+    // ever writes a prop to the DOM when it differs from the previous
+    // render's value (see diff/index.js's own oldProps[i] !== value check),
+    // so "false" here, unchanging across every render, is never
+    // re-applied once the imperative code has flipped the live attribute.
+    // What *does* matter is that it's present in the DOM synchronously
+    // from the very first commit (a plain prop is, no effect needed) —
+    // see use_displayed_layout_effect.js's own comments for why a
+    // descendant relying on aria-expanded's mere presence needs that.
+    "aria-expanded": "false",
     // Read fresh on every render (not frozen at mount), so it stays
     // correct even across a re-render that happens to occur while open —
     // see contentProps' own identical prop just below for the full
@@ -1224,14 +1241,19 @@ const usePopoverProps = (props) => {
     tabIndex,
     "data-layer": layer,
     "navi-animation": isAutoAnimation ? undefined : animation,
+    // See backdropProps' own identical prop above for the full reasoning
+    // (kept once, not repeated here): a constant value here is safe
+    // alongside the imperative setAttribute("aria-expanded", …) toggling
+    // done elsewhere in this file (open/close), and needs to be present
+    // synchronously from the very first commit for
+    // use_displayed_layout_effect.js's own sake.
+    "aria-expanded": "false",
     // Only load-bearing for the custom renderer (see its own &:not([popover])
-    // CSS rule) — present from this very first render (unlike aria-expanded,
-    // deliberately kept out of any vdom-diffed prop so imperative toggling
-    // never fights a re-render — see openEffect's own mount-effect comment)
-    // specifically so there's no gap for the browser to ever paint the
-    // custom renderer visible before anything has actually opened it.
-    // Recomputed fresh on every render from openController.opened (not a
-    // frozen mount-time constant) — Preact only touches the DOM for a prop
+    // CSS rule) — present from this very first render so there's no gap for
+    // the browser to ever paint the custom renderer visible before anything
+    // has actually opened it. Recomputed fresh on every render from
+    // openController.opened (not a frozen mount-time constant, unlike
+    // aria-expanded just above) — Preact only touches the DOM for a prop
     // whose value actually changed since the last render, so as long as
     // this always reflects the *current* truth, it never fights the
     // imperative removeAttribute/setAttribute openEffect/close do directly.

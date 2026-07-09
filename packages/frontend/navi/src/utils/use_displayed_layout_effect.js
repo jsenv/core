@@ -112,6 +112,10 @@ const isAncestorOpen = (ancestor) => {
  * synchronously-observable signal at all. It still arrives a paint late,
  * but a late correction beats none.
  *
+ * This relies on `aria-expanded` genuinely being present on a navi Popover
+ * by the time this code runs — see popover.jsx's own comments on why it
+ * sets that attribute the way it does.
+ *
  * @param {Element} ancestor
  * @param {(event: Event) => void} callback
  * @returns {() => void} cleanup — removes the observer/listener
