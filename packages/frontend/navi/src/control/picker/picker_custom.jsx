@@ -605,7 +605,13 @@ const PickerContentInsidePopup = (props) => {
     mode,
     pointerLock,
     scrollCapture,
-    focusCapture = true,
+    // No default here (matches Popover's own default of inactive) — the
+    // old, differently-named `focusTrap = true` prop never actually reached
+    // Popover's real `focusCapture` prop (see this file's history), so
+    // focus-trapping has never really been active for popover-mode pickers;
+    // defaulting the now-correctly-named prop to `true` would be a real,
+    // unintended behavior change riding along with the rename.
+    focusCapture,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
