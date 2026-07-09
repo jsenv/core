@@ -202,11 +202,17 @@
       };
       const PanelContent = ({ item }) => (
         <>
-          <SidePanel.Head flex spacing="m" paddingX="m" paddingY="m">
+          <SidePanel.Head
+            flex
+            spacing="m"
+            paddingX="m"
+            paddingY="s"
+            alignY="center"
+          >
             <Box expand>
               <strong>{item.title}</strong>
             </Box>
-            <Button command="--navi-close" variant="discrete">
+            <Button command="--navi-close" variant="discrete" marginRight="-s">
               ×
             </Button>
           </SidePanel.Head>

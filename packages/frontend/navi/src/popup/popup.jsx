@@ -28,51 +28,6 @@ import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 
-/**
- * Same small-screen/`maxWidth`-compact heuristic `Popup` uses internally,
- * exported so `picker_custom.jsx` (which needs the resolved mode itself,
- * for its own mode-dependent history/ARIA handling — not just to pick which
- * of Popover/Dialog to render, the way `Popup` only ever needs it) doesn't
- * have to duplicate it.
- *
- * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
- *   resolve automatically.
- * @param {string} [maxWidth] - A small enough value is treated as
- *   "compact", staying a popover even on a small screen.
- * @returns {"dialog"|"popover"}
- */
-export const resolvePopupMode = (modeProp, maxWidth) => {
-  const isSmallScreen = windowWidthSignal.peek() <= 600;
-  const maxWidthPx = parseFloat(maxWidth);
-  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
-};
-
-/**
- * Frozen for the component instance's lifetime — mirrors `Popup`'s own
- * mode-resolution timing (a screen resize while already mounted doesn't
- * switch between Popover and Dialog mid-session).
- *
- * @param {"dialog"|"popover"} [modeProp]
- * @param {string} [maxWidth]
- * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
- *   `resetMode` function a caller can call (e.g. on close) to force the
- *   *next* call to re-resolve from scratch instead of keeping the frozen
- *   value — `Popup` itself never needs this (it has no notion of
- *   open/close of its own), `picker_custom.jsx` does (re-evaluates screen
- *   size on every fresh open).
- */
-export const usePopupMode = (modeProp, maxWidth) => {
-  const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
-  }
-  const resetMode = () => {
-    defaultModeRef.current = null;
-  };
-  return [defaultModeRef.current, resetMode];
-};
-
 const css = /* css */ `
   @layer navi {
     .navi_popup {
@@ -89,6 +44,8 @@ const css = /* css */ `
       &.navi_dialog {
         --dialog-border-radius: var(--popup-border-radius);
         --dialog-border-color: var(--popup-border-color);
+
+        padding: 0;
       }
     }
   }
@@ -233,4 +190,48 @@ export const Popup = (props) => {
       {children}
     </Popover>
   );
+};
+
+/**
+ * Frozen for the component instance's lifetime — mirrors `Popup`'s own
+ * mode-resolution timing (a screen resize while already mounted doesn't
+ * switch between Popover and Dialog mid-session).
+ *
+ * @param {"dialog"|"popover"} [modeProp]
+ * @param {string} [maxWidth]
+ * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
+ *   `resetMode` function a caller can call (e.g. on close) to force the
+ *   *next* call to re-resolve from scratch instead of keeping the frozen
+ *   value — `Popup` itself never needs this (it has no notion of
+ *   open/close of its own), `picker_custom.jsx` does (re-evaluates screen
+ *   size on every fresh open).
+ */
+export const usePopupMode = (modeProp, maxWidth) => {
+  const defaultModeRef = useRef(null);
+  if (defaultModeRef.current === null) {
+    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
+  }
+  const resetMode = () => {
+    defaultModeRef.current = null;
+  };
+  return [defaultModeRef.current, resetMode];
+};
+/**
+ * Same small-screen/`maxWidth`-compact heuristic `Popup` uses internally,
+ * exported so `picker_custom.jsx` (which needs the resolved mode itself,
+ * for its own mode-dependent history/ARIA handling — not just to pick which
+ * of Popover/Dialog to render, the way `Popup` only ever needs it) doesn't
+ * have to duplicate it.
+ *
+ * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
+ *   resolve automatically.
+ * @param {string} [maxWidth] - A small enough value is treated as
+ *   "compact", staying a popover even on a small screen.
+ * @returns {"dialog"|"popover"}
+ */
+const resolvePopupMode = (modeProp, maxWidth) => {
+  const isSmallScreen = windowWidthSignal.peek() <= 600;
+  const maxWidthPx = parseFloat(maxWidth);
+  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
 };
