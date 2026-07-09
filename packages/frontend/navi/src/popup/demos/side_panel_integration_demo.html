@@ -93,31 +93,33 @@
 
       // Same 3-column row shape shared by the column-header row, every data
       // row, and the totals row — the Name cell grows to fill whatever space
-      // isn't taken by the two fixed-width numeric columns. Column widths
-      // only stay aligned across all three because they're all real flex
-      // rows of the same List (same width as each other), not because
-      // anything explicitly synchronizes them.
-      const NAME_CELL_STYLE = {
-        flex: 1,
-        minWidth: 0,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-      };
-      const IN_CELL_STYLE = {
-        flexShrink: 0,
-        width: "48px",
-        textAlign: "right",
-        color: "#2b8a3e",
-        borderLeft: "1px solid #e9ecef",
-        paddingLeft: "8px",
-      };
-      const OUT_CELL_STYLE = {
-        flexShrink: 0,
-        width: "48px",
-        textAlign: "right",
-        color: "#c92a2a",
-      };
+      // isn't taken by the two numeric columns. Column widths only stay
+      // aligned across all three because they're all real flex rows of the
+      // same List (same width as each other), not because anything
+      // explicitly synchronizes them.
+      //
+      // List rows are virtualized (position: absolute — see list.jsx), so
+      // they aren't normal-flow siblings of each other: a real CSS grid
+      // spanning all rows (the usual way to get "auto-size to the widest
+      // cell in this column" for free) isn't an option here, the same way
+      // an HTML <table> wouldn't be either. Instead each numeric column's
+      // width is derived from its own worst case — the Total row's value,
+      // always >= any single item's value — in `ch` units (paired with
+      // tabular-nums below so digits actually render at a consistent
+      // width), computed once per dataset in App and passed down as a prop.
+      const NameCell = (props) => (
+        <Text expandX shrinkX maxLines={1} {...props} />
+      );
+      const NumberCell = ({ width, ...props }) => (
+        <Text
+          as="span"
+          shrinkX={false}
+          width={width}
+          textAlign="right"
+          style={{ fontVariantNumeric: "tabular-nums" }}
+          {...props}
+        />
+      );
 
       // `header`/`footer` on ListItem render as `position: sticky` rows
       // inside the List itself (bypassing virtualization entirely — they're
@@ -138,6 +140,11 @@
         const items = useMemo(() => createItems(itemCount), [itemCount]);
         const totalIn = items.reduce((sum, item) => sum + item.in, 0);
         const totalOut = items.reduce((sum, item) => sum + item.out, 0);
+        // +1 for the leading "+"/"−" sign — the Total row is always the
+        // widest value in its column (a sum of many items), so sizing off
+        // it alone is enough to guarantee no other row ever overflows it.
+        const inColumnWidth = `${String(totalIn).length + 1}ch`;
+        const outColumnWidth = `${String(totalOut).length + 1}ch`;
 
         return (
           <>
@@ -183,9 +190,18 @@
                   alignY="center"
                   spacing="s"
                 >
-                  <span style={NAME_CELL_STYLE}>Name</span>
-                  <span style={IN_CELL_STYLE}>In</span>
-                  <span style={OUT_CELL_STYLE}>Out</span>
+                  <NameCell>Name</NameCell>
+                  <NumberCell
+                    width={inColumnWidth}
+                    color="#2b8a3e"
+                    borderLeft="1px solid #e9ecef"
+                    paddingLeft="8px"
+                  >
+                    In
+                  </NumberCell>
+                  <NumberCell width={outColumnWidth} color="#c92a2a">
+                    Out
+                  </NumberCell>
                 </ListItem>
                 {items.map((item, i) => (
                   <ListItem
@@ -200,9 +216,18 @@
                     spacing="s"
                     background={i % 2 === 0 ? "#ffffff" : "#f8f9fa"}
                   >
-                    <span style={NAME_CELL_STYLE}>{item.label}</span>
-                    <span style={IN_CELL_STYLE}>+{item.in}</span>
-                    <span style={OUT_CELL_STYLE}>−{item.out}</span>
+                    <NameCell>{item.label}</NameCell>
+                    <NumberCell
+                      width={inColumnWidth}
+                      color="#2b8a3e"
+                      borderLeft="1px solid #e9ecef"
+                      paddingLeft="8px"
+                    >
+                      +{item.in}
+                    </NumberCell>
+                    <NumberCell width={outColumnWidth} color="#c92a2a">
+                      −{item.out}
+                    </NumberCell>
                   </ListItem>
                 ))}
                 <ListItem
@@ -216,9 +241,18 @@
                   background="#f1f3f5"
                   borderTop="2px solid #dee2e6"
                 >
-                  <span style={NAME_CELL_STYLE}>Total</span>
-                  <span style={IN_CELL_STYLE}>+{totalIn}</span>
-                  <span style={OUT_CELL_STYLE}>−{totalOut}</span>
+                  <NameCell>Total</NameCell>
+                  <NumberCell
+                    width={inColumnWidth}
+                    color="#2b8a3e"
+                    borderLeft="1px solid #e9ecef"
+                    paddingLeft="8px"
+                  >
+                    +{totalIn}
+                  </NumberCell>
+                  <NumberCell width={outColumnWidth} color="#c92a2a">
+                    −{totalOut}
+                  </NumberCell>
                 </ListItem>
               </List>
             </SidePanel>
