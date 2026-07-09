@@ -136,8 +136,24 @@ const addBeforePaintOpenCallback = (ancestor, callback) => {
     };
   }
 
+  // Edge-triggered on purpose: some consumers (e.g. Popover.jsx) set
+  // aria-expanded both imperatively (in their own openEffect, for precise
+  // ordering relative to forced reflows/transitions) AND declaratively via a
+  // JSX prop derived from the same open state — the latter is a deliberate
+  // "always reflect current truth" prop, but Preact diffs against its own
+  // previous *rendered* value, not the live DOM, so any later re-render that
+  // happens to occur while already open re-applies the same "true" value as
+  // a genuinely new attribute mutation. Tracking wasOpen here collapses that
+  // redundant open→open mutation instead of re-running callback (and
+  // therefore autofocus) a second time for the same open.
+  let wasOpen = isAncestorOpen(ancestor);
   const observer = new MutationObserver(() => {
-    if (!isAncestorOpen(ancestor)) {
+    const isOpen = isAncestorOpen(ancestor);
+    if (isOpen === wasOpen) {
+      return;
+    }
+    wasOpen = isOpen;
+    if (!isOpen) {
       return;
     }
     callback(new CustomEvent("navi_displayed_on_document"));

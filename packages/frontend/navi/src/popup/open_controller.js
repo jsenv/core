@@ -158,7 +158,21 @@ export const createOpenController = (
       // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
       // by mutating it — openHandler reads it right after, synchronously.
       controller.transferFocusOnOpen = (el) => {
-        const focusedBeforeOpen = getFocusedBeforeTransfer(e);
+        // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
+        // e.detail.eventChain (built by chainEvent above) to recover the
+        // element a mousedown/click landed on. `e` itself is usually the raw
+        // native event: its own `.detail` is a number (click count) on a
+        // MouseEvent, so `e.detail.eventChain` is always undefined and the
+        // mousedown/click branches below never matched — silently falling
+        // back to `document.activeElement`, which is often `document.body`
+        // once mousedown.preventDefault() has kept focus from landing
+        // anywhere yet.
+        const focusedBeforeOpen = getFocusedBeforeTransfer(requestOpenEvent);
+        debugInteraction(
+          requestOpenEvent,
+          `focused element before open`,
+          focusedBeforeOpen,
+        );
         // Picker's openController.open() reads this back synchronously right
         // after openEffect() returns (see picker_custom.jsx useOpenController).
         requestOpenEvent.detail.focusedBeforeOpen = focusedBeforeOpen;
