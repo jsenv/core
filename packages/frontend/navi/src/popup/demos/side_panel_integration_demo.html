@@ -91,30 +91,21 @@
           out: Math.floor(Math.random() * 20),
         }));
 
-      // Same 3-column row shape shared by the column-header row, every data
-      // row, and the totals row — the Name cell grows to fill whatever space
-      // isn't taken by the two numeric columns. Column widths only stay
-      // aligned across all three because they're all real flex rows of the
-      // same List (same width as each other), not because anything
-      // explicitly synchronizes them.
-      //
-      // List rows are virtualized (position: absolute — see list.jsx), so
-      // they aren't normal-flow siblings of each other: a real CSS grid
-      // spanning all rows (the usual way to get "auto-size to the widest
-      // cell in this column" for free) isn't an option here, the same way
-      // an HTML <table> wouldn't be either. Instead each numeric column's
-      // width is derived from its own worst case — the Total row's value,
-      // always >= any single item's value — in `ch` units (paired with
-      // tabular-nums below so digits actually render at a consistent
-      // width), computed once per dataset in App and passed down as a prop.
-      const NameCell = (props) => (
-        <Text expandX shrinkX maxLines={1} {...props} />
-      );
-      const NumberCell = ({ width, ...props }) => (
+      // `columns="1fr auto auto"` (List's own grid mode) turns the header
+      // row, every data row, and the totals row into real subgrid rows of
+      // one shared grid — genuine table-like column sizing (first column
+      // flexible, the numeric ones auto-sized to their own widest content),
+      // computed by the browser itself rather than any hand-picked/measured
+      // width. See list.jsx's own ListColumnsContext for how this stays
+      // correct even though most rows are virtualized (only the current
+      // render window + the always-mounted header/footer are ever in the
+      // DOM at once — column tracks size off whichever of those are
+      // present, and the Total row being always-mounted guarantees the
+      // numeric columns are always at least as wide as it needs).
+      const NameCell = (props) => <Text shrinkX maxLines={1} {...props} />;
+      const NumberCell = (props) => (
         <Text
           as="span"
-          shrinkX={false}
-          width={width}
           textAlign="right"
           style={{ fontVariantNumeric: "tabular-nums" }}
           {...props}
@@ -140,11 +131,6 @@
         const items = useMemo(() => createItems(itemCount), [itemCount]);
         const totalIn = items.reduce((sum, item) => sum + item.in, 0);
         const totalOut = items.reduce((sum, item) => sum + item.out, 0);
-        // +1 for the leading "+"/"−" sign — the Total row is always the
-        // widest value in its column (a sum of many items), so sizing off
-        // it alone is enough to guarantee no other row ever overflows it.
-        const inColumnWidth = `${String(totalIn).length + 1}ch`;
-        const outColumnWidth = `${String(totalOut).length + 1}ch`;
 
         return (
           <>
@@ -174,7 +160,7 @@
                   ×
                 </Button>
               </SidePanel.Head>
-              <List expandY border="none">
+              <List expandY border="none" columns="1fr auto auto">
                 <ListItem
                   header
                   paddingX="m"
@@ -186,22 +172,18 @@
                   background="#f1f3f5"
                   borderBottom="1px solid #dee2e6"
                   letterSpacing="0.03em"
-                  flex
                   alignY="center"
                   spacing="s"
                 >
                   <NameCell>Name</NameCell>
                   <NumberCell
-                    width={inColumnWidth}
                     color="#2b8a3e"
                     borderLeft="1px solid #e9ecef"
                     paddingLeft="8px"
                   >
                     In
                   </NumberCell>
-                  <NumberCell width={outColumnWidth} color="#c92a2a">
-                    Out
-                  </NumberCell>
+                  <NumberCell color="#c92a2a">Out</NumberCell>
                 </ListItem>
                 {items.map((item, i) => (
                   <ListItem
@@ -211,30 +193,25 @@
                     value={item.label}
                     paddingX="m"
                     paddingY="s"
-                    flex
                     alignY="center"
                     spacing="s"
                     background={i % 2 === 0 ? "#ffffff" : "#f8f9fa"}
                   >
                     <NameCell>{item.label}</NameCell>
                     <NumberCell
-                      width={inColumnWidth}
                       color="#2b8a3e"
                       borderLeft="1px solid #e9ecef"
                       paddingLeft="8px"
                     >
                       +{item.in}
                     </NumberCell>
-                    <NumberCell width={outColumnWidth} color="#c92a2a">
-                      −{item.out}
-                    </NumberCell>
+                    <NumberCell color="#c92a2a">−{item.out}</NumberCell>
                   </ListItem>
                 ))}
                 <ListItem
                   footer
                   paddingX="m"
                   paddingY="s"
-                  flex
                   alignY="center"
                   spacing="s"
                   bold
@@ -243,16 +220,13 @@
                 >
                   <NameCell>Total</NameCell>
                   <NumberCell
-                    width={inColumnWidth}
                     color="#2b8a3e"
                     borderLeft="1px solid #e9ecef"
                     paddingLeft="8px"
                   >
                     +{totalIn}
                   </NumberCell>
-                  <NumberCell width={outColumnWidth} color="#c92a2a">
-                    −{totalOut}
-                  </NumberCell>
+                  <NumberCell color="#c92a2a">−{totalOut}</NumberCell>
                 </ListItem>
               </List>
             </SidePanel>

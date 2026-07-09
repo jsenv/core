@@ -54,6 +54,12 @@ const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
 const RenderWindowContext = createContext(null);
+// Carries List's own `columns` prop (a grid-template-columns value, e.g.
+// "1fr auto auto") down to each ListItem/filler/fallback so they can render
+// as a subgrid row instead of a flex row — see ListItem's own use of this
+// context, and List's own `columns` doc, for the full rationale (table-like
+// column sizing that stays correct across a virtualized, windowed item set).
+const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -276,6 +282,17 @@ const css = /* css */ `
     }
   }
 
+  /* List's own columns prop (see ListColumnsContext) sets grid on .navi_list
+     itself — Box reflects that as navi-box-flow="grid" (see box.jsx), which
+     this keys off directly rather than threading the columns value through
+     React just for this. A grid track only ever spans the single column it
+     is placed in by default, so without this the filler would collapse into
+     just the first column's width instead of reserving height across the
+     whole row. */
+  .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler {
+    grid-column: 1 / -1;
+  }
+
   /* Empty state — hidden by default, shown when no list items are rendered.
      order: 1 pushes fallbacks after all regular items in flex column layout.
      The list children are open-ended (headers, presentation items, real items),
@@ -425,6 +442,7 @@ const ListUI = (props) => {
     onListVisibleItemsChange,
     virtualItemSize,
     lockSize,
+    columns,
     searchText,
     searchNoMatchMode = "remove",
     horizontal,
@@ -554,6 +572,7 @@ const ListUI = (props) => {
         expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
+        columns={columns}
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
@@ -593,6 +612,7 @@ const ListFirstResolver = (props) => {
  *   lockSize?: boolean,
  *   horizontal?: boolean,
  *   spacing?: string,
+ *   columns?: string,
  *   expandX?: boolean,
  *   expandY?: boolean,
  *   expand?: boolean,
@@ -614,6 +634,7 @@ const ListContent = ({
   expandX,
   horizontal,
   spacing,
+  columns,
   tracker,
   renderWindow,
   virtualItemSizeSignal,
@@ -645,6 +666,7 @@ const ListContent = ({
         // before the user has actually scrolled through all the content).
         horizontal={horizontal}
         spacing={spacing}
+        columns={columns}
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
@@ -1146,13 +1168,16 @@ const UnorderedList = ({
   separator,
   horizontal,
   spacing,
+  columns,
   children,
   ...rest
 }) => {
   return (
     <Box
       as="ul"
-      flex={horizontal ? "x" : "y"}
+      flex={columns ? undefined : horizontal ? "x" : "y"}
+      grid={columns ? true : undefined}
+      gridTemplateColumns={columns}
       {...rest}
       spacing={spacing}
       baseClassName="navi_list"
@@ -1167,7 +1192,9 @@ const UnorderedList = ({
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
             <ListItemTrackerContext.Provider value={tracker}>
-              {children}
+              <ListColumnsContext.Provider value={columns || null}>
+                {children}
+              </ListColumnsContext.Provider>
             </ListItemTrackerContext.Provider>
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
@@ -1273,6 +1300,31 @@ const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
   );
 };
 
+// List's own `columns` prop (see ListColumnsContext) turns a list item into
+// a subgrid row instead of a flex row: its own children become direct grid
+// items of List's own <ul>, so column widths are computed from whichever
+// rows are actually in the DOM (the currently-windowed items plus the
+// always-mounted header/footer) — real grid/table column sizing, not a
+// hand-picked width. Shared by both ListItemReal (regular tracked items)
+// and ListItemPresentation (header/footer/fallback items — these skip
+// ListItemReal entirely via ListItemPresentationResolver below, so without
+// this they'd silently stay flex rows and break column alignment against
+// the rest of the grid). `flex` is force-cleared here because Box picks
+// flex over grid when both are set (see box.jsx's own boxFlow resolution),
+// so a caller-provided `flex` prop (leftover from a non-columns usage)
+// would otherwise silently win over this.
+const useListItemColumnsOverrideProps = (callerStyle) => {
+  const columns = useContext(ListColumnsContext);
+  if (!columns) {
+    return undefined;
+  }
+  return {
+    flex: undefined,
+    grid: true,
+    gridTemplateColumns: "subgrid",
+    style: { gridColumn: "1 / -1", ...callerStyle },
+  };
+};
 const ListItemFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
@@ -1289,7 +1341,9 @@ const ListItemPresentationResolver = (props) => {
   return <Next {...props} />;
 };
 const ListItemPresentation = (props) => {
-  return <Box as="li" {...props} />;
+  const columnsOverrideProps = useListItemColumnsOverrideProps(props.style);
+
+  return <Box as="li" {...props} {...columnsOverrideProps} />;
 };
 const ListItemUI = (props) => {
   if (props.id === undefined) {
@@ -1397,6 +1451,8 @@ const ListItemReal = (props) => {
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useSearchHighlight(ref, highlight, [children, hidden]);
 
+  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+
   return (
     <Box
       as="li"
@@ -1407,6 +1463,7 @@ const ListItemReal = (props) => {
       id={id}
       navi-list-item-real=""
       {...rest}
+      {...columnsOverrideProps}
       index={undefined}
       selected={undefined}
       matchScore={undefined}
