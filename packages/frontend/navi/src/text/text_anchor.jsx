@@ -1,5 +1,3 @@
-import { useLayoutEffect, useRef } from "preact/hooks";
-
 // # TextAnchor — how it works
 //
 // ## Problem
@@ -24,6 +22,10 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 // The child's rect (minus any previously applied correction) gives its natural position.
 //
 // `topOffset = desiredChildTopY - childNaturalTop` is applied as `position:relative; top:`.
+
+import { useRef } from "preact/hooks";
+
+import { useDisplayedLayoutEffect } from "../utils/use_displayed_layout_effect.js";
 
 const css = /* css */ `
   .navi_text_anchor {
@@ -64,61 +66,54 @@ export const TextAnchor = ({
 
   const anchorRef = useRef();
 
-  const setTopOffset = (childEl, topOffset) => {
-    // position:relative + top shifts the element visually.
-    // marginTop: -topOffset makes the layout box follow the visual position, so any container
-    // (button, link, box…) computes its own padding/border/height based on the real final position
-    // rather than the original unshifted one. This means a badge inside a button will symmetrically
-    // expand the button height instead of overflowing or being clipped.
-    // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
-    // the shift is purely a repositioning, not an inflation of the line.
-    if (!topOffset) {
-      childEl.style.position = "";
-      childEl.style.top = "";
-      childEl.style.marginTop = "";
-      childEl.style.marginBottom = "";
-      return;
-    }
-    childEl.style.position = "relative";
-    childEl.style.top = `${topOffset}px`;
-    childEl.style.marginTop = `${-topOffset}px`;
-    childEl.style.marginBottom = `${topOffset}px`;
-  };
-
-  useLayoutEffect(() => {
-    const anchorEl = anchorRef.current;
-    const childEl = childRef.current;
-    if (!anchorEl || !childEl) {
-      return;
-    }
-    // Only correct when the anchor lives in an inline formatting context.
-    // If the parent is a flex/grid container, inline layout rules don't apply
-    // and our font-metrics model is invalid.
-    const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
-    if (
-      parentDisplay !== "inline" &&
-      parentDisplay !== "inline-block" &&
-      parentDisplay !== "block"
-    ) {
-      // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
-      anchorEl.setAttribute("hidden", "");
-      setTopOffset(childEl, 0);
-      return;
-    }
-    anchorEl.removeAttribute("hidden");
-    const topOffset = computeTopOffset({
-      anchorEl,
-      childEl,
+  // Plain useLayoutEffect would also fire while an ancestor dialog/popover
+  // (e.g. a closed SidePanel) is still display:none — every rect involved
+  // reads 0×0 at that point, so the math trivially (and wrongly) resolves
+  // to topOffset 0: not a real "no correction needed" result, just a
+  // zero-by-zero coincidence that happens to look fine only because it
+  // leaves the browser's own default alignment untouched. The real
+  // correction then only gets applied later, on whatever unrelated
+  // re-render next happens to change one of this effect's own deps —
+  // which reads as the child "jumping" even though nothing about its own
+  // geometry changed. useDisplayedLayoutEffect skips the initial run in
+  // that case and reruns once the ancestor actually opens instead.
+  useDisplayedLayoutEffect(
+    anchorRef,
+    (anchorEl) => {
+      const childEl = childRef.current;
+      if (!anchorEl || !childEl) {
+        return;
+      }
+      // Only correct when the anchor lives in an inline formatting context.
+      // If the parent is a flex/grid container, inline layout rules don't apply
+      // and our font-metrics model is invalid.
+      const parentDisplay = getComputedStyle(anchorEl.parentElement).display;
+      if (
+        parentDisplay !== "inline" &&
+        parentDisplay !== "inline-block" &&
+        parentDisplay !== "block"
+      ) {
+        // we must hide the anchor otherwise it would affect layout without providing any benefit (would trigger flex gap for instance)
+        anchorEl.setAttribute("hidden", "");
+        setTopOffset(childEl, 0);
+        return;
+      }
+      anchorEl.removeAttribute("hidden");
+      const topOffset = computeTopOffset({
+        anchorEl,
+        childEl,
+        textAnchor,
+      });
+      setTopOffset(childEl, topOffset);
+    },
+    [
       textAnchor,
-    });
-    setTopOffset(childEl, topOffset);
-  }, [
-    textAnchor,
-    textKey,
-    textSize,
-    lineLayout?.size,
-    lineLayout?.verticalAlign,
-  ]);
+      textKey,
+      textSize,
+      lineLayout?.size,
+      lineLayout?.verticalAlign,
+    ],
+  );
 
   return (
     <>
@@ -128,6 +123,27 @@ export const TextAnchor = ({
       </span>
     </>
   );
+};
+
+const setTopOffset = (childEl, topOffset) => {
+  // position:relative + top shifts the element visually.
+  // marginTop: -topOffset makes the layout box follow the visual position, so any container
+  // (button, link, box…) computes its own padding/border/height based on the real final position
+  // rather than the original unshifted one. This means a badge inside a button will symmetrically
+  // expand the button height instead of overflowing or being clipped.
+  // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+  // the shift is purely a repositioning, not an inflation of the line.
+  if (!topOffset) {
+    childEl.style.position = "";
+    childEl.style.top = "";
+    childEl.style.marginTop = "";
+    childEl.style.marginBottom = "";
+    return;
+  }
+  childEl.style.position = "relative";
+  childEl.style.top = `${topOffset}px`;
+  childEl.style.marginTop = `${-topOffset}px`;
+  childEl.style.marginBottom = `${topOffset}px`;
 };
 
 const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {

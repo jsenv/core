@@ -146,7 +146,9 @@
                 <Box flex alignY="center" gap="8px" expand>
                   <Text>
                     <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
-                    <BadgeCount max="none">{itemCount}</BadgeCount>
+                    <BadgeCount background="red" color="white" max="none">
+                      {itemCount}
+                    </BadgeCount>
                   </Text>
                 </Box>
                 <Button
