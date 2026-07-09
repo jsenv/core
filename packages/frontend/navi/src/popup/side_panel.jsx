@@ -152,39 +152,6 @@ const css = /* css */ `
       padding: 12px 16px;
       border-top: 1px solid var(--navi-popup-border-color);
     }
-
-    /* float, not absolute positioning: lets the head's own text content
-       wrap around it instead of sitting underneath/behind it — the first
-       line is narrower (however wide the button is, plus the margin
-       below), any line after the button's own height is full-width again.
-       Only really "just works" for plain inline/text content, though —
-       something more layout-heavy in the head (its own flex row, say)
-       won't shrink around a float this way. Rendered before children in
-       the JSX specifically so it comes first in DOM/source order, which
-       floats require to visually place them before the content that's
-       supposed to wrap around them. */
-    .navi_side_panel_head_close_button {
-      float: right;
-      display: flex;
-      width: 28px;
-      height: 28px;
-      margin-left: 8px;
-      padding: 0;
-      align-items: center;
-      justify-content: center;
-      color: #6c757d;
-      font-size: 18px;
-      line-height: 1;
-      background: transparent;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-
-      &:hover {
-        color: #212529;
-        background: #f0f0f0;
-      }
-    }
   }
 `;
 
