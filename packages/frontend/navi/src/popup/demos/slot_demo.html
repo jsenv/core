@@ -22,65 +22,104 @@
         Title,
       } from "@jsenv/navi";
 
-      const [ToolbarSlot, ToolbarSlotFill] = createSlot();
-      const [PanelSlot, PanelSlotFill] = createSlot();
-      const [LeftSlot, LeftSlotFill] = createSlot();
-      const [RightSlot, RightSlotFill] = createSlot();
-
-      // Each SlotRenderer here is a SidePanel preset to its own side —
-      // any button anywhere can open content into either one, without
-      // knowing about the other or about whatever else might already be
-      // open there.
-      // defaultOpen, not open: each SlotFill below only ever mounts a fresh
-      // instance of this renderer (conditional rendering, see TwoPanelsDemo),
-      // so "just mounted" already means "should show up open" — no need to
-      // separately track and re-derive an open/closed boolean over that
-      // instance's lifetime, and no onClose here either: closing is the
-      // *consumer's* concern (see TwoPanelsDemo's own onClose props) — this
-      // renderer only cares that it starts open when it exists at all.
-      const LeftSidePanel = (props) => (
-        <SidePanel
-          layer="local"
-          side="left"
-          defaultOpen
-          width={220}
-          animation
-          {...props}
-        />
-      );
-      const [LeftPanelSlot, LeftPanelSlotFill] = createSlot(LeftSidePanel);
-      const RightSidePanel = (props) => (
-        <SidePanel
-          layer="local"
-          side="right"
-          defaultOpen
-          width={220}
-          animation
-          {...props}
-        />
-      );
-      const [RightPanelSlot, RightPanelSlotFill] = createSlot(RightSidePanel);
-
-      const TONE_COLORS = {
-        info: { background: "#d0ebff", color: "#1864ab" },
-        success: { background: "#d3f9d8", color: "#2b8a3e" },
-        error: { background: "#ffe3e3", color: "#c92a2a" },
-      };
-      const StatusBadge = ({ label, tone = "info" }) => (
-        <Text
+      const Demo = () => (
+        <div
           style={{
-            display: "inline-block",
-            padding: "4px 10px",
-            borderRadius: "999px",
-            fontSize: "0.85em",
-            fontWeight: 600,
-            ...TONE_COLORS[tone],
+            padding: "20px",
+            fontFamily: "system-ui, sans-serif",
+            maxWidth: "760px",
+            lineHeight: "1.6",
           }}
         >
-          {label}
-        </Text>
+          <Title as="h1">Slot Demo</Title>
+          <Paragraph>
+            <code>createSlot()</code> returns a <code>[Slot, SlotFill]</code>{" "}
+            pair: render <code>&lt;Slot /&gt;</code> where content should
+            appear, <code>&lt;SlotFill&gt;</code> anywhere else to supply it.
+          </Paragraph>
+
+          <TableOfContents />
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#no-prop-drilling" />
+              1. No prop drilling
+            </Title>
+            <Paragraph>
+              The toolbar below is filled by a component 3 levels deep, with
+              nothing passed down to connect the two.
+            </Paragraph>
+            <ToolbarDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#passing-props" />
+              2. Passing props to the slot
+            </Title>
+            <Paragraph>
+              Props given to <code>SlotFill</code> are passed to the slot's
+              content. Here it's used to pass a custom background color.
+            </Paragraph>
+            <PanelDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#multiple-slots" />
+              3. Multiple independent slots
+            </Title>
+            <Paragraph>
+              Each <code>createSlot()</code> call is independent.
+            </Paragraph>
+            <MultiSlotDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#custom-renderer" />
+              4. Custom SlotRenderer
+            </Title>
+            <Paragraph>
+              <code>createSlot(StatusBadge)</code> renders{" "}
+              <code>StatusBadge</code> instead of the default <code>Box</code>.
+            </Paragraph>
+            <StatusDemo />
+          </Box>
+
+          <Box as="section" marginTop="xl">
+            <Title as="h2">
+              <Link anchor href="#two-side-panels" />
+              5. Two side-panel slots
+            </Title>
+            <Paragraph>
+              Left is driven by a nav-item state (<code>onClose</code> resets it
+              to "Home"); right by a clicked-item state (<code>onClose</code>{" "}
+              clears it). Each <code>SidePanel</code> stays mounted permanently
+              — <code>useSlotFilled()</code> drives its <code>open</code> prop
+              instead of the panel itself being mounted/unmounted, so open/close
+              actually animate.
+            </Paragraph>
+            <TwoPanelsDemo />
+          </Box>
+        </div>
       );
-      const [StatusSlot, StatusSlotFill] = createSlot(StatusBadge);
+
+      const TableOfContents = () => (
+        <Box as="nav" marginBottom="xl">
+          <Box flex="y" spacing="xs">
+            <Link href="#no-prop-drilling">1. No prop drilling</Link>
+            <Link href="#passing-props">2. Passing props to the slot</Link>
+            <Link href="#multiple-slots">3. Multiple independent slots</Link>
+            <Link href="#custom-renderer">4. Custom SlotRenderer</Link>
+            <Link href="#two-side-panels">5. Two side-panel slots</Link>
+          </Box>
+        </Box>
+      );
+
+      // --- 1. No prop drilling ---
+
+      const [ToolbarSlot, ToolbarSlotFill] = createSlot();
 
       const DeepChild = () => (
         <ToolbarSlotFill flex gap="8px" alignY="center">
@@ -107,6 +146,10 @@
           <PageContent />
         </Box>
       );
+
+      // --- 2. Passing props to the slot ---
+
+      const [PanelSlot, PanelSlotFill] = createSlot();
 
       const PanelDemo = () => {
         const [variant, setVariant] = useState("red");
@@ -144,6 +187,11 @@
         );
       };
 
+      // --- 3. Multiple independent slots ---
+
+      const [LeftSlot, LeftSlotFill] = createSlot();
+      const [RightSlot, RightSlotFill] = createSlot();
+
       const MultiSlotDemo = () => (
         <Box flex gap="12px">
           <Box flex="y" gap="4px" expand>
@@ -173,6 +221,29 @@
         </Box>
       );
 
+      // --- 4. Custom SlotRenderer ---
+
+      const TONE_COLORS = {
+        info: { background: "#d0ebff", color: "#1864ab" },
+        success: { background: "#d3f9d8", color: "#2b8a3e" },
+        error: { background: "#ffe3e3", color: "#c92a2a" },
+      };
+      const StatusBadge = ({ label, tone = "info" }) => (
+        <Text
+          style={{
+            display: "inline-block",
+            padding: "4px 10px",
+            borderRadius: "999px",
+            fontSize: "0.85em",
+            fontWeight: 600,
+            ...TONE_COLORS[tone],
+          }}
+        >
+          {label}
+        </Text>
+      );
+      const [StatusSlot, StatusSlotFill] = createSlot(StatusBadge);
+
       const StatusDemo = () => {
         const [status, setStatus] = useState("idle");
         return (
@@ -198,6 +269,53 @@
               <StatusSlotFill label="Error ✕" tone="error" />
             )}
           </Box>
+        );
+      };
+
+      // --- 5. Two side-panel slots ---
+
+      const [LeftPanelSlot, LeftPanelSlotFill, useLeftPanelFilled] =
+        createSlot();
+      const [RightPanelSlot, RightPanelSlotFill, useRightPanelFilled] =
+        createSlot();
+
+      // The SidePanel itself is rendered here, permanently — not by
+      // createSlot() (which would mount/unmount it alongside the filler,
+      // the way sections 1-4 do; fine for a plain Box, not for something
+      // that needs to animate open/close). useSlotFilled() instead drives
+      // its own `open` prop, so the same panel instance transitions
+      // between open/closed rather than being torn down and recreated.
+      // Known remaining gap: while closed, LeftPanelSlot itself still
+      // renders null (no filler mounted), so the panel's *content* goes
+      // blank immediately rather than staying visible through the close
+      // transition — a separate problem from today's "doesn't animate at
+      // all", left for later.
+      const LeftPanel = () => {
+        const filled = useLeftPanelFilled();
+        return (
+          <SidePanel
+            layer="local"
+            side="left"
+            open={filled}
+            width={220}
+            animation
+          >
+            <LeftPanelSlot />
+          </SidePanel>
+        );
+      };
+      const RightPanel = () => {
+        const filled = useRightPanelFilled();
+        return (
+          <SidePanel
+            layer="local"
+            side="right"
+            open={filled}
+            width={220}
+            animation
+          >
+            <RightPanelSlot />
+          </SidePanel>
         );
       };
 
@@ -291,8 +409,8 @@
                   ))}
                 </Box>
 
-                <LeftPanelSlot />
-                <RightPanelSlot />
+                <LeftPanel />
+                <RightPanel />
 
                 {activeNav.content && (
                   <LeftPanelSlotFill onClose={() => setNavKey("home")}>
@@ -309,101 +427,6 @@
           </Box>
         );
       };
-
-      const TableOfContents = () => (
-        <Box as="nav" marginBottom="xl">
-          <Box flex="y" spacing="xs">
-            <Link href="#no-prop-drilling">1. No prop drilling</Link>
-            <Link href="#passing-props">2. Passing props to the slot</Link>
-            <Link href="#multiple-slots">3. Multiple independent slots</Link>
-            <Link href="#custom-renderer">4. Custom SlotRenderer</Link>
-            <Link href="#two-side-panels">5. Two side-panel slots</Link>
-          </Box>
-        </Box>
-      );
-
-      const Demo = () => (
-        <div
-          style={{
-            padding: "20px",
-            fontFamily: "system-ui, sans-serif",
-            maxWidth: "760px",
-            lineHeight: "1.6",
-          }}
-        >
-          <Title as="h1">Slot Demo</Title>
-          <Paragraph>
-            <code>createSlot()</code> returns a <code>[Slot, SlotFill]</code>{" "}
-            pair: render <code>&lt;Slot /&gt;</code> where content should
-            appear, <code>&lt;SlotFill&gt;</code> anywhere else to supply it.
-          </Paragraph>
-
-          <TableOfContents />
-
-          <Box as="section" marginTop="xl">
-            <Title as="h2">
-              <Link anchor href="#no-prop-drilling" />
-              1. No prop drilling
-            </Title>
-            <Paragraph>
-              The toolbar below is filled by a component 3 levels deep, with
-              nothing passed down to connect the two.
-            </Paragraph>
-            <ToolbarDemo />
-          </Box>
-
-          <Box as="section" marginTop="xl">
-            <Title as="h2">
-              <Link anchor href="#passing-props" />
-              2. Passing props to the slot
-            </Title>
-            <Paragraph>
-              Props given to <code>SlotFill</code> are passed to the slot's
-              content. Here it's used to pass a custom background color.
-            </Paragraph>
-            <PanelDemo />
-          </Box>
-
-          <Box as="section" marginTop="xl">
-            <Title as="h2">
-              <Link anchor href="#multiple-slots" />
-              3. Multiple independent slots
-            </Title>
-            <Paragraph>
-              Each <code>createSlot()</code> call is independent.
-            </Paragraph>
-            <MultiSlotDemo />
-          </Box>
-
-          <Box as="section" marginTop="xl">
-            <Title as="h2">
-              <Link anchor href="#custom-renderer" />
-              4. Custom SlotRenderer
-            </Title>
-            <Paragraph>
-              <code>createSlot(StatusBadge)</code> renders{" "}
-              <code>StatusBadge</code> instead of the default <code>Box</code>.
-            </Paragraph>
-            <StatusDemo />
-          </Box>
-
-          <Box as="section" marginTop="xl">
-            <Title as="h2">
-              <Link anchor href="#two-side-panels" />
-              5. Two side-panel slots
-            </Title>
-            <Paragraph>
-              Each slot's <code>SlotRenderer</code> is a <code>SidePanel</code>
-              preset to its own side. Left is driven by a nav-item state (
-              <code>onClose</code> resets it to "Home"); right by a clicked-item
-              state (<code>onClose</code> clears it) — either way,{" "}
-              <code>onClose</code> only ever updates state, never touches the
-              slot directly.
-            </Paragraph>
-            <TwoPanelsDemo />
-          </Box>
-        </div>
-      );
 
       render(<Demo />, document.querySelector("#root"));
     </script>
