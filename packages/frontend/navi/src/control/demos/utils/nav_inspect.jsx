@@ -111,7 +111,7 @@ export const NavInspect = () => {
       <div
         ref={scrollRef}
         style={{
-          maxHeight: "320px",
+          height: "250px",
           overflowY: "auto",
           display: "flex",
           flexDirection: "column",
