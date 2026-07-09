@@ -145,7 +145,7 @@ export const BadgeCount = ({
     circle = false;
   }
 
-  const textKey = loading + String(valueDisplayed) + hasOverflow;
+  const textKey = `${loading ? "loading-" : ""}${String(valueDisplayed)}${hasOverflow ? "-overflow" : ""}`;
 
   if (circle) {
     return (
