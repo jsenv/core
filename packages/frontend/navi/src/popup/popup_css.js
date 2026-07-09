@@ -132,36 +132,36 @@ export const popupCss = /* css */ `
          one per concrete navi-animation value, 100%-of-own-size distance
          (see this file's top comment). */
     &[navi-animation="slide-from-top"] {
-      --popup-slide-x: 0;
-      --popup-slide-y: -1;
+      --x-popup-slide-x: 0;
+      --x-popup-slide-y: -1;
     }
     &[navi-animation="slide-from-bottom"] {
-      --popup-slide-x: 0;
-      --popup-slide-y: 1;
+      --x-popup-slide-x: 0;
+      --x-popup-slide-y: 1;
     }
     &[navi-animation="slide-from-left"] {
-      --popup-slide-x: -1;
-      --popup-slide-y: 0;
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: 0;
     }
     &[navi-animation="slide-from-right"] {
-      --popup-slide-x: 1;
-      --popup-slide-y: 0;
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: 0;
     }
     &[navi-animation="slide-from-top-left"] {
-      --popup-slide-x: -1;
-      --popup-slide-y: -1;
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: -1;
     }
     &[navi-animation="slide-from-top-right"] {
-      --popup-slide-x: 1;
-      --popup-slide-y: -1;
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: -1;
     }
     &[navi-animation="slide-from-bottom-left"] {
-      --popup-slide-x: -1;
-      --popup-slide-y: 1;
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: 1;
     }
     &[navi-animation="slide-from-bottom-right"] {
-      --popup-slide-x: 1;
-      --popup-slide-y: 1;
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: 1;
     }
     &[navi-animation="slide-from-top"],
     &[navi-animation="slide-from-bottom"],
@@ -176,8 +176,8 @@ export const popupCss = /* css */ `
 
       &[aria-expanded="false"] {
         opacity: 0;
-        translate: calc(var(--popup-slide-x, 0) * 100%)
-          calc(var(--popup-slide-y, -1) * 100%);
+        translate: calc(var(--x-popup-slide-x, 0) * 100%)
+          calc(var(--x-popup-slide-y, -1) * 100%);
       }
     }
   }
