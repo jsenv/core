@@ -181,10 +181,10 @@
                   size="s"
                   background="#f1f3f5"
                   borderBottom="1px solid #dee2e6"
-                  style={{
-                    ...ROW_STYLE,
-                    letterSpacing: "0.03em",
-                  }}
+                  letterSpacing="0.03em"
+                  flex
+                  alignY="center"
+                  spacing="s"
                 >
                   <span style={NAME_CELL_STYLE}>Name</span>
                   <span style={IN_CELL_STYLE}>In</span>
@@ -198,10 +198,10 @@
                     value={item.label}
                     paddingX="m"
                     paddingY="s"
-                    style={{
-                      ...ROW_STYLE,
-                      background: i % 2 === 0 ? "#ffffff" : "#f8f9fa",
-                    }}
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    background={i % 2 === 0 ? "#ffffff" : "#f8f9fa"}
                   >
                     <span style={NAME_CELL_STYLE}>{item.label}</span>
                     <span style={IN_CELL_STYLE}>+{item.in}</span>
