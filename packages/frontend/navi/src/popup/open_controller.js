@@ -259,17 +259,20 @@ export const useOpenController = (openHandler) => {
   return controllerRef.current;
 };
 
-export const useOpenControllerByProps = (props) => {
-  const { open, defaultOpen, onClose } = props;
-  // Lets an uncontrolled consumer (no openController of its own) still react
-  // to a self-initiated close (Escape, backdrop click, its own close button)
-  // without having to own a controller just to observe it — onClose is
-  // called on every real close, matching createOpenController's own
-  // { onRequestClose, onClose } contract (never denies the close itself).
-  const openController = useOpenController(() =>
-    onClose ? { onClose } : undefined,
-  );
-
+/**
+ * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
+ * shared between `useOpenControllerByProps` below (Dialog/Popover driving
+ * their own controller) and `picker_custom.jsx` (which derives its own
+ * boolean from history state instead of a literal `open` prop, but needs
+ * the exact same skip-if-already-matching / open-or-requestClose control
+ * flow, via a small `{ open, requestClose, opened }` adapter around its own
+ * `requestOpen`/`requestClose` wrappers).
+ *
+ * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
+ * @param {{ open?: boolean, defaultOpen?: boolean }} props
+ */
+export const useOpenPropsEffectOnOpenController = (openController, props) => {
+  const { open, defaultOpen } = props;
   // Tracks whether the effect below has ever run before — only the very
   // first run gets the "mount already open" treatment (`open` truthy from
   // the start, or the uncontrolled, mount-only `defaultOpen`); every
@@ -296,6 +299,9 @@ export const useOpenControllerByProps = (props) => {
     if (open === undefined) {
       return;
     }
+    // Skip when the controller is already in the desired state.
+    // openController.opened tracks actual open/close (updated by onopen/onclose,
+    // not by renders) so it is the authoritative check against feedback loops.
     if (open === openController.opened) {
       return;
     }
@@ -308,6 +314,18 @@ export const useOpenControllerByProps = (props) => {
       );
     }
   }, [open]);
+};
 
+export const useOpenControllerByProps = (props) => {
+  const { onClose } = props;
+  // Lets an uncontrolled consumer (no openController of its own) still react
+  // to a self-initiated close (Escape, backdrop click, its own close button)
+  // without having to own a controller just to observe it — onClose is
+  // called on every real close, matching createOpenController's own
+  // { onRequestClose, onClose } contract (never denies the close itself).
+  const openController = useOpenController(() =>
+    onClose ? { onClose } : undefined,
+  );
+  useOpenPropsEffectOnOpenController(openController, props);
   return openController;
 };

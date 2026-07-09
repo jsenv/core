@@ -180,7 +180,15 @@
       // put (sticky) while this scrolls underneath is actually observable.
       const HeadFootContent = () => (
         <>
-          <SidePanel.Head closeButton>
+          <SidePanel.Head style={{ padding: "12px 16px" }}>
+            <Button
+              className="navi_side_panel_head_close_button"
+              aria-label="Close panel"
+              command="--navi-close"
+              variant="discrete"
+            >
+              ×
+            </Button>
             <strong>
               Sticky head with a bit of extra text so the close button's float
               actually has something to wrap around.

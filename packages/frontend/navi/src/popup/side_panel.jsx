@@ -10,7 +10,6 @@
  * against the edge, defeating the point of a side panel.
  */
 import { Box } from "../box/box.jsx";
-import { Button } from "../control/input/button.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
 
@@ -142,7 +141,6 @@ const css = /* css */ `
     .navi_side_panel_foot {
       position: sticky;
       z-index: 1;
-      padding: 12px 16px;
       background-color: var(--navi-popup-background-color);
     }
     .navi_side_panel_head {
@@ -151,6 +149,7 @@ const css = /* css */ `
     }
     .navi_side_panel_foot {
       bottom: 0;
+      padding: 12px 16px;
       border-top: 1px solid var(--navi-popup-border-color);
     }
 
@@ -316,32 +315,19 @@ const toCssLength = (value) =>
 
 /**
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
- * regardless of `side` — only the panel's content in between scrolls.
+ * regardless of `side` — only the panel's content in between scrolls. No
+ * built-in padding or close button — add a `<Button command="--navi-close">`
+ * (optionally with the `"navi_side_panel_head_close_button"` className, a
+ * float-right utility this file's own CSS still provides) wherever it makes
+ * sense for the layout.
  *
  * @param {object} props
- * @param {boolean} [props.closeButton=false] - Injects a `--navi-close`
- *   button, floated to the right (see this file's own CSS) so plain
- *   text/inline content wraps around it instead of sitting underneath it —
- *   doesn't help layout-heavy head content (its own flex row, say), which
- *   won't shrink around a float this way.
  * @param {string} [props.className] - Merged with the shared
  *   `"navi_side_panel_head"` class this file's own CSS targets.
  * @param {import("preact").ComponentChildren} props.children
  */
-const SidePanelHead = ({ closeButton = false, children, ...rest }) => (
-  <Box baseClassName="navi_side_panel_head" {...rest}>
-    {closeButton && (
-      <Button
-        className="navi_side_panel_head_close_button"
-        aria-label="Close panel"
-        command="--navi-close"
-        variant="discrete"
-      >
-        ×
-      </Button>
-    )}
-    {children}
-  </Box>
+const SidePanelHead = (props) => (
+  <Box baseClassName="navi_side_panel_head" {...props} />
 );
 /**
  * Stuck to the bottom of the panel's own scrollable area (`position:

@@ -1,9 +1,12 @@
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
-import { useOpenController } from "@jsenv/navi/src/popup/open_controller.js";
+import {
+  useOpenController,
+  useOpenPropsEffectOnOpenController,
+} from "@jsenv/navi/src/popup/open_controller.js";
 import { Popup, usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
@@ -17,57 +20,26 @@ import {
 
 const css = /* css */ `
   .navi_picker {
-    /* Shared by popover and dialog */
-    --picker-popup-background-color: var(--picker-background-color);
-    --picker-popup-border-radius: var(--picker-border-radius);
-    --picker-popup-border-width: var(--picker-border-width);
-    /* Popover */
-    --picker-popover-max-height: 300px; /* soft: user-configurable preferred max-height */
-    --picker-popover-maxmax-height: calc(0.95 * var(--navi-vvh));
-    --picker-popover-maxmax-width: calc(0.95 * var(--navi-vvw));
-    /* --picker-popover-max-width: soft, leave unset to rely on maxmax */
-    /* Dialog */
-    --picker-dialog-margin: 3dvw; /* min gap between dialog edges and viewport */
-    --picker-dialog-maxmax-width: calc(
-      var(--navi-vvw) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-maxmax-height: calc(
-      var(--navi-vvh) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
+    /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
+       overflow... are already handled correctly by Popup/Popover/Dialog
+       themselves — nothing to redefine here. Only the picker's own look
+       (border color/radius/width, background) needs bridging into the vars
+       Popover/Dialog actually consume, plus a couple of genuinely
+       picker-specific bits below (anchor-width min-width, the anchor clone,
+       the nested list). */
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      .navi_picker_popover {
-        position: absolute;
-        inset: unset;
+      .navi_popover {
+        --popover-border-radius: var(--picker-border-radius);
+        --popover-border-width: var(--picker-border-width);
+        --popover-border-color: var(--x-picker-border-color);
+        --popover-background-color: var(--picker-background-color);
+        --popover-outline-width: var(--picker-outline-width);
+        --popover-outline-color: var(--picker-outline-color);
+
         min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-popover-max-width, var(--picker-popover-maxmax-width)),
-          var(--picker-popover-maxmax-width)
-        );
-        /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(
-          var(--picker-popover-max-height),
-          var(--space-available, var(--picker-popover-maxmax-height)),
-          var(--picker-popover-maxmax-height)
-        );
-        margin: 0;
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border-width: var(--picker-border-width);
-        border-style: solid;
-        border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0px;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
-        overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
            trigger. It makes the popover wrap both the trigger area and the list
@@ -114,14 +86,10 @@ const css = /* css */ `
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-popup-border-radius) - var(--picker-border-width)
+            var(--picker-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
         }
       }
 
@@ -133,6 +101,9 @@ const css = /* css */ `
           border-color: transparent;
         }
 
+        /* Popover itself has no opinion on its content's own layout (plain
+           div, block by default) — the picker's content (anchor clone +
+           list) needs to stack vertically. */
         .navi_picker_popover {
           display: flex;
           flex-direction: column;
@@ -142,48 +113,21 @@ const css = /* css */ `
 
     /* dialog */
     &[aria-haspopup="dialog"] {
-      .navi_picker_dialog {
-        min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
-          var(--picker-dialog-maxmax-width)
-        );
-        max-height: min(
-          var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
-          var(--picker-dialog-maxmax-height)
-        );
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border: var(--picker-dialog-border-width) solid
-          var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
+      .navi_dialog {
+        --dialog-border-radius: var(--picker-border-radius);
+        --dialog-border-color: var(--x-picker-border-color);
+        --dialog-background-color: var(--picker-background-color);
+        --dialog-outline-width: var(--picker-outline-width);
+        --dialog-outline-color: var(--picker-outline-color);
+
+        /* Dialog itself already sizes min-width off --anchor-width — only
+           the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
-        /* overscroll-behavior: contain; */
 
-        &[data-expand-x] {
-          width: var(--picker-dialog-maxmax-width);
-        }
-        &[data-expand-y] {
-          height: var(--picker-dialog-maxmax-height);
-        }
-
+        /* Dialog already applies display: flex to [open] itself, but
+           defaults to row — the picker's content needs to stack vertically. */
         &[open] {
-          display: flex;
           flex-direction: column;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
-        }
-
-        &::backdrop {
-          background: rgba(0, 0, 0, 0.4);
         }
       }
 
@@ -191,7 +135,7 @@ const css = /* css */ `
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-popup-border-radius) - var(--picker-border-width)
+          var(--picker-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;
@@ -332,12 +276,6 @@ const PickerCustom = (props) => {
     const openController = useOpenController((openEvent) => {
       enterExpanded();
 
-      const focusedBeforeOpen = openEvent.detail.focusedBeforeOpen;
-      debugFocus(
-        openEvent,
-        "picked opened, store element focused",
-        focusedBeforeOpen,
-      );
       const valueAtOpen = getPickerInputUIState(ref.current);
       debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
 
@@ -387,38 +325,21 @@ const PickerCustom = (props) => {
         },
       };
     });
-    const requestOpen = (e, detail) => {
+    openController.openEffect = () => {
       // scroll <button> of the picker into view when opening it
       const pickerEl = ref.current;
       pickerEl.scrollIntoView({ block: "nearest" });
-      openController.open(e, detail);
     };
+    const requestOpen = openController.open;
     const requestClose = openController.requestClose;
-
-    const open = Boolean(expanded);
-    useLayoutEffect(() => {
-      if (open === undefined) {
-        return;
-      }
-      // Skip when the popup is already in the desired state.
-      // openController.opened tracks actual open/close (updated by onopen/onclose,
-      // not by renders) so it is the authoritative check against feedback loops.
-      if (open === openController.opened) {
-        return;
-      }
-      // open_prop_change means the parent is driving the open state directly
-      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-      // Always treat it as cancel — the user's in-progress edit should be discarded.
-      if (open) {
-        requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      } else {
-        requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      }
-    }, [open]);
+    // Same skip-if-already-matching / open-or-requestClose control flow as
+    // useOpenControllerByProps (see open_controller.js) — the picker's own
+    // "open" comes from history state (expanded) rather than a literal
+    // `open` prop, so it adapts requestOpen/requestClose to the shape that
+    // hook expects instead of driving openController directly.
+    useOpenPropsEffectOnOpenController(openController, {
+      open: Boolean(expanded),
+    });
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);
@@ -658,7 +579,6 @@ const PickerContentInsidePopup = (props) => {
       <Popup
         {...popupProps}
         mode={mode}
-        className={isPopover ? "navi_picker_popover" : "navi_picker_dialog"}
         positionArea={
           isPopover
             ? popoverMode === "nearby"
