@@ -3,10 +3,8 @@ import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
-import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
 import { useOpenController } from "@jsenv/navi/src/popup/open_controller.js";
-import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
-import { usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
+import { Popup, usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
@@ -588,13 +586,7 @@ const PickerCustom = (props) => {
     }
   }
 
-  if (mode === "popover") {
-    return <PickerContentInsidePopover {...pickerProps} />;
-  }
-  if (mode === "dialog") {
-    return <PickerContentInsideDialog {...pickerProps} />;
-  }
-  return null;
+  return <PickerContentInsidePopup {...pickerProps} mode={mode} />;
 };
 
 const getPickerInput = (pickerEl) => {
@@ -605,38 +597,45 @@ const getPickerInputUIState = (pickerEl) => {
   return getUIStateFromElement(pickerInput);
 };
 
-const PickerContentInsidePopover = (props) => {
+const PickerContentInsidePopup = (props) => {
   const Next = useNextResolver();
   const {
     popupProps,
     children,
+    mode,
     pointerLock,
-    scrollLock,
-    focusTrap = true,
+    scrollCapture,
+    focusCapture = true,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
     closeOnFocusOut = false,
+    dialogExpand,
+    dialogExpandX,
+    dialogExpandY,
     ...rest
   } = props;
+  const isPopover = mode === "popover";
+  const expandX = dialogExpand || dialogExpandX;
+  const expandY = dialogExpand || dialogExpandY;
 
   return (
     <Next
-      aria-haspopup="listbox"
-      navi-popover-mode={popoverMode}
+      aria-haspopup={isPopover ? "listbox" : "dialog"}
+      navi-popover-mode={isPopover ? popoverMode : undefined}
       {...rest}
       onFocusOut={(e) => {
-        if (!closeOnFocusOut) {
+        if (!isPopover || !closeOnFocusOut) {
           return;
         }
         // Close when focus leaves the select entirely (not just moving between internal elements).
-        // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+        // relatedTarget is the element receiving focus; if it's inside the select or the popup, keep open.
         const relatedTarget = e.relatedTarget;
         const pickerEl = props.ref.current;
-        const popoverEl = popupProps.ref.current;
+        const popupEl = popupProps.ref.current;
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
-          (popoverEl && popoverEl.contains(relatedTarget));
+          (popupEl && popupEl.contains(relatedTarget));
         if (focusStaysInside) {
           return;
         }
@@ -650,24 +649,29 @@ const PickerContentInsidePopover = (props) => {
         });
       }}
     >
-      <Popover
+      <Popup
         {...popupProps}
-        className="navi_picker_popover"
+        mode={mode}
+        className={isPopover ? "navi_picker_popover" : "navi_picker_dialog"}
         positionArea={
-          popoverMode === "nearby"
-            ? "below aligned-left"
-            : "aligned-top aligned-left"
+          isPopover
+            ? popoverMode === "nearby"
+              ? "below aligned-left"
+              : "aligned-top aligned-left"
+            : undefined
         }
-        marginWithAnchor={popoverSpacing}
-        marginWithContainer={marginWithContainer}
-        scrollLock={scrollLock}
+        marginWithAnchor={isPopover ? popoverSpacing : undefined}
+        marginWithContainer={isPopover ? marginWithContainer : undefined}
+        scrollCapture={scrollCapture}
         pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
-        focusTrap={focusTrap}
+        focusCapture={isPopover ? focusCapture : undefined}
+        expandX={!isPopover ? expandX : undefined}
+        expandY={!isPopover ? expandY : undefined}
       >
-        {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
+        {/* In "attached" mode clone the trigger visually so the popup wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        {popoverMode === "attached" ? (
+        {isPopover && popoverMode === "attached" ? (
           <div
             className="navi_picker_anchor_clone"
             onMouseDown={(e) => {
@@ -681,38 +685,7 @@ const PickerContentInsidePopover = (props) => {
           </div>
         ) : null}
         {children}
-      </Popover>
-    </Next>
-  );
-};
-
-const PickerContentInsideDialog = (props) => {
-  const Next = useNextResolver();
-  const {
-    popupProps,
-    children,
-    scrollLock,
-    pointerLock,
-    dialogExpand,
-    dialogExpandX,
-    dialogExpandY,
-    ...rest
-  } = props;
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
-
-  return (
-    <Next aria-haspopup="dialog" {...rest}>
-      <Dialog
-        {...popupProps}
-        className="navi_picker_dialog"
-        scrollLock={scrollLock}
-        pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
-        data-expand-x={expandX ? "" : undefined}
-        data-expand-y={expandY ? "" : undefined}
-      >
-        {children}
-      </Dialog>
+      </Popup>
     </Next>
   );
 };
