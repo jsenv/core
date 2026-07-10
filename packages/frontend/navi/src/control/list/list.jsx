@@ -295,6 +295,15 @@ const css = /* css */ `
     grid-column: 1 / -1;
   }
 
+  /* Same reasoning as the filler rule above, for the separator (the default
+     Separator rendered between items when List's own separator prop is
+     set): a grid track only ever spans the single column it is placed in
+     by default, so without this it would collapse into just the first
+     column's width instead of the full row. */
+  .navi_list[navi-box-flow="grid"] > .navi_separator {
+    grid-column: 1 / -1;
+  }
+
   /* Empty state — hidden by default, shown when no list items are rendered.
      order: 1 pushes fallbacks after all regular items in flex column layout.
      The list children are open-ended (headers, presentation items, real items),
