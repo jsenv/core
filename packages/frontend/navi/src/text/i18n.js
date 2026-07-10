@@ -1,5 +1,5 @@
 import { interpolateText } from "./interpolate_text.js";
-import { langSignal } from "./lang_signal.js";
+import { languagesSignal } from "./lang_signal.js";
 
 /**
  * Creates a lightweight i18n instance for translating text in the current locale.
@@ -29,12 +29,13 @@ import { langSignal } from "./lang_signal.js";
  * @param {string|string[]} [options.runtimeLang]
  *   The active language (BCP 47 tag or ordered array of tags) — named
  *   "runtime" rather than "system" because there is no actual access to the
- *   OS/user's system language from a browser, only `navigator.language` (or
- *   a forced override) at runtime. Defaults to `langSignal.value`, read
+ *   OS/user's system language from a browser, only `navigator.languages` (or
+ *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
  *   fresh on every `format()`/`has()` call (not frozen at creation time) —
- *   so forcing the language app-wide via `setForcedLang()` (see
- *   lang_signal.js) is picked up here too. Passing an explicit `runtimeLang`
- *   opts out of that and stays fixed for this instance's whole lifetime.
+ *   so overriding the language app-wide via `setPreferredLanguage()`/
+ *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
+ *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
+ *   this instance's whole lifetime.
  *
  * ---
  *
@@ -68,18 +69,21 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   let languageMapVersion = 0;
 
   // Explicit runtimeLang stays fixed for this instance's lifetime (matches
-  // the previous behavior exactly). Without one, re-read langSignal.value
-  // fresh on every call instead of freezing it here via langSignal.peek()
-  // once — that would silently ignore setForcedLang() (see lang_signal.js)
-  // for the rest of this instance's life.
+  // the previous behavior exactly). Without one, re-read languagesSignal.value
+  // fresh on every call instead of freezing it here via languagesSignal.peek()
+  // once — that would silently ignore setPreferredLanguage()/
+  // setSupportedLanguages() (see lang_signal.js) for the rest of this
+  // instance's life.
   const hasExplicitRuntimeLang = runtimeLang !== undefined;
 
   // matchBestLang does real work (a Map lookup per candidate, a possible
   // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
   // format()/has() call in the common case, since what it resolves to only
   // ever changes when languageMap itself changes (addLangKeys) or, for the
-  // non-explicit case, when langSignal.value itself changes (forcedLang/
-  // languagechange — see lang_signal.js) — comparing those two cheaply
+  // non-explicit case, when languagesSignal.value itself changes (preferred
+  // language, supported languages, or "languagechange" — see lang_signal.js,
+  // languagesSignal is a computed() so its reference is stable when none of its
+  // own dependencies actually changed) — comparing those two cheaply
   // (===) is enough to know the cached result below is still valid.
   let cachedActiveLang;
   let cachedActiveLangRuntimeLang;
@@ -87,7 +91,7 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const getActiveLang = () => {
     const currentRuntimeLang = hasExplicitRuntimeLang
       ? runtimeLang
-      : langSignal.value;
+      : languagesSignal.value;
     if (
       cachedActiveLangVersion === languageMapVersion &&
       cachedActiveLangRuntimeLang === currentRuntimeLang
@@ -154,8 +158,8 @@ export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
 
   const _getTemplate = (key, lang) => {
     // matchBestLang, not matchLang directly: lang can be an array (e.g.
-    // langSignal.value is [forcedLang, browserLang] once forced — see
-    // lang_signal.js) and matchLang alone assumes a plain string, throwing
+    // languagesSignal.value is always an ordered array — see lang_signal.js) and
+    // matchLang alone assumes a plain string, throwing
     // on .split() otherwise.
     const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {

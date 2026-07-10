@@ -28,8 +28,9 @@ const ButtonCommandPropResolver = (props) => {
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
   // Button using a command's built-in default label actually follows
-  // setForcedLang()/a "languagechange" event instead of staying stuck with
-  // whatever language was active the first time this module was imported.
+  // setPreferredLanguage()/a "languagechange" event instead of staying
+  // stuck with whatever language was active the first time this module was
+  // imported.
   const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
   if (getCommandDefaultProps) {
     const commandDefaultProps = getCommandDefaultProps();

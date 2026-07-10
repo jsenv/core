@@ -5,9 +5,10 @@ import { createI18n } from "./i18n.js";
  *
  * Use `naviI18n.add(key, { lang: "translation" })` to register or override
  * any text used by navi components. The active language is read from
- * `langSignal` (the browser's current `navigator.language`), live on every
- * lookup — call `setForcedLang("fr")` (see lang_signal.js) to override it
- * app-wide regardless of the browser's own setting.
+ * `languagesSignal` (see lang_signal.js — combines the browser's own
+ * `navigator.languages`, an optional `setPreferredLanguage()` user override,
+ * and an optional `setSupportedLanguages()` app-wide allow-list), live on
+ * every lookup.
  *
  * Built-in keys (can be overridden):
  *   - `"time.less_than_minute"` — e.g. "in less than a minute"

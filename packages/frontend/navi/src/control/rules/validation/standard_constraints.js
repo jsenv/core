@@ -13,7 +13,7 @@ import {
   formatDuration,
   formatMonth,
 } from "@jsenv/navi/src/text/format_time.js";
-import { langSignal } from "@jsenv/navi/src/text/lang_signal.js";
+import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 
@@ -768,7 +768,7 @@ const getTodayIso = (inputType) => {
 };
 
 const formatDateIso = (iso, inputType) => {
-  const locale = langSignal.value;
+  const locale = languagesSignal.value;
   if (inputType === "month") {
     const date = new Date(`${iso}-01T00:00:00`);
     return formatMonth(date, locale);

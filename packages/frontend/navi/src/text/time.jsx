@@ -20,7 +20,7 @@ import {
   formatWeekPlaceholder,
   getRelativeDay,
 } from "./format_time.js";
-import { langSignal } from "./lang_signal.js";
+import { languagesSignal } from "./lang_signal.js";
 import { Text } from "./text.jsx";
 
 /**
@@ -67,7 +67,7 @@ import { Text } from "./text.jsx";
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
  * @param {string} [lang]
  *   BCP 47 locale tag (e.g. `"fr"`, `"en-US"`).
- *   Defaults to `langSignal.value` (the browser's current language).
+ *   Defaults to `languagesSignal.value` (the browser's current language).
  */
 export const Time = (props) => {
   const { type } = props;
@@ -103,7 +103,7 @@ export const Time = (props) => {
 
 const TimeDate = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   dayLabel,
   now,
@@ -153,7 +153,7 @@ const TimeDate = ({
 
 const TimeMonth = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -185,7 +185,7 @@ const TimeMonth = ({
   );
 };
 
-const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
+const TimeWeek = ({ children, lang = languagesSignal.value, ...props }) => {
   if (children === undefined || children === null) {
     return <TimeText {...props}>{formatWeekPlaceholder({ lang })}</TimeText>;
   }
@@ -200,7 +200,7 @@ const TimeWeek = ({ children, lang = langSignal.value, ...props }) => {
 
 const TimeDatetime = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -228,7 +228,7 @@ const TimeDatetime = ({
 
 const TimeTime = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -268,7 +268,7 @@ const TimeTime = ({
 
 const TimeMinute = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -309,13 +309,15 @@ const TimeMinute = ({
 
 const TimeSecond = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
   if (children === undefined) {
     return (
-      <TimeText {...props}>{format === "timestring" ? "--:--:--" : "--"}</TimeText>
+      <TimeText {...props}>
+        {format === "timestring" ? "--:--:--" : "--"}
+      </TimeText>
     );
   }
   let seconds;
@@ -350,7 +352,7 @@ const TimeSecond = ({
 
 const TimeHour = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -388,7 +390,7 @@ const TimeHour = ({
 
 const TimeDuration = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -444,7 +446,7 @@ const TimeDuration = ({
 
 const TimeRelative = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   eventDuration = 0,
   bare,

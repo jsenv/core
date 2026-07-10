@@ -1,5 +1,5 @@
-import { langSignal } from "./lang_signal.js";
+import { languagesSignal } from "./lang_signal.js";
 
-export const formatNumber = (value, { lang = langSignal.value } = {}) => {
+export const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
