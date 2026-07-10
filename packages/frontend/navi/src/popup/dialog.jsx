@@ -49,6 +49,7 @@ import {
   dispatchCustomEvent,
   getElementSignature,
   getPositionedParent,
+  parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
@@ -72,7 +73,6 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
-  parsePositionArea,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
@@ -639,8 +639,7 @@ const useDialogProps = (props) => {
     const positionDialog = () => {
       dialogEl.style.removeProperty("--space-available");
       const { left, top } = pickPositionRelativeTo(dialogEl, null, {
-        positionX: parsedPositionArea.x,
-        positionY: parsedPositionArea.y,
+        positionArea,
         container: isModal ? undefined : positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
       });

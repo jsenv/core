@@ -494,7 +494,7 @@ export const visibleRectEffect = (
   // not just when `element` itself is scrolled/resized/re-anchored. Useful
   // when the tracked element's *position* depends on a size that lives
   // elsewhere (a callout re-measuring itself against its message body, a
-  // popover reconsidering "above" vs "below" once its own content grows).
+  // popover reconsidering "top" vs "bottom" once its own content grows).
   // Can be called more than once, once per element worth watching.
   const observeSize = (elementToObserve) => {
     let lastWidth;
@@ -520,7 +520,7 @@ export const visibleRectEffect = (
       // directly: check() (via update()) commonly mutates
       // elementToObserve's own size again as a side effect of repositioning
       // it (e.g. a popover clearing then re-setting its own max-height
-      // while reconsidering "above" vs "below" once it no longer fits where
+      // while reconsidering "top" vs "bottom" once it no longer fits where
       // it was) — when elementToObserve is the very element this observer
       // watches (a popover watching its own content, not some other
       // element), doing that synchronously from inside this callback is a
@@ -581,23 +581,112 @@ export const visibleRectEffect = (
 };
 
 /**
- * Collapses a bare position value ("above"/"below"/"on-the-left"/
- * "on-the-right") to its "aligned-*" equivalent — "aligned-*"/"center"
- * values pass through unchanged. Only used by pickPositionRelativeTo's own
- * no-anchor (container-docked) mode — see its own doc for why.
+ * The `positionArea` grammar `pickPositionRelativeTo` accepts (also reused
+ * as-is by `@jsenv/navi`'s Popover/Dialog/Callout): a single compass token
+ * (loosely inspired by CSS `position-area`'s own naming), optionally wrapped
+ * in `inset(...)` when the element should overlap the anchor instead of
+ * sitting fully to one side of it. Resolves internally to a { y, x } pair —
+ * y: top/inset-top/center/inset-bottom/bottom, x: left/inset-left/center/
+ * inset-right/right — the same vocabulary the rest of this file's
+ * positioning math (spaceFor, oppositeX/Y, etc.) actually operates on: a
+ * bare `top`/`bottom`/`left`/`right` means outside the anchor (no overlap on
+ * that axis), `inset-*` means flush against/overlapping it.
+ *
+ * Outside the anchor (bare token — element placed fully to one side, no
+ * overlap on that side's axis):
+ *
+ *   top-left     top-start   top   top-end     top-right
+ *   right-start                    right                  right-end
+ *   bottom-right bottom-end  bottom bottom-start bottom-left
+ *   left-end                       left                   left-start
+ *
+ * A corner token fixes one axis outside (top/bottom/left/right) and the
+ * other the same way (a true corner, no cross-axis overlap at all).
+ * "-start"/"-end" keep one axis outside but align the cross axis flush with
+ * the anchor's near/far edge instead (`top-start` is above the anchor,
+ * left-edges flush). The bare direction word centers the cross axis on the
+ * anchor.
+ *
+ * Overlapping the anchor (wrapped in `inset(...)`, the classic 3×3 grid):
+ *
+ *   inset(top-left)     inset(top)    inset(top-right)
+ *   inset(left)          center       inset(right)
+ *   inset(bottom-left)  inset(bottom) inset(bottom-right)
+ *
+ * `center` and `inset(center)` are equivalent aliases for dead-center.
+ */
+const OUTSIDE_POSITION_AREA_TOKENS = {
+  "top-left": { y: "top", x: "left" },
+  "top-start": { y: "top", x: "inset-left" },
+  "top": { y: "top", x: "center" },
+  "top-end": { y: "top", x: "inset-right" },
+  "top-right": { y: "top", x: "right" },
+
+  "right-start": { y: "inset-top", x: "right" },
+  "right": { y: "center", x: "right" },
+  "right-end": { y: "inset-bottom", x: "right" },
+
+  "bottom-right": { y: "bottom", x: "right" },
+  "bottom-end": { y: "bottom", x: "inset-right" },
+  "bottom": { y: "bottom", x: "center" },
+  "bottom-start": { y: "bottom", x: "inset-left" },
+  "bottom-left": { y: "bottom", x: "left" },
+
+  "left-end": { y: "inset-bottom", x: "left" },
+  "left": { y: "center", x: "left" },
+  "left-start": { y: "inset-top", x: "left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_POSITION_AREA_TOKENS = {
+  "top-left": { y: "inset-top", x: "inset-left" },
+  "top": { y: "inset-top", x: "center" },
+  "top-right": { y: "inset-top", x: "inset-right" },
+
+  "right": { y: "center", x: "inset-right" },
+
+  "bottom-right": { y: "inset-bottom", x: "inset-right" },
+  "bottom": { y: "inset-bottom", x: "center" },
+  "bottom-left": { y: "inset-bottom", x: "inset-left" },
+
+  "left": { y: "center", x: "inset-left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_TOKEN_RE = /^inset\(\s*([a-z-]+)\s*\)$/;
+
+/**
+ * Parses a positionArea string into a { y, x } pair, or null if it's not a
+ * recognized token.
+ */
+export const parsePositionArea = (value) => {
+  const insetMatch = INSET_TOKEN_RE.exec(value);
+  if (insetMatch) {
+    const parsed = INSET_POSITION_AREA_TOKENS[insetMatch[1]];
+    return parsed ? { ...parsed } : null;
+  }
+  const parsed = OUTSIDE_POSITION_AREA_TOKENS[value];
+  return parsed ? { ...parsed } : null;
+};
+
+/**
+ * Collapses a bare position value ("top"/"bottom"/"left"/"right") to its
+ * "inset-*" equivalent — "inset-*"/"center" values pass through unchanged.
+ * Only used by pickPositionRelativeTo's own no-anchor (container-docked)
+ * mode — see its own doc for why.
  */
 const toContainerAlignedPosition = (value) => {
-  if (value === "above") {
-    return "aligned-top";
+  if (value === "top") {
+    return "inset-top";
   }
-  if (value === "below") {
-    return "aligned-bottom";
+  if (value === "bottom") {
+    return "inset-bottom";
   }
-  if (value === "on-the-left") {
-    return "aligned-left";
+  if (value === "left") {
+    return "inset-left";
   }
-  if (value === "on-the-right") {
-    return "aligned-right";
+  if (value === "right") {
+    return "inset-right";
   }
   return value;
 };
@@ -605,58 +694,52 @@ const toContainerAlignedPosition = (value) => {
 /**
  * Places element relative to anchor with independent control of horizontal and vertical axes.
  *
- * Horizontal axis — positionX / positionXFixed (left → right):
- *   "on-the-left"   element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "aligned-left"  element.left   = anchor.left   (left edges aligned, overlapping)
- *   "center"        element centered horizontally over anchor  (default)
- *   "aligned-right" element.right  = anchor.right  (right edges aligned, overlapping)
- *   "on-the-right"  element.left   = anchor.right  (sits entirely to the right of anchor)
+ * `positionArea` (see its own doc above `parsePositionArea`) is a single
+ * compass token that resolves to a { y, x } pair internally:
  *
- * Vertical axis — positionY / positionYFixed (top → bottom):
- *   "above"          element.bottom = anchor.top    (sits above, no overlap)
- *   "aligned-top"    element.top    = anchor.top    (top edges aligned, overlapping)
- *   "center"         element centered vertically over anchor
- *   "aligned-bottom" element.bottom = anchor.bottom (bottom edges aligned, overlapping)
- *   "below"          element.top    = anchor.bottom (sits below, no overlap)  (default)
+ * Horizontal (x) axis:
+ *   "left"        element.right  = anchor.left   (sits entirely to the left of anchor)
+ *   "inset-left"  element.left   = anchor.left   (left edges aligned, overlapping)
+ *   "center"      element centered horizontally over anchor
+ *   "inset-right" element.right  = anchor.right  (right edges aligned, overlapping)
+ *   "right"       element.left   = anchor.right  (sits entirely to the right of anchor)
  *
- * positionX / positionY attempt the requested placement and automatically flip to the
+ * Vertical (y) axis:
+ *   "top"          element.bottom = anchor.top    (sits above, no overlap)
+ *   "inset-top"    element.top    = anchor.top    (top edges aligned, overlapping)
+ *   "center"       element centered vertically over anchor
+ *   "inset-bottom" element.bottom = anchor.bottom (bottom edges aligned, overlapping)
+ *   "bottom"       element.top    = anchor.bottom (sits below, no overlap)
+ *
+ * The resolved x/y attempt the requested placement and automatically flip to the
  * logical opposite when the element does not fit in the viewport:
- *   above ↔ below,   aligned-top ↔ aligned-bottom,   on-the-left ↔ on-the-right,   aligned-left ↔ aligned-right
+ *   top ↔ bottom,   inset-top ↔ inset-bottom,   left ↔ right,   inset-left ↔ inset-right
  *
- * positionXFixed / positionYFixed skip the fit check entirely.
+ * `positionAreaFixed` skips the fit check entirely on both axes.
  *
  * The resolved X and Y are persisted as data-position-x-current / data-position-y-current
  * on the element so subsequent calls start from the last resolved position (avoids
  * flickering when the element is near the flip threshold) and so other CSS/JS can read
  * "which side is this on right now" — including for a fixed axis, even though a fixed
- * axis never reads the attribute back itself (positionXFixed/positionYFixed always win).
+ * axis never reads the attribute back itself (`positionAreaFixed` always wins).
  *
  * @param {HTMLElement} element - The element to position (position: absolute or
  *   fixed — detected from its own computed style, see the scroll offset comment below)
  * @param {HTMLElement} [anchor] - The anchor element to position against. Omit (or pass
  *   `null`/`undefined`) when there's no real anchor to dock `element` against a *container*
- *   instead — see `container` below; in that mode, "above"/"below"/"on-the-left"/
- *   "on-the-right" are collapsed to their "aligned-*" equivalent internally (docking has no
- *   "float away with a gap" concept the way a real anchor does) and positionX/Y always
- *   behave as if positionX/YFixed were set (a docked edge/corner never flips to the other
- *   side — there's no "other side" of a container the way there is of a real anchor).
+ *   instead — see `container` below; in that mode, "top"/"bottom"/"left"/"right" are
+ *   collapsed to their "inset-*" equivalent internally (docking has no "float away with
+ *   a gap" concept the way a real anchor does) and x/y always behave as if
+ *   `positionAreaFixed` were set (a docked edge/corner never flips to the other side —
+ *   there's no "other side" of a container the way there is of a real anchor).
  * @param {object} [options]
- * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
- *   "on-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "aligned-left"  — element.left   = anchor.left   (left edges aligned, overlapping)
- *   "center"        — element centered horizontally over anchor  (default)
- *   "aligned-right" — element.right  = anchor.right  (right edges aligned, overlapping)
- *   "on-the-right"  — element.left   = anchor.right  (sits entirely to the right of anchor)
- * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
- *   "above"          — element.bottom = anchor.top    (sits above, no overlap)
- *   "aligned-top"    — element.top    = anchor.top    (top edges aligned, overlapping)
- *   "center"         — element centered vertically over anchor
- *   "aligned-bottom" — element.bottom = anchor.bottom (bottom edges aligned, overlapping)
- *   "below"          — element.top    = anchor.bottom (sits below, no overlap)  (default)
- * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
- * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
+ * @param {string} [options.positionArea="bottom"] - Preferred placement, with viewport
+ *   fallback — see `parsePositionArea`'s own doc for the full token grammar (a single
+ *   compass token, optionally `inset(...)`-wrapped).
+ * @param {string} [options.positionAreaFixed] - Forces this placement, skipping the
+ *   fit-check on both axes. Same grammar as `positionArea`.
  * @param {number} [options.alignToContainerEdgeWhenAnchorNearEdge=0] - When centering
- *   (positionX="center") an element wider than its anchor, snap to the available area's own
+ *   (positionArea's x is "center") an element wider than its anchor, snap to the available area's own
  *   left edge (the page viewport normally, or the container's edge — see `container` below —
  *   whenever there's no real `anchor`) instead of centering, once the anchor is within this
  *   many px of that same edge — avoids the (wider) element overflowing past it. 0 disables
@@ -692,10 +775,8 @@ export const pickPositionRelativeTo = (
   element,
   anchor,
   {
-    positionX = "center",
-    positionY = "below",
-    positionXFixed,
-    positionYFixed,
+    positionArea = "bottom",
+    positionAreaFixed,
     alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     marginWithAnchor = 0,
@@ -704,6 +785,27 @@ export const pickPositionRelativeTo = (
     container,
   } = {},
 ) => {
+  const parsedPositionArea = parsePositionArea(positionArea);
+  if (!parsedPositionArea) {
+    console.warn(
+      `pickPositionRelativeTo: invalid positionArea="${positionArea}"`,
+    );
+  }
+  let positionX = parsedPositionArea ? parsedPositionArea.x : "center";
+  let positionY = parsedPositionArea ? parsedPositionArea.y : "bottom";
+  let positionXFixed;
+  let positionYFixed;
+  if (positionAreaFixed) {
+    const parsedPositionAreaFixed = parsePositionArea(positionAreaFixed);
+    if (!parsedPositionAreaFixed) {
+      console.warn(
+        `pickPositionRelativeTo: invalid positionAreaFixed="${positionAreaFixed}"`,
+      );
+    } else {
+      positionXFixed = parsedPositionAreaFixed.x;
+      positionYFixed = parsedPositionAreaFixed.y;
+    }
+  }
   // No real anchor: dock against a container instead (the page viewport,
   // or an explicit/auto-resolved container element) — see this function's
   // own doc for what changes in that mode.
@@ -856,23 +958,23 @@ export const pickPositionRelativeTo = (
   let finalY;
   {
     const oppositeY = {
-      "above": "below",
-      "below": "above",
-      "aligned-top": "aligned-bottom",
-      "aligned-bottom": "aligned-top",
+      "top": "bottom",
+      "bottom": "top",
+      "inset-top": "inset-bottom",
+      "inset-bottom": "inset-top",
     };
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
-      if (y === "above") {
+      if (y === "top") {
         return spaceAbove - marginWithAnchor - marginWithContainer;
       }
-      if (y === "aligned-bottom") {
+      if (y === "inset-bottom") {
         return spaceAbove + anchorHeight - marginWithContainer;
       }
-      if (y === "below") {
+      if (y === "bottom") {
         return spaceBelow - marginWithAnchor - marginWithContainer;
       }
-      if (y === "aligned-top") {
+      if (y === "inset-top") {
         return spaceBelow + anchorHeight - marginWithContainer;
       }
       return Infinity; // center
@@ -917,23 +1019,23 @@ export const pickPositionRelativeTo = (
   let finalX;
   {
     const oppositeX = {
-      "on-the-left": "on-the-right",
-      "on-the-right": "on-the-left",
-      "aligned-left": "aligned-right",
-      "aligned-right": "aligned-left",
+      "left": "right",
+      "right": "left",
+      "inset-left": "inset-right",
+      "inset-right": "inset-left",
     };
     // Compute effective space for a given X value
     const spaceFor = (x) => {
-      if (x === "on-the-left") {
+      if (x === "left") {
         return spaceLeft - marginWithAnchor - marginWithContainer;
       }
-      if (x === "aligned-left") {
+      if (x === "inset-left") {
         return viewportLeft + viewportWidth - anchorLeft - marginWithContainer;
       }
-      if (x === "aligned-right") {
+      if (x === "inset-right") {
         return anchorRight - marginWithContainer;
       }
-      if (x === "on-the-right") {
+      if (x === "right") {
         return spaceRight - marginWithAnchor - marginWithContainer;
       }
       return Infinity; // center
@@ -970,10 +1072,10 @@ export const pickPositionRelativeTo = (
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    if (finalX === "on-the-left") {
+    if (finalX === "left") {
       elementPositionLeft =
         effectiveAnchorLeft - elementWidth - marginWithAnchor;
-    } else if (finalX === "aligned-left") {
+    } else if (finalX === "inset-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
       // Complex logic handles wide anchors and container-edge snapping
@@ -1014,10 +1116,10 @@ export const pickPositionRelativeTo = (
           }
         }
       }
-    } else if (finalX === "aligned-right") {
+    } else if (finalX === "inset-right") {
       elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
-      // "on-the-right"
+      // "right"
       elementPositionLeft = effectiveAnchorRight + marginWithAnchor;
     }
     // Constrain horizontal position to the available area's boundaries
@@ -1036,23 +1138,23 @@ export const pickPositionRelativeTo = (
   // Calculate vertical position (viewport-relative)
   let elementPositionTop;
   {
-    if (finalY === "above") {
+    if (finalY === "top") {
       // top is always anchorTop + insetTop - elementHeight - marginWithAnchor — max-height truncates if needed.
       const idealTop = anchorTop + insetTop - elementHeight - marginWithAnchor;
       elementPositionTop =
         idealTop < marginWithContainer ? marginWithContainer : idealTop;
-    } else if (finalY === "aligned-bottom") {
+    } else if (finalY === "inset-bottom") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop =
         idealTop < marginWithContainer ? marginWithContainer : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
-    } else if (finalY === "aligned-top") {
+    } else if (finalY === "inset-top") {
       const idealTop = anchorTop;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // "below"
+      // "bottom"
       // top is always anchorBottom - insetBottom + marginWithAnchor — max-height (via --space-available) truncates
       // the element height so it doesn't overflow the viewport bottom.
       const idealTop = anchorBottom - insetBottom + marginWithAnchor;
@@ -1060,9 +1162,9 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
     // Unlike the horizontal clamp above, there's normally no universal
-    // vertical boundary clamp at all — "above"/"below" already clamp their
-    // own idealTop inline, "aligned-*"/"center" don't, and changing that
-    // for every existing consumer (real-anchor "below" near the viewport
+    // vertical boundary clamp at all — "top"/"bottom" already clamp their
+    // own idealTop inline, "inset-*"/"center" don't, and changing that
+    // for every existing consumer (real-anchor "bottom" near the viewport
     // bottom relies on --space-available/max-height truncation instead of
     // repositioning) is out of scope here. Scoped strictly to the no-anchor
     // (container-docked) case, where it's new and safe: a container is
@@ -1158,12 +1260,12 @@ export const pickPositionRelativeTo = (
   // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
-    (finalY === "aligned-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? marginWithAnchor : 0) -
+    (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
+    (finalY === "top" ? marginWithAnchor : 0) -
     marginWithContainer;
   const effectiveSpaceBelow =
-    (finalY === "aligned-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? marginWithAnchor : 0) -
+    (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
+    (finalY === "bottom" ? marginWithAnchor : 0) -
     marginWithContainer;
 
   return {

@@ -132,6 +132,7 @@ export {
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
 export {
+  parsePositionArea,
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "./src/position/visible_rect.js";

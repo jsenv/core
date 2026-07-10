@@ -53,7 +53,7 @@
  * `resolveDirectionValue`), so there's no bare `animation="sliding"`
  * selector here at all — a point/corner has no anchor edge to grow out of,
  * so it slides in instead. The word names *where it comes from*: placed
- * "above" (a point/corner), it slides in from the top.
+ * "top" (a point/corner), it slides in from the top.
  *
  * `animation="expand-*"` (a real anchor only, explicit opt-in — "scaling"
  * reads better overall, see popover.jsx's top comment): grows out of the
@@ -63,8 +63,8 @@
  * (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
  * only), diagonals scale both. The word names the motion/growth direction,
  * the opposite compass point from the point/corner family above: placed
- * "above" the anchor, it grows *up*, away from the anchor (which sits below
- * it) — not "from the top".
+ * "top" of the anchor, it grows *up*, away from the anchor (which sits
+ * below it) — not "from the top".
  *
  * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
  * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.

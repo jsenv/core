@@ -155,8 +155,8 @@
         display: flex;
         width: fit-content;
         /* auto left/right centers it above the grid below; also gives
-           "on-the-left"/"on-the-right" popovers (130px wide) room to render
-           without being clipped by the viewport edge. */
+           "left"/"right" popovers (130px wide) room to render without
+           being clipped by the viewport edge. */
         margin: 16px auto 44px;
         align-items: center;
         justify-content: center;
@@ -175,11 +175,11 @@
         font-size: 10px;
         white-space: nowrap;
       }
-      .demo-zone-label-above {
+      .demo-zone-label-top {
         bottom: 100%;
         margin-bottom: 4px;
       }
-      .demo-zone-label-below {
+      .demo-zone-label-bottom {
         top: 100%;
         margin-top: 4px;
       }
@@ -253,83 +253,42 @@
       import { useId, useState, useEffect } from "preact/hooks";
       import { Button, Popover, NaviDebug } from "@jsenv/navi";
 
-      // Every value positionArea's Y/X axes accept — the grid below shows all
-      // 25 combinations (order-independent: "above on-the-left" and
-      // "on-the-left above" mean the same thing).
-      const POSITION_AREA_Y_VALUES = [
-        "above",
-        "aligned-top",
-        "center",
-        "aligned-bottom",
-        "below",
+      // The full positionArea grammar (see popup_shared.js's own
+      // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
+      // the anchor to fully below it, columns from fully left to fully
+      // right — the same spatial arrangement the anchor itself sits in at
+      // the grid's center. The middle 3×3 (rows/columns 2–4) is the
+      // `inset(...)` family (overlapping the anchor); the outer ring is the
+      // bare/no-overlap family.
+      const POSITION_AREA_GRID = [
+        ["top-left", "top-start", "top", "top-end", "top-right"],
+        [
+          "left-start",
+          "inset(top-left)",
+          "inset(top)",
+          "inset(top-right)",
+          "right-start",
+        ],
+        ["left", "inset(left)", "center", "inset(right)", "right"],
+        [
+          "left-end",
+          "inset(bottom-left)",
+          "inset(bottom)",
+          "inset(bottom-right)",
+          "right-end",
+        ],
+        ["bottom-left", "bottom-start", "bottom", "bottom-end", "bottom-right"],
       ];
-      const POSITION_AREA_X_VALUES = [
-        "on-the-left",
-        "aligned-left",
-        "center",
-        "aligned-right",
-        "on-the-right",
-      ];
-
-      // Drops "center" from a label when the other axis already carries the
-      // real information — "center on-the-left" reads as "on-the-left".
-      const formatAreaLabel = (y, x) => {
-        if (y === "center" && x === "center") {
-          return "center";
-        }
-        if (y === "center") {
-          return x;
-        }
-        if (x === "center") {
-          return y;
-        }
-        return `${y} ${x}`;
-      };
-
-      // Converts an internal { y, x } pair to the actual `positionArea`
-      // string the component now accepts (see popup_shared.js's own
-      // parsePositionArea) — a single compass token, `inset(...)`-wrapped
-      // when the pair overlaps the anchor (aligned-*).
-      const Y_X_TO_POSITION_AREA = {
-        "above|on-the-left": "top-left",
-        "above|aligned-left": "top-start",
-        "above|center": "top",
-        "above|aligned-right": "top-end",
-        "above|on-the-right": "top-right",
-        "aligned-top|on-the-right": "right-start",
-        "center|on-the-right": "right",
-        "aligned-bottom|on-the-right": "right-end",
-        "below|on-the-right": "bottom-right",
-        "below|aligned-right": "bottom-end",
-        "below|center": "bottom",
-        "below|aligned-left": "bottom-start",
-        "below|on-the-left": "bottom-left",
-        "aligned-bottom|on-the-left": "left-end",
-        "center|on-the-left": "left",
-        "aligned-top|on-the-left": "left-start",
-        "center|center": "center",
-        "aligned-top|aligned-left": "inset(top-left)",
-        "aligned-top|center": "inset(top)",
-        "aligned-top|aligned-right": "inset(top-right)",
-        "center|aligned-right": "inset(right)",
-        "aligned-bottom|aligned-right": "inset(bottom-right)",
-        "aligned-bottom|center": "inset(bottom)",
-        "aligned-bottom|aligned-left": "inset(bottom-left)",
-        "center|aligned-left": "inset(left)",
-      };
-      const formatPositionAreaValue = (y, x) =>
-        Y_X_TO_POSITION_AREA[`${y}|${x}`];
 
       // Pinned to a point/corner (layer="top" or "local" — no real anchor
-      // box), overlap and no-overlap collapse to the same
-      // placement, so "aligned-top" lands exactly where "above" does (ditto
-      // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
-      // "aligned-right"/"on-the-right").
-      const isDuplicatePointArea = (y, x) =>
-        y === "aligned-top" ||
-        y === "aligned-bottom" ||
-        x === "aligned-left" ||
-        x === "aligned-right";
+      // box), overlap and no-overlap collapse to the same placement, so
+      // every `-start`/`-end`/`inset(...)` token lands exactly where its
+      // corner/bare counterpart does (e.g. "top-start" lands where
+      // "top-left" does, "inset(top)" lands where "top" does).
+      const isDuplicatePointArea = (token) =>
+        token.startsWith("inset(") ||
+        token.endsWith("-start") ||
+        token.endsWith("-end");
 
       // Backs each grid demo's own "Slow" checkbox — independent per
       // section, so slowing down one doesn't affect the others while you're
@@ -899,15 +858,14 @@
         </section>
       );
 
-      // Renders all 25 Y × X combinations, row-major (Y varies per row, X
-      // per column) so the grid visually reads the same as the prose above
-      // (rows = Y values top to bottom, columns = X values left to right).
+      // Renders all 25 positionArea tokens, row-major, matching
+      // POSITION_AREA_GRID's own spatial layout.
       const AreaGrid = ({ renderCell }) => (
         <div class="demo-area-grid">
-          {POSITION_AREA_Y_VALUES.flatMap((y) =>
-            POSITION_AREA_X_VALUES.map((x) => (
-              <div key={`${y} ${x}`} class="demo-area-cell">
-                {renderCell(y, x)}
+          {POSITION_AREA_GRID.flatMap((row) =>
+            row.map((token) => (
+              <div key={token} class="demo-area-cell">
+                {renderCell(token)}
               </div>
             )),
           )}
@@ -1058,23 +1016,19 @@
         return (
           <>
             <div class="demo-static-anchor-wrapper">
-              <span class="demo-zone-label demo-zone-label-above">above</span>
-              <span class="demo-zone-label demo-zone-label-below">below</span>
-              <span class="demo-zone-label demo-zone-label-left">
-                on-the-left
-              </span>
-              <span class="demo-zone-label demo-zone-label-right">
-                on-the-right
-              </span>
+              <span class="demo-zone-label demo-zone-label-top">top</span>
+              <span class="demo-zone-label demo-zone-label-bottom">bottom</span>
+              <span class="demo-zone-label demo-zone-label-left">left</span>
+              <span class="demo-zone-label demo-zone-label-right">right</span>
               <div id={anchorId} class="demo-static-anchor">
                 anchor
               </div>
             </div>
             <AreaGrid
-              renderCell={(y, x) => (
+              renderCell={(token) => (
                 <AnchorAreaPopover
-                  positionArea={formatPositionAreaValue(y, x)}
-                  label={formatAreaLabel(y, x)}
+                  positionArea={token}
+                  label={token}
                   commandProxyFor={anchorId}
                   animation={animation}
                   animationDuration={animationDuration}
@@ -1089,9 +1043,9 @@
       // Shared by both point-mode subsections (viewport and scrollContainer):
       // pinned to a point/corner of referenceLabel instead of a real anchor
       // box, the popover can only sit flush against its edges — never
-      // floating outside with a gap the way "above"/"below" do against a
-      // real anchor. That collapses the overlap distinction, so some
-      // positions are equivalent (faded in the grid below).
+      // floating outside with a gap the way "top"/"bottom" (bare, no overlap)
+      // do against a real anchor. That collapses the overlap distinction, so
+      // some positions are equivalent (faded in the grid below).
       const PointModeNote = ({ referenceLabel }) => (
         <>
           <p>
@@ -1100,9 +1054,9 @@
             below land in the same spot (faded).
           </p>
           <p class="demo-legend">
-            <span class="demo-legend-example">on-the-left</span>
+            <span class="demo-legend-example">left</span>
             <span class="demo-legend-example" data-duplicate="">
-              aligned-left
+              inset(left)
             </span>
             <span>result in same position (but different animation).</span>
           </p>
@@ -1116,13 +1070,13 @@
           <>
             <PointModeNote referenceLabel="the viewport" />
             <AreaGrid
-              renderCell={(y, x) => (
+              renderCell={(token) => (
                 <AnchorAreaPopover
                   layer="top"
                   anchorCustomEventDetail="ignore"
-                  positionArea={formatPositionAreaValue(y, x)}
-                  label={formatAreaLabel(y, x)}
-                  duplicate={isDuplicatePointArea(y, x)}
+                  positionArea={token}
+                  label={token}
+                  duplicate={isDuplicatePointArea(token)}
                   animation={animation}
                   animationDuration={animationDuration}
                 />
@@ -1141,42 +1095,41 @@
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_area_scroll_container");
+        const allTokens = POSITION_AREA_GRID.flat();
         return (
           <>
             <PointModeNote referenceLabel="the container" />
             <div class="demo-container">
               <span class="demo-container-label">container</span>
-              {POSITION_AREA_Y_VALUES.flatMap((y) =>
-                POSITION_AREA_X_VALUES.map((x) => (
-                  <Popover
-                    key={`${y} ${x}`}
-                    id={`${baseId}-${y}-${x}`}
-                    animation={animation}
-                    animationDuration={animationDuration}
-                    borderRadius="8px"
-                    borderColor="violet"
-                    borderWidth="10px"
-                    layer="local"
-                    positionArea={formatPositionAreaValue(y, x)}
-                    className="demo_popover_box"
-                    pointerInteractionOutsideEffect="close"
-                    anchorCustomEventDetail="ignore"
-                  >
-                    <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>
-                    <Button command="--navi-close">Close</Button>
-                  </Popover>
-                )),
-              )}
+              {allTokens.map((token) => (
+                <Popover
+                  key={token}
+                  id={`${baseId}-${token}`}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                  borderRadius="8px"
+                  borderColor="violet"
+                  borderWidth="10px"
+                  layer="local"
+                  positionArea={token}
+                  className="demo_popover_box"
+                  pointerInteractionOutsideEffect="close"
+                  anchorCustomEventDetail="ignore"
+                >
+                  <p style={{ marginTop: 0 }}>{token}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Popover>
+              ))}
             </div>
             <AreaGrid
-              renderCell={(y, x) => (
+              renderCell={(token) => (
                 <Button
                   command="--navi-toggle"
-                  commandFor={`${baseId}-${y}-${x}`}
+                  commandFor={`${baseId}-${token}`}
                   className="demo-area-button"
-                  data-duplicate={isDuplicatePointArea(y, x) ? "" : undefined}
+                  data-duplicate={isDuplicatePointArea(token) ? "" : undefined}
                 >
-                  {formatAreaLabel(y, x)}
+                  {token}
                 </Button>
               )}
             />

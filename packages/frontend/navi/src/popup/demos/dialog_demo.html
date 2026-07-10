@@ -653,95 +653,49 @@
         );
       };
 
-      // Every value positionArea's Y/X axes accept — same grammar Popover
-      // uses (see dialog.jsx's own top comment and popup_shared.js's
-      // parsePositionArea) — the grid below shows all 25 combinations
-      // (order-independent: "above on-the-left" and "on-the-left above"
-      // mean the same thing).
-      const POSITION_AREA_Y_VALUES = [
-        "above",
-        "aligned-top",
-        "center",
-        "aligned-bottom",
-        "below",
+      // The full positionArea grammar (same one Popover uses — see
+      // dialog.jsx's own top comment and popup_shared.js's parsePositionArea)
+      // laid out as a 5×5 grid: rows go from fully above to fully below,
+      // columns from fully left to fully right — the middle 3×3 is the
+      // `inset(...)` family, the outer ring the bare/no-overlap family.
+      const POSITION_AREA_GRID = [
+        ["top-left", "top-start", "top", "top-end", "top-right"],
+        [
+          "left-start",
+          "inset(top-left)",
+          "inset(top)",
+          "inset(top-right)",
+          "right-start",
+        ],
+        ["left", "inset(left)", "center", "inset(right)", "right"],
+        [
+          "left-end",
+          "inset(bottom-left)",
+          "inset(bottom)",
+          "inset(bottom-right)",
+          "right-end",
+        ],
+        ["bottom-left", "bottom-start", "bottom", "bottom-end", "bottom-right"],
       ];
-      const POSITION_AREA_X_VALUES = [
-        "on-the-left",
-        "aligned-left",
-        "center",
-        "aligned-right",
-        "on-the-right",
-      ];
-
-      // Drops "center" from a label when the other axis already carries the
-      // real information — "center on-the-left" reads as "on-the-left".
-      const formatAreaLabel = (y, x) => {
-        if (y === "center" && x === "center") {
-          return "center";
-        }
-        if (y === "center") {
-          return x;
-        }
-        if (x === "center") {
-          return y;
-        }
-        return `${y} ${x}`;
-      };
-
-      // Converts an internal { y, x } pair to the actual `positionArea`
-      // string the component now accepts (see popup_shared.js's own
-      // parsePositionArea) — a single compass token, `inset(...)`-wrapped
-      // when the pair overlaps the anchor (aligned-*).
-      const Y_X_TO_POSITION_AREA = {
-        "above|on-the-left": "top-left",
-        "above|aligned-left": "top-start",
-        "above|center": "top",
-        "above|aligned-right": "top-end",
-        "above|on-the-right": "top-right",
-        "aligned-top|on-the-right": "right-start",
-        "center|on-the-right": "right",
-        "aligned-bottom|on-the-right": "right-end",
-        "below|on-the-right": "bottom-right",
-        "below|aligned-right": "bottom-end",
-        "below|center": "bottom",
-        "below|aligned-left": "bottom-start",
-        "below|on-the-left": "bottom-left",
-        "aligned-bottom|on-the-left": "left-end",
-        "center|on-the-left": "left",
-        "aligned-top|on-the-left": "left-start",
-        "center|center": "center",
-        "aligned-top|aligned-left": "inset(top-left)",
-        "aligned-top|center": "inset(top)",
-        "aligned-top|aligned-right": "inset(top-right)",
-        "center|aligned-right": "inset(right)",
-        "aligned-bottom|aligned-right": "inset(bottom-right)",
-        "aligned-bottom|center": "inset(bottom)",
-        "aligned-bottom|aligned-left": "inset(bottom-left)",
-        "center|aligned-left": "inset(left)",
-      };
-      const formatPositionAreaValue = (y, x) =>
-        Y_X_TO_POSITION_AREA[`${y}|${x}`];
 
       // Dialog is never really anchored (see dialog.jsx's own top comment)
-      // — overlap and no-overlap collapse to the same placement, so
-      // "aligned-top" lands exactly where "above" does (ditto
-      // "aligned-bottom"/"below" and "aligned-left"/"on-the-left"/
-      // "aligned-right"/"on-the-right"). Kept in the grid anyway since
+      // — overlap and no-overlap collapse to the same placement, so every
+      // `-start`/`-end`/`inset(...)` token lands exactly where its
+      // corner/bare counterpart does. Kept in the grid anyway since
       // positionArea alone still picks which animation direction plays.
-      const isDuplicatePointArea = (y, x) =>
-        y === "aligned-top" ||
-        y === "aligned-bottom" ||
-        x === "aligned-left" ||
-        x === "aligned-right";
+      const isDuplicatePointArea = (token) =>
+        token.startsWith("inset(") ||
+        token.endsWith("-start") ||
+        token.endsWith("-end");
 
-      // Renders all 25 Y × X combinations, row-major (Y varies per row, X
-      // per column) — same layout popover_demo.html's own AreaGrid uses.
+      // Renders all 25 positionArea tokens, row-major, matching
+      // POSITION_AREA_GRID's own spatial layout.
       const AreaGrid = ({ renderCell }) => (
         <div class="demo-position-grid">
-          {POSITION_AREA_Y_VALUES.flatMap((y) =>
-            POSITION_AREA_X_VALUES.map((x) => (
-              <div key={`${y} ${x}`} class="demo-position-cell">
-                {renderCell(y, x)}
+          {POSITION_AREA_GRID.flatMap((row) =>
+            row.map((token) => (
+              <div key={token} class="demo-position-cell">
+                {renderCell(token)}
               </div>
             )),
           )}
@@ -795,11 +749,11 @@
           <div id="position-top-layer" class="demo-subsection">
             <h3>3.1 top layer</h3>
             <AreaGrid
-              renderCell={(y, x) => (
+              renderCell={(token) => (
                 <PositionDialog
-                  label={formatAreaLabel(y, x)}
-                  positionArea={formatPositionAreaValue(y, x)}
-                  duplicate={isDuplicatePointArea(y, x)}
+                  label={token}
+                  positionArea={token}
+                  duplicate={isDuplicatePointArea(token)}
                   animation={animation}
                   animationDuration={animationDuration}
                 />
@@ -842,33 +796,31 @@
                   what boundaryElement + pointerTrap: true, in dialog.jsx's
                   own trapFocusInside call, are for). */}
               <button type="button">Focusable before</button>
-              {POSITION_AREA_Y_VALUES.flatMap((y) =>
-                POSITION_AREA_X_VALUES.map((x) => (
-                  <Dialog
-                    key={`${y} ${x}`}
-                    id={`${baseId}-${y}-${x}`}
-                    layer="local"
-                    positionArea={formatPositionAreaValue(y, x)}
-                    animation={animation}
-                    animationDuration={animationDuration}
-                    className="demo_dialog_box"
-                  >
-                    <p style={{ marginTop: 0 }}>{formatAreaLabel(y, x)}</p>
-                    <Button command="--navi-close">Close</Button>
-                  </Dialog>
-                )),
-              )}
+              {POSITION_AREA_GRID.flat().map((token) => (
+                <Dialog
+                  key={token}
+                  id={`${baseId}-${token}`}
+                  layer="local"
+                  positionArea={token}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                  className="demo_dialog_box"
+                >
+                  <p style={{ marginTop: 0 }}>{token}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Dialog>
+              ))}
               <button type="button">Focusable after</button>
             </div>
             <AreaGrid
-              renderCell={(y, x) => (
+              renderCell={(token) => (
                 <Button
                   command="--navi-toggle"
-                  commandFor={`${baseId}-${y}-${x}`}
+                  commandFor={`${baseId}-${token}`}
                   className="demo-position-button"
-                  data-duplicate={isDuplicatePointArea(y, x) ? "" : undefined}
+                  data-duplicate={isDuplicatePointArea(token) ? "" : undefined}
                 >
-                  {formatAreaLabel(y, x)}
+                  {token}
                 </Button>
               )}
             />

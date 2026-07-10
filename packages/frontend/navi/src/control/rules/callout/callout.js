@@ -1058,9 +1058,13 @@ const stickCalloutToAnchor = (
       } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
         alignToContainerEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
-        positionX: "center",
-        positionY: getAnchorAttribute("data-callout-position") || "below",
-        positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
+        // x is always center for a callout (the arrow, not positionArea's
+        // own x, is what points at the anchor horizontally) — "top"/"bottom"/
+        // "inset(top)"/"inset(bottom)"/"center" are exactly the tokens whose
+        // x resolves to "center" (see parsePositionArea's own doc), so
+        // data-callout-position never needs to carry an x component at all.
+        positionArea: getAnchorAttribute("data-callout-position") || "bottom",
+        positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
         marginWithAnchor: ARROW_HEIGHT,
         alignToAnchorBox,
         marginWithContainer:
@@ -1153,7 +1157,7 @@ const stickCalloutToAnchor = (
       // Force content overflow when there is not enough space to display
       // the entirety of the callout
       const spaceAvailable =
-        positionY === "above" || positionY === "aligned-bottom"
+        positionY === "top" || positionY === "inset-bottom"
           ? spaceAbove
           : spaceBelow;
       const paddingSizes = getPaddingSizes(calloutBodyElement);
@@ -1184,7 +1188,7 @@ const stickCalloutToAnchor = (
         optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
       const { width, height } = calloutElement.getBoundingClientRect();
-      if (positionY === "above" || positionY === "aligned-bottom") {
+      if (positionY === "top" || positionY === "inset-bottom") {
         // Arrow at bottom, extending below the element
         calloutBoxElement.style.marginTop = "";
         calloutBoxElement.style.marginBottom = "";

@@ -38,6 +38,7 @@ import {
   createPubSub,
   getBorderSizes,
   getPositionedParent,
+  parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
   trapFocusInside,
@@ -61,7 +62,6 @@ import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
-  parsePositionArea,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
@@ -716,19 +716,6 @@ const usePopoverProps = (props) => {
         // (unconstrained) height of the popover. This ensures the 60% flip threshold
         // compares against the real content height, not the already-truncated one.
         popoverEl.style.removeProperty("--space-available");
-        let effectivePositionXFixed;
-        let effectivePositionYFixed;
-        if (positionAreaFixed) {
-          const parsedPositionAreaFixed = parsePositionArea(positionAreaFixed);
-          if (!parsedPositionAreaFixed) {
-            console.warn(
-              `Popover: invalid positionAreaFixed="${positionAreaFixed}"`,
-            );
-          } else {
-            effectivePositionXFixed = parsedPositionAreaFixed.x;
-            effectivePositionYFixed = parsedPositionAreaFixed.y;
-          }
-        }
         const {
           left,
           top: pickedTop,
@@ -736,10 +723,8 @@ const usePopoverProps = (props) => {
           spaceAbove,
           spaceBelow,
         } = pickPositionRelativeTo(popoverEl, anchorElement, {
-          positionX: parsedPositionArea.x,
-          positionY: parsedPositionArea.y,
-          positionXFixed: effectivePositionXFixed,
-          positionYFixed: effectivePositionYFixed,
+          positionArea,
+          positionAreaFixed,
           marginWithAnchor: resolveSpacingSize(marginWithAnchor),
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           // Only meaningful for the custom renderer: popoverEl is always
@@ -752,7 +737,7 @@ const usePopoverProps = (props) => {
           minLeft,
         });
         const spaceAvailable =
-          pickedPositionY === "above" || pickedPositionY === "aligned-bottom"
+          pickedPositionY === "top" || pickedPositionY === "inset-bottom"
             ? spaceAbove
             : spaceBelow;
         popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
@@ -777,8 +762,7 @@ const usePopoverProps = (props) => {
           popoverEl,
           null,
           {
-            positionX: parsedPositionArea.x,
-            positionY: parsedPositionArea.y,
+            positionArea,
             container: isTopLayer ? undefined : positionedAncestor,
             marginWithContainer: resolveSpacingSize(marginWithContainer),
           },
@@ -1146,7 +1130,7 @@ const resolvePositionAreaAndAnimationKind = ({
     console.warn(`Popover: invalid positionArea="${positionArea}"`);
   }
   const parsedPositionArea = positionAreaParseResult ?? {
-    y: "below",
+    y: "bottom",
     x: "center",
   };
   const resolvedAnimationKind = isAutoAnimation
