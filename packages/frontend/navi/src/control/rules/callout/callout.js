@@ -2,7 +2,6 @@ import {
   allowWheelThrough,
   applyNewPosition,
   createPubSub,
-  createStyleController,
   createValueEffect,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
@@ -374,7 +373,7 @@ export const openCallout = (
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
-  calloutStyleController.set(calloutElement, { opacity: 0 });
+  calloutElement.style.opacity = 0;
   const update = (newMessage, options = {}) => {
     const prevStatus = callout.status;
     // Connect callout with target element for accessibility
@@ -846,8 +845,6 @@ const calloutTemplate = /* html */ `
   </div>
 `;
 
-const calloutStyleController = createStyleController("callout");
-
 /**
  * Creates a new callout element from template
  * @returns {HTMLElement} - The callout element
@@ -965,22 +962,15 @@ const positionCallout = (
         {
           alignToContainerEdgeWhenAnchorNearEdge: 20,
           minLeft: 1,
-          // x is always center for a callout (the arrow, not positionArea's
-          // own x, is what points at the anchor horizontally) — "top"/"bottom"/
-          // "inset(top)"/"inset(bottom)"/"center" are exactly the tokens whose
-          // x resolves to "center" (see parsePositionArea's own doc), so
-          // data-callout-position never needs to carry an x component at all.
-          // No anchorElement at all: always "center", ignoring the attribute
-          // (there's no anchor to read it from in the first place).
+          // x is always center for a callout — the arrow, not positionArea's
+          // own x, is what points at the anchor horizontally.
           positionArea: anchorElement
             ? getAnchorAttribute("data-callout-position") || "bottom"
             : "center",
           positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
-          // invalidAnchorPositionArea left at its "center" default —
-          // pickPositionRelativeTo's own isAnchorTooBig check (always on, see
-          // its doc in visible_rect.js) rejects the anchor and docks to the
-          // viewport center instead once it's too big to bother anchoring to
-          // — hasAnchor below reports which way it went.
+          // Anchor rejected as too big → dock centered, no arrow (hasAnchor
+          // below reports which way it went).
+          positionAreaWhenAnchorIsInvalid: "center",
           marginWithAnchor: ARROW_HEIGHT,
           alignToAnchorBox,
           marginWithContainer:
@@ -1141,9 +1131,7 @@ const positionCallout = (
             arrowLeftPosOnCallout,
           );
         }
-        calloutStyleController.set(calloutElement, {
-          opacity: visibilityRatio > 0.2 ? 1 : 0,
-        });
+        calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
       } else {
         // Either no anchorElement at all, or a real one isAnchorTooBig
         // rejected (see pickPositionRelativeTo's own doc) — render as a
@@ -1178,7 +1166,7 @@ const positionCallout = (
         calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
         calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
-        calloutStyleController.set(calloutElement, { opacity: 1 });
+        calloutElement.style.opacity = 1;
       }
       applyNewPosition(calloutElement, position);
     },

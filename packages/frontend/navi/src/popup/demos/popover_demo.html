@@ -1177,14 +1177,14 @@
       // to some other, deliberately oversized element instead of the trigger
       // button itself — see AnchorTooWideDemo/AnchorTooTallInContainerDemo
       // below for the two actual "too big" anchors this drives.
-      // invalidAnchorPositionArea is only meaningful once isAnchorTooBig
+      // positionAreaWhenAnchorIsInvalid is only meaningful once isAnchorTooBig
       // (visible_rect.js) actually rejects the anchor — left at its own
       // "center" default unless explicitly passed, to show it's
       // configurable.
       const AnchorTooBigPopover = ({
         label,
         positionArea,
-        invalidAnchorPositionArea,
+        positionAreaWhenAnchorIsInvalid,
         commandProxyFor,
         layer,
       }) => {
@@ -1204,7 +1204,7 @@
               borderRadius="8px"
               layer={layer}
               positionArea={positionArea}
-              invalidAnchorPositionArea={invalidAnchorPositionArea}
+              positionAreaWhenAnchorIsInvalid={positionAreaWhenAnchorIsInvalid}
               className="demo_popover_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -1239,9 +1239,9 @@
                 commandProxyFor={anchorId}
               />
               <AnchorTooBigPopover
-                label="right, invalidAnchorPositionArea=&quot;bottom&quot;"
+                label="right, positionAreaWhenAnchorIsInvalid=&quot;bottom&quot;"
                 positionArea="right"
-                invalidAnchorPositionArea="bottom"
+                positionAreaWhenAnchorIsInvalid="bottom"
                 commandProxyFor={anchorId}
               />
               <AnchorTooBigPopover
@@ -1284,9 +1284,9 @@
                 commandProxyFor={anchorId}
               />
               <AnchorTooBigPopover
-                label="top, invalidAnchorPositionArea=&quot;bottom&quot;"
+                label="top, positionAreaWhenAnchorIsInvalid=&quot;bottom&quot;"
                 positionArea="top"
-                invalidAnchorPositionArea="bottom"
+                positionAreaWhenAnchorIsInvalid="bottom"
                 layer="local"
                 commandProxyFor={anchorId}
               />
@@ -1316,7 +1316,7 @@
             "right"/"top"/"bottom", never "center"/"inset(...)") — an anchor
             consuming almost all the room on that axis (viewport, or a
             custom <code>container</code>) leaves nothing to work with there,
-            so the popover docks via <code>invalidAnchorPositionArea</code>
+            so the popover docks via <code>positionAreaWhenAnchorIsInvalid</code>
             instead (default <code>"center"</code>, itself configurable).
           </p>
           <div class="demo-subsection">
