@@ -1,7 +1,7 @@
 # [opaque key: key returned as-is when no lang registered](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "de" });
+const i18n = createI18n({ runtimeLang: "de" });
 i18n.add("one minute", { fr: "une minute" });
 return {
   result: i18n("one minute"),

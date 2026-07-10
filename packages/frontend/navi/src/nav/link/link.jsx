@@ -457,10 +457,12 @@ const LinkPlain = (props) => {
 
     children,
   } = props;
+  if (anchor && !props.id) {
+    props.id = href.slice(1);
+  }
 
   const selectionContext = useContext(SelectionContext);
   const visited = useIsVisited(href);
-
   const { selection, selectionController } = selectionContext || {};
   const { selected } = useSelectableElement(props.ref, {
     selection,
@@ -550,10 +552,10 @@ const LinkPlain = (props) => {
     <Text
       as="a"
       color={anchor && !innerChildren ? "inherit" : undefined}
-      id={anchor ? href.slice(1) : undefined}
       {...controlRootProps}
       {...controlHostProps}
       preventDefault={undefined}
+      anchor={undefined}
       onClick={(e) => {
         onClick?.(e);
         if (preventDefault) {

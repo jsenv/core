@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/pwa",
-  "version": "6.1.16",
+  "version": "6.1.17",
   "type": "module",
   "description": "Service worker and other progressive web application helpers",
   "repository": {
@@ -27,7 +27,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/sigi": "0.1.8"
+    "@jsenv/sigi": "0.1.9"
   },
   "devDependencies": {
     "@jsenv/assert": "../../tooling/assert",

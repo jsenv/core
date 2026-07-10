@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popover animation experiments (vanilla, no Preact)</title>
+    <style>
+      body {
+        margin: 40px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      p {
+        max-width: 60ch;
+      }
+      #trigger {
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+      #side-select {
+        margin-left: 8px;
+      }
+      [popover] {
+        position: fixed;
+        margin: 0; /* override the UA default centering (inset: 0; margin: auto) */
+        padding: 10px 16px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        view-transition-name: demo-popover;
+      }
+
+      /* Common to every technique below — only animation-name changes
+         (swapped by #transition-style, filled in by JS) to switch technique. */
+      ::view-transition-old(demo-popover),
+      ::view-transition-new(demo-popover) {
+        animation-duration: 0.25s;
+        animation-timing-function: ease;
+      }
+
+      /* fade + scale, subtle (0.9 -> 1, a 10% size change) */
+      @keyframes scale-subtle-in {
+        from {
+          opacity: 0;
+          scale: 0.9;
+        }
+        to {
+          opacity: 1;
+          scale: 1;
+        }
+      }
+      @keyframes scale-subtle-out {
+        from {
+          opacity: 1;
+          scale: 1;
+        }
+        to {
+          opacity: 0;
+          scale: 0.9;
+        }
+      }
+
+      /* fade + scale, dramatic (0.1 -> 1, a 90% size change) */
+      @keyframes scale-dramatic-in {
+        from {
+          opacity: 0;
+          scale: 0.1;
+        }
+        to {
+          opacity: 1;
+          scale: 1;
+        }
+      }
+      @keyframes scale-dramatic-out {
+        from {
+          opacity: 1;
+          scale: 1;
+        }
+        to {
+          opacity: 0;
+          scale: 0.1;
+        }
+      }
+
+      /* fade + slide, from each of the 4 directions */
+      @keyframes slide-bottom-in {
+        from {
+          opacity: 0;
+          translate: 0 16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-bottom-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 0 16px;
+        }
+      }
+      @keyframes slide-top-in {
+        from {
+          opacity: 0;
+          translate: 0 -16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-top-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 0 -16px;
+        }
+      }
+      @keyframes slide-left-in {
+        from {
+          opacity: 0;
+          translate: -16px 0;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-left-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: -16px 0;
+        }
+      }
+      @keyframes slide-right-in {
+        from {
+          opacity: 0;
+          translate: 16px 0;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+      @keyframes slide-right-out {
+        from {
+          opacity: 1;
+          translate: 0 0;
+        }
+        to {
+          opacity: 0;
+          translate: 16px 0;
+        }
+      }
+
+      /* Second demo below, unrelated to the View Transition API section
+         above: plain aria-expanded-driven CSS transitions (the same pattern
+         popover.jsx itself uses), comparing 3 recipes for a real-anchor
+         "below" entrance:
+         - clip-path alone reads as a mask being *removed*, not an opening —
+           the content is already at full size underneath, just revealed.
+         - scaleY alone reads as an opening, but content (text/icons) looks
+           slightly squished for the first instants of the transition.
+         - combining both lets each compensate for the other's flaw: scaleY
+           does most of the work, a shallow clip-path (no need to be
+           aggressive — even 5-10% of the box) hides the "squished" bottom
+           edge without the "mask" look pure clip-path has on its own. */
+      .experiment-popover {
+        width: 240px;
+        /* Constant throughout (not toggled to "none" when closed, unlike
+           popover.jsx's own box-shadow handling) — the point here is
+           specifically to see the shadow's shape get clipped mid-transition,
+           not to fade it in/out. */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+        /* Slow, so each step of the transition is easy to follow. */
+        transition-duration: 200ms;
+        transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+        transition-behavior: allow-discrete;
+        view-transition-name: none;
+      }
+      /* clip-path's own `round` argument must match the box's actual
+         border-radius (8px, see [popover] above) — without it, the clipped
+         shape has square corners while the box underneath has rounded ones,
+         a visible mismatch right at the clipped edge. */
+      #popover-clip-only {
+        opacity: 1;
+        clip-path: inset(0 round 8px);
+        transform-origin: top;
+        transition-property: display, overlay, opacity, clip-path;
+      }
+      #popover-clip-only[aria-expanded="false"] {
+        opacity: 0;
+        clip-path: inset(0 0 100% 0 round 8px);
+      }
+      #popover-scale-only {
+        opacity: 1;
+        transform-origin: top;
+        scale: 1 1;
+        transition-property: display, overlay, opacity, scale;
+      }
+      #popover-scale-only[aria-expanded="false"] {
+        opacity: 0;
+        scale: 1 0.8;
+      }
+      #popover-clip-and-scale {
+        opacity: 1;
+        clip-path: inset(0 round 8px);
+        transform-origin: top;
+        scale: 1 1;
+        transition-property: display, overlay, opacity, scale, clip-path;
+      }
+      #popover-clip-and-scale[aria-expanded="false"] {
+        opacity: 0;
+        clip-path: inset(0 0 40% 0 round 8px);
+        scale: 0.99 0.99;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Popover + View Transitions</h1>
+    <p>
+      No Preact/framework here — plain HTML popover API
+      (<code>showPopover()</code>/<code>hidePopover()</code>) positioned by
+      hand, with the open/close swap wrapped in
+      <code>document.startViewTransition()</code> instead of a CSS
+      <code>transition</code>/<code>@starting-style</code>. Click the button to
+      open, click it again to close. Change "side" (even while open) to see it
+      reposition, or "transition" to compare techniques — each is just a pair of
+      `@keyframes` bound to `::view-transition-old/new(demo-popover)`.
+    </p>
+
+    <p>
+      <label>
+        side:
+        <select id="side-select">
+          <option value="below" selected>below</option>
+          <option value="above">above</option>
+          <option value="left">left</option>
+          <option value="right">right</option>
+        </select>
+      </label>
+      <label>
+        transition:
+        <select id="transition-select">
+          <option value="fade">fade only (default cross-fade)</option>
+          <option value="fade-scale-subtle" selected>
+            fade + scale (subtle, 90% -> 100%)
+          </option>
+          <option value="fade-scale-dramatic">
+            fade + scale (dramatic, 10% -> 100%)
+          </option>
+          <option value="slide-bottom">slide from bottom</option>
+          <option value="slide-top">slide from top</option>
+          <option value="slide-left">slide from left</option>
+          <option value="slide-right">slide from right</option>
+        </select>
+      </label>
+    </p>
+    <style id="transition-style"></style>
+
+    <p>
+      <button id="trigger" type="button">Toggle popover</button>
+    </p>
+
+    <div id="popover" popover="manual">
+      <p style="margin-top: 0">Popover content</p>
+      <p>side: <strong id="side-label">below</strong></p>
+    </div>
+
+    <script>
+      const trigger = document.getElementById("trigger");
+      const popover = document.getElementById("popover");
+      const sideSelect = document.getElementById("side-select");
+      const sideLabel = document.getElementById("side-label");
+      const transitionSelect = document.getElementById("transition-select");
+      const transitionStyle = document.getElementById("transition-style");
+
+      const GAP = 0;
+
+      // Maps each <option> to the in/out @keyframes declared above (all
+      // pre-defined and static — only which pair ::view-transition-old/new
+      // point to changes). "fade" has no entry: the browser's own default
+      // view-transition behavior already *is* a plain cross-fade, so there's
+      // nothing to override.
+      const TRANSITIONS = {
+        "fade": null,
+        "fade-scale-subtle": { in: "scale-subtle-in", out: "scale-subtle-out" },
+        "fade-scale-dramatic": {
+          in: "scale-dramatic-in",
+          out: "scale-dramatic-out",
+        },
+        "slide-bottom": { in: "slide-bottom-in", out: "slide-bottom-out" },
+        "slide-top": { in: "slide-top-in", out: "slide-top-out" },
+        "slide-left": { in: "slide-left-in", out: "slide-left-out" },
+        "slide-right": { in: "slide-right-in", out: "slide-right-out" },
+      };
+
+      const applyTransitionStyle = () => {
+        const names = TRANSITIONS[transitionSelect.value];
+        transitionStyle.textContent = names
+          ? `
+            ::view-transition-old(demo-popover) { animation-name: ${names.out}; }
+            ::view-transition-new(demo-popover) { animation-name: ${names.in}; }
+          `
+          : "";
+      };
+      applyTransitionStyle();
+      transitionSelect.addEventListener("change", applyTransitionStyle);
+
+      // Reads the *current* side from the select every time, so changing it
+      // while the popover is open (or right before opening) always takes
+      // effect — nothing about the side is cached anywhere.
+      const positionPopover = () => {
+        const side = sideSelect.value;
+        sideLabel.textContent = side;
+        const buttonRect = trigger.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        let top;
+        let left;
+        if (side === "below") {
+          top = buttonRect.bottom + GAP;
+          left = buttonRect.left;
+        } else if (side === "above") {
+          top = buttonRect.top - popoverRect.height - GAP;
+          left = buttonRect.left;
+        } else if (side === "left") {
+          top = buttonRect.top;
+          left = buttonRect.left - popoverRect.width - GAP;
+        } else {
+          top = buttonRect.top;
+          left = buttonRect.right + GAP;
+        }
+        popover.style.top = `${top}px`;
+        popover.style.left = `${left}px`;
+      };
+
+      // showPopover() first: the popover needs a real layout box (for
+      // "above"/"left", which measure its own width/height) before it can be
+      // positioned — same reasoning as popover.jsx's own comments about why
+      // this can't be decided before the element is actually rendered.
+      const openPopover = () => {
+        popover.showPopover();
+        positionPopover();
+      };
+      const closePopover = () => {
+        popover.hidePopover();
+      };
+
+      const toggle = () => {
+        const isOpen = popover.matches(":popover-open");
+        const run = isOpen ? closePopover : openPopover;
+        // document.startViewTransition() snapshots the "before" state,
+        // runs `run` synchronously, then snapshots "after" and cross-fades/
+        // animates between the two via ::view-transition-old/new(demo-popover)
+        // above — no CSS transition-property/@starting-style needed at all.
+        if (document.startViewTransition) {
+          document.startViewTransition(run);
+        } else {
+          run();
+        }
+      };
+
+      trigger.addEventListener("click", toggle);
+      sideSelect.addEventListener("change", () => {
+        if (popover.matches(":popover-open")) {
+          positionPopover();
+        }
+      });
+    </script>
+
+    <hr style="margin: 40px 0" />
+
+    <h1>Plain CSS transition experiments</h1>
+    <p>
+      No View Transition API here — the same aria-expanded-driven CSS transition
+      popover.jsx itself uses (transitions suppressed, positioned, reflowed,
+      re-enabled, then aria-expanded flips — see its own comments for why, in
+      short: <code>@starting-style</code> can't see a measurement-dependent
+      "closed" state in time). Comparing 3 recipes for a real-anchor "below"
+      entrance, each isolating one idea. Trigger button and popover content are
+      identical across all 3 (only the heading above each differs), so the
+      recipe itself is the only variable when comparing them.
+    </p>
+
+    <h3>clip-path alone</h3>
+    <p>
+      Reads as a mask being *removed*, not an opening: the content is already at
+      its final size underneath, just revealed.
+    </p>
+    <p>
+      <button class="experiment-trigger" id="trigger-clip-only" type="button">
+        Toggle popover
+      </button>
+    </p>
+    <div id="popover-clip-only" class="experiment-popover" popover="manual">
+      <div class="experiment-popover-content"></div>
+    </div>
+    <div style="height: 220px"></div>
+
+    <h3>scaleY alone</h3>
+    <p>
+      Reads as an actual opening, but content (text/icons) looks slightly
+      squished for the first instants of the transition.
+    </p>
+    <p>
+      <button class="experiment-trigger" id="trigger-scale-only" type="button">
+        Toggle popover
+      </button>
+    </p>
+    <div id="popover-scale-only" class="experiment-popover" popover="manual">
+      <div class="experiment-popover-content"></div>
+    </div>
+    <div style="height: 220px"></div>
+
+    <h3>clip-path + scaleY combined</h3>
+    <p>
+      Each compensates for the other's flaw: scaleY does most of the work, a
+      shallow clip-path (doesn't need to be aggressive — even 5-10% of the box)
+      hides the "squished" bottom edge without clip-path's own "mask" look when
+      used alone.
+    </p>
+    <p>
+      <button
+        class="experiment-trigger"
+        id="trigger-clip-and-scale"
+        type="button"
+      >
+        Toggle popover
+      </button>
+    </p>
+    <div
+      id="popover-clip-and-scale"
+      class="experiment-popover"
+      popover="manual"
+    >
+      <div class="experiment-popover-content"></div>
+    </div>
+    <div style="height: 220px"></div>
+
+    <script>
+      // Same markup in every popover (set once here rather than duplicated
+      // 3 times) — enough content to give clip-path/scale something visible
+      // to act on, and tall enough that the squished-top-during-scale effect
+      // actually shows.
+      const EXPERIMENT_POPOVER_CONTENT = `
+        <p style="margin-top: 0">Popover content</p>
+        <ul style="margin: 0; padding-left: 20px">
+          <li>First item</li>
+          <li>Second item</li>
+          <li>Third item</li>
+        </ul>
+        <p><button type="button">A button</button></p>
+      `;
+      for (const el of document.querySelectorAll(
+        ".experiment-popover-content",
+      )) {
+        el.innerHTML = EXPERIMENT_POPOVER_CONTENT;
+      }
+
+      // Positions `popoverEl` flush below `triggerEl`, then commits that
+      // "closed" frame as a real rendered state (transitions suppressed,
+      // forced reflow) before flipping aria-expanded — same reasoning as
+      // popover.jsx's own top comment: @starting-style can't see this
+      // measurement-dependent state in time.
+      const openExperimentPopover = (popoverEl, triggerEl) => {
+        popoverEl.style.transitionProperty = "none";
+        popoverEl.showPopover();
+        const rect = triggerEl.getBoundingClientRect();
+        popoverEl.style.top = `${rect.bottom}px`;
+        popoverEl.style.left = `${rect.left}px`;
+        popoverEl.getBoundingClientRect();
+        popoverEl.style.transitionProperty = "";
+        popoverEl.setAttribute("aria-expanded", "true");
+      };
+      const closeExperimentPopover = (popoverEl) => {
+        popoverEl.setAttribute("aria-expanded", "false");
+        popoverEl.hidePopover();
+      };
+      const wireExperimentToggle = (triggerId, popoverId) => {
+        const triggerEl = document.getElementById(triggerId);
+        const popoverEl = document.getElementById(popoverId);
+        popoverEl.setAttribute("aria-expanded", "false");
+        triggerEl.addEventListener("click", () => {
+          if (popoverEl.matches(":popover-open")) {
+            closeExperimentPopover(popoverEl);
+          } else {
+            openExperimentPopover(popoverEl, triggerEl);
+          }
+        });
+      };
+      wireExperimentToggle("trigger-clip-only", "popover-clip-only");
+      wireExperimentToggle("trigger-scale-only", "popover-scale-only");
+      wireExperimentToggle("trigger-clip-and-scale", "popover-clip-and-scale");
+    </script>
+  </body>
+</html>

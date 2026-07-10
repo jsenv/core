@@ -24,6 +24,7 @@ const css = /* css */ `
     position: relative;
     color: var(--x-color);
     font-size: var(--font-size);
+    font-variant-numeric: tabular-nums;
     vertical-align: inherit;
 
     &[data-accent-needs-dark-fg] {
@@ -144,7 +145,7 @@ export const BadgeCount = ({
     circle = false;
   }
 
-  const textKey = loading + String(valueDisplayed) + hasOverflow;
+  const textKey = `${loading ? "loading-" : ""}${String(valueDisplayed)}${hasOverflow ? "-overflow" : ""}`;
 
   if (circle) {
     return (

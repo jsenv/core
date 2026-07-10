@@ -1,6 +1,22 @@
-import { isSignal } from "../../utils/is_signal.js";
 import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
+
+// Wires a default `uiAction` that writes user interactions back into
+// `props.signal`, and still calls whatever `uiAction` was explicitly passed.
+// Mutates `props.uiAction`. Guarded by a marker so the recursive
+// normalization below doesn't wrap an already-wrapped uiAction again.
+const wireUIActionToSignal = (props, signal, toSignalValue = (v) => v) => {
+  const existingUIAction = props.uiAction;
+  if (existingUIAction && existingUIAction.autoUpdateSignalWrapper) {
+    return;
+  }
+  const uiAction = (value, event) => {
+    signal.value = toSignalValue(value);
+    existingUIAction?.(value, event);
+  };
+  uiAction.autoUpdateSignalWrapper = true;
+  props.uiAction = uiAction;
+};
 
 // Maps validity type names → navi input type names.
 // Numeric signal types must not fall through to the native type="number"
@@ -69,29 +85,75 @@ const NAVI_TYPE_DEFAULTS = {
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
 export const resolveInputProps = (props) => {
-  // If value is a stateSignal, pull type/min/max/step defaults from the signal's options.
-  // Explicit props take precedence over signal options.
-  const valueSignal = props.value;
-  if (isSignal(valueSignal) && valueSignal.options) {
-    const signalOptions = valueSignal.options;
-    for (const key of ["min", "max", "step"]) {
-      if (props[key] === undefined && signalOptions[key] !== undefined) {
-        props[key] = signalOptions[key];
+  // `signal` is the only prop carrying a signal — `value`/`checked` are plain
+  // props like any other. Consumed and cleared up front so it never leaks
+  // onto the DOM element.
+  const signal = props.signal;
+  if (signal) {
+    props.signal = undefined;
+
+    const signalOptions = signal.options;
+    if (signalOptions) {
+      const signalOptions = signal.options;
+      for (const key of ["min", "max", "step"]) {
+        if (props[key] === undefined && signalOptions[key] !== undefined) {
+          props[key] = signalOptions[key];
+        }
+      }
+      if (props.type === undefined && signalOptions.type !== undefined) {
+        props.type =
+          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
       }
     }
-    if (props.type === undefined && signalOptions.type !== undefined) {
-      props.type =
-        VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+
+    const isCheckable = props.type === "checkbox" || props.type === "radio";
+    if (isCheckable) {
+      if (Object.hasOwn(props, "defaultChecked")) {
+        // explicit defaultChecked prop prevails
+      } else {
+        // If no explicit defaultChecked, derive it from the signal's default
+        // value so that resetUIState restores to the original default.
+        const defaultVal = signal.options.getDefaultValue(false);
+        if (defaultVal === undefined) {
+          // no defaultChecked, and no default value from the signal: leave
+        } else if (props.type === "radio") {
+          if (defaultVal === true) {
+            props.defaultChecked = true;
+          } else if (
+            Object.hasOwn(props, "value") &&
+            defaultVal === props.value
+          ) {
+            props.defaultChecked = true;
+          }
+        } else if (typeof defaultVal === "boolean") {
+          // Standalone checkbox bound to a boolean signal.
+          props.defaultChecked = defaultVal;
+        } else {
+          // Checkbox is a group member: defaultVal is the array of
+          // selected item values.
+          const checkboxValue = props.value;
+          props.defaultChecked =
+            Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
+        }
+      }
+      wireUIActionToSignal(props, signal, (v) => Boolean(v));
+      return;
     }
-    // If no explicit defaultValue, snapshot the signal's current default
-    // so that resetUIState restores to the original default — not the
-    // value the signal had at the time of the last re-render.
-    if (!Object.hasOwn(props, "defaultValue")) {
-      const defaultVal = signalOptions.getDefaultValue(false);
-      if (defaultVal !== undefined) {
-        props.defaultValue = defaultVal;
+
+    if (signalOptions) {
+      if (Object.hasOwn(props, "defaultValue")) {
+        // explicit defaultValue prop prevails
+      } else {
+        // If no explicit defaultValue, snapshot the signal's current default
+        // so that resetUIState restores to the original default — not the
+        // value the signal had at the time of the last re-render.
+        const defaultVal = signalOptions.getDefaultValue(false);
+        if (defaultVal !== undefined) {
+          props.defaultValue = defaultVal;
+        }
       }
     }
+    wireUIActionToSignal(props, signal);
   }
 
   const currentType = props.type;

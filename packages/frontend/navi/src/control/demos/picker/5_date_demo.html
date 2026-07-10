@@ -149,11 +149,11 @@
             <div>
               <div class="states-col-header">Navi Picker</div>
               <Box flex="y" spacing="s">
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Vide</Label>
                   <Picker name="date_empty" type="date" />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Avec valeur</Label>
                   <Picker
                     name="date_with_value"
@@ -161,7 +161,7 @@
                     defaultValue={DEFAULT_DATE}
                   />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Readonly</Label>
                   <Picker
                     name="date_readonly"
@@ -170,7 +170,7 @@
                     readOnly
                   />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Disabled</Label>
                   <Picker
                     name="date_disabled"
@@ -179,7 +179,7 @@
                     disabled
                   />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">
                     Overflow (width contrainte)
                   </Label>
@@ -191,7 +191,7 @@
                     style={{ width: "120px" }}
                   />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">
                     Width 200px + alignX center
                   </Label>
@@ -208,19 +208,19 @@
             <div>
               <div class="states-col-header">User agent</div>
               <Box flex="y" spacing="s">
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Vide</Label>
                   <input type="date" />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Avec valeur</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Readonly</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} readOnly />
                 </Field>
-                <Field ownLabel vertical>
+                <Field flex="y">
                   <Label border="1px dotted grey">Disabled</Label>
                   <input type="date" defaultValue={DEFAULT_DATE} disabled />
                 </Field>
@@ -916,9 +916,9 @@
             La source est en <strong>français</strong> (
             <code>ui={'{<Picker.UI.Date lang="fr" />}'}</code>) et la cible en{" "}
             <strong>anglais</strong> (
-            <code>ui={'{<Picker.UI.Date lang="en" />}'}</code>). Copier /
-            couper dans la source puis coller dans la cible : le texte affiché
-            change de langue mais la date sous-jacente est préservée.
+            <code>ui={'{<Picker.UI.Date lang="en" />}'}</code>). Copier / couper
+            dans la source puis coller dans la cible : le texte affiché change
+            de langue mais la date sous-jacente est préservée.
           </p>
           <ClipboardInspect>
             <div

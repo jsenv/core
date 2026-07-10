@@ -1,225 +1,305 @@
-import { createContext } from "preact";
-import { createPortal } from "preact/compat";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
-
+/**
+ * A drawer docked flush to a viewport (or container) edge, built on top of
+ * `Popup`. Sizing, the perpendicular-axis fill, and the flush-edge
+ * border-radius are all resolved by this file's own CSS (keyed off the
+ * `navi-side`/`data-layer` attributes) rather than computed in JS — read
+ * the CSS block below instead of expecting a JS equivalent of it here.
+ *
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it,
+ * Popover would dock next to whatever triggered the open instead of flush
+ * against the edge, defeating the point of a side panel.
+ */
 import { Box } from "../box/box.jsx";
-import { useKeyboardShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { Popup } from "./popup.jsx";
 
 const css = /* css */ `
-  @layer navi {
-    .navi_side_panel {
-      --side-panel-width: 400px;
-      --side-panel-background: white;
-      --side-panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
-      --side-panel-animation-duration: 250ms;
-    }
-  }
-
   .navi_side_panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    pointer-events: none;
+    /* Dialog's own \`min-width: var(--anchor-width, 0px)\` exists so a
+       dialog naturally matches whatever triggered it (picker_custom.jsx's
+       dialog mode relies on this) — SidePanel's own "anchor" is just its
+       container, so this would otherwise force min-width to the full
+       container width, overriding \`width\`/\`height\` below entirely. Popover
+       ignores this var. */
+    --anchor-width: 0px;
+    /* Side panel create a barriere with the content that is full size */
+    /* So by default they don't have border-radius */
+    --popup-border-radius: 0px;
 
-    .navi_side_panel_overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.3);
-      pointer-events: auto;
+    /* Content-sized by default (each custom property is unset unless the
+       matching \`width\`/\`height\` prop is passed, and var() falls back to
+       "auto") — forced otherwise. Both set unconditionally regardless of
+       \`side\`: whichever axis isn't the docked one gets overridden again
+       below by the perpendicular-fill rules, at higher specificity, unless
+       the corresponding prop was actually passed (see there for why an
+       explicit value still wins even on that axis). */
+    width: var(--navi-side-panel-width, auto);
+    height: var(--navi-side-panel-height, auto);
+
+    /* layer="top": the container is the viewport itself, so the
+       perpendicular axis and the popup's own ceiling both use
+       \`--navi-vvh\`/\`--navi-vvw\` (kept in sync with window.visualViewport,
+       see navi_css_vars.js) instead of a plain 100%/100dvh, which tracks
+       the *layout* viewport instead — that doesn't shrink when e.g. the
+       on-screen keyboard opens, unlike the *visible* one. The viewport
+       itself has no border-radius to inherit, hence 0 below rather than
+       "inherit" (see layer="local" below). */
+    &[data-layer="top"] {
+      --popover-max-height: var(--navi-vvh);
+      --popover-maxmax-height: var(--navi-vvh);
+      --popover-maxmax-width: var(--navi-vvw);
+      --dialog-maxmax-height: var(--navi-vvh);
+      --dialog-maxmax-width: var(--navi-vvw);
+
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        /* An explicit \`height\` prop still wins here (see the base rule
+           above) — only the fallback (no \`height\` given) differs by layer. */
+        height: var(--navi-side-panel-height, var(--navi-vvh));
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        width: var(--navi-side-panel-width, var(--navi-vvw));
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
     }
 
-    .navi_side_panel_dialog {
-      position: absolute;
+    /* layer="local": the container is a real DOM ancestor, so plain 100%
+       already tracks it correctly on the perpendicular axis — the popup's
+       own ceiling there is neutralized instead (a comfortably large but
+       still valid length, not "none": these vars feed a CSS min(), which
+       treats "none" as invalid and falls back to its own initial value
+       rather than using ours). The *docked* axis keeps a real ceiling
+       though (90% of the container, a percentage resolving correctly here
+       since the popup's own containing block, .navi_popover_clip_wrapper/
+       .navi_dialog_clip_wrapper, is inset: 0 within that same container) —
+       an oversized explicit width/height prop should shrink to fit rather
+       than overflow the container or force it to scroll. The real
+       container's own corner may itself be rounded, hence "inherit" below
+       rather than 0 (see layer="top" above) — border-radius isn't
+       naturally an inherited property, so this must be explicit. */
+    &[data-layer="local"] {
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        --popover-maxmax-height: 100000px;
+        --dialog-maxmax-height: 100000px;
+        --popover-max-height: 100000px;
+        --popover-maxmax-width: 90%;
+        --dialog-maxmax-width: 90%;
+        height: var(--navi-side-panel-height, 100%);
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        --popover-maxmax-width: 100000px;
+        --dialog-maxmax-width: 100000px;
+        --popover-maxmax-height: 90%;
+        --dialog-maxmax-height: 90%;
+        --popover-max-height: 90%;
+        width: var(--navi-side-panel-width, 100%);
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+    }
+
+    /* Sticky regardless of side: the panel's own content always stacks
+       (and scrolls) top-to-bottom, whether the panel itself is docked to
+       the left/right or the top/bottom of the viewport/container — so
+       "top" for the head and "bottom" for the foot are the right offsets
+       either way, not something that needs to vary with navi-side. Each
+       needs its own opaque background since scrollable content otherwise
+       shows through underneath while stuck. */
+    .navi_side_panel_head,
+    .navi_side_panel_foot {
+      position: sticky;
+      z-index: 1;
+      background-color: var(--navi-popup-background-color);
+    }
+    .navi_side_panel_head {
       top: 0;
-      right: 0;
+      border-bottom: 1px solid var(--navi-popup-border-color);
+    }
+    .navi_side_panel_foot {
       bottom: 0;
-      width: var(--side-panel-width);
-      background: var(--side-panel-background);
-      outline: none;
-      box-shadow: var(--side-panel-shadow);
-      animation-duration: var(--side-panel-animation-duration);
-      animation-timing-function: ease-out;
-      animation-fill-mode: both;
-      pointer-events: auto;
-      overflow-y: auto;
-    }
-
-    &[data-opening] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_in;
-      }
-    }
-
-    &[data-closing] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_out;
-      }
-    }
-  }
-
-  .navi_side_panel_close_button {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-
-    z-index: 1; /* For some reason required to interact properly with the button */
-    display: flex;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 18px;
-    line-height: 1;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-
-    &:hover {
-      color: #212529;
-      background: #f0f0f0;
-    }
-  }
-
-  @keyframes navi_side_panel_slide_in {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes navi_side_panel_slide_out {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(100%);
+      padding: 12px 16px;
+      border-top: 1px solid var(--navi-popup-border-color);
     }
   }
 `;
 
-const SidePanelCloseContext = createContext(null);
-export const useSidePanelClose = () => useContext(SidePanelCloseContext);
-
-const SidePanelStyleCSSVars = {
-  width: "--side-panel-width",
-};
-
+/**
+ * @param {object} props
+ * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
+ *   `Popup`'s own `open`.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
+ *   required at all for a purely command-driven panel (an `id` plus a
+ *   `<Button command="--navi-toggle" commandFor={id}>` elsewhere, same as
+ *   `Dialog`/`Popover` themselves — see either's own doc).
+ * @param {(event: Event) => void} [props.onClose] - Called when the panel
+ *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
+ * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
+ *   viewport/container edge the panel is docked flush against.
+ * @param {string|number} [props.width] - Explicit width — a bare number is
+ *   treated as pixels. Relevant for a `left`/`right` panel (its docked
+ *   axis); omitted by default, so the panel sizes to its own content there
+ *   (still capped by the popup's own max-width, same as `Dialog`/
+ *   `Popover`). For a `top`/`bottom` panel (where width is the
+ *   perpendicular axis, normally filling the container) passing this
+ *   overrides that fill instead — `side` isn't expected to change at
+ *   runtime, so there's no need to guard against the "wrong axis" case.
+ * @param {string|number} [props.height] - Same as `width`, for the other
+ *   axis: docked (content-sized by default) for `top`/`bottom`,
+ *   perpendicular (container-filling by default) for `left`/`right`.
+ * @param {string|number} [props.minWidth] - Forwarded as-is to `Popup`'s
+ *   own `minWidth`.
+ * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
+ *   own `minHeight`.
+ * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
+ *   against the viewport (real top-layer rendering, matches a fixed,
+ *   always-on-screen drawer). `"local"`: docks against the panel's own
+ *   positioned DOM ancestor instead, confined to (and clipped by) it — for
+ *   a drawer that only takes over part of the page rather than the whole
+ *   viewport.
+ * @param {boolean|"fading"} [props.animation] - Off by default (unlike
+ *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
+ *   of opened/closed as a one-off, where a slide transition is more often
+ *   undesired noise than not. `true` slides in from `side`; `"fading"` is
+ *   the other common choice. Other values are forwarded as-is but not a
+ *   documented/encouraged part of this component's own API.
+ * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
+ *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
+ *   backdrop at all, outside clicks pass straight through; in dialog mode,
+ *   the outside click is still absorbed (a `<dialog>` always blocks
+ *   interaction with the rest of the page one way or another — see
+ *   `dialog.jsx`'s own doc) but with no dimming effect. `true`: closes the
+ *   panel on an outside click instead, and also enables trapping Tab
+ *   navigation inside the panel (`focusCapture`) — closing on outside
+ *   interaction only makes sense paired with not letting focus silently
+ *   leave the panel first.
+ * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
+ *   one underlying renderer instead of its automatic screen-size
+ *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
+ *   or forced here), the panel becomes modal regardless of
+ *   `closeOnClickOutside`/`pointerInteractionOutsideEffect`: a `<dialog>`
+ *   always blocks interaction with the rest of the page one way or another
+ *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
+ *   popover's fully passive, click-through backdrop.
+ * @param {import("preact").ComponentChildren} props.children - No built-in
+ *   close button — add one wherever it makes sense for the layout (e.g. a
+ *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
+ *   `closeButton` prop, or rely on `closeOnClickOutside`/Escape instead.
+ */
 export const SidePanel = ({
-  isOpen,
+  open,
+  defaultOpen,
   onClose,
   children,
-  closeOnClickOutside = false,
-  hideCloseButton = false,
+  side = "right",
   width,
+  height,
+  minWidth,
+  minHeight,
+  animation,
+  closeOnClickOutside = false,
+  mode,
+  layer = "top",
+  className,
   ...rest
 }) => {
   import.meta.css = css;
-  onClose = useStableCallback(onClose);
-  const panelDialogRef = useRef(null);
-  const [phase, setPhase] = useState(isOpen ? "open" : "closed");
-  const previousFocusRef = useRef(null);
-  const isMountedRef = useRef(false);
 
-  useLayoutEffect(() => {
-    if (!isMountedRef.current) {
-      isMountedRef.current = true;
-      return;
-    }
-    if (isOpen) {
-      setPhase("opening");
-    } else if (phase !== "closed") {
-      setPhase("closing");
-    }
-  }, [isOpen]);
-
-  useLayoutEffect(() => {
-    if (phase === "opening" && panelDialogRef.current) {
-      previousFocusRef.current = document.activeElement;
-      panelDialogRef.current.focus();
-    }
-  }, [phase]);
-
-  useKeyboardShortcuts(panelDialogRef, [
-    {
-      key: "escape",
-      handler: () => {
-        onClose();
-        return true;
-      },
-    },
-  ]);
-
-  if (phase === "closed") {
-    return null;
-  }
-
-  const onAnimationEnd = () => {
-    if (phase === "opening") {
-      setPhase("open");
-    } else if (phase === "closing") {
-      setPhase("closed");
-      const prev = previousFocusRef.current;
-      if (prev && document.contains(prev)) {
-        prev.focus({
-          preventScroll: true,
-        });
-      }
-      previousFocusRef.current = null;
-    }
-  };
-
-  return createPortal(
-    <SidePanelCloseContext.Provider value={onClose}>
-      <Box
-        baseClassName="navi_side_panel"
-        styleCSSVars={SidePanelStyleCSSVars}
-        width={width}
-        data-opening={phase === "opening" ? "" : undefined}
-        data-closing={phase === "closing" ? "" : undefined}
-        {...rest}
-      >
-        {closeOnClickOutside && (
-          <div
-            className="navi_side_panel_overlay"
-            onClick={(e) => {
-              onClose(e);
-            }}
-          />
-        )}
-        <Box
-          ref={panelDialogRef}
-          baseClassName="navi_side_panel_dialog"
-          tabIndex={-1}
-          role={closeOnClickOutside ? "dialog" : "complementary"}
-          aria-modal={closeOnClickOutside ? "true" : undefined}
-          onAnimationEnd={onAnimationEnd}
-        >
-          {!hideCloseButton && <NaviSidePanelCloseButton />}
-          {children}
-        </Box>
-      </Box>
-    </SidePanelCloseContext.Provider>,
-    document.body,
-  );
-};
-
-const NaviSidePanelCloseButton = () => {
-  const sidePanelClose = useSidePanelClose();
   return (
-    <button
-      className="navi_side_panel_close_button"
-      aria-label="Close panel"
-      onClick={sidePanelClose}
+    <Popup
+      mode={mode}
+      open={open}
+      defaultOpen={defaultOpen}
+      onClose={onClose}
+      layer={layer}
+      anchorCustomEventDetail="ignore"
+      positionArea={side}
+      animation={animation === true ? `slide-from-${side}` : animation}
+      pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
+      focusCapture={closeOnClickOutside}
+      minWidth={toCssLength(minWidth)}
+      minHeight={toCssLength(minHeight)}
+      className={withPropsClassName("navi_side_panel", className)}
+      navi-side={side}
+      style={{
+        "--navi-side-panel-width": toCssLength(width),
+        "--navi-side-panel-height": toCssLength(height),
+      }}
+      {...rest}
     >
-      ×
-    </button>
+      {children}
+    </Popup>
   );
 };
+// Preact doesn't auto-append "px" to bare numeric style values the way React
+// does — an unsuffixed number is an invalid CSS length, silently rejected by
+// the browser (leaving the property unset instead of sized).
+const toCssLength = (value) =>
+  value === undefined || value === null
+    ? undefined
+    : typeof value === "number"
+      ? `${value}px`
+      : value;
+
+/**
+ * Stuck to the top of the panel's own scrollable area (`position: sticky`)
+ * regardless of `side` — only the panel's content in between scrolls. No
+ * built-in padding or close button — add a `<Button command="--navi-close">`
+ * (optionally with the `"navi_side_panel_head_close_button"` className, a
+ * float-right utility this file's own CSS still provides) wherever it makes
+ * sense for the layout.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_head"` class this file's own CSS targets.
+ * @param {import("preact").ComponentChildren} props.children
+ */
+const SidePanelHead = (props) => (
+  <Box baseClassName="navi_side_panel_head" {...props} />
+);
+/**
+ * Stuck to the bottom of the panel's own scrollable area (`position:
+ * sticky`) regardless of `side` — only the panel's content above scrolls.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_foot"` class this file's own CSS targets.
+ * @param {import("preact").ComponentChildren} props.children
+ */
+const SidePanelFoot = (props) => (
+  <Box className="navi_side_panel_foot" {...props} />
+);
+SidePanel.Head = SidePanelHead;
+SidePanel.Foot = SidePanelFoot;

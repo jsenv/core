@@ -149,12 +149,12 @@
         <h3>Default Status Callout (Preferred Above)</h3>
         <p>
           This text has a callout with no specific status and prefers to appear
-          above using <code>data-callout-position="above"</code>:
+          above using <code>data-callout-position="top"</code>:
         </p>
         <span
           class="example-text"
           id="default-text"
-          data-callout-position="above"
+          data-callout-position="top"
         >
           Text with default callout
         </span>
@@ -218,21 +218,21 @@
         anchor element:
         <ul style="margin: 8px 0; padding-left: 20px">
           <li>
-            <code>data-callout-position="above"</code> - Prefers callout to
+            <code>data-callout-position="top"</code> - Prefers callout to
             appear above the element (but will fallback to below if less than
             60% would be visible above)
           </li>
           <li>
-            <code>data-callout-position="below"</code> - Prefers callout to
+            <code>data-callout-position="bottom"</code> - Prefers callout to
             appear below the element (but will fallback to above if less than
             60% would be visible below)
           </li>
           <li>
-            <code>data-callout-position-force="above"</code> - Forces callout
+            <code>data-callout-position-force="top"</code> - Forces callout
             above regardless of available space
           </li>
           <li>
-            <code>data-callout-position-force="below"</code> - Forces callout
+            <code>data-callout-position-force="bottom"</code> - Forces callout
             below regardless of available space
           </li>
         </ul>
@@ -321,13 +321,10 @@
             element
           </li>
         </ul>
-        <strong>Scroll Behavior:</strong> When centered in the viewport, the
-        callout <strong>will not follow page scrolling</strong> and this is
-        intentional. The callout is designed to display a message to the user at
-        the moment <code>openCallout</code>
-        is called. Following scroll would likely move the message further from
-        the UI element that triggered it in the first place, reducing its
-        contextual relevance.
+        <strong>Scroll Behavior:</strong> When centered in the viewport (no
+        anchor at all, or a real one too big to bother anchoring to — see
+        below), the callout <strong>stays centered in the viewport</strong>
+        as the page scrolls, same as every other repositioning trigger.
         <br /><br />
         When no anchor is provided, the callout centers itself in the viewport
         as a fallback.

@@ -1,7 +1,7 @@
 # [fallbackLang used when requested lang has no translation](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ fallbackLang: "en", systemLang: "fr" });
+const i18n = createI18n({ fallbackLang: "en", runtimeLang: "fr" });
 i18n.addLangKeys("en", {
   greeting: "Hello!",
   farewell: "Goodbye!",

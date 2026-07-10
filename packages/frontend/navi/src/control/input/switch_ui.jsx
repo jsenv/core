@@ -3,7 +3,7 @@ import { Box } from "@jsenv/navi/src/box/box.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_checkbox {
-      --switch-margin: 2px; /* Useful to reserve space for outline */
+      --switch-margin: 0; /* Useful to reserve space for outline */
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
       --switch-padding: 2px;

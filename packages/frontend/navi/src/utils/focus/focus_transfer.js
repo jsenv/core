@@ -83,6 +83,7 @@ export const transferFocus = (containerEl, debugFocus, e, fallback) => {
   }
   if (!target) {
     if (fallback) {
+      reason = "focused element before open (fallback)";
       target = fallback;
     }
   }

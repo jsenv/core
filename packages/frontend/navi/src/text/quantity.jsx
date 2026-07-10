@@ -27,6 +27,9 @@ const css = /* css */ `
         font-weight: normal;
       }
     }
+    .navi_quantity_value {
+      font-variant-numeric: tabular-nums;
+    }
 
     &[data-readonly] {
       opacity: 0.7;

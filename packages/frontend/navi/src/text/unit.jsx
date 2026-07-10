@@ -1,3 +1,4 @@
+import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
@@ -18,7 +19,7 @@ export const Unit = ({
   unit,
   plural,
   format = "long",
-  lang,
+  lang = languagesSignal.value,
   label,
   size = "smaller",
   sizeRatio,

@@ -1,3 +1,5 @@
+import { findDescendant } from "../../traversal.js";
+import { elementIsFocusable } from "./element_is_focusable.js";
 import { performTabNavigation } from "./tab_navigation.js";
 
 /**
@@ -5,12 +7,19 @@ import { performTabNavigation } from "./tab_navigation.js";
  *
  * Once active:
  * - **Tab / Shift+Tab** cycle through focusable descendants of `element`,
- *   wrapping from last → first and first → last. If no focusable element
- *   exists, the default browser Tab action is suppressed so focus cannot
- *   escape.
+ *   wrapping from last → first and first → last — *unless* `boundaryElement`
+ *   is a real container (not `document`), in which case Tab escapes the
+ *   whole container instead of wrapping (see `boundaryElement`'s own doc).
+ *   If no focusable element exists, the default browser Tab action is
+ *   suppressed so focus cannot escape.
  * - **Mouse clicks** outside `element` are only blocked when `pointerTrap`
  *   is `true`. Backdrop clicks (on `<dialog>` elements) still propagate even
  *   then, so the dialog can close itself.
+ * - **Focus entering `boundaryElement` from outside it** (e.g. a `focus()`
+ *   call, or Tab arriving from further out in the document) always lands on
+ *   `element`'s own first focusable descendant — never on some other
+ *   focusable sibling `boundaryElement` happens to also contain. Only
+ *   relevant when `boundaryElement` isn't `document` (see below).
  *
  * Multiple traps can be stacked. When a new trap is activated the previous
  * one is paused; when the new trap is released the previous one resumes.
@@ -23,11 +32,30 @@ import { performTabNavigation } from "./tab_navigation.js";
  *   Backdrop clicks (target is a `<dialog>` element) only receive `preventDefault`
  *   and still propagate, allowing the dialog to react to them (e.g. close itself).
  * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @param {Document|HTMLElement} [options.boundaryElement=document] - Where the
+ *   mousedown/keydown/focusin listeners are attached. Defaults to `document`
+ *   (a genuinely page-wide modal — the usual case, where none of the
+ *   container-specific behavior below applies). Pass a specific container
+ *   element instead for a trap that should only apply *within* that
+ *   container: a Tab press or click occurring entirely outside it never
+ *   reaches a listener attached there at all (events only bubble through
+ *   their own ancestor chain), so the rest of the page keeps its normal tab
+ *   order/interactions untouched. Inside the container, `element` behaves
+ *   as if it were the *only* focusable thing `boundaryElement` contains:
+ *   Tab reaching either edge of `element` skips over any other focusable
+ *   sibling sharing the container, exiting the container entirely (not
+ *   wrapping back into `element`), and focus arriving at some other
+ *   focusable sibling inside the container gets redirected into `element`'s
+ *   own first focusable descendant instead. Used by Dialog's own
+ *   `layer="local"` renderer, which is only meant to be modal within its
+ *   own positioned ancestor, not the whole document — a case where that
+ *   ancestor can genuinely contain other, unrelated focusable content
+ *   (e.g. a trigger button placed right next to it).
  * @returns {() => void} Cleanup function — call it to release the trap.
  */
 export const trapFocusInside = (
   element,
-  { debug, pointerTrap = false } = {},
+  { debug, pointerTrap = false, boundaryElement = document } = {},
 ) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
@@ -51,6 +79,10 @@ export const trapFocusInside = (
     }
     return true;
   };
+
+  // A real container (not document) — element must behave as the only
+  // focusable thing boundaryElement contains, see this file's own doc.
+  const escapeRoot = boundaryElement === document ? null : boundaryElement;
 
   const lock = () => {
     const onmousedown = pointerTrap
@@ -78,6 +110,7 @@ export const trapFocusInside = (
         const handled = performTabNavigation(event, {
           rootElement: element,
           debug,
+          escapeRoot,
         });
         if (!handled) {
           // No focusable target found — prevent the browser from moving focus outside the trap.
@@ -86,25 +119,50 @@ export const trapFocusInside = (
       }
     };
 
+    // Focus landing on some other focusable sibling boundaryElement also
+    // contains (not element itself) gets redirected into element's own
+    // first focusable descendant — e.g. a direct .focus() call, or Tab
+    // arriving from further out in the document. Click-driven focus theft
+    // is already prevented above by onmousedown (when pointerTrap is on);
+    // this covers the rest (keyboard-driven entry, programmatic focus()).
+    const onfocusin = escapeRoot
+      ? (event) => {
+          const target = event.target;
+          if (target === element || element.contains(target)) {
+            return;
+          }
+          const firstFocusable = findDescendant(element, (node) =>
+            elementIsFocusable(node),
+          );
+          firstFocusable?.focus();
+        }
+      : null;
+
     if (onmousedown) {
-      document.addEventListener("mousedown", onmousedown, {
+      boundaryElement.addEventListener("mousedown", onmousedown, {
         capture: true,
         passive: false,
       });
     }
-    document.addEventListener("keydown", onkeydown, {
+    boundaryElement.addEventListener("keydown", onkeydown, {
       capture: true,
       passive: false,
     });
+    if (onfocusin) {
+      boundaryElement.addEventListener("focusin", onfocusin);
+    }
 
     return () => {
       if (onmousedown) {
-        document.removeEventListener("mousedown", onmousedown, {
+        boundaryElement.removeEventListener("mousedown", onmousedown, {
           capture: true,
           passive: false,
         });
       }
-      document.removeEventListener("keydown", onkeydown, {
+      if (onfocusin) {
+        boundaryElement.removeEventListener("focusin", onfocusin);
+      }
+      boundaryElement.removeEventListener("keydown", onkeydown, {
         capture: true,
         passive: false,
       });

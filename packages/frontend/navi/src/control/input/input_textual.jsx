@@ -56,7 +56,6 @@ import { InputTypeResolver } from "./input_resolver_type.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
 import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
-import { resolveInputProps } from "./resolve_input_props.js";
 import { useAutoSelectReadOnly } from "./use_autoselect_read_only.js";
 
 const css = /* css */ `
@@ -423,7 +422,6 @@ const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  resolveInputProps(props);
 
   return <Next {...props} />;
 };

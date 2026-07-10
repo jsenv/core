@@ -183,7 +183,11 @@ export {
 export { Icon } from "./src/text/icon.jsx";
 export { Interpolate } from "./src/text/interpolate.jsx";
 export { interpolateText } from "./src/text/interpolate_text.js";
-export { langSignal } from "./src/text/lang_signal.js";
+export {
+  languagesSignal,
+  setPreferredLanguage,
+  setSupportedLanguages,
+} from "./src/text/lang_signal.js";
 export { MessageBox } from "./src/text/message_box.jsx";
 export { Meter } from "./src/text/meter.jsx";
 export { naviI18n } from "./src/text/navi_i18n.js";
@@ -213,7 +217,9 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 // popup (popover, dialog, tooltip, side panel ...)
 export { Dialog } from "./src/popup/dialog.jsx";
 export { Popover } from "./src/popup/popover.jsx";
-export { SidePanel, useSidePanelClose } from "./src/popup/side_panel.jsx";
+export { Popup } from "./src/popup/popup.jsx";
+export { SidePanel } from "./src/popup/side_panel.jsx";
+export { createSlot } from "./src/popup/slot.jsx";
 
 // Responsivness
 export { windowWidthSignal } from "./src/layout/responsive.js";

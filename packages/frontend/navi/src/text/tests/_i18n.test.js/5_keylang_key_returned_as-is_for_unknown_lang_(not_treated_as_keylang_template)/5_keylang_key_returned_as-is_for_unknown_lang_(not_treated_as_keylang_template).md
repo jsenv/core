@@ -1,7 +1,7 @@
 # [keyLang: key returned as-is for unknown lang (not treated as keyLang template)](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "de", keyLang: "en" });
+const i18n = createI18n({ runtimeLang: "de", keyLang: "en" });
 i18n.add("Hello!", { fr: "Bonjour !" });
 return {
   result: i18n("Hello!"),

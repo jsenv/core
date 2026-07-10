@@ -1,7 +1,7 @@
 # [activeLang updated when a matching lang is registered after creation](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 const before = i18n("one minute");
 i18n.add("one minute", { fr: "une minute" });
 const after = i18n("one minute");

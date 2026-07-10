@@ -59,21 +59,39 @@ export const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    // Only autofocus when the element is mounted directly on the document.
-    // Any other event type means an expandable (popover, dialog, …) just opened
-    // and revealed this element — the expandable's opening logic already calls
-    // focusFirstAutofocusOrFocusable, so we must not steal focus here.
-    if (e.type !== "navi_displayed_on_document") {
+    // Only autofocus when genuinely mounted directly on the document, or
+    // when *this* element is itself the expandable ancestor that just
+    // opened (e.g. Dialog's own self-targeting "fallback" autofocus below).
+    // Any other case means some *other* ancestor (popover, dialog, …) just
+    // opened and revealed this element as one of its descendants — that
+    // ancestor's own opening logic (transferFocus/openEffect) already
+    // placed focus, so we must not steal it back here.
+    const { ancestor, ancestorType } = e.detail;
+    const isSelfAncestor = ancestor === focusableElement;
+    if (ancestorType !== "document" && !isSelfAncestor) {
       return () => {};
     }
     const activeElement = document.activeElement;
+    if (
+      autoFocus === "fallback" &&
+      activeElement !== focusableElement &&
+      focusableElement.contains(activeElement)
+    ) {
+      // "fallback" only ever claims focus when nothing more specific
+      // already did. A descendant with its own real navi-autofocus (or one
+      // focused synchronously by transferFocus, see focus_transfer.js) has
+      // already run by the time this fires — Preact commits a child's own
+      // layout effects before its parent's, so this parent-level "fallback"
+      // effect would otherwise unconditionally steal focus back from it.
+      return () => {};
+    }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
-    if (e.type === "navi_displayed_on_document") {
-      debugFocus(e, `[autofocus] mount -> ${focusDebugCall}`);
+    if (ancestorType === "document") {
+      debugFocus(e, `[autofocus] document -> ${focusDebugCall}`);
     } else {
       debugFocus(
         e,
-        `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
+        `[autofocus] "${ancestorType}" opened ${getElementSignature(ancestor)} -> ${focusDebugCall}`,
       );
     }
     focusableElement.focus({ preventScroll, focusVisible });

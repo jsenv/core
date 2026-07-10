@@ -127,19 +127,19 @@
               <div>
                 <div class="states-col-header">Navi Picker</div>
                 <Box flex="y" spacing="s">
-                  <Field vertical>
+                  <Field flex="y">
                     <Label border="1px dotted grey">Vide</Label>
                     <Picker name="color_empty" type="color" />
                   </Field>
-                  <Field vertical>
-                    <Label>Vide + placeholder</Label>
+                  <Field flex="y">
+                    <Label border="1px dotted grey">Vide + placeholder</Label>
                     <Picker
                       name="color_empty_placeholder"
                       type="color"
                       placeholder="Choisir une couleur"
                     />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label border="1px dotted grey">Avec valeur</Label>
                     <Picker
                       name="color_with_value"
@@ -147,7 +147,7 @@
                       defaultValue={DEFAULT_COLOR}
                     />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Readonly</Label>
                     <Picker
                       name="color_readonly"
@@ -156,7 +156,7 @@
                       readOnly
                     />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Disabled</Label>
                     <Picker
                       name="color_disabled"
@@ -165,7 +165,7 @@
                       disabled
                     />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Loading</Label>
                     <Picker
                       name="color_loading"
@@ -179,27 +179,27 @@
               <div>
                 <div class="states-col-header">User agent</div>
                 <Box flex="y" spacing="s">
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Vide (n/a — toujours noir)</Label>
                     <input type="color" />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Vide + placeholder (n/a)</Label>
                     <input type="color" />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Avec valeur</Label>
                     <input type="color" value={DEFAULT_COLOR} readOnly />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Readonly</Label>
                     <input type="color" value={DEFAULT_COLOR} readOnly />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Disabled</Label>
                     <input type="color" value={DEFAULT_COLOR} disabled />
                   </Field>
-                  <Field vertical>
+                  <Field flex="y">
                     <Label>Loading (n/a)</Label>
                     <input type="color" value={DEFAULT_COLOR} disabled />
                   </Field>
@@ -398,13 +398,16 @@
             />
             <h3 class="states-col-header">ui="default" — UI du navigateur</h3>
             <p class="desc">
-              Passer <code>ui="default"</code> conserve le color picker natif
-              du navigateur tout en bénéficiant du système navi (validation,
+              Passer <code>ui="default"</code> conserve le color picker natif du
+              navigateur tout en bénéficiant du système navi (validation,
               action, états loading…).
             </p>
             <div class="states-grid">
               <div>
-                <p class="desc" style={{ margin: "0 0 8px", fontStyle: "italic" }}>
+                <p
+                  class="desc"
+                  style={{ margin: "0 0 8px", fontStyle: "italic" }}
+                >
                   Picker ui="default"
                 </p>
                 <Box flex="y" spacing="s" alignX="start">
@@ -436,7 +439,10 @@
                 </Box>
               </div>
               <div>
-                <p class="desc" style={{ margin: "0 0 8px", fontStyle: "italic" }}>
+                <p
+                  class="desc"
+                  style={{ margin: "0 0 8px", fontStyle: "italic" }}
+                >
                   input natif (référence)
                 </p>
                 <Box flex="y" spacing="s" alignX="start">

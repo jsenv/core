@@ -121,16 +121,26 @@ export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.
 
 // position
 export {
+  getPositioningScrollOffset,
   getScrollBox,
   getScrollRelativeRect,
 } from "./src/position/dom_coords.js";
-export { getPositionedParent } from "./src/position/offset_parent.js";
+export {
+  getPositionedParent,
+  getPositioningContainer,
+} from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
 export {
+  applyNewPosition,
+  parsePositionArea,
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "./src/position/visible_rect.js";
+export {
+  subscribeVisualViewportResizeSettled,
+  subscribeWindowResizeSettled,
+} from "./src/position/window_size.js";
 
 // size
 export { initFlexDetailsSet } from "./src/size/flex_details_set.js";

@@ -34,6 +34,10 @@ const css = /* css */ `
     }
   }
 
+  time.navi_text {
+    font-variant-numeric: tabular-nums;
+  }
+
   *[data-navi-space] {
   }
 

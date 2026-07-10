@@ -20,8 +20,12 @@
 
 - **Never write tests on your initiative**
 - **Never write documentation on your initiative**
+- **Never verify on your own initiative**: don't run regression checks against unrelated demos/features, and don't open a demo file you just wrote/edited in Playwright or a browser to confirm it works. The user drives verification and will explicitly ask (e.g. "test this in the browser", "run the demo") when they want it. This applies even when a skill (e.g. demo-files) says to prefer checking behavior over reading code — that guidance only kicks in once the user has asked for verification.
 - **Backward Compatibility**: Do not try to maintain it. Breaking changes are fine and desired. Always. So always write code targeting what we want even if that means renaming usages in the codebase.
 - **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
+- **Don't run the test suite defensively**: only run it (`npm run test`, `npm run test:packages`, etc.) when the task is actually about tests — writing new ones or working on existing ones. The goal of a session is to iterate quickly, not necessarily to reach zero errors; time-consuming verification should happen when it concretely makes sense for the task, not by default. Same spirit as the "never verify on your own initiative" rule above.
+- **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
+- **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
 
 ## Project Overview
 
@@ -60,7 +64,16 @@
 - To add debug logs: use `console.debug` with plain sentences, not objects (easier to copy-paste)
 - **Optional Chaining**: Only use `?.` when the value can genuinely be undefined. If you control the data structure and know values exist, access them directly
 - **Always use `{}` block bodies**: Never single-expression `if` without braces. Always `if (x) { return y; }` not `if (x) return y;` — makes it easy to add `console.log` or `debugger` without restructuring
-- **No history-referencing comments**: Never write comments explaining what used to be there, what changed, or that something "no longer" happens (e.g. "no more X round-trip", "replaces the old Y", "instead of a hook-based one"). Comments describe the current code, not its diff against a previous version — that belongs in the commit message/PR description. A comment should make sense to someone who has never seen the old code.
+- **No history-referencing comments**: Never write comments explaining what used to be there, what changed, or why the current code is better/different than before. Comments describe the current code in isolation, as if written by someone seeing it for the first time — not its diff against a previous version. That belongs in the commit message/PR description.
+  - Banned words/phrases (all signal a diff-comment, not a code-comment): "now" (as in "X now does Y"), "no longer", "instead of", "used to", "previously", "replaces", "changed from", "no more X", "own top-layer element now", "not a descendant of X anymore".
+  - Bad: `// The backdrop is its own top-layer element now` — implies there's an "old way" the reader needs to unlearn.
+  - Good: `// A sibling top-layer element, not a descendant of the popover — see the CSS comment for why.` — describes the structure as it is, no before/after.
+  - Bad: `// No more positionX/positionY props — anchorArea covers this now.`
+  - Good: nothing, or if the constraint is non-obvious, state it as a fact about the current API: `// anchorArea covers both axes in one prop.`
+  - This applies even when the comment is otherwise useful/accurate — rewrite it to drop the comparison rather than skip explaining a genuinely non-obvious constraint.
+- **Don't comment what the code already says**: if a comment just narrates control flow or restates what a well-named variable/function already makes obvious ("Sync the DOM open and return how to sync it back closed" above a function that visibly does exactly that), delete it. Only comment the *why* behind a non-obvious choice — a constraint, a workaround, a rejected simpler alternative, a subtle invariant. If you can delete a comment and lose nothing a fresh reader needs, delete it.
+- **Long documentation doesn't belong inline next to implementation**: a prop's accepted-values grammar, a parameter's semantics, "how to use this component" — that's JSDoc (`@param` on the exported function/component, per the JSDoc section below) or a short module-level comment near the top of the file, not a multi-paragraph comment sitting next to the line of code that happens to use it. Inline comments justify *that specific line*; they are not the place to teach the whole feature.
+- **Keep inline comments short**: a sentence or two justifying the non-obvious choice at that line. If an inline comment runs past ~4-5 lines, either it belongs in a JSDoc/module-level comment instead (see above), or it needs to be cut down to its one essential point — don't preserve every nuance "just in case", trim to what a reader actually needs to not get confused at that line.
 
 #### JSDoc
 
@@ -68,6 +81,15 @@
 - For non-obvious props, add `@param` entries after the `@type` block to provide textual descriptions — VSCode shows both in the hover tooltip
 - See `packages/frontend/navi/src/control/list/list.jsx` for a `@type`-only reference example
 - See `packages/frontend/navi/src/text/text.jsx` for a combined `@type` + `@param` example
+
+#### Top-level file comments
+
+A file's own top-of-file comment has exactly two jobs:
+
+1. **Orient a first-time reader**: give whoever just opened this file (a newcomer, the author back after a few days away, an AI with no memory of the conversation that wrote it) a quick overall picture of what the file does and how it's organized.
+2. **Justify surprising technical choices**: explain *why* a non-obvious decision was made, and warn about approaches that were tried and specifically must not be reintroduced.
+
+Nothing else belongs there. Other sources already cover everything else — the top-level comment must not restate what they say: the code itself (well-named functions/variables), inline comments (the *why* at one specific line), JSDoc (a prop's accepted values/semantics), external docs, demo files. If a paragraph in a top-level comment is really documenting a prop's grammar or "how to use this component," move it to JSDoc instead — don't duplicate it in both places. Before adding a paragraph to a top-level comment, ask: is this orientation, or a warning about a rejected approach? If neither, it belongs somewhere else (or nowhere).
 
 ### CSS
 

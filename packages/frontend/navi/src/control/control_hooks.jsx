@@ -282,9 +282,16 @@ export const useControlProps = (
         if (defaultAction === "activate") {
           // activating the control (e.g. space on a button/range)
           return {
-            name: `keydown to ${defaultAction}`,
+            name: `keydown to activate`,
             prevented: () => e.preventDefault(),
-            allowed: () => triggerUIAction(e),
+            allowed: () => {
+              triggerUIAction(e);
+              if (controlType === "button" && e.key === " ") {
+                // prevent browser dispatching click
+                // it could lead to duplicates as we explicitely handled the space to click here
+                e.preventDefault();
+              }
+            },
           };
         }
         if (defaultAction === "scroll") {
@@ -410,8 +417,7 @@ export const useControlProps = (
           const input = e.currentTarget;
           return {
             name: "enter on input to send closest control group",
-            // allow to dispatch --navi-send even if input is readonly
-            bypassInteractivity: true,
+            bypassInteractivity: true, // allow to dispatch --navi-send even if input is readonly
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
             prevented: () => e.preventDefault(),

@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dialog demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-toc {
+        margin-bottom: 32px;
+        padding: 12px 16px;
+        background: #f6f6f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+      .demo-toc ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-toc li {
+        margin-bottom: 4px;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+        scroll-margin-top: 16px;
+      }
+      .demo-subsection {
+        margin-top: 20px;
+        margin-left: 8px;
+      }
+      .demo-row {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .demo-position-grid {
+        /* Same visual idea as popover_demo.html's own .demo-area-grid — the
+           full 5×5 Y×X grid Dialog's own positionArea grammar now shares
+           with Popover (see dialog.jsx's own top comment for why several
+           combinations still matter despite landing on the same final
+           position: positionArea alone picks which animation direction
+           plays). */
+        display: grid;
+        width: fit-content;
+        margin-top: 8px;
+        padding: 8px;
+        grid-template-columns: repeat(5, 100px);
+        grid-template-rows: repeat(5, 48px);
+        gap: 2px;
+        border: 1px solid #999;
+      }
+      .demo-position-cell {
+        display: flex;
+        border: 1px solid #ccc;
+      }
+      .demo-position-button {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 2px;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        text-align: center;
+        line-height: 1.2;
+        white-space: normal;
+      }
+      .demo-position-button[data-duplicate] {
+        opacity: 0.35;
+      }
+      .demo-lazy-mount {
+        /* Fixed footprint, kept identical whether showing the placeholder
+           or the actually-rendered content — swapping between them (on
+           "Render") must not shift the rest of the page's own layout. */
+        display: flex;
+        width: 220px;
+        height: 90px;
+        align-items: center;
+        justify-content: center;
+      }
+      .demo-lazy-placeholder {
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        color: #777;
+        font-size: 12px;
+        background: #f0f0f0;
+        border: 1px dashed #bbb;
+        border-radius: 8px;
+      }
+      .demo-animate-controls {
+        display: flex;
+        margin-top: 8px;
+        gap: 12px;
+      }
+      .demo-animate-toggle {
+        display: block;
+        font-size: 13px;
+      }
+      .demo_dialog_box {
+        width: 280px;
+        padding: 20px 24px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .demo_dialog_flex_box {
+        /* No fixed size, unlike .demo_dialog_box above — sizes to its
+           content, so this section can show how Dialog copes with small
+           vs. large content instead of hiding it behind a fixed box. */
+        max-width: 320px;
+        padding: 20px 24px;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .demo-container {
+        position: relative;
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        height: 240px;
+        margin-bottom: 8px;
+        align-items: center;
+        justify-content: center;
+        border: 1px dotted #999;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .demo-container-label {
+        color: #999;
+        font-size: 12px;
+      }
+      .demo-important-note {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #7a5b00;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
+      }
+      .demo-content-wide-block {
+        width: 460px;
+        max-width: none;
+        height: 22px;
+        margin: 4px 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
+      .demo-content-tall-block {
+        /* flex-shrink: 0 (+ matching min-height) so a flex/column ancestor
+           can't shrink these back down — the whole point is to force the
+           dialog taller, not to be squeezed to fit. Tall enough on its own
+           (8 of them) to overflow most viewports and exercise the same
+           overflow handling as the dedicated "exceeds viewport" example. */
+        height: 120px;
+        min-height: 120px;
+        margin: 4px 0;
+        flex-shrink: 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useState, useEffect } from "preact/hooks";
+      import { Button, Dialog } from "@jsenv/navi";
+
+      // Backs each section's own "Slow" checkbox/"Animation" select —
+      // independent per section, so slowing/changing one doesn't affect the
+      // others while you're testing (same pattern as popover_demo.html).
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+      const useStoredString = (key, defaultValue) => {
+        const [value, setValue] = useState(
+          () => localStorage.getItem(key) ?? defaultValue,
+        );
+        useEffect(() => {
+          localStorage.setItem(key, value);
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // "none" maps to no `animation` prop at all. "sliding" resolves to a
+      // concrete slide-from-* direction from positionArea alone (Dialog
+      // never has a real anchor — see dialog.jsx's own top comment), same
+      // as "auto" does whenever positionArea isn't dead-center.
+      const ANIMATION_CHOICES = [
+        "none",
+        "auto",
+        "fading",
+        "scaling",
+        "sliding",
+      ];
+
+      const useAnimateControls = (storageKey) => {
+        const [animationChoice, setAnimationChoice] = useStoredString(
+          `${storageKey}_animation`,
+          "none",
+        );
+        const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
+        const animation =
+          animationChoice === "none" ? undefined : animationChoice;
+        const animationDuration = animation && slow ? "0.6s" : undefined;
+        return {
+          animation,
+          animationDuration,
+          controlsProps: { animationChoice, setAnimationChoice, slow, setSlow },
+        };
+      };
+
+      const AnimateControls = ({
+        animationChoice,
+        setAnimationChoice,
+        slow,
+        setSlow,
+      }) => (
+        <div class="demo-animate-controls">
+          <label class="demo-animate-toggle">
+            Animation:{" "}
+            <select
+              value={animationChoice}
+              onChange={(e) => setAnimationChoice(e.target.value)}
+            >
+              {ANIMATION_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {choice}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="demo-animate-toggle">
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow
+          </label>
+        </div>
+      );
+
+      // No openController here: without one, Dialog creates its own and
+      // self-wires to --navi-toggle/--navi-close commands.
+      const TriggeredDialog = ({
+        label,
+        animation,
+        animationDuration,
+        pointerInteractionOutsideEffect,
+      }) => {
+        const dialogId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation={animation}
+              animationDuration={animationDuration}
+              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const PointerInteractionOutsideSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_pointer_interaction_outside");
+        return (
+          <section id="pointer-interaction-outside" class="demo-section">
+            <h2>4. pointerInteractionOutsideEffect</h2>
+            <p>
+              <code>"close"</code> (default) closes on an outside click.{" "}
+              <code>"capture"</code>/<code>"none"</code> both just absorb it —
+              <code>showModal()</code> already makes the rest of the page inert,
+              so there's nothing for the click to reach either way (see
+              dialog.jsx's own top comment).
+            </p>
+            <div class="demo-row">
+              <TriggeredDialog
+                label="close (default)"
+                animation={animation}
+                animationDuration={animationDuration}
+                pointerInteractionOutsideEffect="close"
+              />
+              <TriggeredDialog
+                label="capture"
+                animation={animation}
+                animationDuration={animationDuration}
+                pointerInteractionOutsideEffect="capture"
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
+      // Mounting a component with its dialog already open is only
+      // interesting to test *on demand* — rendered directly in the page's
+      // own initial render, every reload would pop it open immediately
+      // (even more disruptive for a Dialog than a Popover). This
+      // placeholder defers rendering `renderContent()` until clicked.
+      const LazyMount = ({ label, renderContent }) => {
+        const [mounted, setMounted] = useState(false);
+        return (
+          <div class="demo-lazy-mount">
+            {mounted ? (
+              renderContent()
+            ) : (
+              <div class="demo-lazy-placeholder">
+                <span>{label}</span>
+                <Button onClick={() => setMounted(true)}>Render</Button>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Mounts already open, with animation on — the entrance animation
+      // should NOT play (same idea as popover_demo.html's own "Open from
+      // the start" section — see its comment there for why).
+      const OpenFromStartDialog = ({ label, ...props }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation
+              animationDuration="0.6s"
+              className="demo_dialog_box"
+              {...props}
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const OpenFromStartSection = () => (
+        <section id="open-from-start" class="demo-section">
+          <h2>5. Open from the start</h2>
+          <p>
+            <code>open={"{true}"}</code> (controlled) or{" "}
+            <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
+            already open — animation is on for both below, but it should never
+            actually play on mount, only on a later close/reopen. Click "Render"
+            below to actually mount each one (rather than forcing it open on
+            every page load). Neither has a real anchor (nothing triggered the
+            open, so there's no button to inherit one from) — regression
+            coverage for both staying their own natural width instead of
+            stretching to the viewport's.
+          </p>
+          <div class="demo-row">
+            <LazyMount
+              label={"open={true}"}
+              renderContent={() => (
+                <OpenFromStartDialog label={"open={true}"} open />
+              )}
+            />
+            <LazyMount
+              label="defaultOpen"
+              renderContent={() => (
+                <OpenFromStartDialog label="defaultOpen" defaultOpen />
+              )}
+            />
+          </div>
+        </section>
+      );
+
+      // Basic --navi-toggle-driven open/close, no anchor concept at all
+      // (unlike Popover — Dialog is never positioned relative to whatever
+      // triggered it).
+      const ControlledByButtonSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_controlled_by_button");
+        return (
+          <section id="controlled-by-button" class="demo-section">
+            <h2>1. Controlled by button</h2>
+            <p>
+              A button commanding <code>--navi-toggle</code> opens/closes the
+              dialog.
+            </p>
+            <div class="demo-row">
+              <TriggeredDialog
+                label="Button commanding dialog"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
+      // No fixed size on the dialog itself (see .demo_dialog_flex_box) —
+      // each button below opens the same dialog with a different amount of
+      // content, small to large enough to exceed the viewport, to see how
+      // Dialog's default (centered) sizing copes.
+      const ContentSizeDialog = ({
+        label,
+        content,
+        animation,
+        animationDuration,
+      }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              scrollCapture
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_flex_box"
+            >
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
+              {content}
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      // Same idea, but the content grows/shrinks *while already open* (via
+      // local state, not a different dialog instance) — shows whether the
+      // dialog reacts to its own size changing after it's already shown.
+      const ExpandCollapseDialog = ({
+        label,
+        animation,
+        animationDuration,
+      }) => {
+        const dialogId = useId();
+        const [expanded, setExpanded] = useState(false);
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              scrollCapture
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_flex_box"
+            >
+              <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
+              <Button onClick={() => setExpanded((v) => !v)}>
+                {expanded ? "Collapse" : "Expand"}
+              </Button>
+              {expanded &&
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      // The triggering button doubles as the dialog's own anchor by default
+      // (no anchor prop set — see dialog.jsx's own openEffect), so a very
+      // wide button forces --anchor-width (and therefore .navi_dialog's own
+      // min-width) up accordingly. Regression coverage for two related
+      // fixes: min-width must never push the dialog's real, padding-
+      // included footprint past --dialog-maxmax-width (box-sizing:
+      // border-box), and an *anchorless* dialog (see "5. Open from the
+      // start" below) must not fall back to stretching to the viewport's
+      // own width/height instead of having no anchor-driven minimum at all.
+      const WideAnchorDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={dialogId}
+              style={{ width: "90vw", maxWidth: "900px" }}
+            >
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>
+                This dialog's own <code>min-width</code> is forced up by its
+                (very wide) anchor button above — should still never exceed the
+                viewport's own spacing, <code>demo_dialog_box</code>'s own
+                padding included.
+              </p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      // minWidth/minHeight passed directly, way past any viewport — since
+      // min-width/height always wins over max-width/height when the two
+      // conflict (a CSS spec rule, not a bug), dialog.jsx clamps its own
+      // min-width/height with an outer min() against the exact same
+      // max-width/height ceiling instead of a bare var(). Without that
+      // clamp, this dialog would blow straight through
+      // --dialog-maxmax-width/height.
+      const MegaMinSizeDialog = ({ label, animation, animationDuration }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              minWidth="3000px"
+              minHeight="3000px"
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>
+                <code>minWidth="3000px"</code> <code>minHeight="3000px"</code> —
+                should still never exceed the viewport's own spacing.
+              </p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const ContentSizeSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_content_size");
+        return (
+          <section id="content-size" class="demo-section">
+            <h2>2. Content dimensions</h2>
+            <p>
+              Dialog has no fixed size of its own either — centered by default,
+              it sizes to whatever's inside it, from a short line of text to
+              content that exceeds the viewport (see "Position" below for other
+              placements).
+            </p>
+            <div class="demo-row">
+              <ContentSizeDialog
+                label="small"
+                content={<p style={{ margin: 0 }}>Just a short line.</p>}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="tall"
+                content={Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="wide"
+                content={<div class="demo-content-wide-block" />}
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="tall + wide"
+                content={
+                  <>
+                    <div class="demo-content-wide-block" />
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} class="demo-content-tall-block" />
+                    ))}
+                  </>
+                }
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <ContentSizeDialog
+                label="exceeds viewport"
+                content={
+                  <>
+                    <div
+                      class="demo-content-wide-block"
+                      style={{ width: "1400px" }}
+                    />
+                    {Array.from({ length: 20 }).map((_, i) => (
+                      <div key={i} class="demo-content-tall-block" />
+                    ))}
+                  </>
+                }
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <WideAnchorDialog
+                label="wide anchor"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <MegaMinSizeDialog
+                label="mega minWidth/minHeight"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+
+            <h3>Expanding/collapsing content while open</h3>
+            <div class="demo-row">
+              <ExpandCollapseDialog
+                label="expand/collapse"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
+      // The full positionArea grammar (same one Popover uses — see
+      // dialog.jsx's own top comment and popup_shared.js's parsePositionArea)
+      // laid out as a 5×5 grid: rows go from fully above to fully below,
+      // columns from fully left to fully right — the middle 3×3 is the
+      // `inset(...)` family, the outer ring the bare/no-overlap family.
+      const POSITION_AREA_GRID = [
+        ["top-left", "top-start", "top", "top-end", "top-right"],
+        [
+          "left-start",
+          "inset(top-left)",
+          "inset(top)",
+          "inset(top-right)",
+          "right-start",
+        ],
+        ["left", "inset(left)", "center", "inset(right)", "right"],
+        [
+          "left-end",
+          "inset(bottom-left)",
+          "inset(bottom)",
+          "inset(bottom-right)",
+          "right-end",
+        ],
+        ["bottom-left", "bottom-start", "bottom", "bottom-end", "bottom-right"],
+      ];
+
+      // Dialog is never really anchored (see dialog.jsx's own top comment)
+      // — overlap and no-overlap collapse to the same placement, so every
+      // `-start`/`-end`/`inset(...)` token lands exactly where its
+      // corner/bare counterpart does. Kept in the grid anyway since
+      // positionArea alone still picks which animation direction plays.
+      const isDuplicatePointArea = (token) =>
+        token.startsWith("inset(") ||
+        token.endsWith("-start") ||
+        token.endsWith("-end");
+
+      // Renders all 25 positionArea tokens, row-major, matching
+      // POSITION_AREA_GRID's own spatial layout.
+      const AreaGrid = ({ renderCell }) => (
+        <div class="demo-position-grid">
+          {POSITION_AREA_GRID.flatMap((row) =>
+            row.map((token) => (
+              <div key={token} class="demo-position-cell">
+                {renderCell(token)}
+              </div>
+            )),
+          )}
+        </div>
+      );
+
+      // The button itself is the grid cell's own content — the Dialog
+      // (fixed/absolute either way) isn't a grid participant visually, only
+      // rendered alongside it so each cell owns its own dialog instance.
+      const PositionDialog = ({
+        label,
+        positionArea,
+        duplicate = false,
+        layer,
+        animation,
+        animationDuration,
+      }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={dialogId}
+              className="demo-position-button"
+              data-duplicate={duplicate ? "" : undefined}
+            >
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              layer={layer}
+              positionArea={positionArea}
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      // layer="top" (default) — the browser's own top layer, so no
+      // container needed at all: each button just opens the same dialog
+      // docked to (or centered in) the whole viewport.
+      const TopLayerPositionSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_position_top_layer");
+        return (
+          <div id="position-top-layer" class="demo-subsection">
+            <h3>3.1 top layer</h3>
+            <AreaGrid
+              renderCell={(token) => (
+                <PositionDialog
+                  label={token}
+                  positionArea={token}
+                  duplicate={isDuplicatePointArea(token)}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                />
+              )}
+            />
+            <AnimateControls {...controlsProps} />
+          </div>
+        );
+      };
+
+      // layer="local" needs the dialogs rendered *inside* the positioned
+      // container to find it (DialogLocal, a plain in-flow div — see
+      // dialog.jsx's own top comment) — the trigger buttons don't, so they
+      // live outside it, in their own grid below (same pattern as
+      // popover_demo.html's own "local layer" subsection).
+      const LocalLayerPositionSection = () => {
+        const baseId = useId();
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_position_local_layer");
+        return (
+          <div id="position-local-layer" class="demo-subsection">
+            <h3>3.2 local layer</h3>
+            <p>
+              Confined to the container below instead of the whole viewport —
+              genuinely clipped by its <code>overflow: hidden</code>. Focus trap
+              and Escape-to-close are both reimplemented in JS for this renderer
+              (try Tab/Shift+Tab and Escape) — the trap is scoped to this
+              container specifically, not the whole document (a Tab press or
+              click outside it is untouched) — the one thing traded away is the
+              hardware/gesture back button closing it (e.g. Android's system
+              back gesture), a known, accepted limitation of{" "}
+              <code>layer="local"</code>, not a bug.
+            </p>
+            <div class="demo-container">
+              <span class="demo-container-label">container</span>
+              {/* Focusable but outside any dialog — with a dialog open, Tab
+                  from inside it should never reach these (wraps back into
+                  the dialog instead), and clicking either directly should
+                  fail to steal focus away from the dialog too (both are
+                  what boundaryElement + pointerTrap: true, in dialog.jsx's
+                  own trapFocusInside call, are for). */}
+              <button type="button">Focusable before</button>
+              {POSITION_AREA_GRID.flat().map((token) => (
+                <Dialog
+                  key={token}
+                  id={`${baseId}-${token}`}
+                  layer="local"
+                  positionArea={token}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                  className="demo_dialog_box"
+                >
+                  <p style={{ marginTop: 0 }}>{token}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Dialog>
+              ))}
+              <button type="button">Focusable after</button>
+            </div>
+            <AreaGrid
+              renderCell={(token) => (
+                <Button
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${token}`}
+                  className="demo-position-button"
+                  data-duplicate={isDuplicatePointArea(token) ? "" : undefined}
+                >
+                  {token}
+                </Button>
+              )}
+            />
+            <AnimateControls {...controlsProps} />
+          </div>
+        );
+      };
+
+      const PositionSection = () => (
+        <section id="position" class="demo-section">
+          <h2>3. Position</h2>
+          <p>
+            The full <code>positionArea</code> grammar Dialog now shares with
+            Popover — a single compass token (<code>top</code>/
+            <code>top-start</code>/<code>top-end</code>/<code>top-left</code>/
+            <code>top-right</code>, <code>right</code>/
+            <code>right-start</code>/<code>right-end</code>,{" "}
+            <code>bottom</code>/<code>bottom-start</code>/
+            <code>bottom-end</code>/<code>bottom-left</code>/
+            <code>bottom-right</code>, <code>left</code>/
+            <code>left-start</code>/<code>left-end</code>, or{" "}
+            <code>center</code>), optionally wrapped in{" "}
+            <code>inset(...)</code> for the overlapping variant (e.g.{" "}
+            <code>inset(top)</code>). Dialog is never really anchored, so
+            several combinations (dimmed below) land on the exact same final
+            position — kept anyway because <code>positionArea</code> alone still
+            picks which animation direction plays for{" "}
+            <code>animation="auto"</code>.
+          </p>
+          <TopLayerPositionSection />
+          <LocalLayerPositionSection />
+        </section>
+      );
+
+      const TableOfContents = () => (
+        <nav class="demo-toc">
+          <strong>Contents</strong>
+          <ol>
+            <li>
+              <a href="#controlled-by-button">Controlled by button</a>
+            </li>
+            <li>
+              <a href="#content-size">Content dimensions</a>
+            </li>
+            <li>
+              <a href="#position">Position</a>
+              <ol>
+                <li>
+                  <a href="#position-top-layer">top layer</a>
+                </li>
+                <li>
+                  <a href="#position-local-layer">local layer</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#pointer-interaction-outside">
+                pointerInteractionOutsideEffect
+              </a>
+            </li>
+            <li>
+              <a href="#open-from-start">Open from the start</a>
+            </li>
+          </ol>
+        </nav>
+      );
+
+      const App = () => (
+        <div>
+          <h1>Dialog demo</h1>
+
+          <TableOfContents />
+
+          <ControlledByButtonSection />
+          <ContentSizeSection />
+          <PositionSection />
+          <PointerInteractionOutsideSection />
+          <OpenFromStartSection />
+        </div>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

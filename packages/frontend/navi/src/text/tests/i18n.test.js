@@ -6,7 +6,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- opaque keys (default mode) ---
 
   test("opaque key: registered translation returned", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.add("one minute", { fr: "une minute" });
     return {
       result: i18n("one minute"),
@@ -14,7 +14,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("opaque key: key returned as-is when not found", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.add("one minute", { fr: "une minute" });
     return {
       result: i18n("one hour"),
@@ -22,7 +22,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("opaque key: key returned as-is when no lang registered", () => {
-    const i18n = createI18n({ systemLang: "de" });
+    const i18n = createI18n({ runtimeLang: "de" });
     i18n.add("one minute", { fr: "une minute" });
     return {
       result: i18n("one minute"),
@@ -30,7 +30,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("opaque key: interpolation with [x] placeholders", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.add("[x] minutes", { fr: "[x] minutes" });
     return {
       "with value": i18n("[x] minutes", { x: 3 }),
@@ -41,7 +41,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- keyLang mode ---
 
   test("keyLang: key doubles as translation for keyLang", () => {
-    const i18n = createI18n({ systemLang: "en", keyLang: "en" });
+    const i18n = createI18n({ runtimeLang: "en", keyLang: "en" });
     i18n.add("Hello [name]!", { fr: "Bonjour [name] !" });
     return {
       en: i18n("Hello [name]!", { name: "Alice" }),
@@ -50,7 +50,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("keyLang: key returned as-is for unknown lang (not treated as keyLang template)", () => {
-    const i18n = createI18n({ systemLang: "de", keyLang: "en" });
+    const i18n = createI18n({ runtimeLang: "de", keyLang: "en" });
     i18n.add("Hello!", { fr: "Bonjour !" });
     return {
       result: i18n("Hello!"),
@@ -58,7 +58,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("keyLang: regional variant of keyLang also uses key as template", () => {
-    const i18n = createI18n({ systemLang: "en-GB", keyLang: "en" });
+    const i18n = createI18n({ runtimeLang: "en-GB", keyLang: "en" });
     i18n.add("Hello!", { fr: "Bonjour !" });
     return {
       result: i18n("Hello!"),
@@ -68,7 +68,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- lang matching ---
 
   test("fr-CA falls back to fr", () => {
-    const i18n = createI18n({ systemLang: "fr-CA" });
+    const i18n = createI18n({ runtimeLang: "fr-CA" });
     i18n.add("one minute", { fr: "une minute" });
     i18n.add("[x] minutes", { fr: "[x] minutes" });
     return {
@@ -78,7 +78,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("regional variant inherits from parent, own keys override", () => {
-    const i18n = createI18n({ systemLang: "fr-provencal" });
+    const i18n = createI18n({ runtimeLang: "fr-provencal" });
     i18n.addLangKeys("fr", {
       "one minute": "une minute",
       "[x] minutes": "[x] minutes",
@@ -98,7 +98,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- addAll / addLangKeys ---
 
   test("addAll registers multiple keys at once", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.addAll({
       "one minute": { fr: "une minute" },
       "one person": { fr: "une personne" },
@@ -110,7 +110,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("addLangKeys is accumulative across multiple calls", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.addLangKeys("fr", { "one minute": "une minute" });
     i18n.addLangKeys("fr", { "one person": "une personne" });
     return {
@@ -120,7 +120,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("activeLang updated when a matching lang is registered after creation", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     const before = i18n("one minute");
     i18n.add("one minute", { fr: "une minute" });
     const after = i18n("one minute");
@@ -130,7 +130,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   // --- fallbackLang ---
 
   test("fallbackLang used when requested lang has no translation", () => {
-    const i18n = createI18n({ fallbackLang: "en", systemLang: "fr" });
+    const i18n = createI18n({ fallbackLang: "en", runtimeLang: "fr" });
     i18n.addLangKeys("en", {
       greeting: "Hello!",
       farewell: "Goodbye!",
@@ -149,7 +149,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("fallbackLang not used when translation exists", () => {
-    const i18n = createI18n({ fallbackLang: "en", systemLang: "fr" });
+    const i18n = createI18n({ fallbackLang: "en", runtimeLang: "fr" });
     i18n.addLangKeys("en", { color: "color" });
     i18n.addLangKeys("fr", { color: "couleur" });
 
@@ -157,7 +157,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   });
 
   test("no fallbackLang: returns key as-is when translation missing", () => {
-    const i18n = createI18n({ systemLang: "fr" });
+    const i18n = createI18n({ runtimeLang: "fr" });
     i18n.addLangKeys("en", { greeting: "Hello!" });
     // no fr translation
 

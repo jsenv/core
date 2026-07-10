@@ -5,7 +5,7 @@
 
 import { parseDuration } from "@jsenv/validity";
 
-import { langSignal } from "./lang_signal.js";
+import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 
 /**
@@ -22,7 +22,7 @@ import { naviI18n } from "./navi_i18n.js";
  */
 export const formatDay = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (format === "numeric") {
     return new Intl.DateTimeFormat(lang, {
@@ -82,7 +82,9 @@ const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, bo
 const getToken = (key, lang) =>
   naviI18n(`time.placeholder.${key}`, undefined, { lang });
 
-export const formatDatePlaceholder = ({ lang = langSignal.value } = {}) => {
+export const formatDatePlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
     day: "numeric",
     month: "numeric",
@@ -105,7 +107,7 @@ export const formatDatePlaceholder = ({ lang = langSignal.value } = {}) => {
 };
 
 export const formatMonthPlaceholder = ({
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
 } = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
@@ -126,12 +128,14 @@ export const formatMonthPlaceholder = ({
     .join("");
 };
 
-export const formatWeekPlaceholder = ({ lang = langSignal.value } = {}) => {
+export const formatWeekPlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
   return `${getToken("week", lang)} xx / ${getToken(lang)}`;
 };
 
 export const formatDatetimePlaceholder = ({
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
 } = {}) => {
   const intlOptions =
@@ -200,7 +204,7 @@ export const formatDayRelative = (offset, lang) => {
 
 export const formatMonth = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   return new Intl.DateTimeFormat(lang, {
     month: format, // "long", "short", or "narrow"
@@ -213,7 +217,7 @@ export const formatMonth = (
  */
 export const formatDatetime = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (format === "long") {
     return new Intl.DateTimeFormat(lang, {
@@ -268,7 +272,7 @@ export const formatTime = (date, lang) => {
  */
 export const formatMinuteDuration = (
   minutes,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -328,7 +332,7 @@ export const formatHourDuration = (hours, options) => {
  */
 export const formatSecondDuration = (
   seconds,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -372,7 +376,7 @@ export const formatSecondDuration = (
  */
 export const formatDuration = (
   duration,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (typeof duration === "string") {
     duration = parseDuration(duration) ?? {};
@@ -476,7 +480,12 @@ export const formatDuration = (
  */
 const formatTimeAgo = (
   date,
-  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
 ) => {
   const rtf = new Intl.RelativeTimeFormat(lang, {
     numeric: "auto",
@@ -549,7 +558,12 @@ const formatTimeAgo = (
 export const formatTimeRelative = (
   start,
   durationMs = 0,
-  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;

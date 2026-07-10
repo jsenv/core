@@ -1,0 +1,1344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popover demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-toc {
+        margin-bottom: 32px;
+        padding: 12px 16px;
+        background: #f6f6f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+      .demo-toc ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-toc li {
+        margin-bottom: 4px;
+      }
+      .demo-section {
+        margin-bottom: 32px;
+        scroll-margin-top: 16px;
+      }
+      .demo-subsection {
+        margin-top: 20px;
+        margin-left: 8px;
+      }
+      .demo-row {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .demo-lazy-mount {
+        /* Fixed footprint, kept identical whether showing the placeholder
+           or the actually-rendered content — swapping between them (on
+           "Render") must not shift the rest of the page's own layout. */
+        display: flex;
+        width: 220px;
+        height: 90px;
+        align-items: center;
+        justify-content: center;
+      }
+      .demo-lazy-placeholder {
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        padding: 8px 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 8px;
+        color: #777;
+        font-size: 12px;
+        background: #f0f0f0;
+        border: 1px dashed #bbb;
+        border-radius: 8px;
+      }
+      .demo_popover_box {
+        /* Fixed size — content (a label of varying length + a Close button)
+           must not influence it, so every popover in a grid demo is
+           directly comparable regardless of which positionArea it shows. */
+        width: 130px;
+        height: 70px;
+        padding: 6px 8px;
+        font-size: 11px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        overflow: auto;
+      }
+      .demo-container {
+        position: relative;
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        height: 240px;
+        margin-bottom: 8px;
+        align-items: center;
+        justify-content: center;
+        border: 1px dotted #999;
+        border-radius: 8px;
+        overflow: auto;
+      }
+      .demo-important-note {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #7a5b00;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
+      }
+      .demo-animate-controls {
+        display: flex;
+        margin-top: 8px;
+        gap: 12px;
+      }
+      .demo-animate-toggle {
+        display: block;
+        font-size: 13px;
+      }
+      .demo-container-label {
+        color: #999;
+        font-size: 12px;
+      }
+      .demo-side-by-side {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+      .demo-area-grid {
+        display: grid;
+        width: fit-content;
+        margin-top: 8px;
+        padding: 8px;
+        grid-template-columns: repeat(5, 100px);
+        grid-template-rows: repeat(5, 48px);
+        gap: 2px;
+        border: 1px solid #999;
+      }
+      .demo-area-cell {
+        display: flex;
+        border: 1px solid #ccc;
+      }
+      .demo-area-button {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        padding: 2px;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        text-align: center;
+        line-height: 1.2;
+        white-space: normal;
+      }
+      .demo-area-button[data-duplicate] {
+        opacity: 0.35;
+      }
+      .demo-static-anchor-wrapper {
+        position: relative;
+        display: flex;
+        width: fit-content;
+        /* auto left/right centers it above the grid below; also gives
+           "left"/"right" popovers (130px wide) room to render without
+           being clipped by the viewport edge. */
+        margin: 16px auto 44px;
+        align-items: center;
+        justify-content: center;
+      }
+      .demo-static-anchor {
+        padding: 10px 16px;
+        color: #666;
+        font-size: 12px;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
+      /* Almost as wide as the viewport (see isAnchorTooBig's own doc,
+         visible_rect.js) — leaves under 50px on the left/right axis, so
+         "left"/"right" get rejected, while "top"/"bottom" stay unaffected
+         (the anchor's own height is unrelated to that axis). */
+      .demo-toobig-anchor-wide {
+        box-sizing: border-box;
+        width: calc(100vw - 10px);
+        margin: 16px auto;
+        padding: 10px 16px;
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
+      /* Almost as tall as its own .demo-container (see below) — same idea
+         as .demo-toobig-anchor-wide, but on the height/container axis
+         instead of the viewport width. */
+      .demo-toobig-anchor-tall {
+        box-sizing: border-box;
+        width: 80px;
+        height: calc(240px - 5px);
+        padding: 10px 8px;
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
+      .demo-zone-label {
+        position: absolute;
+        color: #bbb;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .demo-zone-label-top {
+        bottom: 100%;
+        margin-bottom: 4px;
+      }
+      .demo-zone-label-bottom {
+        top: 100%;
+        margin-top: 4px;
+      }
+      .demo-zone-label-left {
+        right: 100%;
+        margin-right: 8px;
+      }
+      .demo-zone-label-right {
+        left: 100%;
+        margin-left: 8px;
+      }
+      .demo-legend {
+        display: flex;
+        margin: 8px 0 4px;
+        align-items: center;
+        gap: 10px;
+        color: #555;
+        font-size: 13px;
+      }
+      .demo-legend-example {
+        display: flex;
+        width: 90px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        text-align: center;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      .demo-legend-example[data-duplicate] {
+        opacity: 0.35;
+      }
+      .demo_popover_flex_box {
+        /* No fixed size, unlike .demo_popover_box above — sizes to its
+           content, so this section can show how Popover copes with small
+           vs. large content instead of hiding it behind a fixed box. */
+        max-width: 320px;
+        padding: 10px 14px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      }
+      .demo-content-wide-block {
+        width: 460px;
+        max-width: none;
+        height: 22px;
+        margin: 4px 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
+      .demo-content-tall-block {
+        /* flex-shrink: 0 (+ matching min-height) so a flex/column ancestor
+           can't shrink these back down — the whole point is to force the
+           popup taller, not to be squeezed to fit. Tall enough on its own
+           (8 of them) to overflow most viewports and exercise the same
+           overflow handling as the dedicated "exceeds viewport" example. */
+        height: 120px;
+        min-height: 120px;
+        margin: 4px 0;
+        flex-shrink: 0;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useState, useEffect } from "preact/hooks";
+      import { Button, Popover, NaviDebug, Box } from "@jsenv/navi";
+
+      // The full positionArea grammar (see popup_shared.js's own
+      // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
+      // the anchor to fully below it, columns from fully left to fully
+      // right — the same spatial arrangement the anchor itself sits in at
+      // the grid's center. The middle 3×3 (rows/columns 2–4) is the
+      // `inset(...)` family (overlapping the anchor); the outer ring is the
+      // bare/no-overlap family.
+      const POSITION_AREA_GRID = [
+        ["top-left", "top-start", "top", "top-end", "top-right"],
+        [
+          "left-start",
+          "inset(top-left)",
+          "inset(top)",
+          "inset(top-right)",
+          "right-start",
+        ],
+        ["left", "inset(left)", "center", "inset(right)", "right"],
+        [
+          "left-end",
+          "inset(bottom-left)",
+          "inset(bottom)",
+          "inset(bottom-right)",
+          "right-end",
+        ],
+        ["bottom-left", "bottom-start", "bottom", "bottom-end", "bottom-right"],
+      ];
+
+      // Pinned to a point/corner (layer="top" or "local" — no real anchor
+      // box), overlap and no-overlap collapse to the same placement, so
+      // every `-start`/`-end`/`inset(...)` token lands exactly where its
+      // corner/bare counterpart does (e.g. "top-start" lands where
+      // "top-left" does, "inset(top)" lands where "top" does).
+      const isDuplicatePointArea = (token) =>
+        token.startsWith("inset(") ||
+        token.endsWith("-start") ||
+        token.endsWith("-end");
+
+      // Backs each grid demo's own "Slow" checkbox — independent per
+      // section, so slowing down one doesn't affect the others while you're
+      // testing.
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // Backs each grid demo's own "Animation" select.
+      const useStoredString = (key, defaultValue) => {
+        const [value, setValue] = useState(
+          () => localStorage.getItem(key) ?? defaultValue,
+        );
+        useEffect(() => {
+          localStorage.setItem(key, value);
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // "none" maps to no `animation` prop at all (Popover's own default —
+      // no motion, no fade); every other option passes straight through as
+      // the literal `animation` value.
+      const ANIMATION_CHOICES = [
+        "none",
+        "auto",
+        "sliding",
+        "scaling",
+        "expanding",
+        "fading",
+      ];
+
+      // Backs a section's own "Animation" select and "Slow" checkbox, and
+      // computes the animationDuration to pass down — storageKey scopes both
+      // to that one section, independent of every other section's own
+      // controls. Returns plain values/setters (not a component) so the
+      // controls stay one stable component across renders — a component
+      // returned fresh on every call gets a new identity each render, and
+      // Preact remounts it whenever anything in the parent re-renders,
+      // discarding whatever the user was in the middle of clicking.
+      const useAnimateControls = (storageKey) => {
+        const [animationChoice, setAnimationChoice] = useStoredString(
+          `${storageKey}_animation`,
+          "none",
+        );
+        const [slow, setSlow] = useStoredBoolean(`${storageKey}_slow`, true);
+        const animation =
+          animationChoice === "none" ? undefined : animationChoice;
+        const animationDuration = animation && slow ? "0.6s" : undefined;
+        return {
+          animation,
+          animationDuration,
+          controlsProps: { animationChoice, setAnimationChoice, slow, setSlow },
+        };
+      };
+
+      const AnimateControls = ({
+        animationChoice,
+        setAnimationChoice,
+        slow,
+        setSlow,
+      }) => (
+        <div class="demo-animate-controls">
+          <label class="demo-animate-toggle">
+            Animation:{" "}
+            <select
+              value={animationChoice}
+              onChange={(e) => setAnimationChoice(e.target.value)}
+            >
+              {ANIMATION_CHOICES.map((choice) => (
+                <option key={choice} value={choice}>
+                  {choice}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label class="demo-animate-toggle">
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow
+          </label>
+        </div>
+      );
+
+      const App = () => (
+        <div>
+          <h1>Popover demo</h1>
+
+          <p>
+            Most sections below have an "Animate" checkbox — the same buttons,
+            with <code>animation</code> turned on — the best animation for that
+            context gets picked automatically, always with a fade bundled in (no
+            independent opt-out). A "Slow" checkbox next to it slows that
+            section's animations down so you can actually see them play out.
+          </p>
+
+          <TableOfContents />
+
+          <AnchorSection />
+          <ContentSizeSection />
+          <AnchorAreaSection />
+          <AnchorSpacingSection />
+          <MarginWithContainerSection />
+          <PointerInteractionOutsideSection />
+          <CustomizationSection />
+          <OpenAtStartSection />
+          <AnchorTooBigSection />
+        </div>
+      );
+
+      const TableOfContents = () => (
+        <nav class="demo-toc">
+          <strong>Contents</strong>
+          <ol>
+            <li>
+              <a href="#anchor">Controlled by button</a>
+            </li>
+            <li>
+              <a href="#content-size">Content dimensions</a>
+            </li>
+            <li>
+              <a href="#anchor-area">Position</a>
+              <ol>
+                <li>
+                  <a href="#anchor-area-with-anchor">With anchor</a>
+                </li>
+                <li>
+                  <a href="#anchor-area-without-anchor">Without anchor</a>
+                </li>
+                <li>
+                  <a href="#anchor-area-local-layer">local layer</a>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <a href="#anchor-spacing">marginWithAnchor</a>
+            </li>
+            <li>
+              <a href="#layer-spacing">marginWithContainer</a>
+            </li>
+            <li>
+              <a href="#pointer-interaction-outside">
+                pointerInteractionOutsideEffect
+              </a>
+            </li>
+            <li>
+              <a href="#customization">Customization</a>
+            </li>
+            <li>
+              <a href="#open-from-start">Open from the start</a>
+            </li>
+            <li>
+              <a href="#anchor-too-big">Anchor too big (isAnchorTooBig)</a>
+            </li>
+          </ol>
+        </nav>
+      );
+
+      // No fixed size on the popover itself (see .demo_popover_flex_box) —
+      // each button below opens the same anchored popover with a different
+      // amount of content, small to large enough to exceed the viewport, to
+      // see how positioning/flipping reacts. All anchored "below" the same
+      // way an ordinary consumer would use it (not positionAreaFixed).
+      const ContentSizePopover = ({ label, content }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+              pointerInteractionOutsideEffect="close"
+            >
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
+              {content}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Same idea, but the content grows/shrinks *while already open* (via
+      // local state, not a different popover instance) — shows whether the
+      // popover reacts to its own size changing after it's already
+      // positioned, as opposed to being sized differently from the start.
+      const ExpandCollapsePopover = ({ label }) => {
+        const popoverId = useId();
+        const [expanded, setExpanded] = useState(false);
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              className="demo_popover_flex_box"
+            >
+              <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
+              <Button onClick={() => setExpanded((v) => !v)}>
+                {expanded ? "Collapse" : "Expand"}
+              </Button>
+              {expanded &&
+                Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} class="demo-content-tall-block" />
+                ))}
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const ContentSizeSection = () => (
+        <section id="content-size" class="demo-section">
+          <h2>2. Content dimensions</h2>
+          <p>
+            Popover's dimensions follow its content. When it can better fit on
+            another side, it flips to that side.
+          </p>
+          <div class="demo-row">
+            <ContentSizePopover
+              label="small"
+              content={<p style={{ margin: 0 }}>Just a short line.</p>}
+            />
+            <ContentSizePopover
+              label="tall"
+              content={Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} class="demo-content-tall-block" />
+              ))}
+            />
+            <ContentSizePopover
+              label="wide"
+              content={<div class="demo-content-wide-block" />}
+            />
+            <ContentSizePopover
+              label="tall + wide"
+              content={
+                <>
+                  <div class="demo-content-wide-block" />
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+            <ContentSizePopover
+              label="exceeds viewport"
+              content={
+                <>
+                  <div
+                    class="demo-content-wide-block"
+                    style={{ width: "1400px" }}
+                  />
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} class="demo-content-tall-block" />
+                  ))}
+                </>
+              }
+            />
+          </div>
+
+          <p class="demo-important-note">
+            A popover this wide is unlikely in practice — content usually wraps
+            and flows <em>down</em> instead of pushing the box wider once
+            horizontal space runs out, so you'd rarely see anything close to
+            this. Shown anyway to see what actually happens when something
+            forces it regardless (e.g. a single unbreakable block, a wide image,
+            a table with many columns).
+          </p>
+          <div class="demo-row">
+            <ContentSizePopover
+              label="very wide"
+              content={
+                <div
+                  class="demo-content-wide-block"
+                  style={{ width: "2200px" }}
+                />
+              }
+            />
+          </div>
+
+          <h3>Expanding/collapsing content while open</h3>
+          <div class="demo-row">
+            <ExpandCollapsePopover label="expand/collapse" />
+          </div>
+        </section>
+      );
+
+      const AnchorSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_anchor");
+        return (
+          <section id="anchor" class="demo-section">
+            <h2>1. Controlled by button</h2>
+            <div class="demo-row">
+              <AnchoredPopover
+                label="Button commanding popover"
+                animation={animation}
+                animationDuration={animationDuration}
+                pointerInteractionOutsideEffect="close"
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+
+            <p>
+              To ignore the button's own anchor entirely (e.g. to center the
+              popover in the viewport instead), pass{" "}
+              <code>anchorCustomEventDetail="ignore"</code>:
+            </p>
+            <div class="demo-row">
+              <AnchorlessPopover
+                label='anchorCustomEventDetail="ignore"'
+                pointerInteractionOutsideEffect="close"
+              />
+            </div>
+          </section>
+        );
+      };
+
+      // 3.1 positions relative to a real anchor element; 3.2 positions
+      // relative to the container instead (viewport for 3.2, the
+      // positioned ancestor for 3.3's own layer="local").
+      const AnchorAreaSection = () => (
+        <section id="anchor-area" class="demo-section">
+          <h2>3. Position</h2>
+
+          <div id="anchor-area-with-anchor" class="demo-subsection">
+            <h3>3.1 With anchor</h3>
+            <AnchorAreaDefaultDemo />
+            <p class="demo-important-note">
+              In this section the popover appears on the anchor, not the button.
+              This is because each button as a{" "}
+              <code>navi-command-proxy-for</code> to let anchor become something
+              else than themselves.
+            </p>
+          </div>
+
+          <div id="anchor-area-without-anchor" class="demo-subsection">
+            <h3>3.2 Without anchor</h3>
+            <AnchorAreaViewportDemo />
+          </div>
+
+          <div id="anchor-area-local-layer" class="demo-subsection">
+            <h3>3.3 local layer</h3>
+            <p>
+              Renders where it is instead of the top layer, respecting the
+              positioned parent's own dimensions and clipping (
+              <code>overflow: hidden</code>/<code>auto</code>). Focuses solely
+              on the without-anchor use case below, but a real anchor inside the
+              container would work too.
+            </p>
+            <AnchorAreaScrollContainerDemo />
+          </div>
+        </section>
+      );
+
+      const AnchorSpacingSection = () => (
+        <section id="anchor-spacing" class="demo-section">
+          <h2>4. marginWithAnchor</h2>
+          <div class="demo-row">
+            <AnchoredPopover label="marginWithAnchor={0} (default)" />
+            <AnchoredPopover
+              label="marginWithAnchor={16}"
+              marginWithAnchor={16}
+            />
+            <AnchoredPopover
+              label="animated"
+              marginWithAnchor={16}
+              animation
+              animationDuration="0.6s"
+            />
+          </div>
+        </section>
+      );
+
+      // Docked to the viewport's top-left corner (no real anchor) so the
+      // clamp-to-edge effect of marginWithContainer is directly visible: with
+      // the default 0 the popover touches the corner; with a larger value it
+      // keeps a gap from both edges instead.
+      const MarginWithContainerPopover = ({ label, marginWithContainer }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              anchorCustomEventDetail="ignore"
+              positionArea="inset(top-left)"
+              marginWithContainer={marginWithContainer}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const MarginWithContainerSection = () => (
+        <section id="layer-spacing" class="demo-section">
+          <h2>5. marginWithContainer</h2>
+          <div class="demo-row">
+            <MarginWithContainerPopover label="marginWithContainer={0} (default)" />
+            <MarginWithContainerPopover
+              label="marginWithContainer={24}"
+              marginWithContainer={24}
+            />
+          </div>
+        </section>
+      );
+
+      const PointerInteractionOutsideSection = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_pointer_interaction_outside");
+        return (
+          <section id="pointer-interaction-outside" class="demo-section">
+            <h2>6. pointerInteractionOutsideEffect</h2>
+            <div class="demo-row">
+              <PointerInteractionOutsideDemo
+                label="none (default)"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label="close"
+                pointerInteractionOutsideEffect="close"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+              <PointerInteractionOutsideDemo
+                label="capture"
+                pointerInteractionOutsideEffect="capture"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+            <AnimateControls {...controlsProps} />
+          </section>
+        );
+      };
+
+      const CustomizationPopover = ({ label, borderRadius, style }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius={borderRadius}
+              style={style}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const CustomizationSection = () => (
+        <section id="customization" class="demo-section">
+          <h2>7. Customization</h2>
+          <div class="demo-row">
+            <CustomizationPopover label="default" borderRadius="8px" />
+            <CustomizationPopover
+              label="custom"
+              borderRadius="16px"
+              style={{
+                borderWidth: "3px",
+                borderColor: "#7a5b00",
+                backgroundColor: "#fff8e1",
+              }}
+            />
+          </div>
+        </section>
+      );
+
+      // Mounting a component with its popover already open is only
+      // interesting to test *on demand* — rendered directly in the page's
+      // own initial render, every reload would pop it open immediately,
+      // which is exactly the annoying case an "Open from the start" demo
+      // should let you trigger deliberately instead of forcing on you every
+      // single time the page loads. This placeholder defers rendering
+      // `renderContent()` until clicked.
+      const LazyMount = ({ label, renderContent }) => {
+        const [mounted, setMounted] = useState(false);
+        return (
+          <div class="demo-lazy-mount">
+            {mounted ? (
+              renderContent()
+            ) : (
+              <div class="demo-lazy-placeholder">
+                <span>{label}</span>
+                <Button onClick={() => setMounted(true)}>Render</Button>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // Mounts already open, with animation on — the entrance animation
+      // should NOT play (nothing was ever shown as "closed" for the user to
+      // see it transition away from). "controlled" passes a literal
+      // open={true} from the start; "uncontrolled" uses defaultOpen instead
+      // (mount-only, like defaultChecked/defaultValue — toggling later has
+      // no effect on it).
+      const OpenAtStartPopover = ({ label, ...props }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation
+              animationDuration="0.6s"
+              borderRadius="8px"
+              className="demo_popover_box"
+              {...props}
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const OpenAtStartSection = () => (
+        <section id="open-from-start" class="demo-section">
+          <h2>8. Open from the start</h2>
+          <div class="demo-row">
+            <LazyMount
+              label={"open={true}"}
+              renderContent={() => (
+                <OpenAtStartPopover
+                  label={"open={true}"}
+                  open
+                  positionArea="top-right"
+                />
+              )}
+            />
+            <LazyMount
+              label="defaultOpen"
+              renderContent={() => (
+                <OpenAtStartPopover
+                  label="defaultOpen"
+                  defaultOpen
+                  positionArea="top-left"
+                />
+              )}
+            />
+          </div>
+        </section>
+      );
+
+      // Renders all 25 positionArea tokens, row-major, matching
+      // POSITION_AREA_GRID's own spatial layout.
+      const AreaGrid = ({ renderCell }) => (
+        <div class="demo-area-grid">
+          {POSITION_AREA_GRID.flatMap((row) =>
+            row.map((token) => (
+              <div key={token} class="demo-area-cell">
+                {renderCell(token)}
+              </div>
+            )),
+          )}
+        </div>
+      );
+
+      // No openController here: without one, Popover creates its own (see
+      // open_controller.js). It self-wires to --navi-toggle/--navi-close
+      // commands, and the button that triggers --navi-toggle is forwarded
+      // as the anchor automatically (the command's "source" ends up as
+      // navi_request_open's detail.source).
+      const AnchoredPopover = ({ label, ...props }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              {...props}
+              borderRadius="8px"
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Still command-driven (--navi-toggle), but
+      // anchorCustomEventDetail="ignore" tells the popover not to use the
+      // toggle button as its anchor, so it centers itself in the viewport
+      // instead (positionArea="center").
+      const AnchorlessPopover = ({ label, ...rest }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              anchorCustomEventDetail="ignore"
+              positionArea="center"
+              className="demo_popover_box"
+              {...rest}
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // The same button doubles as the popover's own anchor and as "the rest
+      // of the page" to click on once it's open — no separate elements
+      // needed to see what pointerInteractionOutsideEffect actually does.
+      // The backdrop's opacity (see the CSS at the top) makes "close"/
+      // "capture" visually distinct from "none" (fully transparent) without
+      // needing more prose.
+      const PointerInteractionOutsideDemo = ({
+        label,
+        pointerInteractionOutsideEffect,
+        animation,
+        animationDuration,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <div>
+            <Button command="--navi-toggle" commandFor={popoverId}>
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              animation={animation}
+              animationDuration={animationDuration}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </div>
+        );
+      };
+
+      // anchor is left undefined (real anchor, from the toggle event) unless
+      // layer/anchorCustomEventDetail are explicitly passed. Always uses the
+      // flexible positionArea (never positionAreaFixed): what you'd actually
+      // use day to day. commandProxyFor redirects the trigger button's
+      // anchor to another element (see navi-command-proxy-for on the Button
+      // below) — used by the default-anchor subsection so every button
+      // anchors to one shared static box instead of to itself.
+      const AnchorAreaPopover = ({
+        layer,
+        anchorCustomEventDetail,
+        positionArea,
+        label = positionArea,
+        duplicate = false,
+        commandProxyFor,
+        animation,
+        animationDuration,
+      }) => {
+        const popoverId = useId();
+
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={popoverId}
+              navi-command-proxy-for={commandProxyFor}
+              className="demo-area-button"
+              data-duplicate={duplicate ? "" : undefined}
+            >
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              animation={animation}
+              animationDuration={animationDuration}
+              borderRadius="8px"
+              layer={layer}
+              anchorCustomEventDetail={anchorCustomEventDetail}
+              positionArea={positionArea}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // A single static box, with faint labels hinting at the four
+      // directions around it, that every button below anchors its popover
+      // to (via navi-command-proxy-for) instead of to itself.
+      const AnchorAreaDefaultDemo = () => {
+        const anchorId = useId();
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_anchor");
+        return (
+          <>
+            <div class="demo-static-anchor-wrapper">
+              <span class="demo-zone-label demo-zone-label-top">top</span>
+              <span class="demo-zone-label demo-zone-label-bottom">bottom</span>
+              <span class="demo-zone-label demo-zone-label-left">left</span>
+              <span class="demo-zone-label demo-zone-label-right">right</span>
+              <div id={anchorId} class="demo-static-anchor">
+                anchor
+              </div>
+            </div>
+            <AreaGrid
+              renderCell={(token) => (
+                <AnchorAreaPopover
+                  positionArea={token}
+                  label={token}
+                  commandProxyFor={anchorId}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                />
+              )}
+            />
+            <AnimateControls {...controlsProps} />
+          </>
+        );
+      };
+
+      // Shared by both point-mode subsections (viewport and scrollContainer):
+      // pinned to a point/corner of referenceLabel instead of a real anchor
+      // box, the popover can only sit flush against its edges — never
+      // floating outside with a gap the way "top"/"bottom" (bare, no overlap)
+      // do against a real anchor. That collapses the overlap distinction, so
+      // some positions are equivalent (faded in the grid below).
+      const PointModeNote = ({ referenceLabel }) => (
+        <>
+          <p>
+            Pinned to a point/corner of {referenceLabel}, not a real anchor box
+            — the popover always sits flush against its edges, so some positions
+            below land in the same spot (faded).
+          </p>
+          <p class="demo-legend">
+            <span class="demo-legend-example">left</span>
+            <span class="demo-legend-example" data-duplicate="">
+              inset(left)
+            </span>
+            <span>result in same position (but different animation).</span>
+          </p>
+        </>
+      );
+
+      const AnchorAreaViewportDemo = () => {
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_viewport");
+        return (
+          <>
+            <PointModeNote referenceLabel="the viewport" />
+            <AreaGrid
+              renderCell={(token) => (
+                <AnchorAreaPopover
+                  layer="top"
+                  anchorCustomEventDetail="ignore"
+                  positionArea={token}
+                  label={token}
+                  duplicate={isDuplicatePointArea(token)}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                />
+              )}
+            />
+            <AnimateControls {...controlsProps} />
+          </>
+        );
+      };
+
+      // layer="local" needs the popovers rendered *inside* the positioned
+      // container to find it (PopoverCustom, a plain position: absolute div
+      // — see popover.jsx's top comment) — the trigger buttons don't, so
+      // they live outside it, in their own grid below.
+      const AnchorAreaScrollContainerDemo = () => {
+        const baseId = useId();
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("popover_demo_area_scroll_container");
+        const allTokens = POSITION_AREA_GRID.flat();
+        return (
+          <>
+            <PointModeNote referenceLabel="the container" />
+            <div class="demo-container">
+              <span class="demo-container-label">container</span>
+              {allTokens.map((token) => (
+                <Popover
+                  key={token}
+                  id={`${baseId}-${token}`}
+                  animation={animation}
+                  animationDuration={animationDuration}
+                  borderRadius="8px"
+                  borderColor="violet"
+                  borderWidth="10px"
+                  layer="local"
+                  positionArea={token}
+                  className="demo_popover_box"
+                  pointerInteractionOutsideEffect="close"
+                  anchorCustomEventDetail="ignore"
+                >
+                  <p style={{ marginTop: 0 }}>{token}</p>
+                  <Button command="--navi-close">Close</Button>
+                </Popover>
+              ))}
+            </div>
+            <AreaGrid
+              renderCell={(token) => (
+                <Button
+                  command="--navi-toggle"
+                  commandFor={`${baseId}-${token}`}
+                  className="demo-area-button"
+                  data-duplicate={isDuplicatePointArea(token) ? "" : undefined}
+                >
+                  {token}
+                </Button>
+              )}
+            />
+            <AnimateControls {...controlsProps} />
+          </>
+        );
+      };
+
+      // A single Popover instance whose anchor is proxied (navi-command-proxy-for)
+      // to some other, deliberately oversized element instead of the trigger
+      // button itself — see AnchorTooWideDemo/AnchorTooTallInContainerDemo
+      // below for the two actual "too big" anchors this drives.
+      // positionAreaWhenAnchorIsInvalid is only meaningful once isAnchorTooBig
+      // (visible_rect.js) actually rejects the anchor — left at its own
+      // "center" default unless explicitly passed, to show it's
+      // configurable.
+      const AnchorTooBigPopover = ({
+        label,
+        positionArea,
+        positionAreaWhenAnchorIsInvalid,
+        commandProxyFor,
+        layer,
+      }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={popoverId}
+              navi-command-proxy-for={commandProxyFor}
+            >
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              layer={layer}
+              positionArea={positionArea}
+              positionAreaWhenAnchorIsInvalid={positionAreaWhenAnchorIsInvalid}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Anchor spans nearly the full viewport width (see its own CSS,
+      // .demo-toobig-anchor-wide) but stays short — isAnchorTooBig
+      // (visible_rect.js) only ever rejects the axis positionArea actually
+      // places outside the anchor, so "left"/"right" (x outside) get
+      // rejected here while "top"/"bottom" (y outside) still work fine,
+      // since only the anchor's *height* matters for those, and it's tiny.
+      const AnchorTooWideDemo = () => {
+        const anchorId = useId();
+        return (
+          <>
+            <div id={anchorId} class="demo-toobig-anchor-wide">
+              anchor (viewport width − 10px)
+            </div>
+            <Box flex="y" spacing="s" alignX="start">
+              <AnchorTooBigPopover
+                label="left → rejected, falls back to center"
+                positionArea="left"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="right → rejected, falls back to center"
+                positionArea="right"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label='right, positionAreaWhenAnchorIsInvalid="bottom"'
+                positionArea="right"
+                positionAreaWhenAnchorIsInvalid="bottom"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="top → still fine"
+                positionArea="top"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="bottom → still fine"
+                positionArea="bottom"
+                commandProxyFor={anchorId}
+              />
+            </Box>
+          </>
+        );
+      };
+
+      // Same idea as AnchorTooWideDemo, but the "too big" axis is the
+      // container's own height instead of the viewport's width: the anchor
+      // is nearly as tall as its .demo-container (240px − 5px), and the
+      // popover is layer="local" so its own positioned ancestor (this
+      // container, auto-resolved via getPositioningContainer — see
+      // pickPositionRelativeTo's own doc) is what isAnchorTooBig compares
+      // against, not the viewport. "top" (y outside) gets rejected; "left"/
+      // "right" (x outside) still work fine, since only the anchor's width
+      // matters for those, and it's narrow.
+      const AnchorTooTallInContainerDemo = () => {
+        const anchorId = useId();
+        return (
+          <div class="demo-container">
+            <span class="demo-container-label">container (240px tall)</span>
+            <div
+              id={anchorId}
+              class="demo-toobig-anchor-tall"
+              style="margin-left: 50px;"
+            >
+              anchor (container height − 5px)
+            </div>
+            <Box flex="y" spacing="s" alignX="start">
+              <AnchorTooBigPopover
+                label="top → rejected, falls back to center"
+                positionArea="top"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label='top, positionAreaWhenAnchorIsInvalid="bottom"'
+                positionArea="top"
+                positionAreaWhenAnchorIsInvalid="bottom"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="left → still fine"
+                positionArea="left"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="right → still fine"
+                positionArea="right"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+            </Box>
+          </div>
+        );
+      };
+
+      const AnchorTooBigSection = () => (
+        <section id="anchor-too-big" class="demo-section">
+          <h2>9. Anchor too big (isAnchorTooBig)</h2>
+          <p>
+            A real anchor is only usable on the axis <code>positionArea</code>
+            actually places the popover *outside* of it (a bare "left"/
+            "right"/"top"/"bottom", never "center"/"inset(...)") — an anchor
+            consuming almost all the room on that axis (viewport, or a custom{" "}
+            <code>container</code>) leaves nothing to work with there, so the
+            popover docks via <code>positionAreaWhenAnchorIsInvalid</code>
+            instead (default <code>"center"</code>, itself configurable).
+          </p>
+          <div class="demo-subsection">
+            <h3>9.1 Anchor too wide for the viewport</h3>
+            <AnchorTooWideDemo />
+          </div>
+          <div class="demo-subsection">
+            <h3>9.2 Anchor too tall for its container</h3>
+            <AnchorTooTallInContainerDemo />
+          </div>
+        </section>
+      );
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.querySelector("#root"),
+      );
+    </script>
+  </body>
+</html>

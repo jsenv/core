@@ -100,6 +100,26 @@ const resolveFirstChildControl = (el) => {
 const resolveClosestExpandable = (el) => {
   return el.closest("[aria-expanded]");
 };
+// An element carrying navi-command-proxy-for="anchorId" stands in for that
+// other element as the command's source when the source is forwarded to
+// consumers (e.g. Popover reads a --navi-toggle/--navi-open request's source
+// as its anchor) — useful for a trigger button that should open a popover
+// anchored to some other, unrelated element rather than to itself.
+const resolveCommandProxySource = (element) => {
+  const proxyForId = element.getAttribute("navi-command-proxy-for");
+  if (!proxyForId) {
+    return element;
+  }
+  const proxyTarget = document.getElementById(proxyForId);
+  if (!proxyTarget) {
+    console.warn(
+      `navi-command-proxy-for="${proxyForId}" but no element with that id found`,
+      element,
+    );
+    return element;
+  }
+  return proxyTarget;
+};
 const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
@@ -126,7 +146,7 @@ const resolveCommandValue = (source, event) => {
   return getUIStateFromElement(source);
 };
 
-export const onNaviCommand = (e, { debugCommand }) => {
+export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
   const { command, event, source, implementation } = e.detail;
   if (typeof command !== "string") {
     console.warn(`navi_command event is missing detail.command`, e);
@@ -305,6 +325,26 @@ registerNaviCommand("--navi-send", (source, event) => {
   };
 });
 
+registerNaviCommand("--navi-toggle", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      const customEventName = isExpanded
+        ? "navi_request_close"
+        : "navi_request_open";
+      return dispatchCustomEvent(target, customEventName, {
+        event,
+        source: resolveCommandProxySource(source),
+      });
+    },
+  };
+});
 registerNaviCommand("--navi-open", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
@@ -316,7 +356,7 @@ registerNaviCommand("--navi-open", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -332,7 +372,7 @@ registerNaviCommand("--navi-close", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -348,7 +388,7 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
         isCancel: true,
       });
     },

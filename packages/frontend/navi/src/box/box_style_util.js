@@ -465,7 +465,17 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+    if (
+      boxFlow === "flex-x" ||
+      boxFlow === "inline-flex-x" ||
+      // A grid container's inline axis (its own columns) is always the X
+      // axis regardless of any row/column intent — unlike flex, grid has no
+      // single main axis, so justify-content here is correct independent of
+      // the flex-x/flex-y distinction above. See alignY's own matching
+      // grid branch for the analogous Y-axis case.
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
+    ) {
       if (value === "start") {
         return undefined; // this is the default
       }
@@ -480,7 +490,16 @@ const CONTENT_PROPS = {
       }
       return { justifyContent: value };
     }
-    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+    if (
+      boxFlow === "flex-x" ||
+      boxFlow === "inline-flex-x" ||
+      // A grid container's block axis is always the Y axis regardless of
+      // any row/column intent (see alignX's own matching comment) —
+      // align-items controls how each item aligns within its own row
+      // height, same as flex-x's cross axis.
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
+    ) {
       if (value === "stretch") {
         return undefined;
       }

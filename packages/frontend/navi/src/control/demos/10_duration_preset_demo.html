@@ -285,6 +285,7 @@
               id="duration"
               name="duration"
               required
+              flexWrap
               value={duration}
               uiAction={(v) => {
                 durationSignal.value = v;
@@ -395,6 +396,7 @@
               uiAction={(v) => {
                 durationSignal2.value = v;
               }}
+              flexWrap
               border="none"
             >
               {PRESET_DURATIONS.map((minutes, i) => (
@@ -498,6 +500,7 @@
                 durationSignal3.value = v;
               }}
               border="none"
+              flexWrap
             >
               {PRESET_DURATIONS.map((minutes, i) => (
                 <DurationPreset

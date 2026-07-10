@@ -1,9 +1,19 @@
+import {
+  subscribeVisualViewportResizeSettled,
+  subscribeWindowResizeSettled,
+} from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 
 export const windowWidthSignal = signal(window.innerWidth);
 export const windowHeightSignal = signal(window.innerHeight);
 
-window.addEventListener("resize", () => {
+// Debounced (not a raw "resize" listener) — see window_size.js's own
+// module comment: mobile fires a transient "resize" when the browser's own
+// UI chrome (address bar, etc.) briefly shows/hides, and this needs to
+// settle on the exact same tick as visualViewport's own debounced resize
+// below and Popover/Dialog's own repositioning, or one flickers a moment
+// out of sync with the others.
+subscribeWindowResizeSettled(() => {
   windowWidthSignal.value = window.innerWidth;
   windowHeightSignal.value = window.innerHeight;
 });
@@ -19,12 +29,12 @@ export const visualViewportWidthSignal = vv
 export const visualViewportHeightSignal = vv
   ? signal(vv.height)
   : computed(() => windowHeightSignal.value);
+
 if (vv) {
   const update = () => {
     visualViewportWidthSignal.value = vv.width;
     visualViewportHeightSignal.value = vv.height;
   };
-  vv.addEventListener("resize", update);
+  subscribeVisualViewportResizeSettled(update);
   vv.addEventListener("scroll", update);
 }
-

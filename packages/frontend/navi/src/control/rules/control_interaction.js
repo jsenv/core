@@ -207,7 +207,7 @@ export const onRequestInteraction = (
   const controlHost = findControlHost(currentTarget) || currentTarget;
   const controller = controlHost.__uiStateController__;
 
-  if (!bypassInteractivity) {
+  if (controller && !bypassInteractivity) {
     const ci = controller?.rules.interaction;
     if (ci) {
       const canInteract = ci.checkInteractivity({ event });

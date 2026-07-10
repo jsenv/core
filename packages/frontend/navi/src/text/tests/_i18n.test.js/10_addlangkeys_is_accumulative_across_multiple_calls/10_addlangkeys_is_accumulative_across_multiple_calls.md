@@ -1,7 +1,7 @@
 # [addLangKeys is accumulative across multiple calls](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr" });
+const i18n = createI18n({ runtimeLang: "fr" });
 i18n.addLangKeys("fr", { "one minute": "une minute" });
 i18n.addLangKeys("fr", { "one person": "une personne" });
 return {

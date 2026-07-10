@@ -1,7 +1,7 @@
 # [fr-CA falls back to fr](../../i18n.test.js)
 
 ```js
-const i18n = createI18n({ systemLang: "fr-CA" });
+const i18n = createI18n({ runtimeLang: "fr-CA" });
 i18n.add("one minute", { fr: "une minute" });
 i18n.add("[x] minutes", { fr: "[x] minutes" });
 return {

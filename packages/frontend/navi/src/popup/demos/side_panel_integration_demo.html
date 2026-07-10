@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SidePanel Integration Demo</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .demo-controls {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .demo-controls button {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId, useMemo, useState } from "preact/hooks";
+      import {
+        BadgeCount,
+        Box,
+        Text,
+        Button,
+        List,
+        ListItem,
+        SidePanel,
+      } from "@jsenv/navi";
+
+      // A small, deterministic pool of adjective/noun combos reads far closer
+      // to a real inventory than "Item 1"/"Item 2" — enough variety (12 * 26
+      // = 312 combos) to avoid obvious repetition even at the 500-item
+      // dataset size, without pulling in random word lists.
+      const ADJECTIVES = [
+        "Wireless",
+        "Ergonomic",
+        "Compact",
+        "Premium",
+        "Portable",
+        "Adjustable",
+        "Heavy-Duty",
+        "Slim",
+        "Rechargeable",
+        "Foldable",
+        "Industrial",
+        "Standard",
+      ];
+      const NOUNS = [
+        "Mouse",
+        "Keyboard",
+        "Monitor Stand",
+        "Desk Lamp",
+        "Office Chair",
+        "Headset",
+        "Webcam",
+        "USB-C Hub",
+        "Power Strip",
+        "Speaker",
+        "Cable Organizer",
+        "Whiteboard",
+        "Notebook",
+        "Pen Set",
+        "Stapler",
+        "Filing Cabinet",
+        "Backpack",
+        "Water Bottle",
+        "Coffee Mug",
+        "Desk Organizer",
+        "Monitor Arm",
+        "Laptop Stand",
+        "External SSD",
+        "Printer",
+        "Paper Shredder",
+        "Conference Phone",
+      ];
+      const createItems = (count) =>
+        Array.from({ length: count }, (_, i) => ({
+          id: `item-${i}`,
+          label: `${ADJECTIVES[i % ADJECTIVES.length]} ${NOUNS[Math.floor(i / ADJECTIVES.length) % NOUNS.length]}`,
+          in: Math.floor(Math.random() * 20),
+          out: Math.floor(Math.random() * 20),
+        }));
+
+      // `columns="1fr auto auto"` (List's own grid mode) turns the header
+      // row, every data row, and the totals row into real subgrid rows of
+      // one shared grid — genuine table-like column sizing (first column
+      // flexible, the numeric ones auto-sized to their own widest content),
+      // computed by the browser itself rather than any hand-picked/measured
+      // width. See list.jsx's own ListColumnsContext for how this stays
+      // correct even though most rows are virtualized (only the current
+      // render window + the always-mounted header/footer are ever in the
+      // DOM at once — column tracks size off whichever of those are
+      // present, and the Total row being always-mounted guarantees the
+      // numeric columns are always at least as wide as it needs).
+      const NameCell = (props) => <Text shrinkX maxLines={1} {...props} />;
+      const NumberCell = (props) => (
+        <Text
+          as="span"
+          textAlign="right"
+          style={{ fontVariantNumeric: "tabular-nums" }}
+          {...props}
+        />
+      );
+
+      // `header`/`footer` on ListItem render as `position: sticky` rows
+      // inside the List itself (bypassing virtualization entirely — they're
+      // not part of the tracked/virtual item set) rather than living in
+      // SidePanel.Head/Foot: that's what keeps their own Name/In/Out cells
+      // real flex-row siblings of the data rows, so column widths track
+      // each other for free. A plain title has no columns to align, so it
+      // stays in SidePanel.Head instead, outside the List entirely.
+      const App = () => {
+        const panelId = useId();
+        // Small dataset (below the panel's own content, no overflow at all)
+        // vs. large (well beyond it, forcing virtual scroll) — toggled from
+        // outside the panel specifically to see where the sticky Total row
+        // ends up either way: pinned to the bottom of the *panel* when the
+        // list has no overflow of its own, vs. pinned to the bottom of the
+        // *list's own scroll* once it does.
+        const [itemCount, setItemCount] = useState(500);
+        const items = useMemo(() => createItems(itemCount), [itemCount]);
+        const totalIn = items.reduce((sum, item) => sum + item.in, 0);
+        const totalOut = items.reduce((sum, item) => sum + item.out, 0);
+
+        return (
+          <>
+            <div class="demo-controls">
+              <Button command="--navi-toggle" commandFor={panelId}>
+                Toggle panel
+              </Button>
+              <button onClick={() => setItemCount(5)}>5 items</button>
+              <button onClick={() => setItemCount(500)}>500 items</button>
+            </div>
+            <SidePanel id={panelId} animation defaultOpen width={380} flex="y">
+              <SidePanel.Head flex spacing="m" paddingX="m" paddingY="m">
+                <Box flex alignY="center" gap="8px" expand>
+                  <Text>
+                    <strong style={{ fontSize: "1.05em" }}>Inventory</strong>
+                    <BadgeCount background="red" color="white" max="none">
+                      {itemCount}
+                    </BadgeCount>
+                  </Text>
+                </Box>
+                <Button
+                  aria-label="Close panel"
+                  command="--navi-close"
+                  variant="discrete"
+                  autoFocus="fallback"
+                  marginRight="-s"
+                  flex
+                  alignY="center"
+                >
+                  ×
+                </Button>
+              </SidePanel.Head>
+              <List expandY border="none" columns="1fr auto auto">
+                <ListItem
+                  header
+                  paddingX="m"
+                  paddingY="s"
+                  bold
+                  color="#495057"
+                  uppercase
+                  size="s"
+                  background="#f1f3f5"
+                  borderBottom="1px solid #dee2e6"
+                  letterSpacing="0.03em"
+                  alignY="center"
+                  spacing="s"
+                >
+                  <NameCell>Name</NameCell>
+                  <NumberCell
+                    color="#2b8a3e"
+                    borderLeft="1px solid #e9ecef"
+                    paddingLeft="8px"
+                  >
+                    In
+                  </NumberCell>
+                  <NumberCell color="#c92a2a">Out</NumberCell>
+                </ListItem>
+                {items.map((item, i) => (
+                  <ListItem
+                    key={item.id}
+                    index={i}
+                    id={item.id}
+                    value={item.label}
+                    paddingX="m"
+                    paddingY="s"
+                    alignY="center"
+                    spacing="s"
+                    background={i % 2 === 0 ? "#ffffff" : "#f8f9fa"}
+                  >
+                    <NameCell>{item.label}</NameCell>
+                    <NumberCell
+                      color="#2b8a3e"
+                      borderLeft="1px solid #e9ecef"
+                      paddingLeft="8px"
+                    >
+                      +{item.in}
+                    </NumberCell>
+                    <NumberCell color="#c92a2a">−{item.out}</NumberCell>
+                  </ListItem>
+                ))}
+                <ListItem
+                  footer
+                  paddingX="m"
+                  paddingY="s"
+                  alignY="center"
+                  spacing="s"
+                  bold
+                  background="#f1f3f5"
+                  borderTop="2px solid #dee2e6"
+                >
+                  <NameCell>Total</NameCell>
+                  <NumberCell
+                    color="#2b8a3e"
+                    borderLeft="1px solid #e9ecef"
+                    paddingLeft="8px"
+                  >
+                    +{totalIn}
+                  </NumberCell>
+                  <NumberCell color="#c92a2a">−{totalOut}</NumberCell>
+                </ListItem>
+              </List>
+            </SidePanel>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

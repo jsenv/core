@@ -1,5 +1,5 @@
 import { interpolateText } from "./interpolate_text.js";
-import { langSignal } from "./lang_signal.js";
+import { languagesSignal } from "./lang_signal.js";
 
 /**
  * Creates a lightweight i18n instance for translating text in the current locale.
@@ -26,9 +26,16 @@ import { langSignal } from "./lang_signal.js";
  *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
  *   ```
  *
- * @param {string|string[]} [options.systemLang]
- *   The active user language (BCP 47 tag or ordered array of tags).
- *   Defaults to `langSignal.peek()` (browser language at creation time).
+ * @param {string|string[]} [options.runtimeLang]
+ *   The active language (BCP 47 tag or ordered array of tags) — named
+ *   "runtime" rather than "system" because there is no actual access to the
+ *   OS/user's system language from a browser, only `navigator.languages` (or
+ *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
+ *   fresh on every `format()`/`has()` call (not frozen at creation time) —
+ *   so overriding the language app-wide via `setPreferredLanguage()`/
+ *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
+ *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
+ *   this instance's whole lifetime.
  *
  * ---
  *
@@ -54,14 +61,64 @@ import { langSignal } from "./lang_signal.js";
  *   A callable function — `i18n(key, values?, { lang? })` — with the same
  *   signature as `i18n.format()`. `format` is kept as an alias.
  */
-export const createI18n = ({
-  keyLang,
-  fallbackLang,
-  systemLang = langSignal.peek(),
-} = {}) => {
+export const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
+  // Bumped by addLangKeys — the only thing besides the active lang itself
+  // that could change what getActiveLang()/getResolvedFallbackLang() below
+  // resolve to, so it's what invalidates their own small caches.
+  let languageMapVersion = 0;
 
-  let activeLang = systemLang;
+  // Explicit runtimeLang stays fixed for this instance's lifetime (matches
+  // the previous behavior exactly). Without one, re-read languagesSignal.value
+  // fresh on every call instead of freezing it here via languagesSignal.peek()
+  // once — that would silently ignore setPreferredLanguage()/
+  // setSupportedLanguages() (see lang_signal.js) for the rest of this
+  // instance's life.
+  const hasExplicitRuntimeLang = runtimeLang !== undefined;
+
+  // matchBestLang does real work (a Map lookup per candidate, a possible
+  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
+  // format()/has() call in the common case, since what it resolves to only
+  // ever changes when languageMap itself changes (addLangKeys) or, for the
+  // non-explicit case, when languagesSignal.value itself changes (preferred
+  // language, supported languages, or "languagechange" — see lang_signal.js,
+  // languagesSignal is a computed() so its reference is stable when none of its
+  // own dependencies actually changed) — comparing those two cheaply
+  // (===) is enough to know the cached result below is still valid.
+  let cachedActiveLang;
+  let cachedActiveLangRuntimeLang;
+  let cachedActiveLangVersion = -1;
+  const getActiveLang = () => {
+    const currentRuntimeLang = hasExplicitRuntimeLang
+      ? runtimeLang
+      : languagesSignal.value;
+    if (
+      cachedActiveLangVersion === languageMapVersion &&
+      cachedActiveLangRuntimeLang === currentRuntimeLang
+    ) {
+      return cachedActiveLang;
+    }
+    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
+    cachedActiveLangVersion = languageMapVersion;
+    cachedActiveLangRuntimeLang = currentRuntimeLang;
+    return cachedActiveLang;
+  };
+
+  // fallbackLang is a plain, never-reactive option set once at creation —
+  // its own resolution only ever needs recomputing when languageMap does.
+  let cachedResolvedFallbackLang;
+  let cachedResolvedFallbackLangVersion = -1;
+  const getResolvedFallbackLang = () => {
+    if (!fallbackLang) {
+      return null;
+    }
+    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
+      return cachedResolvedFallbackLang;
+    }
+    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
+    cachedResolvedFallbackLangVersion = languageMapVersion;
+    return cachedResolvedFallbackLang;
+  };
 
   const addLangKeys = (lang, translations) => {
     // Accumulate: merge with any existing translations for this lang
@@ -80,7 +137,7 @@ export const createI18n = ({
       }
     }
     languageMap.set(lang, translations);
-    activeLang = matchBestLang(systemLang, languageMap);
+    languageMapVersion++;
   };
 
   const add = (key, langTranslations) => {
@@ -100,7 +157,11 @@ export const createI18n = ({
   };
 
   const _getTemplate = (key, lang) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    // matchBestLang, not matchLang directly: lang can be an array (e.g.
+    // languagesSignal.value is always an ordered array — see lang_signal.js) and
+    // matchLang alone assumes a plain string, throwing
+    // on .split() otherwise.
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       const translated = translations[key];
@@ -108,40 +169,36 @@ export const createI18n = ({
         return translated;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        const fallbackTranslated = fallbackTranslations[key];
-        if (fallbackTranslated !== undefined) {
-          return fallbackTranslated;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      const fallbackTranslated = fallbackTranslations[key];
+      if (fallbackTranslated !== undefined) {
+        return fallbackTranslated;
       }
     }
     // No translation found — return key as-is (opaque fallback)
     return key;
   };
 
-  const format = (key, values, { lang = activeLang } = {}) => {
+  const format = (key, values, { lang = getActiveLang() } = {}) => {
     const template = _getTemplate(key, lang);
     return interpolateText(template, values);
   };
 
-  const has = (key, { lang = activeLang } = {}) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+  const has = (key, { lang = getActiveLang() } = {}) => {
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       if (translations && key in translations) {
         return true;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        if (fallbackTranslations && key in fallbackTranslations) {
-          return true;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      if (fallbackTranslations && key in fallbackTranslations) {
+        return true;
       }
     }
     return false;

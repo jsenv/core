@@ -1,14 +1,15 @@
-import { chainEvent, findEvent } from "@jsenv/dom";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+import { dispatchCustomEvent } from "@jsenv/dom";
+import { useContext, useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
-import { windowWidthSignal } from "@jsenv/navi/src/layout/responsive.js";
 import { useNavState } from "@jsenv/navi/src/nav/browser_integration/browser_integration.js";
 import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
-import { Dialog } from "@jsenv/navi/src/popup/dialog.jsx";
-import { Popover } from "@jsenv/navi/src/popup/popover.jsx";
+import {
+  useOpenController,
+  useOpenPropsEffectOnOpenController,
+} from "@jsenv/navi/src/popup/open_controller.js";
+import { Popup, usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
-import { useStableCallback } from "@jsenv/navi/src/utils/use_stable_callback.js";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
@@ -20,57 +21,26 @@ import {
 
 const css = /* css */ `
   .navi_picker {
-    /* Shared by popover and dialog */
-    --picker-popup-background-color: var(--picker-background-color);
-    --picker-popup-border-radius: var(--picker-border-radius);
-    --picker-popup-border-width: var(--picker-border-width);
-    /* Popover */
-    --picker-popover-max-height: 300px; /* soft: user-configurable preferred max-height */
-    --picker-popover-maxmax-height: calc(0.95 * var(--navi-vvh));
-    --picker-popover-maxmax-width: calc(0.95 * var(--navi-vvw));
-    /* --picker-popover-max-width: soft, leave unset to rely on maxmax */
-    /* Dialog */
-    --picker-dialog-margin: 3dvw; /* min gap between dialog edges and viewport */
-    --picker-dialog-maxmax-width: calc(
-      var(--navi-vvw) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-maxmax-height: calc(
-      var(--navi-vvh) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
+    /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
+       overflow... are already handled correctly by Popup/Popover/Dialog
+       themselves — nothing to redefine here. Only the picker's own look
+       (border color/radius/width, background) needs bridging into the vars
+       Popover/Dialog actually consume, plus a couple of genuinely
+       picker-specific bits below (anchor-width min-width, the anchor clone,
+       the nested list). */
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      .navi_picker_popover {
-        position: absolute;
-        inset: unset;
+      .navi_popover {
+        --popover-border-radius: var(--picker-border-radius);
+        --popover-border-width: var(--picker-border-width);
+        --popover-border-color: var(--x-picker-border-color);
+        --popover-background-color: var(--picker-background-color);
+        --popover-outline-width: var(--picker-outline-width);
+        --popover-outline-color: var(--picker-outline-color);
+
         min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-popover-max-width, var(--picker-popover-maxmax-width)),
-          var(--picker-popover-maxmax-width)
-        );
-        /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(
-          var(--picker-popover-max-height),
-          var(--space-available, var(--picker-popover-maxmax-height)),
-          var(--picker-popover-maxmax-height)
-        );
-        margin: 0;
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border-width: var(--picker-border-width);
-        border-style: solid;
-        border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0px;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
-        overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
            trigger. It makes the popover wrap both the trigger area and the list
@@ -102,8 +72,8 @@ const css = /* css */ `
           }
         }
 
-        &[data-position-y-current="above"],
-        &[data-position-y-current="above-overlap"] {
+        &[data-position-y-current="top"],
+        &[data-position-y-current="inset-bottom"] {
           .navi_picker_anchor_clone {
             order: 1; /* after the list — popover is above the trigger */
             border-top: var(--picker-border-width) solid
@@ -117,14 +87,10 @@ const css = /* css */ `
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-popup-border-radius) - var(--picker-border-width)
+            var(--picker-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
         }
       }
 
@@ -136,7 +102,10 @@ const css = /* css */ `
           border-color: transparent;
         }
 
-        .navi_picker_popover {
+        /* Popover itself has no opinion on its content's own layout (plain
+           div, block by default) — the picker's content (anchor clone +
+           list) needs to stack vertically. */
+        .navi_popover {
           display: flex;
           flex-direction: column;
         }
@@ -145,48 +114,21 @@ const css = /* css */ `
 
     /* dialog */
     &[aria-haspopup="dialog"] {
-      .navi_picker_dialog {
-        min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
-          var(--picker-dialog-maxmax-width)
-        );
-        max-height: min(
-          var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
-          var(--picker-dialog-maxmax-height)
-        );
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border: var(--picker-dialog-border-width) solid
-          var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
+      .navi_dialog {
+        --dialog-border-radius: var(--picker-border-radius);
+        --dialog-border-color: var(--x-picker-border-color);
+        --dialog-background-color: var(--picker-background-color);
+        --dialog-outline-width: var(--picker-outline-width);
+        --dialog-outline-color: var(--picker-outline-color);
+
+        /* Dialog itself already sizes min-width off --anchor-width — only
+           the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
-        /* overscroll-behavior: contain; */
 
-        &[data-expand-x] {
-          width: var(--picker-dialog-maxmax-width);
-        }
-        &[data-expand-y] {
-          height: var(--picker-dialog-maxmax-height);
-        }
-
+        /* Dialog already applies display: flex to [open] itself, but
+           defaults to row — the picker's content needs to stack vertically. */
         &[open] {
-          display: flex;
           flex-direction: column;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
-        }
-
-        &::backdrop {
-          background: rgba(0, 0, 0, 0.4);
         }
       }
 
@@ -194,7 +136,7 @@ const css = /* css */ `
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-popup-border-radius) - var(--picker-border-width)
+          var(--picker-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;
@@ -277,28 +219,32 @@ const PickerNative = (props) => {
 };
 
 const PickerCustom = (props) => {
-  const { ref, mode: modeProp } = props;
+  const { ref, mode: modeProp, open, defaultOpen } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
+  // Captured before the fallback chain below overwrites props.id — needed to
+  // know whether the id actually came from the caller (stable) or from
+  // useId()/ControlIdContext (not guaranteed stable across a reload), see
+  // pickerNavType below.
+  const hasExplicitId = Boolean(props.id);
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
-  // Freeze the mode for the lifetime of an opening: compute it when closed,
-  // keep it stable while open so a screen resize mid-session doesn't switch
-  // between Popover and Dialog.
-  const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    const isSmallScreen = windowWidthSignal.peek() <= 600;
-    const maxWidthPx = parseFloat(props.maxWidth);
-    const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-    defaultModeRef.current =
-      modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
-  }
-  const mode = defaultModeRef.current;
+  // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
+  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // (computed when closed, stable while open, so a screen resize mid-session
+  // doesn't switch between Popover and Dialog), with resetMode called from
+  // this picker's own onClose below to re-evaluate on the *next* open.
+  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
 
   const pickerProps = {
     ...props,
   };
+  // Consumed right here (useNavState's own defaultValue above) — not a
+  // real DOM/Popup prop, so it must not travel any further down (would
+  // otherwise leak through PickerContentInsidePopup's own ...rest).
+  delete pickerProps.open;
+  delete pickerProps.defaultOpen;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -321,21 +267,25 @@ const PickerCustom = (props) => {
   open_close: {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
-    // In "popover" mode, it replaces the current history state (no history entry added).
-    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    // In "dialog" mode with a stable, caller-provided id, enterExpanded()
+    // pushes a history entry so the back button closes it. Every other case
+    // (popover mode, or a dialog whose id was auto-generated via useId()/
+    // ControlIdContext) replaces the current history state instead — a
+    // generated id isn't stable across a reload, so pushing it would either
+    // silently drop the entry or, worse, collide with a different
+    // component's own generated id (see useNavState's own fallback for the
+    // same concern, applied here proactively for the id we control).
+    const pickerNavType =
+      mode === "dialog" && hasExplicitId ? "push" : "replace";
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
+      defaultValue: open || defaultOpen ? "on" : undefined,
       // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
       onLeave: () => {
         requestClose(new CustomEvent("navi_nav_away", { detail: {} }), {
           isCancel: true,
         });
       },
-    });
-
-    const disableClickFor = useIgnoreClickForMousedown(ref, (e) => {
-      debugPopup(e, `click ignored`);
     });
     // openController centralizes open/close decision-making (validation,
     // focus and value bookkeeping) for the picker. The returned
@@ -344,12 +294,6 @@ const PickerCustom = (props) => {
     const openController = useOpenController((openEvent) => {
       enterExpanded();
 
-      const focusedBeforeOpen = openEvent.detail.focusedBeforeOpen;
-      debugFocus(
-        openEvent,
-        "picked opened, store element focused",
-        focusedBeforeOpen,
-      );
       const valueAtOpen = getPickerInputUIState(ref.current);
       debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
 
@@ -393,93 +337,29 @@ const PickerCustom = (props) => {
               event: closeEvent,
             });
           }
-
-          prevent_reopen: {
-            const mousedownEvent = findEvent(closeEvent, "mousedown");
-            if (mousedownEvent) {
-              debugPopup(
-                closeEvent,
-                `closed by mousedown -> disable next click`,
-              );
-              disableClickFor();
-            } else {
-              const spaceEvent = findEvent(
-                closeEvent,
-                (e) => e.type === "keydown" && e.key === " ",
-              );
-              if (spaceEvent) {
-                // space would trigger a click on the picker button causing it to re-open immediatly after closing
-                debugPopup(
-                  closeEvent,
-                  `closed by space key -> prevent browser click`,
-                );
-                // browser won't try to dispatch click
-                // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-                spaceEvent.preventDefault();
-              }
-            }
-          }
-
-          restore_focus: {
-            const focusoutEvent = findEvent(closeEvent, "focusout");
-            if (focusoutEvent) {
-              debugFocus(closeEvent, `closed by focusout -> let focus go away`);
-            } else {
-              const mousedownEvent = findEvent(closeEvent, "mousedown");
-              if (mousedownEvent) {
-                debugFocus(
-                  closeEvent,
-                  "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
-                );
-                mousedownEvent.preventDefault();
-              }
-              debugFocus(
-                closeEvent,
-                `restore focus to previously focused element`,
-                focusedBeforeOpen,
-              );
-              focusedBeforeOpen.focus({ preventScroll: true });
-            }
-          }
-
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
-          defaultModeRef.current = null;
+          resetMode();
         },
       };
     });
-    const requestOpen = (e, detail) => {
-      // scroll <button> of the picker into view when opening it
-      const pickerEl = ref.current;
-      pickerEl.scrollIntoView({ block: "nearest" });
-      openController.open(e, detail);
-    };
+    // scroll <button> of the picker into view when opening it
+    // -> would be overriden by dialog.jsx or popover.jsx
+    // so ideally openEffect should be either protective or a pubSub to allow multiple callbacks
+    // openController.openEffect = () => {
+    //   const pickerEl = ref.current;
+    //   pickerEl.scrollIntoView({ block: "nearest" });
+    // };
+    const requestOpen = openController.open;
     const requestClose = openController.requestClose;
-
-    const open = Boolean(expanded);
-    useLayoutEffect(() => {
-      if (open === undefined) {
-        return;
-      }
-      // Skip when the popup is already in the desired state.
-      // openController.opened tracks actual open/close (updated by onopen/onclose,
-      // not by renders) so it is the authoritative check against feedback loops.
-      if (open === openController.opened) {
-        return;
-      }
-      // open_prop_change means the parent is driving the open state directly
-      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-      // Always treat it as cancel — the user's in-progress edit should be discarded.
-      if (open) {
-        requestOpen(new CustomEvent("open_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      } else {
-        requestClose(new CustomEvent("close_by_prop", { detail: {} }), {
-          isCancel: true,
-        });
-      }
-    }, [open]);
+    // Same skip-if-already-matching / open-or-requestClose control flow as
+    // useOpenControllerByProps (see open_controller.js) — the picker's own
+    // "open" comes from history state (expanded) rather than a literal
+    // `open` prop, so it adapts requestOpen/requestClose to the shape that
+    // hook expects instead of driving openController directly.
+    useOpenPropsEffectOnOpenController(openController, {
+      open: Boolean(expanded),
+    });
 
     const requestInteraction = (options) => {
       dispatchRequestInteraction(ref.current, options);
@@ -492,7 +372,37 @@ const PickerCustom = (props) => {
         onActionStart?.(e);
         // requestClose(e);
       },
+      "uiAction": (v, e) => {
+        uiActionProp?.(v, e);
+      },
+      // The picker's own trigger also carries aria-expanded, so
+      // resolveClosestExpandable() in commands.js can resolve *it* (not the
+      // popup) as the target — e.g. a --navi-open/--navi-close/--navi-toggle
+      // command whose source sits inside the trigger but outside the popup's
+      // own content. Forward the request down to the popup so its
+      // openController (registered above via onnavi_request_open/close on
+      // popupProps) is the single place actually deciding open/close.
       "onnavi_request_open": (e) => {
+        dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
+      },
+      "onnavi_request_close": (e) => {
+        dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
+      },
+      children,
+    });
+    Object.assign(popupProps, {
+      anchor: props.ref,
+      openController,
+      // Not on pickerProps (the trigger): commands.js's own
+      // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
+      // find where to dispatch navi_request_open/navi_request_close — and
+      // the popup itself now carries its own aria-expanded (see
+      // popover.jsx/dialog.jsx), which is *closer* than the picker's own
+      // aria-expanded for anything dispatched from inside the popup's own
+      // content (e.g. a `command="--navi-close"` button rendered as
+      // children here). That command lands on the popup element, not the
+      // picker — so these listeners have to live here to ever see it.
+      onnavi_request_open: (e) => {
         if (openController.opened) {
           return;
         }
@@ -504,7 +414,7 @@ const PickerCustom = (props) => {
           },
         });
       },
-      "onnavi_request_close": (e) => {
+      onnavi_request_close: (e) => {
         requestInteraction({
           event: e,
           allowed: () => {
@@ -512,17 +422,15 @@ const PickerCustom = (props) => {
           },
         });
       },
-      "uiAction": (v, e) => {
-        uiActionProp?.(v, e);
-      },
-      children,
-    });
-    Object.assign(popupProps, {
-      anchorRef: props.ref,
-      openController,
     });
 
     interactions: {
+      const isWithinPickerContent = (el) => {
+        const pickerEl = ref.current;
+        const pickerContentEl = pickerEl.querySelector(".navi_picker_content");
+        return pickerContentEl?.contains(el);
+      };
+
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         "a-z": (e) => {
           return {
@@ -568,6 +476,11 @@ const PickerCustom = (props) => {
           };
         },
         "enter": (e) => {
+          if (isWithinPickerContent(e.target)) {
+            // Enter within popup should not try to re-open it
+            // (enter within input would close popup and this one would try to re-open it)
+            return null;
+          }
           return {
             name: "enter_to_open",
             allowed: () => {
@@ -590,15 +503,10 @@ const PickerCustom = (props) => {
         },
       });
 
-      const isWithinPopup = (el) => {
-        const popupEl = popupRef.current;
-        return el === popupEl || popupEl.contains(el);
-      };
-
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             if (openController.opened) {
@@ -620,7 +528,7 @@ const PickerCustom = (props) => {
             };
           },
           click: (e) => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             // When a label is clicked it transfers focus to the select
@@ -647,13 +555,7 @@ const PickerCustom = (props) => {
     }
   }
 
-  if (mode === "popover") {
-    return <PickerContentInsidePopover {...pickerProps} />;
-  }
-  if (mode === "dialog") {
-    return <PickerContentInsideDialog {...pickerProps} />;
-  }
-  return null;
+  return <PickerContentInsidePopup {...pickerProps} mode={mode} />;
 };
 
 const getPickerInput = (pickerEl) => {
@@ -664,38 +566,51 @@ const getPickerInputUIState = (pickerEl) => {
   return getUIStateFromElement(pickerInput);
 };
 
-const PickerContentInsidePopover = (props) => {
+const PickerContentInsidePopup = (props) => {
   const Next = useNextResolver();
   const {
     popupProps,
     children,
-    pointerTrap,
-    scrollTrap,
-    focusTrap = true,
+    mode,
+    pointerLock,
+    scrollCapture,
+    // No default here (matches Popover's own default of inactive) — the
+    // old, differently-named `focusTrap = true` prop never actually reached
+    // Popover's real `focusCapture` prop (see this file's history), so
+    // focus-trapping has never really been active for popover-mode pickers;
+    // defaulting the now-correctly-named prop to `true` would be a real,
+    // unintended behavior change riding along with the rename.
+    focusCapture,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    viewportSpacing = 10,
+    marginWithContainer = 10,
     closeOnFocusOut = false,
+    dialogExpand,
+    dialogExpandX,
+    dialogExpandY,
     ...rest
   } = props;
+  const isPopover = mode === "popover";
+  const expandX = dialogExpand || dialogExpandX;
+  const expandY = dialogExpand || dialogExpandY;
 
   return (
     <Next
-      aria-haspopup="listbox"
-      navi-popover-mode={popoverMode}
+      aria-haspopup={isPopover ? "listbox" : "dialog"}
+      navi-popover-mode={isPopover ? popoverMode : undefined}
       {...rest}
       onFocusOut={(e) => {
-        if (!closeOnFocusOut) {
+        if (!isPopover || !closeOnFocusOut) {
           return;
         }
         // Close when focus leaves the select entirely (not just moving between internal elements).
-        // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+        // relatedTarget is the element receiving focus; if it's inside the select or the popup, keep open.
         const relatedTarget = e.relatedTarget;
         const pickerEl = props.ref.current;
-        const popoverEl = popupProps.ref.current;
+        const popupEl = popupProps.ref.current;
         const focusStaysInside =
           (pickerEl && pickerEl.contains(relatedTarget)) ||
-          (popoverEl && popoverEl.contains(relatedTarget));
+          (popupEl && popupEl.contains(relatedTarget));
         if (focusStaysInside) {
           return;
         }
@@ -709,24 +624,28 @@ const PickerContentInsidePopover = (props) => {
         });
       }}
     >
-      <Popover
+      <Popup
         {...popupProps}
-        className="navi_picker_popover"
-        positionX="left-aligned"
-        positionY={popoverMode === "nearby" ? "below" : "below-overlap"}
-        spacing={popoverSpacing}
-        viewportSpacing={viewportSpacing}
-        scrollTrap={scrollTrap}
-        pointerTrap={pointerTrap}
-        focusTrap={focusTrap}
-        /* make popover focusable so it can be the first focus target when opening */
-        tabIndex={-1}
-        autoFocus="fallback"
+        mode={mode}
+        positionArea={
+          isPopover
+            ? popoverMode === "nearby"
+              ? "bottom-start"
+              : "inset(top-left)"
+            : undefined
+        }
+        marginWithAnchor={isPopover ? popoverSpacing : undefined}
+        marginWithContainer={isPopover ? marginWithContainer : undefined}
+        scrollCapture={scrollCapture}
+        pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
+        focusCapture={isPopover ? focusCapture : undefined}
+        expandX={!isPopover ? expandX : undefined}
+        expandY={!isPopover ? expandY : undefined}
       >
-        {/* In "attached" mode clone the trigger visually so the popover wraps both the trigger
+        {/* In "attached" mode clone the trigger visually so the popup wraps both the trigger
             and the list with a unified border/shadow. The clone is not
             interactive — the real trigger behind it handles all events. */}
-        {popoverMode === "attached" ? (
+        {isPopover && popoverMode === "attached" ? (
           <div
             className="navi_picker_anchor_clone"
             onMouseDown={(e) => {
@@ -740,207 +659,7 @@ const PickerContentInsidePopover = (props) => {
           </div>
         ) : null}
         {children}
-      </Popover>
+      </Popup>
     </Next>
   );
-};
-
-const PickerContentInsideDialog = (props) => {
-  const Next = useNextResolver();
-  const {
-    popupProps,
-    children,
-    scrollTrap,
-    pointerTrap,
-    dialogExpand,
-    dialogExpandX,
-    dialogExpandY,
-    ...rest
-  } = props;
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
-
-  return (
-    <Next aria-haspopup="dialog" {...rest}>
-      <Dialog
-        {...popupProps}
-        className="navi_picker_dialog"
-        scrollTrap={scrollTrap}
-        pointerTrap={pointerTrap}
-        centerInVisualViewport
-        autoFocus="fallback"
-        data-expand-x={expandX ? "" : undefined}
-        data-expand-y={expandY ? "" : undefined}
-      >
-        {children}
-      </Dialog>
-    </Next>
-  );
-};
-
-/**
- * Returns a `disableClickFor` function that suppresses the next `click` event
- * that lands on a specific element after a `mousedown` already handled an
- * open/close action.
- *
- * Problem: when the popover backdrop closes on mousedown, the browser then
- * dispatches a `click` on whatever element is under the pointer. If that element
- * is the picker button, it would immediately re-open the picker.
- *
- * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
- * `mousedown` to prevent that click — the browser dispatches it regardless.
- *
- * Solution: register a self-removing capture-phase `click` listener on `document`
- * and suppress the click only if it lands inside the given element (the picker
- * button). Clicks on any other element (e.g. a submit button) pass through
- * normally.
- *
- * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
- * the browser always finds a target for the mousedown → click sequence. If the
- * backdrop were removed from the DOM between mousedown and mouseup, the browser
- * would not dispatch a click at all, which would leave this listener armed
- * forever and cause it to swallow the next unrelated user click.
- */
-const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
-  const disableClickFor = () => {
-    const suppressClick = (clickEvent) => {
-      document.removeEventListener("click", suppressClick, { capture: true });
-      const el = elementRef.current;
-      if (!el || !el.contains(clickEvent.target)) {
-        // Click landed outside the element we are guarding — let it through.
-        return;
-      }
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-      onIgnore?.(clickEvent);
-    };
-    document.addEventListener("click", suppressClick, { capture: true });
-  };
-  return disableClickFor;
-};
-
-// Created once per picker instance: openHandler is wrapped in a stable callback
-// so the controller identity never changes across renders, even though
-// Dialog/Popover read fresh closures (scrollTrap, etc.) via
-// openController.openEffect on every render.
-const useOpenController = (openHandler) => {
-  const stableOpenHandler = useStableCallback(openHandler);
-  const controllerRef = useRef(null);
-  if (!controllerRef.current) {
-    controllerRef.current = createOpenController(stableOpenHandler);
-  }
-  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
-  // removes it from the tree without going through requestClose()), there is
-  // no choice to leave open — close it for real.
-  useLayoutEffect(() => {
-    return () => {
-      controllerRef.current.close();
-    };
-  }, []);
-  return controllerRef.current;
-};
-
-/**
- * Owns open/close decision-making for a picker popup (Dialog or Popover):
- * guards against duplicate requests and notifies the picker's own reactions.
- *
- * `controller.openEffect` is implemented by the controlled element (Dialog or
- * Popover), reassigned on every render so it always closes over the latest
- * props (scrollTrap, anchorRef, etc.). It performs whatever DOM side effects
- * are needed to make the element actually open (`showModal()`/`showPopover()`,
- * focus transfer, positioning, traps...) and returns its cleanup —
- * the matching side effects to sync back to closed (`close()`/
- * `hidePopover()`, releasing traps...). That cleanup is kept private to the
- * controller (not exposed as a property) and invoked when the popup actually
- * closes, however that happens.
- *
- * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
- * their own internal triggers (backdrop click, Escape).
- *
- * `openHandler` is the picker's own business logic, passed once to
- * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
- * in the spirit of CloseWatcher
- * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
- * clearer naming than its cancel/close pair:
- * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
- *   open. Validation lives here.
- * - `onClose(e)`: actually closing, not preventable — final reactions live here.
- *
- * The controller exposes matching action methods:
- * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
- * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
- *   stopping after the first if denied. The popup may choose to stay open.
- * - `close()`: closes for real — calls only `onClose`, skipping
- *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
- *   popup unmounting).
- */
-const createOpenController = (openHandler) => {
-  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
-  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
-  const performClose = (closeEvent) => {
-    controller.opened = false;
-    // Sync the DOM closed first (releasing the focus trap) — only then run
-    // the picker's own reaction (onClose may restore focus to an element
-    // outside the popup, which the focus trap would otherwise fight while
-    // still active).
-    openEffectCleanup?.(closeEvent);
-    openEffectCleanup = null;
-    closeHandlers?.onClose?.(closeEvent);
-    closeHandlers = null;
-  };
-  const controller = {
-    opened: false,
-    openEffect: null,
-    open: (e, detail) => {
-      if (controller.opened || !controller.openEffect) {
-        return;
-      }
-      const requestOpenEvent = new CustomEvent("navi_request_open", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestOpenEvent, e);
-      controller.opened = true;
-      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
-      // by mutating it — openHandler reads it right after, synchronously.
-      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
-      closeHandlers = openHandler(requestOpenEvent) || null;
-    },
-    requestClose: (
-      e = new CustomEvent("programmatic", { detail: {} }),
-      detail,
-    ) => {
-      if (!controller.opened) {
-        return;
-      }
-      const requestCloseEvent = new CustomEvent("navi_request_close", {
-        detail: { event: e, ...detail },
-        cancelable: true,
-      });
-      chainEvent(requestCloseEvent, e);
-      closeHandlers?.onRequestClose?.(requestCloseEvent);
-      if (requestCloseEvent.defaultPrevented) {
-        // The native <dialog> "cancel" event (Escape key) closes the dialog
-        // by default; prevent that default so denial actually keeps it open.
-        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
-        if (nativeCancelEvent) {
-          nativeCancelEvent.preventDefault();
-        }
-        return;
-      }
-      performClose(requestCloseEvent);
-    },
-    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
-      if (!controller.opened) {
-        return;
-      }
-      const closeEvent = new CustomEvent("navi_close", {
-        detail: { event: e, ...detail },
-      });
-      chainEvent(closeEvent, e);
-      // Skips onRequestClose entirely — there is no choice here.
-      performClose(closeEvent);
-    },
-  };
-  return controller;
 };
