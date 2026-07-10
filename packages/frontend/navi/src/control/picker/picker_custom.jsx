@@ -411,6 +411,12 @@ const PickerCustom = (props) => {
     });
 
     interactions: {
+      const isWithinPickerContent = (el) => {
+        const pickerEl = ref.current;
+        const pickerContentEl = pickerEl.querySelector(".navi_picker_content");
+        return pickerContentEl?.contains(el);
+      };
+
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         "a-z": (e) => {
           return {
@@ -456,6 +462,11 @@ const PickerCustom = (props) => {
           };
         },
         "enter": (e) => {
+          if (isWithinPickerContent(e.target)) {
+            // Enter within popup should not try to re-open it
+            // (enter within input would close popup and this one would try to re-open it)
+            return null;
+          }
           return {
             name: "enter_to_open",
             allowed: () => {
@@ -478,15 +489,10 @@ const PickerCustom = (props) => {
         },
       });
 
-      const isWithinPopup = (el) => {
-        const popupEl = popupRef.current;
-        return el === popupEl || popupEl.contains(el);
-      };
-
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: (e) => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             if (openController.opened) {
@@ -508,7 +514,7 @@ const PickerCustom = (props) => {
             };
           },
           click: (e) => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             // When a label is clicked it transfers focus to the select

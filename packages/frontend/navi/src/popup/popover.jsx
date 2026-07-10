@@ -479,6 +479,7 @@ const usePopoverProps = (props) => {
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "fallback",
+    onKeyDown,
     children,
     ...rest
   } = props;
@@ -1083,7 +1084,10 @@ const usePopoverProps = (props) => {
     "onnavi_request_interaction": (e) => {
       onRequestInteraction(e, { debugInteraction });
     },
-    "onKeyDown": onKeyDownShortcuts,
+    "onKeyDown": (e) => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    },
     children,
     // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
     // already arrive here as plain props via ...rest (wired by

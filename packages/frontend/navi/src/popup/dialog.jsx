@@ -473,6 +473,7 @@ const useDialogProps = (props) => {
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
     autoFocus = "fallback",
+    onKeyDown,
     children,
     ...rest
   } = props;
@@ -852,7 +853,10 @@ const useDialogProps = (props) => {
     "onnavi_request_interaction": (e) => {
       onRequestInteraction(e, { debugInteraction });
     },
-    "onKeyDown": onKeyDownShortcuts,
+    "onKeyDown": (e) => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    },
     "onCancel": (e) => {
       // Native "cancel" (Escape) only ever fires for a modal (showModal())
       // dialog — the custom renderer's own Escape handling lives in
