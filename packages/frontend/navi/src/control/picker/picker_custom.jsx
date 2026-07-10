@@ -371,7 +371,24 @@ const PickerCustom = (props) => {
         onActionStart?.(e);
         // requestClose(e);
       },
-      "onnavi_request_open": (e) => {
+      "uiAction": (v, e) => {
+        uiActionProp?.(v, e);
+      },
+      children,
+    });
+    Object.assign(popupProps, {
+      anchor: props.ref,
+      openController,
+      // Not on pickerProps (the trigger): commands.js's own
+      // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
+      // find where to dispatch navi_request_open/navi_request_close — and
+      // the popup itself now carries its own aria-expanded (see
+      // popover.jsx/dialog.jsx), which is *closer* than the picker's own
+      // aria-expanded for anything dispatched from inside the popup's own
+      // content (e.g. a `command="--navi-close"` button rendered as
+      // children here). That command lands on the popup element, not the
+      // picker — so these listeners have to live here to ever see it.
+      onnavi_request_open: (e) => {
         if (openController.opened) {
           return;
         }
@@ -383,7 +400,7 @@ const PickerCustom = (props) => {
           },
         });
       },
-      "onnavi_request_close": (e) => {
+      onnavi_request_close: (e) => {
         requestInteraction({
           event: e,
           allowed: () => {
@@ -391,14 +408,6 @@ const PickerCustom = (props) => {
           },
         });
       },
-      "uiAction": (v, e) => {
-        uiActionProp?.(v, e);
-      },
-      children,
-    });
-    Object.assign(popupProps, {
-      anchor: props.ref,
-      openController,
     });
 
     interactions: {
