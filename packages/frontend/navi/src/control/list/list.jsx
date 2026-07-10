@@ -144,6 +144,7 @@ const css = /* css */ `
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
       max-height: var(--list-max-height, inherit);
+      flex-wrap: inherit;
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
     }
@@ -184,8 +185,9 @@ const css = /* css */ `
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    flex-wrap: inherit;
     list-style: none;
-    outline: none; /*  Focus is displayed on the container */
+    outline: none; /* Focus is displayed on the container */
   }
 
   .navi_list_item {

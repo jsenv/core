@@ -1,3 +1,4 @@
+import { dispatchCustomEvent } from "@jsenv/dom";
 import { useContext, useId, useRef } from "preact/hooks";
 
 import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
@@ -373,6 +374,19 @@ const PickerCustom = (props) => {
       },
       "uiAction": (v, e) => {
         uiActionProp?.(v, e);
+      },
+      // The picker's own trigger also carries aria-expanded, so
+      // resolveClosestExpandable() in commands.js can resolve *it* (not the
+      // popup) as the target — e.g. a --navi-open/--navi-close/--navi-toggle
+      // command whose source sits inside the trigger but outside the popup's
+      // own content. Forward the request down to the popup so its
+      // openController (registered above via onnavi_request_open/close on
+      // popupProps) is the single place actually deciding open/close.
+      "onnavi_request_open": (e) => {
+        dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
+      },
+      "onnavi_request_close": (e) => {
+        dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
       },
       children,
     });
