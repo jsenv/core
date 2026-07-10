@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -41505,6 +41505,15 @@ const css$m = /* css */`
     grid-column: 1 / -1;
   }
 
+  /* Same reasoning as the filler rule above, for the separator (the default
+     Separator rendered between items when List's own separator prop is
+     set): a grid track only ever spans the single column it is placed in
+     by default, so without this it would collapse into just the first
+     column's width instead of the full row. */
+  .navi_list[navi-box-flow="grid"] > .navi_separator {
+    grid-column: 1 / -1;
+  }
+
   /* Empty state — hidden by default, shown when no list items are rendered.
      order: 1 pushes fallbacks after all regular items in flex column layout.
      The list children are open-ended (headers, presentation items, real items),
@@ -50009,17 +50018,17 @@ const SidePanel = ({
     className: withPropsClassName("navi_side_panel", className),
     "navi-side": side,
     style: {
-      "--navi-side-panel-width": toCssLength(width),
-      "--navi-side-panel-height": toCssLength(height)
+      "--navi-side-panel-width": toCssLength(width, "width"),
+      "--navi-side-panel-height": toCssLength(height, "height")
     },
     ...rest,
     children: children
   });
 };
-// Preact doesn't auto-append "px" to bare numeric style values the way React
-// does — an unsuffixed number is an invalid CSS length, silently rejected by
-// the browser (leaving the property unset instead of sized).
-const toCssLength = value => value === undefined || value === null ? undefined : typeof value === "number" ? `${value}px` : value;
+// Same width/height normalization Box itself uses for its own styleCSSVars
+// props (see box_style_util.js's own getStringifier) — bare numbers become
+// px, percentages/calc()/CSS keywords pass through untouched.
+const toCssLength = (value, propertyName) => value === undefined || value === null ? undefined : stringifyStyle$1(value, propertyName);
 
 /**
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
