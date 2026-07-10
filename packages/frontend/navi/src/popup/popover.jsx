@@ -118,12 +118,12 @@ const css = /* css */ `
   .navi_popover {
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
-      var(--space-available-width, var(--popover-maxmax-width)),
+      var(--container-position-remaining-width, var(--popover-maxmax-width)),
       var(--popover-maxmax-width)
     );
     --x-popover-max-height: min(
       var(--popover-max-height),
-      var(--space-available-height, var(--popover-maxmax-height)),
+      var(--container-position-remaining-height, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
 
@@ -737,8 +737,8 @@ const usePopoverProps = (props) => {
         // Cleared so pickPositionRelativeTo measures the popover's natural
         // (unconstrained) size — the flip threshold must compare against the
         // real content size, not one already truncated by a stale value.
-        popoverEl.style.removeProperty("--space-available-height");
-        popoverEl.style.removeProperty("--space-available-width");
+        popoverEl.style.removeProperty("--container-position-remaining-height");
+        popoverEl.style.removeProperty("--container-position-remaining-width");
         position = pickPositionRelativeTo(popoverEl, anchorElement, {
           positionArea,
           positionAreaFixed,

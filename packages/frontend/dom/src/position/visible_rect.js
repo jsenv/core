@@ -1157,7 +1157,7 @@ export const pickPositionRelativeTo = (
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
       // "bottom"
-      // top is always anchorBottom - insetBottom + marginWithAnchor — max-height (via --space-available) truncates
+      // top is always anchorBottom - insetBottom + marginWithAnchor — max-height (via --container-position-remaining-height) truncates
       // the element height so it doesn't overflow the viewport bottom.
       const idealTop = anchorBottom - insetBottom + marginWithAnchor;
       elementPositionTop =
@@ -1167,7 +1167,7 @@ export const pickPositionRelativeTo = (
     // vertical boundary clamp at all — "top"/"bottom" already clamp their
     // own idealTop inline, "inset-*"/"center" don't, and changing that
     // for every existing consumer (real-anchor "bottom" near the viewport
-    // bottom relies on --space-available/max-height truncation instead of
+    // bottom relies on --container-position-remaining-height/max-height truncation instead of
     // repositioning) is out of scope here. Scoped strictly to the no-anchor
     // (container-docked) case, where it's new and safe: a container is
     // always meant to be respected on both axes.
@@ -1322,17 +1322,17 @@ export const applyNewPosition = (
   element.style.top = `${top}px`;
 
   if (positionY === "top" || positionY === "inset-bottom") {
-    element.style.setProperty("--space-available-height", `${spaceAbove}px`);
+    element.style.setProperty("--container-position-remaining-height", `${spaceAbove}px`);
   } else if (positionY === "bottom" || positionY === "inset-top") {
-    element.style.setProperty("--space-available-height", `${spaceBelow}px`);
+    element.style.setProperty("--container-position-remaining-height", `${spaceBelow}px`);
   } else {
-    element.style.removeProperty("--space-available-height");
+    element.style.removeProperty("--container-position-remaining-height");
   }
   if (positionX === "left" || positionX === "inset-right") {
-    element.style.setProperty("--space-available-width", `${spaceLeft}px`);
+    element.style.setProperty("--container-position-remaining-width", `${spaceLeft}px`);
   } else if (positionX === "right" || positionX === "inset-left") {
-    element.style.setProperty("--space-available-width", `${spaceRight}px`);
+    element.style.setProperty("--container-position-remaining-width", `${spaceRight}px`);
   } else {
-    element.style.removeProperty("--space-available-width");
+    element.style.removeProperty("--container-position-remaining-width");
   }
 };
