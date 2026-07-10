@@ -5,7 +5,10 @@ import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositioningContainer } from "./offset_parent.js";
-import { subscribeVisualViewportResizeSettled } from "./visual_viewport.js";
+import {
+  subscribeVisualViewportResizeSettled,
+  subscribeWindowResizeSettled,
+} from "./window_size.js";
 
 const DEBUG = false;
 
@@ -292,18 +295,11 @@ export const visibleRectEffect = (
         });
       }
     }
-    on_visual_viewport_resize: {
-      // See onVisualViewportResizeSettled's own module comment
-      // (visual_viewport.js) for why this goes through the shared debounce
-      // instead of keeping its own timer.
+    on_resize: {
+      // See window_size.js's own module comment for why both of these go
+      // through their shared debounce instead of each keeping its own timer.
       addTeardown(subscribeVisualViewportResizeSettled(autoCheck));
-      const onWindowResize = (e) => {
-        autoCheck(e);
-      };
-      window.addEventListener("resize", onWindowResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", onWindowResize);
-      });
+      addTeardown(subscribeWindowResizeSettled(autoCheck));
     }
     on_element_resize: {
       if (skipElementResize) {
