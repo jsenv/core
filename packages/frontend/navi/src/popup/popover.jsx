@@ -68,6 +68,13 @@ import {
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
 
+// Custom renderer only (layer="local") — count of currently-open instances,
+// see --popover-stack-order's own CSS comment for why a plain "last shown"
+// default doesn't happen for free the way it does for the top-layer
+// renderer. A live count (not an ever-growing counter) so the assigned
+// order stays small and resets to 0 once nothing is open.
+let openLocalPopoverCount = 0;
+
 const css = /* css */ `
   @layer navi {
     .navi_popover {
@@ -135,7 +142,12 @@ const css = /* css */ `
        reasoning. */
     position: absolute;
     inset: unset;
-    z-index: 1000;
+    /* Custom renderer only: --popover-stack-order is set to
+       openLocalPopoverCount on every open (see openEffect below) so the
+       most-recently-opened local popover always outranks an earlier one,
+       regardless of DOM position — a plain positioned div gets no free
+       "last shown wins" the way the top-layer renderer does. */
+    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
     min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
     max-width: var(--x-popover-max-width);
     min-height: min(
@@ -161,10 +173,6 @@ const css = /* css */ `
     transition-timing-function: ease-out;
     overflow: auto;
     overscroll-behavior: none;
-
-    &[popover] {
-      z-index: unset;
-    }
 
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
@@ -206,6 +214,11 @@ const css = /* css */ `
        rules, it's always the base "position: absolute" above. */
     &[popover] {
       position: fixed;
+      /* The native top layer already gives "last shown wins" for free —
+         --popover-stack-order is only ever set by the custom renderer's own
+         openEffect, but reset here regardless in case a consumer sets the
+         var directly on an ancestor. */
+      z-index: unset;
       padding: 0;
     }
     &[popover][data-anchor] {
@@ -225,6 +238,12 @@ const css = /* css */ `
 
     position: absolute;
     inset: 0;
+    /* Custom renderer only: same var (and same value) as its own
+       .navi_popover — see that rule's own comment. Ties within the same
+       instance still resolve via DOM order (content rendered after its own
+       backdrop, see this file's top comment), so this only needs to beat
+       *other* popovers' own backdrop/content, not its own. */
+    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
     margin: 0;
     padding: 0;
     background: transparent;
@@ -237,14 +256,14 @@ const css = /* css */ `
        in openEffect) gets pointer-events: none mid-transition. */
     pointer-events: auto;
 
-    /* The via-attribute renderer's backdrop: a top-layer sibling, so it
-       needs to cover the whole viewport itself (width/height: auto
-       overrides the [popover] UA default sizing). */
     &[popover] {
       position: fixed;
       inset: 0;
-      width: auto;
-      height: auto;
+      /* The native top layer already gives "last shown wins" for free —
+         see .navi_popover's own identical rule. */
+      z-index: unset;
+      width: auto; /* user agent override */
+      height: auto; /* user agent override */
     }
 
     /* Same reasoning/mechanism as .navi_popover's own rule above (including
@@ -610,6 +629,18 @@ const usePopoverProps = (props) => {
       popoverEl.removeAttribute("data-anchor");
     }
 
+    if (!isTopLayer) {
+      // Assigned fresh on every open (including reopen) — see
+      // --popover-stack-order's own CSS comment. Same value on the backdrop
+      // below so this instance's own content/backdrop pair still resolves
+      // their own tie via DOM order.
+      const stackOrder = openLocalPopoverCount++;
+      popoverEl.style.setProperty("--popover-stack-order", stackOrder);
+      if (backdropEl) {
+        backdropEl.style.setProperty("--popover-stack-order", stackOrder);
+      }
+    }
+
     const { parsedPositionArea, resolvedAnimationKind } =
       resolvePositionAreaAndAnimationKind({
         positionArea,
@@ -917,6 +948,8 @@ const usePopoverProps = (props) => {
       popoverEl.setAttribute("navi-hidden", "");
       if (isTopLayer) {
         popoverEl.hidePopover();
+      } else {
+        openLocalPopoverCount = Math.max(0, openLocalPopoverCount - 1);
       }
       // Not interactive while it's leaving either — cancel the open side's
       // still-pending suppression first, since a fresh one below fully
@@ -1050,10 +1083,10 @@ const usePopoverProps = (props) => {
     // See backdropProps' own identical prop above for the full reasoning
     // (kept once, not repeated here).
     "aria-expanded": openController.opened ? "true" : "false",
-    // Only load-bearing for the custom renderer (see its own &:not([popover])
-    // CSS rule) — present from this very first render so there's no gap for
-    // the browser to ever paint the custom renderer visible before anything
-    // has actually opened it. Recomputed fresh on every render from
+    // Only load-bearing for the custom renderer (a plain div has no native
+    // starting-hidden default) — present from this very first render so
+    // there's no gap for the browser to ever paint it visible before
+    // anything has actually opened it. Recomputed fresh on every render from
     // openController.opened (not a frozen mount-time constant) — Preact
     // only touches the DOM for a prop whose value actually changed since
     // the last render, so as long as this always reflects the *current*
