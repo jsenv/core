@@ -694,7 +694,22 @@ export const openCallout = (
   });
 
   if (anchorElement) {
-    anchorElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    // "instant", not "smooth": the positioning block further down measures
+    // anchorElement's geometry synchronously, in the same tick — a "smooth"
+    // scroll doesn't move anything until the browser gets to animate it on
+    // a later frame, so that first measurement would run against the
+    // pre-scroll position instead. Once the animation actually plays,
+    // stickCalloutToAnchor's own visibleRectEffect (watching document
+    // scroll to keep following the anchor) reacts to every intermediate
+    // frame of it too, and its sticky above/below choice (deliberately
+    // hysteretic, to avoid flip-flopping while the user scrolls normally)
+    // can latch onto whichever side a mid-animation frame happened to
+    // favor — even when the anchor's own final, settled position would
+    // have fit fine on the original side. Scrolling instantly collapses
+    // that whole window: by the time anything measures anchorElement, it's
+    // already at its final position, so there's no transient frame left to
+    // latch onto.
+    anchorElement.scrollIntoView({ behavior: "instant", block: "nearest" });
     allowWheelThrough(calloutElement, visualAnchorElement);
     anchorElement.setAttribute("data-callout", calloutId);
     addTeardown(() => {

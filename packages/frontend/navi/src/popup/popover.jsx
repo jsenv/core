@@ -149,6 +149,9 @@ const css = /* css */ `
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
+    transition-property: left, top;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
     overflow: auto;
     overscroll-behavior: none;
 

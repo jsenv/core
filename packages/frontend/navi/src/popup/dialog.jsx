@@ -166,6 +166,9 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+    transition-property: left, top;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -664,8 +667,8 @@ const useDialogProps = (props) => {
     // — see this file's top comment.
     const rectEffect = visibleRectEffect(
       isModal ? document.documentElement : positionedAncestor,
-      () => {
-        positionDialog();
+      (visibleRect, { event }) => {
+        positionDialog(event);
       },
       { event: e, skipElementResize: true },
     );
