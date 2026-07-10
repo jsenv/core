@@ -69,7 +69,7 @@ const css = /* css */ `
     .navi_list_container {
       --list-outline-width: 1px;
       --list-border-radius: 4px;
-      --list-border-width: 1px;
+      --list-border-width: 0px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
     }

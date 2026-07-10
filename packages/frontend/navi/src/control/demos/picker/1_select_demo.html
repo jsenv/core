@@ -121,6 +121,7 @@
       import {
         Box,
         Field,
+        Separator,
         Label,
         Input,
         Picker,
@@ -317,11 +318,8 @@
             <h3>Outside a form — default behavior</h3>
             <p>
               Clicking an item highlights it but keeps the popover open. The
-              value is committed only when the popover closes (click outside,
-              Enter, …). Pressing Escape cancels and restores the previous
-              value. This is the default because it works for both single- and
-              multi-select, allows cancellation, and lets side effects (e.g. a
-              preview) be browsed before committing.
+              value is committed only explicitely with the confirm button (
+              <code>command="--navi-send"</code>).
             </p>
             <Field vertical>
               <Label>Fruit</Label>
@@ -354,6 +352,15 @@
                     </List.Item>
                   ))}
                 </List>
+                <Separator margin="0" />
+                <Box flex spacing="s" alignX="end" padding="m">
+                  <Button command="--navi-cancel" variant="discrete">
+                    Cancel
+                  </Button>
+                  <Button command="--navi-define" variant="discrete">
+                    Confirm
+                  </Button>
+                </Box>
               </Picker>
             </Field>
             <CallLog entries={entries} onClear={clear} />
