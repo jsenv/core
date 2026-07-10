@@ -308,6 +308,10 @@ const css = /* css */ `
  * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
  *   the popover has actually been positioned once, so a live reposition
  *   (e.g. anchor moved) doesn't jump to a different side.
+ * @param {string} [props.invalidAnchorPositionArea="center"] - `positionArea`
+ *   used instead, as a plain no-anchor dock, whenever a real anchor is too
+ *   big to bother anchoring to (`isAnchorTooBig`, always checked — see
+ *   `pickPositionRelativeTo`'s own doc in visible_rect.js).
  * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
  *   between the popover and the edges of its container.
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
@@ -472,6 +476,11 @@ const usePopoverProps = (props) => {
     // see the positionArea grammar in the file's top comment
     positionArea = "bottom",
     positionAreaFixed,
+    // positionArea used instead whenever a real anchor is too big to bother
+    // anchoring to (pickPositionRelativeTo's own isAnchorTooBig, always
+    // checked — see its doc in visible_rect.js) — forwarded as-is, same
+    // "center" default.
+    invalidAnchorPositionArea,
     marginWithContainer = 0,
     pointerInteractionOutsideEffect = "none",
     scrollCapture,
@@ -726,6 +735,7 @@ const usePopoverProps = (props) => {
         position = pickPositionRelativeTo(popoverEl, anchorElement, {
           positionArea,
           positionAreaFixed,
+          invalidAnchorPositionArea,
           marginWithAnchor: resolveSpacingSize(marginWithAnchor),
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           // Only meaningful for the custom renderer: popoverEl is always

@@ -321,13 +321,10 @@
             element
           </li>
         </ul>
-        <strong>Scroll Behavior:</strong> When centered in the viewport, the
-        callout <strong>will not follow page scrolling</strong> and this is
-        intentional. The callout is designed to display a message to the user at
-        the moment <code>openCallout</code>
-        is called. Following scroll would likely move the message further from
-        the UI element that triggered it in the first place, reducing its
-        contextual relevance.
+        <strong>Scroll Behavior:</strong> When centered in the viewport (no
+        anchor at all, or a real one too big to bother anchoring to — see
+        below), the callout <strong>stays centered in the viewport</strong>
+        as the page scrolls, same as every other repositioning trigger.
         <br /><br />
         When no anchor is provided, the callout centers itself in the viewport
         as a fallback.

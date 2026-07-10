@@ -169,6 +169,37 @@
         border: 1px dashed #999;
         border-radius: 6px;
       }
+      /* Almost as wide as the viewport (see isAnchorTooBig's own doc,
+         visible_rect.js) — leaves under 50px on the left/right axis, so
+         "left"/"right" get rejected, while "top"/"bottom" stay unaffected
+         (the anchor's own height is unrelated to that axis). */
+      .demo-toobig-anchor-wide {
+        box-sizing: border-box;
+        width: calc(100vw - 10px);
+        margin: 16px auto;
+        padding: 10px 16px;
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
+      /* Almost as tall as its own .demo-container (see below) — same idea
+         as .demo-toobig-anchor-wide, but on the height/container axis
+         instead of the viewport width. */
+      .demo-toobig-anchor-tall {
+        box-sizing: border-box;
+        width: 80px;
+        height: calc(240px - 5px);
+        padding: 10px 8px;
+        color: #666;
+        font-size: 12px;
+        text-align: center;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 6px;
+      }
       .demo-zone-label {
         position: absolute;
         color: #bbb;
@@ -404,6 +435,7 @@
           <PointerInteractionOutsideSection />
           <CustomizationSection />
           <OpenAtStartSection />
+          <AnchorTooBigSection />
         </div>
       );
 
@@ -447,6 +479,9 @@
             </li>
             <li>
               <a href="#open-from-start">Open from the start</a>
+            </li>
+            <li>
+              <a href="#anchor-too-big">Anchor too big (isAnchorTooBig)</a>
             </li>
           </ol>
         </nav>
@@ -1137,6 +1172,163 @@
           </>
         );
       };
+
+      // A single Popover instance whose anchor is proxied (navi-command-proxy-for)
+      // to some other, deliberately oversized element instead of the trigger
+      // button itself — see AnchorTooWideDemo/AnchorTooTallInContainerDemo
+      // below for the two actual "too big" anchors this drives.
+      // invalidAnchorPositionArea is only meaningful once isAnchorTooBig
+      // (visible_rect.js) actually rejects the anchor — left at its own
+      // "center" default unless explicitly passed, to show it's
+      // configurable.
+      const AnchorTooBigPopover = ({
+        label,
+        positionArea,
+        invalidAnchorPositionArea,
+        commandProxyFor,
+        layer,
+      }) => {
+        const popoverId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={popoverId}
+              navi-command-proxy-for={commandProxyFor}
+              className="demo-area-button"
+            >
+              {label}
+            </Button>
+            <Popover
+              id={popoverId}
+              borderRadius="8px"
+              layer={layer}
+              positionArea={positionArea}
+              invalidAnchorPositionArea={invalidAnchorPositionArea}
+              className="demo_popover_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      // Anchor spans nearly the full viewport width (see its own CSS,
+      // .demo-toobig-anchor-wide) but stays short — isAnchorTooBig
+      // (visible_rect.js) only ever rejects the axis positionArea actually
+      // places outside the anchor, so "left"/"right" (x outside) get
+      // rejected here while "top"/"bottom" (y outside) still work fine,
+      // since only the anchor's *height* matters for those, and it's tiny.
+      const AnchorTooWideDemo = () => {
+        const anchorId = useId();
+        return (
+          <>
+            <div id={anchorId} class="demo-toobig-anchor-wide">
+              anchor (viewport width − 10px)
+            </div>
+            <div class="demo-row">
+              <AnchorTooBigPopover
+                label="left → rejected, falls back to center"
+                positionArea="left"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="right → rejected, falls back to center"
+                positionArea="right"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="right, invalidAnchorPositionArea=&quot;bottom&quot;"
+                positionArea="right"
+                invalidAnchorPositionArea="bottom"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="top → still fine"
+                positionArea="top"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="bottom → still fine"
+                positionArea="bottom"
+                commandProxyFor={anchorId}
+              />
+            </div>
+          </>
+        );
+      };
+
+      // Same idea as AnchorTooWideDemo, but the "too big" axis is the
+      // container's own height instead of the viewport's width: the anchor
+      // is nearly as tall as its .demo-container (240px − 5px), and the
+      // popover is layer="local" so its own positioned ancestor (this
+      // container, auto-resolved via getPositioningContainer — see
+      // pickPositionRelativeTo's own doc) is what isAnchorTooBig compares
+      // against, not the viewport. "top" (y outside) gets rejected; "left"/
+      // "right" (x outside) still work fine, since only the anchor's width
+      // matters for those, and it's narrow.
+      const AnchorTooTallInContainerDemo = () => {
+        const anchorId = useId();
+        return (
+          <div class="demo-container">
+            <span class="demo-container-label">container (240px tall)</span>
+            <div id={anchorId} class="demo-toobig-anchor-tall">
+              anchor (container height − 5px)
+            </div>
+            <div class="demo-row">
+              <AnchorTooBigPopover
+                label="top → rejected, falls back to center"
+                positionArea="top"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="top, invalidAnchorPositionArea=&quot;bottom&quot;"
+                positionArea="top"
+                invalidAnchorPositionArea="bottom"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="left → still fine"
+                positionArea="left"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+              <AnchorTooBigPopover
+                label="right → still fine"
+                positionArea="right"
+                layer="local"
+                commandProxyFor={anchorId}
+              />
+            </div>
+          </div>
+        );
+      };
+
+      const AnchorTooBigSection = () => (
+        <section id="anchor-too-big" class="demo-section">
+          <h2>9. Anchor too big (isAnchorTooBig)</h2>
+          <p>
+            A real anchor is only usable on the axis <code>positionArea</code>
+            actually places the popover *outside* of it (a bare "left"/
+            "right"/"top"/"bottom", never "center"/"inset(...)") — an anchor
+            consuming almost all the room on that axis (viewport, or a
+            custom <code>container</code>) leaves nothing to work with there,
+            so the popover docks via <code>invalidAnchorPositionArea</code>
+            instead (default <code>"center"</code>, itself configurable).
+          </p>
+          <div class="demo-subsection">
+            <h3>9.1 Anchor too wide for the viewport</h3>
+            <AnchorTooWideDemo />
+          </div>
+          <div class="demo-subsection">
+            <h3>9.2 Anchor too tall for its container</h3>
+            <AnchorTooTallInContainerDemo />
+          </div>
+        </section>
+      );
 
       render(
         <NaviDebug debugAll>

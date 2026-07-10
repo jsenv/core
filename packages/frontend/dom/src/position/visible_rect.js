@@ -645,22 +645,35 @@ export const parsePositionArea = (value) => {
 
 /**
  * Default check `pickPositionRelativeTo` uses (always, not opt-in) to
- * decide whether a real `anchor` is actually usable: one consuming so much
- * of `availableHeight` that less than `minSpace` px would be left doesn't
- * leave enough room to display anything meaningfully "next to" it — e.g. a
- * callout anchored to a viewport-filling element reads more like an
- * unrelated floating box than something actually pointing at it.
- * `availableHeight` is whatever `element` is actually confined to — the
- * viewport most of the time, but a custom `container` (explicit or
- * auto-resolved) when there is one, since that's the space that actually
- * matters, not the viewport's if the two differ. Exported so a caller
- * reasoning about the same anchor (e.g. Callout's own outer
- * anchored/centered dispatch, run before it even calls
- * pickPositionRelativeTo) can reuse the exact same rule instead of
- * duplicating it.
+ * decide whether a real `anchor` is actually usable — axis by axis: only
+ * the axis `positionArea` actually places `element` *outside* of (a bare
+ * "left"/"right" or "top"/"bottom", never "center"/"inset-*") can ever
+ * reject the anchor, since that's the only axis where the anchor's own
+ * size directly eats into the room available. An anchor consuming so much
+ * of that axis's `availableWidth`/`availableHeight` that less than
+ * `minSpace` px would be left doesn't leave enough room to display
+ * anything meaningfully "next to" it on that side — e.g. a callout anchored
+ * to a viewport-filling element reads more like an unrelated floating box
+ * than something actually pointing at it. A corner (both axes outside,
+ * e.g. "top-left") rejects if *either* axis fails this way — pointless to
+ * anchor at all if even one of the two edges it needs has no room.
+ * `availableWidth`/`availableHeight` are whatever `element` is actually
+ * confined to — the viewport most of the time, but a custom `container`
+ * (explicit or auto-resolved) when there is one, since that's the space
+ * that actually matters, not the viewport's if the two differ.
  */
-const isAnchorTooBig = (anchorRect, availableHeight, minSpace = 50) =>
-  anchorRect.height > availableHeight - minSpace;
+const isAnchorTooBig = (
+  anchorRect,
+  { availableWidth, availableHeight, xIsOutside, yIsOutside, minSpace = 50 },
+) => {
+  if (yIsOutside && anchorRect.height > availableHeight - minSpace) {
+    return true;
+  }
+  if (xIsOutside && anchorRect.width > availableWidth - minSpace) {
+    return true;
+  }
+  return false;
+};
 
 /**
  * Collapses a bare position value ("top"/"bottom"/"left"/"right") to its
@@ -813,12 +826,16 @@ export const pickPositionRelativeTo = (
   const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
 
   // Resolved early (doesn't depend on hasAnchor) so isAnchorTooBig can
-  // compare the anchor against *this* container's own height — normally the
+  // compare the anchor against *this* container's own size — normally the
   // viewport, but a custom `container` (or one auto-resolved via
   // getPositioningContainer below) is what `element` is actually confined
-  // to, so that's the height that actually matters for "is there enough
+  // to, so that's the space that actually matters for "is there enough
   // room left around this anchor" — not the viewport's, if they differ.
   const resolvedContainer = container ?? getPositioningContainer(element);
+  const containerWidthForAnchorCheck =
+    resolvedContainer && resolvedContainer !== document.documentElement
+      ? resolvedContainer.getBoundingClientRect().width
+      : viewportWidth;
   const containerHeightForAnchorCheck =
     resolvedContainer && resolvedContainer !== document.documentElement
       ? resolvedContainer.getBoundingClientRect().height
@@ -832,12 +849,25 @@ export const pickPositionRelativeTo = (
   // left worth respecting, whereas a deliberate no-anchor call (`anchor`
   // genuinely omitted) keeps using `positionArea` as-is — that one's
   // already the caller's own considered "what if there's no anchor" answer.
+  //
+  // Parsed once here purely to read which axes `positionArea` itself
+  // places outside the anchor (isAnchorTooBig's own doc explains why only
+  // those can ever reject it) — `effectivePositionArea` below is parsed
+  // again afterward for the actual x/y this call resolves to, since that
+  // can differ once rejected.
+  const requestedPositionArea = parsePositionArea(positionArea);
   const anchorRejected =
     Boolean(anchor) &&
-    isAnchorTooBig(
-      anchor.getBoundingClientRect(),
-      containerHeightForAnchorCheck,
-    );
+    isAnchorTooBig(anchor.getBoundingClientRect(), {
+      availableWidth: containerWidthForAnchorCheck,
+      availableHeight: containerHeightForAnchorCheck,
+      xIsOutside:
+        requestedPositionArea?.x === "left" ||
+        requestedPositionArea?.x === "right",
+      yIsOutside:
+        requestedPositionArea?.y === "top" ||
+        requestedPositionArea?.y === "bottom",
+    });
   const hasAnchor = Boolean(anchor) && !anchorRejected;
   const effectivePositionArea = anchorRejected
     ? invalidAnchorPositionArea
