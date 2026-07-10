@@ -35,6 +35,7 @@
  */
 
 import {
+  applyNewPosition,
   createPubSub,
   getBorderSizes,
   getPositionedParent,
@@ -149,8 +150,12 @@ const css = /* css */ `
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
+    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
+       transition) for most repositions (scroll, in particular, needs to
+       track its target in lockstep), a real duration only when the
+       reposition was itself triggered by a resize. */
     transition-property: left, top;
-    transition-duration: 0.25s;
+    transition-duration: var(--popup-position-transition-duration, 0s);
     transition-timing-function: ease-out;
     overflow: auto;
     overscroll-behavior: none;
@@ -687,8 +692,7 @@ const usePopoverProps = (props) => {
         : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
-      let appliedLeft;
-      let top;
+      let position;
 
       if (hasAnchorElement) {
         const { width, height } = anchorElement.getBoundingClientRect();
@@ -719,13 +723,7 @@ const usePopoverProps = (props) => {
         // (unconstrained) height of the popover. This ensures the 60% flip threshold
         // compares against the real content height, not the already-truncated one.
         popoverEl.style.removeProperty("--space-available");
-        const {
-          left,
-          top: pickedTop,
-          positionY: pickedPositionY,
-          spaceAbove,
-          spaceBelow,
-        } = pickPositionRelativeTo(popoverEl, anchorElement, {
+        position = pickPositionRelativeTo(popoverEl, anchorElement, {
           positionArea,
           positionAreaFixed,
           marginWithAnchor: resolveSpacingSize(marginWithAnchor),
@@ -738,14 +736,14 @@ const usePopoverProps = (props) => {
           // (see its own doc in visible_rect.js).
           container: isTopLayer ? undefined : positionedAncestor,
           minLeft,
+          event: positionEvent,
         });
         const spaceAvailable =
-          pickedPositionY === "top" || pickedPositionY === "inset-bottom"
-            ? spaceAbove
-            : spaceBelow;
+          position.positionY === "top" || position.positionY === "inset-bottom"
+            ? position.spaceAbove
+            : position.spaceBelow;
         popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
-        appliedLeft = Math.max(left, minLeft);
-        top = pickedTop;
+        position = { ...position, left: Math.max(position.left, minLeft) };
       } else {
         // No real anchor: dock against a container instead — omitting
         // pickPositionRelativeTo's own `anchor` argument entirely puts it
@@ -761,25 +759,19 @@ const usePopoverProps = (props) => {
         // popover always relies on the CSS's own --popover-maxmax-height
         // ceiling instead.
         popoverEl.style.removeProperty("--space-available");
-        const { left, top: pickedTop } = pickPositionRelativeTo(
-          popoverEl,
-          null,
-          {
-            positionArea,
-            container: isTopLayer ? undefined : positionedAncestor,
-            marginWithContainer: resolveSpacingSize(marginWithContainer),
-          },
-        );
-        appliedLeft = left;
-        top = pickedTop;
+        position = pickPositionRelativeTo(popoverEl, null, {
+          positionArea,
+          container: isTopLayer ? undefined : positionedAncestor,
+          marginWithContainer: resolveSpacingSize(marginWithContainer),
+          event: positionEvent,
+        });
       }
 
       debugPopup(
         positionEvent,
-        `positionPopover() -> left: ${appliedLeft}, top: ${top}`,
+        `positionPopover() -> left: ${position.left}, top: ${position.top}`,
       );
-      popoverEl.style.top = `${top}px`;
-      popoverEl.style.left = `${appliedLeft}px`;
+      applyNewPosition(popoverEl, position);
     };
 
     if (scrollCapture) {

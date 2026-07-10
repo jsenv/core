@@ -644,6 +644,25 @@ export const parsePositionArea = (value) => {
 };
 
 /**
+ * Default check `pickPositionRelativeTo` uses (always, not opt-in) to
+ * decide whether a real `anchor` is actually usable: one consuming so much
+ * of `availableHeight` that less than `minSpace` px would be left doesn't
+ * leave enough room to display anything meaningfully "next to" it — e.g. a
+ * callout anchored to a viewport-filling element reads more like an
+ * unrelated floating box than something actually pointing at it.
+ * `availableHeight` is whatever `element` is actually confined to — the
+ * viewport most of the time, but a custom `container` (explicit or
+ * auto-resolved) when there is one, since that's the space that actually
+ * matters, not the viewport's if the two differ. Exported so a caller
+ * reasoning about the same anchor (e.g. Callout's own outer
+ * anchored/centered dispatch, run before it even calls
+ * pickPositionRelativeTo) can reuse the exact same rule instead of
+ * duplicating it.
+ */
+const isAnchorTooBig = (anchorRect, availableHeight, minSpace = 50) =>
+  anchorRect.height > availableHeight - minSpace;
+
+/**
  * Collapses a bare position value ("top"/"bottom"/"left"/"right") to its
  * "inset-*" equivalent — "inset-*"/"center" values pass through unchanged.
  * Only used by pickPositionRelativeTo's own no-anchor (container-docked)
@@ -712,6 +731,15 @@ const toContainerAlignedPosition = (value) => {
  *   compass token, optionally `inset(...)`-wrapped).
  * @param {string} [options.positionAreaFixed] - Forces this placement, skipping the
  *   fit-check on both axes. Same grammar as `positionArea`.
+ * @param {string} [options.invalidAnchorPositionArea="center"] - `positionArea` used
+ *   instead, as a plain no-anchor dock (see `anchor`'s own doc above), whenever a real
+ *   `anchor` is passed but `isAnchorTooBig` (always checked, not opt-in — see its own
+ *   doc) rejects it. `hasAnchor` in the return value reports which way it went.
+ * @param {Event|CustomEvent} [options.event] - The event that triggered this particular
+ *   reposition (a scroll/resize/etc. handler simply forwarding whatever it was itself
+ *   called with) — purely informational, never changes the computed `left`/`top`
+ *   themselves, only `shouldTransition` in the return value (see `applyNewPosition`'s
+ *   own doc for how that's meant to be used).
  * @param {number} [options.alignToContainerEdgeWhenAnchorNearEdge=0] - When centering
  *   (positionArea's x is "center") an element wider than its anchor, snap to the available area's own
  *   left edge (the page viewport normally, or the container's edge — see `container` below —
@@ -743,7 +771,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @returns {{ hasAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -751,6 +779,8 @@ export const pickPositionRelativeTo = (
   {
     positionArea = "bottom",
     positionAreaFixed,
+    invalidAnchorPositionArea = "center",
+    event,
     alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
     marginWithAnchor = 0,
@@ -759,10 +789,64 @@ export const pickPositionRelativeTo = (
     container,
   } = {},
 ) => {
-  const parsedPositionArea = parsePositionArea(positionArea);
+  // Hoisted above the positionArea/hasAnchor resolution below: isAnchorTooBig
+  // needs viewportHeight to decide whether `anchor` is even usable, before
+  // anything else in this function runs. window.visualViewport, not
+  // document.documentElement.clientWidth/Height (the *layout* viewport) —
+  // the layout viewport never shrinks when a mobile on-screen keyboard
+  // opens, only the visual one does, so centering against the former left
+  // anchorless popups (Dialog's own docked case, always) either not
+  // reacting to the keyboard at all, or overlapping it outright. Falls back
+  // to the layout viewport on engines without visualViewport support.
+  const visualViewport = window.visualViewport;
+  const viewportWidth = visualViewport
+    ? visualViewport.width
+    : document.documentElement.clientWidth;
+  const viewportHeight = visualViewport
+    ? visualViewport.height
+    : document.documentElement.clientHeight;
+  // How far the visual viewport's own top/left edge sits from the layout
+  // viewport's (both in the same client-coordinate space getBoundingClientRect
+  // already uses everywhere else in this function) — usually 0/0, but not
+  // always once a keyboard or pinch-zoom has shifted things.
+  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+
+  // Resolved early (doesn't depend on hasAnchor) so isAnchorTooBig can
+  // compare the anchor against *this* container's own height — normally the
+  // viewport, but a custom `container` (or one auto-resolved via
+  // getPositioningContainer below) is what `element` is actually confined
+  // to, so that's the height that actually matters for "is there enough
+  // room left around this anchor" — not the viewport's, if they differ.
+  const resolvedContainer = container ?? getPositioningContainer(element);
+  const containerHeightForAnchorCheck =
+    resolvedContainer && resolvedContainer !== document.documentElement
+      ? resolvedContainer.getBoundingClientRect().height
+      : viewportHeight;
+
+  // A real `anchor` is always checked against isAnchorTooBig (not opt-in —
+  // see its own doc) and, once rejected, treated exactly like no anchor at
+  // all — except it docks via `invalidAnchorPositionArea` instead of
+  // `positionArea`, since a caller's own preferred *anchored* placement
+  // (e.g. "bottom-start") rarely still makes sense once there's no anchor
+  // left worth respecting, whereas a deliberate no-anchor call (`anchor`
+  // genuinely omitted) keeps using `positionArea` as-is — that one's
+  // already the caller's own considered "what if there's no anchor" answer.
+  const anchorRejected =
+    Boolean(anchor) &&
+    isAnchorTooBig(
+      anchor.getBoundingClientRect(),
+      containerHeightForAnchorCheck,
+    );
+  const hasAnchor = Boolean(anchor) && !anchorRejected;
+  const effectivePositionArea = anchorRejected
+    ? invalidAnchorPositionArea
+    : positionArea;
+
+  const parsedPositionArea = parsePositionArea(effectivePositionArea);
   if (!parsedPositionArea) {
     console.warn(
-      `pickPositionRelativeTo: invalid positionArea="${positionArea}"`,
+      `pickPositionRelativeTo: invalid positionArea="${effectivePositionArea}"`,
     );
   }
   let positionX = parsedPositionArea ? parsedPositionArea.x : "center";
@@ -780,49 +864,27 @@ export const pickPositionRelativeTo = (
       positionYFixed = parsedPositionAreaFixed.y;
     }
   }
-  // No real anchor: dock against a container instead (the page viewport,
-  // or an explicit/auto-resolved container element) — see this function's
-  // own doc for what changes in that mode.
-  const hasAnchor = Boolean(anchor);
+  // No real anchor (or one isAnchorTooBig rejected): dock against a
+  // container instead (the page viewport, or an explicit/auto-resolved
+  // container element) — see this function's own doc for what changes in
+  // that mode.
   if (!hasAnchor) {
     positionX = toContainerAlignedPosition(positionX);
     positionY = toContainerAlignedPosition(positionY);
     positionXFixed = positionX;
     positionYFixed = positionY;
   }
-  // Auto-resolved (via getPositioningContainer) whenever not explicitly
-  // given, regardless of hasAnchor — this is what makes the function
-  // always know what to do on its own (no dev warning needed, unlike
-  // earlier versions of this function): `null` from getPositioningContainer
-  // (a popover/dialog element, e.g. Callout's own) falls through to the
-  // traditional document-relative path below all the same, so an existing
-  // caller that never thinks about `container` at all keeps behaving
-  // exactly as before.
-  const resolvedContainer = container ?? getPositioningContainer(element);
+  // resolvedContainer itself was already resolved above (isAnchorTooBig
+  // needed it earlier) — regardless of hasAnchor, which is what makes the
+  // function always know what to do on its own (no dev warning needed,
+  // unlike earlier versions of this function): `null` from
+  // getPositioningContainer (a popover/dialog element, e.g. Callout's own)
+  // falls through to the traditional document-relative path below all the
+  // same, so an existing caller that never thinks about `container` at all
+  // keeps behaving exactly as before.
   const effectiveAnchor = hasAnchor
     ? anchor
     : resolvedContainer || document.documentElement;
-
-  // window.visualViewport, not document.documentElement.clientWidth/Height
-  // (the *layout* viewport) — the layout viewport never shrinks when a
-  // mobile on-screen keyboard opens, only the visual one does, so centering
-  // against the former left anchorless popups (Dialog's own docked case,
-  // always) either not reacting to the keyboard at all, or overlapping it
-  // outright. Falls back to the layout viewport on engines without
-  // visualViewport support.
-  const visualViewport = window.visualViewport;
-  const viewportWidth = visualViewport
-    ? visualViewport.width
-    : document.documentElement.clientWidth;
-  const viewportHeight = visualViewport
-    ? visualViewport.height
-    : document.documentElement.clientHeight;
-  // How far the visual viewport's own top/left edge sits from the layout
-  // viewport's (both in the same client-coordinate space getBoundingClientRect
-  // already uses everywhere else in this function) — usually 0/0, but not
-  // always once a keyboard or pinch-zoom has shifted things.
-  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
-  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
   // document.documentElement is used as a sentinel "the viewport" value: an
   // anchorless popup should center/place itself against the visual
   // viewport, not against <html>'s own box — which, unlike the viewport,
@@ -1243,6 +1305,18 @@ export const pickPositionRelativeTo = (
     marginWithContainer;
 
   return {
+    // Whether a real anchor actually ended up used — false either when no
+    // `anchor` was passed at all, or when isAnchorTooBig rejected the one
+    // that was (see its own doc above). Lets a caller like Callout adapt
+    // its own anchor-specific rendering (arrow, margins) to whichever of
+    // the two this call actually resolved to.
+    hasAnchor,
+    // True only when `event` (the DOM/CustomEvent that triggered this
+    // reposition, if the caller passed one) is a "resize" — see
+    // applyNewPosition's own doc below for why only resize-triggered
+    // repositions are meant to animate: scroll (in particular) needs to
+    // track its target in lockstep, or the element visibly lags behind it.
+    shouldTransition: event?.type === "resize",
     positionX: finalX,
     positionY: finalY,
     left: elementDocumentLeft,
@@ -1258,4 +1332,42 @@ export const pickPositionRelativeTo = (
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };
+};
+
+/**
+ * Applies a `pickPositionRelativeTo` result to `element`: sets `left`/`top`
+ * and, first, the `--popup-position-transition-duration` custom property
+ * that controls whether this particular move eases in or snaps instantly —
+ * `shouldTransition` true (a resize-triggered reposition — the on-screen
+ * keyboard, a window resize) gets `transitionDuration`; anything else
+ * (scroll, in particular) gets `0s`, so the element still reads as
+ * genuinely "stuck" to whatever it's tracking instead of visibly lagging
+ * behind it as it scrolls.
+ *
+ * Left as a variable rather than toggling `element.style.transitionProperty`
+ * directly: Popover/Dialog also transition unrelated properties (opacity,
+ * scale, display, …) for their own open/close animation on the very same
+ * element, and an inline `transitionProperty` would replace that list
+ * wholesale instead of adding to it. Consumers wanting this (Popover,
+ * Dialog, Callout) declare their own `left`/`top` transition in CSS with
+ * `transition-duration: var(--popup-position-transition-duration, 0s)` —
+ * this function only ever drives that one variable, never touches
+ * `transition-property` itself.
+ *
+ * @param {HTMLElement} element
+ * @param {ReturnType<typeof pickPositionRelativeTo>} position
+ * @param {object} [options]
+ * @param {string} [options.transitionDuration="0.25s"]
+ */
+export const applyNewPosition = (
+  element,
+  { left, top, shouldTransition },
+  { transitionDuration = "0.25s" } = {},
+) => {
+  element.style.setProperty(
+    "--popup-position-transition-duration",
+    shouldTransition ? transitionDuration : "0s",
+  );
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
 };

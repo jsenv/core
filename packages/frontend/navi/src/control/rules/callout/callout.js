@@ -1,5 +1,6 @@
 import {
   allowWheelThrough,
+  applyNewPosition,
   createPubSub,
   createStyleController,
   createValueEffect,
@@ -16,6 +17,8 @@ import {
   measureLongestVisualLineWidth,
   pickPositionRelativeTo,
   resolveCSSColor,
+  subscribeVisualViewportResizeSettled,
+  subscribeWindowResizeSettled,
   visibleRectEffect,
 } from "@jsenv/dom";
 import { isValidElement } from "preact";
@@ -70,8 +73,15 @@ const css = /* css */ `
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
+    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
+       left/top's own duration is driven by --popup-position-transition-duration,
+       same mechanism Popover/Dialog use (see their own CSS): 0s (no
+       transition) for most repositions, a real duration only when the
+       reposition was itself triggered by a resize. */
+    transition:
+      opacity 0.2s ease-in-out,
+      left var(--popup-position-transition-duration, 0s) ease-out,
+      top var(--popup-position-transition-duration, 0s) ease-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
@@ -699,7 +709,7 @@ export const openCallout = (
     // scroll doesn't move anything until the browser gets to animate it on
     // a later frame, so that first measurement would run against the
     // pre-scroll position instead. Once the animation actually plays,
-    // stickCalloutToAnchor's own visibleRectEffect (watching document
+    // positionCalloutAgainstAnchor's own visibleRectEffect (watching document
     // scroll to keep following the anchor) reacts to every intermediate
     // frame of it too, and its sticky above/below choice (deliberately
     // hysteretic, to avoid flip-flopping while the user scrolls normally)
@@ -769,56 +779,20 @@ export const openCallout = (
   update(message, { status });
 
   positioning: {
-    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
-    const documentScrollTopAtOpen = document.documentElement.scrollTop;
-
-    let positioner;
-    let strategy;
-    const determine = () => {
-      if (!visualAnchorElement) {
-        return "centered";
-      }
-      // Check if anchor element is too big to reasonably position callout relative to it
-      const anchorRect = visualAnchorElement.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const anchorTooBig = anchorRect.height > viewportHeight - 50;
-      if (anchorTooBig) {
-        return "centered";
-      }
-      return "anchored";
-    };
-    const updatePositioner = () => {
-      const newStrategy = determine();
-      if (newStrategy === strategy) {
-        return;
-      }
-      positioner?.stop();
-      if (newStrategy === "centered") {
-        positioner = centerCalloutInViewport(calloutElement, {
-          documentScrollLeftAtOpen,
-          documentScrollTopAtOpen,
-        });
-      } else {
-        positioner = stickCalloutToAnchor(calloutElement, visualAnchorElement, {
+    // visualAnchorElement's own presence never changes over the callout's
+    // lifetime (unlike whether pickPositionRelativeTo's own isAnchorTooBig
+    // check ends up rejecting it, which can — see positionCallout's own doc
+    // for why that no longer needs detecting/dispatching here at all), so
+    // this only ever needs picking once.
+    const positioner = visualAnchorElement
+      ? positionCalloutAgainstAnchor(calloutElement, visualAnchorElement, {
           debug,
           originalAnchorElement,
-        });
-      }
-      strategy = newStrategy;
-    };
-    updatePositioner();
+        })
+      : positionCalloutCentered(calloutElement);
     addTeardown(() => {
       positioner.stop();
     });
-    auto_update_positioner: {
-      const handleResize = () => {
-        updatePositioner();
-      };
-      window.addEventListener("resize", handleResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", handleResize);
-      });
-    }
     callout.updatePosition = () => positioner.update();
   }
 
@@ -893,11 +867,15 @@ const createCalloutElement = () => {
   return calloutElement;
 };
 
-const centerCalloutInViewport = (
-  calloutElement,
-  { documentScrollLeftAtOpen, documentScrollTopAtOpen },
-) => {
-  // Set up initial styles for centered positioning
+/**
+ * Positions a callout with nothing to anchor to: dead center, no arrow.
+ * Deliberately doesn't track scroll (see this file's own demo/doc) — only
+ * re-measured on open, on an explicit `update()` call (message content
+ * changed), and on a settled window/visualViewport resize; a plain
+ * `position: absolute` box left alone between those simply scrolls with the
+ * rest of the document, which is exactly the intended behavior.
+ */
+const positionCalloutCentered = (calloutElement) => {
   const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
   const calloutFrameElement = calloutElement.querySelector(
     ".navi_callout_frame",
@@ -917,14 +895,16 @@ const centerCalloutInViewport = (
   calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
 
   // Generate simple rectangle SVG without arrow and position in center
-  const updateCenteredPosition = () => {
+  const updateCenteredPosition = (triggerEvent) => {
     const calloutElementClone =
       cloneCalloutToMeasureNaturalSize(calloutElement);
 
     const { height } = calloutElementClone.getBoundingClientRect();
 
     // Handle content overflow when viewport is too small
-    const viewportHeight = window.innerHeight;
+    const viewportHeight = window.visualViewport
+      ? window.visualViewport.height
+      : window.innerHeight;
     const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
 
     let maxHeight;
@@ -956,40 +936,47 @@ const centerCalloutInViewport = (
       finalHeight,
     );
 
-    // Center in viewport (accounting for document scroll)
-    const viewportWidth = window.innerWidth;
-    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
-    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
-
-    calloutStyleController.set(calloutElement, {
-      opacity: 1,
-      transform: {
-        translateX: left,
-        translateY: top,
-      },
+    calloutStyleController.set(calloutElement, { opacity: 1 });
+    const position = pickPositionRelativeTo(calloutElement, null, {
+      positionArea: "center",
+      event: triggerEvent,
     });
+    applyNewPosition(calloutElement, position);
   };
 
   // Initial positioning
   updateCenteredPosition();
-  window.addEventListener("resize", updateCenteredPosition);
+  const unsubscribeWindowResize = subscribeWindowResizeSettled(
+    updateCenteredPosition,
+  );
+  const unsubscribeVisualViewportResize = subscribeVisualViewportResizeSettled(
+    updateCenteredPosition,
+  );
 
   // Return positioning function for dynamic updates
   return {
     update: updateCenteredPosition,
     stop: () => {
-      window.removeEventListener("resize", updateCenteredPosition);
+      unsubscribeWindowResize();
+      unsubscribeVisualViewportResize();
     },
   };
 };
 
 /**
- * Positions a callout relative to an anchor element with an arrow pointing to it
+ * Positions a callout relative to an anchor element with an arrow pointing
+ * to it — live-degrading to a plain centered box (no arrow) whenever
+ * pickPositionRelativeTo's own isAnchorTooBig rejects the anchor (see its
+ * doc in visible_rect.js): no anchor-size detection happens here at all,
+ * only the resulting `hasAnchor` decides which of the two to render, fresh
+ * on every check (so an anchor growing past the threshold mid-lifetime,
+ * without any window resize, degrades immediately, not just on the next
+ * one).
  * @param {HTMLElement} calloutElement - The callout element to position
  * @param {HTMLElement} anchorElement - The anchor element to stick to
  * @returns {Object} - Object with update and stop functions
  */
-const stickCalloutToAnchor = (
+const positionCalloutAgainstAnchor = (
   calloutElement,
   anchorElement,
   { debug, originalAnchorElement = anchorElement },
@@ -1062,15 +1049,7 @@ const stickCalloutToAnchor = (
       }
       const calloutElementClone =
         cloneCalloutToMeasureNaturalSize(calloutElement);
-      const {
-        positionY,
-        left: calloutLeft,
-        top: calloutTop,
-        width: calloutWidth,
-        height: calloutHeight,
-        spaceAbove,
-        spaceBelow,
-      } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+      const position = pickPositionRelativeTo(calloutElementClone, anchorElement, {
         alignToContainerEdgeWhenAnchorNearEdge: 20,
         minLeft: 1,
         // x is always center for a callout (the arrow, not positionArea's
@@ -1080,6 +1059,11 @@ const stickCalloutToAnchor = (
         // data-callout-position never needs to carry an x component at all.
         positionArea: getAnchorAttribute("data-callout-position") || "bottom",
         positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
+        // invalidAnchorPositionArea left at its "center" default —
+        // pickPositionRelativeTo's own isAnchorTooBig check (always on, see
+        // its doc in visible_rect.js) rejects the anchor and docks to the
+        // viewport center instead once it's too big to bother anchoring to
+        // — hasAnchor below reports which way it went.
         marginWithAnchor: ARROW_HEIGHT,
         alignToAnchorBox,
         marginWithContainer:
@@ -1087,7 +1071,15 @@ const stickCalloutToAnchor = (
           anchorElement.hasAttribute("data-callout-viewport-spacing")
             ? Number(getAnchorAttribute("data-callout-viewport-spacing"))
             : 0,
+        event,
       });
+      const {
+        hasAnchor,
+        positionY,
+        left: calloutLeft,
+        width: calloutWidth,
+        height: calloutHeight,
+      } = position;
       // data-position-y-current is written to the clone by pickPositionRelativeTo,
       // copy it back to the real element so stickiness works on next call
       const previousPositionY = calloutElement.getAttribute(
@@ -1108,131 +1100,166 @@ const stickCalloutToAnchor = (
         const anchorRect = anchorElement.getBoundingClientRect();
         debug(
           event,
-          `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${spaceAbove.toFixed(0)}px, spaceBelow: ${spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`,
+          `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`,
         );
       }
 
-      // Calculate arrow position to point at anchorElement element
-      let arrowLeftPosOnCallout;
-      // Determine arrow target position: explicit attribute wins, otherwise
-      // fall back to the computed text-align of the anchor element so the
-      // arrow naturally follows where the text starts.
-      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
-      const arrowPosition =
-        arrowPositionAttribute ||
-        (() => {
-          const textAlign = getComputedStyle(anchorElement).textAlign;
-          if (textAlign === "center") {
-            return "center";
-          }
-          if (textAlign === "right" || textAlign === "end") {
-            return "end";
-          }
-          return "start";
-        })();
-      let arrowAnchorLeft;
-      calloutElement.setAttribute("data-arrow-x", arrowPosition);
-      if (arrowPosition === "start") {
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the left edge of the anchorElement text content (after borders + padding)
-        arrowAnchorLeft =
-          anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
-      } else if (arrowPosition === "center") {
-        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-      } else {
-        // "end"
-        const anchorBorderSizes = getBorderSizes(anchorElement);
-        const anchorPaddingSizes = getPaddingSizes(anchorElement);
-        // Target the right edge of the anchorElement text content (before borders + padding)
-        arrowAnchorLeft =
-          anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
-      }
+      calloutBoxElement.style.marginTop = "";
+      calloutBoxElement.style.marginBottom = "";
 
-      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
-      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
-      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
-      const calloutViewportLeft =
-        calloutLeft - document.documentElement.scrollLeft;
-      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
-        // Arrow target is beyond the right edge of the callout — pin arrow to far right
-        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-      } else {
-        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
-      }
-
-      // Ensure arrow stays within callout bounds with some padding
-      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-      const maxArrowPos = calloutWidth - minArrowPos;
-      arrowLeftPosOnCallout = Math.max(
-        minArrowPos,
-        Math.min(arrowLeftPosOnCallout, maxArrowPos),
-      );
-
-      // Force content overflow when there is not enough space to display
-      // the entirety of the callout
-      const spaceAvailable =
-        positionY === "top" || positionY === "inset-bottom"
-          ? spaceAbove
-          : spaceBelow;
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
-      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      const spaceAvailableForContent =
-        spaceAvailable - spaceNeededAroundContent;
-      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
-      const spaceRemainingAfterContent =
-        spaceAvailableForContent - contentHeight;
       let maxHeight;
-      if (spaceRemainingAfterContent < 2) {
-        maxHeight = spaceAvailableForContent;
-        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-        calloutMessageElement.style.overflowY = "scroll";
+      if (hasAnchor) {
+        // Calculate arrow position to point at anchorElement element
+        let arrowLeftPosOnCallout;
+        // Determine arrow target position: explicit attribute wins, otherwise
+        // fall back to the computed text-align of the anchor element so the
+        // arrow naturally follows where the text starts.
+        const arrowPositionAttribute =
+          getAnchorAttribute("data-callout-arrow-x");
+        const arrowPosition =
+          arrowPositionAttribute ||
+          (() => {
+            const textAlign = getComputedStyle(anchorElement).textAlign;
+            if (textAlign === "center") {
+              return "center";
+            }
+            if (textAlign === "right" || textAlign === "end") {
+              return "end";
+            }
+            return "start";
+          })();
+        let arrowAnchorLeft;
+        calloutElement.setAttribute("data-arrow-x", arrowPosition);
+        if (arrowPosition === "start") {
+          const anchorBorderSizes = getBorderSizes(anchorElement);
+          const anchorPaddingSizes = getPaddingSizes(anchorElement);
+          // Target the left edge of the anchorElement text content (after borders + padding)
+          arrowAnchorLeft =
+            anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
+        } else if (arrowPosition === "center") {
+          arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+        } else {
+          // "end"
+          const anchorBorderSizes = getBorderSizes(anchorElement);
+          const anchorPaddingSizes = getPaddingSizes(anchorElement);
+          // Target the right edge of the anchorElement text content (before borders + padding)
+          arrowAnchorLeft =
+            anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
+        }
+
+        // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+        // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+        // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+        const calloutViewportLeft =
+          calloutLeft - document.documentElement.scrollLeft;
+        if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+          // Arrow target is beyond the right edge of the callout — pin arrow to far right
+          arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+        } else {
+          arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
+        }
+
+        // Ensure arrow stays within callout bounds with some padding
+        const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+        const maxArrowPos = calloutWidth - minArrowPos;
+        arrowLeftPosOnCallout = Math.max(
+          minArrowPos,
+          Math.min(arrowLeftPosOnCallout, maxArrowPos),
+        );
+
+        // Force content overflow when there is not enough space to display
+        // the entirety of the callout
+        const spaceAvailable =
+          positionY === "top" || positionY === "inset-bottom"
+            ? position.spaceAbove
+            : position.spaceBelow;
+        const paddingSizes = getPaddingSizes(calloutBodyElement);
+        const paddingY = paddingSizes.top + paddingSizes.bottom;
+        // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
+        const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+        const spaceAvailableForContent =
+          spaceAvailable - spaceNeededAroundContent;
+        const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
+        const spaceRemainingAfterContent =
+          spaceAvailableForContent - contentHeight;
+        if (spaceRemainingAfterContent < 2) {
+          maxHeight = spaceAvailableForContent;
+          calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+          calloutMessageElement.style.overflowY = "scroll";
+        } else {
+          calloutMessageElement.style.maxHeight = "";
+          calloutMessageElement.style.overflowY = "";
+        }
+
+        const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+          maxHeight,
+        });
+        calloutElementClone.remove();
+
+        calloutBodyElement.style.width =
+          optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+
+        const { width, height } = calloutElement.getBoundingClientRect();
+        if (positionY === "top" || positionY === "inset-bottom") {
+          // Arrow at bottom, extending below the element
+          calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+          calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+          calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
+            width,
+            height + ARROW_HEIGHT,
+            arrowLeftPosOnCallout,
+          );
+        } else {
+          // Arrow at top, extending above the element
+          calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+          calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+          calloutFrameElement.innerHTML = generateSvgWithTopArrow(
+            width,
+            height + ARROW_HEIGHT,
+            arrowLeftPosOnCallout,
+          );
+        }
+        calloutStyleController.set(calloutElement, {
+          opacity: visibilityRatio > 0.2 ? 1 : 0,
+        });
       } else {
-        calloutMessageElement.style.maxHeight = "";
-        calloutMessageElement.style.overflowY = "";
-      }
+        // The anchor is too big to bother anchoring to (isAnchorTooBig, see
+        // pickPositionRelativeTo's own doc) — render as a plain centered
+        // box instead, same as positionCalloutCentered's own no-anchor
+        // rendering, no arrow, opacity never gated on the (irrelevant, once
+        // centered) anchor's own visibilityRatio.
+        calloutElement.removeAttribute("data-arrow-x");
+        const viewportHeight = window.visualViewport
+          ? window.visualViewport.height
+          : window.innerHeight;
+        const maxAllowedHeight = viewportHeight - 40;
+        if (calloutHeight > maxAllowedHeight) {
+          const paddingSizes = getPaddingSizes(calloutBodyElement);
+          const paddingY = paddingSizes.top + paddingSizes.bottom;
+          const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+          maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+          calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+          calloutMessageElement.style.overflowY = "scroll";
+        } else {
+          calloutMessageElement.style.maxHeight = "";
+          calloutMessageElement.style.overflowY = "";
+        }
 
-      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-        maxHeight,
-      });
-      calloutElementClone.remove();
+        const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+          maxHeight,
+        });
+        calloutElementClone.remove();
 
-      calloutBodyElement.style.width =
-        optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+        calloutBodyElement.style.width =
+          optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
 
-      const { width, height } = calloutElement.getBoundingClientRect();
-      if (positionY === "top" || positionY === "inset-bottom") {
-        // Arrow at bottom, extending below the element
-        calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = "";
+        const { width, height } = calloutElement.getBoundingClientRect();
         calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(
-          width,
-          height + ARROW_HEIGHT,
-          arrowLeftPosOnCallout,
-        );
-      } else {
-        // Arrow at top, extending above the element
-        calloutBoxElement.style.marginTop = "";
-        calloutBoxElement.style.marginBottom = "";
-        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
         calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-        calloutFrameElement.innerHTML = generateSvgWithTopArrow(
-          width,
-          height + ARROW_HEIGHT,
-          arrowLeftPosOnCallout,
-        );
+        calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+        calloutStyleController.set(calloutElement, { opacity: 1 });
       }
-      calloutStyleController.set(calloutElement, {
-        opacity: visibilityRatio > 0.2 ? 1 : 0,
-        transform: {
-          translateX: calloutLeft,
-          translateY: calloutTop,
-        },
-      });
+      applyNewPosition(calloutElement, position);
     },
   );
   // Re-measures/repositions the callout whenever its own message body

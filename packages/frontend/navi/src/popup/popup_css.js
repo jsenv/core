@@ -89,13 +89,25 @@ export const popupCss = /* css */ `
 
   .navi_popover,
   .navi_dialog {
+    /* left/top folded into this same list (not left to each of Popover's/
+       Dialog's own base rule alone) — a more specific selector's own
+       transition-property replaces the base rule's list wholesale rather
+       than adding to it, so left/top's own transition would otherwise stop
+       applying for as long as navi-animation is set (which, unlike the
+       open/close transition itself, is the element's *entire* open
+       duration — see openEffect in popover.jsx/dialog.jsx). Duration is
+       driven by --popup-position-transition-duration either way — see
+       applyNewPosition's own doc in visible_rect.js for what sets it and
+       why. */
     &[navi-animation] {
       transition-property:
-        display, overlay, opacity, translate, scale, box-shadow;
+        display, overlay, opacity, translate, scale, box-shadow, left, top;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
-        var(--popup-scale-duration), var(--popup-animation-duration);
+        var(--popup-scale-duration), var(--popup-animation-duration),
+        var(--popup-position-transition-duration, 0s),
+        var(--popup-position-transition-duration, 0s);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
     }

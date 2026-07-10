@@ -45,6 +45,7 @@
  */
 
 import {
+  applyNewPosition,
   createPubSub,
   dispatchCustomEvent,
   getElementSignature,
@@ -166,8 +167,12 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
+       transition) for most repositions (scroll, in particular, needs to
+       track its target in lockstep), a real duration only when the
+       reposition was itself triggered by a resize. */
     transition-property: left, top;
-    transition-duration: 0.25s;
+    transition-duration: var(--popup-position-transition-duration, 0s);
     transition-timing-function: ease-out;
 
     &::backdrop {
@@ -639,15 +644,15 @@ const useDialogProps = (props) => {
     // (cleared, not set) — a docked dialog always relies on the CSS's own
     // --dialog-maxmax-* ceiling instead, see popover.jsx's own comment on
     // this.
-    const positionDialog = () => {
+    const positionDialog = (triggerEvent) => {
       dialogEl.style.removeProperty("--space-available");
-      const { left, top } = pickPositionRelativeTo(dialogEl, null, {
+      const position = pickPositionRelativeTo(dialogEl, null, {
         positionArea,
         container: isModal ? undefined : positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
+        event: triggerEvent,
       });
-      dialogEl.style.left = `${left}px`;
-      dialogEl.style.top = `${top}px`;
+      applyNewPosition(dialogEl, position);
       // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
       // Callout anchored to something inside this Dialog) know to recheck
       // its own position whenever this dialog itself moves — it already
