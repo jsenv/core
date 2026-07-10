@@ -130,10 +130,12 @@ const css = /* css */ `
        min(..., ...) expression twice. */
     --x-dialog-max-width: min(
       var(--dialog-max-width, var(--dialog-maxmax-width)),
+      var(--space-available-width, var(--dialog-maxmax-width)),
       var(--dialog-maxmax-width)
     );
     --x-dialog-max-height: min(
       var(--dialog-max-height, var(--dialog-maxmax-height)),
+      var(--space-available-height, var(--dialog-maxmax-height)),
       var(--dialog-maxmax-height)
     );
 
@@ -640,12 +642,9 @@ const useDialogProps = (props) => {
     // argument at all) docks it against the viewport (layer="top"/isModal)
     // or its own positioned ancestor (layer="local", the same
     // positionedAncestor computed above), same mechanism as Popover's own
-    // custom renderer. --space-available is deliberately left untouched
-    // (cleared, not set) — a docked dialog always relies on the CSS's own
-    // --dialog-maxmax-* ceiling instead, see popover.jsx's own comment on
-    // this.
+    // custom renderer. applyNewPosition sets --space-available-height/-width
+    // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
-      dialogEl.style.removeProperty("--space-available");
       const position = pickPositionRelativeTo(dialogEl, null, {
         positionArea,
         container: isModal ? undefined : positionedAncestor,

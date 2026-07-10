@@ -118,11 +118,12 @@ const css = /* css */ `
   .navi_popover {
     --x-popover-max-width: min(
       var(--popover-max-width, var(--popover-maxmax-width)),
+      var(--space-available-width, var(--popover-maxmax-width)),
       var(--popover-maxmax-width)
     );
     --x-popover-max-height: min(
       var(--popover-max-height),
-      var(--space-available, var(--popover-maxmax-height)),
+      var(--space-available-height, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
 
@@ -733,10 +734,11 @@ const usePopoverProps = (props) => {
           `${snapToPixel(height - borderTop - borderBottom)}px`,
         );
         const minLeft = 1;
-        // Remove max-height constraint so pickPositionRelativeTo measures the natural
-        // (unconstrained) height of the popover. This ensures the 60% flip threshold
-        // compares against the real content height, not the already-truncated one.
-        popoverEl.style.removeProperty("--space-available");
+        // Cleared so pickPositionRelativeTo measures the popover's natural
+        // (unconstrained) size — the flip threshold must compare against the
+        // real content size, not one already truncated by a stale value.
+        popoverEl.style.removeProperty("--space-available-height");
+        popoverEl.style.removeProperty("--space-available-width");
         position = pickPositionRelativeTo(popoverEl, anchorElement, {
           positionArea,
           positionAreaFixed,
@@ -764,10 +766,7 @@ const usePopoverProps = (props) => {
         // attribute signals that (see getPositioningContainer). For the
         // custom renderer, its own positioned ancestor is passed
         // explicitly instead, since it's already computed above for
-        // visibleRectEffect's own observation target. --space-available is
-        // deliberately left untouched here (cleared, not set) — a docked
-        // popover always relies on the CSS's own --popover-maxmax-height
-        // ceiling instead.
+        // visibleRectEffect's own observation target.
         position = pickPositionRelativeTo(popoverEl, null, {
           positionArea,
           container: isTopLayer ? undefined : positionedAncestor,
@@ -775,19 +774,6 @@ const usePopoverProps = (props) => {
           event: positionEvent,
         });
       }
-      // Only meaningful once actually anchored — rejected (too big,
-      // falls back to center) means spaceAbove/spaceBelow describe the
-      // container, not a real anchor, and would collapse max-height to ~0.
-      if (position.hasValidAnchor) {
-        const spaceAvailable =
-          position.positionY === "top" || position.positionY === "inset-bottom"
-            ? position.spaceAbove
-            : position.spaceBelow;
-        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
-      } else {
-        popoverEl.style.removeProperty("--space-available");
-      }
-
       debugPopup(
         positionEvent,
         `positionPopover() -> left: ${position.left}, top: ${position.top}`,

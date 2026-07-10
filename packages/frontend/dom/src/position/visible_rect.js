@@ -1267,6 +1267,14 @@ export const pickPositionRelativeTo = (
     (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
     (finalY === "bottom" ? marginWithAnchor : 0) -
     marginWithContainer;
+  const effectiveSpaceLeft =
+    (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
+    (finalX === "left" ? marginWithAnchor : 0) -
+    marginWithContainer;
+  const effectiveSpaceRight =
+    (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
+    (finalX === "right" ? marginWithAnchor : 0) -
+    marginWithContainer;
 
   return {
     // Whether a real anchor actually ended up used — false when there's no
@@ -1285,8 +1293,8 @@ export const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft: spaceLeft - marginWithContainer,
-    spaceRight: spaceRight - marginWithContainer,
+    spaceLeft: effectiveSpaceLeft,
+    spaceRight: effectiveSpaceRight,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };
@@ -1303,7 +1311,7 @@ export const pickPositionRelativeTo = (
  */
 export const applyNewPosition = (
   element,
-  { left, top, shouldTransition },
+  { left, top, shouldTransition, positionX, positionY, spaceLeft, spaceRight, spaceAbove, spaceBelow },
   { transitionDuration = "0.25s" } = {},
 ) => {
   element.style.setProperty(
@@ -1312,4 +1320,19 @@ export const applyNewPosition = (
   );
   element.style.left = `${left}px`;
   element.style.top = `${top}px`;
+
+  if (positionY === "top" || positionY === "inset-bottom") {
+    element.style.setProperty("--space-available-height", `${spaceAbove}px`);
+  } else if (positionY === "bottom" || positionY === "inset-top") {
+    element.style.setProperty("--space-available-height", `${spaceBelow}px`);
+  } else {
+    element.style.removeProperty("--space-available-height");
+  }
+  if (positionX === "left" || positionX === "inset-right") {
+    element.style.setProperty("--space-available-width", `${spaceLeft}px`);
+  } else if (positionX === "right" || positionX === "inset-left") {
+    element.style.setProperty("--space-available-width", `${spaceRight}px`);
+  } else {
+    element.style.removeProperty("--space-available-width");
+  }
 };
