@@ -136,6 +136,7 @@ export {
   pickPositionRelativeTo,
   visibleRectEffect,
 } from "./src/position/visible_rect.js";
+export { subscribeVisualViewportResizeSettled } from "./src/position/visual_viewport.js";
 
 // size
 export { initFlexDetailsSet } from "./src/size/flex_details_set.js";

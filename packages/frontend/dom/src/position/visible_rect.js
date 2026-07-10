@@ -5,6 +5,7 @@ import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositioningContainer } from "./offset_parent.js";
+import { subscribeVisualViewportResizeSettled } from "./visual_viewport.js";
 
 const DEBUG = false;
 
@@ -292,33 +293,10 @@ export const visibleRectEffect = (
       }
     }
     on_visual_viewport_resize: {
-      if (window.visualViewport) {
-        // visualViewport resize fires when the virtual keyboard opens/closes on mobile.
-        // On mobile, tapping from one input to another triggers a resize because
-        // the virtual keyboard briefly starts to close before the new input receives
-        // focus and the keyboard reopens. Debouncing prevents repositioning the
-        // during that transient state, which would cause a visible flicker.
-        let resizeTimeout;
-        const cancelDelayedAutoCheck = () => {
-          clearTimeout(resizeTimeout);
-        };
-        const onVisualViewportResize = (e) => {
-          cancelDelayedAutoCheck();
-          resizeTimeout = setTimeout(() => {
-            autoCheck(e);
-          }, 100);
-        };
-        window.visualViewport.addEventListener(
-          "resize",
-          onVisualViewportResize,
-        );
-        addTeardown(() => {
-          window.visualViewport.removeEventListener(
-            "resize",
-            onVisualViewportResize,
-          );
-        });
-      }
+      // See onVisualViewportResizeSettled's own module comment
+      // (visual_viewport.js) for why this goes through the shared debounce
+      // instead of keeping its own timer.
+      addTeardown(subscribeVisualViewportResizeSettled(autoCheck));
       const onWindowResize = (e) => {
         autoCheck(e);
       };

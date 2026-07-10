@@ -1,3 +1,4 @@
+import { subscribeVisualViewportResizeSettled } from "@jsenv/dom";
 import { computed, signal } from "@preact/signals";
 
 export const windowWidthSignal = signal(window.innerWidth);
@@ -25,16 +26,6 @@ if (vv) {
     visualViewportWidthSignal.value = vv.width;
     visualViewportHeightSignal.value = vv.height;
   };
-  let resizeTimeout;
-  const onResize = () => {
-    // On mobile, tapping from one input to another triggers a resize
-    // because the virtual keyboard briefly starts to close before the new
-    // input receives focus and the keyboard reopens. Debouncing prevents
-    // updating during that transient state, which would cause a visible
-    // flicker in anything positioned off these vars.
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(update, 100);
-  };
-  vv.addEventListener("resize", onResize);
+  subscribeVisualViewportResizeSettled(update);
   vv.addEventListener("scroll", update);
 }
