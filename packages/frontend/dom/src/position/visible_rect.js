@@ -784,17 +784,34 @@ export const pickPositionRelativeTo = (
   const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
   const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
 
-  // Resolved early: the anchor-too-big check below needs to compare against
-  // this container's own size, not always the viewport's.
+  // Resolved early: everything below that would otherwise reach for
+  // viewportLeft/Top/Width/Height instead uses these, so a "local" popover
+  // never gets offered more room (anchor-too-big check, flip decisions,
+  // clamp) than its own container — resolvedContainer's own padding-box
+  // edges when there is one — actually has.
   const resolvedContainer = container ?? getPositioningContainer(element);
-  const containerWidth =
-    resolvedContainer && resolvedContainer !== document.documentElement
-      ? resolvedContainer.getBoundingClientRect().width
-      : viewportWidth;
-  const containerHeight =
-    resolvedContainer && resolvedContainer !== document.documentElement
-      ? resolvedContainer.getBoundingClientRect().height
-      : viewportHeight;
+  const hasRealContainer =
+    resolvedContainer && resolvedContainer !== document.documentElement;
+  const containerRect = hasRealContainer
+    ? resolvedContainer.getBoundingClientRect()
+    : null;
+  const containerBorders = hasRealContainer
+    ? getBorderSizes(resolvedContainer)
+    : { left: 0, top: 0, right: 0, bottom: 0 };
+  const availableLeft = hasRealContainer
+    ? snapToPixel(containerRect.left) + containerBorders.left
+    : viewportLeft;
+  const availableTop = hasRealContainer
+    ? snapToPixel(containerRect.top) + containerBorders.top
+    : viewportTop;
+  const availableRight = hasRealContainer
+    ? snapToPixel(containerRect.right) - containerBorders.right
+    : viewportLeft + viewportWidth;
+  const availableBottom = hasRealContainer
+    ? snapToPixel(containerRect.bottom) - containerBorders.bottom
+    : viewportTop + viewportHeight;
+  const availableWidth = availableRight - availableLeft;
+  const availableHeight = availableBottom - availableTop;
 
   // Rejected only on the axis positionArea actually places `element`
   // outside of ("left"/"right" or "top"/"bottom") — that's the only axis
@@ -808,11 +825,14 @@ export const pickPositionRelativeTo = (
       const { x, y } = requestedPositionArea ?? {};
       if (
         (y === "top" || y === "bottom") &&
-        rect.height > containerHeight - 50
+        rect.height > availableHeight - 50
       ) {
         return true;
       }
-      if ((x === "left" || x === "right") && rect.width > containerWidth - 50) {
+      if (
+        (x === "left" || x === "right") &&
+        rect.width > availableWidth - 50
+      ) {
         return true;
       }
       return false;
@@ -879,24 +899,9 @@ export const pickPositionRelativeTo = (
   const anchorTop = snapToPixel(anchorRect.top);
   const anchorRight = snapToPixel(anchorRect.right);
   const anchorBottom = snapToPixel(anchorRect.bottom);
-  // The horizontal clamp below confines `element` to resolvedContainer's
-  // own (padding-box) edges whenever there is a real one — regardless of
-  // hasValidAnchor: a "local" popover anchored to a real element still
-  // shouldn't escape its own positioned ancestor. Falls back to the
-  // viewport otherwise.
-  const hasRealContainer =
-    resolvedContainer && resolvedContainer !== document.documentElement;
-  const containerBorders = hasRealContainer
-    ? getBorderSizes(resolvedContainer)
-    : { left: 0, top: 0, right: 0, bottom: 0 };
-  const clampLeftBound = hasRealContainer
-    ? snapToPixel(resolvedContainer.getBoundingClientRect().left) +
-      containerBorders.left
-    : viewportLeft;
-  const clampRightBound = hasRealContainer
-    ? snapToPixel(resolvedContainer.getBoundingClientRect().right) -
-      containerBorders.right
-    : viewportLeft + viewportWidth;
+  // Horizontal clamp bounds — see availableLeft/availableRight above.
+  const clampLeftBound = availableLeft;
+  const clampRightBound = availableRight;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -927,12 +932,12 @@ export const pickPositionRelativeTo = (
     insetLeft = anchorBorderSizes.left + anchorPaddingSizes.left;
     insetRight = anchorBorderSizes.right + anchorPaddingSizes.right;
   }
-  const spaceAbove = anchorTop + insetTop;
-  const spaceBelow = viewportTop + viewportHeight - anchorBottom + insetBottom;
+  const spaceAbove = anchorTop + insetTop - availableTop;
+  const spaceBelow = availableBottom - anchorBottom + insetBottom;
   const effectiveAnchorLeft = anchorLeft + insetLeft;
   const effectiveAnchorRight = anchorRight - insetRight;
-  const spaceLeft = anchorLeft + insetLeft;
-  const spaceRight = viewportLeft + viewportWidth - anchorRight + insetRight;
+  const spaceLeft = anchorLeft + insetLeft - availableLeft;
+  const spaceRight = availableRight - anchorRight + insetRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -1030,10 +1035,10 @@ export const pickPositionRelativeTo = (
         return spaceLeft - marginWithAnchor - marginWithContainer;
       }
       if (x === "inset-left") {
-        return viewportLeft + viewportWidth - anchorLeft - marginWithContainer;
+        return availableRight - anchorLeft - marginWithContainer;
       }
       if (x === "inset-right") {
-        return anchorRight - marginWithContainer;
+        return anchorRight - availableLeft - marginWithContainer;
       }
       if (x === "right") {
         return spaceRight - marginWithAnchor - marginWithContainer;
@@ -1079,25 +1084,22 @@ export const pickPositionRelativeTo = (
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
       // Complex logic handles wide anchors and container-edge snapping
-      const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
-      if (anchorIsWiderThanViewport) {
-        const anchorLeftIsVisible = effectiveAnchorLeft >= viewportLeft;
-        const anchorRightIsVisible =
-          effectiveAnchorRight <= viewportLeft + viewportWidth;
+      const anchorIsWiderThanAvailable = anchorWidth > availableWidth;
+      if (anchorIsWiderThanAvailable) {
+        const anchorLeftIsVisible = effectiveAnchorLeft >= availableLeft;
+        const anchorRightIsVisible = effectiveAnchorRight <= availableRight;
         if (!anchorLeftIsVisible && anchorRightIsVisible) {
-          const viewportCenter = viewportLeft + viewportWidth / 2;
-          const distanceFromRightEdge =
-            viewportLeft + viewportWidth - effectiveAnchorRight;
+          const availableCenter = availableLeft + availableWidth / 2;
+          const distanceFromRightEdge = availableRight - effectiveAnchorRight;
           elementPositionLeft =
-            viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+            availableCenter - distanceFromRightEdge / 2 - elementWidth / 2;
         } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
-          const viewportCenter = viewportLeft + viewportWidth / 2;
-          const distanceFromLeftEdge = viewportLeft - effectiveAnchorLeft;
+          const availableCenter = availableLeft + availableWidth / 2;
+          const distanceFromLeftEdge = availableLeft - effectiveAnchorLeft;
           elementPositionLeft =
-            viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+            availableCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
-          elementPositionLeft =
-            viewportLeft + viewportWidth / 2 - elementWidth / 2;
+          elementPositionLeft = availableLeft + availableWidth / 2 - elementWidth / 2;
         }
       } else {
         elementPositionLeft =
@@ -1170,18 +1172,14 @@ export const pickPositionRelativeTo = (
     // (container-docked) case, where it's new and safe: a container is
     // always meant to be respected on both axes.
     if (!hasValidAnchor) {
-      // Narrowed by the container's own top/bottom border, same reasoning
-      // as clampLeftBound/clampRightBound above.
-      const clampTopBound = anchorTop + containerBorders.top;
-      const clampBottomBound = anchorBottom - containerBorders.bottom;
-      if (elementPositionTop < clampTopBound + marginWithContainer) {
-        elementPositionTop = clampTopBound + marginWithContainer;
+      if (elementPositionTop < availableTop + marginWithContainer) {
+        elementPositionTop = availableTop + marginWithContainer;
       } else if (
         elementPositionTop + elementHeight >
-        clampBottomBound - marginWithContainer
+        availableBottom - marginWithContainer
       ) {
         elementPositionTop =
-          clampBottomBound - marginWithContainer - elementHeight;
+          availableBottom - marginWithContainer - elementHeight;
       }
     }
   }
