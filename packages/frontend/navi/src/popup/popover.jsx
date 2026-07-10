@@ -134,6 +134,7 @@ const css = /* css */ `
        reasoning. */
     position: absolute;
     inset: unset;
+    z-index: 1000;
     min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
     max-width: var(--x-popover-max-width);
     min-height: min(
@@ -159,6 +160,10 @@ const css = /* css */ `
     transition-timing-function: ease-out;
     overflow: auto;
     overscroll-behavior: none;
+
+    &[popover] {
+      z-index: unset;
+    }
 
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
@@ -748,11 +753,6 @@ const usePopoverProps = (props) => {
           minLeft,
           event: positionEvent,
         });
-        const spaceAvailable =
-          position.positionY === "top" || position.positionY === "inset-bottom"
-            ? position.spaceAbove
-            : position.spaceBelow;
-        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
         position = { ...position, left: Math.max(position.left, minLeft) };
       } else {
         // No real anchor: dock against a container instead — omitting
@@ -768,13 +768,24 @@ const usePopoverProps = (props) => {
         // deliberately left untouched here (cleared, not set) — a docked
         // popover always relies on the CSS's own --popover-maxmax-height
         // ceiling instead.
-        popoverEl.style.removeProperty("--space-available");
         position = pickPositionRelativeTo(popoverEl, null, {
           positionArea,
           container: isTopLayer ? undefined : positionedAncestor,
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           event: positionEvent,
         });
+      }
+      // Only meaningful once actually anchored — rejected (too big,
+      // falls back to center) means spaceAbove/spaceBelow describe the
+      // container, not a real anchor, and would collapse max-height to ~0.
+      if (position.hasAnchor) {
+        const spaceAvailable =
+          position.positionY === "top" || position.positionY === "inset-bottom"
+            ? position.spaceAbove
+            : position.spaceBelow;
+        popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
+      } else {
+        popoverEl.style.removeProperty("--space-available");
       }
 
       debugPopup(

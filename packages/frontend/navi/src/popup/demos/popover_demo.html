@@ -282,7 +282,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState, useEffect } from "preact/hooks";
-      import { Button, Popover, NaviDebug } from "@jsenv/navi";
+      import { Button, Popover, NaviDebug, Box } from "@jsenv/navi";
 
       // The full positionArea grammar (see popup_shared.js's own
       // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
@@ -1195,7 +1195,6 @@
               command="--navi-toggle"
               commandFor={popoverId}
               navi-command-proxy-for={commandProxyFor}
-              className="demo-area-button"
             >
               {label}
             </Button>
@@ -1227,7 +1226,7 @@
             <div id={anchorId} class="demo-toobig-anchor-wide">
               anchor (viewport width − 10px)
             </div>
-            <div class="demo-row">
+            <Box flex="y" spacing="s" alignX="start">
               <AnchorTooBigPopover
                 label="left → rejected, falls back to center"
                 positionArea="left"
@@ -1239,7 +1238,7 @@
                 commandProxyFor={anchorId}
               />
               <AnchorTooBigPopover
-                label="right, positionAreaWhenAnchorIsInvalid=&quot;bottom&quot;"
+                label='right, positionAreaWhenAnchorIsInvalid="bottom"'
                 positionArea="right"
                 positionAreaWhenAnchorIsInvalid="bottom"
                 commandProxyFor={anchorId}
@@ -1254,7 +1253,7 @@
                 positionArea="bottom"
                 commandProxyFor={anchorId}
               />
-            </div>
+            </Box>
           </>
         );
       };
@@ -1273,10 +1272,14 @@
         return (
           <div class="demo-container">
             <span class="demo-container-label">container (240px tall)</span>
-            <div id={anchorId} class="demo-toobig-anchor-tall">
+            <div
+              id={anchorId}
+              class="demo-toobig-anchor-tall"
+              style="margin-left: 50px;"
+            >
               anchor (container height − 5px)
             </div>
-            <div class="demo-row">
+            <Box flex="y" spacing="s" alignX="start">
               <AnchorTooBigPopover
                 label="top → rejected, falls back to center"
                 positionArea="top"
@@ -1284,7 +1287,7 @@
                 commandProxyFor={anchorId}
               />
               <AnchorTooBigPopover
-                label="top, positionAreaWhenAnchorIsInvalid=&quot;bottom&quot;"
+                label='top, positionAreaWhenAnchorIsInvalid="bottom"'
                 positionArea="top"
                 positionAreaWhenAnchorIsInvalid="bottom"
                 layer="local"
@@ -1302,7 +1305,7 @@
                 layer="local"
                 commandProxyFor={anchorId}
               />
-            </div>
+            </Box>
           </div>
         );
       };
@@ -1314,9 +1317,9 @@
             A real anchor is only usable on the axis <code>positionArea</code>
             actually places the popover *outside* of it (a bare "left"/
             "right"/"top"/"bottom", never "center"/"inset(...)") — an anchor
-            consuming almost all the room on that axis (viewport, or a
-            custom <code>container</code>) leaves nothing to work with there,
-            so the popover docks via <code>positionAreaWhenAnchorIsInvalid</code>
+            consuming almost all the room on that axis (viewport, or a custom{" "}
+            <code>container</code>) leaves nothing to work with there, so the
+            popover docks via <code>positionAreaWhenAnchorIsInvalid</code>
             instead (default <code>"center"</code>, itself configurable).
           </p>
           <div class="demo-subsection">
