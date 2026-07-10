@@ -829,10 +829,7 @@ export const pickPositionRelativeTo = (
       ) {
         return true;
       }
-      if (
-        (x === "left" || x === "right") &&
-        rect.width > availableWidth - 50
-      ) {
+      if ((x === "left" || x === "right") && rect.width > availableWidth - 50) {
         return true;
       }
       return false;
@@ -1099,7 +1096,8 @@ export const pickPositionRelativeTo = (
           elementPositionLeft =
             availableCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
-          elementPositionLeft = availableLeft + availableWidth / 2 - elementWidth / 2;
+          elementPositionLeft =
+            availableLeft + availableWidth / 2 - elementWidth / 2;
         }
       } else {
         elementPositionLeft =
@@ -1311,7 +1309,17 @@ export const pickPositionRelativeTo = (
  */
 export const applyNewPosition = (
   element,
-  { left, top, shouldTransition, positionX, positionY, spaceLeft, spaceRight, spaceAbove, spaceBelow },
+  {
+    left,
+    top,
+    shouldTransition,
+    positionX,
+    positionY,
+    spaceLeft,
+    spaceRight,
+    spaceAbove,
+    spaceBelow,
+  },
   { transitionDuration = "0.25s" } = {},
 ) => {
   element.style.setProperty(
@@ -1322,16 +1330,28 @@ export const applyNewPosition = (
   element.style.top = `${top}px`;
 
   if (positionY === "top" || positionY === "inset-bottom") {
-    element.style.setProperty("--container-position-remaining-height", `${spaceAbove}px`);
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${spaceAbove}px`,
+    );
   } else if (positionY === "bottom" || positionY === "inset-top") {
-    element.style.setProperty("--container-position-remaining-height", `${spaceBelow}px`);
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${spaceBelow}px`,
+    );
   } else {
     element.style.removeProperty("--container-position-remaining-height");
   }
   if (positionX === "left" || positionX === "inset-right") {
-    element.style.setProperty("--container-position-remaining-width", `${spaceLeft}px`);
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${spaceLeft}px`,
+    );
   } else if (positionX === "right" || positionX === "inset-left") {
-    element.style.setProperty("--container-position-remaining-width", `${spaceRight}px`);
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${spaceRight}px`,
+    );
   } else {
     element.style.removeProperty("--container-position-remaining-width");
   }
