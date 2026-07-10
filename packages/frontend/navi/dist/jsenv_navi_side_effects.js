@@ -1,4 +1,5 @@
 import { signal, computed, effect } from "@preact/signals";
+import { subscribeWindowResizeSettled, subscribeVisualViewportResizeSettled } from "@jsenv/dom";
 
 const installImportMetaCssBuild = (importMeta) => {
   const IMPORT_META_CSS_BUILD = "jsenv_import_meta_css_build";
@@ -53,7 +54,13 @@ const installImportMetaCssBuild = (importMeta) => {
 const windowWidthSignal = signal(window.innerWidth);
 const windowHeightSignal = signal(window.innerHeight);
 
-window.addEventListener("resize", () => {
+// Debounced (not a raw "resize" listener) — see window_size.js's own
+// module comment: mobile fires a transient "resize" when the browser's own
+// UI chrome (address bar, etc.) briefly shows/hides, and this needs to
+// settle on the exact same tick as visualViewport's own debounced resize
+// below and Popover/Dialog's own repositioning, or one flickers a moment
+// out of sync with the others.
+subscribeWindowResizeSettled(() => {
   windowWidthSignal.value = window.innerWidth;
   windowHeightSignal.value = window.innerHeight;
 });
@@ -69,12 +76,13 @@ const visualViewportWidthSignal = vv
 const visualViewportHeightSignal = vv
   ? signal(vv.height)
   : computed(() => windowHeightSignal.value);
+
 if (vv) {
   const update = () => {
     visualViewportWidthSignal.value = vv.width;
     visualViewportHeightSignal.value = vv.height;
   };
-  vv.addEventListener("resize", update);
+  subscribeVisualViewportResizeSettled(update);
   vv.addEventListener("scroll", update);
 }
 
@@ -118,6 +126,19 @@ const css = /* css */`
       /* default */
       --navi-picker-padding-x-default: var(--navi-control-padding-x-default);
       --navi-picker-padding-y-default: var(--navi-control-padding-y-default);
+
+      --navi-popup-z-index: 1000;
+      --navi-popup-border-radius: 8px;
+      --navi-popup-border-color: light-dark(#d0d0d0, #3b3b3b);
+      --navi-popup-box-shadow:
+        0 4px 8px rgba(0, 0, 0, 0.08), 0 12px 40px rgba(0, 0, 0, 0.22);
+      --navi-popup-background-color: light-dark(#ffffff, #1c1c1e);
+      --navi-backdrop-close-background: rgba(0, 0, 0, 0.08);
+      /* "capture" means the rest of the page is fully non-interactive —
+         blurred, not just dimmed, so it reads as clearly secondary and
+         pulls visual focus onto the popover's own content. */
+      --navi-backdrop-capture-background: rgb(255 255 255 / 0.08);
+      --navi-backdrop-capture-backdrop-filter: blur(30px) saturate(180%);
 
       --navi-selection-border-color: #0078d4;
       --navi-selection-background-color: #eaf1fd;

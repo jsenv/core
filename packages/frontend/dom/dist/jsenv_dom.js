@@ -5514,6 +5514,16 @@ const performTabNavigation = (
     outsideOfElement = null,
     debug = () => {},
     excludeAriaHidden,
+    // When reaching the edge of rootElement would normally wrap back
+    // around inside it, escapeRoot changes that: Tab instead continues
+    // past escapeRoot's *entire* subtree (not just rootElement's), landing
+    // on the next/previous focusable element in the document beyond it.
+    // Used by focus_trap.js when boundaryElement is a real container
+    // (not document) — a trapped element nested inside a bigger container
+    // (e.g. a local-layer Dialog) shouldn't just wrap on itself; Tab should
+    // exit the whole container, skipping over any other focusable
+    // siblings inside it (they're not part of what's actually trapped).
+    escapeRoot = null,
   } = {},
 ) => {
   if (!isTabEvent$1(event)) {
@@ -5626,6 +5636,18 @@ const performTabNavigation = (
     if (nextFocusableElement) {
       return onTargetToFocus(nextFocusableElement);
     }
+    if (escapeRoot) {
+      // Skip escapeRoot's own children entirely — anything else still
+      // inside it (a sibling of rootElement) isn't part of what's
+      // trapped, so it must never become the next Tab stop either.
+      const nextOutsideEscapeRoot = findAfter(escapeRoot, predicate, {
+        skipChildren: true,
+      });
+      if (nextOutsideEscapeRoot) {
+        return onTargetToFocus(nextOutsideEscapeRoot);
+      }
+      return false;
+    }
     // Wrap around: go back to the first focusable element in root.
     const firstFocusableElement = findDescendant(rootElement, predicate, {
       skipRoot: outsideOfElement,
@@ -5657,6 +5679,16 @@ const performTabNavigation = (
     });
     if (previousFocusableElement) {
       return onTargetToFocus(previousFocusableElement);
+    }
+    if (escapeRoot) {
+      // findBefore already searches strictly *before* escapeRoot's own
+      // position (previous sibling / ancestor's previous sibling), never
+      // descending into its children — exactly "outside its subtree".
+      const previousOutsideEscapeRoot = findBefore(escapeRoot, predicate);
+      if (previousOutsideEscapeRoot) {
+        return onTargetToFocus(previousOutsideEscapeRoot);
+      }
+      return false;
     }
     // Wrap around: go back to the last focusable element in root.
     const lastFocusableElement = findLastDescendant(rootElement, predicate, {
@@ -5855,12 +5887,19 @@ const preventFocusNavViaKeyboard = (keyboardEvent) => {
  *
  * Once active:
  * - **Tab / Shift+Tab** cycle through focusable descendants of `element`,
- *   wrapping from last → first and first → last. If no focusable element
- *   exists, the default browser Tab action is suppressed so focus cannot
- *   escape.
+ *   wrapping from last → first and first → last — *unless* `boundaryElement`
+ *   is a real container (not `document`), in which case Tab escapes the
+ *   whole container instead of wrapping (see `boundaryElement`'s own doc).
+ *   If no focusable element exists, the default browser Tab action is
+ *   suppressed so focus cannot escape.
  * - **Mouse clicks** outside `element` are only blocked when `pointerTrap`
  *   is `true`. Backdrop clicks (on `<dialog>` elements) still propagate even
  *   then, so the dialog can close itself.
+ * - **Focus entering `boundaryElement` from outside it** (e.g. a `focus()`
+ *   call, or Tab arriving from further out in the document) always lands on
+ *   `element`'s own first focusable descendant — never on some other
+ *   focusable sibling `boundaryElement` happens to also contain. Only
+ *   relevant when `boundaryElement` isn't `document` (see below).
  *
  * Multiple traps can be stacked. When a new trap is activated the previous
  * one is paused; when the new trap is released the previous one resumes.
@@ -5873,11 +5912,30 @@ const preventFocusNavViaKeyboard = (keyboardEvent) => {
  *   Backdrop clicks (target is a `<dialog>` element) only receive `preventDefault`
  *   and still propagate, allowing the dialog to react to them (e.g. close itself).
  * @param {Function} [options.debug] - Optional debug logger passed to tab navigation.
+ * @param {Document|HTMLElement} [options.boundaryElement=document] - Where the
+ *   mousedown/keydown/focusin listeners are attached. Defaults to `document`
+ *   (a genuinely page-wide modal — the usual case, where none of the
+ *   container-specific behavior below applies). Pass a specific container
+ *   element instead for a trap that should only apply *within* that
+ *   container: a Tab press or click occurring entirely outside it never
+ *   reaches a listener attached there at all (events only bubble through
+ *   their own ancestor chain), so the rest of the page keeps its normal tab
+ *   order/interactions untouched. Inside the container, `element` behaves
+ *   as if it were the *only* focusable thing `boundaryElement` contains:
+ *   Tab reaching either edge of `element` skips over any other focusable
+ *   sibling sharing the container, exiting the container entirely (not
+ *   wrapping back into `element`), and focus arriving at some other
+ *   focusable sibling inside the container gets redirected into `element`'s
+ *   own first focusable descendant instead. Used by Dialog's own
+ *   `layer="local"` renderer, which is only meant to be modal within its
+ *   own positioned ancestor, not the whole document — a case where that
+ *   ancestor can genuinely contain other, unrelated focusable content
+ *   (e.g. a trigger button placed right next to it).
  * @returns {() => void} Cleanup function — call it to release the trap.
  */
 const trapFocusInside = (
   element,
-  { debug, pointerTrap = false } = {},
+  { debug, pointerTrap = false, boundaryElement = document } = {},
 ) => {
   if (element.nodeType === 3) {
     console.warn("cannot trap focus inside a text node");
@@ -5901,6 +5959,10 @@ const trapFocusInside = (
     }
     return true;
   };
+
+  // A real container (not document) — element must behave as the only
+  // focusable thing boundaryElement contains, see this file's own doc.
+  const escapeRoot = boundaryElement === document ? null : boundaryElement;
 
   const lock = () => {
     const onmousedown = pointerTrap
@@ -5928,6 +5990,7 @@ const trapFocusInside = (
         const handled = performTabNavigation(event, {
           rootElement: element,
           debug,
+          escapeRoot,
         });
         if (!handled) {
           // No focusable target found — prevent the browser from moving focus outside the trap.
@@ -5936,25 +5999,50 @@ const trapFocusInside = (
       }
     };
 
+    // Focus landing on some other focusable sibling boundaryElement also
+    // contains (not element itself) gets redirected into element's own
+    // first focusable descendant — e.g. a direct .focus() call, or Tab
+    // arriving from further out in the document. Click-driven focus theft
+    // is already prevented above by onmousedown (when pointerTrap is on);
+    // this covers the rest (keyboard-driven entry, programmatic focus()).
+    const onfocusin = escapeRoot
+      ? (event) => {
+          const target = event.target;
+          if (target === element || element.contains(target)) {
+            return;
+          }
+          const firstFocusable = findDescendant(element, (node) =>
+            elementIsFocusable(node),
+          );
+          firstFocusable?.focus();
+        }
+      : null;
+
     if (onmousedown) {
-      document.addEventListener("mousedown", onmousedown, {
+      boundaryElement.addEventListener("mousedown", onmousedown, {
         capture: true,
         passive: false,
       });
     }
-    document.addEventListener("keydown", onkeydown, {
+    boundaryElement.addEventListener("keydown", onkeydown, {
       capture: true,
       passive: false,
     });
+    if (onfocusin) {
+      boundaryElement.addEventListener("focusin", onfocusin);
+    }
 
     return () => {
       if (onmousedown) {
-        document.removeEventListener("mousedown", onmousedown, {
+        boundaryElement.removeEventListener("mousedown", onmousedown, {
           capture: true,
           passive: false,
         });
       }
-      document.removeEventListener("keydown", onkeydown, {
+      if (onfocusin) {
+        boundaryElement.removeEventListener("focusin", onfocusin);
+      }
+      boundaryElement.removeEventListener("keydown", onkeydown, {
         capture: true,
         passive: false,
       });
@@ -6638,6 +6726,24 @@ const viewportPosToScrollRelativePos = (
     leftViewport - scrollContainerLeftViewport,
     topViewport - scrollContainerTopViewport,
   ];
+};
+
+// position: fixed is already viewport-relative, so no scroll offset is
+// needed to place it correctly — adding one would double-count the scroll.
+// position: absolute (assumed relative to the initial containing block, the
+// common case for a document-relative absolutely positioned element) needs
+// the current scroll offset added to convert a viewport-relative coordinate
+// into one it can be set to directly. Read the element's own computed style
+// rather than assuming one or the other, since callers may use either.
+const getPositioningScrollOffset = (element) => {
+  const isFixed = getComputedStyle(element).position === "fixed";
+  if (isFixed) {
+    return { scrollLeft: 0, scrollTop: 0 };
+  }
+  return {
+    scrollLeft: documentElement$1.scrollLeft,
+    scrollTop: documentElement$1.scrollTop,
+  };
 };
 
 const addScrollToRect = (scrollRelativeRect) => {
@@ -10774,6 +10880,28 @@ const getPositionedParent = (element) => {
   return document.body;
 };
 
+/**
+ * Like `getPositionedParent`, but aware of `element` itself being promoted
+ * to the top layer: an element with a `popover` attribute, or a `<dialog>`,
+ * always uses the initial containing block (the viewport) once shown,
+ * regardless of `position` or DOM ancestry — walking up its own parent
+ * chain looking for a positioned ancestor (what `getPositionedParent` does)
+ * would give the wrong answer for these two specifically, since their real
+ * DOM position becomes irrelevant to their own containing block the moment
+ * they're actually open.
+ *
+ * Returns `null` to mean "the viewport" (matching how a real anchor
+ * resolves to `null`/no-anchor callers already treat that as a request for
+ * viewport-relative positioning) for a popover/dialog element;
+ * `getPositionedParent(element)` otherwise.
+ */
+const getPositioningContainer = (element) => {
+  if (element.hasAttribute("popover") || element.tagName === "DIALOG") {
+    return null;
+  }
+  return getPositionedParent(element);
+};
+
 const getHeight = (element) => {
   const { height } = element.getBoundingClientRect();
   return height;
@@ -11100,6 +11228,49 @@ const stickyAsRelativeCoords = (
   return [leftPosition, topPosition];
 };
 
+// Both "resize" sources fire transiently on mobile (keyboard/UI chrome
+// briefly shifting when focus moves between inputs) — debounced so
+// consumers skip that in-between state. One shared timer per source (not
+// one per subscriber) so everything settles on the same tick.
+const RESIZE_SETTLE_MS = 100;
+
+// Set while a visualViewport resize is debouncing, cleared once it settles —
+// read by the window resize listener below.
+let visualViewportResizePending = false;
+
+const [publishVisualViewportResize, subscribeVisualViewportResizeSettled] =
+  createPubSub();
+const [publishWindowResize, subscribeWindowResizeSettled] = createPubSub();
+
+if (window.visualViewport) {
+  let timeoutId;
+  window.visualViewport.addEventListener("resize", (event) => {
+    visualViewportResizePending = true;
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => {
+      visualViewportResizePending = false;
+      publishVisualViewportResize(event);
+    }, RESIZE_SETTLE_MS);
+  });
+}
+
+let windowResizeTimeoutId;
+window.addEventListener("resize", (event) => {
+  clearTimeout(windowResizeTimeoutId);
+  // Mobile browsers appear to dispatch visualViewport resize, then window
+  // resize, then visualViewport resize again for the same keyboard/UI-chrome
+  // shift — debounce the same way only when it looks like part of that
+  // sequence (a visualViewport resize is already pending); otherwise react
+  // immediately, so a genuine window resize isn't delayed for nothing.
+  if (!visualViewportResizePending) {
+    publishWindowResize(event);
+    return;
+  }
+  windowResizeTimeoutId = setTimeout(() => {
+    publishWindowResize(event);
+  }, RESIZE_SETTLE_MS);
+});
+
 // Minimum fraction of element width/height that must be visible on the preferred side
 // before flipping to the opposite side. Prevents flickering near the flip threshold.
 const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
@@ -11148,7 +11319,14 @@ const visibleRectEffect = (
   } = {},
 ) => {
   const [teardown, addTeardown] = createPubSub();
-  const scrollContainer = getScrollContainer(element);
+  // getScrollContainer(document.documentElement) returns null specifically
+  // when the document itself has no overflow to scroll (e.g. a small
+  // dialog/popover on an otherwise short page) — document.documentElement
+  // is still a perfectly valid fallback in that case (scrollLeft/scrollTop
+  // are just 0), so this never needs to crash the way a bare
+  // `getScrollContainer(element)` result would below.
+  const scrollContainer =
+    getScrollContainer(element) ?? document.documentElement;
   const scrollContainerIsDocument =
     scrollContainer === document.documentElement;
   let lastMeasuredWidth;
@@ -11299,16 +11477,16 @@ const visibleRectEffect = (
   check(initialEvent);
 
   const [publishBeforeAutoCheck, onBeforeAutoCheck] = createPubSub();
-  {
-    const autoCheck = (event) => {
-      const beforeCheckResults = publishBeforeAutoCheck(event);
-      check(event);
-      for (const beforeCheckResult of beforeCheckResults) {
-        if (typeof beforeCheckResult === "function") {
-          beforeCheckResult();
-        }
+  const autoCheck = (event) => {
+    const beforeCheckResults = publishBeforeAutoCheck(event);
+    check(event);
+    for (const beforeCheckResult of beforeCheckResults) {
+      if (typeof beforeCheckResult === "function") {
+        beforeCheckResult();
       }
-    };
+    }
+  };
+  {
     // let rafId = null;
     // const scheduleCheck = (reason) => {
     //   cancelAnimationFrame(rafId);
@@ -11369,40 +11547,10 @@ const visibleRectEffect = (
       }
     }
     {
-      if (window.visualViewport) {
-        // visualViewport resize fires when the virtual keyboard opens/closes on mobile.
-        // On mobile, tapping from one input to another triggers a resize because
-        // the virtual keyboard briefly starts to close before the new input receives
-        // focus and the keyboard reopens. Debouncing prevents repositioning the
-        // during that transient state, which would cause a visible flicker.
-        let resizeTimeout;
-        const cancelDelayedAutoCheck = () => {
-          clearTimeout(resizeTimeout);
-        };
-        const onVisualViewportResize = (e) => {
-          cancelDelayedAutoCheck();
-          resizeTimeout = setTimeout(() => {
-            autoCheck(e);
-          }, 100);
-        };
-        window.visualViewport.addEventListener(
-          "resize",
-          onVisualViewportResize,
-        );
-        addTeardown(() => {
-          window.visualViewport.removeEventListener(
-            "resize",
-            onVisualViewportResize,
-          );
-        });
-      }
-      const onWindowResize = (e) => {
-        autoCheck(e);
-      };
-      window.addEventListener("resize", onWindowResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", onWindowResize);
-      });
+      // See window_size.js's own module comment for why both of these go
+      // through their shared debounce instead of each keeping its own timer.
+      addTeardown(subscribeVisualViewportResizeSettled(autoCheck));
+      addTeardown(subscribeWindowResizeSettled(autoCheck));
     }
     on_element_resize: {
       if (skipElementResize) {
@@ -11546,18 +11694,18 @@ const visibleRectEffect = (
           };
           ancestor.addEventListener("toggle", onToggle);
 
-          const onNaviPositionUpdate = (e) => {
+          const onNaviPositionChange = (e) => {
             autoCheck(e);
           };
           ancestor.addEventListener(
-            "navi_position_update",
-            onNaviPositionUpdate,
+            "navi_position_change",
+            onNaviPositionChange,
           );
           addTeardown(() => {
             ancestor.removeEventListener("toggle", onToggle);
             ancestor.removeEventListener(
-              "navi_position_update",
-              onNaviPositionUpdate,
+              "navi_position_change",
+              onNaviPositionChange,
             );
           });
         }
@@ -11566,9 +11714,91 @@ const visibleRectEffect = (
     }
   }
 
+  // Re-checks whenever `elementToObserve` (some other element than the one
+  // this effect tracks — e.g. a popover/callout's own content) changes size,
+  // not just when `element` itself is scrolled/resized/re-anchored. Useful
+  // when the tracked element's *position* depends on a size that lives
+  // elsewhere (a callout re-measuring itself against its message body, a
+  // popover reconsidering "top" vs "bottom" once its own content grows).
+  // Can be called more than once, once per element worth watching.
+  const observeSize = (elementToObserve) => {
+    let lastWidth;
+    let lastHeight;
+    // Set right before a deferred check() runs, read right after — see
+    // below for why a pending frame needs to be cancelable.
+    let pendingFrame = null;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      const { width, height } = entry.contentRect;
+      // Debounce tiny changes that are likely sub-pixel rounding.
+      if (lastWidth !== undefined) {
+        const widthDiff = Math.abs(width - lastWidth);
+        const heightDiff = Math.abs(height - lastHeight);
+        const threshold = 1;
+        if (widthDiff < threshold && heightDiff < threshold) {
+          return;
+        }
+      }
+      lastWidth = width;
+      lastHeight = height;
+      // Deferred to the next frame rather than calling check() here
+      // directly: check() (via update()) commonly mutates
+      // elementToObserve's own size again as a side effect of repositioning
+      // it (e.g. a popover clearing then re-setting its own max-height
+      // while reconsidering "top" vs "bottom" once it no longer fits where
+      // it was) — when elementToObserve is the very element this observer
+      // watches (a popover watching its own content, not some other
+      // element), doing that synchronously from inside this callback is a
+      // same-frame observer-triggers-itself loop, which the browser detects
+      // and reports as "ResizeObserver loop completed with undelivered
+      // notifications." The debounce above only guards against oscillation
+      // across separate ResizeObserver deliveries — it does nothing for
+      // this single legitimate resize-causes-a-reposition-causes-another-
+      // resize step, since each individual size change here is real, not
+      // sub-pixel noise. Deferring one frame breaks the synchronous chain:
+      // by the time the reposition runs, this callback has already
+      // returned, so any size change it causes is observed as a fresh,
+      // later delivery instead of a nested one. Cancels/replaces any
+      // still-pending frame from an earlier, superseded delivery, so only
+      // the latest size ever actually gets checked.
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
+      pendingFrame = requestAnimationFrame(() => {
+        pendingFrame = null;
+        check(
+          new CustomEvent("observed_element_size_change", {
+            detail: { width, height },
+          }),
+        );
+      });
+    });
+    resizeObserver.observe(elementToObserve);
+    const cleanupAutoCheck = onBeforeAutoCheck(() => {
+      resizeObserver.unobserve(elementToObserve);
+      return () => {
+        resizeObserver.observe(elementToObserve);
+      };
+    });
+    addTeardown(() => {
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
+      resizeObserver.disconnect();
+    });
+    return () => {
+      cleanupAutoCheck();
+      if (pendingFrame !== null) {
+        cancelAnimationFrame(pendingFrame);
+      }
+      resizeObserver.disconnect();
+    };
+  };
+
   return {
     check,
     onBeforeAutoCheck,
+    observeSize,
     disconnect: () => {
       teardown();
     },
@@ -11576,87 +11806,359 @@ const visibleRectEffect = (
 };
 
 /**
+ * The `positionArea` grammar `pickPositionRelativeTo` accepts (also reused
+ * as-is by `@jsenv/navi`'s Popover/Dialog/Callout): a single compass token
+ * (loosely inspired by CSS `position-area`'s own naming), optionally wrapped
+ * in `inset(...)` when the element should overlap the anchor instead of
+ * sitting fully to one side of it. Resolves internally to a { y, x } pair —
+ * y: top/inset-top/center/inset-bottom/bottom, x: left/inset-left/center/
+ * inset-right/right — the same vocabulary the rest of this file's
+ * positioning math (spaceFor, oppositeX/Y, etc.) actually operates on: a
+ * bare `top`/`bottom`/`left`/`right` means outside the anchor (no overlap on
+ * that axis), `inset-*` means flush against/overlapping it.
+ *
+ * Outside the anchor (bare token — element placed fully to one side, no
+ * overlap on that side's axis):
+ *
+ *   top-left     top-start   top   top-end     top-right
+ *   right-start                    right                  right-end
+ *   bottom-right bottom-end  bottom bottom-start bottom-left
+ *   left-end                       left                   left-start
+ *
+ * A corner token fixes one axis outside (top/bottom/left/right) and the
+ * other the same way (a true corner, no cross-axis overlap at all).
+ * "-start"/"-end" keep one axis outside but align the cross axis flush with
+ * the anchor's near/far edge instead (`top-start` is above the anchor,
+ * left-edges flush). The bare direction word centers the cross axis on the
+ * anchor.
+ *
+ * Overlapping the anchor (wrapped in `inset(...)`, the classic 3×3 grid):
+ *
+ *   inset(top-left)     inset(top)    inset(top-right)
+ *   inset(left)          center       inset(right)
+ *   inset(bottom-left)  inset(bottom) inset(bottom-right)
+ *
+ * `center` and `inset(center)` are equivalent aliases for dead-center.
+ */
+const OUTSIDE_POSITION_AREA_TOKENS = {
+  "top-left": { y: "top", x: "left" },
+  "top-start": { y: "top", x: "inset-left" },
+  "top": { y: "top", x: "center" },
+  "top-end": { y: "top", x: "inset-right" },
+  "top-right": { y: "top", x: "right" },
+
+  "right-start": { y: "inset-top", x: "right" },
+  "right": { y: "center", x: "right" },
+  "right-end": { y: "inset-bottom", x: "right" },
+
+  "bottom-right": { y: "bottom", x: "right" },
+  "bottom-end": { y: "bottom", x: "inset-right" },
+  "bottom": { y: "bottom", x: "center" },
+  "bottom-start": { y: "bottom", x: "inset-left" },
+  "bottom-left": { y: "bottom", x: "left" },
+
+  "left-end": { y: "inset-bottom", x: "left" },
+  "left": { y: "center", x: "left" },
+  "left-start": { y: "inset-top", x: "left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_POSITION_AREA_TOKENS = {
+  "top-left": { y: "inset-top", x: "inset-left" },
+  "top": { y: "inset-top", x: "center" },
+  "top-right": { y: "inset-top", x: "inset-right" },
+
+  "right": { y: "center", x: "inset-right" },
+
+  "bottom-right": { y: "inset-bottom", x: "inset-right" },
+  "bottom": { y: "inset-bottom", x: "center" },
+  "bottom-left": { y: "inset-bottom", x: "inset-left" },
+
+  "left": { y: "center", x: "inset-left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_TOKEN_RE = /^inset\(\s*([a-z-]+)\s*\)$/;
+
+/**
+ * Parses a positionArea string into a { y, x } pair, or null if it's not a
+ * recognized token.
+ */
+const parsePositionArea = (value) => {
+  const insetMatch = INSET_TOKEN_RE.exec(value);
+  if (insetMatch) {
+    const parsed = INSET_POSITION_AREA_TOKENS[insetMatch[1]];
+    return parsed ? { ...parsed } : null;
+  }
+  const parsed = OUTSIDE_POSITION_AREA_TOKENS[value];
+  return parsed ? { ...parsed } : null;
+};
+
+/**
+ * Collapses a bare position value ("top"/"bottom"/"left"/"right") to its
+ * "inset-*" equivalent — "inset-*"/"center" values pass through unchanged.
+ * Only used by pickPositionRelativeTo's own no-anchor (container-docked)
+ * mode — see its own doc for why.
+ */
+const toContainerAlignedPosition = (value) => {
+  if (value === "top") {
+    return "inset-top";
+  }
+  if (value === "bottom") {
+    return "inset-bottom";
+  }
+  if (value === "left") {
+    return "inset-left";
+  }
+  if (value === "right") {
+    return "inset-right";
+  }
+  return value;
+};
+
+/**
  * Places element relative to anchor with independent control of horizontal and vertical axes.
  *
- * Horizontal axis — positionX / positionXFixed (left → right):
- *   "to-the-left"   element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "left-aligned"  element.left   = anchor.left   (left edges aligned)
- *   "center"        element centered horizontally over anchor  (default)
- *   "right-aligned" element.right  = anchor.right  (right edges aligned)
- *   "to-the-right"  element.left   = anchor.right  (sits entirely to the right of anchor)
+ * `positionArea` (see its own doc above `parsePositionArea`) is a single
+ * compass token that resolves to a { y, x } pair internally:
  *
- * Vertical axis — positionY / positionYFixed (top → bottom):
- *   "above"         element.bottom = anchor.top    (sits above, no overlap)
- *   "above-overlap" element.bottom = anchor.bottom (sits above, overlapping anchor)
- *   "center"        element centered vertically over anchor
- *   "below-overlap" element.top    = anchor.top    (sits below, overlapping anchor)
- *   "below"         element.top    = anchor.bottom (sits below, no overlap)  (default)
+ * Horizontal (x) axis:
+ *   "left"        element.right  = anchor.left   (sits entirely to the left of anchor)
+ *   "inset-left"  element.left   = anchor.left   (left edges aligned, overlapping)
+ *   "center"      element centered horizontally over anchor
+ *   "inset-right" element.right  = anchor.right  (right edges aligned, overlapping)
+ *   "right"       element.left   = anchor.right  (sits entirely to the right of anchor)
  *
- * positionX / positionY attempt the requested placement and automatically flip to the
+ * Vertical (y) axis:
+ *   "top"          element.bottom = anchor.top    (sits above, no overlap)
+ *   "inset-top"    element.top    = anchor.top    (top edges aligned, overlapping)
+ *   "center"       element centered vertically over anchor
+ *   "inset-bottom" element.bottom = anchor.bottom (bottom edges aligned, overlapping)
+ *   "bottom"       element.top    = anchor.bottom (sits below, no overlap)
+ *
+ * The resolved x/y attempt the requested placement and automatically flip to the
  * logical opposite when the element does not fit in the viewport:
- *   above ↔ below,   above-overlap ↔ below-overlap
+ *   top ↔ bottom,   inset-top ↔ inset-bottom,   left ↔ right,   inset-left ↔ inset-right
  *
- * positionXFixed / positionYFixed skip the fit check entirely.
+ * `positionAreaFixed` skips the fit check entirely on both axes.
  *
  * The resolved X and Y are persisted as data-position-x-current / data-position-y-current
  * on the element so subsequent calls start from the last resolved position (avoids
- * flickering when the element is near the flip threshold). Fixed axes are not persisted.
+ * flickering when the element is near the flip threshold) and so other CSS/JS can read
+ * "which side is this on right now" — including for a fixed axis, even though a fixed
+ * axis never reads the attribute back itself (`positionAreaFixed` always wins).
  *
- * @param {HTMLElement} element - The element to position (must be document-relative)
- * @param {HTMLElement} anchor - The anchor element to position against
+ * @param {HTMLElement} element - The element to position (position: absolute or
+ *   fixed — detected from its own computed style, see the scroll offset comment below)
+ * @param {HTMLElement} [anchor] - The anchor element to position against. Omit (or pass
+ *   `null`/`undefined`) when there's no real anchor to dock `element` against a *container*
+ *   instead — see `container` below; in that mode, "top"/"bottom"/"left"/"right" are
+ *   collapsed to their "inset-*" equivalent internally (docking has no "float away with
+ *   a gap" concept the way a real anchor does) and x/y always behave as if
+ *   `positionAreaFixed` were set (a docked edge/corner never flips to the other side —
+ *   there's no "other side" of a container the way there is of a real anchor).
  * @param {object} [options]
- * @param {string} [options.positionX="center"] - Preferred X placement, with viewport fallback.
- *   "to-the-left"   — element.right  = anchor.left   (sits entirely to the left of anchor)
- *   "left-aligned"  — element.left   = anchor.left   (left edges aligned)
- *   "center"        — element centered horizontally over anchor  (default)
- *   "right-aligned" — element.right  = anchor.right  (right edges aligned)
- *   "to-the-right"  — element.left   = anchor.right  (sits entirely to the right of anchor)
- * @param {string} [options.positionY="below"] - Preferred Y placement, with viewport fallback.
- *   "above"         — element.bottom = anchor.top    (sits above, no overlap)
- *   "above-overlap" — element.bottom = anchor.bottom (sits above, overlapping anchor)
- *   "center"        — element centered vertically over anchor
- *   "below-overlap" — element.top    = anchor.top    (sits below, overlapping anchor)
- *   "below"         — element.top    = anchor.bottom (sits below, no overlap)  (default)
- * @param {string} [options.positionXFixed] - Force X placement, skipping the fit-check. Same values as positionX.
- * @param {string} [options.positionYFixed] - Force Y placement, skipping the fit-check. Same values as positionY.
- * @param {number} [options.alignToViewportEdgeWhenAnchorNearEdge=0] - Snap to viewport left
- *   edge when anchor is within this many px of the left edge and element is wider than anchor.
+ * @param {string} [options.positionArea="bottom"] - Preferred placement, with viewport
+ *   fallback — see `parsePositionArea`'s own doc for the full token grammar (a single
+ *   compass token, optionally `inset(...)`-wrapped).
+ * @param {string} [options.positionAreaFixed] - Forces this placement, skipping the
+ *   fit-check on both axes. Same grammar as `positionArea`.
+ * @param {string} [options.positionAreaWhenAnchorIsInvalid="center"] - `positionArea`
+ *   used instead, as a plain no-anchor dock, whenever the anchor is too big to leave
+ *   room on the axis `positionArea` places it outside of. `hasValidAnchor` in the return
+ *   value reports which way it went.
+ * @param {Event|CustomEvent} [options.event] - The event that triggered this particular
+ *   reposition (a scroll/resize/etc. handler simply forwarding whatever it was itself
+ *   called with) — purely informational, never changes the computed `left`/`top`
+ *   themselves, only `shouldTransition` in the return value (see `applyNewPosition`'s
+ *   own doc for how that's meant to be used).
+ * @param {number} [options.alignToContainerEdgeWhenAnchorNearEdge=0] - When centering
+ *   (positionArea's x is "center") an element wider than its anchor, snap to the available area's own
+ *   left edge (the page viewport normally, or the container's edge — see `container` below —
+ *   whenever there's no real `anchor`) instead of centering, once the anchor is within this
+ *   many px of that same edge — avoids the (wider) element overflowing past it. 0 disables
+ *   the snap entirely.
  * @param {number} [options.minLeft=0] - Minimum left coordinate (document-relative).
- * @returns {{ positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @param {HTMLElement|null} [options.container] - The container `element` is genuinely
+ *   `position: absolute` relative to (its own containing block) — decoupled from whether
+ *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
+ *   custom renderer in popover.jsx, always relative to its own positioned ancestor whether
+ *   or not it also has a real anchor). Whenever not explicitly given, this is always
+ *   resolved automatically via `getPositioningContainer(element)` instead — regardless of
+ *   `hasValidAnchor` — so a caller that never thinks about `container` at all still gets the
+ *   right behavior on its own: `null` from `getPositioningContainer` (an `element` with a
+ *   `popover` attribute, or a `<dialog>` — e.g. Callout's own element) falls back to the
+ *   traditional document-relative path below, exactly as if `container` genuinely didn't
+ *   apply; anything else `getPositioningContainer` finds (a real positioned ancestor) is
+ *   used the same way an explicit `container` would be. A container that resolves to
+ *   `document.documentElement` (the viewport) produces identical output to the plain
+ *   document-relative path either way, since the document's own scroll and the viewport's
+ *   own origin already coincide with what this generically computes for any other container
+ *   element. When there's a real container (explicit or resolved) either way: the final
+ *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative to
+ *   its own padding-box origin plus its own scroll, instead of the document's — `element`'s
+ *   own computed `position` is *not* consulted in that case, unlike the traditional path.
+ *   When `anchor` is also omitted (no real anchor at all), the container additionally
+ *   becomes what's positioned against, and the boundary clamp uses its own (padding-box)
+ *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
+ *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
+ *   unlike the coordinate-space conversion itself.
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 const pickPositionRelativeTo = (
   element,
   anchor,
   {
-    positionX = "center",
-    positionY = "below",
-    positionXFixed,
-    positionYFixed,
-    alignToViewportEdgeWhenAnchorNearEdge = 0,
+    positionArea = "bottom",
+    positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid = "center",
+    event,
+    alignToContainerEdgeWhenAnchorNearEdge = 0,
     minLeft = 0,
-    spacing = 0,
+    marginWithAnchor = 0,
     alignToAnchorBox = "border-box",
-    viewportSpacing = 0,
+    marginWithContainer = 0,
+    container,
   } = {},
 ) => {
+  // Needed before hasValidAnchor below. visualViewport, not
+  // document.documentElement.clientWidth/Height: the layout viewport
+  // doesn't shrink when the on-screen keyboard opens, only the visual one
+  // does.
+  const visualViewport = window.visualViewport;
+  const viewportWidth = visualViewport
+    ? visualViewport.width
+    : document.documentElement.clientWidth;
+  const viewportHeight = visualViewport
+    ? visualViewport.height
+    : document.documentElement.clientHeight;
+  const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+  const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
 
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = document.documentElement.clientHeight;
+  // Resolved early: everything below that would otherwise reach for
+  // viewportLeft/Top/Width/Height instead uses these, so a "local" popover
+  // never gets offered more room (anchor-too-big check, flip decisions,
+  // clamp) than its own container — resolvedContainer's own padding-box
+  // edges when there is one — actually has.
+  const resolvedContainer = container ?? getPositioningContainer(element);
+  const hasRealContainer =
+    resolvedContainer && resolvedContainer !== document.documentElement;
+  const containerRect = hasRealContainer
+    ? resolvedContainer.getBoundingClientRect()
+    : null;
+  const containerBorders = hasRealContainer
+    ? getBorderSizes(resolvedContainer)
+    : { left: 0, top: 0, right: 0, bottom: 0 };
+  const availableLeft = hasRealContainer
+    ? snapToPixel(containerRect.left) + containerBorders.left
+    : viewportLeft;
+  const availableTop = hasRealContainer
+    ? snapToPixel(containerRect.top) + containerBorders.top
+    : viewportTop;
+  const availableRight = hasRealContainer
+    ? snapToPixel(containerRect.right) - containerBorders.right
+    : viewportLeft + viewportWidth;
+  const availableBottom = hasRealContainer
+    ? snapToPixel(containerRect.bottom) - containerBorders.bottom
+    : viewportTop + viewportHeight;
+  const availableWidth = availableRight - availableLeft;
+  const availableHeight = availableBottom - availableTop;
+
+  // Rejected only on the axis positionArea actually places `element`
+  // outside of ("left"/"right" or "top"/"bottom") — that's the only axis
+  // where the anchor's own size eats into the room available. Docks via
+  // positionAreaWhenAnchorIsInvalid instead of `positionArea` once rejected.
+  const requestedPositionArea = parsePositionArea(positionArea);
+  const anchorRejected =
+    Boolean(anchor) &&
+    (() => {
+      const rect = anchor.getBoundingClientRect();
+      const { x, y } = requestedPositionArea ?? {};
+      if (
+        (y === "top" || y === "bottom") &&
+        rect.height > availableHeight - 50
+      ) {
+        return true;
+      }
+      if ((x === "left" || x === "right") && rect.width > availableWidth - 50) {
+        return true;
+      }
+      return false;
+    })();
+  const hasValidAnchor = Boolean(anchor) && !anchorRejected;
+  const effectivePositionArea = anchorRejected
+    ? positionAreaWhenAnchorIsInvalid
+    : positionArea;
+
+  const parsedPositionArea = parsePositionArea(effectivePositionArea);
+  if (!parsedPositionArea) {
+    console.warn(
+      `pickPositionRelativeTo: invalid positionArea="${effectivePositionArea}"`,
+    );
+  }
+  let positionX = parsedPositionArea ? parsedPositionArea.x : "center";
+  let positionY = parsedPositionArea ? parsedPositionArea.y : "bottom";
+  let positionXFixed;
+  let positionYFixed;
+  if (positionAreaFixed) {
+    const parsedPositionAreaFixed = parsePositionArea(positionAreaFixed);
+    if (!parsedPositionAreaFixed) {
+      console.warn(
+        `pickPositionRelativeTo: invalid positionAreaFixed="${positionAreaFixed}"`,
+      );
+    } else {
+      positionXFixed = parsedPositionAreaFixed.x;
+      positionYFixed = parsedPositionAreaFixed.y;
+    }
+  }
+  // No real anchor (or a rejected one): dock against a container instead.
+  if (!hasValidAnchor) {
+    positionX = toContainerAlignedPosition(positionX);
+    positionY = toContainerAlignedPosition(positionY);
+    positionXFixed = positionX;
+    positionYFixed = positionY;
+  }
+  // resolvedContainer was already resolved above. `null` from
+  // getPositioningContainer (a popover/dialog element, e.g. Callout's own)
+  // falls through to the traditional document-relative path below all the
+  // same, so an existing caller that never thinks about `container` at all
+  // keeps behaving exactly as before.
+  const effectiveAnchor = hasValidAnchor
+    ? anchor
+    : resolvedContainer || document.documentElement;
+  // document.documentElement is used as a sentinel "the viewport" value: an
+  // anchorless popup should center/place itself against the visual
+  // viewport, not against <html>'s own box — which, unlike the viewport,
+  // grows with document content and can be far taller than what's on
+  // screen (its top is also negative once the page is scrolled). Using the
+  // viewport rect here fixes that; the scroll offset is still applied
+  // below like any other case (see getPositioningScrollOffset).
+  const anchorIsViewport = effectiveAnchor === document.documentElement;
   // Get viewport-relative positions
-  const elementRect = element.getBoundingClientRect();
-  const anchorRect = anchor.getBoundingClientRect();
-  const {
-    left: elementLeft,
-    right: elementRight,
-    top: elementTop,
-    bottom: elementBottom,
-  } = elementRect;
+  const anchorRect = anchorIsViewport
+    ? {
+        left: viewportLeft,
+        top: viewportTop,
+        right: viewportLeft + viewportWidth,
+        bottom: viewportTop + viewportHeight,
+      }
+    : effectiveAnchor.getBoundingClientRect();
   const anchorLeft = snapToPixel(anchorRect.left);
   const anchorTop = snapToPixel(anchorRect.top);
   const anchorRight = snapToPixel(anchorRect.right);
   const anchorBottom = snapToPixel(anchorRect.bottom);
-  const elementWidth = elementRight - elementLeft;
-  const elementHeight = elementBottom - elementTop;
+  // Horizontal clamp bounds — see availableLeft/availableRight above.
+  const clampLeftBound = availableLeft;
+  const clampRightBound = availableRight;
+  // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
+  // painted/transformed box): the element being positioned may have an
+  // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
+  // using animation="scale"/"grow", still at its @starting-style value the
+  // instant it's first shown) — getBoundingClientRect() would then report
+  // its *shrunk* transformed size, throwing off any math that centers/fits
+  // against the element's own dimensions.
+  const elementWidth = element.offsetWidth;
+  const elementHeight = element.offsetHeight;
   const anchorWidth = anchorRight - anchorLeft;
   const anchorHeight = anchorBottom - anchorTop;
 
@@ -11671,19 +12173,19 @@ const pickPositionRelativeTo = (
   let insetLeft = 0;
   let insetRight = 0;
   if (alignToAnchorBox === "content-box") {
-    const anchorBorderSizes = getBorderSizes(anchor);
-    const anchorPaddingSizes = getPaddingSizes(anchor);
+    const anchorBorderSizes = getBorderSizes(effectiveAnchor);
+    const anchorPaddingSizes = getPaddingSizes(effectiveAnchor);
     insetTop = anchorBorderSizes.top + anchorPaddingSizes.top;
     insetBottom = anchorBorderSizes.bottom + anchorPaddingSizes.bottom;
     insetLeft = anchorBorderSizes.left + anchorPaddingSizes.left;
     insetRight = anchorBorderSizes.right + anchorPaddingSizes.right;
   }
-  const spaceAbove = anchorTop + insetTop;
-  const spaceBelow = viewportHeight - anchorBottom + insetBottom;
+  const spaceAbove = anchorTop + insetTop - availableTop;
+  const spaceBelow = availableBottom - anchorBottom + insetBottom;
   const effectiveAnchorLeft = anchorLeft + insetLeft;
   const effectiveAnchorRight = anchorRight - insetRight;
-  const spaceLeft = anchorLeft + insetLeft;
-  const spaceRight = viewportWidth - anchorRight + insetRight;
+  const spaceLeft = anchorLeft + insetLeft - availableLeft;
+  const spaceRight = availableRight - anchorRight + insetRight;
 
   // Resolve active X and Y, and whether each is fixed (no flip fallback)
   let activeX;
@@ -11709,24 +12211,24 @@ const pickPositionRelativeTo = (
   let finalY;
   {
     const oppositeY = {
-      "above": "below",
-      "below": "above",
-      "above-overlap": "below-overlap",
-      "below-overlap": "above-overlap",
+      "top": "bottom",
+      "bottom": "top",
+      "inset-top": "inset-bottom",
+      "inset-bottom": "inset-top",
     };
     // Compute effective space for a given Y value
     const spaceFor = (y) => {
-      if (y === "above") {
-        return spaceAbove - spacing - viewportSpacing;
+      if (y === "top") {
+        return spaceAbove - marginWithAnchor - marginWithContainer;
       }
-      if (y === "above-overlap") {
-        return spaceAbove + anchorHeight - viewportSpacing;
+      if (y === "inset-bottom") {
+        return spaceAbove + anchorHeight - marginWithContainer;
       }
-      if (y === "below") {
-        return spaceBelow - spacing - viewportSpacing;
+      if (y === "bottom") {
+        return spaceBelow - marginWithAnchor - marginWithContainer;
       }
-      if (y === "below-overlap") {
-        return spaceBelow + anchorHeight - viewportSpacing;
+      if (y === "inset-top") {
+        return spaceBelow + anchorHeight - marginWithContainer;
       }
       return Infinity; // center
     };
@@ -11770,24 +12272,24 @@ const pickPositionRelativeTo = (
   let finalX;
   {
     const oppositeX = {
-      "to-the-left": "to-the-right",
-      "to-the-right": "to-the-left",
-      "left-aligned": "right-aligned",
-      "right-aligned": "left-aligned",
+      "left": "right",
+      "right": "left",
+      "inset-left": "inset-right",
+      "inset-right": "inset-left",
     };
     // Compute effective space for a given X value
     const spaceFor = (x) => {
-      if (x === "to-the-left") {
-        return spaceLeft - spacing - viewportSpacing;
+      if (x === "left") {
+        return spaceLeft - marginWithAnchor - marginWithContainer;
       }
-      if (x === "left-aligned") {
-        return viewportWidth - anchorLeft - viewportSpacing;
+      if (x === "inset-left") {
+        return availableRight - anchorLeft - marginWithContainer;
       }
-      if (x === "right-aligned") {
-        return anchorRight - viewportSpacing;
+      if (x === "inset-right") {
+        return anchorRight - availableLeft - marginWithContainer;
       }
-      if (x === "to-the-right") {
-        return spaceRight - spacing - viewportSpacing;
+      if (x === "right") {
+        return spaceRight - marginWithAnchor - marginWithContainer;
       }
       return Infinity; // center
     };
@@ -11823,101 +12325,178 @@ const pickPositionRelativeTo = (
   // Calculate horizontal position (viewport-relative)
   let elementPositionLeft;
   {
-    if (finalX === "to-the-left") {
-      elementPositionLeft = effectiveAnchorLeft - elementWidth - spacing;
-    } else if (finalX === "left-aligned") {
+    if (finalX === "left") {
+      elementPositionLeft =
+        effectiveAnchorLeft - elementWidth - marginWithAnchor;
+    } else if (finalX === "inset-left") {
       elementPositionLeft = effectiveAnchorLeft;
     } else if (finalX === "center") {
-      // Complex logic handles wide anchors and viewport-edge snapping
-      const anchorIsWiderThanViewport = anchorWidth > viewportWidth;
-      if (anchorIsWiderThanViewport) {
-        const anchorLeftIsVisible = effectiveAnchorLeft >= 0;
-        const anchorRightIsVisible = effectiveAnchorRight <= viewportWidth;
+      // Complex logic handles wide anchors and container-edge snapping
+      const anchorIsWiderThanAvailable = anchorWidth > availableWidth;
+      if (anchorIsWiderThanAvailable) {
+        const anchorLeftIsVisible = effectiveAnchorLeft >= availableLeft;
+        const anchorRightIsVisible = effectiveAnchorRight <= availableRight;
         if (!anchorLeftIsVisible && anchorRightIsVisible) {
-          const viewportCenter = viewportWidth / 2;
-          const distanceFromRightEdge = viewportWidth - effectiveAnchorRight;
+          const availableCenter = availableLeft + availableWidth / 2;
+          const distanceFromRightEdge = availableRight - effectiveAnchorRight;
           elementPositionLeft =
-            viewportCenter - distanceFromRightEdge / 2 - elementWidth / 2;
+            availableCenter - distanceFromRightEdge / 2 - elementWidth / 2;
         } else if (anchorLeftIsVisible && !anchorRightIsVisible) {
-          const viewportCenter = viewportWidth / 2;
-          const distanceFromLeftEdge = -effectiveAnchorLeft;
+          const availableCenter = availableLeft + availableWidth / 2;
+          const distanceFromLeftEdge = availableLeft - effectiveAnchorLeft;
           elementPositionLeft =
-            viewportCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
+            availableCenter - distanceFromLeftEdge / 2 - elementWidth / 2;
         } else {
-          elementPositionLeft = viewportWidth / 2 - elementWidth / 2;
+          elementPositionLeft =
+            availableLeft + availableWidth / 2 - elementWidth / 2;
         }
       } else {
         elementPositionLeft =
           effectiveAnchorLeft +
           (effectiveAnchorRight - effectiveAnchorLeft) / 2 -
           elementWidth / 2;
-        if (alignToViewportEdgeWhenAnchorNearEdge) {
+        if (alignToContainerEdgeWhenAnchorNearEdge) {
           const effectiveAnchorWidth =
             effectiveAnchorRight - effectiveAnchorLeft;
           const elementIsWiderThanAnchor = elementWidth > effectiveAnchorWidth;
-          const anchorIsNearLeftEdge =
-            effectiveAnchorLeft < alignToViewportEdgeWhenAnchorNearEdge;
-          if (elementIsWiderThanAnchor && anchorIsNearLeftEdge) {
-            elementPositionLeft = minLeft;
+          const anchorIsNearContainerEdge =
+            effectiveAnchorLeft - clampLeftBound <
+            alignToContainerEdgeWhenAnchorNearEdge;
+          if (elementIsWiderThanAnchor && anchorIsNearContainerEdge) {
+            elementPositionLeft = clampLeftBound + minLeft;
           }
         }
       }
-    } else if (finalX === "right-aligned") {
+    } else if (finalX === "inset-right") {
       elementPositionLeft = effectiveAnchorRight - elementWidth;
     } else {
-      // "to-the-right"
-      elementPositionLeft = effectiveAnchorRight + spacing;
+      // "right"
+      elementPositionLeft = effectiveAnchorRight + marginWithAnchor;
     }
-    // Constrain horizontal position to viewport boundaries (with viewportSpacing margin)
-    if (elementPositionLeft < viewportSpacing) {
-      elementPositionLeft = viewportSpacing;
+    // Constrain horizontal position to the available area's boundaries
+    // (with marginWithContainer margin).
+    if (elementPositionLeft < clampLeftBound + marginWithContainer) {
+      elementPositionLeft = clampLeftBound + marginWithContainer;
     } else if (
       elementPositionLeft + elementWidth >
-      viewportWidth - viewportSpacing
+      clampRightBound - marginWithContainer
     ) {
-      elementPositionLeft = viewportWidth - viewportSpacing - elementWidth;
+      elementPositionLeft =
+        clampRightBound - marginWithContainer - elementWidth;
     }
   }
 
   // Calculate vertical position (viewport-relative)
   let elementPositionTop;
   {
-    if (finalY === "above") {
-      // top is always anchorTop + insetTop - elementHeight - spacing — max-height truncates if needed.
-      const idealTop = anchorTop + insetTop - elementHeight - spacing;
+    if (finalY === "top") {
+      // top is always anchorTop + insetTop - elementHeight - marginWithAnchor — max-height truncates if needed.
+      const idealTop = anchorTop + insetTop - elementHeight - marginWithAnchor;
       elementPositionTop =
-        idealTop < viewportSpacing ? viewportSpacing : idealTop;
-    } else if (finalY === "above-overlap") {
+        idealTop < marginWithContainer ? marginWithContainer : idealTop;
+    } else if (finalY === "inset-bottom") {
       const idealTop = anchorBottom - elementHeight;
       elementPositionTop =
-        idealTop < viewportSpacing ? viewportSpacing : idealTop;
+        idealTop < marginWithContainer ? marginWithContainer : idealTop;
     } else if (finalY === "center") {
       elementPositionTop = anchorTop + anchorHeight / 2 - elementHeight / 2;
-    } else if (finalY === "below-overlap") {
+    } else if (finalY === "inset-top") {
       const idealTop = anchorTop;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     } else {
-      // "below"
-      // top is always anchorBottom - insetBottom + spacing — max-height (via --space-available) truncates
+      // "bottom"
+      // top is always anchorBottom - insetBottom + marginWithAnchor — max-height (via --container-position-remaining-height) truncates
       // the element height so it doesn't overflow the viewport bottom.
-      const idealTop = anchorBottom - insetBottom + spacing;
+      const idealTop = anchorBottom - insetBottom + marginWithAnchor;
       elementPositionTop =
         idealTop % 1 === 0 ? idealTop : Math.floor(idealTop) + 1;
     }
+    // Unlike the horizontal clamp above, there's normally no universal
+    // vertical boundary clamp at all — "top"/"bottom" already clamp their
+    // own idealTop inline, "inset-*"/"center" don't, and changing that
+    // for every existing consumer (real-anchor "bottom" near the viewport
+    // bottom relies on --container-position-remaining-height/max-height truncation instead of
+    // repositioning) is out of scope here. Scoped strictly to the no-anchor
+    // (container-docked) case, where it's new and safe: a container is
+    // always meant to be respected on both axes.
+    if (!hasValidAnchor) {
+      if (elementPositionTop < availableTop + marginWithContainer) {
+        elementPositionTop = availableTop + marginWithContainer;
+      } else if (
+        elementPositionTop + elementHeight >
+        availableBottom - marginWithContainer
+      ) {
+        elementPositionTop =
+          availableBottom - marginWithContainer - elementHeight;
+      }
+    }
   }
 
-  // Persist resolved X/Y so subsequent calls start from here (avoids flickering).
-  // Fixed axes are not persisted.
-  if (!xIsFixed) {
-    element.setAttribute("data-position-x-current", finalX);
-  }
-  if (!yIsFixed) {
-    element.setAttribute("data-position-y-current", finalY);
-  }
+  // Persist resolved X/Y so subsequent calls start from here (avoids
+  // flickering) — and so CSS consumers (e.g. Popover's "clip" animation,
+  // which reads data-position-y-current to pick which edge to reveal from)
+  // can rely on it always reflecting the current side, fixed or not. A fixed
+  // axis is never read back from this attribute (xIsFixed/yIsFixed always
+  // wins over the stored value above), so persisting it here is purely for
+  // those outside readers, not for this function's own flip logic.
+  element.setAttribute("data-position-x-current", finalX);
+  element.setAttribute("data-position-y-current", finalY);
 
-  // Get document scroll for final coordinate conversion
-  const { scrollLeft, scrollTop } = document.documentElement;
+  // Convert the viewport-relative math above into whatever coordinate space
+  // `element.style.top/left` actually needs. This is decided independently
+  // of whether there's a real anchor: `element` might be `position:
+  // absolute` relative to some container regardless (e.g. the custom
+  // renderer in popover.jsx, which is always relative to its own
+  // positioned ancestor whether or not it also has a real anchor) — that's
+  // what `resolvedContainer` (explicit or auto-resolved above) communicates
+  // even when `anchor` is also given. The container to convert into is
+  // `resolvedContainer` when there's a real anchor, or (in the no-anchor
+  // case) `effectiveAnchor` itself, since there the container *is* what's
+  // being positioned against.
+  const coordinateContainer = hasValidAnchor
+    ? resolvedContainer
+    : effectiveAnchor;
+  let scrollLeft;
+  let scrollTop;
+  if (coordinateContainer && coordinateContainer !== document.documentElement) {
+    // Reuse anchorRect/containerBorders when the coordinate container is
+    // the same element already measured above (the no-anchor case);
+    // otherwise (a real anchor positioned within a *different*, explicitly
+    // given container) measure the container separately — the anchor's own
+    // rect only matters for the positioning math above, not for this.
+    const isSameAsEffectiveAnchor = coordinateContainer === effectiveAnchor;
+    const coordinateRect = isSameAsEffectiveAnchor
+      ? anchorRect
+      : coordinateContainer.getBoundingClientRect();
+    const coordinateBorders = isSameAsEffectiveAnchor
+      ? containerBorders
+      : getBorderSizes(coordinateContainer);
+    scrollLeft =
+      -coordinateRect.left -
+      coordinateBorders.left +
+      coordinateContainer.scrollLeft;
+    scrollTop =
+      -coordinateRect.top -
+      coordinateBorders.top +
+      coordinateContainer.scrollTop;
+  } else {
+    // No container to convert into (a plain real anchor, the common case
+    // for Callout/Picker/Popover's own via-attribute renderer), or the
+    // container is the viewport itself (Popover's via-attribute renderer
+    // when docked, no real anchor) — either way, `element`'s own computed
+    // `position` (fixed vs absolute, detected dynamically) decides whether
+    // any scroll offset applies at all: none for position: fixed (already
+    // viewport-relative — adding scroll would double-count it), the
+    // document's own scroll for position: absolute (relative to the
+    // initial containing block, i.e. document-relative) — including when
+    // docked to the viewport, so the result lands at the visual center of
+    // the viewport at its current scroll position.
+    ({ scrollLeft, scrollTop } = getPositioningScrollOffset(element));
+  }
+  // visibleRectEffect recomputes this on every scroll tick, which is what
+  // keeps it looking anchored as the page (or the container) scrolls
+  // either way.
   const elementDocumentLeft = snapToPixel(elementPositionLeft + scrollLeft);
   const elementDocumentTop = snapToPixel(elementPositionTop + scrollTop);
   const anchorDocumentLeft = anchorLeft + scrollLeft;
@@ -11927,18 +12506,32 @@ const pickPositionRelativeTo = (
 
   // For overlap variants the element starts at the anchor edge (not past it),
   // so the usable space includes the anchor dimension.
-  // spacing (gap between anchor and element) and viewportSpacing are subtracted
+  // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
   const effectiveSpaceAbove =
-    (finalY === "above-overlap" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "above" ? spacing : 0) -
-    viewportSpacing;
+    (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
+    (finalY === "top" ? marginWithAnchor : 0) -
+    marginWithContainer;
   const effectiveSpaceBelow =
-    (finalY === "below-overlap" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "below" ? spacing : 0) -
-    viewportSpacing;
+    (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
+    (finalY === "bottom" ? marginWithAnchor : 0) -
+    marginWithContainer;
+  const effectiveSpaceLeft =
+    (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
+    (finalX === "left" ? marginWithAnchor : 0) -
+    marginWithContainer;
+  const effectiveSpaceRight =
+    (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
+    (finalX === "right" ? marginWithAnchor : 0) -
+    marginWithContainer;
 
   return {
+    // Whether a real anchor actually ended up used — false when there's no
+    // `anchor`, or it was rejected as too big.
+    hasValidAnchor,
+    // True only when `event` is a "resize" — see applyNewPosition's own
+    // doc for why only resize-triggered repositions are meant to animate.
+    shouldTransition: event?.type === "resize",
     positionX: finalX,
     positionY: finalY,
     left: elementDocumentLeft,
@@ -11949,11 +12542,70 @@ const pickPositionRelativeTo = (
     anchorTop: anchorDocumentTop,
     anchorRight: anchorDocumentRight,
     anchorBottom: anchorDocumentBottom,
-    spaceLeft: spaceLeft - viewportSpacing,
-    spaceRight: spaceRight - viewportSpacing,
+    spaceLeft: effectiveSpaceLeft,
+    spaceRight: effectiveSpaceRight,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
   };
+};
+
+/**
+ * Applies a `pickPositionRelativeTo` result to `element`. Drives
+ * `--popup-position-transition-duration` (0s unless `shouldTransition`) so
+ * a scroll-triggered reposition stays instant while a resize-triggered one
+ * eases in — set via a CSS var rather than `transitionProperty` directly so
+ * it doesn't clobber Popover/Dialog's own opacity/scale transition on the
+ * same element; consumers declare `transition-duration:
+ * var(--popup-position-transition-duration, 0s)` on `left`/`top` in CSS.
+ */
+const applyNewPosition = (
+  element,
+  {
+    left,
+    top,
+    shouldTransition,
+    positionX,
+    positionY,
+    spaceLeft,
+    spaceRight,
+    spaceAbove,
+    spaceBelow,
+  },
+  { transitionDuration = "0.25s" } = {},
+) => {
+  element.style.setProperty(
+    "--popup-position-transition-duration",
+    shouldTransition ? transitionDuration : "0s",
+  );
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+
+  if (positionY === "top" || positionY === "inset-bottom") {
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${spaceAbove}px`,
+    );
+  } else if (positionY === "bottom" || positionY === "inset-top") {
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${spaceBelow}px`,
+    );
+  } else {
+    element.style.removeProperty("--container-position-remaining-height");
+  }
+  if (positionX === "left" || positionX === "inset-right") {
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${spaceLeft}px`,
+    );
+  } else if (positionX === "right" || positionX === "inset-left") {
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${spaceRight}px`,
+    );
+  } else {
+    element.style.removeProperty("--container-position-remaining-width");
+  }
 };
 
 const [publishDebugger, subscribeDebugger] = createPubSub();
@@ -15206,4 +15858,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, captureScrollState, chainEvent, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, captureScrollState, chainEvent, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, formatEventSideEffect, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningContainer, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

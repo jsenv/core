@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, createStyleController, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, snapToPixel, trapScrollInside, trapFocusInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -72,7 +72,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
+installImportMetaCssBuild(import.meta);const css$R = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -97,7 +97,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -6820,7 +6820,17 @@ const CONTENT_PROPS = {
       }
       return { alignItems: value };
     }
-    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+    if (
+      boxFlow === "flex-x" ||
+      boxFlow === "inline-flex-x" ||
+      // A grid container's inline axis (its own columns) is always the X
+      // axis regardless of any row/column intent — unlike flex, grid has no
+      // single main axis, so justify-content here is correct independent of
+      // the flex-x/flex-y distinction above. See alignY's own matching
+      // grid branch for the analogous Y-axis case.
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
+    ) {
       if (value === "start") {
         return undefined; // this is the default
       }
@@ -6835,7 +6845,16 @@ const CONTENT_PROPS = {
       }
       return { justifyContent: value };
     }
-    if (boxFlow === "flex-x" || boxFlow === "inline-flex-x") {
+    if (
+      boxFlow === "flex-x" ||
+      boxFlow === "inline-flex-x" ||
+      // A grid container's block axis is always the Y axis regardless of
+      // any row/column intent (see alignX's own matching comment) —
+      // align-items controls how each item aligns within its own row
+      // height, same as flex-x's cross axis.
+      boxFlow === "grid" ||
+      boxFlow === "inline-grid"
+    ) {
       if (value === "stretch") {
         return undefined;
       }
@@ -15025,6 +15044,18 @@ const isVisited = browserIntegration.isVisited;
 const visitedUrlsSignal = browserIntegration.visitedUrlsSignal;
 browserIntegration.handleActionTask;
 
+// Preact's own useId() (see preact/hooks) returns "P<mask0>-<mask1>", where
+// the mask is derived from render order within the nearest root/async
+// boundary — stable across re-renders of the *same* mount, but not across a
+// reload (render order can differ) or even across two mounts on the same
+// page (two components hitting useId() in the same relative order get the
+// same string). Storing one of these under type: "push" bakes it into a
+// history entry: reload the page and the entry's key may now belong to a
+// completely different component (or none), silently auto-opening whatever
+// happens to render at that same position instead.
+const PREACT_GENERATED_ID_REGEX = /^P\d+-\d+/;
+const isLikelyPreactGeneratedId = (id) => PREACT_GENERATED_ID_REGEX.test(id);
+
 const NO_OP = () => {};
 const NO_ID_GIVEN = [undefined, NO_OP, NO_OP];
 const useNavStateBasic = (
@@ -15055,6 +15086,11 @@ const useNavStateBasic = (
     return NO_ID_GIVEN;
   }
 
+  let effectiveType = type;
+  if (type === "push" && isLikelyPreactGeneratedId(id)) {
+    effectiveType = "replace";
+  }
+
   const currentValue = keyInState ? state[id] : defaultValue;
 
   if (debug) {
@@ -15073,7 +15109,7 @@ const useNavStateBasic = (
     }
     currentStateCopy[id] = value;
     navTo(window.location.href, {
-      replace: type !== "push",
+      replace: effectiveType !== "push",
       state: currentStateCopy,
     });
   };
@@ -15089,7 +15125,7 @@ const useNavStateBasic = (
     if (!Object.hasOwn(currentStateCopy, id)) {
       return;
     }
-    if (type === "push" && isBack) {
+    if (effectiveType === "push" && isBack) {
       browserIntegration.navBack();
     } else {
       delete currentStateCopy[id];
@@ -15115,6 +15151,11 @@ const useNavStateBasic = (
  *   Controls how enter() adds the state to browser history.
  *   - "push": creates a new history entry — pressing the back button removes it and calls onLeave.
  *   - "replace": updates the current history entry — no extra history entry is created.
+ *   Silently downgraded to "replace" (with a dev-only console.warn) when `id`
+ *   looks auto-generated (e.g. preact's own useId()) — an unstable id baked
+ *   into a pushed history entry won't survive a reload correctly, and could
+ *   even collide with a different component's own auto-generated id. Pass a
+ *   stable, explicit id to actually get "push" behavior.
  * @param {() => void} [options.onLeave]
  *   Called when the state key disappears **externally** — e.g. the user presses the browser
  *   back button. Not called when leave() is invoked programmatically.
@@ -15935,7 +15976,7 @@ installImportMetaCssBuild(import.meta);
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
 
-const css$P = /* css */`
+const css$Q = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -15971,8 +16012,15 @@ const css$P = /* css */`
     border: none;
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
-    /* will be positioned with transform: translate */
-    transition: opacity 0.2s ease-in-out;
+    /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
+       left/top's own duration is driven by --popup-position-transition-duration,
+       same mechanism Popover/Dialog use (see their own CSS): 0s (no
+       transition) for most repositions, a real duration only when the
+       reposition was itself triggered by a resize. */
+    transition:
+      opacity 0.2s ease-in-out,
+      left var(--popup-position-transition-duration, 0s) ease-out,
+      top var(--popup-position-transition-duration, 0s) ease-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
@@ -16133,7 +16181,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -16250,9 +16298,7 @@ const openCallout = (message, {
   };
   const calloutId = `navi_callout_${Date.now()}`;
   calloutElement.id = calloutId;
-  calloutStyleController.set(calloutElement, {
-    opacity: 0
-  });
+  calloutElement.style.opacity = 0;
   const update = (newMessage, options = {}) => {
     const prevStatus = callout.status;
     // Connect callout with target element for accessibility
@@ -16546,8 +16592,23 @@ const openCallout = (message, {
     calloutElement.remove();
   });
   if (anchorElement) {
+    // "instant", not "smooth": the positioning block further down measures
+    // anchorElement's geometry synchronously, in the same tick — a "smooth"
+    // scroll doesn't move anything until the browser gets to animate it on
+    // a later frame, so that first measurement would run against the
+    // pre-scroll position instead. Once the animation actually plays,
+    // positionCallout's own visibleRectEffect (watching document
+    // scroll to keep following the anchor) reacts to every intermediate
+    // frame of it too, and its sticky above/below choice (deliberately
+    // hysteretic, to avoid flip-flopping while the user scrolls normally)
+    // can latch onto whichever side a mid-animation frame happened to
+    // favor — even when the anchor's own final, settled position would
+    // have fit fine on the original side. Scrolling instantly collapses
+    // that whole window: by the time anything measures anchorElement, it's
+    // already at its final position, so there's no transient frame left to
+    // latch onto.
     anchorElement.scrollIntoView({
-      behavior: "smooth",
+      behavior: "instant",
       block: "nearest"
     });
     allowWheelThrough(calloutElement, visualAnchorElement);
@@ -16603,58 +16664,18 @@ const openCallout = (message, {
   update(message, {
     status
   });
-  {
-    const documentScrollLeftAtOpen = document.documentElement.scrollLeft;
-    const documentScrollTopAtOpen = document.documentElement.scrollTop;
-    let positioner;
-    let strategy;
-    const determine = () => {
-      if (!visualAnchorElement) {
-        return "centered";
-      }
-      // Check if anchor element is too big to reasonably position callout relative to it
-      const anchorRect = visualAnchorElement.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const anchorTooBig = anchorRect.height > viewportHeight - 50;
-      if (anchorTooBig) {
-        return "centered";
-      }
-      return "anchored";
-    };
-    const updatePositioner = () => {
-      const newStrategy = determine();
-      if (newStrategy === strategy) {
-        return;
-      }
-      positioner?.stop();
-      if (newStrategy === "centered") {
-        positioner = centerCalloutInViewport(calloutElement, {
-          documentScrollLeftAtOpen,
-          documentScrollTopAtOpen
-        });
-      } else {
-        positioner = stickCalloutToAnchor(calloutElement, visualAnchorElement, {
-          debug,
-          originalAnchorElement
-        });
-      }
-      strategy = newStrategy;
-    };
-    updatePositioner();
-    addTeardown(() => {
-      positioner.stop();
-    });
-    {
-      const handleResize = () => {
-        updatePositioner();
-      };
-      window.addEventListener("resize", handleResize);
-      addTeardown(() => {
-        window.removeEventListener("resize", handleResize);
-      });
-    }
-    callout.updatePosition = () => positioner.update();
-  }
+
+  // positionCallout itself handles both "no anchorElement at all" and "a
+  // real one pickPositionRelativeTo's own isAnchorTooBig rejects" (see its
+  // own doc) — nothing left to dispatch on here.
+  const positioner = positionCallout(calloutElement, visualAnchorElement, {
+    debug,
+    originalAnchorElement
+  });
+  addTeardown(() => {
+    positioner.stop();
+  });
+  callout.updatePosition = () => positioner.update();
   return callout;
 };
 
@@ -16705,7 +16726,6 @@ const calloutTemplate = /* html */`
     </div>
   </div>
 `;
-const calloutStyleController = createStyleController("callout");
 
 /**
  * Creates a new callout element from template
@@ -16717,100 +16737,32 @@ const createCalloutElement = () => {
   const calloutElement = div.firstElementChild;
   return calloutElement;
 };
-const centerCalloutInViewport = (calloutElement, {
-  documentScrollLeftAtOpen,
-  documentScrollTopAtOpen
-}) => {
-  // Set up initial styles for centered positioning
-  const calloutBoxElement = calloutElement.querySelector(".navi_callout_box");
-  const calloutFrameElement = calloutElement.querySelector(".navi_callout_frame");
-  const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
-  const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
-
-  // Remove any margins and set frame positioning for no arrow
-  calloutBoxElement.style.marginTop = "";
-  calloutBoxElement.style.marginBottom = "";
-  calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
-  calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-  calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-
-  // Generate simple rectangle SVG without arrow and position in center
-  const updateCenteredPosition = () => {
-    const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
-    const {
-      height
-    } = calloutElementClone.getBoundingClientRect();
-
-    // Handle content overflow when viewport is too small
-    const viewportHeight = window.innerHeight;
-    const maxAllowedHeight = viewportHeight - 40; // Leave some margin from viewport edges
-
-    let maxHeight;
-    if (height > maxAllowedHeight) {
-      const paddingSizes = getPaddingSizes(calloutBodyElement);
-      const paddingY = paddingSizes.top + paddingSizes.bottom;
-      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-      maxHeight = maxAllowedHeight - spaceNeededAroundContent;
-      calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-      calloutMessageElement.style.overflowY = "scroll";
-    } else {
-      calloutMessageElement.style.maxHeight = "";
-      calloutMessageElement.style.overflowY = "";
-    }
-    const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-      maxHeight
-    });
-    calloutElementClone.remove();
-    calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
-
-    // Get final dimensions after potential overflow adjustments
-    const {
-      width: finalWidth,
-      height: finalHeight
-    } = calloutElement.getBoundingClientRect();
-    calloutFrameElement.innerHTML = generateSvgWithoutArrow(finalWidth, finalHeight);
-
-    // Center in viewport (accounting for document scroll)
-    const viewportWidth = window.innerWidth;
-    const left = documentScrollLeftAtOpen + (viewportWidth - finalWidth) / 2;
-    const top = documentScrollTopAtOpen + (viewportHeight - finalHeight) / 2;
-    calloutStyleController.set(calloutElement, {
-      opacity: 1,
-      transform: {
-        translateX: left,
-        translateY: top
-      }
-    });
-  };
-
-  // Initial positioning
-  updateCenteredPosition();
-  window.addEventListener("resize", updateCenteredPosition);
-
-  // Return positioning function for dynamic updates
-  return {
-    update: updateCenteredPosition,
-    stop: () => {
-      window.removeEventListener("resize", updateCenteredPosition);
-    }
-  };
-};
 
 /**
- * Positions a callout relative to an anchor element with an arrow pointing to it
+ * Positions the callout — sticks to `anchorElement` with an arrow when one
+ * is given, live-degrading to a plain centered box (no arrow) whenever
+ * pickPositionRelativeTo's own isAnchorTooBig rejects it (see its doc in
+ * visible_rect.js), or unconditionally when `anchorElement` itself is
+ * omitted: either way, `hasValidAnchor` in pickPositionRelativeTo's own result
+ * is the only thing that ever decides which of the two to render, fresh on
+ * every visibleRectEffect check (watching `anchorElement`, or
+ * `document.documentElement` when there is none) — no anchor
+ * presence/size detection happens in this function at all.
  * @param {HTMLElement} calloutElement - The callout element to position
- * @param {HTMLElement} anchorElement - The anchor element to stick to
+ * @param {HTMLElement} [anchorElement] - The anchor element to stick to, if any
  * @returns {Object} - Object with update and stop functions
  */
-const stickCalloutToAnchor = (calloutElement, anchorElement, {
+const positionCallout = (calloutElement, anchorElement, {
   debug,
   originalAnchorElement = anchorElement
-}) => {
-  // Read an attribute from the original anchor first, then the visual anchor.
-  // the anchor to a wrapper element that doesn't carry the data-callout-* attributes.
+} = {}) => {
+  // Read an attribute from the original anchor first, then the visual
+  // anchor (a wrapper element that doesn't carry the data-callout-*
+  // attributes) — meaningless without a real anchorElement.
   const getAnchorAttribute = name => {
+    if (!anchorElement) {
+      return null;
+    }
     return originalAnchorElement.getAttribute(name) ?? anchorElement.getAttribute(name);
   };
   // Get references to callout parts
@@ -16819,29 +16771,31 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, {
   const calloutBodyElement = calloutElement.querySelector(".navi_callout_body");
   const calloutMessageElement = calloutElement.querySelector(".navi_callout_message");
   let alignToAnchorBox;
-  if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
-    alignToAnchorBox = "border-box";
-  } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
-    alignToAnchorBox = "content-box";
-  } else {
-    // Smart default: inputs and buttons are tight boxes where border-box makes sense.
-    // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
-    // the arrow points at visible text rather than the outer padding/border.
-    const controHost = findControlHost(anchorElement) || anchorElement;
-    const tagName = controHost.tagName;
-    if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+  if (anchorElement) {
+    if (anchorElement.hasAttribute("data-callout-point-to-border-box")) {
       alignToAnchorBox = "border-box";
-    } else {
+    } else if (anchorElement.hasAttribute("data-callout-point-to-content-box")) {
       alignToAnchorBox = "content-box";
+    } else {
+      // Smart default: inputs and buttons are tight boxes where border-box makes sense.
+      // For everything else (labels, divs, fieldsets…) content-box maximizes the chance
+      // the arrow points at visible text rather than the outer padding/border.
+      const controHost = findControlHost(anchorElement) || anchorElement;
+      const tagName = controHost.tagName;
+      if (tagName === "INPUT" || tagName === "BUTTON" || tagName === "FIELDSET") {
+        alignToAnchorBox = "border-box";
+      } else {
+        alignToAnchorBox = "content-box";
+      }
     }
+    calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
   }
-  calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
 
   // Set initial border styles
   calloutBoxElement.style.borderWidth = `${BORDER_WIDTH}px`;
   calloutFrameElement.style.left = `-${BORDER_WIDTH}px`;
   calloutFrameElement.style.right = `-${BORDER_WIDTH}px`;
-  const anchorVisibleRectEffect = visibleRectEffect(anchorElement, ({
+  const rectEffect = visibleRectEffect(anchorElement || document.documentElement, ({
     left: anchorLeft,
     right: anchorRight,
     visibilityRatio
@@ -16849,40 +16803,46 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, {
     event,
     ancestorClosed
   }) => {
-    if (ancestorClosed) {
-      if (calloutElement.matches(":popover-open")) {
-        if (debug) {
-          debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
+    if (anchorElement) {
+      if (ancestorClosed) {
+        if (calloutElement.matches(":popover-open")) {
+          if (debug) {
+            debug(event, "hiding callout because an ancestor popover/dialog/details is closed");
+          }
+          calloutElement.hidePopover();
         }
-        calloutElement.hidePopover();
+        return;
       }
-      return;
-    }
-    if (!calloutElement.matches(":popover-open")) {
-      if (debug) {
-        debug(event, "showing callout because anchor is visible again");
+      if (!calloutElement.matches(":popover-open")) {
+        if (debug) {
+          debug(event, "showing callout because anchor is visible again");
+        }
+        calloutElement.showPopover();
       }
-      calloutElement.showPopover();
     }
     const calloutElementClone = cloneCalloutToMeasureNaturalSize(calloutElement);
+    const position = pickPositionRelativeTo(calloutElementClone, anchorElement, {
+      alignToContainerEdgeWhenAnchorNearEdge: 20,
+      minLeft: 1,
+      // x is always center for a callout — the arrow, not positionArea's
+      // own x, is what points at the anchor horizontally.
+      positionArea: anchorElement ? getAnchorAttribute("data-callout-position") || "bottom" : "center",
+      positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
+      // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
+      // below reports which way it went).
+      positionAreaWhenAnchorIsInvalid: "center",
+      marginWithAnchor: ARROW_HEIGHT,
+      alignToAnchorBox,
+      marginWithContainer: anchorElement && (originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing")) ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0,
+      event
+    });
     const {
+      hasValidAnchor,
       positionY,
       left: calloutLeft,
-      top: calloutTop,
       width: calloutWidth,
-      height: calloutHeight,
-      spaceAbove,
-      spaceBelow
-    } = pickPositionRelativeTo(calloutElementClone, anchorElement, {
-      alignToViewportEdgeWhenAnchorNearEdge: 20,
-      minLeft: 1,
-      positionX: "center",
-      positionY: getAnchorAttribute("data-callout-position") || "below",
-      positionYFixed: getAnchorAttribute("data-callout-position-fixed"),
-      spacing: ARROW_HEIGHT,
-      alignToAnchorBox,
-      viewportSpacing: originalAnchorElement.hasAttribute("data-callout-viewport-spacing") || anchorElement.hasAttribute("data-callout-viewport-spacing") ? Number(getAnchorAttribute("data-callout-viewport-spacing")) : 0
-    });
+      height: calloutHeight
+    } = position;
     // data-position-y-current is written to the clone by pickPositionRelativeTo,
     // copy it back to the real element so stickiness works on next call
     const previousPositionY = calloutElement.getAttribute("data-position-y-current");
@@ -16892,161 +16852,148 @@ const stickCalloutToAnchor = (calloutElement, anchorElement, {
     } else {
       calloutElement.removeAttribute("data-position-y-current");
     }
-    if (debug && positionY !== previousPositionY) {
+    if (debug && anchorElement && positionY !== previousPositionY) {
       const anchorRect = anchorElement.getBoundingClientRect();
-      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${spaceAbove.toFixed(0)}px, spaceBelow: ${spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
+      debug(event, `callout position changed: ${previousPositionY ?? "(none)"} -> ${positionY} (spaceAbove: ${position.spaceAbove.toFixed(0)}px, spaceBelow: ${position.spaceBelow.toFixed(0)}px, anchorTop: ${anchorRect.top.toFixed(0)}px, anchorBottom: ${anchorRect.bottom.toFixed(0)}px)`);
     }
-
-    // Calculate arrow position to point at anchorElement element
-    let arrowLeftPosOnCallout;
-    // Determine arrow target position: explicit attribute wins, otherwise
-    // fall back to the computed text-align of the anchor element so the
-    // arrow naturally follows where the text starts.
-    const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
-    const arrowPosition = arrowPositionAttribute || (() => {
-      const textAlign = getComputedStyle(anchorElement).textAlign;
-      if (textAlign === "center") {
-        return "center";
-      }
-      if (textAlign === "right" || textAlign === "end") {
-        return "end";
-      }
-      return "start";
-    })();
-    let arrowAnchorLeft;
-    calloutElement.setAttribute("data-arrow-x", arrowPosition);
-    if (arrowPosition === "start") {
-      const anchorBorderSizes = getBorderSizes(anchorElement);
-      const anchorPaddingSizes = getPaddingSizes(anchorElement);
-      // Target the left edge of the anchorElement text content (after borders + padding)
-      arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
-    } else if (arrowPosition === "center") {
-      arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
-    } else {
-      // "end"
-      const anchorBorderSizes = getBorderSizes(anchorElement);
-      const anchorPaddingSizes = getPaddingSizes(anchorElement);
-      // Target the right edge of the anchorElement text content (before borders + padding)
-      arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
-    }
-
-    // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
-    // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
-    // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
-    const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
-    if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
-      // Arrow target is beyond the right edge of the callout — pin arrow to far right
-      arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
-    } else {
-      arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
-    }
-
-    // Ensure arrow stays within callout bounds with some padding
-    const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
-    const maxArrowPos = calloutWidth - minArrowPos;
-    arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
-
-    // Force content overflow when there is not enough space to display
-    // the entirety of the callout
-    const spaceAvailable = positionY === "above" || positionY === "above-overlap" ? spaceAbove : spaceBelow;
-    const paddingSizes = getPaddingSizes(calloutBodyElement);
-    const paddingY = paddingSizes.top + paddingSizes.bottom;
-    // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via spacing: ARROW_HEIGHT passed to pickPositionRelativeTo)
-    const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
-    const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
-    const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
-    const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
+    calloutBoxElement.style.marginTop = "";
+    calloutBoxElement.style.marginBottom = "";
     let maxHeight;
-    if (spaceRemainingAfterContent < 2) {
-      maxHeight = spaceAvailableForContent;
-      calloutMessageElement.style.maxHeight = `${maxHeight}px`;
-      calloutMessageElement.style.overflowY = "scroll";
+    if (hasValidAnchor) {
+      // Calculate arrow position to point at anchorElement element
+      let arrowLeftPosOnCallout;
+      // Determine arrow target position: explicit attribute wins, otherwise
+      // fall back to the computed text-align of the anchor element so the
+      // arrow naturally follows where the text starts.
+      const arrowPositionAttribute = getAnchorAttribute("data-callout-arrow-x");
+      const arrowPosition = arrowPositionAttribute || (() => {
+        const textAlign = getComputedStyle(anchorElement).textAlign;
+        if (textAlign === "center") {
+          return "center";
+        }
+        if (textAlign === "right" || textAlign === "end") {
+          return "end";
+        }
+        return "start";
+      })();
+      let arrowAnchorLeft;
+      calloutElement.setAttribute("data-arrow-x", arrowPosition);
+      if (arrowPosition === "start") {
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the left edge of the anchorElement text content (after borders + padding)
+        arrowAnchorLeft = anchorLeft + anchorBorderSizes.left + anchorPaddingSizes.left;
+      } else if (arrowPosition === "center") {
+        arrowAnchorLeft = (anchorLeft + anchorRight) / 2;
+      } else {
+        // "end"
+        const anchorBorderSizes = getBorderSizes(anchorElement);
+        const anchorPaddingSizes = getPaddingSizes(anchorElement);
+        // Target the right edge of the anchorElement text content (before borders + padding)
+        arrowAnchorLeft = anchorRight - anchorBorderSizes.right - anchorPaddingSizes.right;
+      }
+
+      // arrowAnchorLeft is viewport-relative (from visibleRectEffect).
+      // calloutLeft is document-relative (pickPositionRelativeTo adds scrollLeft).
+      // Subtract scrollLeft to bring calloutLeft to viewport coordinates before diffing.
+      const calloutViewportLeft = calloutLeft - document.documentElement.scrollLeft;
+      if (calloutViewportLeft + calloutWidth < arrowAnchorLeft) {
+        // Arrow target is beyond the right edge of the callout — pin arrow to far right
+        arrowLeftPosOnCallout = calloutWidth - ARROW_WIDTH;
+      } else {
+        arrowLeftPosOnCallout = arrowAnchorLeft - calloutViewportLeft;
+      }
+
+      // Ensure arrow stays within callout bounds with some padding
+      const minArrowPos = CORNER_RADIUS + ARROW_WIDTH / 2 + ARROW_SPACING;
+      const maxArrowPos = calloutWidth - minArrowPos;
+      arrowLeftPosOnCallout = Math.max(minArrowPos, Math.min(arrowLeftPosOnCallout, maxArrowPos));
+
+      // Force content overflow when there is not enough space to display
+      // the entirety of the callout
+      const spaceAvailable = positionY === "top" || positionY === "inset-bottom" ? position.spaceAbove : position.spaceBelow;
+      const paddingSizes = getPaddingSizes(calloutBodyElement);
+      const paddingY = paddingSizes.top + paddingSizes.bottom;
+      // spaceAbove/spaceBelow already exclude ARROW_HEIGHT (via marginWithAnchor: ARROW_HEIGHT passed to pickPositionRelativeTo)
+      const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+      const spaceAvailableForContent = spaceAvailable - spaceNeededAroundContent;
+      const contentHeight = calloutHeight - BORDER_WIDTH * 2 - paddingY;
+      const spaceRemainingAfterContent = spaceAvailableForContent - contentHeight;
+      if (spaceRemainingAfterContent < 2) {
+        maxHeight = spaceAvailableForContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+        maxHeight
+      });
+      calloutElementClone.remove();
+      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+      const {
+        width,
+        height
+      } = calloutElement.getBoundingClientRect();
+      if (positionY === "top" || positionY === "inset-bottom") {
+        // Arrow at bottom, extending below the element
+        calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+      } else {
+        // Arrow at top, extending above the element
+        calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
+        calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
+        calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+      }
+      calloutElement.style.opacity = visibilityRatio > 0.2 ? 1 : 0;
     } else {
-      calloutMessageElement.style.maxHeight = "";
-      calloutMessageElement.style.overflowY = "";
-    }
-    const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
-      maxHeight
-    });
-    calloutElementClone.remove();
-    calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
-    const {
-      width,
-      height
-    } = calloutElement.getBoundingClientRect();
-    if (positionY === "above" || positionY === "above-overlap") {
-      // Arrow at bottom, extending below the element
-      calloutBoxElement.style.marginTop = "";
-      calloutBoxElement.style.marginBottom = "";
+      // Either no anchorElement at all, or a real one isAnchorTooBig
+      // rejected (see pickPositionRelativeTo's own doc) — render as a
+      // plain centered box, no arrow, opacity never gated on the
+      // (irrelevant, once centered) anchor's own visibilityRatio.
+      calloutElement.removeAttribute("data-arrow-x");
+      const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const maxAllowedHeight = viewportHeight - 40;
+      if (calloutHeight > maxAllowedHeight) {
+        const paddingSizes = getPaddingSizes(calloutBodyElement);
+        const paddingY = paddingSizes.top + paddingSizes.bottom;
+        const spaceNeededAroundContent = BORDER_WIDTH * 2 + paddingY;
+        maxHeight = maxAllowedHeight - spaceNeededAroundContent;
+        calloutMessageElement.style.maxHeight = `${maxHeight}px`;
+        calloutMessageElement.style.overflowY = "scroll";
+      } else {
+        calloutMessageElement.style.maxHeight = "";
+        calloutMessageElement.style.overflowY = "";
+      }
+      const optimalBodyWidth = measureOptimalBodyWidth(calloutElementClone, {
+        maxHeight
+      });
+      calloutElementClone.remove();
+      calloutBodyElement.style.width = optimalBodyWidth !== null ? `${optimalBodyWidth}px` : "";
+      const {
+        width,
+        height
+      } = calloutElement.getBoundingClientRect();
       calloutFrameElement.style.top = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.style.bottom = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
-      calloutFrameElement.innerHTML = generateSvgWithBottomArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
-    } else {
-      // Arrow at top, extending above the element
-      calloutBoxElement.style.marginTop = "";
-      calloutBoxElement.style.marginBottom = "";
-      calloutFrameElement.style.top = `-${BORDER_WIDTH + ARROW_HEIGHT - 0.5}px`;
       calloutFrameElement.style.bottom = `-${BORDER_WIDTH}px`;
-      calloutFrameElement.innerHTML = generateSvgWithTopArrow(width, height + ARROW_HEIGHT, arrowLeftPosOnCallout);
+      calloutFrameElement.innerHTML = generateSvgWithoutArrow(width, height);
+      calloutElement.style.opacity = 1;
     }
-    calloutStyleController.set(calloutElement, {
-      opacity: visibilityRatio > 0.2 ? 1 : 0,
-      transform: {
-        translateX: calloutLeft,
-        translateY: calloutTop
-      }
-    });
+    applyNewPosition(calloutElement, position);
   });
-  const calloutSizeChangeObserver = observeCalloutSizeChange(calloutMessageElement, (width, height) => {
-    anchorVisibleRectEffect.check(new CustomEvent(`callout_size_change (${width}x${height})`));
-  });
-  anchorVisibleRectEffect.onBeforeAutoCheck(() => {
-    // prevent feedback loop because check triggers size change which triggers check...
-    calloutSizeChangeObserver.disable();
-    return () => {
-      calloutSizeChangeObserver.enable();
-    };
-  });
+  // Re-measures/repositions the callout whenever its own message body
+  // changes size (e.g. async content loading in, a filter narrowing the
+  // list) — not just when the anchor itself moves/resizes (or, with no
+  // anchorElement at all, the viewport itself resizing/scrolling). The
+  // feedback-loop guard (re-checking can itself change the message body's
+  // size) is handled internally by observeSize.
+  rectEffect.observeSize(calloutMessageElement);
   return {
-    update: anchorVisibleRectEffect.check,
+    update: rectEffect.check,
     stop: () => {
-      calloutSizeChangeObserver.disconnect();
-      anchorVisibleRectEffect.disconnect();
-    }
-  };
-};
-const observeCalloutSizeChange = (elementSizeToObserve, callback) => {
-  let lastContentWidth;
-  let lastContentHeight;
-  const resizeObserver = new ResizeObserver(entries => {
-    const [entry] = entries;
-    const {
-      width,
-      height
-    } = entry.contentRect;
-    // Debounce tiny changes that are likely sub-pixel rounding
-    if (lastContentWidth !== undefined) {
-      const widthDiff = Math.abs(width - lastContentWidth);
-      const heightDiff = Math.abs(height - lastContentHeight);
-      const threshold = 1; // Ignore changes smaller than 1px
-      if (widthDiff < threshold && heightDiff < threshold) {
-        return;
-      }
-    }
-    lastContentWidth = width;
-    lastContentHeight = height;
-    callback(width, height);
-  });
-  resizeObserver.observe(elementSizeToObserve);
-  return {
-    disable: () => {
-      resizeObserver.unobserve(elementSizeToObserve);
-    },
-    enable: () => {
-      resizeObserver.observe(elementSizeToObserve);
-    },
-    disconnect: () => {
-      resizeObserver.disconnect();
+      rectEffect.disconnect();
     }
   };
 };
@@ -17555,32 +17502,136 @@ const resolveValue = (replacements, key, fallback) => {
 
 const DEFAULT_LANG = "en";
 
-const getBrowserLang = () => {
+/**
+ * The browser's own language preferences, most preferred first — read from
+ * `navigator.languages` (falling back to the single `navigator.language`,
+ * then to DEFAULT_LANG when neither is available, e.g. during SSR). Kept as
+ * its own signal, independent from what this app actually supports — see
+ * `supportedLanguagesSignal` below for the allow-list that filters it, and
+ * `languagesSignal` for the final, ready-to-use combination of the two (plus
+ * `preferredLanguageSignal`).
+ */
+const getRuntimeLanguages = () => {
   if (typeof window === "undefined") {
-    return DEFAULT_LANG;
+    return [DEFAULT_LANG];
   }
   const { navigator } = window;
   if (typeof navigator === "undefined") {
-    return DEFAULT_LANG;
-  }
-  const { language } = navigator;
-  if (typeof language === "string") {
-    return language;
+    return [DEFAULT_LANG];
   }
   const { languages } = navigator;
   if (Array.isArray(languages) && languages.length > 0) {
-    return languages[0];
+    return languages;
   }
-  return DEFAULT_LANG;
+  const { language } = navigator;
+  if (typeof language === "string") {
+    return [language];
+  }
+  return [DEFAULT_LANG];
 };
 
-const langSignal = signal(getBrowserLang());
+const runtimeLanguagesSignal = signal(getRuntimeLanguages());
 
 if (typeof window !== "undefined") {
   window.addEventListener("languagechange", () => {
-    langSignal.value = getBrowserLang();
+    runtimeLanguagesSignal.value = getRuntimeLanguages();
   });
 }
+
+/**
+ * The languages this app actually offers, e.g. `["en", "fr"]` — an allow-list
+ * `languagesSignal` below filters everything else against (runtime languages the
+ * browser reports, and `preferredLanguageSignal`'s own override), so a site
+ * that only supports English/French never ends up resolving to German just
+ * because that happens to be the browser's or the user's own preference.
+ *
+ * `null` (the default) means no restriction at all: every language the
+ * browser/user prefers is allowed through, matching this module's previous,
+ * unrestricted behavior.
+ */
+const supportedLanguagesSignal = signal(null);
+
+/**
+ * @param {string[]|null} languages - e.g. `["en", "fr"]`. Pass `null`/`[]`
+ *   to lift the restriction again (allow everything).
+ */
+const setSupportedLanguages = (languages) => {
+  supportedLanguagesSignal.value =
+    languages && languages.length ? languages : null;
+};
+
+/**
+ * A single language the user explicitly chose (e.g. via an in-app language
+ * picker), overriding whatever the browser itself reports — takes priority
+ * over `runtimeLanguagesSignal` in `languagesSignal` below, but is still subject
+ * to `supportedLanguagesSignal`'s own allow-list.
+ *
+ * Deliberately a single language, not an ordered list: reordering *among*
+ * several preferred languages is real complexity real users essentially
+ * never want — the practical need `languagesSignal` needs to serve is "let this
+ * one user pick their one preferred language instead of the browser's",
+ * nothing more.
+ */
+const preferredLanguageSignal = signal(null);
+
+/**
+ * @param {string|null} language - BCP 47 tag, e.g. "fr". Pass `null` to
+ *   go back to following the browser's own language.
+ */
+const setPreferredLanguage = (language) => {
+  preferredLanguageSignal.value = language || null;
+};
+
+const getPrimarySubtag = (lang) => lang.split("-")[0];
+
+const isLanguageSupported = (lang, supportedLanguages) => {
+  const primarySubtag = getPrimarySubtag(lang);
+  return supportedLanguages.some(
+    (supportedLanguage) =>
+      getPrimarySubtag(supportedLanguage) === primarySubtag,
+  );
+};
+
+/**
+ * The ordered, ready-to-use language preference list every navi
+ * component/util defaults to (naviI18n, formatNumber, the Time components,
+ * validation messages…), live on every read. Combines, in priority order:
+ *
+ * 1. `preferredLanguageSignal` (the user's own explicit pick, if any)
+ * 2. `runtimeLanguagesSignal` (the browser's own ordered preferences)
+ *
+ * then filters the result through `supportedLanguagesSignal` (if set) so
+ * only languages this app actually offers ever come out — e.g. a browser
+ * preferring `["de", "fr", "en"]` on a site that only supports `["en",
+ * "fr"]` resolves to `["fr", "en"]`, never touching German. If filtering
+ * would leave nothing at all (none of the browser's/user's preferences are
+ * supported), falls back to `supportedLanguagesSignal` itself so callers
+ * still get *something* usable rather than an empty array.
+ *
+ * Consumers that accept either a single lang or an ordered array (this
+ * package's own `matchBestLang`/`createI18n`, and native `Intl.NumberFormat`/
+ * `Intl.DateTimeFormat`) can pass this straight through: anything not
+ * covered by the first entry falls through to the next, rather than
+ * jumping straight to an unrelated default like "en".
+ */
+const languagesSignal = computed(() => {
+  const preferredLanguage = preferredLanguageSignal.value;
+  const runtimeLanguages = runtimeLanguagesSignal.value;
+  const supportedLanguages = supportedLanguagesSignal.value;
+
+  const orderedLanguages = preferredLanguage
+    ? [preferredLanguage, ...runtimeLanguages]
+    : runtimeLanguages;
+  const dedupedLanguages = [...new Set(orderedLanguages)];
+
+  if (!supportedLanguages) {
+    return dedupedLanguages;
+  }
+  const filteredLanguages = dedupedLanguages.filter((lang) =>
+    isLanguageSupported(lang, supportedLanguages),
+  );
+  return filteredLanguages.length > 0 ? filteredLanguages : supportedLanguages;
+});
 
 /**
  * Creates a lightweight i18n instance for translating text in the current locale.
@@ -17607,9 +17658,16 @@ if (typeof window !== "undefined") {
  *   i18n("greeting", { name: "Alice" }); // "Hello Alice!" (en)
  *   ```
  *
- * @param {string|string[]} [options.systemLang]
- *   The active user language (BCP 47 tag or ordered array of tags).
- *   Defaults to `langSignal.peek()` (browser language at creation time).
+ * @param {string|string[]} [options.runtimeLang]
+ *   The active language (BCP 47 tag or ordered array of tags) — named
+ *   "runtime" rather than "system" because there is no actual access to the
+ *   OS/user's system language from a browser, only `navigator.languages` (or
+ *   an explicit override) at runtime. Defaults to `languagesSignal.value`, read
+ *   fresh on every `format()`/`has()` call (not frozen at creation time) —
+ *   so overriding the language app-wide via `setPreferredLanguage()`/
+ *   `setSupportedLanguages()` (see lang_signal.js) is picked up here too.
+ *   Passing an explicit `runtimeLang` opts out of that and stays fixed for
+ *   this instance's whole lifetime.
  *
  * ---
  *
@@ -17635,14 +17693,64 @@ if (typeof window !== "undefined") {
  *   A callable function — `i18n(key, values?, { lang? })` — with the same
  *   signature as `i18n.format()`. `format` is kept as an alias.
  */
-const createI18n = ({
-  keyLang,
-  fallbackLang,
-  systemLang = langSignal.peek(),
-} = {}) => {
+const createI18n = ({ keyLang, fallbackLang, runtimeLang } = {}) => {
   const languageMap = new Map();
+  // Bumped by addLangKeys — the only thing besides the active lang itself
+  // that could change what getActiveLang()/getResolvedFallbackLang() below
+  // resolve to, so it's what invalidates their own small caches.
+  let languageMapVersion = 0;
 
-  let activeLang = systemLang;
+  // Explicit runtimeLang stays fixed for this instance's lifetime (matches
+  // the previous behavior exactly). Without one, re-read languagesSignal.value
+  // fresh on every call instead of freezing it here via languagesSignal.peek()
+  // once — that would silently ignore setPreferredLanguage()/
+  // setSupportedLanguages() (see lang_signal.js) for the rest of this
+  // instance's life.
+  const hasExplicitRuntimeLang = runtimeLang !== undefined;
+
+  // matchBestLang does real work (a Map lookup per candidate, a possible
+  // "fr-CA" → "fr" split-and-retry loop) — worth skipping on every single
+  // format()/has() call in the common case, since what it resolves to only
+  // ever changes when languageMap itself changes (addLangKeys) or, for the
+  // non-explicit case, when languagesSignal.value itself changes (preferred
+  // language, supported languages, or "languagechange" — see lang_signal.js,
+  // languagesSignal is a computed() so its reference is stable when none of its
+  // own dependencies actually changed) — comparing those two cheaply
+  // (===) is enough to know the cached result below is still valid.
+  let cachedActiveLang;
+  let cachedActiveLangRuntimeLang;
+  let cachedActiveLangVersion = -1;
+  const getActiveLang = () => {
+    const currentRuntimeLang = hasExplicitRuntimeLang
+      ? runtimeLang
+      : languagesSignal.value;
+    if (
+      cachedActiveLangVersion === languageMapVersion &&
+      cachedActiveLangRuntimeLang === currentRuntimeLang
+    ) {
+      return cachedActiveLang;
+    }
+    cachedActiveLang = matchBestLang(currentRuntimeLang, languageMap);
+    cachedActiveLangVersion = languageMapVersion;
+    cachedActiveLangRuntimeLang = currentRuntimeLang;
+    return cachedActiveLang;
+  };
+
+  // fallbackLang is a plain, never-reactive option set once at creation —
+  // its own resolution only ever needs recomputing when languageMap does.
+  let cachedResolvedFallbackLang;
+  let cachedResolvedFallbackLangVersion = -1;
+  const getResolvedFallbackLang = () => {
+    if (!fallbackLang) {
+      return null;
+    }
+    if (cachedResolvedFallbackLangVersion === languageMapVersion) {
+      return cachedResolvedFallbackLang;
+    }
+    cachedResolvedFallbackLang = matchBestLang(fallbackLang, languageMap);
+    cachedResolvedFallbackLangVersion = languageMapVersion;
+    return cachedResolvedFallbackLang;
+  };
 
   const addLangKeys = (lang, translations) => {
     // Accumulate: merge with any existing translations for this lang
@@ -17661,7 +17769,7 @@ const createI18n = ({
       }
     }
     languageMap.set(lang, translations);
-    activeLang = matchBestLang(systemLang, languageMap);
+    languageMapVersion++;
   };
 
   const add = (key, langTranslations) => {
@@ -17681,7 +17789,11 @@ const createI18n = ({
   };
 
   const _getTemplate = (key, lang) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+    // matchBestLang, not matchLang directly: lang can be an array (e.g.
+    // languagesSignal.value is always an ordered array — see lang_signal.js) and
+    // matchLang alone assumes a plain string, throwing
+    // on .split() otherwise.
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       const translated = translations[key];
@@ -17689,40 +17801,36 @@ const createI18n = ({
         return translated;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        const fallbackTranslated = fallbackTranslations[key];
-        if (fallbackTranslated !== undefined) {
-          return fallbackTranslated;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      const fallbackTranslated = fallbackTranslations[key];
+      if (fallbackTranslated !== undefined) {
+        return fallbackTranslated;
       }
     }
     // No translation found — return key as-is (opaque fallback)
     return key;
   };
 
-  const format = (key, values, { lang = activeLang } = {}) => {
+  const format = (key, values, { lang = getActiveLang() } = {}) => {
     const template = _getTemplate(key, lang);
     return interpolateText(template, values);
   };
 
-  const has = (key, { lang = activeLang } = {}) => {
-    const resolvedLang = lang ? matchLang(lang, languageMap) : null;
+  const has = (key, { lang = getActiveLang() } = {}) => {
+    const resolvedLang = lang ? matchBestLang(lang, languageMap) : null;
     if (resolvedLang) {
       const translations = languageMap.get(resolvedLang);
       if (translations && key in translations) {
         return true;
       }
     }
-    if (fallbackLang) {
-      const resolvedFallbackLang = matchLang(fallbackLang, languageMap);
-      if (resolvedFallbackLang) {
-        const fallbackTranslations = languageMap.get(resolvedFallbackLang);
-        if (fallbackTranslations && key in fallbackTranslations) {
-          return true;
-        }
+    const resolvedFallbackLang = getResolvedFallbackLang();
+    if (resolvedFallbackLang) {
+      const fallbackTranslations = languageMap.get(resolvedFallbackLang);
+      if (fallbackTranslations && key in fallbackTranslations) {
+        return true;
       }
     }
     return false;
@@ -17776,7 +17884,10 @@ const matchBestLang = (lang, languageMap) => {
  *
  * Use `naviI18n.add(key, { lang: "translation" })` to register or override
  * any text used by navi components. The active language is read from
- * `langSignal` (the browser's current `navigator.language`).
+ * `languagesSignal` (see lang_signal.js — combines the browser's own
+ * `navigator.languages`, an optional `setPreferredLanguage()` user override,
+ * and an optional `setSupportedLanguages()` app-wide allow-list), live on
+ * every lookup.
  *
  * Built-in keys (can be overridden):
  *   - `"time.less_than_minute"` — e.g. "in less than a minute"
@@ -18815,7 +18926,7 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
  */
 const formatDay = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (format === "numeric") {
     return new Intl.DateTimeFormat(lang, {
@@ -18875,7 +18986,9 @@ const SENTINEL_DATE = new Date(9999, 10, 28); // 28 Nov 9999 — day≠month, bo
 const getToken = (key, lang) =>
   naviI18n(`time.placeholder.${key}`, undefined, { lang });
 
-const formatDatePlaceholder = ({ lang = langSignal.value } = {}) => {
+const formatDatePlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
     day: "numeric",
     month: "numeric",
@@ -18898,7 +19011,7 @@ const formatDatePlaceholder = ({ lang = langSignal.value } = {}) => {
 };
 
 const formatMonthPlaceholder = ({
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
 } = {}) => {
   const parts = new Intl.DateTimeFormat(lang, {
@@ -18919,12 +19032,14 @@ const formatMonthPlaceholder = ({
     .join("");
 };
 
-const formatWeekPlaceholder = ({ lang = langSignal.value } = {}) => {
+const formatWeekPlaceholder = ({
+  lang = languagesSignal.value,
+} = {}) => {
   return `${getToken("week", lang)} xx / ${getToken(lang)}`;
 };
 
 const formatDatetimePlaceholder = ({
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
 } = {}) => {
   const intlOptions =
@@ -18993,7 +19108,7 @@ const formatDayRelative = (offset, lang) => {
 
 const formatMonth = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   return new Intl.DateTimeFormat(lang, {
     month: format, // "long", "short", or "narrow"
@@ -19006,7 +19121,7 @@ const formatMonth = (
  */
 const formatDatetime = (
   date,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (format === "long") {
     return new Intl.DateTimeFormat(lang, {
@@ -19061,7 +19176,7 @@ const formatTime = (date, lang) => {
  */
 const formatMinuteDuration = (
   minutes,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -19121,7 +19236,7 @@ const formatHourDuration = (hours, options) => {
  */
 const formatSecondDuration = (
   seconds,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -19165,7 +19280,7 @@ const formatSecondDuration = (
  */
 const formatDuration = (
   duration,
-  { lang = langSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long" } = {},
 ) => {
   if (typeof duration === "string") {
     duration = parseDuration(duration) ?? {};
@@ -19269,7 +19384,12 @@ const formatDuration = (
  */
 const formatTimeAgo = (
   date,
-  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
 ) => {
   const rtf = new Intl.RelativeTimeFormat(lang, {
     numeric: "auto",
@@ -19342,7 +19462,12 @@ const formatTimeAgo = (
 const formatTimeRelative = (
   start,
   durationMs = 0,
-  { lang = langSignal.value, now = new Date(), bare, format = "long" } = {},
+  {
+    lang = languagesSignal.value,
+    now = new Date(),
+    bare,
+    format = "long",
+  } = {},
 ) => {
   const startMs = start instanceof Date ? start.getTime() : Number(start);
   const endMs = startMs + durationMs;
@@ -20224,7 +20349,7 @@ const getTodayIso = (inputType) => {
 };
 
 const formatDateIso = (iso, inputType) => {
-  const locale = langSignal.value;
+  const locale = languagesSignal.value;
   if (inputType === "month") {
     const date = new Date(`${iso}-01T00:00:00`);
     return formatMonth(date, locale);
@@ -21131,7 +21256,7 @@ const onRequestInteraction = (
   const controlHost = findControlHost(currentTarget) || currentTarget;
   const controller = controlHost.__uiStateController__;
 
-  if (!bypassInteractivity) {
+  if (controller && !bypassInteractivity) {
     const ci = controller?.rules.interaction;
     if (ci) {
       const canInteract = ci.checkInteractivity({ event });
@@ -21295,8 +21420,24 @@ const tryActionAfterInteractionAllowed = (
  *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
  *     useLayoutEffect with the provided deps.
  *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
- *     the callback every time the ancestor opens (toggle event, newState=open).
+ *     the callback once the ancestor opens — see addBeforePaintOpenCallback
+ *     below for exactly how that's detected, and why it matters that it
+ *     happens before the browser paints.
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
+ *
+ * The callback's second argument is always a `navi_displayed` CustomEvent,
+ * with `detail: { ancestor, ancestorType }`:
+ *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
+ *     `{ ancestor: document, ancestorType: "document" }`.
+ *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
+ *     | "popover" | "details" | "aria-expanded" }`. On the toggle fallback
+ *     path (see addBeforePaintOpenCallback) `detail.event` is also set to
+ *     the native `toggle` event that triggered it.
+ * Consumers that only care about a genuine top-level, no-ancestor mount
+ * (e.g. use_auto_focus.js — an ancestor opening already has its own
+ * transferFocus/openEffect placing focus, so re-running a per-element
+ * autofocus for everything it reveals would fight that) can check
+ * `event.detail.ancestorType === "document"`.
  *
  * Usage:
  *   useDisplayedLayoutEffect(ref, () => {
@@ -21308,7 +21449,7 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     throw new TypeError("useDisplayedLayoutEffect: callback is not a function");
   }
 
-  // Keep a stable ref so the toggle listener always calls the latest callback
+  // Keep a stable ref so the open listener always calls the latest callback
   // without needing to be re-registered when deps change.
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
@@ -21321,14 +21462,18 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
     if (!ancestor) {
-      callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
+      callbackRef.current(el, createDisplayedEvent(document, "document"));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; the toggle listener below will fire.
+      // Ancestor is closed — skip now; addBeforePaintOpenCallback below
+      // will fire once it opens.
       return;
     }
-    callbackRef.current(el, new CustomEvent("navi_displayed_on_document"));
+    callbackRef.current(
+      el,
+      createDisplayedEvent(ancestor, getAncestorType(ancestor)),
+    );
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -21341,27 +21486,10 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!ancestor) {
       return undefined;
     }
-    const onToggle = (e) => {
-      // <dialog> and [popover] fire toggle with newState; <details> uses the
-      // older toggle event without newState — fall back to checking .open.
-      let isOpen;
-      if (typeof e.newState === "string") {
-        isOpen = e.newState === "open";
-      } else if (e.target.open) {
-        isOpen = true;
-      } else if (e.target.getAttribute("aria-expanded") === "true") {
-        isOpen = true;
-      }
-      if (!isOpen) {
-        return;
-      }
-      let lastEl = ref.current;
-      callbackRef.current(lastEl, e);
-    };
-    ancestor.addEventListener("toggle", onToggle);
-    return () => {
-      ancestor.removeEventListener("toggle", onToggle);
-    };
+    return addBeforePaintOpenCallback(ancestor, (event) => {
+      const lastEl = ref.current;
+      callbackRef.current(lastEl, event);
+    });
   }, []);
 };
 
@@ -21373,6 +21501,115 @@ const isAncestorOpen = (ancestor) => {
     return ancestor.open;
   }
   return ancestor.getAttribute("aria-expanded") === "true";
+};
+
+const getAncestorType = (ancestor) => {
+  if (ancestor.tagName === "DIALOG") {
+    return "dialog";
+  }
+  if (ancestor.hasAttribute("popover")) {
+    return "popover";
+  }
+  if (ancestor.tagName === "DETAILS") {
+    return "details";
+  }
+  return `${ancestor.tagName}[aria-expanded]`;
+};
+
+const createDisplayedEvent = (ancestor, ancestorType, eventInit) => {
+  return new CustomEvent("navi_displayed", {
+    detail: { ancestor, ancestorType, ...eventInit },
+  });
+};
+
+/**
+ * Notifies `callback` the moment `ancestor` opens — timed to land strictly
+ * before the browser's next paint, so a caller doing layout/measurement work
+ * in response (e.g. text_anchor.jsx repositioning a badge) never flashes the
+ * still-closed state first.
+ *
+ * We deliberately do NOT use the native `toggle` event as the primary
+ * signal, even though every <dialog>/<details>/[popover] fires one: per the
+ * WHATWG spec it's dispatched via a *queued task* ("queue a popover toggle
+ * event task"), not synchronously and not as a microtask. The element's
+ * shown state itself (showPopover()/showModal()) still flips synchronously,
+ * so the browser can — and does — paint it in its default, uncorrected
+ * position before that queued task ever runs. Relying on `toggle` alone
+ * means the correction always arrives one paint late.
+ *
+ * Instead we watch `open`/`aria-expanded` via MutationObserver:
+ *   - <dialog>/<details> reflect `open` themselves, natively, synchronously.
+ *   - This codebase's own Popover.jsx sets `aria-expanded` synchronously in
+ *     the same call stack as showPopover() (see popover.jsx's own
+ *     aria-expanded comments) — not part of any web standard, just this
+ *     library's own convention, but reliable for anything built through it.
+ * MutationObserver callbacks run as a microtask, strictly before paint —
+ * exactly the timing we need, no ambiguity.
+ *
+ * The `toggle` listener is kept as a fallback, attached ONLY where the
+ * MutationObserver above has no chance of ever firing: a bare [popover]
+ * element with no `aria-expanded` of its own — i.e. one not built through
+ * this codebase's own Popover.jsx (the only thing that reliably sets it).
+ * That's the one case this file's author could think of with no other
+ * synchronously-observable signal at all. It still arrives a paint late,
+ * but a late correction beats none.
+ *
+ * This relies on `aria-expanded` genuinely being present on a navi Popover
+ * by the time this code runs — see popover.jsx's own comments on why it
+ * sets that attribute the way it does.
+ *
+ * @param {Element} ancestor
+ * @param {(event: Event) => void} callback
+ * @returns {() => void} cleanup — removes the observer/listener
+ */
+const addBeforePaintOpenCallback = (ancestor, callback) => {
+  const ancestorType = getAncestorType(ancestor);
+  const needsToggleFallback =
+    ancestor.hasAttribute("popover") && !ancestor.hasAttribute("aria-expanded");
+  if (needsToggleFallback) {
+    const onToggle = (toggleEvent) => {
+      if (!isAncestorOpen(ancestor)) {
+        return;
+      }
+      callback(
+        createDisplayedEvent(ancestor, ancestorType, { event: toggleEvent }),
+      );
+    };
+    ancestor.addEventListener("toggle", onToggle);
+    return () => {
+      ancestor.removeEventListener("toggle", onToggle);
+    };
+  }
+
+  // Edge-triggered on purpose: some consumers (e.g. Popover.jsx) set
+  // aria-expanded both imperatively (in their own openEffect, for precise
+  // ordering relative to forced reflows/transitions) AND declaratively via a
+  // JSX prop derived from the same open state — the latter is a deliberate
+  // "always reflect current truth" prop, but Preact diffs against its own
+  // previous *rendered* value, not the live DOM, so any later re-render that
+  // happens to occur while already open re-applies the same "true" value as
+  // a genuinely new attribute mutation. Tracking wasOpen here collapses that
+  // redundant open→open mutation instead of re-running callback a second
+  // time for the same open.
+  let wasOpen = isAncestorOpen(ancestor);
+  const observer = new MutationObserver(() => {
+    const isOpen = isAncestorOpen(ancestor);
+    if (isOpen === wasOpen) {
+      return;
+    }
+    wasOpen = isOpen;
+    if (!isOpen) {
+      return;
+    }
+    callback(createDisplayedEvent(ancestor, ancestorType));
+  });
+  observer.observe(ancestor, {
+    attributes: true,
+    attributeFilter: ["open", "aria-expanded"],
+  });
+  return () => {
+    observer.disconnect();
+  };
 };
 
 // see also https://github.com/preactjs/preact/issues/1255
@@ -21432,21 +21669,39 @@ const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    // Only autofocus when the element is mounted directly on the document.
-    // Any other event type means an expandable (popover, dialog, …) just opened
-    // and revealed this element — the expandable's opening logic already calls
-    // focusFirstAutofocusOrFocusable, so we must not steal focus here.
-    if (e.type !== "navi_displayed_on_document") {
+    // Only autofocus when genuinely mounted directly on the document, or
+    // when *this* element is itself the expandable ancestor that just
+    // opened (e.g. Dialog's own self-targeting "fallback" autofocus below).
+    // Any other case means some *other* ancestor (popover, dialog, …) just
+    // opened and revealed this element as one of its descendants — that
+    // ancestor's own opening logic (transferFocus/openEffect) already
+    // placed focus, so we must not steal it back here.
+    const { ancestor, ancestorType } = e.detail;
+    const isSelfAncestor = ancestor === focusableElement;
+    if (ancestorType !== "document" && !isSelfAncestor) {
       return () => {};
     }
     const activeElement = document.activeElement;
+    if (
+      autoFocus === "fallback" &&
+      activeElement !== focusableElement &&
+      focusableElement.contains(activeElement)
+    ) {
+      // "fallback" only ever claims focus when nothing more specific
+      // already did. A descendant with its own real navi-autofocus (or one
+      // focused synchronously by transferFocus, see focus_transfer.js) has
+      // already run by the time this fires — Preact commits a child's own
+      // layout effects before its parent's, so this parent-level "fallback"
+      // effect would otherwise unconditionally steal focus back from it.
+      return () => {};
+    }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
-    if (e.type === "navi_displayed_on_document") {
-      debugFocus(e, `[autofocus] mount -> ${focusDebugCall}`);
+    if (ancestorType === "document") {
+      debugFocus(e, `[autofocus] document -> ${focusDebugCall}`);
     } else {
       debugFocus(
         e,
-        `[autofocus] "${e.type}" ${getElementSignature(e.target)} -> ${focusDebugCall}`,
+        `[autofocus] "${ancestorType}" opened ${getElementSignature(ancestor)} -> ${focusDebugCall}`,
       );
     }
     focusableElement.focus({ preventScroll, focusVisible });
@@ -21634,6 +21889,26 @@ const resolveFirstChildControl = (el) => {
 const resolveClosestExpandable = (el) => {
   return el.closest("[aria-expanded]");
 };
+// An element carrying navi-command-proxy-for="anchorId" stands in for that
+// other element as the command's source when the source is forwarded to
+// consumers (e.g. Popover reads a --navi-toggle/--navi-open request's source
+// as its anchor) — useful for a trigger button that should open a popover
+// anchored to some other, unrelated element rather than to itself.
+const resolveCommandProxySource = (element) => {
+  const proxyForId = element.getAttribute("navi-command-proxy-for");
+  if (!proxyForId) {
+    return element;
+  }
+  const proxyTarget = document.getElementById(proxyForId);
+  if (!proxyTarget) {
+    console.warn(
+      `navi-command-proxy-for="${proxyForId}" but no element with that id found`,
+      element,
+    );
+    return element;
+  }
+  return proxyTarget;
+};
 const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
@@ -21660,7 +21935,7 @@ const resolveCommandValue = (source, event) => {
   return getUIStateFromElement(source);
 };
 
-const onNaviCommand = (e, { debugCommand }) => {
+const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
   const { command, event, source, implementation } = e.detail;
   if (typeof command !== "string") {
     console.warn(`navi_command event is missing detail.command`, e);
@@ -21837,6 +22112,26 @@ registerNaviCommand("--navi-send", (source, event) => {
   };
 });
 
+registerNaviCommand("--navi-toggle", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || resolveClosestExpandable(source);
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const isExpanded = target.getAttribute("aria-expanded") === "true";
+      const customEventName = isExpanded
+        ? "navi_request_close"
+        : "navi_request_open";
+      return dispatchCustomEvent(target, customEventName, {
+        event,
+        source: resolveCommandProxySource(source),
+      });
+    },
+  };
+});
 registerNaviCommand("--navi-open", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);
@@ -21848,7 +22143,7 @@ registerNaviCommand("--navi-open", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_open", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -21864,7 +22159,7 @@ registerNaviCommand("--navi-close", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
       });
     },
   };
@@ -21880,7 +22175,7 @@ registerNaviCommand("--navi-cancel", (source, event) => {
     implementation: () => {
       return dispatchCustomEvent(target, "navi_request_close", {
         event,
-        source,
+        source: resolveCommandProxySource(source),
         isCancel: true,
       });
     },
@@ -22007,6 +22302,7 @@ const CONTROL_ATTRIBUTE_SET = new Set([
   // "ui-action-target",
   "navi-input-type",
   "navi-control-proxy-for",
+  "navi-command-proxy-for",
   "navi-command-target",
   "onnavi_command",
   "onnavi_request_open",
@@ -23998,9 +24294,16 @@ const useControlProps = (props, {
         if (defaultAction === "activate") {
           // activating the control (e.g. space on a button/range)
           return {
-            name: `keydown to ${defaultAction}`,
+            name: `keydown to activate`,
             prevented: () => e.preventDefault(),
-            allowed: () => triggerUIAction(e)
+            allowed: () => {
+              triggerUIAction(e);
+              if (controlType === "button" && e.key === " ") {
+                // prevent browser dispatching click
+                // it could lead to duplicates as we explicitely handled the space to click here
+                e.preventDefault();
+              }
+            }
           };
         }
         if (defaultAction === "scroll") {
@@ -24121,8 +24424,8 @@ const useControlProps = (props, {
           const input = e.currentTarget;
           return {
             name: "enter on input to send closest control group",
-            // allow to dispatch --navi-send even if input is readonly
             bypassInteractivity: true,
+            // allow to dispatch --navi-send even if input is readonly
             allowed: () => triggerNaviCommand(input, "--navi-send", e),
             // prevent dispatching click as result of this enter
             prevented: () => e.preventDefault()
@@ -26723,7 +27026,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$O = /* css */`
+installImportMetaCssBuild(import.meta);const css$P = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -26753,7 +27056,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -26946,7 +27249,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`
+installImportMetaCssBuild(import.meta);const css$O = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     top: var(--loading-rectangle-top, 0);
@@ -26964,7 +27267,7 @@ installImportMetaCssBuild(import.meta);const css$N = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$N, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -27189,7 +27492,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$M = /* css */`
+const css$N = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -27209,6 +27512,10 @@ const css$M = /* css */`
         display: inline-block;
       }
     }
+  }
+
+  time.navi_text {
+    font-variant-numeric: tabular-nums;
   }
 
   *[data-navi-space] {
@@ -27647,7 +27954,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$M, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -27790,7 +28097,8 @@ const TextWithSelectRange = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`
+installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
+const css$M = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -27825,30 +28133,21 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$L, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
-  const setTopOffset = (childEl, topOffset) => {
-    // position:relative + top shifts the element visually.
-    // marginTop: -topOffset makes the layout box follow the visual position, so any container
-    // (button, link, box…) computes its own padding/border/height based on the real final position
-    // rather than the original unshifted one. This means a badge inside a button will symmetrically
-    // expand the button height instead of overflowing or being clipped.
-    // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
-    // the shift is purely a repositioning, not an inflation of the line.
-    if (!topOffset) {
-      childEl.style.position = "";
-      childEl.style.top = "";
-      childEl.style.marginTop = "";
-      childEl.style.marginBottom = "";
-      return;
-    }
-    childEl.style.position = "relative";
-    childEl.style.top = `${topOffset}px`;
-    childEl.style.marginTop = `${-topOffset}px`;
-    childEl.style.marginBottom = `${topOffset}px`;
-  };
-  useLayoutEffect(() => {
-    const anchorEl = anchorRef.current;
+
+  // Plain useLayoutEffect would also fire while an ancestor dialog/popover
+  // (e.g. a closed SidePanel) is still display:none — every rect involved
+  // reads 0×0 at that point, so the math trivially (and wrongly) resolves
+  // to topOffset 0: not a real "no correction needed" result, just a
+  // zero-by-zero coincidence that happens to look fine only because it
+  // leaves the browser's own default alignment untouched. The real
+  // correction then only gets applied later, on whatever unrelated
+  // re-render next happens to change one of this effect's own deps —
+  // which reads as the child "jumping" even though nothing about its own
+  // geometry changed. useDisplayedLayoutEffect skips the initial run in
+  // that case and reruns once the ancestor actually opens instead.
+  useDisplayedLayoutEffect(anchorRef, anchorEl => {
     const childEl = childRef.current;
     if (!anchorEl || !childEl) {
       return;
@@ -27879,6 +28178,26 @@ const TextAnchor = ({
       children: "\u200B"
     })]
   });
+};
+const setTopOffset = (childEl, topOffset) => {
+  // position:relative + top shifts the element visually.
+  // marginTop: -topOffset makes the layout box follow the visual position, so any container
+  // (button, link, box…) computes its own padding/border/height based on the real final position
+  // rather than the original unshifted one. This means a badge inside a button will symmetrically
+  // expand the button height instead of overflowing or being clipped.
+  // marginBottom: topOffset compensates the marginTop so the line height stays unchanged —
+  // the shift is purely a repositioning, not an inflation of the line.
+  if (!topOffset) {
+    childEl.style.position = "";
+    childEl.style.top = "";
+    childEl.style.marginTop = "";
+    childEl.style.marginBottom = "";
+    return;
+  }
+  childEl.style.position = "relative";
+  childEl.style.top = `${topOffset}px`;
+  childEl.style.marginTop = `${-topOffset}px`;
+  childEl.style.marginBottom = `${topOffset}px`;
 };
 const computeTopOffset = ({
   anchorEl,
@@ -27927,7 +28246,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$K = /* css */`
+installImportMetaCssBuild(import.meta);const css$L = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -28000,7 +28319,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$K, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -28277,7 +28596,7 @@ const useAccentColorAttributes = (
   }, [ref, accentColor, elementSelector, colorProperty]);
 };
 
-installImportMetaCssBuild(import.meta);const css$J = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -28608,7 +28927,7 @@ installImportMetaCssBuild(import.meta);const css$J = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -28786,8 +29105,16 @@ const ButtonCommandPropResolver = props => {
     props.command = props.command || "--navi-send";
   }
   const command = props.command;
-  const commandDefaultProps = COMMAND_DEFAULT_PROPS[command];
-  if (commandDefaultProps) {
+
+  // Called fresh on every render (not a module-level object computed once
+  // at import time) — naviI18n(...) must be re-evaluated per call so a
+  // Button using a command's built-in default label actually follows
+  // setPreferredLanguage()/a "languagechange" event instead of staying
+  // stuck with whatever language was active the first time this module was
+  // imported.
+  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
+  if (getCommandDefaultProps) {
+    const commandDefaultProps = getCommandDefaultProps();
     for (const key of Object.keys(commandDefaultProps)) {
       if (props[key] === undefined) {
         props[key] = commandDefaultProps[key];
@@ -28798,29 +29125,29 @@ const ButtonCommandPropResolver = props => {
     ...props
   });
 };
-const COMMAND_DEFAULT_PROPS = {
-  "--navi-clear": {
+const COMMAND_DEFAULT_PROPS_FACTORIES = {
+  "--navi-clear": () => ({
     children: naviI18n("button.clear")
-  },
-  "--navi-reset": {
+  }),
+  "--navi-reset": () => ({
     children: naviI18n("button.reset")
-  },
-  "--navi-define": {
+  }),
+  "--navi-define": () => ({
     children: naviI18n("button.define")
-  },
-  "--navi-send": {
+  }),
+  "--navi-send": () => ({
     children: naviI18n("button.send"),
     cta: true
-  },
-  "--navi-cancel": {
+  }),
+  "--navi-cancel": () => ({
     children: naviI18n("button.cancel")
-  },
-  "--navi-close": {
+  }),
+  "--navi-close": () => ({
     children: naviI18n("button.close")
-  },
-  "--navi-open": {
+  }),
+  "--navi-open": () => ({
     children: naviI18n("button.open")
-  }
+  })
 };
 const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
@@ -28875,7 +29202,7 @@ const WarningSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
+installImportMetaCssBuild(import.meta);const css$J = /* css */`
   @layer navi {
     .navi_message_box {
       --background-color-info: var(--navi-info-color-light);
@@ -28932,7 +29259,7 @@ const MessageBox = ({
   onClose,
   ...rest
 }) => {
-  import.meta.css = [css$I, "@jsenv/navi/src/text/message_box.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/text/message_box.jsx"];
   const [hasTitleChild, setHasTitleChild] = useState(false);
   const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
   if (icon === true) {
@@ -28995,7 +29322,7 @@ const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", 
 const MessageBoxStatusContext = createContext();
 const MessageBoxReportTitleChildContext = createContext();
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   .navi_message_box {
     .navi_title {
       margin-top: 0;
@@ -29005,7 +29332,7 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
   }
 `;
 const Title = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/text/title.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/text/title.jsx"];
   const messageBoxStatus = useContext(MessageBoxStatusContext);
   const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
   const titleLevel = parseInt(innerAs.slice(1));
@@ -29083,7 +29410,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -29439,7 +29766,7 @@ Object.assign(PSEUDO_CLASSES, {
   }
 });
 const Link = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -29494,6 +29821,9 @@ const LinkPlain = props => {
     hrefFallback = !anchor,
     children
   } = props;
+  if (anchor && !props.id) {
+    props.id = href.slice(1);
+  }
   const selectionContext = useContext(SelectionContext);
   const visited = useIsVisited(href);
   const {
@@ -29577,10 +29907,10 @@ const LinkPlain = props => {
   return jsxs(Text, {
     as: "a",
     color: anchor && !innerChildren ? "inherit" : undefined,
-    id: anchor ? href.slice(1) : undefined,
     ...controlRootProps,
     ...controlHostProps,
     preventDefault: undefined,
+    anchor: undefined,
     onClick: e => {
       onClick?.(e);
       if (preventDefault) {
@@ -29638,7 +29968,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$F = /* css */`
+const css$G = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -29774,7 +30104,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$F, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -30106,7 +30436,20 @@ const createOnKeyDownForShortcutArray = (shortcuts, busyRef) => {
       ...shortcutCandidate,
       handler: (keyboardEvent) => {
         if (shortcutCandidate.handler) {
-          return shortcutCandidate.handler(keyboardEvent);
+          const returnValue = shortcutCandidate.handler(keyboardEvent);
+          // A shortcut handler returns either a plain false/null/undefined
+          // (no interaction to dispatch — e.g. the shortcut didn't apply
+          // given some runtime check), or the same { name, allowed,
+          // prevented, ... } shape dispatchRequestInteraction itself takes,
+          // which needs an actual dispatch to ever run its `allowed`/
+          // `prevented` callbacks.
+          if (!returnValue || typeof returnValue !== "object") {
+            return returnValue;
+          }
+          return dispatchRequestInteraction(keyboardEvent.currentTarget, {
+            event: keyboardEvent,
+            ...returnValue,
+          });
         }
         if (busyRef?.current) {
           return false;
@@ -30395,7 +30738,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$E = /* css */`
+const css$F = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -30480,7 +30823,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -30534,7 +30877,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+installImportMetaCssBuild(import.meta);const css$E = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -30580,7 +30923,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -30829,10 +31172,10 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$D = /* css */`
   @layer navi {
     .navi_checkbox {
-      --switch-margin: 2px; /* Useful to reserve space for outline */
+      --switch-margin: 0; /* Useful to reserve space for outline */
       /* Padding uses px and not em otherwise it can be resolved to a float which does not play well */
       /* With the translation calc in some configurations. In the end 2px is nice in all sizes and can still be configured for exceptions */
       --switch-padding: 2px;
@@ -30907,7 +31250,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -30928,32 +31271,9 @@ const SwitchCSSVars = {
 };
 
 const useCheckableProps = (props, options) => {
-  // If `checked` is a stateSignal, derive defaultChecked from the signal's
-  // default value so resetUIState restores to the original default.
-  const checkedProp = props.checked;
-  if (
-    !Object.hasOwn(props, "defaultChecked") &&
-    isSignal(checkedProp) &&
-    checkedProp.options
-  ) {
-    const defaultVal = checkedProp.options.getDefaultValue(false);
-    if (defaultVal !== undefined) {
-      if (props.type === "radio") {
-        if (defaultVal === true) {
-          props.defaultChecked = true;
-        } else if (
-          Object.hasOwn(props, "value") &&
-          defaultVal === props.value
-        ) {
-          props.defaultChecked = true;
-        }
-      } else if (props.type === "checkbox") {
-        const itemValue = props.value;
-        props.defaultChecked =
-          Array.isArray(defaultVal) && defaultVal.includes(itemValue);
-      }
-    }
-  }
+  // Derives defaultChecked from a `checked` signal's default value, and
+  // wires the signal's default uiAction — same normalization as text/number
+  // inputs, applied here since checkables are controlled via `checked`.
   const result = useControlProps(
     {
       resetOnCancel: true,
@@ -30972,7 +31292,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-control-border-radius);
@@ -31299,7 +31619,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -31421,7 +31741,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   @layer navi {
     .navi_label {
       &[data-control-connected] {
@@ -31492,7 +31812,7 @@ installImportMetaCssBuild(import.meta);const css$A = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -31527,7 +31847,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -31556,7 +31876,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -31680,7 +32000,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$A = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -32001,7 +32321,13 @@ installImportMetaCssBuild(import.meta);const css$z = /* css */`
 
         box-shadow:
           inset 0 2px 4px rgba(0, 0, 0, 0.15),
-          inset 0 0 0 1px var(--button-border-color-checked);
+          inset 0 0 0 1px var(--button-border-color-checked),
+          0 0 0 3px
+            color-mix(
+              in srgb,
+              var(--button-border-color-checked) 25%,
+              transparent
+            );
       }
       &[data-disabled] {
         --x-border-color: var(--button-border-color-disabled);
@@ -32037,7 +32363,7 @@ const InputRadioHeadless = props => {
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -32183,406 +32509,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-/**
- * Parses a time string into seconds.
- * Accepts:
- *   - number: returned as-is (already in seconds)
- *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
- *   - undefined/null: returned as-is
- */
-const timeStringToSeconds = (timeString) => {
-  if (typeof timeString !== "string") {
-    return timeString;
-  }
-  const colonIndex = timeString.indexOf(":");
-  if (colonIndex === -1) {
-    return Number(timeString);
-  }
-  const hours = parseInt(timeString.slice(0, colonIndex), 10);
-  const minutes = parseInt(timeString.slice(colonIndex + 1), 10);
-  return (hours * 60 + minutes) * 60;
-};
-
-const isToday = (value) => {
-  if (!value) {
-    return false;
-  }
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  if (typeof value === "string") {
-    return value === todayStr;
-  }
-  if (typeof value === "number") {
-    const d = new Date(value);
-    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  if (value instanceof Date) {
-    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
-    return s === todayStr;
-  }
-  return false;
-};
-
-/**
- * Returns the current time as "HH:MM", with an optional minute offset.
- *
- * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
- *   E.g. getNowHours(-5) returns "now minus 5 minutes".
- *
- * @example
- * getNowHours()       // "14:30"
- * getNowHours(-5)     // "14:25"
- */
-const getNowHours = (offsetMinutes = 0) => {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
-  const clamped =
-    totalMinutes < 0
-      ? 0
-      : totalMinutes > 23 * 60 + 59
-        ? 23 * 60 + 59
-        : totalMinutes;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-/**
- * Returns the current time rounded up to the nearest step boundary,
- * with an optional minute offset applied first.
- *
- * This is useful to compute a step-aligned `min` for a time picker:
- * passing it ensures the first available slot is always on a step boundary.
- *
- * @param {number} stepMinutes - Step size in minutes (e.g. 30).
- * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
- *
- * @example
- * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
- * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
- * getNowHoursRoundedToStep(30, -5)
- */
-const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
-  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
-  const clamped =
-    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
-
-// Maps validity type names → navi input type names.
-// Numeric signal types must not fall through to the native type="number"
-// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
-const VALIDITY_TYPE_TO_INPUT_TYPE = {
-  boolean: "checkbox",
-  number: "navi_number",
-  integer: "navi_number",
-  percentage: "navi_percentage",
-};
-
-// Conceptual number types: define defaults and map to native type="number".
-// The `data-navi-input-type` attribute is set so constraint messages can use
-// domain-specific wording instead of the generic "Ce nombre doit être...".
-const NAVI_TYPE_DEFAULTS = {
-  navi_time: {
-    "type": "time",
-    "navi-input-type": "time",
-    "min": 0,
-    "max": 24 * 3600 - 1,
-    "step": 1,
-  },
-  navi_percentage: {
-    "type": "navi_number",
-    "navi-input-type": "percentage",
-    "min": 0,
-    "max": 100,
-    "step": 1,
-  },
-  navi_number: {
-    type: "text",
-    autoCorrect: "off",
-    spellcheck: false,
-    autoComplete: "off",
-  },
-};
-
-/**
- * resolveInputProps — normalizes input-related props that are shared across
- * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
- *
- * Normalization is applied recursively: a navi type may resolve to another navi
- * type (e.g. `navi_percentage` → `navi_number` → `text`), and each step applies its
- * own formatters and defaults before moving to the next.
- *
- * Steps applied for each type:
- * 1. Record the original navi type in `props["navi-input-type"]` (first call only).
- * 2. Apply defaults for the current type (min, max, step, and any other props),
- *    only when the prop is not already set.
- * 3. Apply min/max formatters (e.g. HH:MM string → number for duration types,
- *    Date → formatted string for date/time types).
- * 4. Apply step formatter (same conversion rules).
- * 5. Remap `props.type` to the target type defined by the current type's defaults,
- *    then recurse.
- *
- * Supported navi types and their targets:
- * - `navi_percentage` → `navi_number`  (0–100, step 1)
- * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
- * - `navi_time`       → `time`         (step in seconds)
- *
- * Standard HTML input types with formatters:
- * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
- *   min/max accept `Date` instances or timestamps and are converted to the
- *   string format expected by the native input.
- * - `time`, `datetime-local`, `datetime`:
- *   step accepts `"HH:MM"` and is converted to seconds.
- */
-const resolveInputProps = (props) => {
-  // If value is a stateSignal, pull type/min/max/step defaults from the signal's options.
-  // Explicit props take precedence over signal options.
-  const valueSignal = props.value;
-  if (isSignal(valueSignal) && valueSignal.options) {
-    const signalOptions = valueSignal.options;
-    for (const key of ["min", "max", "step"]) {
-      if (props[key] === undefined && signalOptions[key] !== undefined) {
-        props[key] = signalOptions[key];
-      }
-    }
-    if (props.type === undefined && signalOptions.type !== undefined) {
-      props.type =
-        VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
-    }
-    // If no explicit defaultValue, snapshot the signal's current default
-    // so that resetUIState restores to the original default — not the
-    // value the signal had at the time of the last re-render.
-    if (!Object.hasOwn(props, "defaultValue")) {
-      const defaultVal = signalOptions.getDefaultValue(false);
-      if (defaultVal !== undefined) {
-        props.defaultValue = defaultVal;
-      }
-    }
-  }
-
-  const currentType = props.type;
-  // Apply min/max/step formatters before anything else — this must run even for
-  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
-  const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
-  const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
-  if (currentTypeMinMaxFormatter) {
-    props.min = currentTypeMinMaxFormatter(props.min);
-    props.max = currentTypeMinMaxFormatter(props.max);
-  }
-  if (currentTypeStepFormatter) {
-    props.step = currentTypeStepFormatter(props.step);
-  }
-
-  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
-  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
-  if (currentType === "navi_number") {
-    if (props.inputMode === undefined) {
-      props.inputMode =
-        hasDecimalPlaces(props.step) ||
-        hasDecimalPlaces(props.min) ||
-        hasDecimalPlaces(props.max)
-          ? "decimal"
-          : "numeric";
-    }
-  }
-
-  const { charGuard } = props;
-  if (charGuard) {
-    if (charGuard === true || charGuard === "auto") {
-      // Auto-resolve charGuard from context.
-      let charGuardResolved;
-      const inputMode = props.inputMode;
-      if (inputMode === "numeric") {
-        charGuardResolved = "numeric";
-      } else if (inputMode === "decimal") {
-        charGuardResolved = "decimal";
-      } else if (currentType === "tel") {
-        charGuardResolved = "tel";
-      } else if (currentType === "email") {
-        charGuardResolved = "email";
-      }
-      if (charGuardResolved !== undefined) {
-        props.charGuard = charGuardResolved;
-      }
-    }
-    // charGuard is now resolved: derive inputMode from it if not already set.
-    if (props.inputMode === undefined && props.charGuard) {
-      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
-      if (autoMode) {
-        props.inputMode = autoMode;
-      }
-    }
-    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
-    if (props.pattern === undefined && props.charGuard) {
-      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
-      props.pattern = `${charClass}*`;
-    }
-  }
-
-  // Compute maxLength from max when inputMode is numeric/decimal.
-  // Done here (after inputMode is set) so controller.props has the resolved value.
-  if (props.maxLength === undefined) {
-    if (props.inputMode === "numeric") {
-      const { min, max } = props;
-      if (max === undefined) ; else {
-        const canBeNegative = min === undefined ? max < 0 : min < 0;
-        const signCharCount = canBeNegative ? 1 : 0;
-        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
-        props.maxLength = signCharCount + integerDigitCount;
-      }
-    } else if (props.inputMode === "decimal") {
-      const { min, max, step } = props;
-      if (max === undefined) ; else if (step === undefined) ; else {
-        const canBeNegative = min === undefined ? max < 0 : min < 0;
-        const signCharCount = canBeNegative ? 1 : 0;
-        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
-        const stepStr = String(step);
-        const dotIndex = stepStr.indexOf(".");
-        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
-        // no decimal part in maxLength since valid values are whole numbers anyway
-        const isIntegerStep = dotIndex === -1;
-        const decimalSignCharCount = isIntegerStep ? 0 : 1;
-        const decimalDigitCount = isIntegerStep
-          ? 0
-          : stepStr.length - dotIndex - 1;
-        props.maxLength =
-          signCharCount +
-          integerDigitCount +
-          decimalSignCharCount +
-          decimalDigitCount;
-      }
-    }
-  }
-
-  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
-  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
-    props.maxLengthGuard =
-      typeof props.maxLength === "number" ? props.maxLength : undefined;
-  }
-
-  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
-  if (!currentTypeDefaults) {
-    return;
-  }
-
-  for (const key of Object.keys(currentTypeDefaults)) {
-    if (props[key] === undefined) {
-      props[key] = currentTypeDefaults[key];
-    }
-  }
-  const targetType = currentTypeDefaults.type;
-  props.type = targetType;
-  resolveInputProps(props);
-};
-
-// Presets that imply a specific mobile keyboard inputMode.
-const INPUT_MODE_FROM_CHAR_GUARD = {
-  numeric: "numeric",
-  pin: "numeric",
-  card: "numeric",
-  tel: "tel",
-  decimal: "decimal",
-};
-
-const normalizeToDate = (value) => {
-  if (value === undefined || value === null) {
-    return null;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (value instanceof Date) {
-    return value;
-  }
-  return null;
-};
-
-const toInputDate = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-const toInputMonth = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  return `${yyyy}-${mm}`;
-};
-const toInputWeek = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  // ISO week number
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
-  const yearStart = new Date(d.getFullYear(), 0, 4);
-  const week =
-    Math.round(
-      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
-    ) + 1;
-  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
-};
-const toInputTime = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-};
-const toInputDatetime = (value) => {
-  const date = normalizeToDate(value);
-  if (!date) {
-    return value;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-};
-
-const MIN_MAX_FORMATTER_BY_TYPE = {
-  "date": toInputDate,
-  "month": toInputMonth,
-  "week": toInputWeek,
-  "time": toInputTime,
-  "datetime-local": toInputDatetime,
-  "datetime": toInputDatetime,
-};
-const STEP_FORMATTER_BY_TYPE = {
-  "time": timeStringToSeconds,
-  "datetime-local": timeStringToSeconds,
-  "datetime": timeStringToSeconds,
-};
-
-const hasDecimalPlaces = (value) => {
-  if (value === undefined || value === null) {
-    return false;
-  }
-  const num = Number(value);
-  return !isNaN(num) && !Number.isInteger(num);
-};
-
-installImportMetaCssBuild(import.meta);const css$y = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -32837,7 +32764,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -32850,7 +32777,6 @@ const InputRangeFieldInterface = props => {
     const ratio = (inputValue - input.min) / (input.max - input.min);
     input.parentNode.style.setProperty("--x-fill-ratio", ratio);
   };
-  resolveInputProps(props);
   const [rangeRootProps, rangeHostProps] = useControlProps(props, {
     controlType: "input"
   });
@@ -33575,7 +33501,7 @@ installImportMetaCssBuild(import.meta);/**
  *   The maxLength constraint remains active for form validation at submit.
  *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
  */
-const css$x = /* css */`
+const css$y = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: var(--navi-control-border-radius);
@@ -33862,7 +33788,7 @@ const useInputTextualProps = props => {
   });
 };
 const InputTextualUI = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_textual.jsx"];
   const {
     ui,
     discrete,
@@ -33954,7 +33880,6 @@ const InputTextualFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  resolveInputProps(props);
   return jsx(Next, {
     ...props
   });
@@ -34023,7 +33948,464 @@ const InputStyleCSSVars = {
 const InputPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value"];
 const InputPseudoElements = ["::-navi-loader"];
 
+/**
+ * Parses a time string into seconds.
+ * Accepts:
+ *   - number: returned as-is (already in seconds)
+ *   - "HH:MM" string: converted to seconds (e.g. "00:30" → 1800, "01:00" → 3600)
+ *   - undefined/null: returned as-is
+ */
+const timeStringToSeconds = (timeString) => {
+  if (typeof timeString !== "string") {
+    return timeString;
+  }
+  const colonIndex = timeString.indexOf(":");
+  if (colonIndex === -1) {
+    return Number(timeString);
+  }
+  const hours = parseInt(timeString.slice(0, colonIndex), 10);
+  const minutes = parseInt(timeString.slice(colonIndex + 1), 10);
+  return (hours * 60 + minutes) * 60;
+};
+
+const isToday = (value) => {
+  if (!value) {
+    return false;
+  }
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (typeof value === "string") {
+    return value === todayStr;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  if (value instanceof Date) {
+    const s = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+    return s === todayStr;
+  }
+  return false;
+};
+
+/**
+ * Returns the current time as "HH:MM", with an optional minute offset.
+ *
+ * @param {number} [offsetMinutes=0] - Minutes to add (negative = subtract).
+ *   E.g. getNowHours(-5) returns "now minus 5 minutes".
+ *
+ * @example
+ * getNowHours()       // "14:30"
+ * getNowHours(-5)     // "14:25"
+ */
+const getNowHours = (offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const clamped =
+    totalMinutes < 0
+      ? 0
+      : totalMinutes > 23 * 60 + 59
+        ? 23 * 60 + 59
+        : totalMinutes;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+/**
+ * Returns the current time rounded up to the nearest step boundary,
+ * with an optional minute offset applied first.
+ *
+ * This is useful to compute a step-aligned `min` for a time picker:
+ * passing it ensures the first available slot is always on a step boundary.
+ *
+ * @param {number} stepMinutes - Step size in minutes (e.g. 30).
+ * @param {number} [offsetMinutes=0] - Minutes to add before rounding (negative = subtract).
+ *
+ * @example
+ * // At 9:32, step 30, offset -5 → raw = 9:27 → ceil to 30 → "09:30"
+ * // At 9:38, step 30, offset -5 → raw = 9:33 → ceil to 30 → "10:00"
+ * getNowHoursRoundedToStep(30, -5)
+ */
+const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes() + offsetMinutes;
+  const aligned = Math.ceil(totalMinutes / stepMinutes) * stepMinutes;
+  const clamped =
+    aligned < 0 ? 0 : aligned > 23 * 60 + 59 ? 23 * 60 + 59 : aligned;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// Wires a default `uiAction` that writes user interactions back into
+// `props.signal`, and still calls whatever `uiAction` was explicitly passed.
+// Mutates `props.uiAction`. Guarded by a marker so the recursive
+// normalization below doesn't wrap an already-wrapped uiAction again.
+const wireUIActionToSignal = (props, signal, toSignalValue = (v) => v) => {
+  const existingUIAction = props.uiAction;
+  if (existingUIAction && existingUIAction.autoUpdateSignalWrapper) {
+    return;
+  }
+  const uiAction = (value, event) => {
+    signal.value = toSignalValue(value);
+    existingUIAction?.(value, event);
+  };
+  uiAction.autoUpdateSignalWrapper = true;
+  props.uiAction = uiAction;
+};
+
+// Maps validity type names → navi input type names.
+// Numeric signal types must not fall through to the native type="number"
+// (which adds spinner buttons and has poor UX) — they map to navi_number instead.
+const VALIDITY_TYPE_TO_INPUT_TYPE = {
+  boolean: "checkbox",
+  number: "navi_number",
+  integer: "navi_number",
+  percentage: "navi_percentage",
+};
+
+// Conceptual number types: define defaults and map to native type="number".
+// The `data-navi-input-type` attribute is set so constraint messages can use
+// domain-specific wording instead of the generic "Ce nombre doit être...".
+const NAVI_TYPE_DEFAULTS = {
+  navi_time: {
+    "type": "time",
+    "navi-input-type": "time",
+    "min": 0,
+    "max": 24 * 3600 - 1,
+    "step": 1,
+  },
+  navi_percentage: {
+    "type": "navi_number",
+    "navi-input-type": "percentage",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+  },
+  navi_number: {
+    type: "text",
+    autoCorrect: "off",
+    spellcheck: false,
+    autoComplete: "off",
+  },
+};
+
+/**
+ * resolveInputProps — normalizes input-related props that are shared across
+ * `<Picker>`, `<Input>` (textual) and `<Range>`. Mutates the props object in place.
+ *
+ * Normalization is applied recursively: a navi type may resolve to another navi
+ * type (e.g. `navi_percentage` → `navi_number` → `text`), and each step applies its
+ * own formatters and defaults before moving to the next.
+ *
+ * Steps applied for each type:
+ * 1. Record the original navi type in `props["navi-input-type"]` (first call only).
+ * 2. Apply defaults for the current type (min, max, step, and any other props),
+ *    only when the prop is not already set.
+ * 3. Apply min/max formatters (e.g. HH:MM string → number for duration types,
+ *    Date → formatted string for date/time types).
+ * 4. Apply step formatter (same conversion rules).
+ * 5. Remap `props.type` to the target type defined by the current type's defaults,
+ *    then recurse.
+ *
+ * Supported navi types and their targets:
+ * - `navi_percentage` → `navi_number`  (0–100, step 1)
+ * - `navi_number`     → `text`         (inputMode="numeric", no spin buttons implied)
+ * - `navi_time`       → `time`         (step in seconds)
+ *
+ * Standard HTML input types with formatters:
+ * - `date`, `month`, `week`, `time`, `datetime-local`, `datetime`:
+ *   min/max accept `Date` instances or timestamps and are converted to the
+ *   string format expected by the native input.
+ * - `time`, `datetime-local`, `datetime`:
+ *   step accepts `"HH:MM"` and is converted to seconds.
+ */
+const resolveInputProps = (props) => {
+  // `signal` is the only prop carrying a signal — `value`/`checked` are plain
+  // props like any other. Consumed and cleared up front so it never leaks
+  // onto the DOM element.
+  const signal = props.signal;
+  if (signal) {
+    props.signal = undefined;
+
+    const signalOptions = signal.options;
+    if (signalOptions) {
+      const signalOptions = signal.options;
+      for (const key of ["min", "max", "step"]) {
+        if (props[key] === undefined && signalOptions[key] !== undefined) {
+          props[key] = signalOptions[key];
+        }
+      }
+      if (props.type === undefined && signalOptions.type !== undefined) {
+        props.type =
+          VALIDITY_TYPE_TO_INPUT_TYPE[signalOptions.type] ?? signalOptions.type;
+      }
+    }
+
+    const isCheckable = props.type === "checkbox" || props.type === "radio";
+    if (isCheckable) {
+      if (Object.hasOwn(props, "defaultChecked")) ; else {
+        // If no explicit defaultChecked, derive it from the signal's default
+        // value so that resetUIState restores to the original default.
+        const defaultVal = signal.options.getDefaultValue(false);
+        if (defaultVal === undefined) ; else if (props.type === "radio") {
+          if (defaultVal === true) {
+            props.defaultChecked = true;
+          } else if (
+            Object.hasOwn(props, "value") &&
+            defaultVal === props.value
+          ) {
+            props.defaultChecked = true;
+          }
+        } else if (typeof defaultVal === "boolean") {
+          // Standalone checkbox bound to a boolean signal.
+          props.defaultChecked = defaultVal;
+        } else {
+          // Checkbox is a group member: defaultVal is the array of
+          // selected item values.
+          const checkboxValue = props.value;
+          props.defaultChecked =
+            Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
+        }
+      }
+      wireUIActionToSignal(props, signal, (v) => Boolean(v));
+      return;
+    }
+
+    if (signalOptions) {
+      if (Object.hasOwn(props, "defaultValue")) ; else {
+        // If no explicit defaultValue, snapshot the signal's current default
+        // so that resetUIState restores to the original default — not the
+        // value the signal had at the time of the last re-render.
+        const defaultVal = signalOptions.getDefaultValue(false);
+        if (defaultVal !== undefined) {
+          props.defaultValue = defaultVal;
+        }
+      }
+    }
+    wireUIActionToSignal(props, signal);
+  }
+
+  const currentType = props.type;
+  // Apply min/max/step formatters before anything else — this must run even for
+  // standard HTML types (date, time, etc.) that have no NAVI_TYPE_DEFAULTS entry.
+  const currentTypeMinMaxFormatter = MIN_MAX_FORMATTER_BY_TYPE[currentType];
+  const currentTypeStepFormatter = STEP_FORMATTER_BY_TYPE[currentType];
+  if (currentTypeMinMaxFormatter) {
+    props.min = currentTypeMinMaxFormatter(props.min);
+    props.max = currentTypeMinMaxFormatter(props.max);
+  }
+  if (currentTypeStepFormatter) {
+    props.step = currentTypeStepFormatter(props.step);
+  }
+
+  // For navi_number: choose inputMode based on whether step/min/max suggest decimals.
+  // inputMode="numeric" (integer keyboard) vs "decimal" (keyboard with decimal separator).
+  if (currentType === "navi_number") {
+    if (props.inputMode === undefined) {
+      props.inputMode =
+        hasDecimalPlaces(props.step) ||
+        hasDecimalPlaces(props.min) ||
+        hasDecimalPlaces(props.max)
+          ? "decimal"
+          : "numeric";
+    }
+  }
+
+  const { charGuard } = props;
+  if (charGuard) {
+    if (charGuard === true || charGuard === "auto") {
+      // Auto-resolve charGuard from context.
+      let charGuardResolved;
+      const inputMode = props.inputMode;
+      if (inputMode === "numeric") {
+        charGuardResolved = "numeric";
+      } else if (inputMode === "decimal") {
+        charGuardResolved = "decimal";
+      } else if (currentType === "tel") {
+        charGuardResolved = "tel";
+      } else if (currentType === "email") {
+        charGuardResolved = "email";
+      }
+      if (charGuardResolved !== undefined) {
+        props.charGuard = charGuardResolved;
+      }
+    }
+    // charGuard is now resolved: derive inputMode from it if not already set.
+    if (props.inputMode === undefined && props.charGuard) {
+      const autoMode = INPUT_MODE_FROM_CHAR_GUARD[props.charGuard];
+      if (autoMode) {
+        props.inputMode = autoMode;
+      }
+    }
+    // Build pattern from the resolved charGuard (preset name → class, or raw class passthrough).
+    if (props.pattern === undefined && props.charGuard) {
+      const charClass = CHAR_CLASS_PRESETS[props.charGuard] ?? props.charGuard;
+      props.pattern = `${charClass}*`;
+    }
+  }
+
+  // Compute maxLength from max when inputMode is numeric/decimal.
+  // Done here (after inputMode is set) so controller.props has the resolved value.
+  if (props.maxLength === undefined) {
+    if (props.inputMode === "numeric") {
+      const { min, max } = props;
+      if (max === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        props.maxLength = signCharCount + integerDigitCount;
+      }
+    } else if (props.inputMode === "decimal") {
+      const { min, max, step } = props;
+      if (max === undefined) ; else if (step === undefined) ; else {
+        const canBeNegative = min === undefined ? max < 0 : min < 0;
+        const signCharCount = canBeNegative ? 1 : 0;
+        const integerDigitCount = String(Math.floor(Math.abs(max))).length;
+        const stepStr = String(step);
+        const dotIndex = stepStr.indexOf(".");
+        // integer step + decimal inputMode is an unusual combo, but we stay consistent:
+        // no decimal part in maxLength since valid values are whole numbers anyway
+        const isIntegerStep = dotIndex === -1;
+        const decimalSignCharCount = isIntegerStep ? 0 : 1;
+        const decimalDigitCount = isIntegerStep
+          ? 0
+          : stepStr.length - dotIndex - 1;
+        props.maxLength =
+          signCharCount +
+          integerDigitCount +
+          decimalSignCharCount +
+          decimalDigitCount;
+      }
+    }
+  }
+
+  // Resolve maxLengthGuard boolean/auto → the computed maxLength number.
+  if (props.maxLengthGuard === true || props.maxLengthGuard === "auto") {
+    props.maxLengthGuard =
+      typeof props.maxLength === "number" ? props.maxLength : undefined;
+  }
+
+  const currentTypeDefaults = NAVI_TYPE_DEFAULTS[currentType];
+  if (!currentTypeDefaults) {
+    return;
+  }
+
+  for (const key of Object.keys(currentTypeDefaults)) {
+    if (props[key] === undefined) {
+      props[key] = currentTypeDefaults[key];
+    }
+  }
+  const targetType = currentTypeDefaults.type;
+  props.type = targetType;
+  resolveInputProps(props);
+};
+
+// Presets that imply a specific mobile keyboard inputMode.
+const INPUT_MODE_FROM_CHAR_GUARD = {
+  numeric: "numeric",
+  pin: "numeric",
+  card: "numeric",
+  tel: "tel",
+  decimal: "decimal",
+};
+
+const normalizeToDate = (value) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (value instanceof Date) {
+    return value;
+  }
+  return null;
+};
+
+const toInputDate = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+const toInputMonth = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  return `${yyyy}-${mm}`;
+};
+const toInputWeek = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  // ISO week number
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const yearStart = new Date(d.getFullYear(), 0, 4);
+  const week =
+    Math.round(
+      ((d - yearStart) / 86400000 - 3 + ((yearStart.getDay() + 6) % 7)) / 7,
+    ) + 1;
+  return `${d.getFullYear()}-W${String(week).padStart(2, "0")}`;
+};
+const toInputTime = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+};
+const toInputDatetime = (value) => {
+  const date = normalizeToDate(value);
+  if (!date) {
+    return value;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
+
+const MIN_MAX_FORMATTER_BY_TYPE = {
+  "date": toInputDate,
+  "month": toInputMonth,
+  "week": toInputWeek,
+  "time": toInputTime,
+  "datetime-local": toInputDatetime,
+  "datetime": toInputDatetime,
+};
+const STEP_FORMATTER_BY_TYPE = {
+  "time": timeStringToSeconds,
+  "datetime-local": timeStringToSeconds,
+  "datetime": timeStringToSeconds,
+};
+
+const hasDecimalPlaces = (value) => {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  const num = Number(value);
+  return !isNaN(num) && !Number.isInteger(num);
+};
+
 const Input = props => {
+  resolveInputProps(props);
   const {
     type
   } = props;
@@ -34062,7 +34444,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$w = /* css */`
+const css$x = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -34111,7 +34493,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -34379,7 +34761,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   .navi_group {
     --group-border-width: 1px;
 
@@ -34475,7 +34857,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
@@ -34486,7 +34868,7 @@ const Group = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$u = /* css */`
+const css$v = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -34506,7 +34888,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -34541,7 +34923,7 @@ const Unit = ({
   unit,
   plural,
   format = "long",
-  lang,
+  lang = languagesSignal.value,
   label,
   size = "smaller",
   sizeRatio,
@@ -34845,7 +35227,7 @@ const isTextInputElement = (el) => {
   );
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
@@ -34912,7 +35294,7 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 const InputDuration = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/control/input/input_duration.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
@@ -35414,7 +35796,7 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   .navi_radio_group {
     border-style: solid;
 
@@ -35434,7 +35816,7 @@ const RadioGroup = props => {
   return radioGroup;
 };
 const RadioGroupInterface = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/input/radio_group.jsx"];
   const {
     ref
   } = props;
@@ -35568,6 +35950,7 @@ const transferFocus = (containerEl, debugFocus, e, fallback) => {
   }
   if (!target) {
     if (fallback) {
+      reason = "focused element before open (fallback)";
       target = fallback;
     }
   }
@@ -35585,254 +35968,2376 @@ const transferFocus = (containerEl, debugFocus, e, fallback) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
-  .navi_dialog {
-    &[open] {
-      display: flex;
-      /* When centerInVisualViewport is enabled, --dialog-top-inset is set
-         dynamically to keep the dialog centered in the visual viewport
-         (accounts for the virtual keyboard on mobile). */
-      margin-top: var(--dialog-top-inset, auto);
-      margin-bottom: auto;
-      flex-direction: column;
-      transition: margin-top 0.1s ease-in-out;
+/**
+ * Owns open/close decision-making for a popup (Dialog or Popover): guards
+ * against duplicate requests and notifies the popup owner's own reactions.
+ *
+ * `controller.openEffect` is implemented by the controlled element (Dialog or
+ * Popover), reassigned on every render so it always closes over the latest
+ * props (scrollCapture, anchor, etc.). It performs whatever DOM side effects
+ * are needed to make the element actually open (`showModal()`/`showPopover()`,
+ * focus transfer, positioning, traps...) and returns its cleanup —
+ * the matching side effects to sync back to closed (`close()`/
+ * `hidePopover()`, releasing traps...). That cleanup is kept private to the
+ * controller (not exposed as a property) and invoked when the popup actually
+ * closes, however that happens.
+ *
+ * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
+ * their own internal triggers (backdrop click, Escape).
+ *
+ * `openHandler` is the popup owner's own business logic, passed once to
+ * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
+ * in the spirit of CloseWatcher
+ * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
+ * clearer naming than its cancel/close pair:
+ * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
+ *   open. Validation lives here.
+ * - `onClose(e)`: actually closing, not preventable — final reactions live here.
+ *
+ * The controller exposes matching action methods:
+ * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
+ * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
+ *   stopping after the first if denied. The popup may choose to stay open.
+ * - `close()`: closes for real — calls only `onClose`, skipping
+ *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
+ *   popup unmounting).
+ */
+const createOpenController = (
+  openHandler,
+  { debugInteraction } = {},
+) => {
+  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
+  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+
+  // Set true while we're waiting to see whether the click that follows a
+  // mousedown-close will land back on whatever would reopen us — see
+  // armSuppressNextOpenRequest below.
+  let suppressNextOpenRequest = false;
+  let disarmSuppressNextOpenRequest = null;
+
+  // When the popup closes because of a mousedown (e.g. clicking the
+  // backdrop), the browser still dispatches the matching "click" afterward.
+  // If that click lands back on the element that triggers open() (e.g. the
+  // picker button), it would immediately reopen the popup. We cannot
+  // preventDefault/stopPropagation the mousedown to stop that — the browser
+  // dispatches the click regardless.
+  //
+  // Instead: arm a capture-phase "click" listener on document. Capture fires
+  // before the click reaches its target, so by the time any bubble-phase
+  // click handler (e.g. the trigger button's onClick, which calls
+  // controller.open()) runs, `suppressNextOpenRequest` is already true and
+  // open() ignores the request — no need to know *which* element triggers
+  // it. A bubble-phase listener (runs after everything else, once the click
+  // reaches document) clears the flag if nothing consumed it, meaning this
+  // click never resulted in an open() call. A microtask is a last-resort
+  // safety net in case the click never reaches document at all (e.g. some
+  // ancestor called stopPropagation()).
+  const armSuppressNextOpenRequest = () => {
+    disarmSuppressNextOpenRequest?.();
+    const onCaptureClick = () => {
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      suppressNextOpenRequest = true;
+      document.addEventListener("click", onBubbleClick);
+      queueMicrotask(() => {
+        suppressNextOpenRequest = false;
+      });
+    };
+    const onBubbleClick = () => {
+      document.removeEventListener("click", onBubbleClick);
+      suppressNextOpenRequest = false;
+    };
+    disarmSuppressNextOpenRequest = () => {
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+    };
+    document.addEventListener("click", onCaptureClick, { capture: true });
+  };
+
+  const performClose = (closeEvent) => {
+    controller.opened = false;
+
+    prevent_reopen: {
+      const mousedownEvent = findEvent(closeEvent, "mousedown");
+      if (mousedownEvent) {
+        debugInteraction(
+          closeEvent,
+          `closed by mousedown -> ignore next click`,
+        );
+        armSuppressNextOpenRequest();
+        break prevent_reopen;
+      }
+
+      const spaceEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === " ",
+      );
+      if (spaceEvent) {
+        // space would trigger a click on the picker button causing it to re-open immediatly after closing
+        debugInteraction(
+          closeEvent,
+          `closed by space key -> prevent browser click (spaceEvent.preventDefault())`,
+        );
+        // browser won't try to dispatch click
+        // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
+        spaceEvent.preventDefault();
+        break prevent_reopen;
+      }
     }
 
-    &::backdrop {
-      background: rgba(0, 0, 0, 0.4);
+    // Sync the DOM closed first (releasing the focus trap) — only then run
+    // the owner's own reaction (onClose may restore focus to an element
+    // outside the popup, which the focus trap would otherwise fight while
+    // still active).
+    openEffectCleanup?.(closeEvent);
+    openEffectCleanup = null;
+    closeHandlers?.onClose?.(closeEvent);
+    closeHandlers = null;
+  };
+  const controller = {
+    opened: false,
+    openEffect: null,
+    open: (e, detail) => {
+      if (controller.opened || !controller.openEffect) {
+        return;
+      }
+      if (suppressNextOpenRequest) {
+        suppressNextOpenRequest = false;
+        return;
+      }
+      const requestOpenEvent = new CustomEvent("navi_request_open", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestOpenEvent, e);
+      controller.opened = true;
+      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
+      // by mutating it — openHandler reads it right after, synchronously.
+      controller.transferFocusOnOpen = (el) => {
+        // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
+        // e.detail.eventChain (built by chainEvent above) to recover the
+        // element a mousedown/click landed on. `e` itself is usually the raw
+        // native event: its own `.detail` is a number (click count) on a
+        // MouseEvent, so `e.detail.eventChain` is always undefined and the
+        // mousedown/click branches below never matched — silently falling
+        // back to `document.activeElement`, which is often `document.body`
+        // once mousedown.preventDefault() has kept focus from landing
+        // anywhere yet.
+        const focusedBeforeOpen = getFocusedBeforeTransfer(requestOpenEvent);
+        debugInteraction(
+          requestOpenEvent,
+          `focused element before open`,
+          focusedBeforeOpen,
+        );
+        // Picker's openController.open() reads this back synchronously right
+        // after openEffect() returns (see picker_custom.jsx useOpenController).
+        requestOpenEvent.detail.focusedBeforeOpen = focusedBeforeOpen;
+        transferFocus(el, debugInteraction, e, focusedBeforeOpen);
+        return (closeEvent) => {
+          markAutofocusRestoreOnClose(el);
+          const focusoutEvent = findEvent(closeEvent, "focusout");
+          if (focusoutEvent) {
+            debugInteraction(
+              closeEvent,
+              `closed by focusout -> let focus go away`,
+            );
+          } else {
+            const mousedownEvent = findEvent(closeEvent, "mousedown");
+            if (mousedownEvent) {
+              debugInteraction(
+                closeEvent,
+                "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+              );
+              mousedownEvent.preventDefault();
+            }
+            debugInteraction(
+              closeEvent,
+              `restore focus to previously focused element`,
+              focusedBeforeOpen,
+            );
+            focusedBeforeOpen.focus({ preventScroll: true });
+          }
+        };
+      };
+      const openEffectReturnValue =
+        controller.openEffect(requestOpenEvent) || null;
+      openEffectCleanup = (closeEvent) => {
+        openEffectReturnValue?.(closeEvent);
+      };
+      closeHandlers = openHandler(requestOpenEvent) || null;
+    },
+    requestClose: (
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
+    ) => {
+      if (!controller.opened) {
+        return;
+      }
+      const requestCloseEvent = new CustomEvent("navi_request_close", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestCloseEvent, e);
+      closeHandlers?.onRequestClose?.(requestCloseEvent);
+      if (requestCloseEvent.defaultPrevented) {
+        // The native <dialog> "cancel" event (Escape key) closes the dialog
+        // by default; prevent that default so denial actually keeps it open.
+        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
+        if (nativeCancelEvent) {
+          nativeCancelEvent.preventDefault();
+        }
+        return;
+      }
+      performClose(requestCloseEvent);
+    },
+    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      if (!controller.opened) {
+        return;
+      }
+      const closeEvent = new CustomEvent("navi_close", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(closeEvent, e);
+      // Skips onRequestClose entirely — there is no choice here.
+      performClose(closeEvent);
+    },
+  };
+  return controller;
+};
+
+// Created once per popup instance: openHandler is wrapped in a stable callback
+// so the controller identity never changes across renders, even though
+// Dialog/Popover read fresh closures (scrollTrap, etc.) via
+// openController.openEffect on every render.
+const useOpenController = (openHandler) => {
+  const debugInteraction = useDebugInteraction();
+  const stableOpenHandler = useStableCallback(openHandler);
+  const controllerRef = useRef(null);
+  if (!controllerRef.current) {
+    controllerRef.current = createOpenController(stableOpenHandler, {
+      debugInteraction,
+    });
+  }
+  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
+  // removes it from the tree without going through requestClose()), there is
+  // no choice to leave open — close it for real.
+  useLayoutEffect(() => {
+    return () => {
+      controllerRef.current.close();
+    };
+  }, []);
+  return controllerRef.current;
+};
+
+/**
+ * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
+ * shared between `useOpenControllerByProps` below (Dialog/Popover driving
+ * their own controller) and `picker_custom.jsx` (which derives its own
+ * boolean from history state instead of a literal `open` prop, but needs
+ * the exact same skip-if-already-matching / open-or-requestClose control
+ * flow, via a small `{ open, requestClose, opened }` adapter around its own
+ * `requestOpen`/`requestClose` wrappers).
+ *
+ * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
+ * @param {{ open?: boolean, defaultOpen?: boolean }} props
+ */
+const useOpenPropsEffectOnOpenController = (openController, props) => {
+  const { open, defaultOpen } = props;
+  // Tracks whether the effect below has ever run before — only the very
+  // first run gets the "mount already open" treatment (`open` truthy from
+  // the start, or the uncontrolled, mount-only `defaultOpen`); every
+  // subsequent `open` change is a real, later toggle and should animate
+  // normally like any other interactive open/close.
+  const isFirstRunRef = useRef(true);
+
+  useLayoutEffect(() => {
+    const isFirstRun = isFirstRunRef.current;
+    isFirstRunRef.current = false;
+
+    if (isFirstRun) {
+      if (open || defaultOpen) {
+        // silent: true — nothing was ever shown as "closed" for the user to
+        // see transition away from, so this first open skips the entrance
+        // animation entirely (see popover.jsx's own openEffect for how).
+        openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+          silent: true,
+        });
+      }
+      return;
+    }
+
+    if (open === undefined) {
+      return;
+    }
+    // Skip when the controller is already in the desired state.
+    // openController.opened tracks actual open/close (updated by onopen/onclose,
+    // not by renders) so it is the authoritative check against feedback loops.
+    if (open === openController.opened) {
+      return;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+  }, [open]);
+};
+
+const useOpenControllerByProps = (props) => {
+  const { onClose } = props;
+  // Lets an uncontrolled consumer (no openController of its own) still react
+  // to a self-initiated close (Escape, backdrop click, its own close button)
+  // without having to own a controller just to observe it — onClose is
+  // called on every real close, matching createOpenController's own
+  // { onRequestClose, onClose } contract (never denies the close itself).
+  const openController = useOpenController(() =>
+    onClose ? { onClose } : undefined,
+  );
+  useOpenPropsEffectOnOpenController(openController, props);
+  return openController;
+};
+
+/**
+ * Entry/exit animation CSS shared by Popover and Dialog.
+ *
+ * Relies on `transition-behavior: allow-discrete` so the browser keeps the
+ * popover/dialog rendered (not `display: none`) for the duration of the exit
+ * transition — no JS timing/animationend bookkeeping needed,
+ * `showPopover()`/`hidePopover()` (or `showModal()`/`close()`) can stay
+ * perfectly synchronous.
+ *
+ * Deliberately no `@starting-style`: the "closed" selectors below (keyed on
+ * `[aria-expanded="false"]`) are what an entry transition needs to animate
+ * *from* — but the popup's opener (popover.jsx) can only measure/position it
+ * once it's actually rendered, which is later than the point at which
+ * `@starting-style` would already have locked in its snapshot. Instead, the
+ * opener commits the correctly-measured "closed" frame (transitions
+ * suppressed) before flipping `aria-expanded` to `"true"` — an ordinary,
+ * already-rendered state change that transitions normally, no special "just
+ * born" handling needed.
+ *
+ * Both Popover and Dialog set `aria-expanded="true"`/`"false"` on themselves
+ * (imperatively, in sync with showPopover()/hidePopover() or
+ * showModal()/close()) so this file can key off a single "is currently
+ * open/shown" selector without needing to know which one it's styling.
+ *
+ * Timing is a CSS variable (with a default below) rather than a JS constant,
+ * so any consumer can override it per-instance from CSS (or via the
+ * `animationDuration` prop, wired to --popup-animation-duration through
+ * Box's styleCSSVars) without touching this file: `--popup-animation-duration`,
+ * `--popup-scale-from`, `--popup-border-radius`. `slide-from-*`'s own
+ * 100%-of-own-size distance is hardcoded for now rather than exposed as a
+ * variable — fine to revisit if a consumer ever needs to override it.
+ *
+ * `[navi-fade-animation]` below is Dialog's own, independent fade mechanism —
+ * driven by its own `fadeAnimation` prop, unrelated to any `animation` kind.
+ * Popover doesn't use this attribute at all: each of its `navi-animation`
+ * values gets its own opacity in/out written directly into its own rule
+ * below (repeated per kind rather than factored into one shared selector),
+ * so a kind's fade can diverge from the others later without disturbing
+ * anything else.
+ *
+ * Whenever either attribute is active, `box-shadow` is also transitioned
+ * to/from `none` (open/closed) — the consumer's own box-shadow (e.g.
+ * Popover's `demo_popover_box` class) only takes effect once fully open, so
+ * the shadow fades in/out along with the rest instead of looking flat while
+ * the popup is still moving.
+ *
+ * `animation="fading"` (Popover): opacity only, no motion.
+ *
+ * `animation="slide-from-*"` (anchorReference/point mode only): a real
+ * translate-based entrance, 8 directions (cardinal + 4 diagonals), each
+ * 100%-of-own-size. Popover always resolves `animation="auto"`/`"sliding"`
+ * to one of these concretely in JS (see popover.jsx's
+ * `resolveDirectionValue`), so there's no bare `animation="sliding"`
+ * selector here at all — a point/corner has no anchor edge to grow out of,
+ * so it slides in instead. The word names *where it comes from*: placed
+ * "top" (a point/corner), it slides in from the top.
+ *
+ * `animation="expand-*"` (a real anchor only, explicit opt-in — "scaling"
+ * reads better overall, see popover.jsx's top comment): grows out of the
+ * anchor's own edge via `scale` + `transform-origin` instead of a translate, which
+ * visually travels *through* the anchor element on its way in. 8 directions
+ * (cardinal + 4 diagonals) — cardinal ones scale a single axis only
+ * (`expand-up`/`expand-down`: Y only; `expand-left`/`expand-right`: X
+ * only), diagonals scale both. The word names the motion/growth direction,
+ * the opposite compass point from the point/corner family above: placed
+ * "top" of the anchor, it grows *up*, away from the anchor (which sits
+ * below it) — not "from the top".
+ *
+ * `animation="scaling"`: a plain `scale` transform, `--popup-scale-from`
+ * (default 0.9) to `1`, uniform on both axes, no direction/edge involved.
+ * Popover picks this automatically for `animation="auto"` for any real
+ * anchor, or a point/corner placed dead-center (both positionArea axes
+ * overlapping the anchor — there's no sensible direction to slide from in
+ * that case).
+ */
+
+const popupCss = /* css */ `
+  @layer navi {
+    .navi_popover,
+    .navi_dialog {
+      --popup-animation-duration: 0.18s;
+      --popup-scale-from: 0.9;
+
+      --popup-opacity-duration: var(--popup-animation-duration);
+      --popup-translate-duration: var(--popup-animation-duration);
+      --popup-scale-duration: var(--popup-animation-duration);
+    }
+  }
+
+  .navi_popover,
+  .navi_dialog {
+    /* left/top folded into this same list (not left to each of Popover's/
+       Dialog's own base rule alone) — a more specific selector's own
+       transition-property replaces the base rule's list wholesale rather
+       than adding to it, so left/top's own transition would otherwise stop
+       applying for as long as navi-animation is set (which, unlike the
+       open/close transition itself, is the element's *entire* open
+       duration — see openEffect in popover.jsx/dialog.jsx). Duration is
+       driven by --popup-position-transition-duration either way — see
+       applyNewPosition's own doc in visible_rect.js for what sets it and
+       why. */
+    &[navi-animation] {
+      transition-property:
+        display, overlay, opacity, translate, scale, box-shadow, left, top;
+      transition-duration:
+        var(--popup-animation-duration), var(--popup-animation-duration),
+        var(--popup-opacity-duration), var(--popup-translate-duration),
+        var(--popup-scale-duration), var(--popup-animation-duration),
+        var(--popup-position-transition-duration, 0s),
+        var(--popup-position-transition-duration, 0s);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+    }
+
+    /* box-shadow fades in/out alongside any animation kind, instead of
+         staying flat while the popup is still moving. */
+    &[aria-expanded="false"] {
+      &[navi-animation] {
+        box-shadow: none;
+      }
+    }
+
+    /* fading — opacity only, no motion. */
+    &[navi-animation="fading"] {
+      opacity: 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+      }
+    }
+
+    /* scaling — grows from --popup-scale-from (default 0.9) to full size,
+         centered, no direction involved. */
+    &[navi-animation="scaling"] {
+      opacity: 1;
+      translate: 0 0;
+      scale: 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+
+    /* slide — anchorReference/point mode family: direction multipliers,
+         one per concrete navi-animation value, 100%-of-own-size distance
+         (see this file's top comment). */
+    &[navi-animation="slide-from-top"] {
+      --x-popup-slide-x: 0;
+      --x-popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-bottom"] {
+      --x-popup-slide-x: 0;
+      --x-popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-left"] {
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: 0;
+    }
+    &[navi-animation="slide-from-right"] {
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: 0;
+    }
+    &[navi-animation="slide-from-top-left"] {
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-top-right"] {
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: -1;
+    }
+    &[navi-animation="slide-from-bottom-left"] {
+      --x-popup-slide-x: -1;
+      --x-popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-bottom-right"] {
+      --x-popup-slide-x: 1;
+      --x-popup-slide-y: 1;
+    }
+    &[navi-animation="slide-from-top"],
+    &[navi-animation="slide-from-bottom"],
+    &[navi-animation="slide-from-left"],
+    &[navi-animation="slide-from-right"],
+    &[navi-animation="slide-from-top-left"],
+    &[navi-animation="slide-from-top-right"],
+    &[navi-animation="slide-from-bottom-left"],
+    &[navi-animation="slide-from-bottom-right"] {
+      opacity: 1;
+      translate: 0 0;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
+        translate: calc(var(--x-popup-slide-x, 0) * 100%)
+          calc(var(--x-popup-slide-y, -1) * 100%);
+      }
+    }
+  }
+
+  .navi_popover {
+    /* expand — real-anchor family (see this file's top comment): grows
+         out of the anchor's own edge via transform-origin + scale.
+         Cardinal directions scale a single axis only; diagonals scale
+         both. */
+    &[navi-animation="expand-up"] {
+      opacity: 1;
+      transform-origin: bottom;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: 1 var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down"] {
+      opacity: 1;
+      transform-origin: top;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: 1 var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-left"] {
+      opacity: 1;
+      transform-origin: right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from) 1;
+      }
+    }
+    &[navi-animation="expand-right"] {
+      opacity: 1;
+      transform-origin: left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from) 1;
+      }
+    }
+    &[navi-animation="expand-up-left"] {
+      opacity: 1;
+      transform-origin: bottom right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-up-right"] {
+      opacity: 1;
+      transform-origin: bottom left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down-left"] {
+      opacity: 1;
+      transform-origin: top right;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
+    }
+    &[navi-animation="expand-down-right"] {
+      opacity: 1;
+      transform-origin: top left;
+      scale: 1 1;
+      &[aria-expanded="false"] {
+        opacity: 0;
+        scale: var(--popup-scale-from);
+      }
     }
   }
 `;
+
+/**
+ * Small, renderer-agnostic helpers shared by Popover and Dialog's own custom
+ * (non-top-layer) renderers — operate on a plain DOM element, no knowledge
+ * of which of the two owns it.
+ */
+
+
+/**
+ * Disables pointer-events on `el` until its current CSS transition settles
+ * (via `transitionend`, with a safety `setTimeout` fallback matching the
+ * longest `transition-duration` in case nothing actually transitions or an
+ * event is missed) — avoids the cursor changing/something becoming
+ * clickable while the popup is still visually moving into or out of place.
+ *
+ * Returns a "cancel" function: doesn't restore pointer-events (a fresh call
+ * for the next open/close is about to set its own state) — only prevents
+ * this stale instance's `transitionend` listener/timeout from firing later
+ * and clobbering that fresh state.
+ */
+const suppressPointerEventsDuringTransition = (el) => {
+  el.style.pointerEvents = "none";
+  let settled = false;
+  const onTransitionEnd = (transitionEvent) => {
+    if (transitionEvent.target === el) {
+      finish();
+    }
+  };
+  const finish = () => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    el.style.pointerEvents = "";
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+  el.addEventListener("transitionend", onTransitionEnd);
+  const durationsInSeconds = getComputedStyle(el)
+    .transitionDuration.split(",")
+    .map((value) => parseFloat(value) || 0);
+  const longestDurationMs = Math.max(0, ...durationsInSeconds) * 1000;
+  const safetyTimeoutId = setTimeout(finish, longestDurationMs + 50);
+  return () => {
+    if (settled) {
+      return;
+    }
+    settled = true;
+    el.removeEventListener("transitionend", onTransitionEnd);
+    clearTimeout(safetyTimeoutId);
+  };
+};
+
+/**
+ * Hides the backdrop, deferring until the browser's matching "click" fires
+ * when `closeEvent` was triggered by a mousedown (see popover.jsx's top
+ * comment for why) — same capture-phase-on-document pattern as
+ * armSuppressNextOpenRequest in open_controller.js, which a plain timeout
+ * can't safely replace: mouseup (and the click that follows it) can land an
+ * arbitrarily long time after mousedown (the user is still holding the
+ * button down), so a short timeout can fire first and hide the backdrop
+ * before its own click ever arrives. A capture-phase listener on document
+ * fires for every click regardless of what any bubble-phase handler does
+ * downstream, so no fallback timer is needed.
+ *
+ * `hide` is the caller's own way to actually hide the backdrop
+ * (`hidePopover()` for a top-layer backdrop, a plain `style.display = "none"`
+ * for a plain div) — this helper only owns the mousedown/click timing.
+ *
+ * Returns a disarm function (or undefined if hidden immediately), so a
+ * fresh open can cancel a pending hide it's about to make redundant.
+ */
+const armPointerDownOutsideClose = (closeEvent, hide) => {
+  const mousedownEvent = findEvent(closeEvent, "mousedown");
+  if (!mousedownEvent) {
+    hide();
+    return undefined;
+  }
+  const onClick = () => {
+    document.removeEventListener("click", onClick, { capture: true });
+    hide();
+  };
+  document.addEventListener("click", onClick, { capture: true });
+  return () => {
+    document.removeEventListener("click", onClick, { capture: true });
+  };
+};
+
+/**
+ * Maps a positionArea y/x pair to a concrete `navi-animation` value (a
+ * `prefix` plus a direction word), or `null` if both axes overlap the anchor
+ * (no direction at all — that's `resolvedAnimationKind === "scaling"`
+ * territory instead, see resolveAutoAnimationKind below).
+ *
+ * `prefix: "slide-from"` (used with no real anchor — Dialog always, Popover
+ * when docked) keeps the word as the compass direction the popup comes
+ * from: placed "top" (a point/corner), it slides in from the top.
+ * `prefix: "expand"` (a real anchor, Popover-only) uses the motion/growth
+ * direction instead, the opposite compass point: placed "top" of the
+ * anchor, it moves/grows up, away from the anchor (which sits below it).
+ *
+ * "inset-*"/"center" contribute no direction on their axis either way.
+ */
+const resolveDirectionValue = (y, x, { prefix }) => {
+  const yWord =
+    y === "top"
+      ? prefix === "expand"
+        ? "up"
+        : "top"
+      : y === "bottom"
+        ? prefix === "expand"
+          ? "down"
+          : "bottom"
+        : null;
+  const xWord = x === "left" ? "left" : x === "right" ? "right" : null;
+  if (!yWord && !xWord) {
+    return null;
+  }
+  return yWord && xWord
+    ? `${prefix}-${yWord}-${xWord}`
+    : `${prefix}-${yWord || xWord}`;
+};
+
+/**
+ * Shared `animation="auto"`/`true` resolution: "scaling" reads best overall
+ * — picked for any real anchor, or for a point/corner placed dead-center
+ * (both positionArea axes overlapping — there's no sensible direction to
+ * slide from in that case). "sliding" otherwise. `anchor` is `undefined`
+ * for any no-anchor/docked case (Dialog always, Popover's own custom
+ * renderer when there's no real anchor), so this collapses to "scaling"
+ * there only for the dead-center case, "sliding" otherwise. The two
+ * "overlapping" booleans below describe the *positionArea* itself (a bare
+ * word vs. "inset-"/"center"), not anything about the anchor — they'd
+ * mean exactly the same thing even with no anchor at all, since it's the
+ * position strategy, not the anchor, that decides whether there's a
+ * direction to slide from.
+ */
+const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
+  const yIsOverlapping =
+    parsedPositionArea.y !== "top" && parsedPositionArea.y !== "bottom";
+  const xIsOverlapping =
+    parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
+  return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A dialog is centered in the viewport by default, with no anchor to grow
+ * out of or slide in from — `animation={true}`/`"auto"` resolves through
+ * Popover's own no-real-anchor path (see popover.jsx's own top comment).
+ * `positionArea` accepts the same grammar Popover does (see
+ * popup_shared.js), even though several combinations land identically here
+ * since Dialog is never really anchored — kept distinct anyway because
+ * `positionArea` still picks which animation direction plays. `anchor` only
+ * ever affects the `--anchor-width`/`--anchor-height` CSS vars (sizing the
+ * dialog relative to whatever opened it) — Dialog's own positioning is never
+ * relative to it, unlike Popover.
+ *
+ * Two rendering strategies, picked via `layer`: `DialogAsModal` (a real
+ * `<dialog>`, `showModal()`, top layer — native focus trap,
+ * `Escape`-to-cancel, hardware/gesture back-button dismissal, all for free)
+ * and `DialogLocal` (also a real `<dialog>`, shown via the non-modal
+ * `.show()` instead so it stays in normal document flow — `position:
+ * absolute` relative to its own positioned ancestor, clipped by it, same
+ * motivation as Popover's own `PopoverCustom`).
+ *
+ * `.show()` gives up everything `showModal()` gets for free, which
+ * `DialogLocal` reimplements itself: a focus trap (scoped to its own
+ * positioned ancestor, not `document`) and `Escape`-to-close (`.show()`
+ * dialogs don't fire "cancel" on Escape the way a modal one does).
+ * **Deliberately NOT reimplemented: hardware/gesture back-button
+ * dismissal** — no public web API hooks into that outside the browser's own
+ * native modal-dismissal stack, which only a genuine `showModal()` element
+ * participates in. An accepted, intentional limitation of `layer="local"`,
+ * not an oversight.
+ *
+ * `DialogAsModal`'s own backdrop is the native `::backdrop` pseudo-element,
+ * not a real rendered element — simpler than the alternative turned out to
+ * be: a `showModal()`-shown `<dialog>` makes the rest of the document
+ * genuinely non-interactive while open, so a real backdrop `<div
+ * popover="manual">` never actually received a `mousedown` at all (tried
+ * and reverted). Outside-click detection is instead a plain
+ * `document`-level `mousedown` listener, coordinate-based against
+ * `dialogEl`'s own rect rather than target-based (a backdrop click doesn't
+ * reliably fire `dialogEl`'s own `mousedown` either).
+ *
+ * `DialogLocal` wraps its dialog element in a `.navi_dialog_clip_wrapper`
+ * (mirrors Popover's own `.navi_popover_clip_wrapper`) purely to absorb
+ * overflow growth from a translate/scale entrance transition before it
+ * reaches the real container.
+ */
+const css$s = /* css */`
+  @layer navi {
+    .navi_dialog {
+      /* min gap between dialog edges and viewport */
+      /* not named margin because it's not implemented with margins (which are needed for centering) */
+      --dialog-viewport-spacing: 3dvw;
+
+      --dialog-maxmax-width: calc(
+        var(--navi-vvw) - 2 * var(--dialog-viewport-spacing)
+      );
+      --dialog-maxmax-height: calc(
+        var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
+      );
+
+      --dialog-border-radius: var(--navi-popup-border-radius);
+      --dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
+      --dialog-outline-width: var(--navi-focus-outline-width);
+      --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
+      --dialog-outline-color: var(--navi-focus-outline-color);
+      --dialog-box-shadow: var(--navi-popup-box-shadow);
+      --dialog-background-color: var(--navi-popup-background-color);
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — same purpose as
+     Popover's own .navi_popover_clip_wrapper: a plain, borderless div sized
+     to exactly match the dialog's own positioned ancestor, absorbing any
+     scrollable-overflow growth a translate/scale entrance transition can
+     cause in some browsers before it ever reaches the real container. */
+  .navi_dialog_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    /* Otherwise-invisible itself, but sits between the dialog and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the dialog itself (e.g. side_panel.jsx) would otherwise inherit this
+       wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_dialog {
+      pointer-events: auto;
+    }
+  }
+
+  .navi_dialog {
+    /* Computed once, reused by both max-width itself and min-width's own
+       clamp below (see its comment for why) — avoids repeating the same
+       min(..., ...) expression twice. */
+    --x-dialog-max-width: min(
+      var(--dialog-max-width, var(--dialog-maxmax-width)),
+      var(--container-position-remaining-width, var(--dialog-maxmax-width)),
+      var(--dialog-maxmax-width)
+    );
+    --x-dialog-max-height: min(
+      var(--dialog-max-height, var(--dialog-maxmax-height)),
+      var(--container-position-remaining-height, var(--dialog-maxmax-height)),
+      var(--dialog-maxmax-height)
+    );
+
+    /* Base default: also the custom renderer's own permanent value — its
+       containing block is genuinely its nearest positioned ancestor,
+       regardless of positionArea. See the [data-layer="top"] rule below for
+       why the via-attribute renderer overrides this. Position is always
+       JS-driven (pickPositionRelativeTo sets top/left directly, see
+       useDialogProps below) — no CSS alignment/inset math here at all,
+       unlike an earlier version of this file. */
+    position: absolute;
+    inset: unset;
+    min-width: min(
+      max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
+      var(--x-dialog-max-width)
+    );
+    max-width: var(--x-dialog-max-width);
+    min-height: min(
+      max(var(--anchor-height, 0px), var(--dialog-min-height, 0px)),
+      var(--x-dialog-max-height)
+    );
+    max-height: var(--x-dialog-max-height);
+    margin: 0;
+    flex-direction: column;
+    background-color: var(--dialog-background-color);
+    border-width: var(--dialog-border-width);
+    border-style: solid;
+    border-color: var(--dialog-border-color);
+    border-radius: var(--dialog-border-radius);
+    outline-width: var(--dialog-outline-width);
+    outline-color: var(--dialog-outline-color);
+    outline-offset: 0;
+    box-shadow: var(--dialog-box-shadow);
+    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
+       transition) for most repositions (scroll, in particular, needs to
+       track its target in lockstep), a real duration only when the
+       reposition was itself triggered by a resize. */
+    transition-property: left, top;
+    transition-duration: var(--popup-position-transition-duration, 0s);
+    transition-timing-function: ease-out;
+
+    &::backdrop {
+      background: var(--navi-backdrop-close-background);
+    }
+    &[data-pointer-interaction-outside="capture"]::backdrop {
+      background: var(--navi-backdrop-capture-background);
+      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+
+    /* Nested under &[navi-animation] (not the other way around) so every
+       attribute selector compiles *before* ::backdrop, not after — a
+       pseudo-element can't be qualified by an attribute of its own
+       (::backdrop[navi-animation] would never match anything), only by an
+       attribute of the *originating* element it's generated for. */
+    &[navi-animation] {
+      &::backdrop {
+        opacity: 1;
+        transition-property: display, overlay, opacity;
+        transition-duration: var(--popup-animation-duration, 0.18s);
+        transition-timing-function: ease;
+        transition-behavior: allow-discrete;
+
+        @starting-style {
+          opacity: 0;
+        }
+      }
+      &[aria-expanded="false"]::backdrop {
+        opacity: 0;
+      }
+    }
+
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+
+    &[open] {
+      display: flex;
+    }
+
+    /* Via-attribute renderer only — promoted to the top layer, so its
+       containing block is the viewport rather than any positioned
+       ancestor. Not left to the native :modal UA stylesheet's own default
+       (also position: fixed, but with its own margin/inset assumptions) so
+       that JS-set top/left (see useDialogProps below) always wins
+       cleanly. */
+    &[data-layer="top"] {
+      position: fixed;
+    }
+
+    /* [open] above is already scoped (display only turns on while shown),
+       but that alone isn't enough: a consumer whose own CSS also sets an
+       *unconditional* display (e.g. Popup's own flex prop, needed so
+       SidePanel + List can share a bounded height — see side_panel.jsx)
+       still competes for the same property while dialogEl is closed, and
+       CSS origin rules mean *any* author rule — including that unrelated
+       one — beats the UA stylesheet's own dialog:not([open]) default
+       regardless of specificity. [navi-hidden] (see useDialogProps'
+       contentProps, toggled in openEffect/close below) is the real,
+       load-bearing hide mechanism whenever that happens; harmless/
+       redundant the rest of the time. */
+    &[navi-hidden] {
+      display: none !important;
+    }
+  }
+
+  /* Custom renderer only — .show()'d dialogs get no ::backdrop, so this is
+     a real sibling element instead, same idea/CSS shape as Popover's own
+     .navi_popover_backdrop (see popover.jsx's top comment for the design
+     this mirrors). Always rendered (never skipped like Popover's own
+     "none" case): a dialog is always modal, so there's always at least a
+     click-absorbing backdrop, matching what showModal() already gives the
+     via-attribute renderer for free regardless of
+     pointerInteractionOutsideEffect. */
+  .navi_dialog_backdrop {
+    --popup-animation-duration: 0.18s;
+
+    position: absolute;
+    inset: 0;
+    border: none;
+    /* Always clickable while actually rendered (display: none while
+       genuinely closed already makes it non-interactive on its own) — an
+       outside click should close the dialog even while it's still
+       animating in, not just once the entrance transition settles. Only
+       the content itself (.navi_dialog, via suppressPointerEventsDuringTransition
+       in openEffect) gets pointer-events: none mid-transition. */
+    pointer-events: auto;
+
+    /* A plain div, unlike dialogEl itself (a real <dialog>, natively hidden
+       by default until .show()/.showModal() adds [open]) — needs its own
+       starting-hidden mechanism. [navi-hidden] is set from useDialogProps'
+       own backdropProps (recomputed from openController.opened on every
+       render, present from the very first one), then toggled by plain
+       removeAttribute/setAttribute in openEffect/close, never an explicit
+       display override — removing the attribute just lets this rule stop
+       matching, so whatever display the box would otherwise have applies
+       on its own. */
+    &[navi-hidden] {
+      display: none;
+    }
+
+    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
+    &[data-pointer-interaction-outside="close"] {
+      background: var(--navi-backdrop-close-background);
+    }
+    &[data-pointer-interaction-outside="capture"] {
+      background: var(--navi-backdrop-capture-background);
+      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+
+    &[navi-animation] {
+      opacity: 1;
+      transition-property: display, opacity;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
+      }
+    }
+  }
+
+  ${popupCss}
+`;
+
+/**
+ * A dialog box — modal by default (real `<dialog>` + `showModal()`, browser
+ * top layer), or confined to a local container via `layer="local"`. See
+ * this file's own top comment for the full architecture (positionArea
+ * grammar, anchor's sizing-only role, backdrop mechanics).
+ *
+ * @param {object} props
+ * @param {"top"|"local"} [props.layer="top"] - `"top"`: `showModal()`'d
+ *   into the browser's own top layer (native focus trap, `Escape`-to-cancel,
+ *   hardware back-button dismissal, rest-of-document made inert). `"local"`:
+ *   shown via the non-modal `.show()` instead, staying in normal document
+ *   flow inside its own positioned ancestor — confined to (and clipped by)
+ *   that container instead of the whole viewport.
+ * @param {string} [props.positionArea="center"] - Where to dock the dialog
+ *   within its container (the viewport for `layer="top"`, the positioned
+ *   ancestor for `layer="local"`) — Dialog is never anchored to a real
+ *   element for positioning purposes. Same grammar as `Popover`'s own
+ *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): a single
+ *   compass token — `top`/`top-start`/`top-end`/`top-left`/`top-right`,
+ *   `right`/`right-start`/`right-end`, `bottom`/`bottom-start`/
+ *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
+ *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
+ *   `inset(top)`) for the overlapping variant.
+ * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
+ *   between the dialog and the edges of its container.
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
+ *   both just absorb the click without closing (visually dimmed backdrop vs.
+ *   not) — a dialog is always modal one way or another, so there's always
+ *   at least a click-absorbing backdrop regardless of this prop.
+ * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
+ *   dialog so the page/container behind it can't scroll while it's open.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
+ *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
+ *   value is used as-is.
+ * @param {string} [props.animationDuration] - Maps to
+ *   `--popup-animation-duration`.
+ * @param {Element|{current: Element}} [props.anchor] - Only ever sizes the
+ *   dialog via the `--anchor-width`/`--anchor-height` CSS vars — never used
+ *   for positioning (see this file's top comment). Defaults to whatever
+ *   triggered the open (`e.detail.anchor`), if any.
+ * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
+ *   so it can never push the dialog past `--dialog-maxmax-width` (the
+ *   viewport/container-spacing ceiling) regardless of how large a value is
+ *   passed.
+ * @param {string} [props.maxWidth] - Maps to `--dialog-max-width`.
+ * @param {string} [props.minHeight] - Maps to `--dialog-min-height`, same
+ *   clamping as `minWidth`.
+ * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
+ * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
+ *   `autoFocus="fallback"` below has somewhere to land when the dialog has
+ *   no other focusable descendant of its own.
+ * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
+ *   `use_auto_focus.js` — `"fallback"` focuses the dialog itself if it has
+ *   no other focusable descendant.
+ * @param {boolean} [props.open] - Controlled open state.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state — plays no entrance animation (nothing was ever shown as
+ *   "closed" for the user to see it transition away from).
+ * @param {(event: Event) => void} [props.onClose] - Called when the dialog
+ *   actually closes — not preventable (see `open_controller.js`'s own
+ *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
+ *   veto a close instead).
+ * @param {object} [props.openController] - Advanced: an externally-owned
+ *   open controller (see `open_controller.js`) for a caller that wants to
+ *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
+ *   by `picker_custom.jsx`).
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ */
 const Dialog = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/popup/dialog.jsx"];
+  if (props.openController) {
+    return jsx(ControlledDialog, {
+      ...props
+    });
+  }
+  return jsx(UncontrolledDialog, {
+    ...props
+  });
+};
+
+// No openController passed: this Dialog is used declaratively (e.g. driven
+// by --navi-toggle/--navi-open/--navi-close commands, the `open` prop, or
+// `defaultOpen`) rather than owned by a parent component.
+const UncontrolledDialog = props => {
+  const openController = useOpenControllerByProps(props);
+  return jsx(ControlledDialog, {
+    ...props,
+    open: undefined,
+    defaultOpen: undefined,
+    onClose: undefined,
+    openController: openController,
+    onnavi_request_open: e => {
+      openController.open(e, {
+        anchor: e.detail?.anchor ?? e.detail?.source
+      });
+    },
+    onnavi_request_close: e => {
+      openController.requestClose(e, {
+        isCancel: e.detail?.isCancel
+      });
+    }
+  });
+};
+
+// Picks which rendering strategy actually mounts, from `layer` alone — see
+// this file's top comment. Done after the controlled/uncontrolled split
+// above, so an openController is always already resolved by the time
+// DialogAsModal/DialogLocal (and the useDialogProps hook they share) ever
+// run.
+const ControlledDialog = props => {
+  if (props.layer === "local") {
+    return jsx(DialogLocal, {
+      ...props
+    });
+  }
+  return jsx(DialogAsModal, {
+    ...props
+  });
+};
+const DialogAsModal = props => {
+  const [backdropProps, contentProps] = useDialogProps(props);
+  return jsxs(Fragment$1, {
+    children: [backdropProps && jsx(Box, {
+      ...backdropProps
+    }), jsx(Box, {
+      ...contentProps
+    })]
+  });
+};
+const DialogLocal = props => {
+  const [backdropProps, contentProps] = useDialogProps(props);
+  return jsxs(Fragment$1, {
+    children: [backdropProps && jsx(Box, {
+      ...backdropProps
+    }), jsx("div", {
+      className: "navi_dialog_clip_wrapper",
+      children: jsx(Box, {
+        ...contentProps
+      })
+    })]
+  });
+};
+
+/**
+ * Everything both rendering strategies share once an `openController` is
+ * already resolved: focus/debug/id plumbing, the open-commit sequence, the
+ * close handler — inlined in `openEffect`, branching on `isModal` at each
+ * point the two renderers genuinely differ (same pattern as popover.jsx's
+ * own usePopoverProps — see its top comment for why this stays inline
+ * rather than split into two functions). Returns `[backdropProps,
+ * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
+ * (its own backdrop is native, not a real element).
+ */
+const useDialogProps = props => {
+  const backdropProps = {};
+  const contentProps = {};
   const {
     openController,
-    anchorRef,
+    // "top" (default) → real <dialog>, showModal(), the browser's own top
+    // layer. "local" → also a real <dialog>, but shown via the non-modal
+    // .show() instead, staying in normal document flow, position: absolute
+    // relative to its own positioned ancestor. See this file's top comment.
+    layer = "top",
+    // Same grammar as Popover's own positionArea — see this file's top
+    // comment and popup_shared.js's parsePositionArea.
+    positionArea = "center",
+    marginWithContainer = 0,
+    // "close" (default) closes on an outside click. "capture"/"none" both
+    // just absorb it without closing — for the via-attribute renderer,
+    // showModal() already makes the rest of the page inert, so there's
+    // nothing for a click to reach either way; for the custom renderer,
+    // there's no native inert-ing, so the real backdrop below is what
+    // actually makes "capture"/"none" behave the same way here too.
+    pointerInteractionOutsideEffect = "close",
+    scrollCapture,
+    animation,
+    // Only ever affects --anchor-width/--anchor-height (see this file's top
+    // comment) — Dialog's own positioning is never relative to it.
+    anchor,
+    // Makes the dialog itself a valid focus target so autoFocus="fallback"
+    // below has somewhere to land when it contains nothing focusable of its
+    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // programmatically). <dialog> has no default tabindex of its own.
+    tabIndex = -1,
+    // See use_auto_focus.js's own docs for why this must never reach the DOM
+    // as a plain `autofocus` attribute — useAutoFocus below takes over
+    // instead, so it's read here rather than left in `rest`.
+    autoFocus = "fallback",
+    onKeyDown,
     children,
-    scrollTrap,
-    pointerTrap,
-    centerInVisualViewport: centerInVisualViewportProp,
     ...rest
   } = props;
+  const isModal = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const backdropRef = useRef();
+  // Disarms a still-pending backdrop hide from a previous close (see
+  // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
+  const disarmBackdropHideRef = useRef(null);
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+  const debugInteraction = useDebugInteraction();
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
+  const positionAreaParseResult = parsePositionArea(positionArea);
+  if (!positionAreaParseResult) {
+    console.warn(`Dialog: invalid positionArea="${positionArea}"`);
+  }
+  const parsedPositionArea = positionAreaParseResult ?? {
+    y: "center",
+    x: "center"
+  };
+  const isAutoAnimation = animation === true || animation === "auto";
+  // Dialog never has a real anchor (see this file's top comment), so this
+  // is always the "no anchor" path — the same one Popover's own custom
+  // renderer falls into when it has no real anchor either.
+  const resolvedAnimationKind = isAutoAnimation ? resolveAutoAnimationKind(undefined, parsedPositionArea) : animation;
+  // Not gated on isAutoAnimation — an explicit animation="sliding" needs a
+  // concrete direction just as much as an auto-resolved one does (same as
+  // Popover's own "sliding"/"expanding" resolution step in openEffect).
+  let resolvedAnimation = resolvedAnimationKind;
+  if (resolvedAnimationKind === "sliding") {
+    resolvedAnimation = resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
+      prefix: "slide-from"
+    }) ?? "slide-from-top";
+  }
 
   // Sync the DOM open and return how to sync it back closed, fresh on every
-  // render so it closes over the latest props (scrollTrap, etc.). The
-  // controller (owned by picker_custom.jsx) decides *when* this runs.
-  // openEffect runs outside of render (triggered by openController.open()), so
-  // it cannot call hooks — cleanup is a plain pub/sub.
+  // render so it closes over the latest props (scrollLock, etc.). The
+  // controller (owned by the caller, or by UncontrolledDialog) decides
+  // *when* this runs. openEffect runs outside of render (triggered by
+  // openController.open()), so it cannot call hooks — cleanup is a plain
+  // pub/sub.
   openController.openEffect = e => {
     const dialogEl = ref.current;
+    const backdropEl = backdropRef.current;
     if (!dialogEl) {
       return undefined;
     }
+
+    // Set by useOpenControllerByProps for the very first open triggered by
+    // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
+    // own openEffect for the full reasoning, mirrored here identically.
+    const silent = Boolean(e.detail.silent);
+    const positionedAncestor = isModal ? null : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
     const [cleanup, addCleanup] = createPubSub(true);
-    const anchor = anchorRef?.current ?? null;
-    const effectiveAnchor = anchor || document.documentElement;
+    let anchorElement;
+    if (typeof anchor === "string") {
+      console.warn(`Dialog: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`);
+    } else if (anchor) {
+      // anchor prop is a ref or a DOM element
+      anchorElement = anchor.current ?? anchor;
+    } else if (e.detail.anchor) {
+      // e.g. the button that triggered a --navi-toggle/--navi-open command,
+      // already resolved from detail.anchor/detail.source by the caller
+      // (see UncontrolledDialog's onnavi_request_open).
+      anchorElement = e.detail.anchor;
+    }
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
-    const {
-      width,
-      height
-    } = effectiveAnchor.getBoundingClientRect();
-    dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-    dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
-    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
-    dialogEl.showModal();
-    transferFocus(dialogEl, debugFocus, e, focusedBeforeOpen);
-    if (scrollTrap) {
+    if (anchorElement) {
+      const {
+        width,
+        height
+      } = anchorElement.getBoundingClientRect();
+      dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+      dialogEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+    } else {
+      dialogEl.style.removeProperty("--anchor-width");
+      dialogEl.style.removeProperty("--anchor-height");
+    }
+    if (resolvedAnimation) {
+      dialogEl.setAttribute("navi-animation", resolvedAnimation);
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      dialogEl.removeAttribute("navi-animation");
+      backdropEl?.removeAttribute("navi-animation");
+    }
+
+    // Suppressed until committed below — same @starting-style-avoidance
+    // reasoning as popover.jsx's own openEffect (see its top comment), even
+    // though Dialog never needs to measure/flip anything: it still needs a
+    // genuinely rendered "closed" frame to transition from, not a jump
+    // straight from not-shown to aria-expanded="true".
+    dialogEl.style.transitionProperty = "none";
+    if (backdropEl) {
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
+      backdropEl.style.transitionProperty = "none";
+      backdropEl.removeAttribute("navi-hidden");
+      backdropEl.getBoundingClientRect();
+      // aria-expanded stays "false" here — flipped below, alongside
+      // dialogEl's own flip, once transitions are back on (or, for
+      // `silent`, deliberately not — see below). Setting it here (before
+      // navi-animation is guaranteed to already apply) would risk the same
+      // bug already fixed once for Popover's own backdrop.
+    }
+    if (isModal) {
+      dialogEl.showModal();
+    } else {
+      dialogEl.show();
+    }
+    // Regardless of isModal — see the backdrop's own [navi-hidden] CSS rule
+    // and popover.jsx's identical reasoning: showModal()/show() alone only
+    // wins over a stray, still-present [navi-hidden] { display: none }
+    // default when nothing else authored also sets display on dialogEl —
+    // a consumer combining layer="top" with another authored display
+    // property (e.g. Popup's own flex prop) defeats the UA stylesheet's own
+    // dialog:not([open]) default the same way it can for Popover.
+    dialogEl.removeAttribute("navi-hidden");
+    if (isModal) ; else {
+      addCleanup(trapFocusInside(dialogEl, {
+        debug: debugFocus,
+        boundaryElement: positionedAncestor,
+        // A dialog is always modal (see this file's top comment) — a
+        // mousedown on some other focusable element inside the same
+        // container (but outside the dialog) must not steal focus away
+        // from it either, not just a Tab press.
+        pointerTrap: true
+      }));
+    }
+    if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
     }
-    if (centerInVisualViewportProp && window.visualViewport) {
-      const updatePosition = () => {
-        const vv = window.visualViewport;
-        const dialogHeight = dialogEl.offsetHeight;
-        const availableHeight = vv.height;
-        const topOffset = vv.offsetTop;
-        const marginTop = availableHeight > dialogHeight ? topOffset + (availableHeight - dialogHeight) / 2 : topOffset;
-        dialogEl.style.setProperty("--dialog-top-inset", `${snapToPixel(marginTop)}px`);
-        dispatchCustomEvent(dialogEl, "navi_position_change");
+
+    // Positioning: dialogEl is already shown (display: flex, per this
+    // file's own [open] CSS) by this point, so its own dimensions are real
+    // — pickPositionRelativeTo's own no-anchor/docked mode (no `anchor`
+    // argument at all) docks it against the viewport (layer="top"/isModal)
+    // or its own positioned ancestor (layer="local", the same
+    // positionedAncestor computed above), same mechanism as Popover's own
+    // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
+    // from the result, same as popover.jsx.
+    const positionDialog = triggerEvent => {
+      const position = pickPositionRelativeTo(dialogEl, null, {
+        positionArea,
+        container: isModal ? undefined : positionedAncestor,
+        marginWithContainer: resolveSpacingSize(marginWithContainer),
+        event: triggerEvent
+      });
+      applyNewPosition(dialogEl, position);
+      // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout anchored to something inside this Dialog) know to recheck
+      // its own position whenever this dialog itself moves — it already
+      // walks up the ancestor chain and listens for this event on any
+      // <dialog> ancestor specifically, no wiring needed on that side.
+      dispatchCustomEvent(dialogEl, "navi_position_change");
+    };
+    positionDialog();
+
+    // Reposition on the same triggers Popover's own visibleRectEffect
+    // already reacts to generically — window resize/scroll/visual-viewport
+    // changes for layer="top"/isModal (watching document.documentElement;
+    // visibleRectEffect already debounces visualViewport resize by 100ms
+    // to avoid the mobile tap-to-tap-input keyboard flicker, so no
+    // separate mechanism is needed here for that), or the positioned
+    // ancestor's own resize for layer="local" (watching positionedAncestor)
+    // — see this file's top comment.
+    const rectEffect = visibleRectEffect(isModal ? document.documentElement : positionedAncestor, (visibleRect, {
+      event
+    }) => {
+      positionDialog(event);
+    }, {
+      event: e,
+      skipElementResize: true
+    });
+    rectEffect.observeSize(dialogEl);
+    addCleanup(() => {
+      rectEffect.disconnect();
+    });
+
+    // Final commit — see popover.jsx's own openEffect for the full
+    // reasoning behind the `silent` ordering swap (forced reflow between
+    // the flip and re-enabling transitions is what actually matters, not
+    // just the JS statement order).
+    dialogEl.getBoundingClientRect();
+    if (silent) {
+      dialogEl.setAttribute("aria-expanded", "true");
+      backdropEl?.setAttribute("aria-expanded", "true");
+      dialogEl.getBoundingClientRect();
+      dialogEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    } else {
+      dialogEl.style.transitionProperty = "";
+      dialogEl.setAttribute("aria-expanded", "true");
+      backdropEl?.setAttribute("aria-expanded", "true");
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
+    const hasCssTransitionAnimation = Boolean(resolvedAnimation);
+    const cancelOpenInteractionSuppression = !silent && hasCssTransitionAnimation ? suppressPointerEventsDuringTransition(dialogEl) : null;
+    const restoreFocus = openController.transferFocusOnOpen(dialogEl);
+
+    // isModal outside-click detection (see this file's top comment for why
+    // this is a plain document-level listener rather than anything
+    // dialogEl/its native ::backdrop dispatches on their own) — active for
+    // the dialog's entire open lifetime, not just mid-transition.
+    if (isModal && pointerInteractionOutsideEffect === "close") {
+      const onDocumentMouseDown = mouseDownEvent => {
+        if (mouseDownEvent.button !== 0) {
+          return;
+        }
+        const rect = dialogEl.getBoundingClientRect();
+        const isOutside = mouseDownEvent.clientX < rect.left || mouseDownEvent.clientX > rect.right || mouseDownEvent.clientY < rect.top || mouseDownEvent.clientY > rect.bottom;
+        if (!isOutside) {
+          return;
+        }
+        openController.requestClose(mouseDownEvent, {
+          isCancel: true
+        });
       };
-      const onScroll = () => {
-        updatePosition();
-      };
-      let resizeTimeout;
-      const cancelDelayedUpdatePosition = () => {
-        clearTimeout(resizeTimeout);
-      };
-      const onResize = () => {
-        // On mobile, tapping from one input to another triggers a resize because
-        // the virtual keyboard briefly starts to close before the new input receives
-        // focus and the keyboard reopens. Debouncing prevents repositioning the
-        // dialog during that transient state, which would cause a visible flicker.
-        cancelDelayedUpdatePosition();
-        resizeTimeout = setTimeout(updatePosition, 100);
-      };
-      updatePosition();
-      window.visualViewport.addEventListener("resize", onResize);
-      window.visualViewport.addEventListener("scroll", onScroll);
+      document.addEventListener("mousedown", onDocumentMouseDown, {
+        capture: true
+      });
       addCleanup(() => {
-        cancelDelayedUpdatePosition();
-        window.visualViewport.removeEventListener("resize", onResize);
-        window.visualViewport.removeEventListener("scroll", onScroll);
-        dialogEl.style.removeProperty("--dialog-top-inset");
+        document.removeEventListener("mousedown", onDocumentMouseDown, {
+          capture: true
+        });
       });
     }
-    // Picker's openController.open() reads this back synchronously right
-    // after openEffect() returns (see picker_custom.jsx useOpenController).
-    e.detail.focusedBeforeOpen = focusedBeforeOpen;
-    return () => {
-      debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> closeDialog`);
-      markAutofocusRestoreOnClose(dialogEl);
+    return closeEvent => {
+      debugPopup(`"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`);
+      dialogEl.setAttribute("aria-expanded", "false");
+      // See openEffect's own identical comment for why this is needed
+      // regardless of isModal, not just when a stray authored display
+      // property is actually present — harmless the rest of the time.
+      dialogEl.setAttribute("navi-hidden", "");
       dialogEl.close();
+      cancelOpenInteractionSuppression?.();
+      if (hasCssTransitionAnimation) {
+        suppressPointerEventsDuringTransition(dialogEl);
+      }
+      if (backdropEl) {
+        backdropEl.setAttribute("aria-expanded", "false");
+        disarmBackdropHideRef.current = armPointerDownOutsideClose(closeEvent, () => {
+          backdropEl.setAttribute("navi-hidden", "");
+        });
+      }
+      restoreFocus(closeEvent);
       cleanup();
     };
   };
-  return jsx(Box, {
-    ...rest,
-    ...autoFocusProps,
-    as: "dialog",
-    ref: ref,
-    baseClassName: "navi_dialog",
-    pseudoClasses: DIALOG_PSEUDO_CLASSES,
-    onMouseDown: e => {
-      rest.onMouseDown?.(e);
-      // Detect backdrop click: the click must land outside the dialog's
-      // bounding rect. Checking coordinates is necessary because clicking
-      // on the dialog's own padding also sets e.target === ref.current.
-      if (!pointerTrap && e.button === 0 && e.target === ref.current) {
-        const rect = ref.current.getBoundingClientRect();
-        const isBackdrop = e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom;
-        if (isBackdrop) {
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    escape: e => {
+      // Only the custom renderer needs this — a modal <dialog> already
+      // fires "cancel" (handled via onCancel below) on Escape natively; a
+      // non-modal .show()'d one doesn't.
+      if (isModal || !openController.opened) {
+        return null;
+      }
+      return {
+        name: "escape_to_cancel",
+        allowed: () => {
           openController.requestClose(e, {
             isCancel: true
           });
         }
-      }
+      };
+    }
+  });
+
+  // Built up as plain mutable objects rather than two conditional literals:
+  // most fields are shared: renderer-specific bits (the outside-click
+  // handler below, in particular) are just assigned onto whichever of the
+  // two actually owns that concern for a given renderer, instead of one
+  // object's own field branching internally on isModal. backdropProps only
+  // gets returned (see the bottom of this function) when !isModal — the
+  // via-attribute renderer's own backdrop is native (::backdrop), not a
+  // real element we render ourselves.
+  Object.assign(backdropProps, {
+    "ref": backdropRef,
+    "baseClassName": "navi_dialog_backdrop",
+    "aria-hidden": "true",
+    // Recomputed fresh on every render from openController.opened (not
+    // driven through a mount-time layout effect, unlike this file's own
+    // imperative open/close toggling below) — present in the DOM
+    // synchronously from the very first commit, matching this file's own
+    // CSS (&[aria-expanded="false"]) which is genuinely rendering-eligible,
+    // and matching what a descendant relying on
+    // use_displayed_layout_effect.js's own aria-expanded-presence check
+    // needs — see popover.jsx's own identical prop for the full reasoning.
+    "aria-expanded": openController.opened ? "true" : "false",
+    // Present from this very first render (recomputed fresh on every one
+    // from openController.opened, not a frozen mount-time constant) so
+    // there's no gap for the browser to ever paint this plain-div backdrop
+    // visible before anything has actually opened it — see popover.jsx's
+    // own identical prop for the full reasoning, and this file's own CSS
+    // for the rule it drives.
+    "navi-hidden": openController.opened ? undefined : "",
+    "styleCSSVars": DIALOG_STYLE_CSS_VARS,
+    "animationDuration": rest.animationDuration,
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect
+  });
+  Object.assign(contentProps, {
+    tabIndex,
+    // See backdropProps' own identical prop above for the full reasoning
+    // (kept once, not repeated here).
+    "aria-expanded": openController.opened ? "true" : "false",
+    // Present from the very first render (recomputed fresh from
+    // openController.opened every time, not a frozen mount-time constant —
+    // see popover.jsx's own identical prop for the full reasoning) so a
+    // consumer whose own CSS also sets display (e.g. Popup's flex prop)
+    // can't silently defeat showModal()/close()'s native open/close — see
+    // this file's own CSS rule for dialogEl and the open/close steps below
+    // for how it's toggled.
+    "navi-hidden": openController.opened ? undefined : "",
+    // Unlike Popover (which genuinely can't resolve "auto" until it
+    // measures against a real anchor), resolvedAnimation is already fully
+    // known synchronously here — a dialog never needs to flip anything
+    // after measuring (see this file's top comment) — so there's no reason
+    // to withhold the attribute for the auto case the way Popover has to.
+    "navi-animation": resolvedAnimation,
+    // Only meaningful for the via-attribute renderer's own native
+    // ::backdrop (see this file's CSS for the "capture" glass effect) — a
+    // pseudo-element can't carry its own attributes, so this has to live on
+    // the originating .navi_dialog element instead, same reasoning as
+    // navi-animation above. Harmless for the custom renderer too (its own
+    // real backdrop element already gets the same attribute via
+    // backdropProps above, which is what its own CSS actually keys off).
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "styleCSSVars": DIALOG_STYLE_CSS_VARS,
+    ...rest,
+    ...autoFocusProps,
+    "as": "dialog",
+    ref,
+    "baseClassName": "navi_dialog",
+    "pseudoClasses": DIALOG_PSEUDO_CLASSES,
+    // Distinguishes the two renderers for the CSS above (position: fixed
+    // vs. absolute) — positioning itself is entirely JS-driven now (see
+    // openEffect's own positionDialog above), no data-position-area
+    // attribute needed at all.
+    "data-layer": layer,
+    "onnavi_command": e => {
+      onNaviCommand(e);
     },
-    onCancel: e => {
+    "onnavi_request_interaction": e => {
+      onRequestInteraction(e, {
+        debugInteraction
+      });
+    },
+    "onKeyDown": e => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    },
+    "onCancel": e => {
+      // Native "cancel" (Escape) only ever fires for a modal (showModal())
+      // dialog — the custom renderer's own Escape handling lives in
+      // onKeyDownShortcuts above instead.
       openController.requestClose(e, {
         isCancel: true
       });
     },
-    children: children
+    children
   });
+
+  // Outside-click handling for layer="local" only — the via-attribute
+  // renderer's own is a plain document-level listener instead, set up in
+  // openEffect above (see this file's top comment for why: neither a real
+  // backdrop element nor dialogEl's own mousedown reliably fires for a
+  // native ::backdrop click).
+  if (!isModal) {
+    backdropProps.onMouseDown = mouseDownEvent => {
+      if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      if (pointerInteractionOutsideEffect === "close") {
+        openController.requestClose(mouseDownEvent, {
+          isCancel: true
+        });
+      }
+      // "capture"/"none" both just absorb the click without closing — see
+      // this hook's own destructuring comment for why the two collapse to
+      // the same behavior for Dialog.
+    };
+  }
+  return [isModal ? null : backdropProps, contentProps];
 };
 const DIALOG_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+// Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
+// it to the CSS var for us (see box.jsx's styleCSSVars handling).
+const DIALOG_STYLE_CSS_VARS = {
+  animationDuration: "--popup-animation-duration",
+  minWidth: "--dialog-min-width",
+  maxWidth: "--dialog-max-width",
+  minHeight: "--dialog-min-height",
+  maxHeight: "--dialog-max-height"
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A popup positioned via `anchor`/`positionArea`. Two real rendering
+ * strategies live in this file, each its own component: `PopoverViaAttribute`
+ * (native Popover API, top layer) and `PopoverCustom` (`position: absolute`
+ * relative to its own nearest positioned ancestor, clipped by that
+ * ancestor's own `overflow` unlike the top layer). Kept as two separate
+ * components rather than one branching internally — their JSX already
+ * diverges (`PopoverCustom` wraps its content in an extra clip-wrapper div)
+ * and collapsing them would just mean re-splitting later. `layer` picks
+ * between them directly and has no opinion on anchor resolution — a real
+ * `anchor` always wins over `layer` and works with either renderer.
+ *
+ * The backdrop (`pointerInteractionOutsideEffect`) is a sibling, not a
+ * descendant, of the real popover — a stacking-context root's own
+ * background always paints below even its own negative-z-index children, so
+ * a z-index trick on a descendant backdrop could never sit behind the
+ * popover's own background. Its hide is deferred until the browser's
+ * matching "click" fires when close was triggered by a mousedown (an
+ * outside click) — hiding synchronously would make the mousedown's target
+ * vanish before mouseup, silently dropping that click.
+ *
+ * `animation="auto"` resolves to "scaling" for a real anchor or a
+ * dead-center placement, "sliding" otherwise. "scaling" is the auto-pick
+ * (over "expanding") because it simply reads best in practice for a popup
+ * opening. A `spawnFromPointer`-style option (growing from the pointer
+ * position) was tried and dropped — it added motion that competed with the
+ * popover's own content for attention.
+ *
+ * The via-attribute renderer defaults to `position: fixed`, overridden to
+ * `absolute` only when there's a real anchor: a real anchor needs the
+ * popover to scroll in lockstep with the document to stay visually attached
+ * to it, whereas `fixed` is the more direct way to stay pinned to the
+ * viewport when there's none (and avoids ever extending the document's own
+ * scrollable area).
+ */
+let openLocalPopoverCount = 0;
+const css$r = /* css */`
+  @layer navi {
+    .navi_popover {
+      --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
+      --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
+      --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
+
+      --popover-box-shadow: var(--navi-popup-box-shadow);
+      --popover-border-radius: var(--navi-popup-border-radius);
+      --popover-border-width: 1px;
+      --popover-border-color: var(--navi-popup-border-color);
+      --popover-outline-width: var(--navi-focus-outline-width);
+      --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
+      --popover-outline-color: var(--navi-focus-outline-color);
+      --popover-background-color: var(--navi-popup-background-color);
+    }
+  }
+
+  /* Custom renderer only (see this file's top comment) — a plain,
+     borderless div sized to exactly match the popover's own positioned
+     ancestor (inset: 0 relative to it), existing solely to absorb the
+     scrollable-overflow growth some browsers attribute to a translate/scale
+     transform mid-animation: without this, a container with overflow:
+     hidden/auto can transiently gain a scrollbar while the popover slides
+     or scales into/out of place, even though the transform never actually
+     moves its layout box. overflow: hidden here clips that growth before it
+     ever reaches the real container, whose own geometry this wrapper
+     matches exactly, so the wrapper itself never overflows in turn.
+     pointer-events: none so the otherwise-empty space around the popover
+     doesn't intercept clicks meant for whatever else lives in the same
+     container — .navi_popover re-enables it below. */
+  .navi_popover_clip_wrapper {
+    position: absolute;
+    inset: 0;
+    /* Otherwise-invisible itself, but sits between the popover and its real
+       positioned ancestor — a consumer styling border-radius: inherit on
+       the popover itself (e.g. side_panel.jsx) would otherwise inherit
+       this wrapper's own (unset) radius instead of the real ancestor's. */
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: hidden;
+
+    .navi_popover {
+      pointer-events: auto;
+    }
+  }
+
   .navi_popover {
-    &[data-anchor-hidden] {
+    --x-popover-max-width: min(
+      var(--popover-max-width, var(--popover-maxmax-width)),
+      var(--container-position-remaining-width, var(--popover-maxmax-width)),
+      var(--popover-maxmax-width)
+    );
+    --x-popover-max-height: min(
+      var(--popover-max-height),
+      var(--container-position-remaining-height, var(--popover-maxmax-height)),
+      var(--popover-maxmax-height)
+    );
+
+    /* Base default: also the custom renderer's own permanent value — its
+       containing block is genuinely its nearest positioned ancestor,
+       regardless of anchor. See the [popover] rules below for why the
+       via-attribute renderer overrides this differently depending on
+       whether it has a real anchor — this file's top comment has the full
+       reasoning. */
+    position: absolute;
+    inset: unset;
+    /* Custom renderer only: --popover-stack-order is set to
+       openLocalPopoverCount on every open (see openEffect below) so the
+       most-recently-opened local popover always outranks an earlier one,
+       regardless of DOM position — a plain positioned div gets no free
+       "last shown wins" the way the top-layer renderer does. */
+    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    min-width: min(var(--popover-min-width, 0px), var(--x-popover-max-width));
+    max-width: var(--x-popover-max-width);
+    min-height: min(
+      var(--popover-min-height, 0px),
+      var(--x-popover-max-height)
+    );
+    max-height: var(--x-popover-max-height);
+    background-color: var(--popover-background-color);
+    border-width: var(--popover-border-width);
+    border-style: solid;
+    border-color: var(--popover-border-color);
+    border-radius: var(--popover-border-radius);
+    outline-width: var(--popover-outline-width);
+    outline-color: var(--popover-outline-color);
+    outline-offset: 0px;
+    box-shadow: var(--popover-box-shadow);
+    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
+       transition) for most repositions (scroll, in particular, needs to
+       track its target in lockstep), a real duration only when the
+       reposition was itself triggered by a resize. */
+    transition-property: left, top;
+    transition-duration: var(--popup-position-transition-duration, 0s);
+    transition-timing-function: ease-out;
+    overflow: auto;
+    overscroll-behavior: none;
+
+    /* The via-attribute renderer starts hidden for free (native UA default
+       for any [popover] element, same as <dialog> without [open]) — the
+       custom renderer is a plain div with no such native default, so
+       without this it would flash visible for one frame on mount, before
+       openEffect's own JS ever gets a chance to hide it. [navi-hidden] is
+       set from usePopoverProps' own contentProps (recomputed from
+       openController.opened on every render, present from the very first
+       one — see there for why), then toggled by plain
+       removeAttribute/setAttribute in openEffect/close, never an explicit
+       display override: removing the attribute just lets this rule stop
+       matching, so whatever display the box would otherwise have applies
+       on its own.
+
+       Applies regardless of [popover] (not scoped to the custom renderer
+       alone) and !important: CSS origin rules mean *any* author rule beats
+       the UA stylesheet's own [popover]:not(:popover-open) default,
+       regardless of specificity — a consumer combining layer="top" with
+       another authored display property (e.g. Popup's own flex prop)
+       silently defeats showPopover()/hidePopover()'s native hide otherwise,
+       since nothing then actually toggles display back off when closed.
+       This rule is the real, load-bearing hide mechanism whenever that
+       happens; harmless/redundant the rest of the time. */
+    &[navi-hidden] {
+      display: none !important;
+    }
+
+    &[data-focus-visible] {
+      outline-style: solid;
+    }
+
+    /* The via-attribute renderer's own default: an element in the top layer
+       always uses the initial containing block regardless of "position",
+       so this is really "pinned to the viewport" either way — fixed is
+       just the more direct way to say so. Overridden back to absolute
+       below when genuinely anchored to a real element — see this file's
+       top comment for why the two need opposite defaults. The custom
+       renderer (no [popover] attribute) never matches either of these
+       rules, it's always the base "position: absolute" above. */
+    &[popover] {
+      position: fixed;
+      /* The native top layer already gives "last shown wins" for free —
+         --popover-stack-order is only ever set by the custom renderer's own
+         openEffect, but reset here regardless in case a consumer sets the
+         var directly on an ancestor. */
+      z-index: unset;
+      padding: 0;
+    }
+    &[popover][data-anchor] {
+      position: absolute;
+    }
+
+    &[data-anchor-out-of-view] {
       opacity: 0;
       pointer-events: none;
     }
+  }
 
-    .navi_popover_backdrop {
+  /* Sibling element, not a descendant of .navi_popover — see this file's
+     top comment for why. */
+  .navi_popover_backdrop {
+    --popup-animation-duration: 0.18s;
+
+    position: absolute;
+    inset: 0;
+    /* Custom renderer only: same var (and same value) as its own
+       .navi_popover — see that rule's own comment. Ties within the same
+       instance still resolve via DOM order (content rendered after its own
+       backdrop, see this file's top comment), so this only needs to beat
+       *other* popovers' own backdrop/content, not its own. */
+    z-index: calc(var(--navi-popup-z-index) + var(--popover-stack-order, 0));
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    /* Always clickable while actually rendered (display: none/hidePopover()
+       while genuinely closed already makes it non-interactive on its own)
+       — an outside click should close the popover even while it's still
+       animating in, not just once the entrance transition settles. Only
+       the content itself (.navi_popover, via suppressPointerEventsDuringTransition
+       in openEffect) gets pointer-events: none mid-transition. */
+    pointer-events: auto;
+
+    &[popover] {
       position: fixed;
       inset: 0;
-      z-index: -1;
-      background: transparent;
-      pointer-events: none;
+      /* The native top layer already gives "last shown wins" for free —
+         see .navi_popover's own identical rule. */
+      z-index: unset;
+      width: auto; /* user agent override */
+      height: auto; /* user agent override */
     }
 
-    &:popover-open {
-      .navi_popover_backdrop {
-        pointer-events: auto;
+    /* Same reasoning/mechanism as .navi_popover's own rule above (including
+       the unconditional-plus-!important reasoning) — a plain div, no native
+       starting-hidden default to lean on for the custom renderer, and the
+       same authored-CSS-beats-the-UA-stylesheet risk for the via-attribute
+       one. */
+    &[navi-hidden] {
+      display: none !important;
+    }
+
+    /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
+    &[data-pointer-interaction-outside="close"] {
+      background: var(--navi-backdrop-close-background);
+    }
+    &[data-pointer-interaction-outside="capture"] {
+      background: var(--navi-backdrop-capture-background);
+      backdrop-filter: var(--navi-backdrop-capture-backdrop-filter);
+    }
+
+    /* navi-animation mirrors the content popover's own resolved value (set
+       imperatively in openEffect) — the backdrop only ever fades, regardless
+       of which kind it is (translate/scale wouldn't mean anything on it).
+       display is included alongside opacity (+ allow-discrete) for the same
+       reason popup_css.js's own .navi_popover rule includes it — see this
+       file's top comment. */
+    &[navi-animation] {
+      opacity: 1;
+      transition-property: display, opacity;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+
+      &[aria-expanded="false"] {
+        opacity: 0;
       }
     }
   }
+
+  ${popupCss}
 `;
+
+/**
+ * An anchored (or container-docked) popup — via the native Popover API by
+ * default (`layer="top"`, real top-layer stacking), or a plain positioned
+ * div confined to a local container via `layer="local"`. See this file's
+ * own top comment for the full architecture (positionArea grammar, anchor
+ * resolution, backdrop mechanics, animation resolution).
+ *
+ * @param {object} props
+ * @param {"top"|"local"} [props.layer="top"] - `"top"`: rendered via the
+ *   native Popover API (`popover="manual"` + `showPopover()`), in the
+ *   browser's own top layer. `"local"`: a plain `position: absolute` div,
+ *   positioned relative to its own nearest positioned ancestor and clipped
+ *   by it — genuinely confined to (and by) that container instead of the
+ *   whole viewport. A real `anchor` works with either.
+ * @param {string} [props.positionArea="bottom"] - Where to place the popover
+ *   relative to its `anchor` (or its container, if there is none). Same
+ *   grammar as `Dialog`'s own `positionArea` (see `popup_shared.js`'s
+ *   `parsePositionArea`): a single compass token — `top`/`top-start`/
+ *   `top-end`/`top-left`/`top-right`, `right`/`right-start`/`right-end`,
+ *   `bottom`/`bottom-start`/`bottom-end`/`bottom-left`/`bottom-right`,
+ *   `left`/`left-start`/`left-end`, or `center`. A bare token means no
+ *   overlap with the anchor; wrap it in `inset(...)` (e.g. `inset(top)`,
+ *   `inset(top-left)`) to overlap the anchor instead (edges touching or
+ *   inside it).
+ * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
+ *   the popover has actually been positioned once, so a live reposition
+ *   (e.g. anchor moved) doesn't jump to a different side.
+ * @param {string} [props.positionAreaWhenAnchorIsInvalid="center"] - `positionArea`
+ *   used instead, as a plain no-anchor dock, whenever a real anchor is too
+ *   big to bother anchoring to (`isAnchorTooBig`, always checked — see
+ *   `pickPositionRelativeTo`'s own doc in visible_rect.js).
+ * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
+ *   between the popover and the edges of its container.
+ * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
+ *   between the popover and the edges of its anchor.
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
+ *   - `"none"` (default): no backdrop at all, outside clicks pass straight
+ *   through. `"close"` closes the popover on an outside click. `"capture"`
+ *   absorbs the click (dims the backdrop) without closing. Note this
+ *   default differs from `Dialog`'s own (`"close"`) — a popover is
+ *   typically a lightweight, non-modal affordance.
+ * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
+ *   popover so the page/container behind it can't scroll while it's open.
+ * @param {boolean} [props.focusCapture] - Traps Tab navigation inside the
+ *   popover (see `focus_trap.js`).
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
+ *   - `true`/`"auto"` resolves to a concrete `"slide-from-*"` direction
+ *   based on `positionArea`. Any other explicit value is used as-is.
+ * @param {string} [props.animationDuration] - Maps to
+ *   `--popup-animation-duration`.
+ * @param {Element|{current: Element}} [props.anchor] - The element the
+ *   popover is positioned relative to. Defaults to whatever triggered the
+ *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
+ *   all, the popover docks to its container instead (viewport for
+ *   `layer="top"`, positioned ancestor for `layer="local"`).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
+ *   Whether an explicit `anchor` prop takes precedence over
+ *   (`"override"`, default) or is ignored in favor of
+ *   (`"ignore"`) whatever anchor the triggering event itself carried.
+ * @param {string} [props.minWidth] - Maps to `--popover-min-width`; clamped
+ *   so it can never push the popover past `--popover-maxmax-width` (the
+ *   viewport/container-spacing ceiling) regardless of how large a value is
+ *   passed.
+ * @param {string} [props.maxWidth] - Maps to `--popover-max-width`.
+ * @param {string} [props.minHeight] - Maps to `--popover-min-height`, same
+ *   clamping as `minWidth`.
+ * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
+ * @param {number} [props.tabIndex=-1] - Set on the popover element itself
+ *   so `autoFocus="fallback"` below has somewhere to land when the popover
+ *   has no other focusable descendant of its own.
+ * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
+ *   `use_auto_focus.js` — `"fallback"` focuses the popover itself if it has
+ *   no other focusable descendant.
+ * @param {boolean} [props.open] - Controlled open state.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state — plays no entrance animation (nothing was ever shown as
+ *   "closed" for the user to see it transition away from).
+ * @param {(event: Event) => void} [props.onClose] - Called when the popover
+ *   actually closes — not preventable (see `open_controller.js`'s own
+ *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd
+ *   veto a close instead).
+ * @param {object} [props.openController] - Advanced: an externally-owned
+ *   open controller (see `open_controller.js`) for a caller that wants to
+ *   drive open/close itself instead of `open`/`defaultOpen`/`onClose` (used
+ *   by `picker_custom.jsx`/`side_panel.jsx`).
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ */
 const Popover = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/popup/popover.jsx"];
+  if (props.openController) {
+    return jsx(ControlledPopover, {
+      ...props
+    });
+  }
+  return jsx(UncontrolledPopover, {
+    ...props
+  });
+};
+
+// No openController passed: this Popover is used declaratively (e.g. driven
+// by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
+// rather than owned by a parent component.
+const UncontrolledPopover = props => {
+  const openController = useOpenControllerByProps(props);
+  return jsx(ControlledPopover, {
+    ...props,
+    open: undefined,
+    defaultOpen: undefined,
+    onClose: undefined,
+    openController: openController,
+    onnavi_request_open: e => {
+      openController.open(e, {
+        anchor: e.detail?.anchor ?? e.detail?.source
+      });
+    },
+    onnavi_request_close: e => {
+      openController.requestClose(e, {
+        isCancel: e.detail?.isCancel
+      });
+    }
+  });
+};
+
+// Picks which rendering strategy actually mounts, from `layer` alone (see
+// this file's top comment) — done here, after the controlled/uncontrolled
+// split above, so an openController is always already resolved by the time
+// PopoverViaAttribute/PopoverCustom (and the usePopoverProps hook they
+// share) ever run. `anchor` doesn't factor into this choice: the custom
+// renderer is perfectly compatible with a real anchor too — it's still
+// `position: absolute` relative to its own positioned ancestor either way,
+// it just positions against the anchor's own edges instead of the
+// ancestor's when one is given (see usePopoverProps' own real-anchor
+// branch, and pickPositionRelativeTo's own `container` option in
+// visible_rect.js for how the ancestor-relative coordinate conversion
+// still applies regardless).
+const ControlledPopover = props => {
+  if (props.layer === "local") {
+    return jsx(PopoverCustom, {
+      ...props
+    });
+  }
+  return jsx(PopoverViaAttribute, {
+    ...props
+  });
+};
+
+// See this file's top comment for why this and PopoverCustom are two
+// components sharing one hook, rather than one component branching
+// internally.
+const PopoverViaAttribute = props => {
+  const [backdropProps, contentProps] = usePopoverProps(props);
+  return jsxs(Fragment$1, {
+    children: [backdropProps && jsx(Box, {
+      ...backdropProps
+    }), jsx(Box, {
+      ...contentProps
+    })]
+  });
+};
+const PopoverCustom = props => {
+  const [backdropProps, contentProps] = usePopoverProps(props);
+  return jsxs(Fragment$1, {
+    children: [backdropProps && jsx(Box, {
+      ...backdropProps
+    }), jsx("div", {
+      className: "navi_popover_clip_wrapper",
+      children: jsx(Box, {
+        ...contentProps
+      })
+    })]
+  });
+};
+
+/**
+ * Everything both rendering strategies share once an `openController` is
+ * already resolved (by `ControlledPopover`'s callers above): focus/debug/id
+ * plumbing, capture setup, animation-attribute resolution, the open-commit
+ * sequence, the close handler, and the open/position/close sequence itself
+ * — inlined here, branching on `isTopLayer` at each point the two renderers
+ * genuinely differ (see this file's top comment for why it's inlined
+ * rather than split into two functions). Returns `[backdropProps,
+ * contentProps]` — two plain prop objects ready to spread onto a
+ * backdrop/content element each.
+ */
+const usePopoverProps = props => {
+  const backdropProps = {};
+  const contentProps = {};
   const {
     openController,
-    anchorRef,
-    scrollTrap,
-    pointerTrap,
-    focusTrap,
+    // "top" (default) → via-attribute, in the browser's own top layer;
+    // "local" → custom, resolved to the popover's own positioned ancestor.
+    // Picks the rendering strategy directly — not an "anchor fallback", see
+    // this file's top comment for why that distinction matters. Independent
+    // of anchorProp — a real anchor works with either renderer.
+    layer = "top",
+    // see the positionArea grammar in the file's top comment
+    positionArea = "bottom",
+    positionAreaFixed,
+    // positionArea used instead whenever a real anchor is too big to bother
+    // anchoring to (pickPositionRelativeTo's own isAnchorTooBig, always
+    // checked — see its doc in visible_rect.js) — forwarded as-is, same
+    // "center" default.
+    positionAreaWhenAnchorIsInvalid,
+    marginWithContainer = 0,
+    pointerInteractionOutsideEffect = "none",
+    scrollCapture,
+    focusCapture,
+    animation,
+    anchor,
+    anchorCustomEventDetail = "override",
+    marginWithAnchor = 0,
+    // Makes the popover itself a valid focus target so autoFocus="fallback"
+    // below has somewhere to land when it contains nothing focusable of its
+    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // programmatically).
+    tabIndex = -1,
+    // See use_auto_focus.js's own docs for why this must never reach the DOM
+    // as a plain `autofocus` attribute — useAutoFocus below takes over
+    // instead, so it's read here rather than left in `rest`.
+    autoFocus = "fallback",
+    onKeyDown,
     children,
-    positionX,
-    positionY,
-    positionXFixed,
-    positionYFixed,
-    spacing = 0,
-    viewportSpacing = 0,
     ...rest
   } = props;
+  const isTopLayer = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const backdropRef = useRef();
+  // Disarms a still-pending backdrop hide from a previous close (see
+  // armPointerDownOutsideClose below) — set at close time, read at the next
+  // open, two separate invocations of openEffect that don't otherwise share
+  // any scope, hence the ref.
+  const disarmBackdropHideRef = useRef(null);
   const defaultId = useId();
   const id = rest.id || defaultId;
+  const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const autoFocusProps = useAutoFocus(ref, props.autoFocus);
+  const debugInteraction = useDebugInteraction();
+  const autoFocusProps = useAutoFocus(ref, autoFocus);
+  // animation={true} or "auto" always resolves to "sliding" or "scaling"
+  // (see resolveAutoAnimationKind).
+  const isAutoAnimation = animation === true || animation === "auto";
+  const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  // The custom renderer's own starting-hidden state is a stylesheet default
+  // now (&:not([popover]) { display: none } on .navi_popover/
+  // .navi_popover_backdrop above) rather than set here imperatively — a
+  // plain div has no native default the way [popover]/<dialog> do, so
+  // leaving this to a layout effect meant an actual (if narrow) window
+  // where the browser could paint it visible before this ever ran.
+  // aria-expanded starts "false" the same way, but via a static literal
+  // JSX prop on contentProps/backdropProps below instead of a layout
+  // effect — see that prop's own comment for why a *constant* value there
+  // is safe to combine with the imperative setAttribute("aria-expanded", …)
+  // toggling done elsewhere in this file (open/close), and for why it
+  // needs to be present synchronously from the very first commit, not a
+  // layout effect later: a descendant relying on useDisplayedLayoutEffect
+  // (see that file) to detect "this ancestor just opened" checks for
+  // aria-expanded's mere presence at its own, earlier-firing layout effect
+  // (Preact fires child effects before parent effects) — if this file set
+  // it via its own layout effect instead, that check would run too early
+  // and see no aria-expanded at all yet, wrongly falling back to the
+  // slower, flash-prone `toggle` event instead of the fast, pre-paint
+  // MutationObserver path.
 
-  // Sync the DOM open and return how to sync it back closed, fresh on every
-  // render so it closes over the latest props (scrollTrap, etc.). The
-  // controller (owned by picker_custom.jsx) decides *when* this runs.
-  // openEffect runs outside of render (triggered by openController.open()), so
-  // it cannot call hooks — cleanup is a plain pub/sub.
   openController.openEffect = e => {
     const popoverEl = ref.current;
+    // backdropEl is null when pointerInteractionOutsideEffect is "none" —
+    // the backdrop isn't rendered at all in that case.
+    const backdropEl = backdropRef.current;
     if (!popoverEl) {
       return undefined;
     }
+
+    // Set by useOpenControllerByProps for the very first open triggered by
+    // `open`/`defaultOpen` already being truthy at mount — there's nothing
+    // to visually transition away from (nothing was ever shown as "closed"
+    // to the user), so this open skips the animation entirely instead of
+    // playing it against a closed frame that was never actually seen. See
+    // the final commit step below for how that's done.
+    const silent = Boolean(e.detail.silent);
     const [cleanup, addCleanup] = createPubSub(true);
-    debugPopup(e, `openPopover()`);
-    const focusedBeforeOpen = getFocusedBeforeTransfer(e);
-    popoverEl.showPopover();
-    transferFocus(popoverEl, debugFocus, e, focusedBeforeOpen);
-    const anchor = anchorRef?.current ?? null;
-    const effectiveAnchor = anchor || document.documentElement;
+
+    // Anchor resolution is the first genuine fork: a real anchorProp works
+    // for either renderer (the custom renderer is still `position:
+    // absolute` relative to its own positioned ancestor either way — see
+    // pickPositionRelativeTo's own `container` option below for how the
+    // ancestor-relative coordinate conversion still applies) — only the
+    // triggering event's own carried anchor is via-attribute-only, since
+    // the custom renderer's own positioned ancestor is already an explicit,
+    // deliberate choice, not something to infer from whatever happened to
+    // trigger the open. Inlined rather than a standalone function since it
+    // only has this one call site.
+    let anchorElement;
+    if (typeof anchor === "string") {
+      // A plain string is a near-certain leftover from an older API
+      // (anchor used to accept "viewport"/"scrollContainer" directly) —
+      // anchor is a ref or a DOM element only now; layer/
+      // anchorCustomEventDetail cover what those strings used to mean.
+      console.warn(`Popover: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`);
+    } else if (anchor) {
+      // anchor prop is a ref or a DOM element — always a real anchor,
+      // regardless of anchorCustomEventDetail.
+      anchorElement = anchor.current ?? anchor;
+    } else if (anchorCustomEventDetail === "override") {
+      anchorElement = e.detail.anchor;
+    }
+    const hasAnchorElement = Boolean(anchorElement);
+    const positionedAncestor = isTopLayer ? null : getPositionedParent(popoverEl);
+    // Drives the via-attribute renderer's own position: fixed/absolute
+    // switch (see this file's top comment) — set here, well before any
+    // positioning/measurement runs, so there's no ordering subtlety to get
+    // wrong (unlike the CSS this replaced, which keyed off the resolved
+    // animation instead, known too late relative to the first measurement).
+    if (hasAnchorElement) {
+      popoverEl.setAttribute("data-anchor", "");
+    } else {
+      popoverEl.removeAttribute("data-anchor");
+    }
+    if (!isTopLayer) {
+      // Assigned fresh on every open (including reopen) — see
+      // --popover-stack-order's own CSS comment. Same value on the backdrop
+      // below so this instance's own content/backdrop pair still resolves
+      // their own tie via DOM order.
+      const stackOrder = openLocalPopoverCount++;
+      popoverEl.style.setProperty("--popover-stack-order", stackOrder);
+      if (backdropEl) {
+        backdropEl.style.setProperty("--popover-stack-order", stackOrder);
+      }
+    }
+    const {
+      parsedPositionArea,
+      resolvedAnimationKind
+    } = resolvePositionAreaAndAnimationKind({
+      positionArea,
+      isAutoAnimation,
+      animation,
+      animationAnchor: anchorElement
+    });
+
+    // Suppressed until the popover is actually measured/positioned below —
+    // see this file's top comment for why @starting-style can't drive the
+    // opening transition (it needs the popover's actual resting position
+    // already in place, which requires a layout box that only exists once
+    // shown).
+    popoverEl.style.transitionProperty = "none";
+    if (backdropEl) {
+      // Disarm a still-pending hide from a previous close: a click
+      // arriving later must not hide the fresh instance this open is
+      // about to show.
+      disarmBackdropHideRef.current?.();
+      disarmBackdropHideRef.current = null;
+      // transitionProperty stays "none" here for both — reset later, in the
+      // final commit step alongside popoverEl's own (not resumed early the
+      // way it briefly was), so a `silent` open (see above) can keep both
+      // elements' transitions suppressed right up until after their
+      // aria-expanded flip, the same way it does for popoverEl.
+      backdropEl.style.transitionProperty = "none";
+      if (isTopLayer) {
+        // Hidden first if a previous close's deferred hidePopover() (see
+        // the close handler below) hasn't run yet — showPopover() throws
+        // on an already-open element. Showing it fresh here (rather than
+        // reusing an older still-open instance) resets its top-layer
+        // position to right below whatever shows next, which matters when
+        // other popovers already opened in between.
+        if (backdropEl.matches(":popover-open")) {
+          backdropEl.hidePopover();
+        }
+        // Same reflow trick as the real popover below (no @starting-style):
+        // the backdrop's own fade needs a genuinely rendered "closed" frame
+        // to transition from, not a jump straight from not-rendered to
+        // aria-expanded="true". Shown *before* popoverEl below — the top
+        // layer stacks later showPopover() calls above earlier ones, so the
+        // backdrop must go first for the real popover to end up on top.
+        backdropEl.showPopover();
+        // Also cleared here, not just in the custom-renderer branch below:
+        // showPopover() alone only wins over [navi-hidden] { display: none }
+        // (see that rule's own comment) when nothing *else* authored also
+        // sets display on this element — a consumer combining layer="top"
+        // with e.g. Popup's own flex prop does exactly that, and CSS origin
+        // rules mean *any* author rule beats the UA stylesheet's own
+        // [popover]:not(:popover-open) default regardless of specificity,
+        // so showPopover() toggling :popover-open alone isn't sufficient in
+        // that case — this is the actual, load-bearing hide mechanism then.
+        backdropEl.removeAttribute("navi-hidden");
+        backdropEl.getBoundingClientRect();
+      } else {
+        backdropEl.removeAttribute("navi-hidden");
+        backdropEl.getBoundingClientRect();
+      }
+      // aria-expanded stays "false" here — flipped later, once
+      // navi-animation has actually been set on the backdrop (see the final
+      // commit step below): flipping it here, before that attribute exists,
+      // would mean the "closed"→"open" opacity change happens while the
+      // CSS's own [navi-animation] rule doesn't match yet, so no transition
+      // would ever play.
+    }
+    if (isTopLayer) {
+      popoverEl.showPopover();
+      // See the backdrop's own identical call above for why this is
+      // needed even in the native/top-layer case, not just the custom
+      // renderer's own branch below.
+      popoverEl.removeAttribute("navi-hidden");
+      // aria-expanded stays "false" here — transitions are still
+      // suppressed, so this doesn't matter yet — and only flips once
+      // positioned below. Shown *after* the backdrop above so it stacks on
+      // top of it in the top layer.
+    } else {
+      // Not "showPopover()" — just making it visible again, synchronously,
+      // so it's measurable below even though aria-expanded is still
+      // "false" (see this file's top comment for why the two are
+      // deliberately decoupled).
+      popoverEl.removeAttribute("navi-hidden");
+    }
+
+    // What we observe for repositioning on resize/scroll/visibility
+    // changes: the anchor itself whenever there's a real one (either
+    // renderer), otherwise whatever we're docked against instead — the
+    // positioned ancestor for the custom renderer, the document for
+    // via-attribute.
+    const effectiveAnchor = hasAnchorElement ? anchorElement : isTopLayer ? document.documentElement : positionedAncestor;
     const positionPopover = positionEvent => {
-      const {
-        width,
-        height
-      } = effectiveAnchor.getBoundingClientRect();
-      const {
-        left: borderLeft,
-        right: borderRight,
-        top: borderTop,
-        bottom: borderBottom
-      } = getBorderSizes(effectiveAnchor);
-      popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
-      popoverEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
-      popoverEl.style.setProperty("--anchor-inner-width", `${snapToPixel(width - borderLeft - borderRight)}px`);
-      popoverEl.style.setProperty("--anchor-inner-height", `${snapToPixel(height - borderTop - borderBottom)}px`);
-      const minLeft = 1;
-      const effectivePositionX = anchor ? positionX : "center";
-      // Remove max-height constraint so pickPositionRelativeTo measures the natural
-      // (unconstrained) height of the popover. This ensures the 60% flip threshold
-      // compares against the real content height, not the already-truncated one.
-      popoverEl.style.removeProperty("--space-available");
-      const {
-        left,
-        top,
-        positionY: finalPositionY,
-        spaceAbove,
-        spaceBelow
-      } = pickPositionRelativeTo(popoverEl, effectiveAnchor, {
-        positionX: effectivePositionX,
-        positionY,
-        positionXFixed,
-        positionYFixed,
-        spacing: resolveSpacingSize(spacing),
-        viewportSpacing: resolveSpacingSize(viewportSpacing),
-        minLeft
-      });
-      const spaceAvailable = finalPositionY === "above" || finalPositionY === "above-overlap" ? spaceAbove : spaceBelow;
-      popoverEl.style.setProperty("--space-available", `${spaceAvailable}px`);
-      debugPopup(positionEvent, `positionPopover() -> left: ${left}, top: ${top}`);
-      popoverEl.style.top = `${top}px`;
-      popoverEl.style.left = `${Math.max(left, minLeft)}px`;
+      let position;
+      if (hasAnchorElement) {
+        const {
+          width,
+          height
+        } = anchorElement.getBoundingClientRect();
+        const {
+          left: borderLeft,
+          right: borderRight,
+          top: borderTop,
+          bottom: borderBottom
+        } = getBorderSizes(anchorElement);
+        popoverEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
+        popoverEl.style.setProperty("--anchor-height", `${snapToPixel(height)}px`);
+        popoverEl.style.setProperty("--anchor-inner-width", `${snapToPixel(width - borderLeft - borderRight)}px`);
+        popoverEl.style.setProperty("--anchor-inner-height", `${snapToPixel(height - borderTop - borderBottom)}px`);
+        const minLeft = 1;
+        // Cleared so pickPositionRelativeTo measures the popover's natural
+        // (unconstrained) size — the flip threshold must compare against the
+        // real content size, not one already truncated by a stale value.
+        popoverEl.style.removeProperty("--container-position-remaining-height");
+        popoverEl.style.removeProperty("--container-position-remaining-width");
+        position = pickPositionRelativeTo(popoverEl, anchorElement, {
+          positionArea,
+          positionAreaFixed,
+          positionAreaWhenAnchorIsInvalid,
+          marginWithAnchor: resolveSpacingSize(marginWithAnchor),
+          marginWithContainer: resolveSpacingSize(marginWithContainer),
+          // Only meaningful for the custom renderer: popoverEl is always
+          // position: absolute relative to its own positioned ancestor,
+          // real anchor or not — this tells pickPositionRelativeTo to
+          // convert the computed coordinates into that ancestor's own
+          // local space instead of assuming document-relative absolute
+          // (see its own doc in visible_rect.js).
+          container: isTopLayer ? undefined : positionedAncestor,
+          minLeft,
+          event: positionEvent
+        });
+        position = {
+          ...position,
+          left: Math.max(position.left, minLeft)
+        };
+      } else {
+        // No real anchor: dock against a container instead — omitting
+        // pickPositionRelativeTo's own `anchor` argument entirely puts it
+        // in its own container-docked mode (see its own doc for what that
+        // changes). For the via-attribute renderer, its `container` is
+        // left unspecified too — pickPositionRelativeTo auto-resolves it
+        // to the viewport on its own, since popoverEl's own [popover]
+        // attribute signals that (see getPositioningContainer). For the
+        // custom renderer, its own positioned ancestor is passed
+        // explicitly instead, since it's already computed above for
+        // visibleRectEffect's own observation target.
+        position = pickPositionRelativeTo(popoverEl, null, {
+          positionArea,
+          container: isTopLayer ? undefined : positionedAncestor,
+          marginWithContainer: resolveSpacingSize(marginWithContainer),
+          event: positionEvent
+        });
+      }
+      debugPopup(positionEvent, `positionPopover() -> left: ${position.left}, top: ${position.top}`);
+      applyNewPosition(popoverEl, position);
     };
-    if (scrollTrap) {
+    if (scrollCapture) {
       addCleanup(trapScrollInside(popoverEl));
     }
-    if (focusTrap) {
+    if (focusCapture) {
       addCleanup(trapFocusInside(popoverEl, {
         debug: debugFocus
       }));
@@ -35842,11 +38347,17 @@ const Popover = props => {
     }, {
       event
     }) => {
-      if (visibilityRatio <= 0.2) {
-        popoverEl.setAttribute("data-anchor-hidden", "");
+      // Only a real anchor can meaningfully go "out of view" — gating on
+      // document.documentElement's own visibilityRatio (used for
+      // anchorless/docked popups) would wrongly skip positioning on a
+      // tall page, since its ratio is often low even when nothing's
+      // hidden. hasAnchorElement is already false for the custom
+      // renderer, so this never triggers for it either.
+      if (hasAnchorElement && visibilityRatio <= 0.2) {
+        popoverEl.setAttribute("data-anchor-out-of-view", "");
         return;
       }
-      popoverEl.removeAttribute("data-anchor-hidden");
+      popoverEl.removeAttribute("data-anchor-out-of-view");
       positionPopover(event);
     }, {
       event: e,
@@ -35854,100 +38365,568 @@ const Popover = props => {
       // (we could even argue it's a feature as it helps to keep the popover position stable)
       skipElementResize: true
     });
+    // Re-run positioning whenever the popover's own content changes size
+    // while open (e.g. an expand/collapse toggle inside it) — not just when
+    // the anchor itself moves/resizes/re-anchors.
+    rectEffect.observeSize(popoverEl);
     addCleanup(() => {
       rectEffect.disconnect();
     });
-    // Picker's openController.open() reads this back synchronously right
-    // after openEffect() returns (see picker_custom.jsx useOpenController).
-    e.detail.focusedBeforeOpen = focusedBeforeOpen;
-    return () => {
-      debugPopup(e, `closePopover()`);
-      markAutofocusRestoreOnClose(popoverEl);
-      popoverEl.hidePopover();
+
+    // "sliding"/"expanding" need a concrete direction (see
+    // resolveDirectionValue) — resolved here, once, now that rectEffect's
+    // own setup has already called positionPopover() above and the actual
+    // position is known (pickPositionRelativeTo, for a real anchor, may
+    // have picked a different side than requested, written onto
+    // data-position-y/x-current — reading that back is what makes
+    // "expanding" point the right way), and before transitions are
+    // re-enabled below (same constraint as positioning itself). Mirrored
+    // onto the backdrop too (see the backdrop's own CSS comment for why it
+    // only ever fades regardless of which kind it is).
+    let resolvedAnimation = resolvedAnimationKind;
+    if (resolvedAnimationKind === "sliding") {
+      resolvedAnimation = resolveDirectionValue(parsedPositionArea.y, parsedPositionArea.x, {
+        prefix: "slide-from"
+      }) ?? "slide-from-top";
+    } else if (resolvedAnimationKind === "expanding") {
+      resolvedAnimation = resolveDirectionValue(popoverEl.getAttribute("data-position-y-current"), popoverEl.getAttribute("data-position-x-current"), {
+        prefix: "expand"
+      }) ?? "expand-up";
+    }
+    if (resolvedAnimation) {
+      popoverEl.setAttribute("navi-animation", resolvedAnimation);
+      backdropEl?.setAttribute("navi-animation", resolvedAnimation);
+    } else {
+      popoverEl.removeAttribute("navi-animation");
+      backdropEl?.removeAttribute("navi-animation");
+    }
+    const hasCssTransitionAnimation = Boolean(resolvedAnimationKind);
+
+    // The final step of open — commits the correctly positioned "closed"
+    // frame set up above as a real rendered state (the reflow), re-enables
+    // transitions, flips aria-expanded="true" (only then does the CSS
+    // transition play, from that just-committed frame to the open one,
+    // with no @starting-style involved at all — see this file's top
+    // comment), suppresses pointer events until it settles, and transfers
+    // focus in. Inlined rather than a standalone function since it only
+    // has this one call site.
+    //
+    // `silent` (mounting already open via `open`/`defaultOpen`) flips the
+    // order instead: aria-expanded first, *then* re-enable transitions, with
+    // its own forced reflow in between the two — without that reflow, the
+    // browser coalesces "flip aria-expanded" and "re-enable transitions"
+    // into a single style recalculation where, by the time anything is
+    // actually computed, transitions are already back on — which is
+    // transition-eligible against the earlier "closed" frame below and
+    // plays the animation anyway, JS statement order notwithstanding.
+    popoverEl.getBoundingClientRect();
+    if (!silent) {
+      // Re-enabled before the flip below, so the change is genuinely
+      // transition-able when it happens. For `silent`, this happens further
+      // down instead — after, not before, the flip.
+      popoverEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
+    popoverEl.setAttribute("aria-expanded", "true");
+    // Backdrop flips here too, not in the earlier show block above — by now
+    // navi-animation has already been set on it (right above), so this is
+    // the first point its own opacity transition can actually fire.
+    backdropEl?.setAttribute("aria-expanded", "true");
+    if (silent) {
+      // Commits the just-applied "open" state as its own observed frame,
+      // still with transitions fully suppressed, before re-enabling them —
+      // see the comment above for why this forced reflow can't be skipped.
+      popoverEl.getBoundingClientRect();
+      popoverEl.style.transitionProperty = "";
+      if (backdropEl) {
+        backdropEl.style.transitionProperty = "";
+      }
+    }
+    const cancelOpenInteractionSuppression = !silent && hasCssTransitionAnimation ? suppressPointerEventsDuringTransition(popoverEl) : null;
+    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
+    debugPopup(e, isTopLayer ? `openPopover() -> anchor: ${anchorElement?.tagName}, hasAnchorElement: ${hasAnchorElement}` : `openPopover() -> scroll-container (local)`);
+
+    // The close callback openEffect returns — also inlined for the same
+    // reason: only ever built here.
+    return closeEvent => {
+      debugPopup(closeEvent, `closePopover()`);
+      popoverEl.setAttribute("aria-expanded", "false");
+      // Set regardless of isTopLayer — see the open side's own identical
+      // comment (openEffect above) for why hidePopover() alone isn't
+      // reliably sufficient once a consumer's own CSS also sets display.
+      popoverEl.setAttribute("navi-hidden", "");
+      if (isTopLayer) {
+        popoverEl.hidePopover();
+      } else {
+        openLocalPopoverCount = Math.max(0, openLocalPopoverCount - 1);
+      }
+      // Not interactive while it's leaving either — cancel the open side's
+      // still-pending suppression first, since a fresh one below fully
+      // replaces it (nothing ever needs to cancel this one in turn: a
+      // closed popover can stay non-interactive indefinitely, and the next
+      // open is its own separate call with no way to reach back into this
+      // one).
+      cancelOpenInteractionSuppression?.();
+      if (hasCssTransitionAnimation) {
+        suppressPointerEventsDuringTransition(popoverEl);
+      }
+      if (backdropEl) {
+        backdropEl.setAttribute("aria-expanded", "false");
+        disarmBackdropHideRef.current = armPointerDownOutsideClose(closeEvent, () => {
+          // Set regardless of isTopLayer — see openEffect's own identical
+          // comment for why hidePopover() alone isn't reliably sufficient.
+          backdropEl.setAttribute("navi-hidden", "");
+          if (isTopLayer) {
+            backdropEl.hidePopover();
+          }
+        });
+      }
+      restoreFocus(closeEvent);
+
+      // pickPositionRelativeTo (visible_rect.js) writes data-position-y/x-
+      // current unconditionally on every call, and treats their mere
+      // *presence* as "already positioned this session — stay on this
+      // side unless it no longer fits" (its own anti-oscillation guard for
+      // repositioning mid-open, e.g. on scroll/resize). Popover's own CSS
+      // doesn't read these anymore (slide direction is resolved in JS now,
+      // see resolveDirectionValue), which is why the clearing that used to
+      // live here was removed — but that removal missed this second,
+      // still-live purpose: without clearing them on close, a later reopen
+      // sees a stale, "already positioned" value left over from a
+      // *previous* open (e.g. the container-aligned collapse from an
+      // anchorless silent open) and wrongly stays sticky to it instead of
+      // resolving fresh from the current positionArea/anchor — a real,
+      // reproduced bug, not just a leftover no-op.
+      popoverEl.removeAttribute("data-position-y-current");
+      popoverEl.removeAttribute("data-position-x-current");
       cleanup();
     };
   };
-  return jsxs(Box, {
-    id: id,
-    popover: "manual",
-    ...rest,
-    ...autoFocusProps,
-    ref: ref,
-    baseClassName: "navi_popover",
-    pseudoClasses: POPOVER_PSEUDO_CLASSES,
-    children: [jsx("div", {
-      className: "navi_popover_backdrop",
-      "aria-hidden": "true",
-      onMouseDown: e => {
-        if (e.button !== 0) {
-          return;
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    escape: e => {
+      if (!openController.opened) {
+        return null;
+      }
+      return {
+        name: "escape_to_cancel",
+        allowed: () => {
+          openController.requestClose(e, {
+            isCancel: true
+          });
         }
-        if (pointerTrap) {
-          e.preventDefault();
-          return;
-        }
-        openController.requestClose(e, {
+      };
+    }
+  });
+  if (isTopLayer) {
+    backdropProps["popover"] = "manual";
+    contentProps["popover"] = "manual";
+  }
+  Object.assign(backdropProps, {
+    "ref": backdropRef,
+    "id": backdropId,
+    "baseClassName": "navi_popover_backdrop",
+    "aria-hidden": "true",
+    // Recomputed fresh on every render from openController.opened (not a
+    // frozen mount-time constant, same pattern as navi-hidden just below)
+    // rather than driven through a mount-time layout effect — its own
+    // actual open/close toggling is still done entirely imperatively
+    // (setAttribute("aria-expanded", …) in openEffect/close), deliberately
+    // outside Preact's render cycle, for the same
+    // precise-ordering-relative-to-forced-reflows reasons as
+    // navi-animation. That doesn't fight this prop: Preact only ever
+    // writes a prop to the DOM when it differs from the previous render's
+    // value (see diff/index.js's own oldProps[i] !== value check), so as
+    // long as this always reflects the *current* truth, a re-render
+    // between imperative toggles never stomps on them. What *does* matter
+    // is that it's present in the DOM synchronously from the very first
+    // commit (a plain prop is, no effect needed) — see
+    // use_displayed_layout_effect.js's own comments for why a descendant
+    // relying on aria-expanded's mere presence needs that.
+    "aria-expanded": openController.opened ? "true" : "false",
+    // Read fresh on every render (not frozen at mount), so it stays
+    // correct even across a re-render that happens to occur while open —
+    // see contentProps' own identical prop just below for the full
+    // reasoning (kept once, not repeated here).
+    "navi-hidden": openController.opened ? undefined : "",
+    "styleCSSVars": POPUP_STYLE_CSS_VARS,
+    "animationDuration": rest.animationDuration,
+    "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
+    "onMouseDown": mouseDownEvent => {
+      if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // Ignore clicks that land inside the popover's bounding rect
+      // (padding and border area are part of the popover box but can
+      // forward pointer events to the backdrop behind them).
+      const rect = ref.current.getBoundingClientRect();
+      const isOutside = mouseDownEvent.clientX < rect.left || mouseDownEvent.clientX > rect.right || mouseDownEvent.clientY < rect.top || mouseDownEvent.clientY > rect.bottom;
+      if (!isOutside) {
+        return;
+      }
+      // "capture" absorbs the click so it doesn't reach whatever's
+      // behind the popover, without closing it. "none" never reaches
+      // here at all — the backdrop isn't rendered in that case.
+      if (pointerInteractionOutsideEffect === "capture") {
+        mouseDownEvent.preventDefault();
+        return;
+      }
+      if (pointerInteractionOutsideEffect === "close") {
+        openController.requestClose(mouseDownEvent, {
           isCancel: true
         });
+        return;
       }
-    }), children]
+    }
+  });
+  Object.assign(contentProps, {
+    id,
+    tabIndex,
+    "data-layer": layer,
+    "navi-animation": isAutoAnimation ? undefined : animation,
+    // See backdropProps' own identical prop above for the full reasoning
+    // (kept once, not repeated here).
+    "aria-expanded": openController.opened ? "true" : "false",
+    // Only load-bearing for the custom renderer (a plain div has no native
+    // starting-hidden default) — present from this very first render so
+    // there's no gap for the browser to ever paint it visible before
+    // anything has actually opened it. Recomputed fresh on every render from
+    // openController.opened (not a frozen mount-time constant) — Preact
+    // only touches the DOM for a prop whose value actually changed since
+    // the last render, so as long as this always reflects the *current*
+    // truth, it never fights the imperative
+    // removeAttribute/setAttribute openEffect/close do directly.
+    "navi-hidden": openController.opened ? undefined : "",
+    "styleCSSVars": POPUP_STYLE_CSS_VARS,
+    ...rest,
+    ...autoFocusProps,
+    ref,
+    "baseClassName": "navi_popover",
+    "pseudoClasses": POPOVER_PSEUDO_CLASSES,
+    "onnavi_command": e => {
+      onNaviCommand(e);
+    },
+    "onnavi_request_interaction": e => {
+      onRequestInteraction(e, {
+        debugInteraction
+      });
+    },
+    "onKeyDown": e => {
+      onKeyDown?.(e);
+      onKeyDownShortcuts(e);
+    },
+    children
+    // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
+    // already arrive here as plain props via ...rest (wired by
+    // UncontrolledPopover above, forwarded through ControlledPopover's own
+    // {...props} spread) — nothing extra to add here. A controlled caller
+    // (picker_custom.jsx/side_panel.jsx) wires its own equivalent handling
+    // directly against its own openController instead.
+  });
+  return [hasBackdrop ? backdropProps : null, contentProps];
+};
+
+/* ============================================================
+ * Shared helpers
+ * ============================================================ */
+
+const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
+
+// Lets consumers pass animationDuration="0.5s"/borderRadius="8px" as regular
+// props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
+// handling).
+const POPUP_STYLE_CSS_VARS = {
+  animationDuration: "--popup-animation-duration",
+  minWidth: "--popover-min-width",
+  maxWidth: "--popover-max-width",
+  minHeight: "--popover-min-height",
+  maxHeight: "--popover-max-height"
+};
+
+// parsePositionArea/POSITION_AREA_X/Y_VALUES moved to popup_shared.js — same
+// grammar Dialog's own layer="local"/"top" now shares.
+
+/**
+ * Shared by both renderers: parses `positionArea` and resolves
+ * `animation="auto"`/`true`. `animationAnchor` is the real anchor element
+ * for the via-attribute renderer's auto-animation resolution, or
+ * `undefined` for the custom renderer (which never has one — see
+ * resolveAutoAnimationKind's own comment).
+ */
+const resolvePositionAreaAndAnimationKind = ({
+  positionArea,
+  isAutoAnimation,
+  animation,
+  animationAnchor
+}) => {
+  const positionAreaParseResult = parsePositionArea(positionArea);
+  if (!positionAreaParseResult) {
+    console.warn(`Popover: invalid positionArea="${positionArea}"`);
+  }
+  const parsedPositionArea = positionAreaParseResult ?? {
+    y: "bottom",
+    x: "center"
+  };
+  const resolvedAnimationKind = isAutoAnimation ? resolveAutoAnimationKind(animationAnchor, parsedPositionArea) : animation;
+  return {
+    parsedPositionArea,
+    resolvedAnimationKind
+  };
+};
+
+// resolveDirectionValue/resolveAutoAnimationKind moved to popup_shared.js —
+// same logic Dialog's own auto-animation resolution now shares, since it
+// never has a real anchor either (always the "anchor === undefined" path).
+
+// suppressPointerEventsDuringTransition/armPointerDownOutsideClose moved to
+// popup_shared.js — same helpers Dialog's own custom renderer needs, no
+// Popover-specific knowledge in either.
+
+installImportMetaCssBuild(import.meta);/**
+ * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
+ * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
+ * shortcuts, history-driven expanded state, anchor-clone "attached" mode):
+ * just picks between rendering a Popover or a Dialog and applies the shared
+ * "popup box" look (padding, background, border-radius, box-shadow) to
+ * whichever one it renders.
+ *
+ * Mode resolution (`usePopupMode` below) is shared with picker_custom.jsx,
+ * not just mirrored — the picker needs the resolved mode itself (for its own
+ * mode-dependent history/ARIA handling), not just to pick which of Popover/
+ * Dialog to render, so it calls the same hook directly instead of
+ * duplicating the heuristic. `Popup` itself never resets it (no
+ * open/close notion of its own to hook a reset into); the picker does, via
+ * the hook's own `resetMode` return value, from its own onClose.
+ *
+ * `layer` (shared by both — picks the top-layer vs. local-container rendering
+ * strategy either way) and `anchorCustomEventDetail` (Popover-only, Dialog
+ * ignores it — Dialog never resolves an anchor for positioning purposes)
+ * pass through untouched via `...rest` to whichever of Popover/Dialog
+ * actually renders.
+ */
+const css$q = /* css */`
+  @layer navi {
+    .navi_popup {
+      --popup-border-radius: var(--navi-popup-border-radius);
+      --popup-border-width: 1px;
+      --popup-border-color: var(--navi-popup-border-color);
+
+      &.navi_popover {
+        --popover-border-radius: var(--popup-border-radius);
+        --popover-border-width: var(--popup-border-width);
+        --popover-border-color: var(--popup-border-color);
+      }
+
+      &.navi_dialog {
+        --dialog-border-radius: var(--popup-border-radius);
+        --dialog-border-color: var(--popup-border-color);
+
+        padding: 0;
+      }
+    }
+  }
+
+  .navi_popup {
+    &.navi_dialog {
+      &[data-expand-x] {
+        width: var(--dialog-maxmax-width);
+      }
+      &[data-expand-y] {
+        height: var(--dialog-maxmax-height);
+      }
+    }
+  }
+`;
+
+/**
+ * Renders a `Dialog` or a `Popover` behind one shared API, switching
+ * automatically based on screen size (small screen → dialog, otherwise →
+ * popover) unless `mode` is set explicitly. See this file's own top
+ * comment for the full mode-resolution/prop-forwarding rationale.
+ *
+ * @param {object} props
+ * @param {"dialog"|"popover"} [props.mode] - Forces one mode instead of the
+ *   automatic small-screen/large-screen resolution. Frozen for the
+ *   component instance's lifetime either way (see this file's top comment).
+ * @param {"top"|"local"} [props.layer] - Forwarded as-is to whichever of
+ *   `Dialog`/`Popover` renders — see either component's own doc.
+ * @param {Element|{current: Element}} [props.anchor] - Forwarded as-is —
+ *   sizing-only for `Dialog`, positioning for `Popover` (see each
+ *   component's own doc for what it actually does there).
+ * @param {"override"|"ignore"} [props.anchorCustomEventDetail] -
+ *   **Popover-only** (`Dialog` never resolves an anchor for positioning) —
+ *   never forwarded to `Dialog`, so it can't leak onto the real `<dialog>`
+ *   element as a stray DOM attribute when `mode="dialog"` is picked.
+ * @param {string} [props.marginWithAnchor] - **Popover-only**, same
+ *   Dialog-leak guard as `anchorCustomEventDetail` above.
+ * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
+ * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
+ * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
+ *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
+ *   deliberately not homogenized here (each reads best for its own typical
+ *   use case).
+ * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ *   - Forwarded to whichever component renders, defaulted here to `"close"`
+ *   specifically to override `Popover`'s own different default (`"none"`)
+ *   — without this, the exact same `<Popup>` usage would behave
+ *   differently (close-on-outside-click or not) purely based on which mode
+ *   the screen-size check happens to pick, which defeats the point of
+ *   having one shared API in the first place. Note this can only ever go so
+ *   far: in dialog mode, `"none"`/`"capture"` still absorb every outside
+ *   click (no visual effect vs. dimmed) rather than truly letting it
+ *   through, since a `<dialog>` is always modal one way or another (see
+ *   `dialog.jsx`'s own doc) — a popover's fully passive, click-through
+ *   backdrop has no dialog-mode equivalent. Whatever content `Popup` opens
+ *   is unavoidably *more* intrusive once it switches to dialog mode than
+ *   the exact same usage would be as a popover — worth keeping in mind for
+ *   anything that relies on `Popup` and can end up on a small screen.
+ * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|"expanding"|`slide-from-${string}`|`expand-${string}`} [props.animation]
+ *   - Forwarded as-is.
+ * @param {string} [props.animationDuration] - Forwarded as-is.
+ * @param {string} [props.maxWidth] - Forwarded as-is to both; also read
+ *   here directly to help decide the automatic `mode` (a small enough
+ *   `maxWidth` is treated as "compact", staying a popover even on a small
+ *   screen).
+ * @param {string} [props.minWidth] - Forwarded as-is.
+ * @param {string} [props.minHeight] - Forwarded as-is.
+ * @param {string} [props.maxHeight] - Forwarded as-is.
+ * @param {boolean} [props.expand] - Dialog-mode only: shorthand for both
+ *   `expandX`/`expandY` below. No effect in popover mode.
+ * @param {boolean} [props.expandX] - Dialog-mode only: stretches the dialog
+ *   to `--dialog-maxmax-width` (`data-expand-x`).
+ * @param {boolean} [props.expandY] - Dialog-mode only: stretches the dialog
+ *   to `--dialog-maxmax-height` (`data-expand-y`).
+ * @param {boolean} [props.scrollCapture] - Forwarded as-is.
+ * @param {boolean} [props.open] - Forwarded as-is (controlled).
+ * @param {boolean} [props.defaultOpen] - Forwarded as-is (uncontrolled,
+ *   mount-only).
+ * @param {(event: Event) => void} [props.onClose] - Forwarded as-is.
+ * @param {object} [props.openController] - Forwarded as-is (advanced —
+ *   see `open_controller.js`).
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_popup"` class (see this file's own CSS) rather than replacing
+ *   it.
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ */
+const Popup = props => {
+  import.meta.css = [css$q, "@jsenv/navi/src/popup/popup.jsx"];
+  const {
+    mode: modeProp,
+    maxWidth,
+    expand,
+    expandX,
+    expandY,
+    className,
+    children,
+    // Both default here (not left to each component's own, *different*
+    // default — Dialog's own is "close", Popover's own is "none") so the
+    // exact same <Popup> usage behaves identically regardless of which
+    // mode the automatic screen-size resolution happens to pick.
+    pointerInteractionOutsideEffect = "close",
+    // Popover-only (see this component's own doc) — destructured out so
+    // they're never part of ...rest, and therefore never forwarded to
+    // Dialog below, where they'd otherwise leak onto the real <dialog>
+    // element as stray, unrecognized DOM attributes.
+    anchorCustomEventDetail,
+    marginWithAnchor,
+    focusCapture,
+    positionAreaFixed,
+    ...rest
+  } = props;
+  const [mode] = usePopupMode(modeProp, maxWidth);
+  if (mode === "dialog") {
+    const expandXResolved = expand || expandX;
+    const expandYResolved = expand || expandY;
+    return jsx(Dialog, {
+      ...rest,
+      maxWidth: maxWidth,
+      pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
+      className: withPropsClassName("navi_popup", className),
+      "data-expand-x": expandXResolved ? "" : undefined,
+      "data-expand-y": expandYResolved ? "" : undefined,
+      children: children
+    });
+  }
+  return jsx(Popover, {
+    ...rest,
+    maxWidth: maxWidth,
+    pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
+    anchorCustomEventDetail: anchorCustomEventDetail,
+    marginWithAnchor: marginWithAnchor,
+    focusCapture: focusCapture,
+    positionAreaFixed: positionAreaFixed,
+    className: withPropsClassName("navi_popup", className),
+    children: children
   });
 };
-const POPOVER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
+
+/**
+ * Frozen for the component instance's lifetime — mirrors `Popup`'s own
+ * mode-resolution timing (a screen resize while already mounted doesn't
+ * switch between Popover and Dialog mid-session).
+ *
+ * @param {"dialog"|"popover"} [modeProp]
+ * @param {string} [maxWidth]
+ * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
+ *   `resetMode` function a caller can call (e.g. on close) to force the
+ *   *next* call to re-resolve from scratch instead of keeping the frozen
+ *   value — `Popup` itself never needs this (it has no notion of
+ *   open/close of its own), `picker_custom.jsx` does (re-evaluates screen
+ *   size on every fresh open).
+ */
+const usePopupMode = (modeProp, maxWidth) => {
+  const defaultModeRef = useRef(null);
+  if (defaultModeRef.current === null) {
+    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
+  }
+  const resetMode = () => {
+    defaultModeRef.current = null;
+  };
+  return [defaultModeRef.current, resetMode];
+};
+/**
+ * Same small-screen/`maxWidth`-compact heuristic `Popup` uses internally,
+ * exported so `picker_custom.jsx` (which needs the resolved mode itself,
+ * for its own mode-dependent history/ARIA handling — not just to pick which
+ * of Popover/Dialog to render, the way `Popup` only ever needs it) doesn't
+ * have to duplicate it.
+ *
+ * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
+ *   resolve automatically.
+ * @param {string} [maxWidth] - A small enough value is treated as
+ *   "compact", staying a popover even on a small screen.
+ * @returns {"dialog"|"popover"}
+ */
+const resolvePopupMode = (modeProp, maxWidth) => {
+  const isSmallScreen = windowWidthSignal.peek() <= 600;
+  const maxWidthPx = parseFloat(maxWidth);
+  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
+};
 
 installImportMetaCssBuild(import.meta);const css$p = /* css */`
   .navi_picker {
-    /* Shared by popover and dialog */
-    --picker-popup-background-color: var(--picker-background-color);
-    --picker-popup-border-radius: var(--picker-border-radius);
-    --picker-popup-border-width: var(--picker-border-width);
-    /* Popover */
-    --picker-popover-max-height: 300px; /* soft: user-configurable preferred max-height */
-    --picker-popover-maxmax-height: calc(0.95 * var(--navi-vvh));
-    --picker-popover-maxmax-width: calc(0.95 * var(--navi-vvw));
-    /* --picker-popover-max-width: soft, leave unset to rely on maxmax */
-    /* Dialog */
-    --picker-dialog-margin: 3dvw; /* min gap between dialog edges and viewport */
-    --picker-dialog-maxmax-width: calc(
-      var(--navi-vvw) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-maxmax-height: calc(
-      var(--navi-vvh) - 2 * var(--picker-dialog-margin)
-    );
-    --picker-dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
+    /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
+       overflow... are already handled correctly by Popup/Popover/Dialog
+       themselves — nothing to redefine here. Only the picker's own look
+       (border color/radius/width, background) needs bridging into the vars
+       Popover/Dialog actually consume, plus a couple of genuinely
+       picker-specific bits below (anchor-width min-width, the anchor clone,
+       the nested list). */
 
     /* popover */
     &[aria-haspopup="listbox"] {
-      .navi_picker_popover {
-        position: absolute;
-        inset: unset;
+      .navi_popover {
+        --popover-border-radius: var(--picker-border-radius);
+        --popover-border-width: var(--picker-border-width);
+        --popover-border-color: var(--x-picker-border-color);
+        --popover-background-color: var(--picker-background-color);
+        --popover-outline-width: var(--picker-outline-width);
+        --popover-outline-color: var(--picker-outline-color);
+
         min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-popover-max-width, var(--picker-popover-maxmax-width)),
-          var(--picker-popover-maxmax-width)
-        );
-        /* max-height covers the placeholder + list; the list scrolls internally */
-        max-height: min(
-          var(--picker-popover-max-height),
-          var(--space-available, var(--picker-popover-maxmax-height)),
-          var(--picker-popover-maxmax-height)
-        );
-        margin: 0;
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border-width: var(--picker-border-width);
-        border-style: solid;
-        border-color: var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0px;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
         cursor: default; /* Reset pointer cursor within the select */
-        overflow: auto;
-        overscroll-behavior: none;
 
         /* The anchor placeholder is a non-interactive visual clone of the
            trigger. It makes the popover wrap both the trigger area and the list
@@ -35979,8 +38958,8 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           }
         }
 
-        &[data-position-y-current="above"],
-        &[data-position-y-current="above-overlap"] {
+        &[data-position-y-current="top"],
+        &[data-position-y-current="inset-bottom"] {
           .navi_picker_anchor_clone {
             order: 1; /* after the list — popover is above the trigger */
             border-top: var(--picker-border-width) solid
@@ -35994,14 +38973,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           width: 100%;
           border-radius: max(
             0px,
-            var(--picker-popup-border-radius) - var(--picker-border-width)
+            var(--picker-border-radius) - var(--picker-border-width)
           );
           overflow: auto;
           overscroll-behavior: none;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
         }
       }
 
@@ -36013,7 +38988,10 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
           border-color: transparent;
         }
 
-        .navi_picker_popover {
+        /* Popover itself has no opinion on its content's own layout (plain
+           div, block by default) — the picker's content (anchor clone +
+           list) needs to stack vertically. */
+        .navi_popover {
           display: flex;
           flex-direction: column;
         }
@@ -36022,48 +39000,21 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
 
     /* dialog */
     &[aria-haspopup="dialog"] {
-      .navi_picker_dialog {
-        min-width: var(--anchor-width, 0px);
-        max-width: min(
-          var(--picker-dialog-max-width, var(--picker-dialog-maxmax-width)),
-          var(--picker-dialog-maxmax-width)
-        );
-        max-height: min(
-          var(--picker-dialog-max-height, var(--picker-dialog-maxmax-height)),
-          var(--picker-dialog-maxmax-height)
-        );
-        padding: 0;
-        background: var(--picker-popup-background-color);
-        border: var(--picker-dialog-border-width) solid
-          var(--x-picker-border-color);
-        border-radius: var(--picker-popup-border-radius);
-        outline-width: var(--picker-outline-width);
-        outline-color: var(--picker-outline-color);
-        outline-offset: 0;
-        box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.08),
-          0 12px 40px rgba(0, 0, 0, 0.22);
+      .navi_dialog {
+        --dialog-border-radius: var(--picker-border-radius);
+        --dialog-border-color: var(--x-picker-border-color);
+        --dialog-background-color: var(--picker-background-color);
+        --dialog-outline-width: var(--picker-outline-width);
+        --dialog-outline-color: var(--picker-outline-color);
+
+        /* Dialog itself already sizes min-width off --anchor-width — only
+           the cursor reset below is picker-specific here. */
         cursor: default; /* Reset pointer cursor within the select */
-        /* overscroll-behavior: contain; */
 
-        &[data-expand-x] {
-          width: var(--picker-dialog-maxmax-width);
-        }
-        &[data-expand-y] {
-          height: var(--picker-dialog-maxmax-height);
-        }
-
+        /* Dialog already applies display: flex to [open] itself, but
+           defaults to row — the picker's content needs to stack vertically. */
         &[open] {
-          display: flex;
           flex-direction: column;
-        }
-
-        &[data-focus-visible] {
-          outline-style: solid;
-        }
-
-        &::backdrop {
-          background: rgba(0, 0, 0, 0.4);
         }
       }
 
@@ -36071,7 +39022,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         width: 100%;
         border-radius: max(
           0px,
-          var(--picker-popup-border-radius) - var(--picker-border-width)
+          var(--picker-border-radius) - var(--picker-border-width)
         );
         overflow: auto;
         overscroll-behavior: none;
@@ -36151,27 +39102,34 @@ const PickerNative = props => {
 const PickerCustom = props => {
   const {
     ref,
-    mode: modeProp
+    mode: modeProp,
+    open,
+    defaultOpen
   } = props;
   // Resolve the id the same way useControlProps does (own id > Field's id > generated id)
   // before computing popupId below, so two Pickers without an explicit id never collide.
+  // Captured before the fallback chain below overwrites props.id — needed to
+  // know whether the id actually came from the caller (stable) or from
+  // useId()/ControlIdContext (not guaranteed stable across a reload), see
+  // pickerNavType below.
+  const hasExplicitId = Boolean(props.id);
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
-  // Freeze the mode for the lifetime of an opening: compute it when closed,
-  // keep it stable while open so a screen resize mid-session doesn't switch
-  // between Popover and Dialog.
-  const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    const isSmallScreen = windowWidthSignal.peek() <= 600;
-    const maxWidthPx = parseFloat(props.maxWidth);
-    const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-    defaultModeRef.current = modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
-  }
-  const mode = defaultModeRef.current;
+  // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
+  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // (computed when closed, stable while open, so a screen resize mid-session
+  // doesn't switch between Popover and Dialog), with resetMode called from
+  // this picker's own onClose below to re-evaluate on the *next* open.
+  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
   const pickerProps = {
     ...props
   };
+  // Consumed right here (useNavState's own defaultValue above) — not a
+  // real DOM/Popup prop, so it must not travel any further down (would
+  // otherwise leak through PickerContentInsidePopup's own ...rest).
+  delete pickerProps.open;
+  delete pickerProps.defaultOpen;
   const popupProps = {};
   Object.assign(pickerProps, {
     popupProps,
@@ -36194,11 +39152,18 @@ const PickerCustom = props => {
   {
     const debugFocus = useDebugFocus();
     const debugPopup = useDebugPopup();
-    // In "dialog" mode, enterExpanded() pushes a history entry so the back button closes.
-    // In "popover" mode, it replaces the current history state (no history entry added).
-    const pickerNavType = mode === "dialog" ? "push" : "replace";
+    // In "dialog" mode with a stable, caller-provided id, enterExpanded()
+    // pushes a history entry so the back button closes it. Every other case
+    // (popover mode, or a dialog whose id was auto-generated via useId()/
+    // ControlIdContext) replaces the current history state instead — a
+    // generated id isn't stable across a reload, so pushing it would either
+    // silently drop the entry or, worse, collide with a different
+    // component's own generated id (see useNavState's own fallback for the
+    // same concern, applied here proactively for the id we control).
+    const pickerNavType = mode === "dialog" && hasExplicitId ? "push" : "replace";
     const [expanded, enterExpanded, leaveExpanded] = useNavState(popupId, {
       type: pickerNavType,
+      defaultValue: open || defaultOpen ? "on" : undefined,
       // onLeave fires only when the state key disappears externally (back button/gesture most of the time).
       onLeave: () => {
         requestClose(new CustomEvent("navi_nav_away", {
@@ -36208,17 +39173,12 @@ const PickerCustom = props => {
         });
       }
     });
-    const disableClickFor = useIgnoreClickForMousedown(ref, e => {
-      debugPopup(e, `click ignored`);
-    });
     // openController centralizes open/close decision-making (validation,
     // focus and value bookkeeping) for the picker. The returned
     // { onRequestClose, onClose } pair is the picker's reaction to close
     // requests — see createOpenController below for the full contract.
     const openController = useOpenController(openEvent => {
       enterExpanded();
-      const focusedBeforeOpen = openEvent.detail.focusedBeforeOpen;
-      debugFocus(openEvent, "picked opened, store element focused", focusedBeforeOpen);
       const valueAtOpen = getPickerInputUIState(ref.current);
       debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
       return {
@@ -36257,83 +39217,31 @@ const PickerCustom = props => {
               event: closeEvent
             });
           }
-          {
-            const mousedownEvent = findEvent(closeEvent, "mousedown");
-            if (mousedownEvent) {
-              debugPopup(closeEvent, `closed by mousedown -> disable next click`);
-              disableClickFor();
-            } else {
-              const spaceEvent = findEvent(closeEvent, e => e.type === "keydown" && e.key === " ");
-              if (spaceEvent) {
-                // space would trigger a click on the picker button causing it to re-open immediatly after closing
-                debugPopup(closeEvent, `closed by space key -> prevent browser click`);
-                // browser won't try to dispatch click
-                // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-                spaceEvent.preventDefault();
-              }
-            }
-          }
-          {
-            const focusoutEvent = findEvent(closeEvent, "focusout");
-            if (focusoutEvent) {
-              debugFocus(closeEvent, `closed by focusout -> let focus go away`);
-            } else {
-              const mousedownEvent = findEvent(closeEvent, "mousedown");
-              if (mousedownEvent) {
-                debugFocus(closeEvent, "closed by mousedown -> prevent browser focus (mousedown.preventDefault())");
-                mousedownEvent.preventDefault();
-              }
-              debugFocus(closeEvent, `restore focus to previously focused element`, focusedBeforeOpen);
-              focusedBeforeOpen.focus({
-                preventScroll: true
-              });
-            }
-          }
           leaveExpanded({
             isBack: closeEvent.detail.isCancel
           });
           // Reset so the next opening re-evaluates screen size
-          defaultModeRef.current = null;
+          resetMode();
         }
       };
     });
-    const requestOpen = (e, detail) => {
-      // scroll <button> of the picker into view when opening it
-      const pickerEl = ref.current;
-      pickerEl.scrollIntoView({
-        block: "nearest"
-      });
-      openController.open(e, detail);
-    };
+    // scroll <button> of the picker into view when opening it
+    // -> would be overriden by dialog.jsx or popover.jsx
+    // so ideally openEffect should be either protective or a pubSub to allow multiple callbacks
+    // openController.openEffect = () => {
+    //   const pickerEl = ref.current;
+    //   pickerEl.scrollIntoView({ block: "nearest" });
+    // };
+    const requestOpen = openController.open;
     const requestClose = openController.requestClose;
-    const open = Boolean(expanded);
-    useLayoutEffect(() => {
-      if (open === undefined) {
-        return;
-      }
-      // Skip when the popup is already in the desired state.
-      // openController.opened tracks actual open/close (updated by onopen/onclose,
-      // not by renders) so it is the authoritative check against feedback loops.
-      if (open === openController.opened) {
-        return;
-      }
-      // open_prop_change means the parent is driving the open state directly
-      // (e.g. back-button navigation flipped openProp to false before onLeave fires).
-      // Always treat it as cancel — the user's in-progress edit should be discarded.
-      if (open) {
-        requestOpen(new CustomEvent("open_by_prop", {
-          detail: {}
-        }), {
-          isCancel: true
-        });
-      } else {
-        requestClose(new CustomEvent("close_by_prop", {
-          detail: {}
-        }), {
-          isCancel: true
-        });
-      }
-    }, [open]);
+    // Same skip-if-already-matching / open-or-requestClose control flow as
+    // useOpenControllerByProps (see open_controller.js) — the picker's own
+    // "open" comes from history state (expanded) rather than a literal
+    // `open` prop, so it adapts requestOpen/requestClose to the shape that
+    // hook expects instead of driving openController directly.
+    useOpenPropsEffectOnOpenController(openController, {
+      open: Boolean(expanded)
+    });
     const requestInteraction = options => {
       dispatchRequestInteraction(ref.current, options);
     };
@@ -36348,7 +39256,37 @@ const PickerCustom = props => {
         onActionStart?.(e);
         // requestClose(e);
       },
+      "uiAction": (v, e) => {
+        uiActionProp?.(v, e);
+      },
+      // The picker's own trigger also carries aria-expanded, so
+      // resolveClosestExpandable() in commands.js can resolve *it* (not the
+      // popup) as the target — e.g. a --navi-open/--navi-close/--navi-toggle
+      // command whose source sits inside the trigger but outside the popup's
+      // own content. Forward the request down to the popup so its
+      // openController (registered above via onnavi_request_open/close on
+      // popupProps) is the single place actually deciding open/close.
       "onnavi_request_open": e => {
+        dispatchCustomEvent(popupRef.current, "navi_request_open", e.detail);
+      },
+      "onnavi_request_close": e => {
+        dispatchCustomEvent(popupRef.current, "navi_request_close", e.detail);
+      },
+      children
+    });
+    Object.assign(popupProps, {
+      anchor: props.ref,
+      openController,
+      // Not on pickerProps (the trigger): commands.js's own
+      // resolveClosestExpandable() does `el.closest("[aria-expanded]")` to
+      // find where to dispatch navi_request_open/navi_request_close — and
+      // the popup itself now carries its own aria-expanded (see
+      // popover.jsx/dialog.jsx), which is *closer* than the picker's own
+      // aria-expanded for anything dispatched from inside the popup's own
+      // content (e.g. a `command="--navi-close"` button rendered as
+      // children here). That command lands on the popup element, not the
+      // picker — so these listeners have to live here to ever see it.
+      onnavi_request_open: e => {
         if (openController.opened) {
           return;
         }
@@ -36360,7 +39298,7 @@ const PickerCustom = props => {
           }
         });
       },
-      "onnavi_request_close": e => {
+      onnavi_request_close: e => {
         requestInteraction({
           event: e,
           allowed: () => {
@@ -36369,17 +39307,14 @@ const PickerCustom = props => {
             });
           }
         });
-      },
-      "uiAction": (v, e) => {
-        uiActionProp?.(v, e);
-      },
-      children
-    });
-    Object.assign(popupProps, {
-      anchorRef: props.ref,
-      openController
+      }
     });
     {
+      const isWithinPickerContent = el => {
+        const pickerEl = ref.current;
+        const pickerContentEl = pickerEl.querySelector(".navi_picker_content");
+        return pickerContentEl?.contains(el);
+      };
       const onKeyDownShortcuts = createOnKeyDownForShortcuts({
         "a-z": e => {
           return {
@@ -36425,6 +39360,11 @@ const PickerCustom = props => {
           };
         },
         "enter": e => {
+          if (isWithinPickerContent(e.target)) {
+            // Enter within popup should not try to re-open it
+            // (enter within input would close popup and this one would try to re-open it)
+            return null;
+          }
           return {
             name: "enter_to_open",
             allowed: () => {
@@ -36448,14 +39388,10 @@ const PickerCustom = props => {
           };
         }
       });
-      const isWithinPopup = el => {
-        const popupEl = popupRef.current;
-        return el === popupEl || popupEl.contains(el);
-      };
       Object.assign(pickerProps, {
         eventReactionDefinitions: {
           mouseDown: e => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             if (openController.opened) {
@@ -36476,7 +39412,7 @@ const PickerCustom = props => {
             };
           },
           click: e => {
-            if (isWithinPopup(e.target)) {
+            if (isWithinPickerContent(e.target)) {
               return null;
             }
             // When a label is clicked it transfers focus to the select
@@ -36499,17 +39435,10 @@ const PickerCustom = props => {
       });
     }
   }
-  if (mode === "popover") {
-    return jsx(PickerContentInsidePopover, {
-      ...pickerProps
-    });
-  }
-  if (mode === "dialog") {
-    return jsx(PickerContentInsideDialog, {
-      ...pickerProps
-    });
-  }
-  return null;
+  return jsx(PickerContentInsidePopup, {
+    ...pickerProps,
+    mode: mode
+  });
 };
 const getPickerInput = pickerEl => {
   return pickerEl.querySelector(".navi_picker_input");
@@ -36518,34 +39447,47 @@ const getPickerInputUIState = pickerEl => {
   const pickerInput = getPickerInput(pickerEl);
   return getUIStateFromElement(pickerInput);
 };
-const PickerContentInsidePopover = props => {
+const PickerContentInsidePopup = props => {
   const Next = useNextResolver();
   const {
     popupProps,
     children,
-    pointerTrap,
-    scrollTrap,
-    focusTrap = true,
+    mode,
+    pointerLock,
+    scrollCapture,
+    // No default here (matches Popover's own default of inactive) — the
+    // old, differently-named `focusTrap = true` prop never actually reached
+    // Popover's real `focusCapture` prop (see this file's history), so
+    // focus-trapping has never really been active for popover-mode pickers;
+    // defaulting the now-correctly-named prop to `true` would be a real,
+    // unintended behavior change riding along with the rename.
+    focusCapture,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    viewportSpacing = 10,
+    marginWithContainer = 10,
     closeOnFocusOut = false,
+    dialogExpand,
+    dialogExpandX,
+    dialogExpandY,
     ...rest
   } = props;
+  const isPopover = mode === "popover";
+  const expandX = dialogExpand || dialogExpandX;
+  const expandY = dialogExpand || dialogExpandY;
   return jsx(Next, {
-    "aria-haspopup": "listbox",
-    "navi-popover-mode": popoverMode,
+    "aria-haspopup": isPopover ? "listbox" : "dialog",
+    "navi-popover-mode": isPopover ? popoverMode : undefined,
     ...rest,
     onFocusOut: e => {
-      if (!closeOnFocusOut) {
+      if (!isPopover || !closeOnFocusOut) {
         return;
       }
       // Close when focus leaves the select entirely (not just moving between internal elements).
-      // relatedTarget is the element receiving focus; if it's inside the select or the popover, keep open.
+      // relatedTarget is the element receiving focus; if it's inside the select or the popup, keep open.
       const relatedTarget = e.relatedTarget;
       const pickerEl = props.ref.current;
-      const popoverEl = popupProps.ref.current;
-      const focusStaysInside = pickerEl && pickerEl.contains(relatedTarget) || popoverEl && popoverEl.contains(relatedTarget);
+      const popupEl = popupProps.ref.current;
+      const focusStaysInside = pickerEl && pickerEl.contains(relatedTarget) || popupEl && popupEl.contains(relatedTarget);
       if (focusStaysInside) {
         return;
       }
@@ -36560,20 +39502,18 @@ const PickerContentInsidePopover = props => {
         }
       });
     },
-    children: jsxs(Popover, {
+    children: jsxs(Popup, {
       ...popupProps,
-      className: "navi_picker_popover",
-      positionX: "left-aligned",
-      positionY: popoverMode === "nearby" ? "below" : "below-overlap",
-      spacing: popoverSpacing,
-      viewportSpacing: viewportSpacing,
-      scrollTrap: scrollTrap,
-      pointerTrap: pointerTrap,
-      focusTrap: focusTrap
-      /* make popover focusable so it can be the first focus target when opening */,
-      tabIndex: -1,
-      autoFocus: "fallback",
-      children: [popoverMode === "attached" ? jsx("div", {
+      mode: mode,
+      positionArea: isPopover ? popoverMode === "nearby" ? "bottom-start" : "inset(top-left)" : undefined,
+      marginWithAnchor: isPopover ? popoverSpacing : undefined,
+      marginWithContainer: isPopover ? marginWithContainer : undefined,
+      scrollCapture: scrollCapture,
+      pointerInteractionOutsideEffect: pointerLock ? "capture" : "close",
+      focusCapture: isPopover ? focusCapture : undefined,
+      expandX: !isPopover ? expandX : undefined,
+      expandY: !isPopover ? expandY : undefined,
+      children: [isPopover && popoverMode === "attached" ? jsx("div", {
         className: "navi_picker_anchor_clone",
         onMouseDown: e => {
           if (e.button !== 0) {
@@ -36587,217 +39527,6 @@ const PickerContentInsidePopover = props => {
       }) : null, children]
     })
   });
-};
-const PickerContentInsideDialog = props => {
-  const Next = useNextResolver();
-  const {
-    popupProps,
-    children,
-    scrollTrap,
-    pointerTrap,
-    dialogExpand,
-    dialogExpandX,
-    dialogExpandY,
-    ...rest
-  } = props;
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
-  return jsx(Next, {
-    "aria-haspopup": "dialog",
-    ...rest,
-    children: jsx(Dialog, {
-      ...popupProps,
-      className: "navi_picker_dialog",
-      scrollTrap: scrollTrap,
-      pointerTrap: pointerTrap,
-      centerInVisualViewport: true,
-      autoFocus: "fallback",
-      "data-expand-x": expandX ? "" : undefined,
-      "data-expand-y": expandY ? "" : undefined,
-      children: children
-    })
-  });
-};
-
-/**
- * Returns a `disableClickFor` function that suppresses the next `click` event
- * that lands on a specific element after a `mousedown` already handled an
- * open/close action.
- *
- * Problem: when the popover backdrop closes on mousedown, the browser then
- * dispatches a `click` on whatever element is under the pointer. If that element
- * is the picker button, it would immediately re-open the picker.
- *
- * We cannot call `stopPropagation()` or `preventDefault()` on the backdrop
- * `mousedown` to prevent that click — the browser dispatches it regardless.
- *
- * Solution: register a self-removing capture-phase `click` listener on `document`
- * and suppress the click only if it lands inside the given element (the picker
- * button). Clicks on any other element (e.g. a submit button) pass through
- * normally.
- *
- * Note: the popover backdrop stays in the DOM (with pointer-events:none) so that
- * the browser always finds a target for the mousedown → click sequence. If the
- * backdrop were removed from the DOM between mousedown and mouseup, the browser
- * would not dispatch a click at all, which would leave this listener armed
- * forever and cause it to swallow the next unrelated user click.
- */
-const useIgnoreClickForMousedown = (elementRef, onIgnore) => {
-  const disableClickFor = () => {
-    const suppressClick = clickEvent => {
-      document.removeEventListener("click", suppressClick, {
-        capture: true
-      });
-      const el = elementRef.current;
-      if (!el || !el.contains(clickEvent.target)) {
-        // Click landed outside the element we are guarding — let it through.
-        return;
-      }
-      clickEvent.stopPropagation();
-      clickEvent.preventDefault();
-      onIgnore?.(clickEvent);
-    };
-    document.addEventListener("click", suppressClick, {
-      capture: true
-    });
-  };
-  return disableClickFor;
-};
-
-// Created once per picker instance: openHandler is wrapped in a stable callback
-// so the controller identity never changes across renders, even though
-// Dialog/Popover read fresh closures (scrollTrap, etc.) via
-// openController.openEffect on every render.
-const useOpenController = openHandler => {
-  const stableOpenHandler = useStableCallback(openHandler);
-  const controllerRef = useRef(null);
-  if (!controllerRef.current) {
-    controllerRef.current = createOpenController(stableOpenHandler);
-  }
-  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
-  // removes it from the tree without going through requestClose()), there is
-  // no choice to leave open — close it for real.
-  useLayoutEffect(() => {
-    return () => {
-      controllerRef.current.close();
-    };
-  }, []);
-  return controllerRef.current;
-};
-
-/**
- * Owns open/close decision-making for a picker popup (Dialog or Popover):
- * guards against duplicate requests and notifies the picker's own reactions.
- *
- * `controller.openEffect` is implemented by the controlled element (Dialog or
- * Popover), reassigned on every render so it always closes over the latest
- * props (scrollTrap, anchorRef, etc.). It performs whatever DOM side effects
- * are needed to make the element actually open (`showModal()`/`showPopover()`,
- * focus transfer, positioning, traps...) and returns its cleanup —
- * the matching side effects to sync back to closed (`close()`/
- * `hidePopover()`, releasing traps...). That cleanup is kept private to the
- * controller (not exposed as a property) and invoked when the popup actually
- * closes, however that happens.
- *
- * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
- * their own internal triggers (backdrop click, Escape).
- *
- * `openHandler` is the picker's own business logic, passed once to
- * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
- * in the spirit of CloseWatcher
- * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
- * clearer naming than its cancel/close pair:
- * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
- *   open. Validation lives here.
- * - `onClose(e)`: actually closing, not preventable — final reactions live here.
- *
- * The controller exposes matching action methods:
- * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
- * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
- *   stopping after the first if denied. The popup may choose to stay open.
- * - `close()`: closes for real — calls only `onClose`, skipping
- *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
- *   popup unmounting).
- */
-const createOpenController = openHandler => {
-  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
-  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
-  const performClose = closeEvent => {
-    controller.opened = false;
-    // Sync the DOM closed first (releasing the focus trap) — only then run
-    // the picker's own reaction (onClose may restore focus to an element
-    // outside the popup, which the focus trap would otherwise fight while
-    // still active).
-    openEffectCleanup?.(closeEvent);
-    openEffectCleanup = null;
-    closeHandlers?.onClose?.(closeEvent);
-    closeHandlers = null;
-  };
-  const controller = {
-    opened: false,
-    openEffect: null,
-    open: (e, detail) => {
-      if (controller.opened || !controller.openEffect) {
-        return;
-      }
-      const requestOpenEvent = new CustomEvent("navi_request_open", {
-        detail: {
-          event: e,
-          ...detail
-        },
-        cancelable: true
-      });
-      chainEvent(requestOpenEvent, e);
-      controller.opened = true;
-      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
-      // by mutating it — openHandler reads it right after, synchronously.
-      openEffectCleanup = controller.openEffect(requestOpenEvent) || null;
-      closeHandlers = openHandler(requestOpenEvent) || null;
-    },
-    requestClose: (e = new CustomEvent("programmatic", {
-      detail: {}
-    }), detail) => {
-      if (!controller.opened) {
-        return;
-      }
-      const requestCloseEvent = new CustomEvent("navi_request_close", {
-        detail: {
-          event: e,
-          ...detail
-        },
-        cancelable: true
-      });
-      chainEvent(requestCloseEvent, e);
-      closeHandlers?.onRequestClose?.(requestCloseEvent);
-      if (requestCloseEvent.defaultPrevented) {
-        // The native <dialog> "cancel" event (Escape key) closes the dialog
-        // by default; prevent that default so denial actually keeps it open.
-        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
-        if (nativeCancelEvent) {
-          nativeCancelEvent.preventDefault();
-        }
-        return;
-      }
-      performClose(requestCloseEvent);
-    },
-    close: (e = new CustomEvent("programmatic", {
-      detail: {}
-    }), detail) => {
-      if (!controller.opened) {
-        return;
-      }
-      const closeEvent = new CustomEvent("navi_close", {
-        detail: {
-          event: e,
-          ...detail
-        }
-      });
-      chainEvent(closeEvent, e);
-      // Skips onRequestClose entirely — there is no choice here.
-      performClose(closeEvent);
-    }
-  };
-  return controller;
 };
 
 const PickerNaviMinute = props => {
@@ -36895,7 +39624,7 @@ const Time = props => {
 };
 const TimeDate = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   dayLabel,
   now,
@@ -36952,7 +39681,7 @@ const TimeDate = ({
 };
 const TimeMonth = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -36993,7 +39722,7 @@ const TimeMonth = ({
 };
 const TimeWeek = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   ...props
 }) => {
   if (children === undefined || children === null) {
@@ -37013,7 +39742,7 @@ const TimeWeek = ({
 };
 const TimeDatetime = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37047,7 +39776,7 @@ const TimeDatetime = ({
 };
 const TimeTime = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37093,7 +39822,7 @@ const TimeTime = ({
 };
 const TimeMinute = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37139,7 +39868,7 @@ const TimeMinute = ({
 };
 const TimeSecond = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37184,7 +39913,7 @@ const TimeSecond = ({
 };
 const TimeHour = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37226,7 +39955,7 @@ const TimeHour = ({
 };
 const TimeDuration = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   ...props
 }) => {
@@ -37297,7 +40026,7 @@ const TimeDuration = ({
 };
 const TimeRelative = ({
   children,
-  lang = langSignal.value,
+  lang = languagesSignal.value,
   format = "long",
   eventDuration = 0,
   bare,
@@ -38536,6 +41265,12 @@ const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
 const RenderWindowContext = createContext(null);
+// Carries List's own `columns` prop (a grid-template-columns value, e.g.
+// "1fr auto auto") down to each ListItem/filler/fallback so they can render
+// as a subgrid row instead of a flex row — see ListItem's own use of this
+// context, and List's own `columns` doc, for the full rationale (table-like
+// column sizing that stays correct across a virtualized, windowed item set).
+const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
@@ -38544,7 +41279,7 @@ const css$m = /* css */`
     .navi_list_container {
       --list-outline-width: 1px;
       --list-border-radius: 4px;
-      --list-border-width: 1px;
+      --list-border-width: 0px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
     }
@@ -38619,6 +41354,7 @@ const css$m = /* css */`
       min-width: inherit;
       max-width: var(--list-max-width, inherit);
       max-height: var(--list-max-height, inherit);
+      flex-wrap: inherit;
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
     }
@@ -38659,8 +41395,9 @@ const css$m = /* css */`
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    flex-wrap: inherit;
     list-style: none;
-    outline: none; /*  Focus is displayed on the container */
+    outline: none; /* Focus is displayed on the container */
   }
 
   .navi_list_item {
@@ -38744,6 +41481,7 @@ const css$m = /* css */`
   .navi_list_virtual_filler {
     display: inline-block;
     height: var(--size-to-fill, 0px);
+    flex-shrink: 0; /* prevent eventual flex parent from shrinking fillers */
     list-style: none;
     /* background: pink; */
   }
@@ -38754,6 +41492,17 @@ const css$m = /* css */`
       width: var(--size-to-fill, 0px);
       height: 100%;
     }
+  }
+
+  /* List's own columns prop (see ListColumnsContext) sets grid on .navi_list
+     itself — Box reflects that as navi-box-flow="grid" (see box.jsx), which
+     this keys off directly rather than threading the columns value through
+     React just for this. A grid track only ever spans the single column it
+     is placed in by default, so without this the filler would collapse into
+     just the first column's width instead of reserving height across the
+     whole row. */
+  .navi_list[navi-box-flow="grid"] > .navi_list_virtual_filler {
+    grid-column: 1 / -1;
   }
 
   /* Empty state — hidden by default, shown when no list items are rendered.
@@ -38904,6 +41653,7 @@ const ListUI = props => {
     onListVisibleItemsChange,
     virtualItemSize,
     lockSize,
+    columns,
     searchText,
     searchNoMatchMode = "remove",
     horizontal,
@@ -39007,11 +41757,10 @@ const ListUI = props => {
       searchFallback: searchFallback,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
-      expandX: expandX,
-      expandY: expandY,
-      expand: expand,
+      expandX: expandX || expand,
       horizontal: horizontal,
       spacing: spacing,
+      columns: columns,
       tracker: tracker,
       renderWindow: renderWindow,
       virtualItemSizeSignal: virtualItemSizeSignal,
@@ -39050,6 +41799,7 @@ const ListFirstResolver = props => {
  *   lockSize?: boolean,
  *   horizontal?: boolean,
  *   spacing?: string,
+ *   columns?: string,
  *   expandX?: boolean,
  *   expandY?: boolean,
  *   expand?: boolean,
@@ -39065,10 +41815,9 @@ const ListContent = ({
   searchNoMatchMode,
   separator,
   expandX,
-  expandY,
-  expand,
   horizontal,
   spacing,
+  columns,
   tracker,
   renderWindow,
   virtualItemSizeSignal,
@@ -39086,10 +41835,25 @@ const ListContent = ({
       separator: separator === true ? jsx(Separator, {
         margin: "0"
       }) : separator,
-      expandX: expandX || expand,
-      expandY: expandY || expand,
+      expandX: expandX
+      // Deliberately not expandY here (unlike expandX above): the outer
+      // .navi_list_container already gets its own expandY treatment (see
+      // ListUI's own Box above) to fill whatever space its *own* parent
+      // gives it (e.g. a flex-column ancestor's flex-grow) — the <ul>
+      // itself must stay auto-height regardless, or it gets capped to
+      // match .navi_list_scroll_container's own (possibly much smaller)
+      // flex-resolved height instead of its real content height. That
+      // breaks two things at once: virtual scroll's own filler sizing
+      // (nothing to overflow into the scroll container in the first
+      // place) and any sticky List.Item header/footer inside it (their
+      // sticky "containing block" — the <ul>'s own box — would be
+      // artificially small, so they run out of room to stay stuck well
+      // before the user has actually scrolled through all the content).
+      ,
+
       horizontal: horizontal,
       spacing: spacing,
+      columns: columns,
       ...listProps,
       tracker: tracker,
       renderWindow: renderWindow,
@@ -39483,19 +42247,42 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   }
   useLayoutEffect(() => {
     if (virtualSizeSignal.peek() !== 0) {
-      return;
+      return undefined;
     }
     const listEl = ref.current?.querySelector(".navi_list");
     if (!listEl) {
-      return;
+      return undefined;
     }
     const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
     if (!firstListItem) {
-      return;
+      return undefined;
     }
     const rect = firstListItem.getBoundingClientRect();
     const measuredSize = horizontal ? rect.width : rect.height;
-    virtualSizeSignal.value = measuredSize;
+    if (measuredSize > 0) {
+      virtualSizeSignal.value = measuredSize;
+      return undefined;
+    }
+    // A real, mounted item never legitimately measures zero — this means
+    // it isn't actually visible yet (e.g. still inside a SidePanel/Popover/
+    // Dialog that hasn't finished opening), not that it's genuinely
+    // zero-height. Left as 0, this would otherwise latch permanently: the
+    // ancestor becoming visible is often a plain imperative DOM mutation
+    // (removing a hidden attribute), not a Preact re-render, so nothing
+    // would ever give this effect another chance to run. A ResizeObserver
+    // re-measures the moment it actually gets a real size instead.
+    const observer = new ResizeObserver(() => {
+      const rect = firstListItem.getBoundingClientRect();
+      const measuredSize = horizontal ? rect.width : rect.height;
+      if (measuredSize > 0) {
+        virtualSizeSignal.value = measuredSize;
+        observer.disconnect();
+      }
+    });
+    observer.observe(firstListItem);
+    return () => {
+      observer.disconnect();
+    };
   });
   return virtualSizeSignal;
 };
@@ -39516,12 +42303,15 @@ const UnorderedList = ({
   separator,
   horizontal,
   spacing,
+  columns,
   children,
   ...rest
 }) => {
   return jsxs(Box, {
     as: "ul",
-    flex: horizontal ? "x" : "y",
+    flex: columns ? undefined : horizontal ? "x" : "y",
+    grid: columns ? true : undefined,
+    gridTemplateColumns: columns,
     ...rest,
     spacing: spacing,
     baseClassName: "navi_list",
@@ -39542,7 +42332,10 @@ const UnorderedList = ({
           value: separator ?? null,
           children: jsx(ListItemTrackerContext.Provider, {
             value: tracker,
-            children: children
+            children: jsx(ListColumnsContext.Provider, {
+              value: columns || null,
+              children: children
+            })
           })
         })
       })
@@ -39648,6 +42441,35 @@ const AfterFiller = ({
     }
   });
 };
+
+// List's own `columns` prop (see ListColumnsContext) turns a list item into
+// a subgrid row instead of a flex row: its own children become direct grid
+// items of List's own <ul>, so column widths are computed from whichever
+// rows are actually in the DOM (the currently-windowed items plus the
+// always-mounted header/footer) — real grid/table column sizing, not a
+// hand-picked width. Shared by both ListItemReal (regular tracked items)
+// and ListItemPresentation (header/footer/fallback items — these skip
+// ListItemReal entirely via ListItemPresentationResolver below, so without
+// this they'd silently stay flex rows and break column alignment against
+// the rest of the grid). `flex` is force-cleared here because Box picks
+// flex over grid when both are set (see box.jsx's own boxFlow resolution),
+// so a caller-provided `flex` prop (leftover from a non-columns usage)
+// would otherwise silently win over this.
+const useListItemColumnsOverrideProps = callerStyle => {
+  const columns = useContext(ListColumnsContext);
+  if (!columns) {
+    return undefined;
+  }
+  return {
+    flex: undefined,
+    grid: true,
+    gridTemplateColumns: "subgrid",
+    style: {
+      gridColumn: "1 / -1",
+      ...callerStyle
+    }
+  };
+};
 const ListItemFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
@@ -39668,9 +42490,11 @@ const ListItemPresentationResolver = props => {
   });
 };
 const ListItemPresentation = props => {
+  const columnsOverrideProps = useListItemColumnsOverrideProps(props.style);
   return jsx(Box, {
     as: "li",
-    ...props
+    ...props,
+    ...columnsOverrideProps
   });
 };
 const ListItemUI = props => {
@@ -39776,6 +42600,7 @@ const ListItemReal = props => {
 
   // CSS Highlight API: mark matching text ranges when highlight prop is set.
   useSearchHighlight(ref, highlight, [children, hidden]);
+  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
   return jsx(Box, {
     as: "li",
     baseClassName: "navi_list_item",
@@ -39785,6 +42610,7 @@ const ListItemReal = props => {
     id: id,
     "navi-list-item-real": "",
     ...rest,
+    ...columnsOverrideProps,
     index: undefined,
     selected: undefined,
     matchScore: undefined,
@@ -45446,7 +48272,7 @@ const LoadingDotsSvg = () => {
   });
 };
 
-const formatNumber = (value, { lang } = {}) => {
+const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
@@ -45466,6 +48292,7 @@ installImportMetaCssBuild(import.meta);const css$9 = /* css */`
     position: relative;
     color: var(--x-color);
     font-size: var(--font-size);
+    font-variant-numeric: tabular-nums;
     vertical-align: inherit;
 
     &[data-accent-needs-dark-fg] {
@@ -45585,7 +48412,7 @@ const BadgeCount = ({
   if (charCount > MAX_CHAR_AS_CIRCLE) {
     circle = false;
   }
-  const textKey = loading + String(valueDisplayed) + hasOverflow;
+  const textKey = `${loading ? "loading-" : ""}${String(valueDisplayed)}${hasOverflow ? "-overflow" : ""}`;
   if (circle) {
     return jsx(TextAnchor, {
       childRef: ref,
@@ -46100,6 +48927,9 @@ installImportMetaCssBuild(import.meta);const css$7 = /* css */`
       .navi_unit {
         font-weight: normal;
       }
+    }
+    .navi_quantity_value {
+      font-variant-numeric: tabular-nums;
     }
 
     &[data-readonly] {
@@ -46929,199 +49759,320 @@ const ViewportLayout = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css = /* css */`
-  @layer navi {
-    .navi_side_panel {
-      --side-panel-width: 400px;
-      --side-panel-background: white;
-      --side-panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.18);
-      --side-panel-animation-duration: 250ms;
-    }
-  }
-
+installImportMetaCssBuild(import.meta);/**
+ * A drawer docked flush to a viewport (or container) edge, built on top of
+ * `Popup`. Sizing, the perpendicular-axis fill, and the flush-edge
+ * border-radius are all resolved by this file's own CSS (keyed off the
+ * `navi-side`/`data-layer` attributes) rather than computed in JS — read
+ * the CSS block below instead of expecting a JS equivalent of it here.
+ *
+ * `anchorCustomEventDetail="ignore"` is required, not cosmetic: without it,
+ * Popover would dock next to whatever triggered the open instead of flush
+ * against the edge, defeating the point of a side panel.
+ */
+const css = /* css */`
   .navi_side_panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    pointer-events: none;
+    /* Dialog's own \`min-width: var(--anchor-width, 0px)\` exists so a
+       dialog naturally matches whatever triggered it (picker_custom.jsx's
+       dialog mode relies on this) — SidePanel's own "anchor" is just its
+       container, so this would otherwise force min-width to the full
+       container width, overriding \`width\`/\`height\` below entirely. Popover
+       ignores this var. */
+    --anchor-width: 0px;
+    /* Side panel create a barriere with the content that is full size */
+    /* So by default they don't have border-radius */
+    --popup-border-radius: 0px;
 
-    .navi_side_panel_overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.3);
-      pointer-events: auto;
+    /* Content-sized by default (each custom property is unset unless the
+       matching \`width\`/\`height\` prop is passed, and var() falls back to
+       "auto") — forced otherwise. Both set unconditionally regardless of
+       \`side\`: whichever axis isn't the docked one gets overridden again
+       below by the perpendicular-fill rules, at higher specificity, unless
+       the corresponding prop was actually passed (see there for why an
+       explicit value still wins even on that axis). */
+    width: var(--navi-side-panel-width, auto);
+    height: var(--navi-side-panel-height, auto);
+
+    /* layer="top": the container is the viewport itself, so the
+       perpendicular axis and the popup's own ceiling both use
+       \`--navi-vvh\`/\`--navi-vvw\` (kept in sync with window.visualViewport,
+       see navi_css_vars.js) instead of a plain 100%/100dvh, which tracks
+       the *layout* viewport instead — that doesn't shrink when e.g. the
+       on-screen keyboard opens, unlike the *visible* one. The viewport
+       itself has no border-radius to inherit, hence 0 below rather than
+       "inherit" (see layer="local" below). */
+    &[data-layer="top"] {
+      --popover-max-height: var(--navi-vvh);
+      --popover-maxmax-height: var(--navi-vvh);
+      --popover-maxmax-width: var(--navi-vvw);
+      --dialog-maxmax-height: var(--navi-vvh);
+      --dialog-maxmax-width: var(--navi-vvw);
+
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        /* An explicit \`height\` prop still wins here (see the base rule
+           above) — only the fallback (no \`height\` given) differs by layer. */
+        height: var(--navi-side-panel-height, var(--navi-vvh));
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        width: var(--navi-side-panel-width, var(--navi-vvw));
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: 0;
+        border-bottom-left-radius: 0;
+      }
     }
 
-    .navi_side_panel_dialog {
-      position: absolute;
+    /* layer="local": the container is a real DOM ancestor, so plain 100%
+       already tracks it correctly on the perpendicular axis — the popup's
+       own ceiling there is neutralized instead (a comfortably large but
+       still valid length, not "none": these vars feed a CSS min(), which
+       treats "none" as invalid and falls back to its own initial value
+       rather than using ours). The *docked* axis keeps a real ceiling
+       though (90% of the container, a percentage resolving correctly here
+       since the popup's own containing block, .navi_popover_clip_wrapper/
+       .navi_dialog_clip_wrapper, is inset: 0 within that same container) —
+       an oversized explicit width/height prop should shrink to fit rather
+       than overflow the container or force it to scroll. The real
+       container's own corner may itself be rounded, hence "inherit" below
+       rather than 0 (see layer="top" above) — border-radius isn't
+       naturally an inherited property, so this must be explicit. */
+    &[data-layer="local"] {
+      &[navi-side="left"],
+      &[navi-side="right"] {
+        --popover-maxmax-height: 100000px;
+        --dialog-maxmax-height: 100000px;
+        --popover-max-height: 100000px;
+        --popover-maxmax-width: 90%;
+        --dialog-maxmax-width: 90%;
+        height: var(--navi-side-panel-height, 100%);
+      }
+      &[navi-side="top"],
+      &[navi-side="bottom"] {
+        --popover-maxmax-width: 100000px;
+        --dialog-maxmax-width: 100000px;
+        --popover-maxmax-height: 90%;
+        --dialog-maxmax-height: 90%;
+        --popover-max-height: 90%;
+        width: var(--navi-side-panel-width, 100%);
+      }
+      &[navi-side="left"] {
+        border-top-left-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+      &[navi-side="right"] {
+        border-top-right-radius: inherit;
+        border-bottom-right-radius: inherit;
+      }
+      &[navi-side="top"] {
+        border-top-left-radius: inherit;
+        border-top-right-radius: inherit;
+      }
+      &[navi-side="bottom"] {
+        border-bottom-right-radius: inherit;
+        border-bottom-left-radius: inherit;
+      }
+    }
+
+    /* Sticky regardless of side: the panel's own content always stacks
+       (and scrolls) top-to-bottom, whether the panel itself is docked to
+       the left/right or the top/bottom of the viewport/container — so
+       "top" for the head and "bottom" for the foot are the right offsets
+       either way, not something that needs to vary with navi-side. Each
+       needs its own opaque background since scrollable content otherwise
+       shows through underneath while stuck. */
+    .navi_side_panel_head,
+    .navi_side_panel_foot {
+      position: sticky;
+      z-index: 1;
+      background-color: var(--navi-popup-background-color);
+    }
+    .navi_side_panel_head {
       top: 0;
-      right: 0;
+      border-bottom: 1px solid var(--navi-popup-border-color);
+    }
+    .navi_side_panel_foot {
       bottom: 0;
-      width: var(--side-panel-width);
-      background: var(--side-panel-background);
-      outline: none;
-      box-shadow: var(--side-panel-shadow);
-      animation-duration: var(--side-panel-animation-duration);
-      animation-timing-function: ease-out;
-      animation-fill-mode: both;
-      pointer-events: auto;
-      overflow-y: auto;
-    }
-
-    &[data-opening] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_in;
-      }
-    }
-
-    &[data-closing] {
-      .navi_side_panel_dialog {
-        animation-name: navi_side_panel_slide_out;
-      }
-    }
-  }
-
-  .navi_side_panel_close_button {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-
-    z-index: 1; /* For some reason required to interact properly with the button */
-    display: flex;
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-    font-size: 18px;
-    line-height: 1;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-
-    &:hover {
-      color: #212529;
-      background: #f0f0f0;
-    }
-  }
-
-  @keyframes navi_side_panel_slide_in {
-    from {
-      transform: translateX(100%);
-    }
-    to {
-      transform: translateX(0);
-    }
-  }
-
-  @keyframes navi_side_panel_slide_out {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(100%);
+      padding: 12px 16px;
+      border-top: 1px solid var(--navi-popup-border-color);
     }
   }
 `;
-const SidePanelCloseContext = createContext(null);
-const useSidePanelClose = () => useContext(SidePanelCloseContext);
-const SidePanelStyleCSSVars = {
-  width: "--side-panel-width"
-};
+
+/**
+ * @param {object} props
+ * @param {boolean} [props.open] - Controlled open state, forwarded as-is to
+ *   `Popup`'s own `open`.
+ * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
+ *   open state, forwarded as-is to `Popup`. Neither this nor `open` is
+ *   required at all for a purely command-driven panel (an `id` plus a
+ *   `<Button command="--navi-toggle" commandFor={id}>` elsewhere, same as
+ *   `Dialog`/`Popover` themselves — see either's own doc).
+ * @param {(event: Event) => void} [props.onClose] - Called when the panel
+ *   actually closes (see `Dialog`/`Popover`'s own `onClose`).
+ * @param {"left"|"right"|"top"|"bottom"} [props.side="right"] - Which
+ *   viewport/container edge the panel is docked flush against.
+ * @param {string|number} [props.width] - Explicit width — a bare number is
+ *   treated as pixels. Relevant for a `left`/`right` panel (its docked
+ *   axis); omitted by default, so the panel sizes to its own content there
+ *   (still capped by the popup's own max-width, same as `Dialog`/
+ *   `Popover`). For a `top`/`bottom` panel (where width is the
+ *   perpendicular axis, normally filling the container) passing this
+ *   overrides that fill instead — `side` isn't expected to change at
+ *   runtime, so there's no need to guard against the "wrong axis" case.
+ * @param {string|number} [props.height] - Same as `width`, for the other
+ *   axis: docked (content-sized by default) for `top`/`bottom`,
+ *   perpendicular (container-filling by default) for `left`/`right`.
+ * @param {string|number} [props.minWidth] - Forwarded as-is to `Popup`'s
+ *   own `minWidth`.
+ * @param {string|number} [props.minHeight] - Forwarded as-is to `Popup`'s
+ *   own `minHeight`.
+ * @param {"top"|"local"} [props.layer="top"] - `"top"` (default): docks
+ *   against the viewport (real top-layer rendering, matches a fixed,
+ *   always-on-screen drawer). `"local"`: docks against the panel's own
+ *   positioned DOM ancestor instead, confined to (and clipped by) it — for
+ *   a drawer that only takes over part of the page rather than the whole
+ *   viewport.
+ * @param {boolean|"fading"} [props.animation] - Off by default (unlike
+ *   `Dialog`/`Popover` themselves) — SidePanel is commonly toggled instead
+ *   of opened/closed as a one-off, where a slide transition is more often
+ *   undesired noise than not. `true` slides in from `side`; `"fading"` is
+ *   the other common choice. Other values are forwarded as-is but not a
+ *   documented/encouraged part of this component's own API.
+ * @param {boolean} [props.closeOnClickOutside=false] - `false` (default):
+ *   maps to `pointerInteractionOutsideEffect="none"` — in popover mode, no
+ *   backdrop at all, outside clicks pass straight through; in dialog mode,
+ *   the outside click is still absorbed (a `<dialog>` always blocks
+ *   interaction with the rest of the page one way or another — see
+ *   `dialog.jsx`'s own doc) but with no dimming effect. `true`: closes the
+ *   panel on an outside click instead, and also enables trapping Tab
+ *   navigation inside the panel (`focusCapture`) — closing on outside
+ *   interaction only makes sense paired with not letting focus silently
+ *   leave the panel first.
+ * @param {"dialog"|"popover"} [props.mode] - Forwarded to `Popup` — forces
+ *   one underlying renderer instead of its automatic screen-size
+ *   resolution. Note that if `Popup` ends up in dialog mode (small screen,
+ *   or forced here), the panel becomes modal regardless of
+ *   `closeOnClickOutside`/`pointerInteractionOutsideEffect`: a `<dialog>`
+ *   always blocks interaction with the rest of the page one way or another
+ *   (see `dialog.jsx`'s own doc) — there is no dialog-mode equivalent of a
+ *   popover's fully passive, click-through backdrop.
+ * @param {import("ignore:preact").ComponentChildren} props.children - No built-in
+ *   close button — add one wherever it makes sense for the layout (e.g. a
+ *   plain `<Button command="--navi-close">`), use `SidePanel.Head`'s own
+ *   `closeButton` prop, or rely on `closeOnClickOutside`/Escape instead.
+ */
 const SidePanel = ({
-  isOpen,
+  open,
+  defaultOpen,
   onClose,
   children,
-  closeOnClickOutside = false,
-  hideCloseButton = false,
+  side = "right",
   width,
+  height,
+  minWidth,
+  minHeight,
+  animation,
+  closeOnClickOutside = false,
+  mode,
+  layer = "top",
+  className,
   ...rest
 }) => {
   import.meta.css = [css, "@jsenv/navi/src/popup/side_panel.jsx"];
-  onClose = useStableCallback(onClose);
-  const panelDialogRef = useRef(null);
-  const [phase, setPhase] = useState(isOpen ? "open" : "closed");
-  const previousFocusRef = useRef(null);
-  const isMountedRef = useRef(false);
-  useLayoutEffect(() => {
-    if (!isMountedRef.current) {
-      isMountedRef.current = true;
-      return;
-    }
-    if (isOpen) {
-      setPhase("opening");
-    } else if (phase !== "closed") {
-      setPhase("closing");
-    }
-  }, [isOpen]);
-  useLayoutEffect(() => {
-    if (phase === "opening" && panelDialogRef.current) {
-      previousFocusRef.current = document.activeElement;
-      panelDialogRef.current.focus();
-    }
-  }, [phase]);
-  useKeyboardShortcuts(panelDialogRef, [{
-    key: "escape",
-    handler: () => {
-      onClose();
-      return true;
-    }
-  }]);
-  if (phase === "closed") {
-    return null;
-  }
-  const onAnimationEnd = () => {
-    if (phase === "opening") {
-      setPhase("open");
-    } else if (phase === "closing") {
-      setPhase("closed");
-      const prev = previousFocusRef.current;
-      if (prev && document.contains(prev)) {
-        prev.focus({
-          preventScroll: true
-        });
-      }
-      previousFocusRef.current = null;
-    }
-  };
-  return createPortal(jsx(SidePanelCloseContext.Provider, {
-    value: onClose,
-    children: jsxs(Box, {
-      baseClassName: "navi_side_panel",
-      styleCSSVars: SidePanelStyleCSSVars,
-      width: width,
-      "data-opening": phase === "opening" ? "" : undefined,
-      "data-closing": phase === "closing" ? "" : undefined,
-      ...rest,
-      children: [closeOnClickOutside && jsx("div", {
-        className: "navi_side_panel_overlay",
-        onClick: e => {
-          onClose(e);
-        }
-      }), jsxs(Box, {
-        ref: panelDialogRef,
-        baseClassName: "navi_side_panel_dialog",
-        tabIndex: -1,
-        role: closeOnClickOutside ? "dialog" : "complementary",
-        "aria-modal": closeOnClickOutside ? "true" : undefined,
-        onAnimationEnd: onAnimationEnd,
-        children: [!hideCloseButton && jsx(NaviSidePanelCloseButton, {}), children]
-      })]
-    })
-  }), document.body);
-};
-const NaviSidePanelCloseButton = () => {
-  const sidePanelClose = useSidePanelClose();
-  return jsx("button", {
-    className: "navi_side_panel_close_button",
-    "aria-label": "Close panel",
-    onClick: sidePanelClose,
-    children: "\xD7"
+  return jsx(Popup, {
+    mode: mode,
+    open: open,
+    defaultOpen: defaultOpen,
+    onClose: onClose,
+    layer: layer,
+    anchorCustomEventDetail: "ignore",
+    positionArea: side,
+    animation: animation === true ? `slide-from-${side}` : animation,
+    pointerInteractionOutsideEffect: closeOnClickOutside ? "close" : "none",
+    focusCapture: closeOnClickOutside,
+    minWidth: toCssLength(minWidth),
+    minHeight: toCssLength(minHeight),
+    className: withPropsClassName("navi_side_panel", className),
+    "navi-side": side,
+    style: {
+      "--navi-side-panel-width": toCssLength(width),
+      "--navi-side-panel-height": toCssLength(height)
+    },
+    ...rest,
+    children: children
   });
+};
+// Preact doesn't auto-append "px" to bare numeric style values the way React
+// does — an unsuffixed number is an invalid CSS length, silently rejected by
+// the browser (leaving the property unset instead of sized).
+const toCssLength = value => value === undefined || value === null ? undefined : typeof value === "number" ? `${value}px` : value;
+
+/**
+ * Stuck to the top of the panel's own scrollable area (`position: sticky`)
+ * regardless of `side` — only the panel's content in between scrolls. No
+ * built-in padding or close button — add a `<Button command="--navi-close">`
+ * (optionally with the `"navi_side_panel_head_close_button"` className, a
+ * float-right utility this file's own CSS still provides) wherever it makes
+ * sense for the layout.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_head"` class this file's own CSS targets.
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ */
+const SidePanelHead = props => jsx(Box, {
+  baseClassName: "navi_side_panel_head",
+  ...props
+});
+/**
+ * Stuck to the bottom of the panel's own scrollable area (`position:
+ * sticky`) regardless of `side` — only the panel's content above scrolls.
+ *
+ * @param {object} props
+ * @param {string} [props.className] - Merged with the shared
+ *   `"navi_side_panel_foot"` class this file's own CSS targets.
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ */
+const SidePanelFoot = props => jsx(Box, {
+  className: "navi_side_panel_foot",
+  ...props
+});
+SidePanel.Head = SidePanelHead;
+SidePanel.Foot = SidePanelFoot;
+
+const createSlot = (SlotRenderer = Box) => {
+  const slotPropsSignal = signal();
+  const Slot = () => {
+    const props = slotPropsSignal.value;
+    return jsx(SlotRenderer, {
+      ...props,
+      isFilled: Boolean(props)
+    });
+  };
+  const SlotFill = props => {
+    slotPropsSignal.value = props;
+    useLayoutEffect(() => {
+      return () => {
+        slotPropsSignal.value = null;
+      };
+    }, []);
+    return null;
+  };
+  return [Slot, SlotFill];
 };
 
 /*
@@ -47263,5 +50214,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, langSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSidePanelClose, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
