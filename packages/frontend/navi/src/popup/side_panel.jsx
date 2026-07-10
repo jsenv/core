@@ -9,6 +9,8 @@
  * Popover would dock next to whatever triggered the open instead of flush
  * against the edge, defeating the point of a side panel.
  */
+import { stringifyStyle } from "@jsenv/dom";
+
 import { Box } from "../box/box.jsx";
 import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
@@ -254,8 +256,8 @@ export const SidePanel = ({
       className={withPropsClassName("navi_side_panel", className)}
       navi-side={side}
       style={{
-        "--navi-side-panel-width": toCssLength(width),
-        "--navi-side-panel-height": toCssLength(height),
+        "--navi-side-panel-width": toCssLength(width, "width"),
+        "--navi-side-panel-height": toCssLength(height, "height"),
       }}
       {...rest}
     >
@@ -263,15 +265,13 @@ export const SidePanel = ({
     </Popup>
   );
 };
-// Preact doesn't auto-append "px" to bare numeric style values the way React
-// does — an unsuffixed number is an invalid CSS length, silently rejected by
-// the browser (leaving the property unset instead of sized).
-const toCssLength = (value) =>
+// Same width/height normalization Box itself uses for its own styleCSSVars
+// props (see box_style_util.js's own getStringifier) — bare numbers become
+// px, percentages/calc()/CSS keywords pass through untouched.
+const toCssLength = (value, propertyName) =>
   value === undefined || value === null
     ? undefined
-    : typeof value === "number"
-      ? `${value}px`
-      : value;
+    : stringifyStyle(value, propertyName);
 
 /**
  * Stuck to the top of the panel's own scrollable area (`position: sticky`)
