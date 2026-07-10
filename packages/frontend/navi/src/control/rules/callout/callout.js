@@ -861,7 +861,7 @@ const createCalloutElement = () => {
  * is given, live-degrading to a plain centered box (no arrow) whenever
  * pickPositionRelativeTo's own isAnchorTooBig rejects it (see its doc in
  * visible_rect.js), or unconditionally when `anchorElement` itself is
- * omitted: either way, `hasAnchor` in pickPositionRelativeTo's own result
+ * omitted: either way, `hasValidAnchor` in pickPositionRelativeTo's own result
  * is the only thing that ever decides which of the two to render, fresh on
  * every visibleRectEffect check (watching `anchorElement`, or
  * `document.documentElement` when there is none) — no anchor
@@ -968,7 +968,7 @@ const positionCallout = (
             ? getAnchorAttribute("data-callout-position") || "bottom"
             : "center",
           positionAreaFixed: getAnchorAttribute("data-callout-position-fixed"),
-          // Anchor rejected as too big → dock centered, no arrow (hasAnchor
+          // Anchor rejected as too big → dock centered, no arrow (hasValidAnchor
           // below reports which way it went).
           positionAreaWhenAnchorIsInvalid: "center",
           marginWithAnchor: ARROW_HEIGHT,
@@ -985,7 +985,7 @@ const positionCallout = (
         },
       );
       const {
-        hasAnchor,
+        hasValidAnchor,
         positionY,
         left: calloutLeft,
         width: calloutWidth,
@@ -1019,7 +1019,7 @@ const positionCallout = (
       calloutBoxElement.style.marginBottom = "";
 
       let maxHeight;
-      if (hasAnchor) {
+      if (hasValidAnchor) {
         // Calculate arrow position to point at anchorElement element
         let arrowLeftPosOnCallout;
         // Determine arrow target position: explicit attribute wins, otherwise

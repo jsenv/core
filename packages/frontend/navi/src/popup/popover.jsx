@@ -778,7 +778,7 @@ const usePopoverProps = (props) => {
       // Only meaningful once actually anchored — rejected (too big,
       // falls back to center) means spaceAbove/spaceBelow describe the
       // container, not a real anchor, and would collapse max-height to ~0.
-      if (position.hasAnchor) {
+      if (position.hasValidAnchor) {
         const spaceAvailable =
           position.positionY === "top" || position.positionY === "inset-bottom"
             ? position.spaceAbove

@@ -714,7 +714,7 @@ const toContainerAlignedPosition = (value) => {
  *   fit-check on both axes. Same grammar as `positionArea`.
  * @param {string} [options.positionAreaWhenAnchorIsInvalid="center"] - `positionArea`
  *   used instead, as a plain no-anchor dock, whenever the anchor is too big to leave
- *   room on the axis `positionArea` places it outside of. `hasAnchor` in the return
+ *   room on the axis `positionArea` places it outside of. `hasValidAnchor` in the return
  *   value reports which way it went.
  * @param {Event|CustomEvent} [options.event] - The event that triggered this particular
  *   reposition (a scroll/resize/etc. handler simply forwarding whatever it was itself
@@ -734,7 +734,7 @@ const toContainerAlignedPosition = (value) => {
  *   custom renderer in popover.jsx, always relative to its own positioned ancestor whether
  *   or not it also has a real anchor). Whenever not explicitly given, this is always
  *   resolved automatically via `getPositioningContainer(element)` instead — regardless of
- *   `hasAnchor` — so a caller that never thinks about `container` at all still gets the
+ *   `hasValidAnchor` — so a caller that never thinks about `container` at all still gets the
  *   right behavior on its own: `null` from `getPositioningContainer` (an `element` with a
  *   `popover` attribute, or a `<dialog>` — e.g. Callout's own element) falls back to the
  *   traditional document-relative path below, exactly as if `container` genuinely didn't
@@ -750,9 +750,9 @@ const toContainerAlignedPosition = (value) => {
  *   When `anchor` is also omitted (no real anchor at all), the container additionally
  *   becomes what's positioned against, and the boundary clamp uses its own (padding-box)
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
- *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasAnchor`,
+ *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -770,7 +770,7 @@ export const pickPositionRelativeTo = (
     container,
   } = {},
 ) => {
-  // Needed before hasAnchor below. visualViewport, not
+  // Needed before hasValidAnchor below. visualViewport, not
   // document.documentElement.clientWidth/Height: the layout viewport
   // doesn't shrink when the on-screen keyboard opens, only the visual one
   // does.
@@ -806,7 +806,10 @@ export const pickPositionRelativeTo = (
     (() => {
       const rect = anchor.getBoundingClientRect();
       const { x, y } = requestedPositionArea ?? {};
-      if ((y === "top" || y === "bottom") && rect.height > containerHeight - 50) {
+      if (
+        (y === "top" || y === "bottom") &&
+        rect.height > containerHeight - 50
+      ) {
         return true;
       }
       if ((x === "left" || x === "right") && rect.width > containerWidth - 50) {
@@ -814,7 +817,7 @@ export const pickPositionRelativeTo = (
       }
       return false;
     })();
-  const hasAnchor = Boolean(anchor) && !anchorRejected;
+  const hasValidAnchor = Boolean(anchor) && !anchorRejected;
   const effectivePositionArea = anchorRejected
     ? positionAreaWhenAnchorIsInvalid
     : positionArea;
@@ -841,7 +844,7 @@ export const pickPositionRelativeTo = (
     }
   }
   // No real anchor (or a rejected one): dock against a container instead.
-  if (!hasAnchor) {
+  if (!hasValidAnchor) {
     positionX = toContainerAlignedPosition(positionX);
     positionY = toContainerAlignedPosition(positionY);
     positionXFixed = positionX;
@@ -852,7 +855,7 @@ export const pickPositionRelativeTo = (
   // falls through to the traditional document-relative path below all the
   // same, so an existing caller that never thinks about `container` at all
   // keeps behaving exactly as before.
-  const effectiveAnchor = hasAnchor
+  const effectiveAnchor = hasValidAnchor
     ? anchor
     : resolvedContainer || document.documentElement;
   // document.documentElement is used as a sentinel "the viewport" value: an
@@ -881,7 +884,7 @@ export const pickPositionRelativeTo = (
   // padding-box origin, which is what a position: absolute child is
   // actually placed relative to. document.documentElement (the
   // anchorIsViewport case) has ~0 border, so this is a no-op there.
-  const containerBorders = !hasAnchor
+  const containerBorders = !hasValidAnchor
     ? getBorderSizes(effectiveAnchor)
     : { left: 0, top: 0, right: 0, bottom: 0 };
   // The available area's own boundaries — the page viewport normally, or
@@ -897,12 +900,12 @@ export const pickPositionRelativeTo = (
   // converted into the container's local coordinate space — a real,
   // previously unnoticed 1px overflow (any container with a visible border)
   // that this fixes.
-  const clampLeftBound = !hasAnchor
-    ? anchorLeft + containerBorders.left
-    : viewportLeft;
-  const clampRightBound = !hasAnchor
-    ? anchorRight - containerBorders.right
-    : viewportLeft + viewportWidth;
+  const clampLeftBound = hasValidAnchor
+    ? viewportLeft
+    : anchorLeft + containerBorders.left;
+  const clampRightBound = hasValidAnchor
+    ? viewportLeft + viewportWidth
+    : anchorRight - containerBorders.right;
   // offsetWidth/offsetHeight (layout box), not getBoundingClientRect() (the
   // painted/transformed box): the element being positioned may have an
   // active CSS `scale`/`translate` transform mid-animation (e.g. a popover
@@ -1175,7 +1178,7 @@ export const pickPositionRelativeTo = (
     // repositioning) is out of scope here. Scoped strictly to the no-anchor
     // (container-docked) case, where it's new and safe: a container is
     // always meant to be respected on both axes.
-    if (!hasAnchor) {
+    if (!hasValidAnchor) {
       // Narrowed by the container's own top/bottom border, same reasoning
       // as clampLeftBound/clampRightBound above.
       const clampTopBound = anchorTop + containerBorders.top;
@@ -1213,7 +1216,9 @@ export const pickPositionRelativeTo = (
   // `resolvedContainer` when there's a real anchor, or (in the no-anchor
   // case) `effectiveAnchor` itself, since there the container *is* what's
   // being positioned against.
-  const coordinateContainer = hasAnchor ? resolvedContainer : effectiveAnchor;
+  const coordinateContainer = hasValidAnchor
+    ? resolvedContainer
+    : effectiveAnchor;
   let scrollLeft;
   let scrollTop;
   if (coordinateContainer && coordinateContainer !== document.documentElement) {
@@ -1277,7 +1282,7 @@ export const pickPositionRelativeTo = (
   return {
     // Whether a real anchor actually ended up used — false when there's no
     // `anchor`, or it was rejected as too big.
-    hasAnchor,
+    hasValidAnchor,
     // True only when `event` is a "resize" — see applyNewPosition's own
     // doc for why only resize-triggered repositions are meant to animate.
     shouldTransition: event?.type === "resize",
