@@ -287,14 +287,16 @@ const css = /* css */ `
  *   positioned relative to its own nearest positioned ancestor and clipped
  *   by it — genuinely confined to (and by) that container instead of the
  *   whole viewport. A real `anchor` works with either.
- * @param {string} [props.positionArea="below"] - Where to place the popover
+ * @param {string} [props.positionArea="bottom"] - Where to place the popover
  *   relative to its `anchor` (or its container, if there is none). Same
  *   grammar as `Dialog`'s own `positionArea` (see `popup_shared.js`'s
- *   `parsePositionArea`): two space-separated words, order-independent — y
- *   from `above`/`aligned-top`/`center`/`aligned-bottom`/`below`, x from
- *   `on-the-left`/`aligned-left`/`center`/`aligned-right`/`on-the-right`. A
- *   bare word means no overlap with the anchor; `aligned-*` means edges
- *   touching/overlapping.
+ *   `parsePositionArea`): a single compass token — `top`/`top-start`/
+ *   `top-end`/`top-left`/`top-right`, `right`/`right-start`/`right-end`,
+ *   `bottom`/`bottom-start`/`bottom-end`/`bottom-left`/`bottom-right`,
+ *   `left`/`left-start`/`left-end`, or `center`. A bare token means no
+ *   overlap with the anchor; wrap it in `inset(...)` (e.g. `inset(top)`,
+ *   `inset(top-left)`) to overlap the anchor instead (edges touching or
+ *   inside it).
  * @param {string} [props.positionAreaFixed] - Overrides `positionArea` once
  *   the popover has actually been positioned once, so a live reposition
  *   (e.g. anchor moved) doesn't jump to a different side.
@@ -460,7 +462,7 @@ const usePopoverProps = (props) => {
     // of anchorProp — a real anchor works with either renderer.
     layer = "top",
     // see the positionArea grammar in the file's top comment
-    positionArea = "below",
+    positionArea = "bottom",
     positionAreaFixed,
     marginWithContainer = 0,
     pointerInteractionOutsideEffect = "none",

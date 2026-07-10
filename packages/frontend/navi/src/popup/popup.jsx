@@ -86,7 +86,7 @@ const css = /* css */ `
  * @param {boolean} [props.focusCapture] - **Popover-only**, same guard.
  * @param {string} [props.positionAreaFixed] - **Popover-only**, same guard.
  * @param {string} [props.positionArea] - Forwarded as-is — `Dialog` and
- *   `Popover` have different own defaults (`"center"` vs. `"below"`),
+ *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
  *   use case).
  * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]

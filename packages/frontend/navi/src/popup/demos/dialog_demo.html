@@ -688,6 +688,40 @@
         return `${y} ${x}`;
       };
 
+      // Converts an internal { y, x } pair to the actual `positionArea`
+      // string the component now accepts (see popup_shared.js's own
+      // parsePositionArea) — a single compass token, `inset(...)`-wrapped
+      // when the pair overlaps the anchor (aligned-*).
+      const Y_X_TO_POSITION_AREA = {
+        "above|on-the-left": "top-left",
+        "above|aligned-left": "top-start",
+        "above|center": "top",
+        "above|aligned-right": "top-end",
+        "above|on-the-right": "top-right",
+        "aligned-top|on-the-right": "right-start",
+        "center|on-the-right": "right",
+        "aligned-bottom|on-the-right": "right-end",
+        "below|on-the-right": "bottom-right",
+        "below|aligned-right": "bottom-end",
+        "below|center": "bottom",
+        "below|aligned-left": "bottom-start",
+        "below|on-the-left": "bottom-left",
+        "aligned-bottom|on-the-left": "left-end",
+        "center|on-the-left": "left",
+        "aligned-top|on-the-left": "left-start",
+        "center|center": "center",
+        "aligned-top|aligned-left": "inset(top-left)",
+        "aligned-top|center": "inset(top)",
+        "aligned-top|aligned-right": "inset(top-right)",
+        "center|aligned-right": "inset(right)",
+        "aligned-bottom|aligned-right": "inset(bottom-right)",
+        "aligned-bottom|center": "inset(bottom)",
+        "aligned-bottom|aligned-left": "inset(bottom-left)",
+        "center|aligned-left": "inset(left)",
+      };
+      const formatPositionAreaValue = (y, x) =>
+        Y_X_TO_POSITION_AREA[`${y}|${x}`];
+
       // Dialog is never really anchored (see dialog.jsx's own top comment)
       // — overlap and no-overlap collapse to the same placement, so
       // "aligned-top" lands exactly where "above" does (ditto
@@ -764,7 +798,7 @@
               renderCell={(y, x) => (
                 <PositionDialog
                   label={formatAreaLabel(y, x)}
-                  positionArea={`${y} ${x}`}
+                  positionArea={formatPositionAreaValue(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animation}
                   animationDuration={animationDuration}
@@ -814,7 +848,7 @@
                     key={`${y} ${x}`}
                     id={`${baseId}-${y}-${x}`}
                     layer="local"
-                    positionArea={`${y} ${x}`}
+                    positionArea={formatPositionAreaValue(y, x)}
                     animation={animation}
                     animationDuration={animationDuration}
                     className="demo_dialog_box"
@@ -848,12 +882,17 @@
           <h2>3. Position</h2>
           <p>
             The full <code>positionArea</code> grammar Dialog now shares with
-            Popover — two space-separated words, order-independent, y from{" "}
-            <code>above</code>/<code>aligned-top</code>/<code>center</code>/
-            <code>aligned-bottom</code>/<code>below</code>, x from{" "}
-            <code>on-the-left</code>/<code>aligned-left</code>/
-            <code>center</code>/<code>aligned-right</code>/
-            <code>on-the-right</code>. Dialog is never really anchored, so
+            Popover — a single compass token (<code>top</code>/
+            <code>top-start</code>/<code>top-end</code>/<code>top-left</code>/
+            <code>top-right</code>, <code>right</code>/
+            <code>right-start</code>/<code>right-end</code>,{" "}
+            <code>bottom</code>/<code>bottom-start</code>/
+            <code>bottom-end</code>/<code>bottom-left</code>/
+            <code>bottom-right</code>, <code>left</code>/
+            <code>left-start</code>/<code>left-end</code>, or{" "}
+            <code>center</code>), optionally wrapped in{" "}
+            <code>inset(...)</code> for the overlapping variant (e.g.{" "}
+            <code>inset(top)</code>). Dialog is never really anchored, so
             several combinations (dimmed below) land on the exact same final
             position — kept anyway because <code>positionArea</code> alone still
             picks which animation direction plays for{" "}

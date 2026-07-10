@@ -87,64 +87,89 @@ export const armPointerDownOutsideClose = (closeEvent, hide) => {
 };
 
 /**
- * The `positionArea` grammar shared by Popover and Dialog: two
- * space-separated words, order-independent (every value but "center"
- * belongs to exactly one axis). y: above/aligned-top/center/aligned-bottom/
- * below. x: on-the-left/aligned-left/center/aligned-right/on-the-right. A
- * bare word means no overlap with whatever it's positioned relative to;
- * "aligned-" means edges touching. A single word implies "center" on the
- * other axis (e.g. a corner is spelled out as "aligned-top aligned-left",
- * no dedicated corner presets). Loosely inspired by CSS `position-area`.
+ * The `positionArea` grammar shared by Popover and Dialog: a single compass
+ * token (loosely inspired by CSS `position-area`'s own naming), optionally
+ * wrapped in `inset(...)` when the popup should overlap the anchor instead
+ * of sitting fully to one side of it. Internally this still resolves to a
+ * { y, x } pair exactly as before — y: above/aligned-top/center/
+ * aligned-bottom/below, x: on-the-left/aligned-left/center/aligned-right/
+ * on-the-right — only the external string syntax changed.
+ *
+ * Outside the anchor (bare token — popup placed fully to one side, no
+ * overlap on that side's axis):
+ *
+ *   top-left     top-start   top   top-end     top-right
+ *   right-start                    right                  right-end
+ *   bottom-right bottom-end  bottom bottom-start bottom-left
+ *   left-end                       left                   left-start
+ *
+ * A corner token fixes one axis outside (above/below/on-the-left/
+ * on-the-right) and the other the same way (a true corner, no cross-axis
+ * overlap at all). "-start"/"-end" keep one axis outside but align the
+ * cross axis flush with the anchor's near/far edge instead (`top-start` is
+ * above the anchor, left-edges flush). The bare direction word centers the
+ * cross axis on the anchor.
+ *
+ * Overlapping the anchor (wrapped in `inset(...)`, the classic 3×3 grid):
+ *
+ *   inset(top-left)     inset(top)    inset(top-right)
+ *   inset(left)          center       inset(right)
+ *   inset(bottom-left)  inset(bottom) inset(bottom-right)
+ *
+ * `center` and `inset(center)` are equivalent aliases for dead-center.
  */
-export const POSITION_AREA_X_VALUES = new Set([
-  "on-the-left",
-  "aligned-left",
-  "center",
-  "aligned-right",
-  "on-the-right",
-]);
-export const POSITION_AREA_Y_VALUES = new Set([
-  "above",
-  "aligned-top",
-  "center",
-  "aligned-bottom",
-  "below",
-]);
+const OUTSIDE_POSITION_AREA_TOKENS = {
+  "top-left": { y: "above", x: "on-the-left" },
+  "top-start": { y: "above", x: "aligned-left" },
+  "top": { y: "above", x: "center" },
+  "top-end": { y: "above", x: "aligned-right" },
+  "top-right": { y: "above", x: "on-the-right" },
+
+  "right-start": { y: "aligned-top", x: "on-the-right" },
+  "right": { y: "center", x: "on-the-right" },
+  "right-end": { y: "aligned-bottom", x: "on-the-right" },
+
+  "bottom-right": { y: "below", x: "on-the-right" },
+  "bottom-end": { y: "below", x: "aligned-right" },
+  "bottom": { y: "below", x: "center" },
+  "bottom-start": { y: "below", x: "aligned-left" },
+  "bottom-left": { y: "below", x: "on-the-left" },
+
+  "left-end": { y: "aligned-bottom", x: "on-the-left" },
+  "left": { y: "center", x: "on-the-left" },
+  "left-start": { y: "aligned-top", x: "on-the-left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_POSITION_AREA_TOKENS = {
+  "top-left": { y: "aligned-top", x: "aligned-left" },
+  "top": { y: "aligned-top", x: "center" },
+  "top-right": { y: "aligned-top", x: "aligned-right" },
+
+  "right": { y: "center", x: "aligned-right" },
+
+  "bottom-right": { y: "aligned-bottom", x: "aligned-right" },
+  "bottom": { y: "aligned-bottom", x: "center" },
+  "bottom-left": { y: "aligned-bottom", x: "aligned-left" },
+
+  "left": { y: "center", x: "aligned-left" },
+
+  "center": { y: "center", x: "center" },
+};
+const INSET_TOKEN_RE = /^inset\(\s*([a-z-]+)\s*\)$/;
 
 /**
  * Parses a positionArea string into a { y, x } pair, or null if it's not a
- * recognized word/pair.
+ * recognized token.
  */
-export const parsePositionArea = (
-  value,
-  { defaultX = "center", defaultY = "center" } = {},
-) => {
-  const tokens = value.split(" ");
-  if (tokens.length === 1) {
-    const [token] = tokens;
-    if (token === "center") {
-      return { y: "center", x: "center" };
-    }
-    if (POSITION_AREA_Y_VALUES.has(token)) {
-      return { y: token, x: defaultX };
-    }
-    if (POSITION_AREA_X_VALUES.has(token)) {
-      return { y: defaultY, x: token };
-    }
-    return null;
+export const parsePositionArea = (value) => {
+  const insetMatch = INSET_TOKEN_RE.exec(value);
+  if (insetMatch) {
+    const parsed = INSET_POSITION_AREA_TOKENS[insetMatch[1]];
+    return parsed ? { ...parsed } : null;
   }
-  if (tokens.length === 2) {
-    const [a, b] = tokens;
-    // Every value but "center" is unique to one axis, so either order
-    // works — whichever token is the Y value becomes y, the other x.
-    if (POSITION_AREA_Y_VALUES.has(a) && POSITION_AREA_X_VALUES.has(b)) {
-      return { y: a, x: b };
-    }
-    if (POSITION_AREA_X_VALUES.has(a) && POSITION_AREA_Y_VALUES.has(b)) {
-      return { y: b, x: a };
-    }
-  }
-  return null;
+  const parsed = OUTSIDE_POSITION_AREA_TOKENS[value];
+  return parsed ? { ...parsed } : null;
 };
 
 /**

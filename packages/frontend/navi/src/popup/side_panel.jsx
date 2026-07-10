@@ -265,10 +265,10 @@ export const SidePanel = ({
   );
 };
 const SIDE_TO_POSITION_AREA = {
-  left: "on-the-left",
-  right: "on-the-right",
-  top: "above",
-  bottom: "below",
+  left: "left",
+  right: "right",
+  top: "top",
+  bottom: "bottom",
 };
 // Preact doesn't auto-append "px" to bare numeric style values the way React
 // does — an unsuffixed number is an invalid CSS length, silently rejected by

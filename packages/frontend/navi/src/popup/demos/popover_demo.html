@@ -286,6 +286,40 @@
         return `${y} ${x}`;
       };
 
+      // Converts an internal { y, x } pair to the actual `positionArea`
+      // string the component now accepts (see popup_shared.js's own
+      // parsePositionArea) — a single compass token, `inset(...)`-wrapped
+      // when the pair overlaps the anchor (aligned-*).
+      const Y_X_TO_POSITION_AREA = {
+        "above|on-the-left": "top-left",
+        "above|aligned-left": "top-start",
+        "above|center": "top",
+        "above|aligned-right": "top-end",
+        "above|on-the-right": "top-right",
+        "aligned-top|on-the-right": "right-start",
+        "center|on-the-right": "right",
+        "aligned-bottom|on-the-right": "right-end",
+        "below|on-the-right": "bottom-right",
+        "below|aligned-right": "bottom-end",
+        "below|center": "bottom",
+        "below|aligned-left": "bottom-start",
+        "below|on-the-left": "bottom-left",
+        "aligned-bottom|on-the-left": "left-end",
+        "center|on-the-left": "left",
+        "aligned-top|on-the-left": "left-start",
+        "center|center": "center",
+        "aligned-top|aligned-left": "inset(top-left)",
+        "aligned-top|center": "inset(top)",
+        "aligned-top|aligned-right": "inset(top-right)",
+        "center|aligned-right": "inset(right)",
+        "aligned-bottom|aligned-right": "inset(bottom-right)",
+        "aligned-bottom|center": "inset(bottom)",
+        "aligned-bottom|aligned-left": "inset(bottom-left)",
+        "center|aligned-left": "inset(left)",
+      };
+      const formatPositionAreaValue = (y, x) =>
+        Y_X_TO_POSITION_AREA[`${y}|${x}`];
+
       // Pinned to a point/corner (layer="top" or "local" — no real anchor
       // box), overlap and no-overlap collapse to the same
       // placement, so "aligned-top" lands exactly where "above" does (ditto
@@ -694,7 +728,7 @@
               id={popoverId}
               borderRadius="8px"
               anchorCustomEventDetail="ignore"
-              positionArea="aligned-top aligned-left"
+              positionArea="inset(top-left)"
               marginWithContainer={marginWithContainer}
               className="demo_popover_box"
             >
@@ -847,7 +881,7 @@
                 <OpenAtStartPopover
                   label={"open={true}"}
                   open
-                  positionArea="on-the-right above"
+                  positionArea="top-right"
                 />
               )}
             />
@@ -857,7 +891,7 @@
                 <OpenAtStartPopover
                   label="defaultOpen"
                   defaultOpen
-                  positionArea="on-the-left above"
+                  positionArea="top-left"
                 />
               )}
             />
@@ -1039,7 +1073,7 @@
             <AreaGrid
               renderCell={(y, x) => (
                 <AnchorAreaPopover
-                  positionArea={`${y} ${x}`}
+                  positionArea={formatPositionAreaValue(y, x)}
                   label={formatAreaLabel(y, x)}
                   commandProxyFor={anchorId}
                   animation={animation}
@@ -1086,7 +1120,7 @@
                 <AnchorAreaPopover
                   layer="top"
                   anchorCustomEventDetail="ignore"
-                  positionArea={`${y} ${x}`}
+                  positionArea={formatPositionAreaValue(y, x)}
                   label={formatAreaLabel(y, x)}
                   duplicate={isDuplicatePointArea(y, x)}
                   animation={animation}
@@ -1123,7 +1157,7 @@
                     borderColor="violet"
                     borderWidth="10px"
                     layer="local"
-                    positionArea={`${y} ${x}`}
+                    positionArea={formatPositionAreaValue(y, x)}
                     className="demo_popover_box"
                     pointerInteractionOutsideEffect="close"
                     anchorCustomEventDetail="ignore"

@@ -308,10 +308,12 @@ const css = /* css */ `
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
  *   element for positioning purposes. Same grammar as `Popover`'s own
- *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): two
- *   space-separated words, order-independent — y from `above`/
- *   `aligned-top`/`center`/`aligned-bottom`/`below`, x from `on-the-left`/
- *   `aligned-left`/`center`/`aligned-right`/`on-the-right`.
+ *   `positionArea` (see `popup_shared.js`'s `parsePositionArea`): a single
+ *   compass token — `top`/`top-start`/`top-end`/`top-left`/`top-right`,
+ *   `right`/`right-start`/`right-end`, `bottom`/`bottom-start`/
+ *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
+ *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
+ *   `inset(top)`) for the overlapping variant.
  * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
  *   between the dialog and the edges of its container.
  * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
