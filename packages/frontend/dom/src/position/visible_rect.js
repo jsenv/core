@@ -884,9 +884,9 @@ export const pickPositionRelativeTo = (
   // padding-box origin, which is what a position: absolute child is
   // actually placed relative to. document.documentElement (the
   // anchorIsViewport case) has ~0 border, so this is a no-op there.
-  const containerBorders = !hasValidAnchor
-    ? getBorderSizes(effectiveAnchor)
-    : { left: 0, top: 0, right: 0, bottom: 0 };
+  const containerBorders = hasValidAnchor
+    ? { left: 0, top: 0, right: 0, bottom: 0 }
+    : getBorderSizes(effectiveAnchor);
   // The available area's own boundaries — the page viewport normally, or
   // the container's own edges when docking (no real anchor). Used both by
   // the alignToContainerEdgeWhenAnchorNearEdge snap below and the final
