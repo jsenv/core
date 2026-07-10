@@ -236,7 +236,6 @@ export const SidePanel = ({
   ...rest
 }) => {
   import.meta.css = css;
-  const positionArea = SIDE_TO_POSITION_AREA[side];
 
   return (
     <Popup
@@ -246,7 +245,7 @@ export const SidePanel = ({
       onClose={onClose}
       layer={layer}
       anchorCustomEventDetail="ignore"
-      positionArea={positionArea}
+      positionArea={side}
       animation={animation === true ? `slide-from-${side}` : animation}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}
@@ -263,12 +262,6 @@ export const SidePanel = ({
       {children}
     </Popup>
   );
-};
-const SIDE_TO_POSITION_AREA = {
-  left: "left",
-  right: "right",
-  top: "top",
-  bottom: "bottom",
 };
 // Preact doesn't auto-append "px" to bare numeric style values the way React
 // does — an unsuffixed number is an invalid CSS length, silently rejected by
