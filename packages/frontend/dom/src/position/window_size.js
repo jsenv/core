@@ -6,27 +6,44 @@ import { createPubSub } from "../pub_sub.js";
 // one per subscriber) so everything settles on the same tick.
 const RESIZE_SETTLE_MS = 100;
 
-const createResizeSettledSubscription = (target, eventName) => {
-  const [publish, subscribe] = createPubSub();
-  if (!target) {
-    return subscribe;
-  }
+// Set while a visualViewport resize is debouncing, cleared once it settles —
+// read by the window resize listener below.
+let visualViewportResizePending = false;
+
+const [publishVisualViewportResize, subscribeVisualViewportResizeSettled] =
+  createPubSub();
+// Calls `callback` once `window.visualViewport` settles after a resize —
+// no-op (never calls back) without support. Returns an unsubscribe function.
+export { subscribeVisualViewportResizeSettled };
+const [publishWindowResize, subscribeWindowResizeSettled] = createPubSub();
+// Calls `callback` once `window` settles after a resize. Returns an unsubscribe function.
+export { subscribeWindowResizeSettled };
+
+if (window.visualViewport) {
   let timeoutId;
-  target.addEventListener(eventName, (event) => {
+  window.visualViewport.addEventListener("resize", (event) => {
+    visualViewportResizePending = true;
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => {
-      publish(event);
+      visualViewportResizePending = false;
+      publishVisualViewportResize(event);
     }, RESIZE_SETTLE_MS);
   });
-  return subscribe;
-};
+}
 
-// Calls `callback` once `window` settles after a resize. Returns an unsubscribe function.
-export const subscribeWindowResizeSettled = createResizeSettledSubscription(
-  window,
-  "resize",
-);
-
-// Same, for `window.visualViewport` — no-op (never calls back) without support.
-export const subscribeVisualViewportResizeSettled =
-  createResizeSettledSubscription(window.visualViewport, "resize");
+let windowResizeTimeoutId;
+window.addEventListener("resize", (event) => {
+  clearTimeout(windowResizeTimeoutId);
+  // Mobile browsers appear to dispatch visualViewport resize, then window
+  // resize, then visualViewport resize again for the same keyboard/UI-chrome
+  // shift — debounce the same way only when it looks like part of that
+  // sequence (a visualViewport resize is already pending); otherwise react
+  // immediately, so a genuine window resize isn't delayed for nothing.
+  if (!visualViewportResizePending) {
+    publishWindowResize(event);
+    return;
+  }
+  windowResizeTimeoutId = setTimeout(() => {
+    publishWindowResize(event);
+  }, RESIZE_SETTLE_MS);
+});
