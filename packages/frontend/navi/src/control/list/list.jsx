@@ -696,6 +696,7 @@ const LIST_STYLE_CSS_VARS = {
   borderColor: "--list-border-color",
   borderRadius: "--list-border-radius",
   borderWidth: "--list-border-width",
+  backgroundColor: "--list-background-color",
 };
 const LIST_PSEUDO_CLASSES = [
   ":hover",

@@ -40532,6 +40532,7 @@ const ListItemHeader = props => {
   }, []);
   return jsx(Next, {
     ...props,
+    header: undefined,
     role: "presentation",
     baseClassName: "navi_list_item_header"
   });
@@ -40549,6 +40550,7 @@ const ListItemFooter = props => {
   }, []);
   return jsx(Next, {
     ...props,
+    footer: undefined,
     role: "presentation",
     baseClassName: "navi_list_item_footer"
   });
@@ -41879,7 +41881,8 @@ const LIST_STYLE_CSS_VARS = {
   maxWidth: "--list-max-width",
   borderColor: "--list-border-color",
   borderRadius: "--list-border-radius",
-  borderWidth: "--list-border-width"
+  borderWidth: "--list-border-width",
+  backgroundColor: "--list-background-color"
 };
 const LIST_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-void", ":-navi-expanded"];
 const useListScrollSync = ({

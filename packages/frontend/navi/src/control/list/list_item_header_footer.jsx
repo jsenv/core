@@ -35,6 +35,7 @@ const ListItemHeader = (props) => {
   return (
     <Next
       {...props}
+      header={undefined}
       role="presentation"
       baseClassName="navi_list_item_header"
     />
@@ -63,6 +64,7 @@ const ListItemFooter = (props) => {
   return (
     <Next
       {...props}
+      footer={undefined}
       role="presentation"
       baseClassName="navi_list_item_footer"
     />
