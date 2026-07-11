@@ -273,6 +273,42 @@ export const useOpenController = (openHandler) => {
   return controllerRef.current;
 };
 
+// Nested popups that both mount already-open (`open`/`defaultOpen`) would
+// otherwise stack in the wrong order: Preact fires layout effects
+// child-first on mount, so a nested popup's own silent mount-open would call
+// showPopover() before its ancestor's — and the top layer stacks *later*
+// showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
+// comment) — leaving the ancestor on top instead of the nested popup, the
+// opposite of what opening them one at a time (ancestor first, by real user
+// interaction) would produce. Batching every mount-time silent open queued
+// during the same commit's layout-effect phase into one microtask flush,
+// then simply running them in *reverse* of their registration order fixes
+// this — no need to compare DOM positions: since effects already fire
+// child-first, tree-wide, for *any* ancestor/descendant pair the descendant
+// is always queued before the ancestor, regardless of what else is in the
+// tree, so reversing the whole batch always puts every ancestor before its
+// own descendants. Works for any nesting depth for the same reason. Two
+// unrelated (sibling) popups both mounting open also get reordered
+// relative to each other, but there's no meaningful "correct" order between
+// those anyway.
+let pendingSilentOpens = [];
+let silentOpenFlushScheduled = false;
+const scheduleSilentOpen = (run) => {
+  pendingSilentOpens.push(run);
+  if (silentOpenFlushScheduled) {
+    return;
+  }
+  silentOpenFlushScheduled = true;
+  queueMicrotask(() => {
+    const entries = pendingSilentOpens;
+    pendingSilentOpens = [];
+    silentOpenFlushScheduled = false;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      entries[i]();
+    }
+  });
+};
+
 /**
  * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
  * shared between `useOpenControllerByProps` below (Dialog/Popover driving
@@ -303,9 +339,15 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
         // silent: true — nothing was ever shown as "closed" for the user to
         // see transition away from, so this first open skips the entrance
         // animation entirely (see popover.jsx's own openEffect for how).
-        openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
-          silent: true,
-        });
+        // Deferred + batched (see scheduleSilentOpen above) rather than
+        // called directly, so nested popups that both mount already-open
+        // end up stacked ancestor-first instead of Preact's own child-first
+        // effect order.
+        scheduleSilentOpen(() =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: true,
+          }),
+        );
       }
       return;
     }
