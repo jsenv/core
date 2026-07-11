@@ -83,6 +83,24 @@
         font-weight: bold;
         border-bottom: 1px solid #e5e5e5;
       }
+      .interop-dialog-head-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      /* Grab handle — dragging it moves the whole dialog (see DialogHead's
+         own createDragToMoveGestureController wiring), to test whether
+         anything anchored inside (Popover, Callout) keeps tracking its
+         anchor as the dialog itself moves, not just when its content
+         scrolls. */
+      .interop-dialog-grab {
+        cursor: grab;
+        color: #999;
+        touch-action: none;
+      }
+      .interop-dialog-grab:active {
+        cursor: grabbing;
+      }
       .interop-dialog-content {
         height: calc(100% - 41px);
         padding: 16px;
@@ -152,7 +170,8 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useId } from "preact/hooks";
+      import { useId, useRef } from "preact/hooks";
+      import { createDragToMoveGestureController } from "@jsenv/dom";
       import { Button, Dialog, Popover, Box } from "@jsenv/navi";
       import { openCallout } from "../../control/rules/callout/callout.js";
 
@@ -171,6 +190,7 @@
           <TableOfContents />
 
           <DialogWithNormalPopoverSection />
+          <DialogWithLocalPopoverSection />
           <DialogWithCalloutSection />
           <DialogWithPopoverSection />
         </div>
@@ -183,6 +203,11 @@
             <li>
               <a href="#dialog-with-normal-popover">
                 Dialog containing a Popover (regular size)
+              </a>
+            </li>
+            <li>
+              <a href="#dialog-with-local-popover">
+                Dialog containing a Popover (layer="local")
               </a>
             </li>
             <li>
@@ -203,6 +228,42 @@
         <div class="interop-page-filler">{label}</div>
       );
 
+      // Shared by every demo below — the grab handle drags the whole dialog
+      // by hand (via createDragToMoveGestureController, the same primitive
+      // table_drag.jsx/drag_gesture_demo.html use), so you can check whether
+      // whatever's anchored inside (a nested Popover, or a Callout anchored
+      // to a field inside) keeps tracking its anchor as the dialog itself
+      // moves — not just when its own content scrolls, the other way these
+      // demos already move the anchor around. dialogRef is a plain useRef
+      // passed down from each demo (Dialog forwards it to the real <dialog>
+      // element via its own `ref` prop, same as any DOM ref).
+      const DialogHead = ({ dialogRef }) => (
+        <div class="interop-dialog-head">
+          <span class="interop-dialog-head-left">
+            <span
+              class="interop-dialog-grab"
+              aria-hidden="true"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                createDragToMoveGestureController().grabViaPointer(event, {
+                  element: dialogRef.current,
+                });
+              }}
+            >
+              ⠿
+            </span>
+            <span>Dialog</span>
+          </span>
+          <Button
+            aria-label="Close dialog"
+            command="--navi-close"
+            variant="discrete"
+          >
+            ×
+          </Button>
+        </div>
+      );
+
       // The closest Popover equivalent to the Callout case right after this
       // one: a popup anchored to a button inside the dialog, sized like a
       // regular popover (.interop-popover-normal) rather than deliberately
@@ -211,22 +272,14 @@
       const DialogWithNormalPopoverDemo = () => {
         const dialogId = useId();
         const popoverId = useId();
+        const dialogRef = useRef();
         return (
           <>
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} className="interop-dialog-box">
-              <div class="interop-dialog-head">
-                <span>Dialog</span>
-                <Button
-                  aria-label="Close dialog"
-                  command="--navi-close"
-                  variant="discrete"
-                >
-                  ×
-                </Button>
-              </div>
+            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+              <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
                   This popover is anchored to a button inside the dialog.
@@ -260,13 +313,82 @@
         <section id="dialog-with-normal-popover" class="demo-section">
           <h2>1. Dialog containing a Popover (regular size)</h2>
           <p>
-            Same anchor-inside-a-dialog case as the Callout section right after
-            this one, but with a regular, content-sized <code>Popover</code>{" "}
+            Same anchor-inside-a-dialog case as the Callout section further
+            down, but with a regular, content-sized <code>Popover</code>{" "}
             instead — confirms the pairing works there too, at a directly
             comparable size, before the exaggerated "bigger than the dialog"
-            version further down.
+            version at the very end.
           </p>
           <DialogWithNormalPopoverDemo />
+        </section>
+      );
+
+      // Same as DialogWithNormalPopoverDemo above, except the nested popover
+      // uses layer="local" instead of the default layer="top" — position:
+      // absolute relative to its own nearest positioned ancestor (the
+      // dialog itself, see dialog.jsx's own `.navi_dialog { position:
+      // absolute }`) and clipped by that ancestor's own overflow, rather
+      // than the top layer's "escapes everything" behavior section 1 shows.
+      // .interop-dialog-box's own overflow: hidden is what does the clipping
+      // here.
+      const DialogWithLocalPopoverDemo = () => {
+        const dialogId = useId();
+        const popoverId = useId();
+        const dialogRef = useRef();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              Open dialog
+            </Button>
+            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+              <DialogHead dialogRef={dialogRef} />
+              <div class="interop-dialog-content">
+                <p style={{ marginTop: 0 }}>
+                  This popover (layer="local") is anchored to a button inside
+                  the dialog, and clipped by the dialog's own bounds.
+                </p>
+                <Button
+                  command="--navi-toggle"
+                  commandFor={popoverId}
+                  className="interop-anchor"
+                >
+                  Anchor (toggle popover)
+                </Button>
+                <div class="interop-dialog-filler" />
+              </div>
+
+              <Popover
+                id={popoverId}
+                layer="local"
+                positionArea="right"
+                borderRadius="8px"
+                padding="m"
+                className="interop-popover-normal"
+              >
+                <p style={{ marginTop: 0 }}>
+                  Anchored inside the dialog, layer="local".
+                </p>
+                <Button command="--navi-close">Close</Button>
+              </Popover>
+            </Dialog>
+          </>
+        );
+      };
+
+      const DialogWithLocalPopoverSection = () => (
+        <section id="dialog-with-local-popover" class="demo-section">
+          <h2>2. Dialog containing a Popover (layer="local")</h2>
+          <p>
+            Same as section 1, except the popover uses{" "}
+            <code>layer="local"</code> — it positions relative to the
+            dialog's own box (its nearest positioned ancestor) instead of the
+            top layer, and gets clipped by the dialog's own{" "}
+            <code>overflow: hidden</code> rather than escaping it. Open the
+            popover, then scroll the dialog's own content far enough that it
+            would want to render outside the dialog — it should get clipped
+            instead of overflowing, unlike section 1's top-layer popover.
+          </p>
+          <DialogWithLocalPopoverDemo />
         </section>
       );
 
@@ -280,22 +402,14 @@
       const DialogWithPopoverDemo = () => {
         const dialogId = useId();
         const popoverId = useId();
+        const dialogRef = useRef();
         return (
           <>
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} className="interop-dialog-box">
-              <div class="interop-dialog-head">
-                <span>Dialog</span>
-                <Button
-                  aria-label="Close dialog"
-                  command="--navi-close"
-                  variant="discrete"
-                >
-                  ×
-                </Button>
-              </div>
+            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+              <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
                   Scroll this area — the anchor button below moves with it, and
@@ -345,7 +459,7 @@
 
       const DialogWithPopoverSection = () => (
         <section id="dialog-with-popover" class="demo-section">
-          <h2>3. Dialog containing a Popover (bigger than the dialog)</h2>
+          <h2>4. Dialog containing a Popover (bigger than the dialog)</h2>
           <p>
             The popover below is anchored to a button that lives <em>inside</em>{" "}
             the dialog's own scrollable content — a different kind of anchor
@@ -392,22 +506,14 @@
       const DialogWithCalloutDemo = () => {
         const dialogId = useId();
         const fieldId = useId();
+        const dialogRef = useRef();
         return (
           <>
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} className="interop-dialog-box">
-              <div class="interop-dialog-head">
-                <span>Dialog</span>
-                <Button
-                  aria-label="Close dialog"
-                  command="--navi-close"
-                  variant="discrete"
-                >
-                  ×
-                </Button>
-              </div>
+            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+              <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
                   This field's callout is anchored inside the dialog.
@@ -437,7 +543,7 @@
 
       const DialogWithCalloutSection = () => (
         <section id="dialog-with-callout" class="demo-section">
-          <h2>2. Dialog containing a Callout</h2>
+          <h2>3. Dialog containing a Callout</h2>
           <p>
             Same idea, with a <code>Callout</code> (the validation-message style
             popup, opened imperatively via <code>openCallout</code>) instead of
