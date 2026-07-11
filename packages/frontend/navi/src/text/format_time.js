@@ -261,7 +261,15 @@ export const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", alwaysShowHours?: boolean }} [options]
+ * @param {boolean} [options.alwaysShowHours=false] - Normally a zero-hours
+ *   component is dropped entirely (a real 5-minute duration should print as
+ *   "5 minutes", not "0 hours 5 minutes") — set this to keep it (e.g. "0 h
+ *   et 5 min"/"0h 5min"/"0h05") instead. Only meaningful when `minutes` is
+ *   itself less than 60, i.e. the hours component would otherwise be zero;
+ *   used by `<Time type="time">` for a time-of-day at midnight, where
+ *   dropping the hour would make it indistinguishable from an actual
+ *   duration (see time.jsx's own TimeTime).
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -269,16 +277,20 @@ export const formatTime = (date, lang) => {
  * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
  * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
+ * formatMinuteDuration(5, { lang: "fr", format: "narrow", alwaysShowHours: true }) // "0h 5min"
  */
 export const formatMinuteDuration = (
   minutes,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long", alwaysShowHours = false } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, { style: format }); // "long", "short", or "narrow"
-    if (h === 0) {
+    const fmt = new Intl.DurationFormat(lang, {
+      style: format, // "long", "short", or "narrow"
+      ...(alwaysShowHours ? { hoursDisplay: "always" } : {}),
+    });
+    if (h === 0 && !alwaysShowHours) {
       return fmt.format({ minutes: m });
     }
     if (m === 0) {
@@ -289,7 +301,7 @@ export const formatMinuteDuration = (
   // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  if (h === 0) {
+  if (h === 0 && !alwaysShowHours) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
@@ -436,40 +448,50 @@ export const formatDuration = (
     // Fall through to compact notation when values are non-numeric or mixed-sign
   }
 
+  // A component explicitly present but numerically zero (e.g. the demo's own
+  // { hours: 0, minutes: 5 }) conveys no information for a genuine duration
+  // — same convention formatMinuteDuration/formatSecondDuration already
+  // follow (checking h > 0/m > 0, not merely "was a value passed") — so
+  // it's dropped here too, regardless of whether the caller included the
+  // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
+  // present — Number("2a") is NaN, never === 0 — so those keep rendering
+  // as-is with their own unit symbol.
+  const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
+
   const sym = (key) =>
     naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
   const parts = [];
 
-  if (has("years")) {
+  if (hasNonZero("years")) {
     parts.push(`${duration.years}${sym("year")}`);
   }
-  if (has("months")) {
+  if (hasNonZero("months")) {
     parts.push(`${duration.months}${sym("month")}`);
   }
-  if (has("weeks")) {
+  if (hasNonZero("weeks")) {
     parts.push(`${duration.weeks}${sym("week")}`);
   }
-  if (has("days")) {
+  if (hasNonZero("days")) {
     parts.push(`${duration.days}${sym("day")}`);
   }
 
   // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
   const hSym = sym("hour");
   const mSym = sym("minute");
-  if (has("hours") && has("minutes")) {
+  if (hasNonZero("hours") && hasNonZero("minutes")) {
     parts.push(
       `${duration.hours}${hSym}${String(duration.minutes).padStart(2, "0")}`,
     );
-  } else if (has("hours")) {
+  } else if (hasNonZero("hours")) {
     parts.push(`${duration.hours}${hSym}`);
-  } else if (has("minutes")) {
+  } else if (hasNonZero("minutes")) {
     parts.push(`${duration.minutes}${mSym}`);
   }
 
-  if (has("seconds")) {
+  if (hasNonZero("seconds")) {
     parts.push(`${duration.seconds}${sym("second")}`);
   }
-  if (has("milliseconds")) {
+  if (hasNonZero("milliseconds")) {
     parts.push(`${duration.milliseconds}${sym("millisecond")}`);
   }
   return parts.join("") || "0";

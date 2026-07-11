@@ -14,6 +14,7 @@ import { createI18n } from "./i18n.js";
  *   - `"time.less_than_minute"` — e.g. "in less than a minute"
  *   - `"time.ongoing"`          — e.g. "Ongoing"
  *   - `"time.tomorrow_at"`      — e.g. "[day] at [time]" ([day] and [time] are placeholders)
+ *   - `"time.midnight"`         — e.g. "midnight"
  *
  * @example
  * import { naviI18n } from "@jsenv/navi";
@@ -106,6 +107,24 @@ naviI18n.addAll({
     it: "tra [duration]",
     pt: "em [duration]",
     nl: "over [duration]",
+  },
+  // Substituted in place of the "0 heure(s)" part of an Intl-generated
+  // duration string when <Time type="time" format="long"> renders midnight
+  // — see time.jsx's own TimeTime for why midnight can't just fall through
+  // to formatMinuteDuration like every other hour does, and how this word
+  // gets spliced in (formatToParts, not string concatenation) so the rest
+  // of the sentence (conjunction, minutes) still comes out in whatever
+  // grammar/word order this language's own Intl.DurationFormat produces.
+  // Languages without an entry here fall back to that language's own
+  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
+  "time.midnight": {
+    en: "midnight",
+    fr: "minuit",
+    de: "Mitternacht",
+    es: "medianoche",
+    it: "mezzanotte",
+    pt: "meia-noite",
+    nl: "middernacht",
   },
   // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
   "time.duration.year_symbol": {

@@ -21,6 +21,7 @@ import {
   getRelativeDay,
 } from "./format_time.js";
 import { languagesSignal } from "./lang_signal.js";
+import { naviI18n } from "./navi_i18n.js";
 import { Text } from "./text.jsx";
 
 /**
@@ -39,7 +40,13 @@ import { Text } from "./text.jsx";
  *   - `"date"`     → "lundi 11 mai" (long by default); `format="short"` → "lun. 11 mai"; `format="numeric"` → "11/05/2026"
  *   - `"month"`    → "juin 2026"
  *   - `"datetime"` → "lun. 11 mai, 14:30" (long); `format="short"` → "11 mai, 14:30"; `format="narrow"` → "11/05, 14:30"
- *   - `"time"`     → time-of-day as duration by default; `format="timestring"` → clock "14 h 30"
+ *   - `"time"`     → time-of-day as duration by default (e.g. "14:30" → "14 heures 30");
+ *                    `format="timestring"` → clock "14 h 30". Midnight (00:xx) is
+ *                    special-cased regardless of `format` — "0 heures 5 minutes"
+ *                    would otherwise collapse to "5 minutes", indistinguishable
+ *                    from an actual 5-minute duration: `format="long"` (default)
+ *                    says "minuit et 5 minutes" (`format="short"/"narrow"/"compact"`
+ *                    keep the zero hour instead — "0 h et 5 min"/"0h 5min"/"0h05")
  *   - `"hour"`     → hours as duration (e.g. 1.5 → "1 heure 30 minutes")
  *   - `"minute"`   → minutes as duration (e.g. 90 → "1 heure 30 minutes")
  *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
@@ -258,7 +265,69 @@ const TimeTime = ({
     );
   }
   const totalMinutes = date.getHours() * 60 + date.getMinutes();
-  const text = formatMinuteDuration(totalMinutes, { lang, format });
+  // Midnight (hour 0) can't go through formatMinuteDuration's own default
+  // zero-hour handling: it drops a zero-valued unit entirely (by design — a
+  // real 5-minute duration should print as "5 minutes", not "0 hours 5
+  // minutes"), so "00:05" would otherwise render identically to an actual
+  // 5-minute duration, silently losing the fact that it's midnight. Every
+  // other hour keeps at least its own "N hour(s)" wording as a hint that
+  // this is a time-of-day, not a duration — only hour 0 loses that hint
+  // entirely.
+  let text;
+  if (date.getHours() !== 0) {
+    text = formatMinuteDuration(totalMinutes, { lang, format });
+  } else if (format !== "long") {
+    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
+    // dropping it (formatMinuteDuration's own alwaysShowHours) — e.g.
+    // "0 h et 5 min"/"0h 5min"/"0h05" — rather than substituting a
+    // translated "midnight" word, which would look out of place squeezed
+    // into these otherwise terse, symbol-based formats.
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      alwaysShowHours: true,
+    });
+  } else {
+    const midnightWord = naviI18n("time.midnight", undefined, { lang });
+    if (midnightWord === "time.midnight") {
+      // No "midnight" translation registered for this language — fall back
+      // to this language's own literal "0 heure(s)" wording instead (still
+      // better than leaking the untranslated key, or substituting an
+      // English word that wouldn't grammatically match the rest of the
+      // sentence in whatever language this actually is).
+      text = formatMinuteDuration(totalMinutes, {
+        lang,
+        format,
+        alwaysShowHours: true,
+      });
+    } else {
+      // Swap just the "0 heure(s)" part of the Intl-generated duration
+      // string for the translated "midnight" word, keeping everything else
+      // (the conjunction, the minutes part) exactly as Intl would produce
+      // for this locale — formatToParts tags each token with the unit it
+      // belongs to, so the swap doesn't need to know the locale's own
+      // grammar/word order. Only ever one hour-tagged group per call
+      // (hours is always 0 or absent here), but guarded anyway in case a
+      // future Intl implementation ever splits it into more parts.
+      const parts = new Intl.DurationFormat(lang, {
+        style: "long",
+        hoursDisplay: "always",
+      }).formatToParts({ hours: 0, minutes: date.getMinutes() });
+      let hourGroupReplaced = false;
+      text = parts
+        .map((part) => {
+          if (part.unit !== "hour") {
+            return part.value;
+          }
+          if (hourGroupReplaced) {
+            return "";
+          }
+          hourGroupReplaced = true;
+          return midnightWord;
+        })
+        .join("");
+    }
+  }
   return (
     <TimeText dateTime={dateTime} {...props}>
       {text}
