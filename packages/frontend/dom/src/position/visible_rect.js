@@ -1464,7 +1464,7 @@ const pendingPositionTransitions = new WeakMap();
 // 250. Falls back to `fallbackMs` when unset/empty/unparsable, so a caller
 // never has to declare the CSS var itself just to get a sane default
 // duration — it only needs to when it actually wants to override it.
-const parseTransitionDurationMs = (element, cssVarName, fallbackMs = 180) => {
+const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
   const trimmed = getStyle(element, cssVarName).trim();
   if (!trimmed) {
     return fallbackMs;
@@ -1640,8 +1640,9 @@ export const applyNewPosition = (
         duration: parseTransitionDurationMs(
           element,
           "--popup-position-transition-duration",
+          250,
         ),
-        easing: "ease-out",
+        easing: "ease",
       },
     );
     notifyPositionTransition(element, animation);
