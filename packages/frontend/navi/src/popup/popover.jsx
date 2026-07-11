@@ -27,16 +27,23 @@
  * popover's own content for attention.
  *
  * The via-attribute renderer defaults to `position: fixed`, overridden to
- * `absolute` only when there's a real anchor: a real anchor needs the
- * popover to scroll in lockstep with the document to stay visually attached
- * to it, whereas `fixed` is the more direct way to stay pinned to the
- * viewport when there's none (and avoids ever extending the document's own
- * scrollable area).
+ * `absolute` only when there's a real anchor that itself scrolls with the
+ * document: such an anchor needs the popover to scroll in lockstep with it
+ * to stay visually attached, whereas `fixed` is the more direct way to stay
+ * pinned to the viewport when there's no anchor (and avoids ever extending
+ * the document's own scrollable area). When the anchor itself doesn't
+ * scroll with the document — it's `position: fixed`, or nested inside
+ * something that is, e.g. anchored to an element inside another top-layer
+ * popover/modal dialog — staying `fixed` is correct *despite* having a real
+ * anchor too, since the anchor never moves on scroll either; see
+ * `data-anchor-scrolls` in openEffect/the CSS below for how that's detected
+ * and applied.
  */
 
 import {
   applyNewPosition,
   createPubSub,
+  findSelfOrAncestorFixedPosition,
   getBorderSizes,
   getPositionedParent,
   onAncestorReopen,
@@ -208,11 +215,12 @@ const css = /* css */ `
     /* The via-attribute renderer's own default: an element in the top layer
        always uses the initial containing block regardless of "position",
        so this is really "pinned to the viewport" either way — fixed is
-       just the more direct way to say so. Overridden back to absolute
-       below when genuinely anchored to a real element — see this file's
-       top comment for why the two need opposite defaults. The custom
-       renderer (no [popover] attribute) never matches either of these
-       rules, it's always the base "position: absolute" above. */
+       just the more direct way to say so. Overridden to absolute below only
+       when data-anchor-scrolls is set — see this file's top comment, and
+       that attribute's own JS-side comment in openEffect, for the full
+       fixed-vs-absolute reasoning. The custom renderer (no [popover]
+       attribute) never matches either of these rules, it's always the base
+       "position: absolute" above. */
     &[popover] {
       position: fixed;
       /* The native top layer already gives "last shown wins" for free —
@@ -221,9 +229,10 @@ const css = /* css */ `
          var directly on an ancestor. */
       z-index: unset;
       padding: 0;
-    }
-    &[popover][data-anchor] {
-      position: absolute;
+
+      &[data-anchor-scrolls] {
+        position: absolute;
+      }
     }
 
     &[data-anchor-out-of-view] {
@@ -631,10 +640,20 @@ const usePopoverProps = (props) => {
     // positioning/measurement runs, so there's no ordering subtlety to get
     // wrong (unlike the CSS this replaced, which keyed off the resolved
     // animation instead, known too late relative to the first measurement).
-    if (hasAnchorElement) {
-      popoverEl.setAttribute("data-anchor", "");
+    // True only for a real anchor that itself scrolls with the document —
+    // that's the one case `absolute` (scrolling in lockstep with it) is
+    // correct; not just "has an anchor at all", since an anchor that's
+    // itself `position: fixed`, or nested inside something that is (e.g.
+    // anchored to an element inside another top-layer popover/modal dialog,
+    // which are always `position: fixed` — see popover.jsx's/dialog.jsx's
+    // own `[popover]`/`[data-layer="top"]` rules), stays pinned to the
+    // viewport regardless of document scroll too, so this popover must stay
+    // `fixed` right alongside it instead — switching to `absolute` there
+    // would make it drift away from an anchor that never actually moves.
+    if (hasAnchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+      popoverEl.setAttribute("data-anchor-scrolls", "");
     } else {
-      popoverEl.removeAttribute("data-anchor");
+      popoverEl.removeAttribute("data-anchor-scrolls");
     }
 
     if (!isTopLayer) {
@@ -739,7 +758,9 @@ const usePopoverProps = (props) => {
     // renderer), otherwise whatever we're docked against instead —
     // positionedAncestor already is document.documentElement for the
     // via-attribute renderer (see its own computation above).
-    const effectiveAnchor = hasAnchorElement ? anchorElement : positionedAncestor;
+    const effectiveAnchor = hasAnchorElement
+      ? anchorElement
+      : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
       let position;

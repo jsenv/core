@@ -8,6 +8,7 @@ import {
   findEvent,
   findFocusable,
   findFocusDelegateTarget,
+  findSelfOrAncestorFixedPosition,
   getBorderSizes,
   getElementSignature,
   getFirstVisuallyVisibleAncestor,
@@ -53,17 +54,21 @@ const css = /* css */ `
     --x-callout-border-color: var(--x-callout-status-color);
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
-
+    /* Default: no anchor at all (docked/centered in the viewport) — fixed
+       is the direct way to stay pinned there. Overridden to absolute below
+       only when data-anchor-scrolls is set (see its own JS-side comment,
+       right where it's set) — same reasoning as Popover's identical
+       attribute (popover.jsx's own top comment has the full case). */
+    position: fixed;
     /* Popover resets */
-    position: absolute;
     inset: auto;
     top: 0;
     left: 0;
     /* Callout styles */
     display: block;
-    height: auto;
+    height: auto; /* User agent reset */
     margin: 0;
-    padding: 0;
+    padding: 0; /* User agent reset */
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
@@ -82,6 +87,10 @@ const css = /* css */ `
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
+
+    &[data-anchor-scrolls] {
+      position: absolute;
+    }
 
     &[data-status="success"] {
       --x-callout-status-color: var(--callout-success-color);
@@ -921,6 +930,24 @@ const positionCallout = (
       }
     }
     calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
+  }
+
+  // Drives the callout's own position: fixed/absolute switch (see
+  // .navi_callout's own CSS) — same reasoning as Popover's identical
+  // data-anchor-scrolls attribute (popover.jsx): true only for a real
+  // anchor that itself scrolls with the document — that's the one case
+  // absolute (scrolling in lockstep with it) is correct; not just "has an
+  // anchor at all", since an anchor that's itself position: fixed, or
+  // nested inside something that is (e.g. anchored to an element inside a
+  // Popover/Dialog rendered in the top layer), stays pinned to the viewport
+  // regardless of document scroll too, so the callout must stay fixed right
+  // alongside it instead — switching to absolute there would make it drift
+  // away from an anchor that never actually moves on scroll. No anchor at
+  // all (docked/centered in the viewport) also stays fixed, the default.
+  if (anchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+    calloutElement.setAttribute("data-anchor-scrolls", "");
+  } else {
+    calloutElement.removeAttribute("data-anchor-scrolls");
   }
 
   // Set initial border styles
