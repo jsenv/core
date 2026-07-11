@@ -168,13 +168,11 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -716,9 +714,9 @@ const useDialogProps = (props) => {
     // repositioning transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
-    // applyNewPosition itself (see its own ensurePositionTransitionForwarding),
-    // since positionDialog already goes through it above; nothing to wire
-    // up here.
+    // applyNewPosition itself (see its own notifyPositionTransition), since
+    // positionDialog already goes through it above; nothing to wire up
+    // here.
 
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between

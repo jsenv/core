@@ -76,14 +76,10 @@ const css = /* css */ `
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
     /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
-       left/top's own duration is driven by --popup-position-transition-duration,
-       same mechanism Popover/Dialog use (see their own CSS): 0s (no
-       transition) for most repositions, a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition:
-      opacity 0.2s ease-in-out,
-      left var(--popup-position-transition-duration, 0s) ease-out,
-      top var(--popup-position-transition-duration, 0s) ease-out;
+       left/top are NOT transitioned here, applyNewPosition drives that
+       itself via the Web Animations API instead of CSS, same mechanism
+       Popover/Dialog use. */
+    transition: opacity 0.2s ease-in-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;

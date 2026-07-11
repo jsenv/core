@@ -50,10 +50,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
  *   update() is called immediately on ancestor close and again (with false) on reopen.
  * @property {boolean} ancestorRepositioning - True while an ancestor dialog/popover is itself
- *   mid-repositioning — its own real `left`/`top` CSS transition actually running, dispatched via
- *   navi_position_transition (distinct from navi_position_change, which fires once with the final
- *   target, not per animation frame — see applyNewPosition's own ensurePositionTransitionForwarding
- *   for where navi_position_transition itself comes from). The element's own anchor may be inside
+ *   mid-repositioning — its own left/top Web Animations API animation actually running, dispatched
+ *   via navi_position_transition (distinct from navi_position_change, which fires once with the
+ *   final target, not per animation frame — see applyNewPosition's own notifyPositionTransition for
+ *   where navi_position_transition itself comes from). The element's own anchor may be inside
  *   that ancestor and mid-flight, so any position computed while this is true is unreliable —
  *   consumers (Popover, Callout) hide themselves for its duration and reposition once it clears.
  *
@@ -542,13 +542,13 @@ export const visibleRectEffect = (
           "navi_position_change",
           onNaviPositionChange,
         );
-        // Dispatched by applyNewPosition's own ensurePositionTransitionForwarding
-        // around this ancestor's real `left`/`top` CSS transition (distinct
-        // from navi_position_change, fired once with the final target, not
-        // per animation frame) — see ancestorRepositioningCount's own doc
-        // above for the full reasoning. e.detail.onEnd registers our own
-        // reaction to the matching transitionend/transitioncancel, rather
-        // than this needing its own separate listener pair for that.
+        // Dispatched by applyNewPosition's own notifyPositionTransition
+        // around this ancestor's own left/top Web Animations API animation
+        // (distinct from navi_position_change, fired once with the final
+        // target, not per animation frame) — see ancestorRepositioningCount's
+        // own doc above for the full reasoning. e.detail.onEnd registers our
+        // own reaction to when that animation actually ends, rather than
+        // this needing its own separate listener/event pair for that.
         // eslint-disable-next-line no-loop-func
         const onNaviPositionTransition = (e) => {
           ancestorRepositioningCount++;
@@ -1451,82 +1451,107 @@ export const pickPositionRelativeTo = (
   };
 };
 
-// Ensures exactly one transitionrun listener per element, lazily, the first
-// time applyNewPosition ever touches it — not one per applyNewPosition call
-// (this element's left/top transition only ever needs the one). See
-// ensurePositionTransitionForwarding's own doc for what it actually does.
-const elementsWithPositionTransitionForwarding = new WeakSet();
+// Per-element bookkeeping for the currently in-flight, self-driven position
+// transition, if any — see notifyPositionTransition's own doc for why this
+// is animation-driven rather than listening for the browser's own
+// transitionrun/transitionend: element -> { animation, endCallbacks }.
+const pendingPositionTransitions = new WeakMap();
 
-/**
- * Forwards `element`'s own real `left` CSS transition (assumed to run
- * alongside `top`, both driven by the same --popup-position-transition-
- * duration — see applyNewPosition's own doc) as a single
- * "navi_position_transition" event, dispatched on `element` the moment the
- * transition actually starts (`transitionrun`, not just whenever
- * applyNewPosition sets a new target — a 0s "transition" never fires one at
- * all, and a real one still takes time to arrive at that target).
- *
- * A descendant anchored to something inside `element` (a Callout, a nested
- * Popover — see visible_rect.js's own ancestorRepositioningCount doc for the
- * full reasoning) has no correct position to compute until this transition
- * actually ends, and no way to keep tracking it smoothly without a
- * per-frame loop of its own — it hides itself for the duration instead.
- * `event.detail.onEnd(callback)` is how it registers to be told when that
- * is: rather than a second, separate "end" event every subscriber would
- * need its own transitionend/transitioncancel listener pair for (each
- * having to independently guard against bubbling from an unrelated
- * descendant transition, filter the right propertyName, etc.), the one
- * "start" dispatch already sets up that plumbing once and lets every
- * subscriber hook into its result — cancel included (an interrupted
- * transition, e.g. a second reposition landing mid-way, still calls every
- * registered `onEnd` exactly once, so nothing is ever left stuck hidden).
- */
-const ensurePositionTransitionForwarding = (element) => {
-  if (elementsWithPositionTransitionForwarding.has(element)) {
-    return;
+// "0.25s" -> 250, "250ms" -> 250 — transitionDuration is always one of these
+// two forms (applyNewPosition's own default, or whatever a caller passes),
+// never a bare number, so no other unit needs handling.
+const parseTransitionDurationMs = (durationString) => {
+  const trimmed = String(durationString).trim();
+  if (trimmed.endsWith("ms")) {
+    return parseFloat(trimmed);
   }
-  elementsWithPositionTransitionForwarding.add(element);
-  element.addEventListener("transitionrun", (transitionEvent) => {
-    if (
-      transitionEvent.target !== element ||
-      transitionEvent.propertyName !== "left"
-    ) {
-      return;
-    }
-    const endCallbacks = [];
-    dispatchCustomEvent(element, "navi_position_transition", {
-      onEnd: (callback) => {
-        endCallbacks.push(callback);
-      },
-    });
-    const onPositionTransitionEnd = (endEvent) => {
-      if (endEvent.target !== element || endEvent.propertyName !== "left") {
-        return;
-      }
-      element.removeEventListener("transitionend", onPositionTransitionEnd);
-      element.removeEventListener("transitioncancel", onPositionTransitionEnd);
-      for (const callback of endCallbacks) {
-        callback();
-      }
-    };
-    element.addEventListener("transitionend", onPositionTransitionEnd);
-    element.addEventListener("transitioncancel", onPositionTransitionEnd);
-  });
+  if (trimmed.endsWith("s")) {
+    return parseFloat(trimmed) * 1000;
+  }
+  return parseFloat(trimmed) || 0;
 };
 
 /**
- * Applies a `pickPositionRelativeTo` result to `element`. Drives
- * `--popup-position-transition-duration` (0s unless `shouldTransition`) so
- * a scroll-triggered reposition stays instant while a resize-triggered one
- * eases in — set via a CSS var rather than `transitionProperty` directly so
- * it doesn't clobber Popover/Dialog's own opacity/scale transition on the
- * same element; consumers declare `transition-duration:
- * var(--popup-position-transition-duration, 0s)` on `left`/`top` in CSS.
- * Also lazily wires up navi_position_transition forwarding for `element`
- * (see ensurePositionTransitionForwarding's own doc), and dispatches
- * navi_position_change on it — every caller of this function already wants
- * both (Dialog, Popover, Callout all set their own position through here),
- * so there's nothing to opt into separately: a descendant anchored to
+ * Dispatches a single "navi_position_transition" event on `element`,
+ * self-driven rather than confirmed by the browser's own `transitionrun`:
+ * `applyNewPosition` calls this exactly when it *knows* it just started a
+ * left/top `animation` (a Web Animations API `Animation`, not a CSS
+ * transition), so there's nothing to wait for. This sidesteps two real
+ * problems with listening for `transitionrun`/`transitionend` instead:
+ *   - Reacting to *any* CSS transition on the element would also fire for
+ *     an unrelated one sharing it (e.g. a scale/opacity entrance animation
+ *     on the same Popover) — wrongly hiding a descendant for that too.
+ *   - Filtering to a specific `propertyName` (`"left"`, say) to avoid that
+ *     is itself unreliable: which of `left`/`top` the browser reports
+ *     `transitionrun` for first isn't guaranteed to stay whichever one
+ *     appears first in a `transition-property` list — it was observed
+ *     firing for `"top"` instead in practice.
+ * Driving left/top through `element.animate()` sidesteps both: it's a
+ * dedicated Animation object with its own real `finished` promise, entirely
+ * independent of whatever CSS transitions the element also has running.
+ *
+ * A descendant anchored to something inside `element` (a Callout, a nested
+ * Popover — see visible_rect.js's own ancestorRepositioningCount doc for the
+ * full reasoning) has no correct position to compute until this animation
+ * actually ends, and no way to keep tracking it smoothly without a
+ * per-frame loop of its own — it hides itself for the duration instead.
+ * `event.detail.onEnd(callback)` is how it registers to be told when that
+ * is, rather than needing its own separate "end" event/listener.
+ *
+ * If another position animation starts on the same element before this
+ * one's own `finished` promise ever settles (a second reposition landing
+ * mid-way), the pending one is cancelled and its own registered callbacks
+ * are flushed immediately (same spirit as a real `transitioncancel`) before
+ * the new one begins, so nothing is ever left stuck hidden waiting for an
+ * `onEnd` that was actually superseded.
+ */
+const notifyPositionTransition = (element, animation) => {
+  const pending = pendingPositionTransitions.get(element);
+  if (pending) {
+    pending.animation.cancel();
+    for (const callback of pending.endCallbacks) {
+      callback();
+    }
+  }
+  const endCallbacks = [];
+  dispatchCustomEvent(element, "navi_position_transition", {
+    onEnd: (callback) => {
+      endCallbacks.push(callback);
+    },
+  });
+  const current = { animation, endCallbacks };
+  pendingPositionTransitions.set(element, current);
+  animation.finished
+    .then(() => {
+      if (pendingPositionTransitions.get(element) === current) {
+        pendingPositionTransitions.delete(element);
+      }
+      for (const callback of endCallbacks) {
+        callback();
+      }
+    })
+    .catch(() => {
+      // Cancelled by a subsequent reposition — already flushed above.
+    });
+};
+
+/**
+ * Applies a `pickPositionRelativeTo` result to `element`. `left`/`top` are
+ * set instantly (no scroll-triggered reposition should ever lag behind its
+ * target); when `shouldTransition` is set (a resize-triggered reposition,
+ * not a scroll one), the visual move from the previous position to this one
+ * is instead played out via `element.animate()` — a Web Animations API
+ * animation kept deliberately independent of any CSS transition
+ * Popover/Dialog/Callout also run on the same element (opacity/scale/
+ * display), so it can't clobber or be clobbered by them, and gives a real
+ * `Animation.finished` promise to key off instead of a fragile
+ * `transitionend`/`propertyName` filter (see notifyPositionTransition's own
+ * doc for why that matters).
+ * Also dispatches navi_position_transition (see notifyPositionTransition's
+ * own doc) whenever it starts such an animation, and navi_position_change
+ * unconditionally — every caller of this function already wants both
+ * (Dialog, Popover, Callout all set their own position through here), so
+ * there's nothing to opt into separately: a descendant anchored to
  * something inside `element` (visible_rect.js's own on_ancestor_events)
  * needs to recheck its own position whenever `element` itself moves,
  * whichever of the three it actually is.
@@ -1544,15 +1569,32 @@ export const applyNewPosition = (
     spaceAbove,
     spaceBelow,
   },
-  { transitionDuration = "0.25s" } = {},
 ) => {
-  ensurePositionTransitionForwarding(element);
-  element.style.setProperty(
-    "--popup-position-transition-duration",
-    shouldTransition ? transitionDuration : "0s",
-  );
+  const previousLeft = parseFloat(element.style.left);
+  const previousTop = parseFloat(element.style.top);
   element.style.left = `${left}px`;
   element.style.top = `${top}px`;
+  if (
+    shouldTransition &&
+    !Number.isNaN(previousLeft) &&
+    !Number.isNaN(previousTop) &&
+    (previousLeft !== left || previousTop !== top)
+  ) {
+    const animation = element.animate(
+      [
+        { left: `${previousLeft}px`, top: `${previousTop}px` },
+        { left: `${left}px`, top: `${top}px` },
+      ],
+      {
+        duration: parseTransitionDurationMs(
+          element,
+          "--popup-position-transition-duration",
+        ),
+        easing: "ease-out",
+      },
+    );
+    notifyPositionTransition(element, animation);
+  }
 
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(

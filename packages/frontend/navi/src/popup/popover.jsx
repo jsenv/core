@@ -172,13 +172,11 @@ const css = /* css */ `
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
     overflow: auto;
     overscroll-behavior: none;
 
@@ -823,7 +821,11 @@ const usePopoverProps = (props) => {
           minLeft,
           event: positionEvent,
         };
-        position = pickPositionRelativeTo(popoverEl, anchorElement, pickOptions);
+        position = pickPositionRelativeTo(
+          popoverEl,
+          anchorElement,
+          pickOptions,
+        );
         position = { ...position, left: Math.max(position.left, minLeft) };
         applyNewPosition(popoverEl, position);
         // applyNewPosition above just set --container-position-remaining-
@@ -976,8 +978,8 @@ const usePopoverProps = (props) => {
     // left/top repositioning transition — not just that the target changed
     // (navi_position_change above), but that a real, currently-playing
     // transition is moving it right now — is handled generically by
-    // applyNewPosition itself (see its own ensurePositionTransitionForwarding
-    // in visible_rect.js), since positionPopover already goes through it
+    // applyNewPosition itself (see its own notifyPositionTransition in
+    // visible_rect.js), since positionPopover already goes through it
     // above; nothing to wire up here.
     addCleanup(() => {
       rectEffect.disconnect();
