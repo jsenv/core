@@ -539,7 +539,19 @@
                   This field's callout is anchored inside the dialog.
                 </p>
                 <Box flex="y" alignX="start">
-                  <input id={fieldId} type="text" placeholder="Your name" />
+                  <Box flex spacing="s">
+                    <input
+                      id={fieldId}
+                      type="text"
+                      placeholder="Name"
+                      style="width: 50px"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Ttotos"
+                      style="width: 50px"
+                    />
+                  </Box>
                   <Button
                     onClick={() => {
                       openCallout(
