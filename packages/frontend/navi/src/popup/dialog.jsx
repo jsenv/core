@@ -725,6 +725,19 @@ const useDialogProps = (props) => {
         if (mouseDownEvent.button !== 0) {
           return;
         }
+        // Real DOM containment wins over the coordinate check below — an
+        // element genuinely inside the dialog (e.g. one with `overflow:
+        // visible`, a negative margin, or an absolutely-positioned child)
+        // can be visually painted outside dialogEl's own bounding rect, and
+        // a click there must not count as "outside" just because its
+        // coordinates fall outside that rect. contains() can't be the only
+        // check though (see this file's top comment) — a genuine backdrop
+        // click doesn't reliably land on dialogEl's own subtree via
+        // event.target, so the coordinate check below still has to cover
+        // that case.
+        if (dialogEl.contains(mouseDownEvent.target)) {
+          return;
+        }
         const rect = dialogEl.getBoundingClientRect();
         const isOutside =
           mouseDownEvent.clientX < rect.left ||
