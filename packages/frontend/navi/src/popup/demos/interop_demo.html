@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Popup interop demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-toc {
+        margin-bottom: 32px;
+        padding: 12px 16px;
+        background: #f6f6f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+      }
+      .demo-toc ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-toc li {
+        margin-bottom: 4px;
+      }
+      .demo-section {
+        margin-bottom: 48px;
+        scroll-margin-top: 16px;
+      }
+      .demo-important-note {
+        margin: 8px 0;
+        padding: 8px 12px;
+        color: #7a5b00;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
+      }
+      /* Tall filler blocks around each section's trigger — gives the page
+         itself real scroll room, so "scroll the page while the dialog is
+         open" is an actual thing you can do, not just internal-dialog
+         scroll. */
+      .interop-page-filler {
+        display: flex;
+        height: 500px;
+        margin: 16px 0;
+        align-items: center;
+        justify-content: center;
+        color: #aaa;
+        font-size: 13px;
+        background: repeating-linear-gradient(
+          -45deg,
+          #f6f6f6,
+          #f6f6f6 12px,
+          #efefef 12px,
+          #efefef 24px
+        );
+        border: 1px dashed #ddd;
+        border-radius: 8px;
+      }
+      /* Fixed footprint, deliberately small enough that its own content
+         needs to scroll internally (see .interop-dialog-content) — that
+         internal scroll is what should move the anchor around under the
+         popover. */
+      .interop-dialog-box {
+        width: 340px;
+        height: 260px;
+        padding: 0;
+        overflow: hidden;
+        background: white;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .interop-dialog-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        font-weight: bold;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      .interop-dialog-content {
+        height: calc(100% - 41px);
+        padding: 16px;
+        overflow: auto;
+      }
+      .interop-dialog-filler {
+        height: 160px;
+        margin: 12px 0;
+        background: repeating-linear-gradient(
+          45deg,
+          #eef3fb,
+          #eef3fb 10px,
+          #e3ecfa 10px,
+          #e3ecfa 20px
+        );
+        border: 1px solid #cfe0f5;
+        border-radius: 6px;
+      }
+      .interop-anchor {
+        display: block;
+        width: 100%;
+        padding: 10px 12px;
+        color: #333;
+        font: inherit;
+        text-align: left;
+        background: #fff3cd;
+        border: 1px dashed #e0a800;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      /* Deliberately bigger than .interop-dialog-box on both axes, so most
+         of it renders outside the dialog's own footprint regardless of
+         which side it opens on. */
+      .interop-popover-big {
+        box-sizing: border-box;
+        width: 480px;
+        height: 380px;
+        padding: 16px 20px;
+        overflow: auto;
+        background: white;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      .interop-field-row {
+        display: flex;
+        margin-top: 12px;
+        align-items: center;
+        gap: 8px;
+      }
+      .interop-field-row input {
+        padding: 6px 8px;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useId } from "preact/hooks";
+      import { Button, Dialog, Popover } from "@jsenv/navi";
+      import { openCallout } from "../../control/rules/callout/callout.js";
+
+      const App = () => (
+        <div>
+          <h1>Popup interop demo</h1>
+          <p>
+            Individual demos (<code>popover_demo.html</code>,{" "}
+            <code>dialog_demo.html</code>, …) exercise one component at a
+            time. This one is about the combinations — one popup nested
+            inside another, unrelated one — to see whether they actually
+            cooperate (anchor tracking, stacking, scroll, outside-click
+            handling) once combined, not just in isolation.
+          </p>
+
+          <TableOfContents />
+
+          <DialogWithPopoverSection />
+          <DialogWithCalloutSection />
+        </div>
+      );
+
+      const TableOfContents = () => (
+        <nav class="demo-toc">
+          <strong>Contents</strong>
+          <ol>
+            <li>
+              <a href="#dialog-with-popover">Dialog containing a Popover</a>
+            </li>
+            <li>
+              <a href="#dialog-with-callout">Dialog containing a Callout</a>
+            </li>
+          </ol>
+        </nav>
+      );
+
+      // A filler block, purely to give the page itself scroll room around a
+      // section's own trigger — see .interop-page-filler's own comment.
+      const PageFiller = ({ label }) => (
+        <div class="interop-page-filler">{label}</div>
+      );
+
+      // The dialog's own content is deliberately taller than the dialog
+      // itself (.interop-dialog-content scrolls, see its own CSS) — the
+      // anchor button sits after a filler block, so opening the popover
+      // right away and then scrolling the dialog's own content is what
+      // exercises anchor tracking. anchor is left to resolve automatically
+      // from the toggle button that opens it (same as popover_demo.html's
+      // own AnchoredPopover), not passed explicitly.
+      const DialogWithPopoverDemo = () => {
+        const dialogId = useId();
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              Open dialog
+            </Button>
+            <Dialog id={dialogId} className="interop-dialog-box">
+              <div class="interop-dialog-head">
+                <span>Dialog</span>
+                <Button
+                  aria-label="Close dialog"
+                  command="--navi-close"
+                  variant="discrete"
+                >
+                  ×
+                </Button>
+              </div>
+              <div class="interop-dialog-content">
+                <p style={{ marginTop: 0 }}>
+                  Scroll this area — the anchor button below moves with it,
+                  and the popover it opens should keep tracking it.
+                </p>
+                <div class="interop-dialog-filler" />
+                <Button
+                  command="--navi-toggle"
+                  commandFor={popoverId}
+                  className="interop-anchor"
+                >
+                  Anchor (toggle popover)
+                </Button>
+                <div class="interop-dialog-filler" />
+                <div class="interop-dialog-filler" />
+              </div>
+            </Dialog>
+            <Popover
+              id={popoverId}
+              positionArea="right"
+              borderRadius="8px"
+              pointerInteractionOutsideEffect="none"
+              className="interop-popover-big"
+            >
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>
+                Popover (bigger than the dialog)
+              </p>
+              <p>
+                This box is intentionally larger than the dialog itself, so
+                most of it renders outside the dialog's own bounds no matter
+                which side it opens on. Try clicking/selecting text in the
+                part of this popover that's outside the dialog — it should
+                behave normally rather than getting blocked by the dialog
+                (they're both top-layer elements; this one opened after the
+                dialog, so it stacks above it).
+              </p>
+              <p>
+                Then scroll the dialog's own content (behind this popover, or
+                close this one first) — the anchor button moves, and this
+                popover should reposition to keep following it.
+              </p>
+              <Button command="--navi-close">Close popover</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const DialogWithPopoverSection = () => (
+        <section id="dialog-with-popover" class="demo-section">
+          <h2>1. Dialog containing a Popover</h2>
+          <p>
+            The popover below is anchored to a button that lives{" "}
+            <em>inside</em> the dialog's own scrollable content — a
+            different kind of anchor than every other popover demo, which
+            anchor to something in the normal page flow. Things to check:
+          </p>
+          <ul>
+            <li>
+              Scroll the dialog's own content (once the popover is open) —
+              does the popover keep following its anchor?
+            </li>
+            <li>
+              Scroll the page itself (there's filler above and below the
+              trigger) — does the dialog stay put in the viewport regardless
+              (it's a real, top-layer modal, so it should)?
+            </li>
+            <li>
+              The popover is deliberately bigger than the dialog — does
+              interacting with the part of it outside the dialog's own
+              bounds work normally?
+            </li>
+          </ul>
+          <p class="demo-important-note">
+            <code>pointerInteractionOutsideEffect="none"</code> on the
+            popover here on purpose — the dialog is already modal
+            (<code>showModal()</code>), so an outside click never reaches
+            anything behind it anyway; closing the popover on outside click
+            would also make it impossible to click something in the dialog
+            further away from the anchor while the popover is open, which
+            defeats the point of this test.
+          </p>
+          <PageFiller label="scroll ↓ — page filler before the trigger" />
+          <DialogWithPopoverDemo />
+          <PageFiller label="scroll ↑ — page filler after the trigger" />
+        </section>
+      );
+
+      // Lighter test than the Popover one above — Callout is driven
+      // imperatively (openCallout), not a JSX component you nest directly,
+      // so there's no "child JSX inside the dialog" to write; this just
+      // confirms a callout anchored to a field *inside* a dialog renders on
+      // top of it (both end up in the top layer — see callout.js's own
+      // popover="manual" markup) instead of behind its backdrop.
+      const DialogWithCalloutDemo = () => {
+        const dialogId = useId();
+        const fieldId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              Open dialog
+            </Button>
+            <Dialog id={dialogId} className="interop-dialog-box">
+              <div class="interop-dialog-head">
+                <span>Dialog</span>
+                <Button
+                  aria-label="Close dialog"
+                  command="--navi-close"
+                  variant="discrete"
+                >
+                  ×
+                </Button>
+              </div>
+              <div class="interop-dialog-content">
+                <p style={{ marginTop: 0 }}>
+                  This field's callout is anchored inside the dialog.
+                </p>
+                <div class="interop-field-row">
+                  <input id={fieldId} type="text" placeholder="Your name" />
+                  <Button
+                    onClick={() => {
+                      openCallout(
+                        "This is a <strong>required field</strong> — anchored to an element inside the dialog.",
+                        {
+                          anchorElement: document.getElementById(fieldId),
+                          status: "error",
+                        },
+                      );
+                    }}
+                  >
+                    Show callout
+                  </Button>
+                </div>
+                <div class="interop-dialog-filler" />
+              </div>
+            </Dialog>
+          </>
+        );
+      };
+
+      const DialogWithCalloutSection = () => (
+        <section id="dialog-with-callout" class="demo-section">
+          <h2>2. Dialog containing a Callout</h2>
+          <p>
+            Same idea, with a <code>Callout</code> (the validation-message
+            style popup, opened imperatively via <code>openCallout</code>)
+            instead of a <code>Popover</code>. It should render on top of the
+            dialog rather than behind its backdrop.
+          </p>
+          <DialogWithCalloutDemo />
+        </section>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
