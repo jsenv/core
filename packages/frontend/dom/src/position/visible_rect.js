@@ -82,55 +82,32 @@ export const visibleRectEffect = (
   let lastMeasuredHeight;
   let ancestorClosedCount = 0;
   // Every ResizeObserver this effect owns (its own element-resize watcher
-  // below, plus one per observeSize() call) subscribes here and unobserves
-  // itself the moment an ancestor closes, reobserving once it reopens — see
-  // on_ancestor_events below for the publish side, and each subscriber
-  // (on_element_resize, observeSize) for the unobserve/reobserve itself.
-  // Closing a dialog/popover/details containing several independently-
-  // watched elements (an anchor, a popover's own content) can make them all
-  // collapse to zero size in the same reflow; leaving their ResizeObservers
-  // watching through that is what trips the browser's own same-frame
-  // notification-count heuristic ("ResizeObserver loop completed with
-  // undelivered notifications"), even though our own reaction to it
-  // (check()'s own ancestorClosed flag) is already a no-op for consumers
-  // like Callout. Proactively unobserving avoids generating those
-  // notifications in the first place instead of just ignoring them.
-  // Set while an ancestor dialog/popover is itself mid-repositioning — see
-  // on_ancestor_events' own onNaviPositionTransition, which drives this
-  // element's position every frame for that duration already (more
-  // accurately than a one-off resize check could, since it tracks the
-  // ancestor's live in-flight position instead of wherever it happens to be
-  // ~100ms after the resize settles). Gates only the *direct*
-  // window/visualViewport resize reaction below (on_resize) — without this,
-  // that reaction would fire mid-way through the ancestor's own transition
-  // with a real "resize" event, animate its own competing 250ms move toward
-  // a target computed from the anchor's current (still mid-flight) rect,
-  // and visibly race the frame-by-frame follow loop already in progress.
+  // below, plus one per observeSize() call) unobserves itself the moment an
+  // ancestor closes, reobserving once it reopens (see on_ancestor_events) —
+  // closing a dialog/popover containing several watched elements can make
+  // them all collapse to zero size in the same reflow, which is what trips
+  // the browser's "ResizeObserver loop completed with undelivered
+  // notifications" warning. Proactively unobserving avoids generating those
+  // notifications instead of just reacting differently to them.
+  // Set while an ancestor is itself mid-repositioning — on_ancestor_events'
+  // own onNaviPositionTransition already drives this element's position
+  // every frame for that duration, more accurately than the direct
+  // window/visualViewport resize reaction below (on_resize) could. Gates
+  // that reaction so it doesn't also fire mid-transition and animate its
+  // own competing move toward a target computed from the anchor's still
+  // mid-flight rect, racing the frame-by-frame follow loop.
   let ancestorRepositioningCount = 0;
   // check() runs on every scroll/resize/frame of an ancestor's own
-  // transition, but plenty of those calls land on an identical result (a
-  // scroll event firing for an axis this element doesn't care about, an
-  // ancestor-tracking frame once the anchor has actually stopped moving) —
-  // skip calling update() again when neither of these actually changed
-  // from last time, so a consumer's own positioning work isn't redone for
-  // nothing. Two separate snapshots, not one, because they track two
-  // separate things pickPositionRelativeTo depends on:
-  //   - lastVisibleRect: this element's own left/top/width/height, plus
-  //     visibilityRatio (needs its own check alongside those, not just
-  //     implied by them — it's (visible width * visible height) / (raw
-  //     width * raw height), and the raw width/height come from the
-  //     anchor's own unclipped getBoundingClientRect(), so it can change
-  //     while the *visible*, already-clipped width/height stay pinned at
-  //     the same clamped value. Popover's own out-of-view gating depends
-  //     on exactly that).
-  //   - lastViewportRect: not part of visibleRect at all (no consumer
-  //     needs viewportWidth/Height/OffsetLeft/OffsetTop directly, they'd
-  //     read window.visualViewport themselves if they did), but
-  //     pickPositionRelativeTo depends on them the same way it depends on
-  //     the anchor's own visibleRect: an on-screen keyboard opening/closing
-  //     can shrink/grow the viewport without moving this element's own
-  //     visibleRect by a single pixel — skipping update() in that case
-  //     would leave a consumer positioned against stale available space.
+  // transition, but plenty of those land on an identical result — skip
+  // calling update() again when neither snapshot changed. Two snapshots,
+  // not one, because pickPositionRelativeTo depends on both separately:
+  //   - lastVisibleRect: left/top/width/height, plus visibilityRatio (which
+  //     can change on its own — see its own ratio formula further down —
+  //     without any of the other four moving).
+  //   - lastViewportRect: not part of visibleRect at all, but an on-screen
+  //     keyboard opening/closing can shrink the viewport without moving
+  //     this element's own visibleRect by a single pixel, and
+  //     pickPositionRelativeTo's available space depends on it too.
   let lastVisibleRect = null;
   let lastViewportRect = null;
   let resizeWatchingPaused = false;
@@ -156,21 +133,13 @@ export const visibleRectEffect = (
     }
 
     // visualViewport, not window.innerWidth/Height: the layout viewport
-    // doesn't shrink when the on-screen keyboard opens, only the visual one
-    // does (same reasoning as pickPositionRelativeTo's own identical
-    // choice). Its own offsetLeft/Top matter here too, not just
-    // width/height: pinch-zoomed and panned, the visual viewport's own
-    // top-left can sit anywhere within the layout viewport instead of
-    // always at (0, 0) — the same coordinate space getBoundingClientRect()
-    // uses, so clamping against a hardcoded 0 would clip to the wrong edge
-    // once the visual viewport is offset. Computed once up here (not just
-    // where the non-document-scroll-container branch below already needed
-    // it) because pickPositionRelativeTo depends on it too, regardless of
-    // scroll container: a keyboard opening can leave this element's own
-    // visibleRect completely unchanged (nothing about it moved) while still
-    // changing the available space pickPositionRelativeTo would compute —
-    // see visibleRectChanged further down, which folds these in precisely
-    // so that case still triggers update() instead of being skipped.
+    // doesn't shrink when the on-screen keyboard opens (same reasoning as
+    // pickPositionRelativeTo's own identical choice). offsetLeft/Top matter
+    // too, for pinch-zoom/pan. Computed here regardless of scroll container
+    // (not just where the non-document branch below needs it) because a
+    // keyboard opening can change pickPositionRelativeTo's available space
+    // without moving this element's own visibleRect at all — see
+    // viewportRectChanged further down.
     const visualViewport = window.visualViewport;
     const viewportWidth = visualViewport
       ? visualViewport.width
@@ -317,14 +286,9 @@ export const visibleRectEffect = (
       height: heightVisible,
       visibilityRatio,
     };
-    // Not part of visibleRect itself (consumers never see these — they'd
-    // read them straight off window.visualViewport if they needed to), but
-    // pickPositionRelativeTo depends on them for available-space
-    // calculations same as it depends on the anchor's own visibleRect: a
-    // keyboard opening/closing can shrink/grow the viewport without moving
-    // this element's own visibleRect by a single pixel, and skipping
-    // update() in that case would leave a consumer positioned against
-    // stale available space.
+    // Not part of visibleRect itself, tracked only so viewportRectChanged
+    // below can catch a keyboard opening/closing even when it doesn't move
+    // this element's own visibleRect.
     const viewportRect = {
       viewportWidth,
       viewportHeight,
@@ -637,21 +601,17 @@ export const visibleRectEffect = (
           onNaviPositionChange,
         );
         // Dispatched by applyNewPosition's own notifyPositionTransition
-        // around this ancestor's own left/top Web Animations API animation
-        // (distinct from navi_position_change, fired once with the final
-        // target, not per animation frame). The anchor this element is
-        // positioned against may live inside that ancestor and be moving
-        // right now — rather than hiding for the duration (an opacity
-        // 0/1 flicker once it settles reads worse than a position that's
-        // very slightly behind), autoCheck() every frame for as long as the
-        // animation runs, so this element's own position stays in lockstep
-        // with the ancestor's. autoCheck (not check directly) so this
-        // element's own ResizeObserver(s) stay unobserved for the loop's
-        // duration too, same as any other autoCheck — repositioning every
-        // frame can itself cause reflows, and reacting to those would risk
-        // the exact same-frame ResizeObserver feedback this file already
-        // works around elsewhere. e.detail.onEnd stops the loop and settles
-        // on one final check once the animation actually ends.
+        // around this ancestor's own left/top animation (distinct from
+        // navi_position_change, fired once with the final target, not per
+        // frame). The anchor this element is positioned against may live
+        // inside that ancestor and be moving right now — rather than hiding
+        // for the duration (an opacity flicker once it settles reads worse
+        // than a slightly-behind position), autoCheck() every frame for as
+        // long as the animation runs, so this element stays in lockstep.
+        // autoCheck, not check directly, so this element's own
+        // ResizeObserver(s) stay unobserved for the loop's duration too —
+        // repositioning every frame can itself cause reflows. e.detail.onEnd
+        // stops the loop and settles on one final check once it ends.
         let positionTransitionRafId = null;
         let isTrackingPositionTransition = false;
         // ancestorRepositioningCount is intentionally shared across every
@@ -1601,47 +1561,29 @@ const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
 
 /**
  * Dispatches a single "navi_position_transition" event on `element`,
- * self-driven rather than confirmed by the browser's own `transitionrun`:
- * `applyNewPosition` calls this exactly when it *knows* it just started a
- * left/top `animation` (a Web Animations API `Animation`, not a CSS
- * transition), so there's nothing to wait for. This sidesteps two real
- * problems with listening for `transitionrun`/`transitionend` instead:
- *   - Reacting to *any* CSS transition on the element would also fire for
- *     an unrelated one sharing it (e.g. a scale/opacity entrance animation
- *     on the same Popover) — wrongly hiding a descendant for that too.
- *   - Filtering to a specific `propertyName` (`"left"`, say) to avoid that
- *     is itself unreliable: which of `left`/`top` the browser reports
- *     `transitionrun` for first isn't guaranteed to stay whichever one
- *     appears first in a `transition-property` list — it was observed
- *     firing for `"top"` instead in practice.
- * Driving left/top through `element.animate()` sidesteps both: it's a
- * dedicated Animation object with its own real `finished` promise, entirely
- * independent of whatever CSS transitions the element also has running.
+ * self-driven rather than confirmed by the browser's own `transitionrun` —
+ * `applyNewPosition` calls this exactly when it knows it just started a
+ * left/top `animation`, so there's nothing to wait for. transitionrun was
+ * tried first and dropped: it reacts to *any* transition sharing the
+ * element (a scale/opacity entrance would wrongly hide a descendant too),
+ * and filtering by `propertyName` is unreliable (observed firing for "top"
+ * instead of "left" in practice, despite the transition-property order).
+ * A dedicated `Animation` sidesteps both.
  *
- * A descendant anchored to something inside `element` (a Callout, a nested
- * Popover — see visible_rect.js's own on_ancestor_events) re-checks its own
- * position every frame for as long as this animation runs, to stay in
- * lockstep with `element` while it's mid-flight instead of momentarily
- * showing a stale position. `event.detail.onEnd(callback)` is how it
- * registers to be told when the animation actually ends, so it can settle
- * on one final check instead of needing its own separate "end"
- * event/listener.
+ * A descendant anchored inside `element` (see on_ancestor_events)
+ * re-checks its own position every frame for as long as this animation
+ * runs, instead of showing a stale position. `event.detail.onEnd(callback)`
+ * is how it learns when the animation actually ends.
  *
- * If another position animation starts on the same element before this
- * one's own `finished` promise ever settles (a second reposition landing
- * mid-way), the pending one is cancelled and its own registered callbacks
- * are flushed immediately (same spirit as a real `transitioncancel`) before
- * the new one begins, so nothing is ever left stuck hidden waiting for an
- * `onEnd` that was actually superseded.
+ * A second reposition landing mid-animation cancels the pending one and
+ * flushes its own registered callbacks immediately (same spirit as a real
+ * `transitioncancel`), so nothing is left waiting on a superseded `onEnd`.
  *
- * `applyNewPosition` already sets `element.style.left`/`top` to their final
- * target before this animation ever starts, so `animation.commitStyles()`
- * below is not what makes the final position correct — with the default
- * `fill: "none"`, the animation stops overriding the computed style once
- * its active duration elapses either way, and the specified style (already
- * final) takes back over. `commitStyles()` + `cancel()` just makes that
- * explicit and immediate rather than relying on that fill/timing nuance,
- * and drops the now-finished Animation instead of leaving it around.
+ * `commitStyles()` below isn't what makes the final position correct —
+ * `applyNewPosition` already sets the specified `left`/`top` before this
+ * animation starts, so it takes back over once the active duration elapses
+ * regardless. It just makes that explicit instead of relying on `fill:
+ * "none"` timing, and drops the finished Animation instead of leaving it.
  */
 const notifyPositionTransition = (element, animation) => {
   const pending = pendingPositionTransitions.get(element);
@@ -1682,27 +1624,18 @@ const notifyPositionTransition = (element, animation) => {
 
 /**
  * Applies a `pickPositionRelativeTo` result to `element`. `left`/`top` are
- * set instantly (no scroll-triggered reposition should ever lag behind its
- * target); when `shouldTransition` is set (a resize-triggered reposition,
- * not a scroll one), the visual move from the previous position to this one
- * is instead played out via `element.animate()` — a Web Animations API
- * animation kept deliberately independent of any CSS transition
- * Popover/Dialog/Callout also run on the same element (opacity/scale/
- * display), so it can't clobber or be clobbered by them, and gives a real
- * `Animation.finished` promise to key off instead of a fragile
- * `transitionend`/`propertyName` filter (see notifyPositionTransition's own
- * doc for why that matters). Its duration comes from the
- * `--popup-position-transition-duration` CSS var (parseTransitionDurationMs),
- * read straight off `element` — falls back to 180ms unset, but a consumer
- * can override it in its own CSS same as any other custom property.
- * Also dispatches navi_position_transition (see notifyPositionTransition's
- * own doc) whenever it starts such an animation, and navi_position_change
- * unconditionally — every caller of this function already wants both
- * (Dialog, Popover, Callout all set their own position through here), so
- * there's nothing to opt into separately: a descendant anchored to
- * something inside `element` (visible_rect.js's own on_ancestor_events)
- * needs to recheck its own position whenever `element` itself moves,
- * whichever of the three it actually is.
+ * set instantly (a scroll-triggered reposition should never lag its
+ * target); when `shouldTransition` is set (a resize-triggered reposition),
+ * the visual move is played out via `element.animate()` instead — kept
+ * independent of Popover/Dialog/Callout's own opacity/scale/display CSS
+ * transition on the same element, so neither can clobber the other (see
+ * notifyPositionTransition's own doc for why a dedicated Animation over a
+ * CSS one). Duration comes from `--popup-position-transition-duration`
+ * (parseTransitionDurationMs), falling back to 180ms unset.
+ * Dispatches navi_position_transition when it starts such an animation, and
+ * navi_position_change unconditionally — every caller (Dialog, Popover,
+ * Callout) wants both, so a descendant anchored inside `element` can always
+ * recheck its own position whenever `element` moves.
  */
 export const applyNewPosition = (
   element,
