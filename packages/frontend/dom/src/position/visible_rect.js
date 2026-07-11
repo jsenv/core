@@ -1066,7 +1066,14 @@ export const pickPositionRelativeTo = (
       if (currentFitsEnough) {
         finalX = activeX;
       } else {
-        finalX = oppositeX[activeX];
+        // Only flip if the opposite side has more space — avoids oscillation
+        // when neither side has enough room (both fail the ratio). Mirrors
+        // the Y-axis branch above; missing here was the actual cause of a
+        // real left/right flicker on a narrow viewport (neither side ever
+        // "fits enough", so this branch ran on every reposition).
+        const opposite = oppositeX[activeX];
+        const oppositeHasMoreSpace = spaceFor(opposite) > spaceFor(activeX);
+        finalX = oppositeHasMoreSpace ? opposite : activeX;
       }
     }
   }
