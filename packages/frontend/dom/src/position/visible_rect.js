@@ -95,6 +95,18 @@ export const visibleRectEffect = (
   // (check()'s own ancestorClosed flag) is already a no-op for consumers
   // like Callout. Proactively unobserving avoids generating those
   // notifications in the first place instead of just ignoring them.
+  // Set while an ancestor dialog/popover is itself mid-repositioning — see
+  // on_ancestor_events' own onNaviPositionTransition, which drives this
+  // element's position every frame for that duration already (more
+  // accurately than a one-off resize check could, since it tracks the
+  // ancestor's live in-flight position instead of wherever it happens to be
+  // ~100ms after the resize settles). Gates only the *direct*
+  // window/visualViewport resize reaction below (on_resize) — without this,
+  // that reaction would fire mid-way through the ancestor's own transition
+  // with a real "resize" event, animate its own competing 250ms move toward
+  // a target computed from the anchor's current (still mid-flight) rect,
+  // and visibly race the frame-by-frame follow loop already in progress.
+  let ancestorRepositioningCount = 0;
   let resizeWatchingPaused = false;
   const [publishResizeWatchingPausedChange, onResizeWatchingPausedChange] =
     createPubSub();
@@ -359,8 +371,22 @@ export const visibleRectEffect = (
     on_resize: {
       // See window_size.js's own module comment for why both of these go
       // through their shared debounce instead of each keeping its own timer.
-      addTeardown(subscribeVisualViewportResizeSettled(autoCheck));
-      addTeardown(subscribeWindowResizeSettled(autoCheck));
+      const onWindowOrViewportResize = (event) => {
+        // An ancestor's own navi_position_transition follow loop (see
+        // on_ancestor_events below) is already re-checking this element's
+        // position every frame, tracking the ancestor's live in-flight
+        // position — more accurately than this debounced, ~100ms-after-the-
+        // fact check could. Reacting here too would race it: a real
+        // "resize" event makes shouldTransition true, so this would animate
+        // its own competing move toward a target computed from the
+        // anchor's current (still mid-flight) rect.
+        if (ancestorRepositioningCount > 0) {
+          return;
+        }
+        autoCheck(event);
+      };
+      addTeardown(subscribeVisualViewportResizeSettled(onWindowOrViewportResize));
+      addTeardown(subscribeWindowResizeSettled(onWindowOrViewportResize));
     }
     on_element_resize: {
       if (skipElementResize) {
@@ -539,8 +565,19 @@ export const visibleRectEffect = (
         // works around elsewhere. e.detail.onEnd stops the loop and settles
         // on one final check once the animation actually ends.
         let positionTransitionRafId = null;
+        let isTrackingPositionTransition = false;
+        // ancestorRepositioningCount is intentionally shared across every
+        // ancestor level (declared once, outside this loop) — it's a
+        // single "is this element's position currently being driven by
+        // some ancestor's transition" flag for the element itself, not
+        // per-ancestor state.
+        // eslint-disable-next-line no-loop-func
         const onNaviPositionTransition = (e) => {
           cancelAnimationFrame(positionTransitionRafId);
+          if (!isTrackingPositionTransition) {
+            isTrackingPositionTransition = true;
+            ancestorRepositioningCount++;
+          }
           const loop = () => {
             autoCheck(e);
             positionTransitionRafId = requestAnimationFrame(loop);
@@ -548,6 +585,10 @@ export const visibleRectEffect = (
           loop();
           e.detail.onEnd(() => {
             cancelAnimationFrame(positionTransitionRafId);
+            if (isTrackingPositionTransition) {
+              isTrackingPositionTransition = false;
+              ancestorRepositioningCount--;
+            }
             autoCheck(e);
           });
         };
