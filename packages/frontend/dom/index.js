@@ -125,6 +125,7 @@ export {
   getAncestorOpenType,
   isAncestorOpen,
   observeAncestorOpenState,
+  onAncestorReopen,
 } from "./src/position/ancestor_open.js";
 export {
   getPositioningScrollOffset,

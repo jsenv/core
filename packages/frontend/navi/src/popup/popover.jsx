@@ -39,6 +39,7 @@ import {
   createPubSub,
   getBorderSizes,
   getPositionedParent,
+  onAncestorReopen,
   parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
@@ -821,6 +822,32 @@ const usePopoverProps = (props) => {
     }
     if (focusCapture) {
       addCleanup(trapFocusInside(popoverEl, { debug: debugFocus }));
+    }
+
+    // Real top-layer stacking is call-order-based (see this file's own
+    // "the top layer stacks later showPopover() calls above earlier ones"
+    // comment) — so when a popover nests inside another openable ancestor
+    // (a <dialog>, another popover, a <details>, or an [aria-expanded]
+    // container) and that ancestor *closes and reopens* while we ourselves
+    // stay open the whole time, the ancestor's own fresh showModal()/
+    // showPopover() call ends up later than our own stale one, leaving us
+    // stacked underneath it — even though we never actually closed (an
+    // ancestor closing hides us for free via the normal "display: none
+    // cascades through the top layer too" rule, no explicit hidePopover()
+    // needed for that half). Deliberately does NOT go through
+    // openController/requestClose — we're not being asked to close, only to
+    // re-assert our own stacking position once the ancestor comes back.
+    if (isTopLayer) {
+      onAncestorReopen(popoverEl, () => {
+        if (backdropEl?.matches(":popover-open")) {
+          backdropEl.hidePopover();
+        }
+        backdropEl?.showPopover();
+        if (popoverEl.matches(":popover-open")) {
+          popoverEl.hidePopover();
+        }
+        popoverEl.showPopover();
+      });
     }
 
     const rectEffect = visibleRectEffect(

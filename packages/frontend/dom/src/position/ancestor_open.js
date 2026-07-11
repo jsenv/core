@@ -140,3 +140,16 @@ export const observeAncestorOpenState = (ancestor, callback) => {
     observer.disconnect();
   };
 };
+
+export const onAncestorReopen = (el, callback) => {
+  const nearestOpenableAncestor = closestOpenableAncestor(el);
+  if (!nearestOpenableAncestor) {
+    return () => {};
+  }
+  return observeAncestorOpenState(nearestOpenableAncestor, ({ isOpen }) => {
+    if (!isOpen) {
+      return;
+    }
+    callback();
+  });
+};
