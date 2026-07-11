@@ -1365,9 +1365,14 @@
         const childId = useId();
         return (
           <>
-            <span id={sectionAnchorId} class="demo-static-anchor-small">
+            <Button
+              command="--navi-toggle"
+              commandFor={parentId}
+              id={sectionAnchorId}
+              class="demo-static-anchor-small"
+            >
               anchor
-            </span>
+            </Button>
             <Popover
               id={parentId}
               defaultOpen
@@ -1375,11 +1380,9 @@
               pointerInteractionOutsideEffect="close"
               positionArea="bottom"
               borderRadius="8px"
-              className="demo_popover_flex_box"
+              padding="m"
             >
-              <p style={{ marginTop: 0, fontWeight: "bold" }}>
-                Parent popover
-              </p>
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>Parent popover</p>
               <p>
                 Clicking outside this one closes it
                 (pointerInteractionOutsideEffect="close").
@@ -1394,7 +1397,7 @@
                 pointerInteractionOutsideEffect="none"
                 positionArea="right"
                 borderRadius="8px"
-                className="demo_popover_flex_box"
+                padding="m"
               >
                 <p style={{ marginTop: 0 }}>Child popover</p>
                 <p>anchor="{anchorTargetId}", no click-outside-to-close.</p>
@@ -1414,9 +1417,9 @@
             element via a plain id string — normally impossible with{" "}
             <code>defaultOpen</code> (there's no triggering event/ref yet to
             read a real anchor element from at that point). The string is
-            resolved via <code>document.getElementById</code> once the
-            popover actually opens, by which time the anchor already exists —
-            even the child's own anchor, rendered by the parent's content.
+            resolved via <code>document.getElementById</code> once the popover
+            actually opens, by which time the anchor already exists — even the
+            child's own anchor, rendered by the parent's content.
           </p>
           <div class="demo-row">
             <NestedPopoverDemo />
