@@ -620,16 +620,12 @@ const usePopoverProps = (props) => {
       anchorElement = e.detail.anchor;
     }
     const hasAnchorElement = Boolean(anchorElement);
-    // Not just `getPositionedParent(popoverEl)` unconditionally — this runs
-    // before showPopover() below, so popoverEl doesn't match `:popover-open`
-    // yet even when isTopLayer (getPositionedParent's own top-layer check
-    // needs the live state, since a merely-`popover="manual"`-attributed but
-    // not-yet-shown element is otherwise indistinguishable from one that
-    // never will be). document.documentElement either way — the shared
-    // "no real container, use the viewport" sentinel (see offset_parent.js).
-    const positionedAncestor = isTopLayer
-      ? document.documentElement
-      : getPositionedParent(popoverEl);
+    // getPositionedParent already resolves to document.documentElement for
+    // the via-attribute renderer on its own (popoverEl's own `popover`
+    // attribute, present from render regardless of whether it's actually
+    // open yet — see offset_parent.js's own doc) — no isTopLayer branch
+    // needed here.
+    const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
     // positioning/measurement runs, so there's no ordering subtlety to get

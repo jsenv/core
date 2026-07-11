@@ -1,3 +1,4 @@
+import { getPositionedParent } from "../../position/offset_parent.js";
 import { findSelfOrAncestorFixedPosition } from "../../position/position_fixed.js";
 import { getScrollContainer } from "../scroll/scroll_container.js";
 
@@ -82,14 +83,18 @@ export const createDragElementPositioner = (
   let scrollableTop;
   let convertScrollablePosition;
 
-  const positionedParent = elementToMove
-    ? elementToMove.offsetParent
-    : element.offsetParent;
+  // getPositionedParent, not raw .offsetParent — offsetParent is null for a
+  // position: fixed element, and also for one promoted to the top layer
+  // (e.g. a <dialog>/[popover] being dragged by its own handle), which
+  // crashes the fixed-position lookup below (findSelfOrAncestorFixedPosition
+  // assumes a real starting element, not null). getPositionedParent never
+  // returns null (document.documentElement instead — see its own doc).
+  const positionedParent = getPositionedParent(elementToMove || element);
   const scrollContainer = getScrollContainer(element);
   const [getPositionOffsets, getScrollOffsets] = createGetOffsets({
     positionedParent,
     referencePositionedParent: referenceElement
-      ? referenceElement.offsetParent
+      ? getPositionedParent(referenceElement)
       : positionedParent,
     scrollContainer,
     referenceScrollContainer: referenceElement
@@ -343,7 +348,7 @@ const isOverlayOf = (element, potentialTarget) => {
   if (overlayTarget === potentialTarget) {
     return true;
   }
-  const overlayTargetPositionedParent = overlayTarget.offsetParent;
+  const overlayTargetPositionedParent = getPositionedParent(overlayTarget);
   if (overlayTargetPositionedParent === potentialTarget) {
     return true;
   }

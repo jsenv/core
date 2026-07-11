@@ -6,13 +6,19 @@
  * Also aware of `element` itself being promoted to the top layer: a
  * `<dialog>` actually shown modally (`showModal()`, matches `:modal` — a
  * `.show()`'d, non-modal dialog does NOT match and is positioned like any
- * other in-flow element instead, walked up normally below) or a `[popover]`
- * element while actually shown (`:popover-open`) always uses the initial
- * containing block (the viewport) regardless of its own `position` or DOM
- * ancestry — walking up its own parent chain (what the rest of this
- * function does) would give the wrong answer for these two specifically,
- * since their real DOM position becomes irrelevant to their own containing
- * block the moment they're actually promoted.
+ * other in-flow element instead, walked up normally below), or *any*
+ * `[popover]` element, always uses the initial containing block (the
+ * viewport) regardless of its own `position` or DOM ancestry — walking up
+ * its own parent chain (what the rest of this function does) would give
+ * the wrong answer for these two specifically, since their real DOM
+ * position becomes irrelevant to their own containing block the moment
+ * they're actually promoted. Checked via the `popover` attribute itself,
+ * not the live `:popover-open` state — unlike `<dialog>`, a `[popover]`
+ * element has no "local" mode: it's always top-layer-bound once shown,
+ * regardless of whether it happens to be open right this moment, so the
+ * static attribute alone is enough (and correct even when called just
+ * before `showPopover()` actually runs, when `:popover-open` isn't true
+ * yet).
  *
  * `document.documentElement` (not `document.body`, not `null`) is this
  * function's own "no real container — use the viewport" sentinel:
@@ -29,7 +35,7 @@
 export const getPositionedParent = (element) => {
   const isPromotedToTopLayer =
     (element.tagName === "DIALOG" && element.matches(":modal")) ||
-    element.matches(":popover-open");
+    element.hasAttribute("popover");
   if (isPromotedToTopLayer) {
     return document.documentElement;
   }
