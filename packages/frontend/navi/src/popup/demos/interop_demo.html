@@ -240,17 +240,18 @@
                 </Button>
                 <div class="interop-dialog-filler" />
               </div>
+
+              <Popover
+                id={popoverId}
+                positionArea="right"
+                borderRadius="8px"
+                pointerInteractionOutsideEffect="none"
+                className="interop-popover-normal"
+              >
+                <p style={{ marginTop: 0 }}>Anchored inside the dialog.</p>
+                <Button command="--navi-close">Close</Button>
+              </Popover>
             </Dialog>
-            <Popover
-              id={popoverId}
-              positionArea="right"
-              borderRadius="8px"
-              pointerInteractionOutsideEffect="none"
-              className="interop-popover-normal"
-            >
-              <p style={{ marginTop: 0 }}>Anchored inside the dialog.</p>
-              <Button command="--navi-close">Close</Button>
-            </Popover>
           </>
         );
       };
@@ -259,11 +260,11 @@
         <section id="dialog-with-normal-popover" class="demo-section">
           <h2>1. Dialog containing a Popover (regular size)</h2>
           <p>
-            Same anchor-inside-a-dialog case as the Callout section right
-            after this one, but with a regular, content-sized{" "}
-            <code>Popover</code> instead — confirms the pairing works there
-            too, at a directly comparable size, before the exaggerated
-            "bigger than the dialog" version further down.
+            Same anchor-inside-a-dialog case as the Callout section right after
+            this one, but with a regular, content-sized <code>Popover</code>{" "}
+            instead — confirms the pairing works there too, at a directly
+            comparable size, before the exaggerated "bigger than the dialog"
+            version further down.
           </p>
           <DialogWithNormalPopoverDemo />
         </section>
