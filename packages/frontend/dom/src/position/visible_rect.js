@@ -1624,18 +1624,22 @@ export const applyNewPosition = (
     element.style.removeProperty("--container-position-remaining-width");
   }
 
-  // A single keyframe is only ever the *end* state — the Web Animations API
-  // fills in the start on its own from whatever the underlying value
-  // already is at the moment `animate()` is called (its "neutral"/implicit
-  // keyframe), so there's no need to read/parse the previous `left`/`top`
-  // ourselves, and no "did it actually change" check to get right: nothing
-  // to gain from skipping a no-op animation when it's already implicit and
-  // harmless. This only works because `animate()` runs *before* the
-  // specified style below is overwritten with the new target — the
-  // implicit start is captured once, right here.
+  // A single implicit keyframe turned out not to work here: the WAAPI
+  // "neutral" start keyframe isn't frozen at `animate()` call time, it's
+  // resolved from the underlying value when the animation is first
+  // *sampled* (the next frame) — by then `element.style.left`/`top` below
+  // has already been overwritten with the new target, so start === end and
+  // nothing visibly moves (observed as the dialog just jumping). Reading
+  // the previous value ourselves, before overwriting it, and passing both
+  // keyframes explicitly sidesteps that entirely.
+  const previousLeft = parseFloat(element.style.left) || left;
+  const previousTop = parseFloat(element.style.top) || top;
   if (shouldTransition) {
     const animation = element.animate(
-      [{ left: `${left}px`, top: `${top}px` }],
+      [
+        { left: `${previousLeft}px`, top: `${previousTop}px` },
+        { left: `${left}px`, top: `${top}px` },
+      ],
       {
         duration: parseTransitionDurationMs(
           element,
