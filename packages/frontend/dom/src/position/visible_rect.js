@@ -107,21 +107,32 @@ export const visibleRectEffect = (
   // a target computed from the anchor's current (still mid-flight) rect,
   // and visibly race the frame-by-frame follow loop already in progress.
   let ancestorRepositioningCount = 0;
-  // Last visibleRect reported to update() — check() runs on every scroll/
-  // resize/frame of an ancestor's own transition, but plenty of those calls
-  // land on an identical position (a scroll event firing for an axis this
-  // element doesn't care about, an ancestor-tracking frame once the anchor
-  // has actually stopped moving) — skip calling update() again when
-  // left/top/width/height/visibilityRatio didn't actually change from last
-  // time, so a consumer's own positioning work isn't redone for nothing.
-  // visibilityRatio needs its own check alongside the others, not just
-  // implied by them: it's (visible width * visible height) / (raw width *
-  // raw height) — the raw width/height come from the anchor's own
-  // unclipped getBoundingClientRect(), so it can change (the anchor grows,
-  // say) while the *visible*, already-clipped width/height stay pinned at
-  // the same clamped value, changing the ratio without changing any of the
-  // other four. Popover's own out-of-view gating depends on exactly that.
+  // check() runs on every scroll/resize/frame of an ancestor's own
+  // transition, but plenty of those calls land on an identical result (a
+  // scroll event firing for an axis this element doesn't care about, an
+  // ancestor-tracking frame once the anchor has actually stopped moving) —
+  // skip calling update() again when neither of these actually changed
+  // from last time, so a consumer's own positioning work isn't redone for
+  // nothing. Two separate snapshots, not one, because they track two
+  // separate things pickPositionRelativeTo depends on:
+  //   - lastVisibleRect: this element's own left/top/width/height, plus
+  //     visibilityRatio (needs its own check alongside those, not just
+  //     implied by them — it's (visible width * visible height) / (raw
+  //     width * raw height), and the raw width/height come from the
+  //     anchor's own unclipped getBoundingClientRect(), so it can change
+  //     while the *visible*, already-clipped width/height stay pinned at
+  //     the same clamped value. Popover's own out-of-view gating depends
+  //     on exactly that).
+  //   - lastViewportRect: not part of visibleRect at all (no consumer
+  //     needs viewportWidth/Height/OffsetLeft/OffsetTop directly, they'd
+  //     read window.visualViewport themselves if they did), but
+  //     pickPositionRelativeTo depends on them the same way it depends on
+  //     the anchor's own visibleRect: an on-screen keyboard opening/closing
+  //     can shrink/grow the viewport without moving this element's own
+  //     visibleRect by a single pixel — skipping update() in that case
+  //     would leave a consumer positioned against stale available space.
   let lastVisibleRect = null;
+  let lastViewportRect = null;
   let resizeWatchingPaused = false;
   const [publishResizeWatchingPausedChange, onResizeWatchingPausedChange] =
     createPubSub();
@@ -143,6 +154,32 @@ export const visibleRectEffect = (
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }
+
+    // visualViewport, not window.innerWidth/Height: the layout viewport
+    // doesn't shrink when the on-screen keyboard opens, only the visual one
+    // does (same reasoning as pickPositionRelativeTo's own identical
+    // choice). Its own offsetLeft/Top matter here too, not just
+    // width/height: pinch-zoomed and panned, the visual viewport's own
+    // top-left can sit anywhere within the layout viewport instead of
+    // always at (0, 0) — the same coordinate space getBoundingClientRect()
+    // uses, so clamping against a hardcoded 0 would clip to the wrong edge
+    // once the visual viewport is offset. Computed once up here (not just
+    // where the non-document-scroll-container branch below already needed
+    // it) because pickPositionRelativeTo depends on it too, regardless of
+    // scroll container: a keyboard opening can leave this element's own
+    // visibleRect completely unchanged (nothing about it moved) while still
+    // changing the available space pickPositionRelativeTo would compute —
+    // see visibleRectChanged further down, which folds these in precisely
+    // so that case still triggers update() instead of being skipped.
+    const visualViewport = window.visualViewport;
+    const viewportWidth = visualViewport
+      ? visualViewport.width
+      : window.innerWidth;
+    const viewportHeight = visualViewport
+      ? visualViewport.height
+      : window.innerHeight;
+    const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
+    const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollContainer;
@@ -244,28 +281,10 @@ export const visibleRectEffect = (
     if (scrollContainerIsDocument) {
       visibilityRatio = (widthVisible * heightVisible) / (width * height);
     } else {
-      // widthVisible/heightVisible are already clipped to the scroll container.
-      // Now clip their viewport-relative counterparts against the viewport.
-      // visualViewport, not window.innerWidth/Height: the layout viewport
-      // doesn't shrink when the on-screen keyboard opens, only the visual
-      // one does (same reasoning as pickPositionRelativeTo's own identical
-      // choice, visible_rect.js's own doc further down). Its own
-      // offsetLeft/Top matter here too, not just width/height: pinch-zoomed
-      // and panned, the visual viewport's own top-left can sit anywhere
-      // within the layout viewport instead of always at (0, 0) — the same
-      // coordinate space getBoundingClientRect() (what overlayLeft/Top and
-      // widthVisible/heightVisible are ultimately derived from) uses, so
-      // clamping against a hardcoded 0 would clip to the wrong edge once
-      // the visual viewport is offset.
-      const visualViewport = window.visualViewport;
-      const viewportWidth = visualViewport
-        ? visualViewport.width
-        : window.innerWidth;
-      const viewportHeight = visualViewport
-        ? visualViewport.height
-        : window.innerHeight;
-      const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
-      const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
+      // widthVisible/heightVisible are already clipped to the scroll
+      // container. Now clip their viewport-relative counterparts against
+      // the viewport (viewportWidth/Height/OffsetLeft/OffsetTop computed
+      // once, at the top of check() — see their own comment there).
       // Container-clipped visible rect in viewport coordinates
       const visibleLeft = overlayLeft;
       const visibleTop = overlayTop;
@@ -298,6 +317,32 @@ export const visibleRectEffect = (
       height: heightVisible,
       visibilityRatio,
     };
+    // Not part of visibleRect itself (consumers never see these — they'd
+    // read them straight off window.visualViewport if they needed to), but
+    // pickPositionRelativeTo depends on them for available-space
+    // calculations same as it depends on the anchor's own visibleRect: a
+    // keyboard opening/closing can shrink/grow the viewport without moving
+    // this element's own visibleRect by a single pixel, and skipping
+    // update() in that case would leave a consumer positioned against
+    // stale available space.
+    const viewportRect = {
+      viewportWidth,
+      viewportHeight,
+      viewportOffsetLeft,
+      viewportOffsetTop,
+    };
+    const notify = (reason) => {
+      if (DEBUG) {
+        console.log(`${reason}`);
+        console.groupEnd();
+      }
+      update(visibleRect, {
+        event,
+        width,
+        height,
+        ancestorClosed: ancestorClosedCount > 0,
+      });
+    };
 
     const visibleRectChanged =
       !lastVisibleRect ||
@@ -306,24 +351,28 @@ export const visibleRectEffect = (
       lastVisibleRect.width !== visibleRect.width ||
       lastVisibleRect.height !== visibleRect.height ||
       lastVisibleRect.visibilityRatio !== visibleRect.visibilityRatio;
-    if (DEBUG) {
-      console.log(
-        visibleRectChanged
-          ? `update(${JSON.stringify(visibleRect, null, "  ")})`
-          : "update() skipped, left/top/width/height/visibilityRatio unchanged",
-      );
-      console.groupEnd();
-    }
-    if (!visibleRectChanged) {
+    if (visibleRectChanged) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify("visibleRect changed");
       return;
     }
-    lastVisibleRect = visibleRect;
-    update(visibleRect, {
-      event,
-      width,
-      height,
-      ancestorClosed: ancestorClosedCount > 0,
-    });
+    const viewportRectChanged =
+      !lastViewportRect ||
+      lastViewportRect.viewportWidth !== viewportRect.viewportWidth ||
+      lastViewportRect.viewportHeight !== viewportRect.viewportHeight ||
+      lastViewportRect.viewportOffsetLeft !== viewportRect.viewportOffsetLeft ||
+      lastViewportRect.viewportOffsetTop !== viewportRect.viewportOffsetTop;
+    if (viewportRectChanged) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify(`viewportRect changed`);
+      return;
+    }
+    if (DEBUG) {
+      console.log("update() skipped, visibleRect and viewportRect unchanged");
+      console.groupEnd();
+    }
   };
 
   check(initialEvent);
@@ -544,13 +593,13 @@ export const visibleRectEffect = (
             if (!isOpen) {
               ancestorClosedCount++;
               pauseResizeWatching();
-              // Invalidates check()'s own "did left/top/width/height/
-              // visibilityRatio actually change" cache — without this,
-              // reopening onto the exact same geometry as before closing
-              // would look unchanged to check() and it would skip calling
-              // update() again, leaving a consumer stuck showing this
-              // closed/zeroed state.
+              // Invalidates check()'s own "did anything actually change"
+              // caches — without this, reopening onto the exact same
+              // geometry/viewport as before closing would look unchanged to
+              // check() and it would skip calling update() again, leaving a
+              // consumer stuck showing this closed/zeroed state.
               lastVisibleRect = null;
+              lastViewportRect = null;
               update(
                 {
                   left: 0,
