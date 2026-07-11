@@ -1570,32 +1570,6 @@ export const applyNewPosition = (
     spaceBelow,
   },
 ) => {
-  const previousLeft = parseFloat(element.style.left);
-  const previousTop = parseFloat(element.style.top);
-  element.style.left = `${left}px`;
-  element.style.top = `${top}px`;
-  if (
-    shouldTransition &&
-    !Number.isNaN(previousLeft) &&
-    !Number.isNaN(previousTop) &&
-    (previousLeft !== left || previousTop !== top)
-  ) {
-    const animation = element.animate(
-      [
-        { left: `${previousLeft}px`, top: `${previousTop}px` },
-        { left: `${left}px`, top: `${top}px` },
-      ],
-      {
-        duration: parseTransitionDurationMs(
-          element,
-          "--popup-position-transition-duration",
-        ),
-        easing: "ease-out",
-      },
-    );
-    notifyPositionTransition(element, animation);
-  }
-
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(
       "--container-position-remaining-height",
@@ -1622,5 +1596,34 @@ export const applyNewPosition = (
   } else {
     element.style.removeProperty("--container-position-remaining-width");
   }
-  dispatchCustomEvent(element, "navi_position_change");
+
+  const previousLeft = parseFloat(element.style.left);
+  const previousTop = parseFloat(element.style.top);
+  const leftOrTopChanged =
+    !Number.isNaN(previousLeft) &&
+    !Number.isNaN(previousTop) &&
+    (previousLeft !== left || previousTop !== top);
+
+  if (leftOrTopChanged) {
+    if (shouldTransition) {
+      const animation = element.animate(
+        [
+          { left: `${previousLeft}px`, top: `${previousTop}px` },
+          { left: `${left}px`, top: `${top}px` },
+        ],
+        {
+          duration: parseTransitionDurationMs(
+            element,
+            "--popup-position-transition-duration",
+          ),
+          easing: "ease-out",
+        },
+      );
+      notifyPositionTransition(element, animation);
+    } else {
+      element.style.left = `${left}px`;
+      element.style.top = `${top}px`;
+    }
+    dispatchCustomEvent(element, "navi_position_change");
+  }
 };
