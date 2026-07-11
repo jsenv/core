@@ -216,20 +216,42 @@ export const visibleRectEffect = (
     } else {
       // widthVisible/heightVisible are already clipped to the scroll container.
       // Now clip their viewport-relative counterparts against the viewport.
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      // visualViewport, not window.innerWidth/Height: the layout viewport
+      // doesn't shrink when the on-screen keyboard opens, only the visual
+      // one does (same reasoning as pickPositionRelativeTo's own identical
+      // choice, visible_rect.js's own doc further down). Its own
+      // offsetLeft/Top matter here too, not just width/height: pinch-zoomed
+      // and panned, the visual viewport's own top-left can sit anywhere
+      // within the layout viewport instead of always at (0, 0) — the same
+      // coordinate space getBoundingClientRect() (what overlayLeft/Top and
+      // widthVisible/heightVisible are ultimately derived from) uses, so
+      // clamping against a hardcoded 0 would clip to the wrong edge once
+      // the visual viewport is offset.
+      const visualViewport = window.visualViewport;
+      const viewportWidth = visualViewport
+        ? visualViewport.width
+        : window.innerWidth;
+      const viewportHeight = visualViewport
+        ? visualViewport.height
+        : window.innerHeight;
+      const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
+      const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
       // Container-clipped visible rect in viewport coordinates
       const visibleLeft = overlayLeft;
       const visibleTop = overlayTop;
       const visibleRight = overlayLeft + widthVisible;
       const visibleBottom = overlayTop + heightVisible;
       // Intersect with viewport
-      const clippedLeft = visibleLeft < 0 ? 0 : visibleLeft;
-      const clippedTop = visibleTop < 0 ? 0 : visibleTop;
+      const clippedLeft =
+        visibleLeft < viewportOffsetLeft ? viewportOffsetLeft : visibleLeft;
+      const clippedTop =
+        visibleTop < viewportOffsetTop ? viewportOffsetTop : visibleTop;
+      const viewportRight = viewportOffsetLeft + viewportWidth;
+      const viewportBottom = viewportOffsetTop + viewportHeight;
       const clippedRight =
-        visibleRight > viewportWidth ? viewportWidth : visibleRight;
+        visibleRight > viewportRight ? viewportRight : visibleRight;
       const clippedBottom =
-        visibleBottom > viewportHeight ? viewportHeight : visibleBottom;
+        visibleBottom > viewportBottom ? viewportBottom : visibleBottom;
       const clippedWidth =
         clippedRight > clippedLeft ? clippedRight - clippedLeft : 0;
       const clippedHeight =
