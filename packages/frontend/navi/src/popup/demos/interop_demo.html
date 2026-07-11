@@ -113,6 +113,16 @@
         border-radius: 6px;
         cursor: pointer;
       }
+      /* Regular, content-sized popover — the closest Popover equivalent to
+         Callout's own compact bubble, unlike .interop-popover-big below. */
+      .interop-popover-normal {
+        box-sizing: border-box;
+        max-width: 220px;
+        padding: 10px 14px;
+        background: white;
+        border: 1px solid #d0d0d0;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
       /* Deliberately bigger than .interop-dialog-box on both axes, so most
          of it renders outside the dialog's own footprint regardless of
          which side it opens on. */
@@ -160,8 +170,9 @@
 
           <TableOfContents />
 
-          <DialogWithPopoverSection />
+          <DialogWithNormalPopoverSection />
           <DialogWithCalloutSection />
+          <DialogWithPopoverSection />
         </div>
       );
 
@@ -170,10 +181,17 @@
           <strong>Contents</strong>
           <ol>
             <li>
-              <a href="#dialog-with-popover">Dialog containing a Popover</a>
+              <a href="#dialog-with-normal-popover">
+                Dialog containing a Popover (regular size)
+              </a>
             </li>
             <li>
               <a href="#dialog-with-callout">Dialog containing a Callout</a>
+            </li>
+            <li>
+              <a href="#dialog-with-popover">
+                Dialog containing a Popover (bigger than the dialog)
+              </a>
             </li>
           </ol>
         </nav>
@@ -183,6 +201,72 @@
       // section's own trigger — see .interop-page-filler's own comment.
       const PageFiller = ({ label }) => (
         <div class="interop-page-filler">{label}</div>
+      );
+
+      // The closest Popover equivalent to the Callout case right after this
+      // one: a popup anchored to a button inside the dialog, sized like a
+      // regular popover (.interop-popover-normal) rather than deliberately
+      // oversized — see DialogWithPopoverDemo further down for that
+      // exaggerated version.
+      const DialogWithNormalPopoverDemo = () => {
+        const dialogId = useId();
+        const popoverId = useId();
+        return (
+          <>
+            <Button command="--navi-toggle" commandFor={dialogId}>
+              Open dialog
+            </Button>
+            <Dialog id={dialogId} className="interop-dialog-box">
+              <div class="interop-dialog-head">
+                <span>Dialog</span>
+                <Button
+                  aria-label="Close dialog"
+                  command="--navi-close"
+                  variant="discrete"
+                >
+                  ×
+                </Button>
+              </div>
+              <div class="interop-dialog-content">
+                <p style={{ marginTop: 0 }}>
+                  This popover is anchored to a button inside the dialog.
+                </p>
+                <Button
+                  command="--navi-toggle"
+                  commandFor={popoverId}
+                  className="interop-anchor"
+                >
+                  Anchor (toggle popover)
+                </Button>
+                <div class="interop-dialog-filler" />
+              </div>
+            </Dialog>
+            <Popover
+              id={popoverId}
+              positionArea="right"
+              borderRadius="8px"
+              pointerInteractionOutsideEffect="none"
+              className="interop-popover-normal"
+            >
+              <p style={{ marginTop: 0 }}>Anchored inside the dialog.</p>
+              <Button command="--navi-close">Close</Button>
+            </Popover>
+          </>
+        );
+      };
+
+      const DialogWithNormalPopoverSection = () => (
+        <section id="dialog-with-normal-popover" class="demo-section">
+          <h2>1. Dialog containing a Popover (regular size)</h2>
+          <p>
+            Same anchor-inside-a-dialog case as the Callout section right
+            after this one, but with a regular, content-sized{" "}
+            <code>Popover</code> instead — confirms the pairing works there
+            too, at a directly comparable size, before the exaggerated
+            "bigger than the dialog" version further down.
+          </p>
+          <DialogWithNormalPopoverDemo />
+        </section>
       );
 
       // The dialog's own content is deliberately taller than the dialog
@@ -260,7 +344,7 @@
 
       const DialogWithPopoverSection = () => (
         <section id="dialog-with-popover" class="demo-section">
-          <h2>1. Dialog containing a Popover</h2>
+          <h2>3. Dialog containing a Popover (bigger than the dialog)</h2>
           <p>
             The popover below is anchored to a button that lives <em>inside</em>{" "}
             the dialog's own scrollable content — a different kind of anchor
