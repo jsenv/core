@@ -402,9 +402,7 @@ export const visibleRectEffect = (
       });
     }
     on_ancestor_events: {
-      let currentOpenableAncestor = closestOpenableAncestor(
-        element.parentElement,
-      );
+      let currentOpenableAncestor = closestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {
@@ -459,7 +457,7 @@ export const visibleRectEffect = (
           );
         });
         currentOpenableAncestor = closestOpenableAncestor(
-          currentOpenableAncestor.parentElement,
+          currentOpenableAncestor,
         );
       }
     }

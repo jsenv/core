@@ -6,7 +6,14 @@
 const ANCESTOR_OPEN_SELECTOR = "dialog, details, [popover], [aria-expanded]";
 
 export const closestOpenableAncestor = (element) => {
-  return element.closest(ANCESTOR_OPEN_SELECTOR);
+  const parentElement = element.parentElement;
+  if (!parentElement) {
+    return null;
+  }
+  if (!parentElement.closest) {
+    return null;
+  }
+  return parentElement.closest(ANCESTOR_OPEN_SELECTOR);
 };
 
 export const isAncestorOpen = (ancestor) => {
@@ -23,6 +30,9 @@ export const isAncestorOpen = (ancestor) => {
 };
 
 export const getAncestorOpenType = (ancestor) => {
+  if (ancestor === document) {
+    return "document";
+  }
   if (ancestor.tagName === "DIALOG") {
     return "dialog";
   }
@@ -34,9 +44,6 @@ export const getAncestorOpenType = (ancestor) => {
   }
   if (ancestor.hasAttribute("aria-expanded")) {
     return `${ancestor.tagName}[aria-expanded]`;
-  }
-  if (ancestor === document) {
-    return "document";
   }
   return `${ancestor.tagName}`;
 };
