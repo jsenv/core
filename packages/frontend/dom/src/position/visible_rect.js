@@ -1,15 +1,17 @@
+import { dispatchCustomEvent } from "../dom_events.js";
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
+import { getStyle } from "../style/dom_styles.js";
 import {
   closestOpenableAncestor,
   isAncestorOpen,
   observeAncestorOpenState,
 } from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
-import { getPositioningContainer } from "./offset_parent.js";
+import { getPositionedParent } from "./offset_parent.js";
 import {
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
@@ -42,10 +44,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *   Is 0 when ancestorClosed is true.
  *
  * @typedef {Object} VisibleRectInfo
- * @property {Event}   event          - The DOM event (or CustomEvent) that triggered the check.
- * @property {number}  width          - Raw getBoundingClientRect() width of the element.
- * @property {number}  height         - Raw getBoundingClientRect() height of the element.
- * @property {boolean} ancestorClosed - True when a popover, dialog, or details ancestor is
+ * @property {Event}   event                 - The DOM event (or CustomEvent) that triggered the check.
+ * @property {number}  width                 - Raw getBoundingClientRect() width of the element.
+ * @property {number}  height                - Raw getBoundingClientRect() height of the element.
+ * @property {boolean} ancestorClosed        - True when a popover, dialog, or details ancestor is
  *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
  *   update() is called immediately on ancestor close and again (with false) on reopen.
  *
@@ -53,6 +55,7 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *   - Once synchronously on initialization (event.type = "initialization")
  *   - On document/container scroll, window resize, element resize, intersection changes, touch move
  *   - Immediately when an ancestor popover/dialog/details opens or closes
+ *   - Immediately when an ancestor popover/dialog starts or stops repositioning itself
  *
  * A bit like https://tetherjs.dev/ but different
  */
@@ -78,10 +81,74 @@ export const visibleRectEffect = (
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   let ancestorClosedCount = 0;
+  // Every ResizeObserver this effect owns (its own element-resize watcher
+  // below, plus one per observeSize() call) unobserves itself the moment an
+  // ancestor closes, reobserving once it reopens (see on_ancestor_events) —
+  // closing a dialog/popover containing several watched elements can make
+  // them all collapse to zero size in the same reflow, which is what trips
+  // the browser's "ResizeObserver loop completed with undelivered
+  // notifications" warning. Proactively unobserving avoids generating those
+  // notifications instead of just reacting differently to them.
+  // Set while an ancestor is itself mid-repositioning — on_ancestor_events'
+  // own onNaviPositionTransition already drives this element's position
+  // every frame for that duration, more accurately than the direct
+  // window/visualViewport resize reaction below (on_resize) could. Gates
+  // that reaction so it doesn't also fire mid-transition and animate its
+  // own competing move toward a target computed from the anchor's still
+  // mid-flight rect, racing the frame-by-frame follow loop.
+  let ancestorRepositioningCount = 0;
+  // check() runs on every scroll/resize/frame of an ancestor's own
+  // transition, but plenty of those land on an identical result — skip
+  // calling update() again when neither snapshot changed. Two snapshots,
+  // not one, because pickPositionRelativeTo depends on both separately:
+  //   - lastVisibleRect: left/top/width/height, plus visibilityRatio (which
+  //     can change on its own — see its own ratio formula further down —
+  //     without any of the other four moving).
+  //   - lastViewportRect: not part of visibleRect at all, but an on-screen
+  //     keyboard opening/closing can shrink the viewport without moving
+  //     this element's own visibleRect by a single pixel, and
+  //     pickPositionRelativeTo's available space depends on it too.
+  let lastVisibleRect = null;
+  let lastViewportRect = null;
+  let resizeWatchingPaused = false;
+  const [publishResizeWatchingPausedChange, onResizeWatchingPausedChange] =
+    createPubSub();
+  const pauseResizeWatching = () => {
+    if (resizeWatchingPaused) {
+      return;
+    }
+    resizeWatchingPaused = true;
+    publishResizeWatchingPausedChange(true);
+  };
+  const resumeResizeWatching = () => {
+    if (!resizeWatchingPaused) {
+      return;
+    }
+    resizeWatchingPaused = false;
+    publishResizeWatchingPausedChange(false);
+  };
   const check = (event) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }
+
+    // visualViewport, not window.innerWidth/Height: the layout viewport
+    // doesn't shrink when the on-screen keyboard opens (same reasoning as
+    // pickPositionRelativeTo's own identical choice). offsetLeft/Top matter
+    // too, for pinch-zoom/pan. Computed here regardless of scroll container
+    // (not just where the non-document branch below needs it) because a
+    // keyboard opening can change pickPositionRelativeTo's available space
+    // without moving this element's own visibleRect at all — see
+    // viewportRectChanged further down.
+    const visualViewport = window.visualViewport;
+    const viewportWidth = visualViewport
+      ? visualViewport.width
+      : window.innerWidth;
+    const viewportHeight = visualViewport
+      ? visualViewport.height
+      : window.innerHeight;
+    const viewportOffsetLeft = visualViewport ? visualViewport.offsetLeft : 0;
+    const viewportOffsetTop = visualViewport ? visualViewport.offsetTop : 0;
 
     // 1. Calculate element position relative to scrollable parent
     const { scrollLeft, scrollTop } = scrollContainer;
@@ -183,22 +250,26 @@ export const visibleRectEffect = (
     if (scrollContainerIsDocument) {
       visibilityRatio = (widthVisible * heightVisible) / (width * height);
     } else {
-      // widthVisible/heightVisible are already clipped to the scroll container.
-      // Now clip their viewport-relative counterparts against the viewport.
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      // widthVisible/heightVisible are already clipped to the scroll
+      // container. Now clip their viewport-relative counterparts against
+      // the viewport (viewportWidth/Height/OffsetLeft/OffsetTop computed
+      // once, at the top of check() — see their own comment there).
       // Container-clipped visible rect in viewport coordinates
       const visibleLeft = overlayLeft;
       const visibleTop = overlayTop;
       const visibleRight = overlayLeft + widthVisible;
       const visibleBottom = overlayTop + heightVisible;
       // Intersect with viewport
-      const clippedLeft = visibleLeft < 0 ? 0 : visibleLeft;
-      const clippedTop = visibleTop < 0 ? 0 : visibleTop;
+      const clippedLeft =
+        visibleLeft < viewportOffsetLeft ? viewportOffsetLeft : visibleLeft;
+      const clippedTop =
+        visibleTop < viewportOffsetTop ? viewportOffsetTop : visibleTop;
+      const viewportRight = viewportOffsetLeft + viewportWidth;
+      const viewportBottom = viewportOffsetTop + viewportHeight;
       const clippedRight =
-        visibleRight > viewportWidth ? viewportWidth : visibleRight;
+        visibleRight > viewportRight ? viewportRight : visibleRight;
       const clippedBottom =
-        visibleBottom > viewportHeight ? viewportHeight : visibleBottom;
+        visibleBottom > viewportBottom ? viewportBottom : visibleBottom;
       const clippedWidth =
         clippedRight > clippedLeft ? clippedRight - clippedLeft : 0;
       const clippedHeight =
@@ -215,17 +286,57 @@ export const visibleRectEffect = (
       height: heightVisible,
       visibilityRatio,
     };
+    // Not part of visibleRect itself, tracked only so viewportRectChanged
+    // below can catch a keyboard opening/closing even when it doesn't move
+    // this element's own visibleRect.
+    const viewportRect = {
+      viewportWidth,
+      viewportHeight,
+      viewportOffsetLeft,
+      viewportOffsetTop,
+    };
+    const notify = (reason) => {
+      if (DEBUG) {
+        console.log(`${reason}`);
+        console.groupEnd();
+      }
+      update(visibleRect, {
+        event,
+        width,
+        height,
+        ancestorClosed: ancestorClosedCount > 0,
+      });
+    };
 
+    const visibleRectChanged =
+      !lastVisibleRect ||
+      lastVisibleRect.left !== visibleRect.left ||
+      lastVisibleRect.top !== visibleRect.top ||
+      lastVisibleRect.width !== visibleRect.width ||
+      lastVisibleRect.height !== visibleRect.height ||
+      lastVisibleRect.visibilityRatio !== visibleRect.visibilityRatio;
+    if (visibleRectChanged) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify("visibleRect changed");
+      return;
+    }
+    const viewportRectChanged =
+      !lastViewportRect ||
+      lastViewportRect.viewportWidth !== viewportRect.viewportWidth ||
+      lastViewportRect.viewportHeight !== viewportRect.viewportHeight ||
+      lastViewportRect.viewportOffsetLeft !== viewportRect.viewportOffsetLeft ||
+      lastViewportRect.viewportOffsetTop !== viewportRect.viewportOffsetTop;
+    if (viewportRectChanged) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify(`viewportRect changed`);
+      return;
+    }
     if (DEBUG) {
-      console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
+      console.log("update() skipped, visibleRect and viewportRect unchanged");
       console.groupEnd();
     }
-    update(visibleRect, {
-      event,
-      width,
-      height,
-      ancestorClosed: ancestorClosedCount > 0,
-    });
   };
 
   check(initialEvent);
@@ -303,8 +414,24 @@ export const visibleRectEffect = (
     on_resize: {
       // See window_size.js's own module comment for why both of these go
       // through their shared debounce instead of each keeping its own timer.
-      addTeardown(subscribeVisualViewportResizeSettled(autoCheck));
-      addTeardown(subscribeWindowResizeSettled(autoCheck));
+      const onWindowOrViewportResize = (event) => {
+        // An ancestor's own navi_position_transition follow loop (see
+        // on_ancestor_events below) is already re-checking this element's
+        // position every frame, tracking the ancestor's live in-flight
+        // position — more accurately than this debounced, ~100ms-after-the-
+        // fact check could. Reacting here too would race it: a real
+        // "resize" event makes shouldTransition true, so this would animate
+        // its own competing move toward a target computed from the
+        // anchor's current (still mid-flight) rect.
+        if (ancestorRepositioningCount > 0) {
+          return;
+        }
+        autoCheck(event);
+      };
+      addTeardown(
+        subscribeVisualViewportResizeSettled(onWindowOrViewportResize),
+      );
+      addTeardown(subscribeWindowResizeSettled(onWindowOrViewportResize));
     }
     on_element_resize: {
       if (skipElementResize) {
@@ -339,16 +466,30 @@ export const visibleRectEffect = (
         handlingResize = false;
       });
       resizeObserver.observe(element);
+      const unsubscribeResizeWatchingPausedChange =
+        onResizeWatchingPausedChange((paused) => {
+          if (paused) {
+            resizeObserver.unobserve(element);
+          } else {
+            resizeObserver.observe(element);
+          }
+        });
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
       onBeforeAutoCheck(() => {
         resizeObserver.unobserve(element);
         return () => {
-          // This triggers a new call to the resive observer that will be ignored thanks to
-          // the widthDiff/heightDiff early return
-          resizeObserver.observe(element);
+          // Not reobserved at all while an ancestor is closed (see
+          // pauseResizeWatching/resumeResizeWatching above) — resumeResizeWatching's
+          // own publish is what reobserves once it reopens instead.
+          if (!resizeWatchingPaused) {
+            // This triggers a new call to the resive observer that will be ignored thanks to
+            // the widthDiff/heightDiff early return
+            resizeObserver.observe(element);
+          }
         };
       });
       addTeardown(() => {
+        unsubscribeResizeWatchingPausedChange();
         resizeObserver.disconnect();
       });
     }
@@ -407,6 +548,7 @@ export const visibleRectEffect = (
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {
           ancestorClosedCount++;
+          pauseResizeWatching();
         }
         const removeOpenStateObserver = observeAncestorOpenState(
           openableAncestor,
@@ -414,6 +556,14 @@ export const visibleRectEffect = (
           ({ isOpen, toggleEvent }) => {
             if (!isOpen) {
               ancestorClosedCount++;
+              pauseResizeWatching();
+              // Invalidates check()'s own "did anything actually change"
+              // caches — without this, reopening onto the exact same
+              // geometry/viewport as before closing would look unchanged to
+              // check() and it would skip calling update() again, leaving a
+              // consumer stuck showing this closed/zeroed state.
+              lastVisibleRect = null;
+              lastViewportRect = null;
               update(
                 {
                   left: 0,
@@ -437,6 +587,7 @@ export const visibleRectEffect = (
               ancestorClosedCount--;
             }
             if (ancestorClosedCount === 0) {
+              resumeResizeWatching();
               check(toggleEvent ?? new CustomEvent("ancestor_open"));
             }
           },
@@ -449,11 +600,60 @@ export const visibleRectEffect = (
           "navi_position_change",
           onNaviPositionChange,
         );
+        // Dispatched by applyNewPosition's own notifyPositionTransition
+        // around this ancestor's own left/top animation (distinct from
+        // navi_position_change, fired once with the final target, not per
+        // frame). The anchor this element is positioned against may live
+        // inside that ancestor and be moving right now — rather than hiding
+        // for the duration (an opacity flicker once it settles reads worse
+        // than a slightly-behind position), autoCheck() every frame for as
+        // long as the animation runs, so this element stays in lockstep.
+        // autoCheck, not check directly, so this element's own
+        // ResizeObserver(s) stay unobserved for the loop's duration too —
+        // repositioning every frame can itself cause reflows. e.detail.onEnd
+        // stops the loop and settles on one final check once it ends.
+        let positionTransitionRafId = null;
+        let isTrackingPositionTransition = false;
+        // ancestorRepositioningCount is intentionally shared across every
+        // ancestor level (declared once, outside this loop) — it's a
+        // single "is this element's position currently being driven by
+        // some ancestor's transition" flag for the element itself, not
+        // per-ancestor state.
+        // eslint-disable-next-line no-loop-func
+        const onNaviPositionTransition = (e) => {
+          cancelAnimationFrame(positionTransitionRafId);
+          if (!isTrackingPositionTransition) {
+            isTrackingPositionTransition = true;
+            ancestorRepositioningCount++;
+          }
+          const loop = () => {
+            autoCheck(e);
+            positionTransitionRafId = requestAnimationFrame(loop);
+          };
+          loop();
+          e.detail.onEnd(() => {
+            cancelAnimationFrame(positionTransitionRafId);
+            if (isTrackingPositionTransition) {
+              isTrackingPositionTransition = false;
+              ancestorRepositioningCount--;
+            }
+            autoCheck(e);
+          });
+        };
+        openableAncestor.addEventListener(
+          "navi_position_transition",
+          onNaviPositionTransition,
+        );
         addTeardown(() => {
           removeOpenStateObserver();
+          cancelAnimationFrame(positionTransitionRafId);
           openableAncestor.removeEventListener(
             "navi_position_change",
             onNaviPositionChange,
+          );
+          openableAncestor.removeEventListener(
+            "navi_position_transition",
+            onNaviPositionTransition,
           );
         });
         currentOpenableAncestor = closestOpenableAncestor(
@@ -523,20 +723,45 @@ export const visibleRectEffect = (
       });
     });
     resizeObserver.observe(elementToObserve);
+    // An ancestor may already be closed by the time a consumer calls
+    // observeSize (e.g. Callout's own observeSize(calloutMessageElement)
+    // call happens after visibleRectEffect itself returns) — keep this new
+    // observer consistent with that already-paused state instead of
+    // observing it only to immediately generate a closed-container
+    // notification.
+    if (resizeWatchingPaused) {
+      resizeObserver.unobserve(elementToObserve);
+    }
+    const unsubscribeResizeWatchingPausedChange = onResizeWatchingPausedChange(
+      (paused) => {
+        if (paused) {
+          resizeObserver.unobserve(elementToObserve);
+        } else {
+          resizeObserver.observe(elementToObserve);
+        }
+      },
+    );
     const cleanupAutoCheck = onBeforeAutoCheck(() => {
       resizeObserver.unobserve(elementToObserve);
       return () => {
-        resizeObserver.observe(elementToObserve);
+        // Not reobserved at all while an ancestor is closed (see
+        // pauseResizeWatching/resumeResizeWatching) — resumeResizeWatching's
+        // own publish is what reobserves once it reopens instead.
+        if (!resizeWatchingPaused) {
+          resizeObserver.observe(elementToObserve);
+        }
       };
     });
     addTeardown(() => {
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
       }
+      unsubscribeResizeWatchingPausedChange();
       resizeObserver.disconnect();
     });
     return () => {
       cleanupAutoCheck();
+      unsubscribeResizeWatchingPausedChange();
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
       }
@@ -733,17 +958,18 @@ const toContainerAlignedPosition = (value) => {
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
  *   custom renderer in popover.jsx, always relative to its own positioned ancestor whether
  *   or not it also has a real anchor). Whenever not explicitly given, this is always
- *   resolved automatically via `getPositioningContainer(element)` instead — regardless of
+ *   resolved automatically via `getPositionedParent(element)` instead — regardless of
  *   `hasValidAnchor` — so a caller that never thinks about `container` at all still gets the
- *   right behavior on its own: `null` from `getPositioningContainer` (an `element` with a
- *   `popover` attribute, or a `<dialog>` — e.g. Callout's own element) falls back to the
- *   traditional document-relative path below, exactly as if `container` genuinely didn't
- *   apply; anything else `getPositioningContainer` finds (a real positioned ancestor) is
- *   used the same way an explicit `container` would be. A container that resolves to
- *   `document.documentElement` (the viewport) produces identical output to the plain
- *   document-relative path either way, since the document's own scroll and the viewport's
- *   own origin already coincide with what this generically computes for any other container
- *   element. When there's a real container (explicit or resolved) either way: the final
+ *   right behavior on its own: `document.documentElement` from `getPositionedParent` (an
+ *   `element` promoted to the top layer — a `[popover]` while shown, or a `<dialog>` while
+ *   actually modal — or one with no positioned ancestor at all, e.g. Callout's own element)
+ *   falls back to the traditional document-relative path below, exactly as if `container`
+ *   genuinely didn't apply; anything else `getPositionedParent` finds (a real positioned
+ *   ancestor) is used the same way an explicit `container` would be. A container that
+ *   resolves to `document.documentElement` (the viewport) produces identical output to the
+ *   plain document-relative path either way, since the document's own scroll and the
+ *   viewport's own origin already coincide with what this generically computes for any other
+ *   container element. When there's a real container (explicit or resolved) either way: the final
  *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative to
  *   its own padding-box origin plus its own scroll, instead of the document's — `element`'s
  *   own computed `position` is *not* consulted in that case, unlike the traditional path.
@@ -789,9 +1015,11 @@ export const pickPositionRelativeTo = (
   // never gets offered more room (anchor-too-big check, flip decisions,
   // clamp) than its own container — resolvedContainer's own padding-box
   // edges when there is one — actually has.
-  const resolvedContainer = container ?? getPositioningContainer(element);
-  const hasRealContainer =
-    resolvedContainer && resolvedContainer !== document.documentElement;
+  // Always a real element now (never null/undefined) — getPositionedParent
+  // itself never returns anything falsy, document.documentElement (the
+  // viewport) included.
+  const resolvedContainer = container ?? getPositionedParent(element);
+  const hasRealContainer = resolvedContainer !== document.documentElement;
   const containerRect = hasRealContainer
     ? resolvedContainer.getBoundingClientRect()
     : null;
@@ -867,14 +1095,13 @@ export const pickPositionRelativeTo = (
     positionXFixed = positionX;
     positionYFixed = positionY;
   }
-  // resolvedContainer was already resolved above. `null` from
-  // getPositioningContainer (a popover/dialog element, e.g. Callout's own)
-  // falls through to the traditional document-relative path below all the
-  // same, so an existing caller that never thinks about `container` at all
-  // keeps behaving exactly as before.
-  const effectiveAnchor = hasValidAnchor
-    ? anchor
-    : resolvedContainer || document.documentElement;
+  // resolvedContainer was already resolved above. document.documentElement
+  // from getPositionedParent (a popover/dialog element, e.g. Callout's own,
+  // or one with no positioned ancestor at all) falls through to the
+  // traditional document-relative path below all the same, so an existing
+  // caller that never thinks about `container` at all keeps behaving
+  // exactly as before.
+  const effectiveAnchor = hasValidAnchor ? anchor : resolvedContainer;
   // document.documentElement is used as a sentinel "the viewport" value: an
   // anchorless popup should center/place itself against the visual
   // viewport, not against <html>'s own box — which, unlike the viewport,
@@ -1305,14 +1532,110 @@ export const pickPositionRelativeTo = (
   };
 };
 
+// Per-element bookkeeping for the currently in-flight, self-driven position
+// transition, if any — see notifyPositionTransition's own doc for why this
+// is animation-driven rather than listening for the browser's own
+// transitionrun/transitionend: element -> { animation, endCallbacks }.
+const pendingPositionTransitions = new WeakMap();
+
+// Reads `cssVarName` off `element` (getComputedStyle, so it's whatever the
+// cascade resolves to — a consumer can set it inline, in its own CSS rule,
+// or not at all) and converts it to milliseconds: "0.25s" -> 250, "250ms" ->
+// 250. Falls back to `fallbackMs` when unset/empty/unparsable, so a caller
+// never has to declare the CSS var itself just to get a sane default
+// duration — it only needs to when it actually wants to override it.
+const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
+  const trimmed = getStyle(element, cssVarName).trim();
+  if (!trimmed) {
+    return fallbackMs;
+  }
+  if (trimmed.endsWith("ms")) {
+    return parseFloat(trimmed);
+  }
+  if (trimmed.endsWith("s")) {
+    return parseFloat(trimmed) * 1000;
+  }
+  const parsed = parseFloat(trimmed);
+  return Number.isNaN(parsed) ? fallbackMs : parsed;
+};
+
 /**
- * Applies a `pickPositionRelativeTo` result to `element`. Drives
- * `--popup-position-transition-duration` (0s unless `shouldTransition`) so
- * a scroll-triggered reposition stays instant while a resize-triggered one
- * eases in — set via a CSS var rather than `transitionProperty` directly so
- * it doesn't clobber Popover/Dialog's own opacity/scale transition on the
- * same element; consumers declare `transition-duration:
- * var(--popup-position-transition-duration, 0s)` on `left`/`top` in CSS.
+ * Dispatches a single "navi_position_transition" event on `element`,
+ * self-driven rather than confirmed by the browser's own `transitionrun` —
+ * `applyNewPosition` calls this exactly when it knows it just started a
+ * left/top `animation`, so there's nothing to wait for. transitionrun was
+ * tried first and dropped: it reacts to *any* transition sharing the
+ * element (a scale/opacity entrance would wrongly hide a descendant too),
+ * and filtering by `propertyName` is unreliable (observed firing for "top"
+ * instead of "left" in practice, despite the transition-property order).
+ * A dedicated `Animation` sidesteps both.
+ *
+ * A descendant anchored inside `element` (see on_ancestor_events)
+ * re-checks its own position every frame for as long as this animation
+ * runs, instead of showing a stale position. `event.detail.onEnd(callback)`
+ * is how it learns when the animation actually ends.
+ *
+ * A second reposition landing mid-animation cancels the pending one and
+ * flushes its own registered callbacks immediately (same spirit as a real
+ * `transitioncancel`), so nothing is left waiting on a superseded `onEnd`.
+ *
+ * `commitStyles()` below isn't what makes the final position correct —
+ * `applyNewPosition` already sets the specified `left`/`top` before this
+ * animation starts, so it takes back over once the active duration elapses
+ * regardless. It just makes that explicit instead of relying on `fill:
+ * "none"` timing, and drops the finished Animation instead of leaving it.
+ */
+const notifyPositionTransition = (element, animation) => {
+  const pending = pendingPositionTransitions.get(element);
+  if (pending) {
+    pending.animation.cancel();
+    for (const callback of pending.endCallbacks) {
+      callback();
+    }
+  }
+  const endCallbacks = [];
+  dispatchCustomEvent(element, "navi_position_transition", {
+    onEnd: (callback) => {
+      endCallbacks.push(callback);
+    },
+  });
+  const current = { animation, endCallbacks };
+  pendingPositionTransitions.set(element, current);
+  animation.finished
+    .then(() => {
+      if (pendingPositionTransitions.get(element) === current) {
+        pendingPositionTransitions.delete(element);
+      }
+      try {
+        animation.commitStyles();
+      } catch {
+        // Element no longer rendered (removed/hidden mid-animation) —
+        // nothing to commit to, and left/top were already final anyway.
+      }
+      animation.cancel();
+      for (const callback of endCallbacks) {
+        callback();
+      }
+    })
+    .catch(() => {
+      // Cancelled by a subsequent reposition — already flushed above.
+    });
+};
+
+/**
+ * Applies a `pickPositionRelativeTo` result to `element`. `left`/`top` are
+ * set instantly (a scroll-triggered reposition should never lag its
+ * target); when `shouldTransition` is set (a resize-triggered reposition),
+ * the visual move is played out via `element.animate()` instead — kept
+ * independent of Popover/Dialog/Callout's own opacity/scale/display CSS
+ * transition on the same element, so neither can clobber the other (see
+ * notifyPositionTransition's own doc for why a dedicated Animation over a
+ * CSS one). Duration comes from `--popup-position-transition-duration`
+ * (parseTransitionDurationMs), falling back to 180ms unset.
+ * Dispatches navi_position_transition when it starts such an animation, and
+ * navi_position_change unconditionally — every caller (Dialog, Popover,
+ * Callout) wants both, so a descendant anchored inside `element` can always
+ * recheck its own position whenever `element` moves.
  */
 export const applyNewPosition = (
   element,
@@ -1327,15 +1650,7 @@ export const applyNewPosition = (
     spaceAbove,
     spaceBelow,
   },
-  { transitionDuration = "0.25s" } = {},
 ) => {
-  element.style.setProperty(
-    "--popup-position-transition-duration",
-    shouldTransition ? transitionDuration : "0s",
-  );
-  element.style.left = `${left}px`;
-  element.style.top = `${top}px`;
-
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(
       "--container-position-remaining-height",
@@ -1362,4 +1677,40 @@ export const applyNewPosition = (
   } else {
     element.style.removeProperty("--container-position-remaining-width");
   }
+
+  // A single implicit keyframe turned out not to work here: the WAAPI
+  // "neutral" start keyframe isn't frozen at `animate()` call time, it's
+  // resolved from the underlying value when the animation is first
+  // *sampled* (the next frame) — by then `element.style.left`/`top` below
+  // has already been overwritten with the new target, so start === end and
+  // nothing visibly moves (observed as the dialog just jumping). Reading
+  // the previous value ourselves, before overwriting it, and passing both
+  // keyframes explicitly sidesteps that entirely.
+  const previousLeft = parseFloat(element.style.left) || left;
+  const previousTop = parseFloat(element.style.top) || top;
+  if (shouldTransition) {
+    const animation = element.animate(
+      [
+        { left: `${previousLeft}px`, top: `${previousTop}px` },
+        { left: `${left}px`, top: `${top}px` },
+      ],
+      {
+        duration: parseTransitionDurationMs(
+          element,
+          "--popup-position-transition-duration",
+          250,
+        ),
+        easing: "ease",
+      },
+    );
+    notifyPositionTransition(element, animation);
+  }
+  // The specified `left`/`top` are set to their final target right away,
+  // regardless of `shouldTransition` — the animation above only plays the
+  // visual move from the old position, it never becomes the actual
+  // specified style (see notifyPositionTransition's own commitStyles for
+  // why that matters once it ends).
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+  dispatchCustomEvent(element, "navi_position_change");
 };

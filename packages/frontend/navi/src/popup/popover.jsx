@@ -27,16 +27,23 @@
  * popover's own content for attention.
  *
  * The via-attribute renderer defaults to `position: fixed`, overridden to
- * `absolute` only when there's a real anchor: a real anchor needs the
- * popover to scroll in lockstep with the document to stay visually attached
- * to it, whereas `fixed` is the more direct way to stay pinned to the
- * viewport when there's none (and avoids ever extending the document's own
- * scrollable area).
+ * `absolute` only when there's a real anchor that itself scrolls with the
+ * document: such an anchor needs the popover to scroll in lockstep with it
+ * to stay visually attached, whereas `fixed` is the more direct way to stay
+ * pinned to the viewport when there's no anchor (and avoids ever extending
+ * the document's own scrollable area). When the anchor itself doesn't
+ * scroll with the document — it's `position: fixed`, or nested inside
+ * something that is, e.g. anchored to an element inside another top-layer
+ * popover/modal dialog — staying `fixed` is correct *despite* having a real
+ * anchor too, since the anchor never moves on scroll either; see
+ * `data-anchor-scrolls` in openEffect/the CSS below for how that's detected
+ * and applied.
  */
 
 import {
   applyNewPosition,
   createPubSub,
+  findSelfOrAncestorFixedPosition,
   getBorderSizes,
   getPositionedParent,
   onAncestorReopen,
@@ -165,13 +172,11 @@ const css = /* css */ `
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
     overflow: auto;
     overscroll-behavior: none;
 
@@ -208,11 +213,12 @@ const css = /* css */ `
     /* The via-attribute renderer's own default: an element in the top layer
        always uses the initial containing block regardless of "position",
        so this is really "pinned to the viewport" either way — fixed is
-       just the more direct way to say so. Overridden back to absolute
-       below when genuinely anchored to a real element — see this file's
-       top comment for why the two need opposite defaults. The custom
-       renderer (no [popover] attribute) never matches either of these
-       rules, it's always the base "position: absolute" above. */
+       just the more direct way to say so. Overridden to absolute below only
+       when data-anchor-scrolls is set — see this file's top comment, and
+       that attribute's own JS-side comment in openEffect, for the full
+       fixed-vs-absolute reasoning. The custom renderer (no [popover]
+       attribute) never matches either of these rules, it's always the base
+       "position: absolute" above. */
     &[popover] {
       position: fixed;
       /* The native top layer already gives "last shown wins" for free —
@@ -221,9 +227,10 @@ const css = /* css */ `
          var directly on an ancestor. */
       z-index: unset;
       padding: 0;
-    }
-    &[popover][data-anchor] {
-      position: absolute;
+
+      &[data-anchor-scrolls] {
+        position: absolute;
+      }
     }
 
     &[data-anchor-out-of-view] {
@@ -620,18 +627,31 @@ const usePopoverProps = (props) => {
       anchorElement = e.detail.anchor;
     }
     const hasAnchorElement = Boolean(anchorElement);
-    const positionedAncestor = isTopLayer
-      ? null
-      : getPositionedParent(popoverEl);
+    // getPositionedParent already resolves to document.documentElement for
+    // the via-attribute renderer on its own (popoverEl's own `popover`
+    // attribute, present from render regardless of whether it's actually
+    // open yet — see offset_parent.js's own doc) — no isTopLayer branch
+    // needed here.
+    const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
     // positioning/measurement runs, so there's no ordering subtlety to get
     // wrong (unlike the CSS this replaced, which keyed off the resolved
     // animation instead, known too late relative to the first measurement).
-    if (hasAnchorElement) {
-      popoverEl.setAttribute("data-anchor", "");
+    // True only for a real anchor that itself scrolls with the document —
+    // that's the one case `absolute` (scrolling in lockstep with it) is
+    // correct; not just "has an anchor at all", since an anchor that's
+    // itself `position: fixed`, or nested inside something that is (e.g.
+    // anchored to an element inside another top-layer popover/modal dialog,
+    // which are always `position: fixed` — see popover.jsx's/dialog.jsx's
+    // own `[popover]`/`[data-layer="top"]` rules), stays pinned to the
+    // viewport regardless of document scroll too, so this popover must stay
+    // `fixed` right alongside it instead — switching to `absolute` there
+    // would make it drift away from an anchor that never actually moves.
+    if (hasAnchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+      popoverEl.setAttribute("data-anchor-scrolls", "");
     } else {
-      popoverEl.removeAttribute("data-anchor");
+      popoverEl.removeAttribute("data-anchor-scrolls");
     }
 
     if (!isTopLayer) {
@@ -733,14 +753,12 @@ const usePopoverProps = (props) => {
 
     // What we observe for repositioning on resize/scroll/visibility
     // changes: the anchor itself whenever there's a real one (either
-    // renderer), otherwise whatever we're docked against instead — the
-    // positioned ancestor for the custom renderer, the document for
-    // via-attribute.
+    // renderer), otherwise whatever we're docked against instead —
+    // positionedAncestor already is document.documentElement for the
+    // via-attribute renderer (see its own computation above).
     const effectiveAnchor = hasAnchorElement
       ? anchorElement
-      : isTopLayer
-        ? document.documentElement
-        : positionedAncestor;
+      : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
       let position;
@@ -775,7 +793,7 @@ const usePopoverProps = (props) => {
         // real content size, not one already truncated by a stale value.
         popoverEl.style.removeProperty("--container-position-remaining-height");
         popoverEl.style.removeProperty("--container-position-remaining-width");
-        position = pickPositionRelativeTo(popoverEl, anchorElement, {
+        const pickOptions = {
           positionArea,
           positionAreaFixed,
           positionAreaWhenAnchorIsInvalid,
@@ -786,35 +804,89 @@ const usePopoverProps = (props) => {
           // real anchor or not — this tells pickPositionRelativeTo to
           // convert the computed coordinates into that ancestor's own
           // local space instead of assuming document-relative absolute
-          // (see its own doc in visible_rect.js).
-          container: isTopLayer ? undefined : positionedAncestor,
+          // (see its own doc in visible_rect.js). positionedAncestor is
+          // already document.documentElement for the via-attribute
+          // renderer, same as omitting `container` entirely would resolve
+          // to on its own.
+          container: positionedAncestor,
           minLeft,
           event: positionEvent,
-        });
+        };
+        position = pickPositionRelativeTo(
+          popoverEl,
+          anchorElement,
+          pickOptions,
+        );
         position = { ...position, left: Math.max(position.left, minLeft) };
+        applyNewPosition(popoverEl, position);
+        // applyNewPosition above just set --container-position-remaining-
+        // width/height to the real available space near the anchor —
+        // narrower than the "natural" size just measured, whenever there
+        // isn't enough room. If that actually changes the popover's own
+        // rendered box (e.g. its text rewraps once truly constrained), the
+        // position picked above was computed against the wrong (wider,
+        // shorter) box — left uncorrected, it paints one frame too high/low
+        // before ever getting a chance to fix itself, since the
+        // ResizeObserver watching this same element for exactly that
+        // (rectEffect.observeSize below) only reacts on the *next*
+        // animation frame (see visible_rect.js's own observeSize comment
+        // for why: reacting synchronously there would re-trigger the very
+        // observer that just fired, the "ResizeObserver loop" it's built to
+        // avoid). Re-measuring here instead, still without clearing the
+        // constraint this time (unlike above — it's now the real, final
+        // value, not a stale one), converges before this function ever
+        // returns, so nothing gets painted in between.
+        if (
+          popoverEl.offsetWidth !== position.width ||
+          popoverEl.offsetHeight !== position.height
+        ) {
+          position = pickPositionRelativeTo(
+            popoverEl,
+            anchorElement,
+            pickOptions,
+          );
+          position = { ...position, left: Math.max(position.left, minLeft) };
+          applyNewPosition(popoverEl, position);
+        }
       } else {
         // No real anchor: dock against a container instead — omitting
         // pickPositionRelativeTo's own `anchor` argument entirely puts it
         // in its own container-docked mode (see its own doc for what that
-        // changes). For the via-attribute renderer, its `container` is
-        // left unspecified too — pickPositionRelativeTo auto-resolves it
-        // to the viewport on its own, since popoverEl's own [popover]
-        // attribute signals that (see getPositioningContainer). For the
-        // custom renderer, its own positioned ancestor is passed
-        // explicitly instead, since it's already computed above for
-        // visibleRectEffect's own observation target.
-        position = pickPositionRelativeTo(popoverEl, null, {
+        // changes). positionedAncestor is passed either way — already
+        // document.documentElement for the via-attribute renderer (see its
+        // own computation above), the real positioned ancestor for the
+        // custom renderer, already computed above for visibleRectEffect's
+        // own observation target regardless.
+        const pickOptions = {
           positionArea,
-          container: isTopLayer ? undefined : positionedAncestor,
+          container: positionedAncestor,
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           event: positionEvent,
-        });
+        };
+        position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+        applyNewPosition(popoverEl, position);
+        // Same reasoning as the real-anchor branch above — a first open
+        // starts from the same unconstrained state (no
+        // --container-position-remaining-width/height set yet either),
+        // so the same rewrap-after-constraint mismatch can happen here too.
+        if (
+          popoverEl.offsetWidth !== position.width ||
+          popoverEl.offsetHeight !== position.height
+        ) {
+          position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+          applyNewPosition(popoverEl, position);
+        }
       }
       debugPopup(
         positionEvent,
         `positionPopover() -> left: ${position.left}, top: ${position.top}`,
       );
-      applyNewPosition(popoverEl, position);
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout, or another nested Popover, anchored to something inside
+      // this one) knowing to recheck its own position whenever this popover
+      // itself moves is handled generically by applyNewPosition itself
+      // (dispatches navi_position_change on every call) — nothing to do
+      // here.
     };
 
     if (scrollCapture) {
@@ -877,6 +949,14 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // A descendant anchored to something inside this popover (a Callout, a
+    // further-nested Popover) needing to know about this popover's own
+    // left/top repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own notifyPositionTransition in
+    // visible_rect.js), since positionPopover already goes through it
+    // above; nothing to wire up here.
     addCleanup(() => {
       rectEffect.disconnect();
     });

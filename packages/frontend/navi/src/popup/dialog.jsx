@@ -47,7 +47,6 @@
 import {
   applyNewPosition,
   createPubSub,
-  dispatchCustomEvent,
   getElementSignature,
   getPositionedParent,
   parsePositionArea,
@@ -169,13 +168,11 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -546,8 +543,14 @@ const useDialogProps = (props) => {
     // own openEffect for the full reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
 
+    // document.documentElement — the shared "no real container, use the
+    // viewport" sentinel (see offset_parent.js) — not just
+    // getPositionedParent(dialogEl) unconditionally: that walks starting
+    // from dialogEl.parentElement, which for DialogLocal is the
+    // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
+    // real, meaningful ancestor beyond it.
     const positionedAncestor = isModal
-      ? null
+      ? document.documentElement
       : getPositionedParent(
           dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
         );
@@ -652,32 +655,51 @@ const useDialogProps = (props) => {
     // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
-      const position = pickPositionRelativeTo(dialogEl, null, {
+      const pickOptions = {
         positionArea,
-        container: isModal ? undefined : positionedAncestor,
+        container: positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
         event: triggerEvent,
-      });
+      };
+      let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
       applyNewPosition(dialogEl, position);
-      // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
-      // Callout anchored to something inside this Dialog) know to recheck
-      // its own position whenever this dialog itself moves — it already
-      // walks up the ancestor chain and listens for this event on any
-      // <dialog> ancestor specifically, no wiring needed on that side.
-      dispatchCustomEvent(dialogEl, "navi_position_change");
+      // applyNewPosition above just set --container-position-remaining-
+      // width/height to the real available space — narrower than whatever
+      // dialogEl measured at just before (nothing, on a first open — see
+      // popover.jsx's own identical comment on its own positionPopover for
+      // the full reasoning, mirrored here). If that changes dialogEl's own
+      // rendered box (its content rewraps once truly constrained), the
+      // position picked above was computed against the wrong (wider,
+      // shorter) box and needs a synchronous second pass, or it paints one
+      // frame too high/low before the ResizeObserver watching this same
+      // element (rectEffect.observeSize below) ever gets a chance to
+      // correct it — that one only reacts on the *next* animation frame.
+      if (
+        dialogEl.offsetWidth !== position.width ||
+        dialogEl.offsetHeight !== position.height
+      ) {
+        position = pickPositionRelativeTo(dialogEl, null, pickOptions);
+        applyNewPosition(dialogEl, position);
+      }
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout anchored to something inside this Dialog) knowing to
+      // recheck its own position whenever this dialog itself moves is
+      // handled generically by applyNewPosition itself (dispatches
+      // navi_position_change on every call) — nothing to do here.
     };
     positionDialog();
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top"/isModal (watching document.documentElement;
+    // changes for layer="top"/isModal (positionedAncestor is already
+    // document.documentElement there, see its own computation above;
     // visibleRectEffect already debounces visualViewport resize by 100ms
     // to avoid the mobile tap-to-tap-input keyboard flicker, so no
     // separate mechanism is needed here for that), or the positioned
-    // ancestor's own resize for layer="local" (watching positionedAncestor)
-    // — see this file's top comment.
+    // ancestor's own resize for layer="local" — see this file's top
+    // comment.
     const rectEffect = visibleRectEffect(
-      isModal ? document.documentElement : positionedAncestor,
+      positionedAncestor,
       (visibleRect, { event }) => {
         positionDialog(event);
       },
@@ -687,6 +709,14 @@ const useDialogProps = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+    // A descendant anchored to something inside this dialog (a Callout, a
+    // nested Popover) needing to know about this dialog's own left/top
+    // repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own notifyPositionTransition), since
+    // positionDialog already goes through it above; nothing to wire up
+    // here.
 
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between
