@@ -9,7 +9,7 @@ import {
   observeAncestorOpenState,
 } from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
-import { getPositioningContainer } from "./offset_parent.js";
+import { getPositionedParent } from "./offset_parent.js";
 import {
   subscribeVisualViewportResizeSettled,
   subscribeWindowResizeSettled,
@@ -733,17 +733,18 @@ const toContainerAlignedPosition = (value) => {
  *   there's a real `anchor`, since `element` can be container-relative either way (e.g. the
  *   custom renderer in popover.jsx, always relative to its own positioned ancestor whether
  *   or not it also has a real anchor). Whenever not explicitly given, this is always
- *   resolved automatically via `getPositioningContainer(element)` instead — regardless of
+ *   resolved automatically via `getPositionedParent(element)` instead — regardless of
  *   `hasValidAnchor` — so a caller that never thinks about `container` at all still gets the
- *   right behavior on its own: `null` from `getPositioningContainer` (an `element` with a
- *   `popover` attribute, or a `<dialog>` — e.g. Callout's own element) falls back to the
- *   traditional document-relative path below, exactly as if `container` genuinely didn't
- *   apply; anything else `getPositioningContainer` finds (a real positioned ancestor) is
- *   used the same way an explicit `container` would be. A container that resolves to
- *   `document.documentElement` (the viewport) produces identical output to the plain
- *   document-relative path either way, since the document's own scroll and the viewport's
- *   own origin already coincide with what this generically computes for any other container
- *   element. When there's a real container (explicit or resolved) either way: the final
+ *   right behavior on its own: `document.documentElement` from `getPositionedParent` (an
+ *   `element` promoted to the top layer — a `[popover]` while shown, or a `<dialog>` while
+ *   actually modal — or one with no positioned ancestor at all, e.g. Callout's own element)
+ *   falls back to the traditional document-relative path below, exactly as if `container`
+ *   genuinely didn't apply; anything else `getPositionedParent` finds (a real positioned
+ *   ancestor) is used the same way an explicit `container` would be. A container that
+ *   resolves to `document.documentElement` (the viewport) produces identical output to the
+ *   plain document-relative path either way, since the document's own scroll and the
+ *   viewport's own origin already coincide with what this generically computes for any other
+ *   container element. When there's a real container (explicit or resolved) either way: the final
  *   `left`/`top` (and the returned `anchorLeft/Top/Right/Bottom`) are expressed relative to
  *   its own padding-box origin plus its own scroll, instead of the document's — `element`'s
  *   own computed `position` is *not* consulted in that case, unlike the traditional path.
@@ -789,9 +790,11 @@ export const pickPositionRelativeTo = (
   // never gets offered more room (anchor-too-big check, flip decisions,
   // clamp) than its own container — resolvedContainer's own padding-box
   // edges when there is one — actually has.
-  const resolvedContainer = container ?? getPositioningContainer(element);
-  const hasRealContainer =
-    resolvedContainer && resolvedContainer !== document.documentElement;
+  // Always a real element now (never null/undefined) — getPositionedParent
+  // itself never returns anything falsy, document.documentElement (the
+  // viewport) included.
+  const resolvedContainer = container ?? getPositionedParent(element);
+  const hasRealContainer = resolvedContainer !== document.documentElement;
   const containerRect = hasRealContainer
     ? resolvedContainer.getBoundingClientRect()
     : null;
@@ -867,14 +870,13 @@ export const pickPositionRelativeTo = (
     positionXFixed = positionX;
     positionYFixed = positionY;
   }
-  // resolvedContainer was already resolved above. `null` from
-  // getPositioningContainer (a popover/dialog element, e.g. Callout's own)
-  // falls through to the traditional document-relative path below all the
-  // same, so an existing caller that never thinks about `container` at all
-  // keeps behaving exactly as before.
-  const effectiveAnchor = hasValidAnchor
-    ? anchor
-    : resolvedContainer || document.documentElement;
+  // resolvedContainer was already resolved above. document.documentElement
+  // from getPositionedParent (a popover/dialog element, e.g. Callout's own,
+  // or one with no positioned ancestor at all) falls through to the
+  // traditional document-relative path below all the same, so an existing
+  // caller that never thinks about `container` at all keeps behaving
+  // exactly as before.
+  const effectiveAnchor = hasValidAnchor ? anchor : resolvedContainer;
   // document.documentElement is used as a sentinel "the viewport" value: an
   // anchorless popup should center/place itself against the visual
   // viewport, not against <html>'s own box — which, unlike the viewport,

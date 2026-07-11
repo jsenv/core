@@ -620,8 +620,15 @@ const usePopoverProps = (props) => {
       anchorElement = e.detail.anchor;
     }
     const hasAnchorElement = Boolean(anchorElement);
+    // Not just `getPositionedParent(popoverEl)` unconditionally — this runs
+    // before showPopover() below, so popoverEl doesn't match `:popover-open`
+    // yet even when isTopLayer (getPositionedParent's own top-layer check
+    // needs the live state, since a merely-`popover="manual"`-attributed but
+    // not-yet-shown element is otherwise indistinguishable from one that
+    // never will be). document.documentElement either way — the shared
+    // "no real container, use the viewport" sentinel (see offset_parent.js).
     const positionedAncestor = isTopLayer
-      ? null
+      ? document.documentElement
       : getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
@@ -733,14 +740,10 @@ const usePopoverProps = (props) => {
 
     // What we observe for repositioning on resize/scroll/visibility
     // changes: the anchor itself whenever there's a real one (either
-    // renderer), otherwise whatever we're docked against instead — the
-    // positioned ancestor for the custom renderer, the document for
-    // via-attribute.
-    const effectiveAnchor = hasAnchorElement
-      ? anchorElement
-      : isTopLayer
-        ? document.documentElement
-        : positionedAncestor;
+    // renderer), otherwise whatever we're docked against instead —
+    // positionedAncestor already is document.documentElement for the
+    // via-attribute renderer (see its own computation above).
+    const effectiveAnchor = hasAnchorElement ? anchorElement : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
       let position;
@@ -786,8 +789,11 @@ const usePopoverProps = (props) => {
           // real anchor or not — this tells pickPositionRelativeTo to
           // convert the computed coordinates into that ancestor's own
           // local space instead of assuming document-relative absolute
-          // (see its own doc in visible_rect.js).
-          container: isTopLayer ? undefined : positionedAncestor,
+          // (see its own doc in visible_rect.js). positionedAncestor is
+          // already document.documentElement for the via-attribute
+          // renderer, same as omitting `container` entirely would resolve
+          // to on its own.
+          container: positionedAncestor,
           minLeft,
           event: positionEvent,
         });
@@ -796,16 +802,14 @@ const usePopoverProps = (props) => {
         // No real anchor: dock against a container instead — omitting
         // pickPositionRelativeTo's own `anchor` argument entirely puts it
         // in its own container-docked mode (see its own doc for what that
-        // changes). For the via-attribute renderer, its `container` is
-        // left unspecified too — pickPositionRelativeTo auto-resolves it
-        // to the viewport on its own, since popoverEl's own [popover]
-        // attribute signals that (see getPositioningContainer). For the
-        // custom renderer, its own positioned ancestor is passed
-        // explicitly instead, since it's already computed above for
-        // visibleRectEffect's own observation target.
+        // changes). positionedAncestor is passed either way — already
+        // document.documentElement for the via-attribute renderer (see its
+        // own computation above), the real positioned ancestor for the
+        // custom renderer, already computed above for visibleRectEffect's
+        // own observation target regardless.
         position = pickPositionRelativeTo(popoverEl, null, {
           positionArea,
-          container: isTopLayer ? undefined : positionedAncestor,
+          container: positionedAncestor,
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           event: positionEvent,
         });

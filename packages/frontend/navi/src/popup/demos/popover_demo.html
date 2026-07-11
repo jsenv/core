@@ -1279,7 +1279,7 @@
       // container's own height instead of the viewport's width: the anchor
       // is nearly as tall as its .demo-container (240px − 5px), and the
       // popover is layer="local" so its own positioned ancestor (this
-      // container, auto-resolved via getPositioningContainer — see
+      // container, auto-resolved via getPositionedParent — see
       // pickPositionRelativeTo's own doc) is what isAnchorTooBig compares
       // against, not the viewport. "top" (y outside) gets rejected; "left"/
       // "right" (x outside) still work fine, since only the anchor's width

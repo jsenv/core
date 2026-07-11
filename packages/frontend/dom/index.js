@@ -132,10 +132,7 @@ export {
   getScrollBox,
   getScrollRelativeRect,
 } from "./src/position/dom_coords.js";
-export {
-  getPositionedParent,
-  getPositioningContainer,
-} from "./src/position/offset_parent.js";
+export { getPositionedParent } from "./src/position/offset_parent.js";
 export { initPositionSticky } from "./src/position/position_sticky.js";
 export { stickyAsRelativeCoords } from "./src/position/sticky_rect.js";
 export {

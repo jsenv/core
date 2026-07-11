@@ -546,8 +546,14 @@ const useDialogProps = (props) => {
     // own openEffect for the full reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
 
+    // document.documentElement — the shared "no real container, use the
+    // viewport" sentinel (see offset_parent.js) — not just
+    // getPositionedParent(dialogEl) unconditionally: that walks starting
+    // from dialogEl.parentElement, which for DialogLocal is the
+    // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
+    // real, meaningful ancestor beyond it.
     const positionedAncestor = isModal
-      ? null
+      ? document.documentElement
       : getPositionedParent(
           dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
         );
@@ -654,7 +660,7 @@ const useDialogProps = (props) => {
     const positionDialog = (triggerEvent) => {
       const position = pickPositionRelativeTo(dialogEl, null, {
         positionArea,
-        container: isModal ? undefined : positionedAncestor,
+        container: positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
         event: triggerEvent,
       });
@@ -670,14 +676,15 @@ const useDialogProps = (props) => {
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top"/isModal (watching document.documentElement;
+    // changes for layer="top"/isModal (positionedAncestor is already
+    // document.documentElement there, see its own computation above;
     // visibleRectEffect already debounces visualViewport resize by 100ms
     // to avoid the mobile tap-to-tap-input keyboard flicker, so no
     // separate mechanism is needed here for that), or the positioned
-    // ancestor's own resize for layer="local" (watching positionedAncestor)
-    // — see this file's top comment.
+    // ancestor's own resize for layer="local" — see this file's top
+    // comment.
     const rectEffect = visibleRectEffect(
-      isModal ? document.documentElement : positionedAncestor,
+      positionedAncestor,
       (visibleRect, { event }) => {
         positionDialog(event);
       },
