@@ -169,6 +169,15 @@
         border: 1px dashed #999;
         border-radius: 6px;
       }
+      .demo-static-anchor-small {
+        display: inline-block;
+        padding: 4px 8px;
+        color: #666;
+        font-size: 10px;
+        background: #f6f6f6;
+        border: 1px dashed #999;
+        border-radius: 4px;
+      }
       /* Almost as wide as the viewport (see isAnchorTooBig's own doc,
          visible_rect.js) — leaves under 50px on the left/right axis, so
          "left"/"right" get rejected, while "top"/"bottom" stay unaffected
@@ -1341,55 +1350,59 @@
         </section>
       );
 
-      // The child popover anchors to a div rendered by the parent popover's
-      // own (already open) content — an id string, resolved via
-      // document.getElementById once the child itself opens, is what makes
-      // this work with defaultOpen: there's no triggering event/ref yet at
-      // that point to read a real anchor element from, only an id known up
-      // front. Both are lazy-mounted (see LazyMount above) so reloading the
-      // page doesn't pop them open on every single load.
+      // Both popovers anchor via a plain id string, resolved via
+      // document.getElementById once each one opens — the parent to a small
+      // anchor rendered right here in the section, the child to an equally
+      // small one rendered by the parent's own (already open) content. A
+      // string is what makes this work with defaultOpen at all: there's no
+      // triggering event/ref yet at that point to read a real anchor element
+      // from, only an id known up front. Rendered open immediately (no
+      // Render button/click needed) so the anchoring is visible right away.
       const NestedPopoverDemo = () => {
+        const sectionAnchorId = useId();
         const parentId = useId();
         const anchorTargetId = useId();
         const childId = useId();
         return (
-          <Popover
-            id={parentId}
-            defaultOpen
-            pointerInteractionOutsideEffect="close"
-            anchorCustomEventDetail="ignore"
-            positionArea="center"
-            borderRadius="8px"
-            className="demo_popover_flex_box"
-          >
-            <p style={{ marginTop: 0, fontWeight: "bold" }}>Parent popover</p>
-            <p>
-              Clicking outside this one closes it (pointerInteractionOutsideEffect="close").
-            </p>
-            <div
-              id={anchorTargetId}
-              class="demo-static-anchor"
-              style={{ marginTop: 12, marginBottom: 12 }}
-            >
-              anchor target
-            </div>
+          <>
+            <span id={sectionAnchorId} class="demo-static-anchor-small">
+              anchor
+            </span>
             <Popover
-              id={childId}
+              id={parentId}
               defaultOpen
-              anchor={anchorTargetId}
-              pointerInteractionOutsideEffect="none"
-              positionArea="right"
+              anchor={sectionAnchorId}
+              pointerInteractionOutsideEffect="close"
+              positionArea="bottom"
               borderRadius="8px"
               className="demo_popover_flex_box"
             >
-              <p style={{ marginTop: 0 }}>Child popover</p>
-              <p>
-                anchor="{anchorTargetId}", no click-outside-to-close.
+              <p style={{ marginTop: 0, fontWeight: "bold" }}>
+                Parent popover
               </p>
-              <Button command="--navi-close">Close</Button>
+              <p>
+                Clicking outside this one closes it
+                (pointerInteractionOutsideEffect="close").
+              </p>
+              <span id={anchorTargetId} class="demo-static-anchor-small">
+                anchor
+              </span>
+              <Popover
+                id={childId}
+                defaultOpen
+                anchor={anchorTargetId}
+                pointerInteractionOutsideEffect="none"
+                positionArea="right"
+                borderRadius="8px"
+                className="demo_popover_flex_box"
+              >
+                <p style={{ marginTop: 0 }}>Child popover</p>
+                <p>anchor="{anchorTargetId}", no click-outside-to-close.</p>
+                <Button command="--navi-close">Close</Button>
+              </Popover>
+              <Button command="--navi-close">Close parent</Button>
             </Popover>
-            <Button command="--navi-close">Close parent</Button>
-          </Popover>
+          </>
         );
       };
 
@@ -1397,19 +1410,16 @@
         <section id="nested-popovers" class="demo-section">
           <h2>10. Nested popovers</h2>
           <p>
-            The child popover below anchors to a div that only exists because
-            the parent popover is already open — normally impossible with{" "}
+            Both popovers below open immediately, each anchored to a small
+            element via a plain id string — normally impossible with{" "}
             <code>defaultOpen</code> (there's no triggering event/ref yet to
-            read a real anchor element from at that point). Passing a plain id
-            string as <code>anchor</code> instead resolves it via{" "}
-            <code>document.getElementById</code> once the popover actually
-            opens, by which time the parent's own content already exists.
+            read a real anchor element from at that point). The string is
+            resolved via <code>document.getElementById</code> once the
+            popover actually opens, by which time the anchor already exists —
+            even the child's own anchor, rendered by the parent's content.
           </p>
           <div class="demo-row">
-            <LazyMount
-              label="parent (defaultOpen) + child (defaultOpen, anchor id string)"
-              renderContent={() => <NestedPopoverDemo />}
-            />
+            <NestedPopoverDemo />
           </div>
         </section>
       );
