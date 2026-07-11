@@ -489,24 +489,24 @@ naviI18n.addAll({
     en: "The date must be on or before <strong>[max]</strong>.",
   },
   "constraint.max.number.default": {
-    fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
-    en: "This number must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong>.",
+    en: "Max <strong>[max]</strong>.",
   },
   "constraint.max.hour.default": {
-    fr: "Le nombre d'heures doit être <strong>[max]</strong> ou moins.",
-    en: "The number of hours must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> heures.",
+    en: "Max <strong>[max]</strong> hours.",
   },
   "constraint.max.minute.default": {
-    fr: "Le nombre de minutes doit être <strong>[max]</strong> ou moins.",
-    en: "The number of minutes must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> minutes.",
+    en: "Max <strong>[max]</strong> minutes.",
   },
   "constraint.max.second.default": {
-    fr: "Le nombre de secondes doit être <strong>[max]</strong> ou moins.",
-    en: "The number of seconds must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> secondes.",
+    en: "Max <strong>[max]</strong> secondes.",
   },
   "constraint.max.percentage.default": {
-    fr: "Le pourcentage doit être <strong>[max]</strong> ou moins.",
-    en: "The percentage must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong>%.",
+    en: "Max <strong>[max]</strong>%.",
   },
   "constraint.step.number.default": {
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
