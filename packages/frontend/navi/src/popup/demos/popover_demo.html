@@ -175,7 +175,7 @@
          (the anchor's own height is unrelated to that axis). */
       .demo-toobig-anchor-wide {
         box-sizing: border-box;
-        width: calc(100vw - 10px);
+        width: calc(100vw - 30px);
         margin: 16px auto;
         padding: 10px 16px;
         color: #666;
@@ -1223,8 +1223,12 @@
         const anchorId = useId();
         return (
           <>
-            <div id={anchorId} class="demo-toobig-anchor-wide">
-              anchor (viewport width − 10px)
+            <div
+              id={anchorId}
+              class="demo-toobig-anchor-wide"
+              style="margin-left: -20px;"
+            >
+              anchor (viewport width − 30px)
             </div>
             <Box flex="y" spacing="s" alignX="start">
               <AnchorTooBigPopover

@@ -339,10 +339,12 @@ const css = /* css */ `
  *   value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}} [props.anchor] - Only ever sizes the
- *   dialog via the `--anchor-width`/`--anchor-height` CSS vars — never used
- *   for positioning (see this file's top comment). Defaults to whatever
- *   triggered the open (`e.detail.anchor`), if any.
+ * @param {Element|{current: Element}|string} [props.anchor] - Only ever sizes
+ *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars — never
+ *   used for positioning (see this file's top comment). Defaults to whatever
+ *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
+ *   `document.getElementById` when the dialog opens — see popover.jsx's own
+ *   `anchor` doc for why (mainly `defaultOpen`).
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -553,9 +555,14 @@ const useDialogProps = (props) => {
     const [cleanup, addCleanup] = createPubSub(true);
     let anchorElement;
     if (typeof anchor === "string") {
-      console.warn(
-        `Dialog: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`,
-      );
+      // Resolved at open time (not render time) via getElementById — mainly
+      // for defaultOpen, where there's no triggering event/ref yet to read a
+      // real element from, only an id known up front. See popover.jsx's own
+      // anchor handling for the full reasoning, mirrored here identically.
+      anchorElement = document.getElementById(anchor);
+      if (!anchorElement) {
+        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
+      }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element
       anchorElement = anchor.current ?? anchor;

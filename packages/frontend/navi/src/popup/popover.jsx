@@ -356,11 +356,14 @@ const css = /* css */ `
  *   based on `positionArea`. Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}} [props.anchor] - The element the
+ * @param {Element|{current: Element}|string} [props.anchor] - The element the
  *   popover is positioned relative to. Defaults to whatever triggered the
  *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
  *   all, the popover docks to its container instead (viewport for
- *   `layer="top"`, positioned ancestor for `layer="local"`).
+ *   `layer="top"`, positioned ancestor for `layer="local"`). A string is
+ *   resolved via `document.getElementById` when the popover opens — mainly
+ *   useful for `defaultOpen` (there's no triggering event/ref to read a
+ *   real element from yet at that point, only an id known up front).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
  *   Whether an explicit `anchor` prop takes precedence over
  *   (`"override"`, default) or is ignored in favor of
@@ -600,13 +603,14 @@ const usePopoverProps = (props) => {
     // only has this one call site.
     let anchorElement;
     if (typeof anchor === "string") {
-      // A plain string is a near-certain leftover from an older API
-      // (anchor used to accept "viewport"/"scrollContainer" directly) —
-      // anchor is a ref or a DOM element only now; layer/
-      // anchorCustomEventDetail cover what those strings used to mean.
-      console.warn(
-        `Popover: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`,
-      );
+      // Resolved at open time (not render time) via getElementById — mainly
+      // for defaultOpen, where there's no triggering event/ref yet to read a
+      // real element from, only an id known up front (e.g. a popover nested
+      // inside another, anchored to an element rendered by that ancestor).
+      anchorElement = document.getElementById(anchor);
+      if (!anchorElement) {
+        console.warn(`Popover: anchor="${anchor}" did not match any element`);
+      }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
       // regardless of anchorCustomEventDetail.
