@@ -4,6 +4,7 @@ import { createPubSub } from "../pub_sub.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
+import { getStyle } from "../style/dom_styles.js";
 import {
   closestOpenableAncestor,
   isAncestorOpen,
@@ -1457,18 +1458,25 @@ export const pickPositionRelativeTo = (
 // transitionrun/transitionend: element -> { animation, endCallbacks }.
 const pendingPositionTransitions = new WeakMap();
 
-// "0.25s" -> 250, "250ms" -> 250 — transitionDuration is always one of these
-// two forms (applyNewPosition's own default, or whatever a caller passes),
-// never a bare number, so no other unit needs handling.
-const parseTransitionDurationMs = (durationString) => {
-  const trimmed = String(durationString).trim();
+// Reads `cssVarName` off `element` (getComputedStyle, so it's whatever the
+// cascade resolves to — a consumer can set it inline, in its own CSS rule,
+// or not at all) and converts it to milliseconds: "0.25s" -> 250, "250ms" ->
+// 250. Falls back to `fallbackMs` when unset/empty/unparsable, so a caller
+// never has to declare the CSS var itself just to get a sane default
+// duration — it only needs to when it actually wants to override it.
+const parseTransitionDurationMs = (element, cssVarName, fallbackMs = 180) => {
+  const trimmed = getStyle(element, cssVarName).trim();
+  if (!trimmed) {
+    return fallbackMs;
+  }
   if (trimmed.endsWith("ms")) {
     return parseFloat(trimmed);
   }
   if (trimmed.endsWith("s")) {
     return parseFloat(trimmed) * 1000;
   }
-  return parseFloat(trimmed) || 0;
+  const parsed = parseFloat(trimmed);
+  return Number.isNaN(parsed) ? fallbackMs : parsed;
 };
 
 /**
@@ -1504,6 +1512,15 @@ const parseTransitionDurationMs = (durationString) => {
  * are flushed immediately (same spirit as a real `transitioncancel`) before
  * the new one begins, so nothing is ever left stuck hidden waiting for an
  * `onEnd` that was actually superseded.
+ *
+ * `applyNewPosition` already sets `element.style.left`/`top` to their final
+ * target before this animation ever starts, so `animation.commitStyles()`
+ * below is not what makes the final position correct — with the default
+ * `fill: "none"`, the animation stops overriding the computed style once
+ * its active duration elapses either way, and the specified style (already
+ * final) takes back over. `commitStyles()` + `cancel()` just makes that
+ * explicit and immediate rather than relying on that fill/timing nuance,
+ * and drops the now-finished Animation instead of leaving it around.
  */
 const notifyPositionTransition = (element, animation) => {
   const pending = pendingPositionTransitions.get(element);
@@ -1526,6 +1543,13 @@ const notifyPositionTransition = (element, animation) => {
       if (pendingPositionTransitions.get(element) === current) {
         pendingPositionTransitions.delete(element);
       }
+      try {
+        animation.commitStyles();
+      } catch {
+        // Element no longer rendered (removed/hidden mid-animation) —
+        // nothing to commit to, and left/top were already final anyway.
+      }
+      animation.cancel();
       for (const callback of endCallbacks) {
         callback();
       }
@@ -1546,7 +1570,10 @@ const notifyPositionTransition = (element, animation) => {
  * display), so it can't clobber or be clobbered by them, and gives a real
  * `Animation.finished` promise to key off instead of a fragile
  * `transitionend`/`propertyName` filter (see notifyPositionTransition's own
- * doc for why that matters).
+ * doc for why that matters). Its duration comes from the
+ * `--popup-position-transition-duration` CSS var (parseTransitionDurationMs),
+ * read straight off `element` — falls back to 180ms unset, but a consumer
+ * can override it in its own CSS same as any other custom property.
  * Also dispatches navi_position_transition (see notifyPositionTransition's
  * own doc) whenever it starts such an animation, and navi_position_change
  * unconditionally — every caller of this function already wants both
@@ -1597,33 +1624,34 @@ export const applyNewPosition = (
     element.style.removeProperty("--container-position-remaining-width");
   }
 
-  const previousLeft = parseFloat(element.style.left);
-  const previousTop = parseFloat(element.style.top);
-  const leftOrTopChanged =
-    !Number.isNaN(previousLeft) &&
-    !Number.isNaN(previousTop) &&
-    (previousLeft !== left || previousTop !== top);
-
-  if (leftOrTopChanged) {
-    if (shouldTransition) {
-      const animation = element.animate(
-        [
-          { left: `${previousLeft}px`, top: `${previousTop}px` },
-          { left: `${left}px`, top: `${top}px` },
-        ],
-        {
-          duration: parseTransitionDurationMs(
-            element,
-            "--popup-position-transition-duration",
-          ),
-          easing: "ease-out",
-        },
-      );
-      notifyPositionTransition(element, animation);
-    } else {
-      element.style.left = `${left}px`;
-      element.style.top = `${top}px`;
-    }
-    dispatchCustomEvent(element, "navi_position_change");
+  // A single keyframe is only ever the *end* state — the Web Animations API
+  // fills in the start on its own from whatever the underlying value
+  // already is at the moment `animate()` is called (its "neutral"/implicit
+  // keyframe), so there's no need to read/parse the previous `left`/`top`
+  // ourselves, and no "did it actually change" check to get right: nothing
+  // to gain from skipping a no-op animation when it's already implicit and
+  // harmless. This only works because `animate()` runs *before* the
+  // specified style below is overwritten with the new target — the
+  // implicit start is captured once, right here.
+  if (shouldTransition) {
+    const animation = element.animate(
+      [{ left: `${left}px`, top: `${top}px` }],
+      {
+        duration: parseTransitionDurationMs(
+          element,
+          "--popup-position-transition-duration",
+        ),
+        easing: "ease-out",
+      },
+    );
+    notifyPositionTransition(element, animation);
   }
+  // The specified `left`/`top` are set to their final target right away,
+  // regardless of `shouldTransition` — the animation above only plays the
+  // visual move from the old position, it never becomes the actual
+  // specified style (see notifyPositionTransition's own commitStyles for
+  // why that matters once it ends).
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+  dispatchCustomEvent(element, "navi_position_change");
 };
