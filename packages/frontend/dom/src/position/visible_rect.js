@@ -529,21 +529,26 @@ export const visibleRectEffect = (
         // positioned against may live inside that ancestor and be moving
         // right now — rather than hiding for the duration (an opacity
         // 0/1 flicker once it settles reads worse than a position that's
-        // very slightly behind), check() every frame for as long as the
+        // very slightly behind), autoCheck() every frame for as long as the
         // animation runs, so this element's own position stays in lockstep
-        // with the ancestor's. e.detail.onEnd stops the loop and settles on
-        // one final check once the animation actually ends.
+        // with the ancestor's. autoCheck (not check directly) so this
+        // element's own ResizeObserver(s) stay unobserved for the loop's
+        // duration too, same as any other autoCheck — repositioning every
+        // frame can itself cause reflows, and reacting to those would risk
+        // the exact same-frame ResizeObserver feedback this file already
+        // works around elsewhere. e.detail.onEnd stops the loop and settles
+        // on one final check once the animation actually ends.
         let positionTransitionRafId = null;
         const onNaviPositionTransition = (e) => {
           cancelAnimationFrame(positionTransitionRafId);
           const loop = () => {
-            check(e);
+            autoCheck(e);
             positionTransitionRafId = requestAnimationFrame(loop);
           };
           loop();
           e.detail.onEnd(() => {
             cancelAnimationFrame(positionTransitionRafId);
-            check(e);
+            autoCheck(e);
           });
         };
         openableAncestor.addEventListener(
