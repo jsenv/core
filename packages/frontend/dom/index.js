@@ -121,6 +121,12 @@ export { getDropTargetInfo } from "./src/interaction/drag/drop_target_detection.
 
 // position
 export {
+  closestOpenableAncestor,
+  getAncestorOpenType,
+  isAncestorOpen,
+  observeAncestorOpenState,
+} from "./src/position/ancestor_open.js";
+export {
   getPositioningScrollOffset,
   getScrollBox,
   getScrollRelativeRect,

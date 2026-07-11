@@ -3,6 +3,11 @@ import { createPubSub } from "../pub_sub.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
 import { getPaddingSizes } from "../size/get_padding_sizes.js";
 import { snapToPixel } from "../size/snap_to_pixel.js";
+import {
+  closestOpenableAncestor,
+  isAncestorOpen,
+  observeAncestorOpenState,
+} from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositioningContainer } from "./offset_parent.js";
 import {
@@ -397,28 +402,19 @@ export const visibleRectEffect = (
       });
     }
     on_ancestor_events: {
-      let current = element.parentElement;
-      while (current) {
-        if (
-          current.hasAttribute("popover") ||
-          current.tagName === "DIALOG" ||
-          current.tagName === "DETAILS"
-        ) {
-          const ancestor = current;
-          const isInitiallyClosed =
-            ancestor.tagName === "DIALOG" || ancestor.tagName === "DETAILS"
-              ? !ancestor.open
-              : !ancestor.matches(":popover-open");
-          if (isInitiallyClosed) {
-            ancestorClosedCount++;
-          }
+      let currentOpenableAncestor = closestOpenableAncestor(
+        element.parentElement,
+      );
+      while (currentOpenableAncestor) {
+        const openableAncestor = currentOpenableAncestor;
+        if (!isAncestorOpen(openableAncestor)) {
+          ancestorClosedCount++;
+        }
+        const removeOpenStateObserver = observeAncestorOpenState(
+          openableAncestor,
           // eslint-disable-next-line no-loop-func
-          const onToggle = (e) => {
-            const isClosed =
-              ancestor.tagName === "DETAILS"
-                ? !ancestor.open
-                : e.newState === "closed";
-            if (isClosed) {
+          ({ isOpen, toggleEvent }) => {
+            if (!isOpen) {
               ancestorClosedCount++;
               update(
                 {
@@ -430,35 +426,41 @@ export const visibleRectEffect = (
                   height: 0,
                   visibilityRatio: 0,
                 },
-                { event: e, width: 0, height: 0, ancestorClosed: true },
+                {
+                  event: toggleEvent ?? new CustomEvent("ancestor_close"),
+                  width: 0,
+                  height: 0,
+                  ancestorClosed: true,
+                },
               );
-            } else {
-              if (ancestorClosedCount > 0) {
-                ancestorClosedCount--;
-              }
-              if (ancestorClosedCount === 0) {
-                check(e);
-              }
+              return;
             }
-          };
-          ancestor.addEventListener("toggle", onToggle);
+            if (ancestorClosedCount > 0) {
+              ancestorClosedCount--;
+            }
+            if (ancestorClosedCount === 0) {
+              check(toggleEvent ?? new CustomEvent("ancestor_open"));
+            }
+          },
+        );
 
-          const onNaviPositionChange = (e) => {
-            autoCheck(e);
-          };
-          ancestor.addEventListener(
+        const onNaviPositionChange = (e) => {
+          autoCheck(e);
+        };
+        openableAncestor.addEventListener(
+          "navi_position_change",
+          onNaviPositionChange,
+        );
+        addTeardown(() => {
+          removeOpenStateObserver();
+          openableAncestor.removeEventListener(
             "navi_position_change",
             onNaviPositionChange,
           );
-          addTeardown(() => {
-            ancestor.removeEventListener("toggle", onToggle);
-            ancestor.removeEventListener(
-              "navi_position_change",
-              onNaviPositionChange,
-            );
-          });
-        }
-        current = current.parentElement;
+        });
+        currentOpenableAncestor = closestOpenableAncestor(
+          currentOpenableAncestor.parentElement,
+        );
       }
     }
   }

@@ -1,3 +1,9 @@
+import {
+  closestOpenableAncestor,
+  getAncestorOpenType,
+  isAncestorOpen,
+  observeAncestorOpenState,
+} from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 /**
@@ -14,9 +20,9 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
  *     useLayoutEffect with the provided deps.
  *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
- *     the callback once the ancestor opens — see addBeforePaintOpenCallback
- *     below for exactly how that's detected, and why it matters that it
- *     happens before the browser paints.
+ *     the callback once the ancestor opens — see @jsenv/dom's own
+ *     observeAncestorOpenState for exactly how that's detected, and why it
+ *     matters that it happens before the browser paints.
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
@@ -24,9 +30,7 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
- *     | "popover" | "details" | "aria-expanded" }`. On the toggle fallback
- *     path (see addBeforePaintOpenCallback) `detail.event` is also set to
- *     the native `toggle` event that triggered it.
+ *     | "popover" | "details" | "aria-expanded" }`.
  * Consumers that only care about a genuine top-level, no-ancestor mount
  * (e.g. use_auto_focus.js — an ancestor opening already has its own
  * transferFocus/openEffect placing focus, so re-running a per-element
@@ -54,20 +58,17 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
+    const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document, "document"));
+      callbackRef.current(el, createDisplayedEvent(document));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; addBeforePaintOpenCallback below
-      // will fire once it opens.
+      // Ancestor is closed — skip now; the observeAncestorOpenState call
+      // below will fire once it opens.
       return;
     }
-    callbackRef.current(
-      el,
-      createDisplayedEvent(ancestor, getAncestorType(ancestor)),
-    );
+    callbackRef.current(el, createDisplayedEvent(ancestor));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -76,132 +77,25 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
+    const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
       return undefined;
     }
-    return addBeforePaintOpenCallback(ancestor, (event) => {
+    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
+      if (!isOpen) {
+        return;
+      }
       const lastEl = ref.current;
-      callbackRef.current(lastEl, event);
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor));
     });
   }, []);
 };
 
-const isAncestorOpen = (ancestor) => {
-  if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
-    return ancestor.matches(":popover-open, [open]");
-  }
-  if (ancestor.tagName === "DETAILS") {
-    return ancestor.open;
-  }
-  return ancestor.getAttribute("aria-expanded") === "true";
-};
-
-const getAncestorType = (ancestor) => {
-  if (ancestor.tagName === "DIALOG") {
-    return "dialog";
-  }
-  if (ancestor.hasAttribute("popover")) {
-    return "popover";
-  }
-  if (ancestor.tagName === "DETAILS") {
-    return "details";
-  }
-  return `${ancestor.tagName}[aria-expanded]`;
-};
-
-const createDisplayedEvent = (ancestor, ancestorType, eventInit) => {
+const createDisplayedEvent = (ancestor) => {
   return new CustomEvent("navi_displayed", {
-    detail: { ancestor, ancestorType, ...eventInit },
+    detail: {
+      ancestor,
+      ancestorType: getAncestorOpenType(ancestor),
+    },
   });
-};
-
-/**
- * Notifies `callback` the moment `ancestor` opens — timed to land strictly
- * before the browser's next paint, so a caller doing layout/measurement work
- * in response (e.g. text_anchor.jsx repositioning a badge) never flashes the
- * still-closed state first.
- *
- * We deliberately do NOT use the native `toggle` event as the primary
- * signal, even though every <dialog>/<details>/[popover] fires one: per the
- * WHATWG spec it's dispatched via a *queued task* ("queue a popover toggle
- * event task"), not synchronously and not as a microtask. The element's
- * shown state itself (showPopover()/showModal()) still flips synchronously,
- * so the browser can — and does — paint it in its default, uncorrected
- * position before that queued task ever runs. Relying on `toggle` alone
- * means the correction always arrives one paint late.
- *
- * Instead we watch `open`/`aria-expanded` via MutationObserver:
- *   - <dialog>/<details> reflect `open` themselves, natively, synchronously.
- *   - This codebase's own Popover.jsx sets `aria-expanded` synchronously in
- *     the same call stack as showPopover() (see popover.jsx's own
- *     aria-expanded comments) — not part of any web standard, just this
- *     library's own convention, but reliable for anything built through it.
- * MutationObserver callbacks run as a microtask, strictly before paint —
- * exactly the timing we need, no ambiguity.
- *
- * The `toggle` listener is kept as a fallback, attached ONLY where the
- * MutationObserver above has no chance of ever firing: a bare [popover]
- * element with no `aria-expanded` of its own — i.e. one not built through
- * this codebase's own Popover.jsx (the only thing that reliably sets it).
- * That's the one case this file's author could think of with no other
- * synchronously-observable signal at all. It still arrives a paint late,
- * but a late correction beats none.
- *
- * This relies on `aria-expanded` genuinely being present on a navi Popover
- * by the time this code runs — see popover.jsx's own comments on why it
- * sets that attribute the way it does.
- *
- * @param {Element} ancestor
- * @param {(event: Event) => void} callback
- * @returns {() => void} cleanup — removes the observer/listener
- */
-const addBeforePaintOpenCallback = (ancestor, callback) => {
-  const ancestorType = getAncestorType(ancestor);
-  const needsToggleFallback =
-    ancestor.hasAttribute("popover") && !ancestor.hasAttribute("aria-expanded");
-  if (needsToggleFallback) {
-    const onToggle = (toggleEvent) => {
-      if (!isAncestorOpen(ancestor)) {
-        return;
-      }
-      callback(
-        createDisplayedEvent(ancestor, ancestorType, { event: toggleEvent }),
-      );
-    };
-    ancestor.addEventListener("toggle", onToggle);
-    return () => {
-      ancestor.removeEventListener("toggle", onToggle);
-    };
-  }
-
-  // Edge-triggered on purpose: some consumers (e.g. Popover.jsx) set
-  // aria-expanded both imperatively (in their own openEffect, for precise
-  // ordering relative to forced reflows/transitions) AND declaratively via a
-  // JSX prop derived from the same open state — the latter is a deliberate
-  // "always reflect current truth" prop, but Preact diffs against its own
-  // previous *rendered* value, not the live DOM, so any later re-render that
-  // happens to occur while already open re-applies the same "true" value as
-  // a genuinely new attribute mutation. Tracking wasOpen here collapses that
-  // redundant open→open mutation instead of re-running callback a second
-  // time for the same open.
-  let wasOpen = isAncestorOpen(ancestor);
-  const observer = new MutationObserver(() => {
-    const isOpen = isAncestorOpen(ancestor);
-    if (isOpen === wasOpen) {
-      return;
-    }
-    wasOpen = isOpen;
-    if (!isOpen) {
-      return;
-    }
-    callback(createDisplayedEvent(ancestor, ancestorType));
-  });
-  observer.observe(ancestor, {
-    attributes: true,
-    attributeFilter: ["open", "aria-expanded"],
-  });
-  return () => {
-    observer.disconnect();
-  };
 };

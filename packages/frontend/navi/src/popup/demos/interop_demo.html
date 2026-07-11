@@ -66,20 +66,20 @@
          internal scroll is what should move the anchor around under the
          popover. */
       .interop-dialog-box {
-        width: 340px;
+        width: 240px;
         height: 260px;
         padding: 0;
-        overflow: hidden;
         background: white;
         border: none;
         border-radius: 10px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
       }
       .interop-dialog-head {
         display: flex;
+        padding: 10px 16px;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 16px;
         font-weight: bold;
         border-bottom: 1px solid #e5e5e5;
       }
@@ -121,10 +121,10 @@
         width: 480px;
         height: 380px;
         padding: 16px 20px;
-        overflow: auto;
         background: white;
         border: 1px solid #d0d0d0;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        overflow: auto;
       }
       .interop-field-row {
         display: flex;
@@ -143,7 +143,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId } from "preact/hooks";
-      import { Button, Dialog, Popover } from "@jsenv/navi";
+      import { Button, Dialog, Popover, Box } from "@jsenv/navi";
       import { openCallout } from "../../control/rules/callout/callout.js";
 
       const App = () => (
@@ -151,11 +151,11 @@
           <h1>Popup interop demo</h1>
           <p>
             Individual demos (<code>popover_demo.html</code>,{" "}
-            <code>dialog_demo.html</code>, …) exercise one component at a
-            time. This one is about the combinations — one popup nested
-            inside another, unrelated one — to see whether they actually
-            cooperate (anchor tracking, stacking, scroll, outside-click
-            handling) once combined, not just in isolation.
+            <code>dialog_demo.html</code>, …) exercise one component at a time.
+            This one is about the combinations — one popup nested inside
+            another, unrelated one — to see whether they actually cooperate
+            (anchor tracking, stacking, scroll, outside-click handling) once
+            combined, not just in isolation.
           </p>
 
           <TableOfContents />
@@ -213,8 +213,8 @@
               </div>
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
-                  Scroll this area — the anchor button below moves with it,
-                  and the popover it opens should keep tracking it.
+                  Scroll this area — the anchor button below moves with it, and
+                  the popover it opens should keep tracking it.
                 </p>
                 <div class="interop-dialog-filler" />
                 <Button
@@ -239,13 +239,13 @@
                 Popover (bigger than the dialog)
               </p>
               <p>
-                This box is intentionally larger than the dialog itself, so
-                most of it renders outside the dialog's own bounds no matter
-                which side it opens on. Try clicking/selecting text in the
-                part of this popover that's outside the dialog — it should
-                behave normally rather than getting blocked by the dialog
-                (they're both top-layer elements; this one opened after the
-                dialog, so it stacks above it).
+                This box is intentionally larger than the dialog itself, so most
+                of it renders outside the dialog's own bounds no matter which
+                side it opens on. Try clicking/selecting text in the part of
+                this popover that's outside the dialog — it should behave
+                normally rather than getting blocked by the dialog (they're both
+                top-layer elements; this one opened after the dialog, so it
+                stacks above it).
               </p>
               <p>
                 Then scroll the dialog's own content (behind this popover, or
@@ -262,15 +262,15 @@
         <section id="dialog-with-popover" class="demo-section">
           <h2>1. Dialog containing a Popover</h2>
           <p>
-            The popover below is anchored to a button that lives{" "}
-            <em>inside</em> the dialog's own scrollable content — a
-            different kind of anchor than every other popover demo, which
-            anchor to something in the normal page flow. Things to check:
+            The popover below is anchored to a button that lives <em>inside</em>{" "}
+            the dialog's own scrollable content — a different kind of anchor
+            than every other popover demo, which anchor to something in the
+            normal page flow. Things to check:
           </p>
           <ul>
             <li>
-              Scroll the dialog's own content (once the popover is open) —
-              does the popover keep following its anchor?
+              Scroll the dialog's own content (once the popover is open) — does
+              the popover keep following its anchor?
             </li>
             <li>
               Scroll the page itself (there's filler above and below the
@@ -279,14 +279,14 @@
             </li>
             <li>
               The popover is deliberately bigger than the dialog — does
-              interacting with the part of it outside the dialog's own
-              bounds work normally?
+              interacting with the part of it outside the dialog's own bounds
+              work normally?
             </li>
           </ul>
           <p class="demo-important-note">
-            <code>pointerInteractionOutsideEffect="none"</code> on the
-            popover here on purpose — the dialog is already modal
-            (<code>showModal()</code>), so an outside click never reaches
+            <code>pointerInteractionOutsideEffect="none"</code> on the popover
+            here on purpose — the dialog is already modal (
+            <code>showModal()</code>), so an outside click never reaches
             anything behind it anyway; closing the popover on outside click
             would also make it impossible to click something in the dialog
             further away from the anchor while the popover is open, which
@@ -327,7 +327,7 @@
                 <p style={{ marginTop: 0 }}>
                   This field's callout is anchored inside the dialog.
                 </p>
-                <div class="interop-field-row">
+                <Box flex="y" alignX="start">
                   <input id={fieldId} type="text" placeholder="Your name" />
                   <Button
                     onClick={() => {
@@ -342,7 +342,7 @@
                   >
                     Show callout
                   </Button>
-                </div>
+                </Box>
                 <div class="interop-dialog-filler" />
               </div>
             </Dialog>
@@ -354,10 +354,10 @@
         <section id="dialog-with-callout" class="demo-section">
           <h2>2. Dialog containing a Callout</h2>
           <p>
-            Same idea, with a <code>Callout</code> (the validation-message
-            style popup, opened imperatively via <code>openCallout</code>)
-            instead of a <code>Popover</code>. It should render on top of the
-            dialog rather than behind its backdrop.
+            Same idea, with a <code>Callout</code> (the validation-message style
+            popup, opened imperatively via <code>openCallout</code>) instead of
+            a <code>Popover</code>. It should render on top of the dialog rather
+            than behind its backdrop.
           </p>
           <DialogWithCalloutDemo />
         </section>
