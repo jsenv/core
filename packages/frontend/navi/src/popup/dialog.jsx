@@ -730,12 +730,16 @@ const useDialogProps = (props) => {
         // visible`, a negative margin, or an absolutely-positioned child)
         // can be visually painted outside dialogEl's own bounding rect, and
         // a click there must not count as "outside" just because its
-        // coordinates fall outside that rect. contains() can't be the only
-        // check though (see this file's top comment) — a genuine backdrop
-        // click doesn't reliably land on dialogEl's own subtree via
-        // event.target, so the coordinate check below still has to cover
-        // that case.
-        if (dialogEl.contains(mouseDownEvent.target)) {
+        // coordinates fall outside that rect. Excludes dialogEl itself
+        // though (contains() is true for the element itself, not just real
+        // descendants) — a genuine backdrop click reports target === dialogEl
+        // (there's no real ::backdrop node to be the target), so treating
+        // that case as "contained" would make the coordinate check below
+        // (the actual backdrop-vs-dialog-padding distinction) never run.
+        if (
+          mouseDownEvent.target !== dialogEl &&
+          dialogEl.contains(mouseDownEvent.target)
+        ) {
           return;
         }
         const rect = dialogEl.getBoundingClientRect();
