@@ -1387,9 +1387,14 @@
                 Clicking outside this one closes it
                 (pointerInteractionOutsideEffect="close").
               </p>
-              <span id={anchorTargetId} class="demo-static-anchor-small">
+              <Button
+                command="--navi-toggle"
+                commandFor={childId}
+                id={anchorTargetId}
+                class="demo-static-anchor-small"
+              >
                 anchor
-              </span>
+              </Button>
               <Popover
                 id={childId}
                 defaultOpen
