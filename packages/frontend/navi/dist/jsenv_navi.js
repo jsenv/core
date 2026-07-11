@@ -3,7 +3,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -15965,8 +15965,7 @@ const renderIntoCallout = (jsx$1, calloutMessageElement, {
   render(calloutJsx, calloutMessageElement);
 };
 
-installImportMetaCssBuild(import.meta);
-/**
+installImportMetaCssBuild(import.meta);/**
  * A callout component that mimics native browser validation messages.
  * Features:
  * - Positions above or below target element based on available space
@@ -15975,7 +15974,6 @@ installImportMetaCssBuild(import.meta);
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-
 const css$Q = /* css */`
   @layer navi {
     .navi_callout {
@@ -15995,17 +15993,21 @@ const css$Q = /* css */`
     --x-callout-border-color: var(--x-callout-status-color);
     --x-callout-background-color: var(--callout-background-color);
     --x-callout-icon-color: var(--x-callout-status-color);
-
+    /* Default: no anchor at all (docked/centered in the viewport) — fixed
+       is the direct way to stay pinned there. Overridden to absolute below
+       only when data-anchor-scrolls is set (see its own JS-side comment,
+       right where it's set) — same reasoning as Popover's identical
+       attribute (popover.jsx's own top comment has the full case). */
+    position: fixed;
     /* Popover resets */
-    position: absolute;
     inset: auto;
     top: 0;
     left: 0;
     /* Callout styles */
     display: block;
-    height: auto;
+    height: auto; /* User agent reset */
     margin: 0;
-    padding: 0;
+    padding: 0; /* User agent reset */
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
@@ -16013,17 +16015,17 @@ const css$Q = /* css */`
     outline: none; /* programmatic focus may land here briefly before being redirected to close button */
     opacity: 0;
     /* Positioned with plain left/top (applyNewPosition, visible_rect.js) —
-       left/top's own duration is driven by --popup-position-transition-duration,
-       same mechanism Popover/Dialog use (see their own CSS): 0s (no
-       transition) for most repositions, a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition:
-      opacity 0.2s ease-in-out,
-      left var(--popup-position-transition-duration, 0s) ease-out,
-      top var(--popup-position-transition-duration, 0s) ease-out;
+       left/top are NOT transitioned here, applyNewPosition drives that
+       itself via the Web Animations API instead of CSS, same mechanism
+       Popover/Dialog use. */
+    transition: opacity 0.2s ease-in-out;
     cursor: initial; /* Do not inherit element cursor, inside the element but should use regular cursor */
     pointer-events: auto; /* Must be interactive to be closabled (overrid list item pointer-events none for instance)  */
     overflow: visible;
+
+    &[data-anchor-scrolls] {
+      position: absolute;
+    }
 
     &[data-status="success"] {
       --x-callout-status-color: var(--callout-success-color);
@@ -16789,6 +16791,24 @@ const positionCallout = (calloutElement, anchorElement, {
       }
     }
     calloutElement.setAttribute("data-anchor-box", alignToAnchorBox);
+  }
+
+  // Drives the callout's own position: fixed/absolute switch (see
+  // .navi_callout's own CSS) — same reasoning as Popover's identical
+  // data-anchor-scrolls attribute (popover.jsx): true only for a real
+  // anchor that itself scrolls with the document — that's the one case
+  // absolute (scrolling in lockstep with it) is correct; not just "has an
+  // anchor at all", since an anchor that's itself position: fixed, or
+  // nested inside something that is (e.g. anchored to an element inside a
+  // Popover/Dialog rendered in the top layer), stays pinned to the viewport
+  // regardless of document scroll too, so the callout must stay fixed right
+  // alongside it instead — switching to absolute there would make it drift
+  // away from an anchor that never actually moves on scroll. No anchor at
+  // all (docked/centered in the viewport) also stays fixed, the default.
+  if (anchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+    calloutElement.setAttribute("data-anchor-scrolls", "");
+  } else {
+    calloutElement.removeAttribute("data-anchor-scrolls");
   }
 
   // Set initial border styles
@@ -17893,6 +17913,7 @@ const matchBestLang = (lang, languageMap) => {
  *   - `"time.less_than_minute"` — e.g. "in less than a minute"
  *   - `"time.ongoing"`          — e.g. "Ongoing"
  *   - `"time.tomorrow_at"`      — e.g. "[day] at [time]" ([day] and [time] are placeholders)
+ *   - `"time.midnight"`         — e.g. "midnight"
  *
  * @example
  * import { naviI18n } from "@jsenv/navi";
@@ -17985,6 +18006,24 @@ naviI18n.addAll({
     it: "tra [duration]",
     pt: "em [duration]",
     nl: "over [duration]",
+  },
+  // Substituted in place of the "0 heure(s)" part of an Intl-generated
+  // duration string when <Time type="time" format="long"> renders midnight
+  // — see time.jsx's own TimeTime for why midnight can't just fall through
+  // to formatMinuteDuration like every other hour does, and how this word
+  // gets spliced in (formatToParts, not string concatenation) so the rest
+  // of the sentence (conjunction, minutes) still comes out in whatever
+  // grammar/word order this language's own Intl.DurationFormat produces.
+  // Languages without an entry here fall back to that language's own
+  // literal "0 heure(s)" wording instead (see TimeTime), never to this key.
+  "time.midnight": {
+    en: "midnight",
+    fr: "minuit",
+    de: "Mitternacht",
+    es: "medianoche",
+    it: "mezzanotte",
+    pt: "meia-noite",
+    nl: "middernacht",
   },
   // Compact duration unit symbols used in "1h30", "45min", "2d", etc.
   "time.duration.year_symbol": {
@@ -18368,24 +18407,24 @@ naviI18n.addAll({
     en: "The date must be on or before <strong>[max]</strong>.",
   },
   "constraint.max.number.default": {
-    fr: "Ce nombre doit être <strong>[max]</strong> ou moins.",
-    en: "This number must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong>.",
+    en: "Max <strong>[max]</strong>.",
   },
   "constraint.max.hour.default": {
-    fr: "Le nombre d'heures doit être <strong>[max]</strong> ou moins.",
-    en: "The number of hours must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> heures.",
+    en: "Max <strong>[max]</strong> hours.",
   },
   "constraint.max.minute.default": {
-    fr: "Le nombre de minutes doit être <strong>[max]</strong> ou moins.",
-    en: "The number of minutes must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> minutes.",
+    en: "Max <strong>[max]</strong> minutes.",
   },
   "constraint.max.second.default": {
-    fr: "Le nombre de secondes doit être <strong>[max]</strong> ou moins.",
-    en: "The number of seconds must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong> secondes.",
+    en: "Max <strong>[max]</strong> secondes.",
   },
   "constraint.max.percentage.default": {
-    fr: "Le pourcentage doit être <strong>[max]</strong> ou moins.",
-    en: "The percentage must be <strong>[max]</strong> or less.",
+    fr: "Max <strong>[max]</strong>%.",
+    en: "Max <strong>[max]</strong>%.",
   },
   "constraint.step.number.default": {
     fr: "Ce nombre doit être un multiple de <strong>[step]</strong> (par ex. <strong>[before]</strong> ou <strong>[after]</strong>).",
@@ -19165,7 +19204,15 @@ const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", alwaysShowHours?: boolean }} [options]
+ * @param {boolean} [options.alwaysShowHours=false] - Normally a zero-hours
+ *   component is dropped entirely (a real 5-minute duration should print as
+ *   "5 minutes", not "0 hours 5 minutes") — set this to keep it (e.g. "0 h
+ *   et 5 min"/"0h 5min"/"0h05") instead. Only meaningful when `minutes` is
+ *   itself less than 60, i.e. the hours component would otherwise be zero;
+ *   used by `<Time type="time">` for a time-of-day at midnight, where
+ *   dropping the hour would make it indistinguishable from an actual
+ *   duration (see time.jsx's own TimeTime).
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -19173,16 +19220,20 @@ const formatTime = (date, lang) => {
  * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
  * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
+ * formatMinuteDuration(5, { lang: "fr", format: "narrow", alwaysShowHours: true }) // "0h 5min"
  */
 const formatMinuteDuration = (
   minutes,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long", alwaysShowHours = false } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    const fmt = new Intl.DurationFormat(lang, { style: format }); // "long", "short", or "narrow"
-    if (h === 0) {
+    const fmt = new Intl.DurationFormat(lang, {
+      style: format, // "long", "short", or "narrow"
+      ...(alwaysShowHours ? { hoursDisplay: "always" } : {}),
+    });
+    if (h === 0 && !alwaysShowHours) {
       return fmt.format({ minutes: m });
     }
     if (m === 0) {
@@ -19193,7 +19244,7 @@ const formatMinuteDuration = (
   // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  if (h === 0) {
+  if (h === 0 && !alwaysShowHours) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
@@ -19340,40 +19391,50 @@ const formatDuration = (
     // Fall through to compact notation when values are non-numeric or mixed-sign
   }
 
+  // A component explicitly present but numerically zero (e.g. the demo's own
+  // { hours: 0, minutes: 5 }) conveys no information for a genuine duration
+  // — same convention formatMinuteDuration/formatSecondDuration already
+  // follow (checking h > 0/m > 0, not merely "was a value passed") — so
+  // it's dropped here too, regardless of whether the caller included the
+  // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
+  // present — Number("2a") is NaN, never === 0 — so those keep rendering
+  // as-is with their own unit symbol.
+  const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
+
   const sym = (key) =>
     naviI18n(`time.duration.${key}_symbol`, undefined, { lang });
   const parts = [];
 
-  if (has("years")) {
+  if (hasNonZero("years")) {
     parts.push(`${duration.years}${sym("year")}`);
   }
-  if (has("months")) {
+  if (hasNonZero("months")) {
     parts.push(`${duration.months}${sym("month")}`);
   }
-  if (has("weeks")) {
+  if (hasNonZero("weeks")) {
     parts.push(`${duration.weeks}${sym("week")}`);
   }
-  if (has("days")) {
+  if (hasNonZero("days")) {
     parts.push(`${duration.days}${sym("day")}`);
   }
 
   // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
   const hSym = sym("hour");
   const mSym = sym("minute");
-  if (has("hours") && has("minutes")) {
+  if (hasNonZero("hours") && hasNonZero("minutes")) {
     parts.push(
       `${duration.hours}${hSym}${String(duration.minutes).padStart(2, "0")}`,
     );
-  } else if (has("hours")) {
+  } else if (hasNonZero("hours")) {
     parts.push(`${duration.hours}${hSym}`);
-  } else if (has("minutes")) {
+  } else if (hasNonZero("minutes")) {
     parts.push(`${duration.minutes}${mSym}`);
   }
 
-  if (has("seconds")) {
+  if (hasNonZero("seconds")) {
     parts.push(`${duration.seconds}${sym("second")}`);
   }
-  if (has("milliseconds")) {
+  if (hasNonZero("milliseconds")) {
     parts.push(`${duration.milliseconds}${sym("millisecond")}`);
   }
   return parts.join("") || "0";
@@ -21420,9 +21481,9 @@ const tryActionAfterInteractionAllowed = (
  *   - No <dialog>/<details>/[popover] ancestor → runs like a normal
  *     useLayoutEffect with the provided deps.
  *   - Inside a closed/hidden ancestor → skips the initial run; instead runs
- *     the callback once the ancestor opens — see addBeforePaintOpenCallback
- *     below for exactly how that's detected, and why it matters that it
- *     happens before the browser paints.
+ *     the callback once the ancestor opens — see @jsenv/dom's own
+ *     observeAncestorOpenState for exactly how that's detected, and why it
+ *     matters that it happens before the browser paints.
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
@@ -21430,9 +21491,7 @@ const tryActionAfterInteractionAllowed = (
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
- *     | "popover" | "details" | "aria-expanded" }`. On the toggle fallback
- *     path (see addBeforePaintOpenCallback) `detail.event` is also set to
- *     the native `toggle` event that triggered it.
+ *     | "popover" | "details" | "aria-expanded" }`.
  * Consumers that only care about a genuine top-level, no-ancestor mount
  * (e.g. use_auto_focus.js — an ancestor opening already has its own
  * transferFocus/openEffect placing focus, so re-running a per-element
@@ -21460,20 +21519,17 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return;
     }
-    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
+    const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document, "document"));
+      callbackRef.current(el, createDisplayedEvent(document));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
-      // Ancestor is closed — skip now; addBeforePaintOpenCallback below
-      // will fire once it opens.
+      // Ancestor is closed — skip now; the observeAncestorOpenState call
+      // below will fire once it opens.
       return;
     }
-    callbackRef.current(
-      el,
-      createDisplayedEvent(ancestor, getAncestorType(ancestor)),
-    );
+    callbackRef.current(el, createDisplayedEvent(ancestor));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -21482,134 +21538,27 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     if (!el) {
       return undefined;
     }
-    const ancestor = el.closest("dialog, details, [popover], [aria-expanded]");
+    const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
       return undefined;
     }
-    return addBeforePaintOpenCallback(ancestor, (event) => {
+    return observeAncestorOpenState(ancestor, ({ isOpen }) => {
+      if (!isOpen) {
+        return;
+      }
       const lastEl = ref.current;
-      callbackRef.current(lastEl, event);
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor));
     });
   }, []);
 };
 
-const isAncestorOpen = (ancestor) => {
-  if (ancestor.tagName === "DIALOG" || ancestor.hasAttribute("popover")) {
-    return ancestor.matches(":popover-open, [open]");
-  }
-  if (ancestor.tagName === "DETAILS") {
-    return ancestor.open;
-  }
-  return ancestor.getAttribute("aria-expanded") === "true";
-};
-
-const getAncestorType = (ancestor) => {
-  if (ancestor.tagName === "DIALOG") {
-    return "dialog";
-  }
-  if (ancestor.hasAttribute("popover")) {
-    return "popover";
-  }
-  if (ancestor.tagName === "DETAILS") {
-    return "details";
-  }
-  return `${ancestor.tagName}[aria-expanded]`;
-};
-
-const createDisplayedEvent = (ancestor, ancestorType, eventInit) => {
+const createDisplayedEvent = (ancestor) => {
   return new CustomEvent("navi_displayed", {
-    detail: { ancestor, ancestorType, ...eventInit },
+    detail: {
+      ancestor,
+      ancestorType: getAncestorOpenType(ancestor),
+    },
   });
-};
-
-/**
- * Notifies `callback` the moment `ancestor` opens — timed to land strictly
- * before the browser's next paint, so a caller doing layout/measurement work
- * in response (e.g. text_anchor.jsx repositioning a badge) never flashes the
- * still-closed state first.
- *
- * We deliberately do NOT use the native `toggle` event as the primary
- * signal, even though every <dialog>/<details>/[popover] fires one: per the
- * WHATWG spec it's dispatched via a *queued task* ("queue a popover toggle
- * event task"), not synchronously and not as a microtask. The element's
- * shown state itself (showPopover()/showModal()) still flips synchronously,
- * so the browser can — and does — paint it in its default, uncorrected
- * position before that queued task ever runs. Relying on `toggle` alone
- * means the correction always arrives one paint late.
- *
- * Instead we watch `open`/`aria-expanded` via MutationObserver:
- *   - <dialog>/<details> reflect `open` themselves, natively, synchronously.
- *   - This codebase's own Popover.jsx sets `aria-expanded` synchronously in
- *     the same call stack as showPopover() (see popover.jsx's own
- *     aria-expanded comments) — not part of any web standard, just this
- *     library's own convention, but reliable for anything built through it.
- * MutationObserver callbacks run as a microtask, strictly before paint —
- * exactly the timing we need, no ambiguity.
- *
- * The `toggle` listener is kept as a fallback, attached ONLY where the
- * MutationObserver above has no chance of ever firing: a bare [popover]
- * element with no `aria-expanded` of its own — i.e. one not built through
- * this codebase's own Popover.jsx (the only thing that reliably sets it).
- * That's the one case this file's author could think of with no other
- * synchronously-observable signal at all. It still arrives a paint late,
- * but a late correction beats none.
- *
- * This relies on `aria-expanded` genuinely being present on a navi Popover
- * by the time this code runs — see popover.jsx's own comments on why it
- * sets that attribute the way it does.
- *
- * @param {Element} ancestor
- * @param {(event: Event) => void} callback
- * @returns {() => void} cleanup — removes the observer/listener
- */
-const addBeforePaintOpenCallback = (ancestor, callback) => {
-  const ancestorType = getAncestorType(ancestor);
-  const needsToggleFallback =
-    ancestor.hasAttribute("popover") && !ancestor.hasAttribute("aria-expanded");
-  if (needsToggleFallback) {
-    const onToggle = (toggleEvent) => {
-      if (!isAncestorOpen(ancestor)) {
-        return;
-      }
-      callback(
-        createDisplayedEvent(ancestor, ancestorType, { event: toggleEvent }),
-      );
-    };
-    ancestor.addEventListener("toggle", onToggle);
-    return () => {
-      ancestor.removeEventListener("toggle", onToggle);
-    };
-  }
-
-  // Edge-triggered on purpose: some consumers (e.g. Popover.jsx) set
-  // aria-expanded both imperatively (in their own openEffect, for precise
-  // ordering relative to forced reflows/transitions) AND declaratively via a
-  // JSX prop derived from the same open state — the latter is a deliberate
-  // "always reflect current truth" prop, but Preact diffs against its own
-  // previous *rendered* value, not the live DOM, so any later re-render that
-  // happens to occur while already open re-applies the same "true" value as
-  // a genuinely new attribute mutation. Tracking wasOpen here collapses that
-  // redundant open→open mutation instead of re-running callback a second
-  // time for the same open.
-  let wasOpen = isAncestorOpen(ancestor);
-  const observer = new MutationObserver(() => {
-    const isOpen = isAncestorOpen(ancestor);
-    if (isOpen === wasOpen) {
-      return;
-    }
-    wasOpen = isOpen;
-    if (!isOpen) {
-      return;
-    }
-    callback(createDisplayedEvent(ancestor, ancestorType));
-  });
-  observer.observe(ancestor, {
-    attributes: true,
-    attributeFilter: ["open", "aria-expanded"],
-  });
-  return () => {
-    observer.disconnect();
-  };
 };
 
 // see also https://github.com/preactjs/preact/issues/1255
@@ -36232,6 +36181,42 @@ const useOpenController = (openHandler) => {
   return controllerRef.current;
 };
 
+// Nested popups that both mount already-open (`open`/`defaultOpen`) would
+// otherwise stack in the wrong order: Preact fires layout effects
+// child-first on mount, so a nested popup's own silent mount-open would call
+// showPopover() before its ancestor's — and the top layer stacks *later*
+// showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
+// comment) — leaving the ancestor on top instead of the nested popup, the
+// opposite of what opening them one at a time (ancestor first, by real user
+// interaction) would produce. Batching every mount-time silent open queued
+// during the same commit's layout-effect phase into one microtask flush,
+// then simply running them in *reverse* of their registration order fixes
+// this — no need to compare DOM positions: since effects already fire
+// child-first, tree-wide, for *any* ancestor/descendant pair the descendant
+// is always queued before the ancestor, regardless of what else is in the
+// tree, so reversing the whole batch always puts every ancestor before its
+// own descendants. Works for any nesting depth for the same reason. Two
+// unrelated (sibling) popups both mounting open also get reordered
+// relative to each other, but there's no meaningful "correct" order between
+// those anyway.
+let pendingSilentOpens = [];
+let silentOpenFlushScheduled = false;
+const scheduleSilentOpen = (run) => {
+  pendingSilentOpens.push(run);
+  if (silentOpenFlushScheduled) {
+    return;
+  }
+  silentOpenFlushScheduled = true;
+  queueMicrotask(() => {
+    const entries = pendingSilentOpens;
+    pendingSilentOpens = [];
+    silentOpenFlushScheduled = false;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      entries[i]();
+    }
+  });
+};
+
 /**
  * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
  * shared between `useOpenControllerByProps` below (Dialog/Popover driving
@@ -36262,9 +36247,15 @@ const useOpenPropsEffectOnOpenController = (openController, props) => {
         // silent: true — nothing was ever shown as "closed" for the user to
         // see transition away from, so this first open skips the entrance
         // animation entirely (see popover.jsx's own openEffect for how).
-        openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
-          silent: true,
-        });
+        // Deferred + batched (see scheduleSilentOpen above) rather than
+        // called directly, so nested popups that both mount already-open
+        // end up stacked ancestor-first instead of Preact's own child-first
+        // effect order.
+        scheduleSilentOpen(() =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: true,
+          }),
+        );
       }
       return;
     }
@@ -36394,25 +36385,17 @@ const popupCss = /* css */ `
 
   .navi_popover,
   .navi_dialog {
-    /* left/top folded into this same list (not left to each of Popover's/
-       Dialog's own base rule alone) — a more specific selector's own
-       transition-property replaces the base rule's list wholesale rather
-       than adding to it, so left/top's own transition would otherwise stop
-       applying for as long as navi-animation is set (which, unlike the
-       open/close transition itself, is the element's *entire* open
-       duration — see openEffect in popover.jsx/dialog.jsx). Duration is
-       driven by --popup-position-transition-duration either way — see
-       applyNewPosition's own doc in visible_rect.js for what sets it and
-       why. */
+    /* left/top are deliberately absent from this list — applyNewPosition
+       (visible_rect.js) drives that transition itself via the Web
+       Animations API instead of CSS, so it stays independent of whatever
+       this list contains (no shared transition-property to clobber, no
+       propertyName to filter). */
     &[navi-animation] {
-      transition-property:
-        display, overlay, opacity, translate, scale, box-shadow, left, top;
+      transition-property: display, overlay, opacity, translate, scale, box-shadow;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
-        var(--popup-scale-duration), var(--popup-animation-duration),
-        var(--popup-position-transition-duration, 0s),
-        var(--popup-position-transition-duration, 0s);
+        var(--popup-scale-duration), var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
     }
@@ -36858,13 +36841,11 @@ const css$s = /* css */`
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
 
     &::backdrop {
       background: var(--navi-backdrop-close-background);
@@ -37028,10 +37009,12 @@ const css$s = /* css */`
  *   value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}} [props.anchor] - Only ever sizes the
- *   dialog via the `--anchor-width`/`--anchor-height` CSS vars — never used
- *   for positioning (see this file's top comment). Defaults to whatever
- *   triggered the open (`e.detail.anchor`), if any.
+ * @param {Element|{current: Element}|string} [props.anchor] - Only ever sizes
+ *   the dialog via the `--anchor-width`/`--anchor-height` CSS vars — never
+ *   used for positioning (see this file's top comment). Defaults to whatever
+ *   triggered the open (`e.detail.anchor`), if any. A string is resolved via
+ *   `document.getElementById` when the dialog opens — see popover.jsx's own
+ *   `anchor` doc for why (mainly `defaultOpen`).
  * @param {string} [props.minWidth] - Maps to `--dialog-min-width`; clamped
  *   so it can never push the dialog past `--dialog-maxmax-width` (the
  *   viewport/container-spacing ceiling) regardless of how large a value is
@@ -37235,11 +37218,25 @@ const useDialogProps = props => {
     // `open`/`defaultOpen` already being truthy at mount — see popover.jsx's
     // own openEffect for the full reasoning, mirrored here identically.
     const silent = Boolean(e.detail.silent);
-    const positionedAncestor = isModal ? null : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
+
+    // document.documentElement — the shared "no real container, use the
+    // viewport" sentinel (see offset_parent.js) — not just
+    // getPositionedParent(dialogEl) unconditionally: that walks starting
+    // from dialogEl.parentElement, which for DialogLocal is the
+    // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
+    // real, meaningful ancestor beyond it.
+    const positionedAncestor = isModal ? document.documentElement : getPositionedParent(dialogEl.parentElement /* dialogEl is inside the clip_wrapper */);
     const [cleanup, addCleanup] = createPubSub(true);
     let anchorElement;
     if (typeof anchor === "string") {
-      console.warn(`Dialog: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now (or omit it entirely).`);
+      // Resolved at open time (not render time) via getElementById — mainly
+      // for defaultOpen, where there's no triggering event/ref yet to read a
+      // real element from, only an id known up front. See popover.jsx's own
+      // anchor handling for the full reasoning, mirrored here identically.
+      anchorElement = document.getElementById(anchor);
+      if (!anchorElement) {
+        console.warn(`Dialog: anchor="${anchor}" did not match any element`);
+      }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element
       anchorElement = anchor.current ?? anchor;
@@ -37324,31 +37321,47 @@ const useDialogProps = props => {
     // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
     // from the result, same as popover.jsx.
     const positionDialog = triggerEvent => {
-      const position = pickPositionRelativeTo(dialogEl, null, {
+      const pickOptions = {
         positionArea,
-        container: isModal ? undefined : positionedAncestor,
+        container: positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
         event: triggerEvent
-      });
+      };
+      let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
       applyNewPosition(dialogEl, position);
-      // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
-      // Callout anchored to something inside this Dialog) know to recheck
-      // its own position whenever this dialog itself moves — it already
-      // walks up the ancestor chain and listens for this event on any
-      // <dialog> ancestor specifically, no wiring needed on that side.
-      dispatchCustomEvent(dialogEl, "navi_position_change");
+      // applyNewPosition above just set --container-position-remaining-
+      // width/height to the real available space — narrower than whatever
+      // dialogEl measured at just before (nothing, on a first open — see
+      // popover.jsx's own identical comment on its own positionPopover for
+      // the full reasoning, mirrored here). If that changes dialogEl's own
+      // rendered box (its content rewraps once truly constrained), the
+      // position picked above was computed against the wrong (wider,
+      // shorter) box and needs a synchronous second pass, or it paints one
+      // frame too high/low before the ResizeObserver watching this same
+      // element (rectEffect.observeSize below) ever gets a chance to
+      // correct it — that one only reacts on the *next* animation frame.
+      if (dialogEl.offsetWidth !== position.width || dialogEl.offsetHeight !== position.height) {
+        position = pickPositionRelativeTo(dialogEl, null, pickOptions);
+        applyNewPosition(dialogEl, position);
+      }
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout anchored to something inside this Dialog) knowing to
+      // recheck its own position whenever this dialog itself moves is
+      // handled generically by applyNewPosition itself (dispatches
+      // navi_position_change on every call) — nothing to do here.
     };
     positionDialog();
 
     // Reposition on the same triggers Popover's own visibleRectEffect
     // already reacts to generically — window resize/scroll/visual-viewport
-    // changes for layer="top"/isModal (watching document.documentElement;
+    // changes for layer="top"/isModal (positionedAncestor is already
+    // document.documentElement there, see its own computation above;
     // visibleRectEffect already debounces visualViewport resize by 100ms
     // to avoid the mobile tap-to-tap-input keyboard flicker, so no
     // separate mechanism is needed here for that), or the positioned
-    // ancestor's own resize for layer="local" (watching positionedAncestor)
-    // — see this file's top comment.
-    const rectEffect = visibleRectEffect(isModal ? document.documentElement : positionedAncestor, (visibleRect, {
+    // ancestor's own resize for layer="local" — see this file's top
+    // comment.
+    const rectEffect = visibleRectEffect(positionedAncestor, (visibleRect, {
       event
     }) => {
       positionDialog(event);
@@ -37360,6 +37373,14 @@ const useDialogProps = props => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+    // A descendant anchored to something inside this dialog (a Callout, a
+    // nested Popover) needing to know about this dialog's own left/top
+    // repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own notifyPositionTransition), since
+    // positionDialog already goes through it above; nothing to wire up
+    // here.
 
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between
@@ -37393,6 +37414,20 @@ const useDialogProps = props => {
     if (isModal && pointerInteractionOutsideEffect === "close") {
       const onDocumentMouseDown = mouseDownEvent => {
         if (mouseDownEvent.button !== 0) {
+          return;
+        }
+        // Real DOM containment wins over the coordinate check below — an
+        // element genuinely inside the dialog (e.g. one with `overflow:
+        // visible`, a negative margin, or an absolutely-positioned child)
+        // can be visually painted outside dialogEl's own bounding rect, and
+        // a click there must not count as "outside" just because its
+        // coordinates fall outside that rect. Excludes dialogEl itself
+        // though (contains() is true for the element itself, not just real
+        // descendants) — a genuine backdrop click reports target === dialogEl
+        // (there's no real ::backdrop node to be the target), so treating
+        // that case as "contained" would make the coordinate check below
+        // (the actual backdrop-vs-dialog-padding distinction) never run.
+        if (mouseDownEvent.target !== dialogEl && dialogEl.contains(mouseDownEvent.target)) {
           return;
         }
         const rect = dialogEl.getBoundingClientRect();
@@ -37611,11 +37646,17 @@ installImportMetaCssBuild(import.meta);/**
  * popover's own content for attention.
  *
  * The via-attribute renderer defaults to `position: fixed`, overridden to
- * `absolute` only when there's a real anchor: a real anchor needs the
- * popover to scroll in lockstep with the document to stay visually attached
- * to it, whereas `fixed` is the more direct way to stay pinned to the
- * viewport when there's none (and avoids ever extending the document's own
- * scrollable area).
+ * `absolute` only when there's a real anchor that itself scrolls with the
+ * document: such an anchor needs the popover to scroll in lockstep with it
+ * to stay visually attached, whereas `fixed` is the more direct way to stay
+ * pinned to the viewport when there's no anchor (and avoids ever extending
+ * the document's own scrollable area). When the anchor itself doesn't
+ * scroll with the document — it's `position: fixed`, or nested inside
+ * something that is, e.g. anchored to an element inside another top-layer
+ * popover/modal dialog — staying `fixed` is correct *despite* having a real
+ * anchor too, since the anchor never moves on scroll either; see
+ * `data-anchor-scrolls` in openEffect/the CSS below for how that's detected
+ * and applied.
  */
 let openLocalPopoverCount = 0;
 const css$r = /* css */`
@@ -37707,13 +37748,11 @@ const css$r = /* css */`
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
-    /* Duration driven by applyNewPosition (visible_rect.js) — 0s (no
-       transition) for most repositions (scroll, in particular, needs to
-       track its target in lockstep), a real duration only when the
-       reposition was itself triggered by a resize. */
-    transition-property: left, top;
-    transition-duration: var(--popup-position-transition-duration, 0s);
-    transition-timing-function: ease-out;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
     overflow: auto;
     overscroll-behavior: none;
 
@@ -37750,11 +37789,12 @@ const css$r = /* css */`
     /* The via-attribute renderer's own default: an element in the top layer
        always uses the initial containing block regardless of "position",
        so this is really "pinned to the viewport" either way — fixed is
-       just the more direct way to say so. Overridden back to absolute
-       below when genuinely anchored to a real element — see this file's
-       top comment for why the two need opposite defaults. The custom
-       renderer (no [popover] attribute) never matches either of these
-       rules, it's always the base "position: absolute" above. */
+       just the more direct way to say so. Overridden to absolute below only
+       when data-anchor-scrolls is set — see this file's top comment, and
+       that attribute's own JS-side comment in openEffect, for the full
+       fixed-vs-absolute reasoning. The custom renderer (no [popover]
+       attribute) never matches either of these rules, it's always the base
+       "position: absolute" above. */
     &[popover] {
       position: fixed;
       /* The native top layer already gives "last shown wins" for free —
@@ -37763,9 +37803,10 @@ const css$r = /* css */`
          var directly on an ancestor. */
       z-index: unset;
       padding: 0;
-    }
-    &[popover][data-anchor] {
-      position: absolute;
+
+      &[data-anchor-scrolls] {
+        position: absolute;
+      }
     }
 
     &[data-anchor-out-of-view] {
@@ -37899,11 +37940,14 @@ const css$r = /* css */`
  *   based on `positionArea`. Any other explicit value is used as-is.
  * @param {string} [props.animationDuration] - Maps to
  *   `--popup-animation-duration`.
- * @param {Element|{current: Element}} [props.anchor] - The element the
+ * @param {Element|{current: Element}|string} [props.anchor] - The element the
  *   popover is positioned relative to. Defaults to whatever triggered the
  *   open (`e.detail.anchor`/`e.detail.source`), if any — with no anchor at
  *   all, the popover docks to its container instead (viewport for
- *   `layer="top"`, positioned ancestor for `layer="local"`).
+ *   `layer="top"`, positioned ancestor for `layer="local"`). A string is
+ *   resolved via `document.getElementById` when the popover opens — mainly
+ *   useful for `defaultOpen` (there's no triggering event/ref to read a
+ *   real element from yet at that point, only an id known up front).
  * @param {"override"|"ignore"} [props.anchorCustomEventDetail="override"] -
  *   Whether an explicit `anchor` prop takes precedence over
  *   (`"override"`, default) or is ignored in favor of
@@ -38144,11 +38188,14 @@ const usePopoverProps = props => {
     // only has this one call site.
     let anchorElement;
     if (typeof anchor === "string") {
-      // A plain string is a near-certain leftover from an older API
-      // (anchor used to accept "viewport"/"scrollContainer" directly) —
-      // anchor is a ref or a DOM element only now; layer/
-      // anchorCustomEventDetail cover what those strings used to mean.
-      console.warn(`Popover: anchor="${anchor}" is no longer supported — anchor only accepts a ref or a DOM element now. Use layer="local" (was anchor="scrollContainer") or anchorCustomEventDetail="ignore" (was ignoreEventAnchor) instead.`);
+      // Resolved at open time (not render time) via getElementById — mainly
+      // for defaultOpen, where there's no triggering event/ref yet to read a
+      // real element from, only an id known up front (e.g. a popover nested
+      // inside another, anchored to an element rendered by that ancestor).
+      anchorElement = document.getElementById(anchor);
+      if (!anchorElement) {
+        console.warn(`Popover: anchor="${anchor}" did not match any element`);
+      }
     } else if (anchor) {
       // anchor prop is a ref or a DOM element — always a real anchor,
       // regardless of anchorCustomEventDetail.
@@ -38157,16 +38204,31 @@ const usePopoverProps = props => {
       anchorElement = e.detail.anchor;
     }
     const hasAnchorElement = Boolean(anchorElement);
-    const positionedAncestor = isTopLayer ? null : getPositionedParent(popoverEl);
+    // getPositionedParent already resolves to document.documentElement for
+    // the via-attribute renderer on its own (popoverEl's own `popover`
+    // attribute, present from render regardless of whether it's actually
+    // open yet — see offset_parent.js's own doc) — no isTopLayer branch
+    // needed here.
+    const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
     // positioning/measurement runs, so there's no ordering subtlety to get
     // wrong (unlike the CSS this replaced, which keyed off the resolved
     // animation instead, known too late relative to the first measurement).
-    if (hasAnchorElement) {
-      popoverEl.setAttribute("data-anchor", "");
+    // True only for a real anchor that itself scrolls with the document —
+    // that's the one case `absolute` (scrolling in lockstep with it) is
+    // correct; not just "has an anchor at all", since an anchor that's
+    // itself `position: fixed`, or nested inside something that is (e.g.
+    // anchored to an element inside another top-layer popover/modal dialog,
+    // which are always `position: fixed` — see popover.jsx's/dialog.jsx's
+    // own `[popover]`/`[data-layer="top"]` rules), stays pinned to the
+    // viewport regardless of document scroll too, so this popover must stay
+    // `fixed` right alongside it instead — switching to `absolute` there
+    // would make it drift away from an anchor that never actually moves.
+    if (hasAnchorElement && !findSelfOrAncestorFixedPosition(anchorElement)) {
+      popoverEl.setAttribute("data-anchor-scrolls", "");
     } else {
-      popoverEl.removeAttribute("data-anchor");
+      popoverEl.removeAttribute("data-anchor-scrolls");
     }
     if (!isTopLayer) {
       // Assigned fresh on every open (including reopen) — see
@@ -38266,10 +38328,10 @@ const usePopoverProps = props => {
 
     // What we observe for repositioning on resize/scroll/visibility
     // changes: the anchor itself whenever there's a real one (either
-    // renderer), otherwise whatever we're docked against instead — the
-    // positioned ancestor for the custom renderer, the document for
-    // via-attribute.
-    const effectiveAnchor = hasAnchorElement ? anchorElement : isTopLayer ? document.documentElement : positionedAncestor;
+    // renderer), otherwise whatever we're docked against instead —
+    // positionedAncestor already is document.documentElement for the
+    // via-attribute renderer (see its own computation above).
+    const effectiveAnchor = hasAnchorElement ? anchorElement : positionedAncestor;
     const positionPopover = positionEvent => {
       let position;
       if (hasAnchorElement) {
@@ -38293,7 +38355,7 @@ const usePopoverProps = props => {
         // real content size, not one already truncated by a stale value.
         popoverEl.style.removeProperty("--container-position-remaining-height");
         popoverEl.style.removeProperty("--container-position-remaining-width");
-        position = pickPositionRelativeTo(popoverEl, anchorElement, {
+        const pickOptions = {
           positionArea,
           positionAreaFixed,
           positionAreaWhenAnchorIsInvalid,
@@ -38304,35 +38366,78 @@ const usePopoverProps = props => {
           // real anchor or not — this tells pickPositionRelativeTo to
           // convert the computed coordinates into that ancestor's own
           // local space instead of assuming document-relative absolute
-          // (see its own doc in visible_rect.js).
-          container: isTopLayer ? undefined : positionedAncestor,
+          // (see its own doc in visible_rect.js). positionedAncestor is
+          // already document.documentElement for the via-attribute
+          // renderer, same as omitting `container` entirely would resolve
+          // to on its own.
+          container: positionedAncestor,
           minLeft,
           event: positionEvent
-        });
+        };
+        position = pickPositionRelativeTo(popoverEl, anchorElement, pickOptions);
         position = {
           ...position,
           left: Math.max(position.left, minLeft)
         };
+        applyNewPosition(popoverEl, position);
+        // applyNewPosition above just set --container-position-remaining-
+        // width/height to the real available space near the anchor —
+        // narrower than the "natural" size just measured, whenever there
+        // isn't enough room. If that actually changes the popover's own
+        // rendered box (e.g. its text rewraps once truly constrained), the
+        // position picked above was computed against the wrong (wider,
+        // shorter) box — left uncorrected, it paints one frame too high/low
+        // before ever getting a chance to fix itself, since the
+        // ResizeObserver watching this same element for exactly that
+        // (rectEffect.observeSize below) only reacts on the *next*
+        // animation frame (see visible_rect.js's own observeSize comment
+        // for why: reacting synchronously there would re-trigger the very
+        // observer that just fired, the "ResizeObserver loop" it's built to
+        // avoid). Re-measuring here instead, still without clearing the
+        // constraint this time (unlike above — it's now the real, final
+        // value, not a stale one), converges before this function ever
+        // returns, so nothing gets painted in between.
+        if (popoverEl.offsetWidth !== position.width || popoverEl.offsetHeight !== position.height) {
+          position = pickPositionRelativeTo(popoverEl, anchorElement, pickOptions);
+          position = {
+            ...position,
+            left: Math.max(position.left, minLeft)
+          };
+          applyNewPosition(popoverEl, position);
+        }
       } else {
         // No real anchor: dock against a container instead — omitting
         // pickPositionRelativeTo's own `anchor` argument entirely puts it
         // in its own container-docked mode (see its own doc for what that
-        // changes). For the via-attribute renderer, its `container` is
-        // left unspecified too — pickPositionRelativeTo auto-resolves it
-        // to the viewport on its own, since popoverEl's own [popover]
-        // attribute signals that (see getPositioningContainer). For the
-        // custom renderer, its own positioned ancestor is passed
-        // explicitly instead, since it's already computed above for
-        // visibleRectEffect's own observation target.
-        position = pickPositionRelativeTo(popoverEl, null, {
+        // changes). positionedAncestor is passed either way — already
+        // document.documentElement for the via-attribute renderer (see its
+        // own computation above), the real positioned ancestor for the
+        // custom renderer, already computed above for visibleRectEffect's
+        // own observation target regardless.
+        const pickOptions = {
           positionArea,
-          container: isTopLayer ? undefined : positionedAncestor,
+          container: positionedAncestor,
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           event: positionEvent
-        });
+        };
+        position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+        applyNewPosition(popoverEl, position);
+        // Same reasoning as the real-anchor branch above — a first open
+        // starts from the same unconstrained state (no
+        // --container-position-remaining-width/height set yet either),
+        // so the same rewrap-after-constraint mismatch can happen here too.
+        if (popoverEl.offsetWidth !== position.width || popoverEl.offsetHeight !== position.height) {
+          position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+          applyNewPosition(popoverEl, position);
+        }
       }
       debugPopup(positionEvent, `positionPopover() -> left: ${position.left}, top: ${position.top}`);
-      applyNewPosition(popoverEl, position);
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout, or another nested Popover, anchored to something inside
+      // this one) knowing to recheck its own position whenever this popover
+      // itself moves is handled generically by applyNewPosition itself
+      // (dispatches navi_position_change on every call) — nothing to do
+      // here.
     };
     if (scrollCapture) {
       addCleanup(trapScrollInside(popoverEl));
@@ -38341,6 +38446,32 @@ const usePopoverProps = props => {
       addCleanup(trapFocusInside(popoverEl, {
         debug: debugFocus
       }));
+    }
+
+    // Real top-layer stacking is call-order-based (see this file's own
+    // "the top layer stacks later showPopover() calls above earlier ones"
+    // comment) — so when a popover nests inside another openable ancestor
+    // (a <dialog>, another popover, a <details>, or an [aria-expanded]
+    // container) and that ancestor *closes and reopens* while we ourselves
+    // stay open the whole time, the ancestor's own fresh showModal()/
+    // showPopover() call ends up later than our own stale one, leaving us
+    // stacked underneath it — even though we never actually closed (an
+    // ancestor closing hides us for free via the normal "display: none
+    // cascades through the top layer too" rule, no explicit hidePopover()
+    // needed for that half). Deliberately does NOT go through
+    // openController/requestClose — we're not being asked to close, only to
+    // re-assert our own stacking position once the ancestor comes back.
+    if (isTopLayer) {
+      onAncestorReopen(popoverEl, () => {
+        if (backdropEl?.matches(":popover-open")) {
+          backdropEl.hidePopover();
+        }
+        backdropEl?.showPopover();
+        if (popoverEl.matches(":popover-open")) {
+          popoverEl.hidePopover();
+        }
+        popoverEl.showPopover();
+      });
     }
     const rectEffect = visibleRectEffect(effectiveAnchor, ({
       visibilityRatio
@@ -38369,6 +38500,14 @@ const usePopoverProps = props => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // A descendant anchored to something inside this popover (a Callout, a
+    // further-nested Popover) needing to know about this popover's own
+    // left/top repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own notifyPositionTransition in
+    // visible_rect.js), since positionPopover already goes through it
+    // above; nothing to wire up here.
     addCleanup(() => {
       rectEffect.disconnect();
     });
@@ -39810,10 +39949,75 @@ const TimeTime = ({
     });
   }
   const totalMinutes = date.getHours() * 60 + date.getMinutes();
-  const text = formatMinuteDuration(totalMinutes, {
-    lang,
-    format
-  });
+  // Midnight (hour 0) can't go through formatMinuteDuration's own default
+  // zero-hour handling: it drops a zero-valued unit entirely (by design — a
+  // real 5-minute duration should print as "5 minutes", not "0 hours 5
+  // minutes"), so "00:05" would otherwise render identically to an actual
+  // 5-minute duration, silently losing the fact that it's midnight. Every
+  // other hour keeps at least its own "N hour(s)" wording as a hint that
+  // this is a time-of-day, not a duration — only hour 0 loses that hint
+  // entirely.
+  let text;
+  if (date.getHours() !== 0) {
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format
+    });
+  } else if (format !== "long") {
+    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
+    // dropping it (formatMinuteDuration's own alwaysShowHours) — e.g.
+    // "0 h et 5 min"/"0h 5min"/"0h05" — rather than substituting a
+    // translated "midnight" word, which would look out of place squeezed
+    // into these otherwise terse, symbol-based formats.
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      alwaysShowHours: true
+    });
+  } else {
+    const midnightWord = naviI18n("time.midnight", undefined, {
+      lang
+    });
+    if (midnightWord === "time.midnight") {
+      // No "midnight" translation registered for this language — fall back
+      // to this language's own literal "0 heure(s)" wording instead (still
+      // better than leaking the untranslated key, or substituting an
+      // English word that wouldn't grammatically match the rest of the
+      // sentence in whatever language this actually is).
+      text = formatMinuteDuration(totalMinutes, {
+        lang,
+        format,
+        alwaysShowHours: true
+      });
+    } else {
+      // Swap just the "0 heure(s)" part of the Intl-generated duration
+      // string for the translated "midnight" word, keeping everything else
+      // (the conjunction, the minutes part) exactly as Intl would produce
+      // for this locale — formatToParts tags each token with the unit it
+      // belongs to, so the swap doesn't need to know the locale's own
+      // grammar/word order. Only ever one hour-tagged group per call
+      // (hours is always 0 or absent here), but guarded anyway in case a
+      // future Intl implementation ever splits it into more parts.
+      const parts = new Intl.DurationFormat(lang, {
+        style: "long",
+        hoursDisplay: "always"
+      }).formatToParts({
+        hours: 0,
+        minutes: date.getMinutes()
+      });
+      let hourGroupReplaced = false;
+      text = parts.map(part => {
+        if (part.unit !== "hour") {
+          return part.value;
+        }
+        if (hourGroupReplaced) {
+          return "";
+        }
+        hourGroupReplaced = true;
+        return midnightWord;
+      }).join("");
+    }
+  }
   return jsx(TimeText, {
     dateTime: dateTime,
     ...props,
