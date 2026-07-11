@@ -78,6 +78,37 @@ export const visibleRectEffect = (
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   let ancestorClosedCount = 0;
+  // Every ResizeObserver this effect owns (its own element-resize watcher
+  // below, plus one per observeSize() call) subscribes here and unobserves
+  // itself the moment an ancestor closes, reobserving once it reopens — see
+  // on_ancestor_events below for the publish side, and each subscriber
+  // (on_element_resize, observeSize) for the unobserve/reobserve itself.
+  // Closing a dialog/popover/details containing several independently-
+  // watched elements (an anchor, a popover's own content) can make them all
+  // collapse to zero size in the same reflow; leaving their ResizeObservers
+  // watching through that is what trips the browser's own same-frame
+  // notification-count heuristic ("ResizeObserver loop completed with
+  // undelivered notifications"), even though our own reaction to it
+  // (check()'s own ancestorClosed flag) is already a no-op for consumers
+  // like Callout. Proactively unobserving avoids generating those
+  // notifications in the first place instead of just ignoring them.
+  let resizeWatchingPaused = false;
+  const [publishResizeWatchingPausedChange, onResizeWatchingPausedChange] =
+    createPubSub();
+  const pauseResizeWatching = () => {
+    if (resizeWatchingPaused) {
+      return;
+    }
+    resizeWatchingPaused = true;
+    publishResizeWatchingPausedChange(true);
+  };
+  const resumeResizeWatching = () => {
+    if (!resizeWatchingPaused) {
+      return;
+    }
+    resizeWatchingPaused = false;
+    publishResizeWatchingPausedChange(false);
+  };
   const check = (event) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
@@ -339,16 +370,30 @@ export const visibleRectEffect = (
         handlingResize = false;
       });
       resizeObserver.observe(element);
+      const unsubscribeResizeWatchingPausedChange =
+        onResizeWatchingPausedChange((paused) => {
+          if (paused) {
+            resizeObserver.unobserve(element);
+          } else {
+            resizeObserver.observe(element);
+          }
+        });
       // Temporarily disconnect ResizeObserver to prevent feedback loops eventually caused by update function
       onBeforeAutoCheck(() => {
         resizeObserver.unobserve(element);
         return () => {
-          // This triggers a new call to the resive observer that will be ignored thanks to
-          // the widthDiff/heightDiff early return
-          resizeObserver.observe(element);
+          // Not reobserved at all while an ancestor is closed (see
+          // pauseResizeWatching/resumeResizeWatching above) — resumeResizeWatching's
+          // own publish is what reobserves once it reopens instead.
+          if (!resizeWatchingPaused) {
+            // This triggers a new call to the resive observer that will be ignored thanks to
+            // the widthDiff/heightDiff early return
+            resizeObserver.observe(element);
+          }
         };
       });
       addTeardown(() => {
+        unsubscribeResizeWatchingPausedChange();
         resizeObserver.disconnect();
       });
     }
@@ -407,6 +452,7 @@ export const visibleRectEffect = (
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {
           ancestorClosedCount++;
+          pauseResizeWatching();
         }
         const removeOpenStateObserver = observeAncestorOpenState(
           openableAncestor,
@@ -414,6 +460,7 @@ export const visibleRectEffect = (
           ({ isOpen, toggleEvent }) => {
             if (!isOpen) {
               ancestorClosedCount++;
+              pauseResizeWatching();
               update(
                 {
                   left: 0,
@@ -437,6 +484,7 @@ export const visibleRectEffect = (
               ancestorClosedCount--;
             }
             if (ancestorClosedCount === 0) {
+              resumeResizeWatching();
               check(toggleEvent ?? new CustomEvent("ancestor_open"));
             }
           },
@@ -523,20 +571,45 @@ export const visibleRectEffect = (
       });
     });
     resizeObserver.observe(elementToObserve);
+    // An ancestor may already be closed by the time a consumer calls
+    // observeSize (e.g. Callout's own observeSize(calloutMessageElement)
+    // call happens after visibleRectEffect itself returns) — keep this new
+    // observer consistent with that already-paused state instead of
+    // observing it only to immediately generate a closed-container
+    // notification.
+    if (resizeWatchingPaused) {
+      resizeObserver.unobserve(elementToObserve);
+    }
+    const unsubscribeResizeWatchingPausedChange = onResizeWatchingPausedChange(
+      (paused) => {
+        if (paused) {
+          resizeObserver.unobserve(elementToObserve);
+        } else {
+          resizeObserver.observe(elementToObserve);
+        }
+      },
+    );
     const cleanupAutoCheck = onBeforeAutoCheck(() => {
       resizeObserver.unobserve(elementToObserve);
       return () => {
-        resizeObserver.observe(elementToObserve);
+        // Not reobserved at all while an ancestor is closed (see
+        // pauseResizeWatching/resumeResizeWatching) — resumeResizeWatching's
+        // own publish is what reobserves once it reopens instead.
+        if (!resizeWatchingPaused) {
+          resizeObserver.observe(elementToObserve);
+        }
       };
     });
     addTeardown(() => {
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
       }
+      unsubscribeResizeWatchingPausedChange();
       resizeObserver.disconnect();
     });
     return () => {
       cleanupAutoCheck();
+      unsubscribeResizeWatchingPausedChange();
       if (pendingFrame !== null) {
         cancelAnimationFrame(pendingFrame);
       }
