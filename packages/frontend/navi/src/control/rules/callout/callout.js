@@ -1,3 +1,13 @@
+/**
+ * A callout component that mimics native browser validation messages.
+ * Features:
+ * - Positions above or below target element based on available space
+ * - Follows target element during scrolling and resizing
+ * - Automatically hides when target element is not visible
+ * - Arrow automatically shows when pointing at a valid anchor element
+ * - Centers in viewport when no anchor element provided or anchor is too big
+ */
+
 import {
   allowWheelThrough,
   applyNewPosition,
@@ -24,16 +34,6 @@ import { isValidElement } from "preact";
 import { findControlHost, findControlRoot } from "../../control_dom.js";
 import { findControlProxy } from "../../control_proxy.js";
 import { renderIntoCallout } from "./callout.jsx";
-
-/**
- * A callout component that mimics native browser validation messages.
- * Features:
- * - Positions above or below target element based on available space
- * - Follows target element during scrolling and resizing
- * - Automatically hides when target element is not visible
- * - Arrow automatically shows when pointing at a valid anchor element
- * - Centers in viewport when no anchor element provided or anchor is too big
- */
 
 const css = /* css */ `
   @layer navi {
