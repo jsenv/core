@@ -529,19 +529,19 @@ export const visibleRectEffect = (
         });
       }
     }
-    // on_window_touchmove: {
-    //   const onWindowTouchMove = (e) => {
-    //     autoCheck(e);
-    //   };
-    //   window.addEventListener("touchmove", onWindowTouchMove, {
-    //     passive: true,
-    //   });
-    //   addTeardown(() => {
-    //     window.removeEventListener("touchmove", onWindowTouchMove, {
-    //       passive: true,
-    //     });
-    //   });
-    // }
+    on_window_touchmove: {
+      const onWindowTouchMove = (e) => {
+        autoCheck(e);
+      };
+      window.addEventListener("touchmove", onWindowTouchMove, {
+        passive: true,
+      });
+      addTeardown(() => {
+        window.removeEventListener("touchmove", onWindowTouchMove, {
+          passive: true,
+        });
+      });
+    }
     on_ancestor_events: {
       let currentOpenableAncestor = closestOpenableAncestor(element);
       while (currentOpenableAncestor) {
