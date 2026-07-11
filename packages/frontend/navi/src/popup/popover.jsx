@@ -795,7 +795,7 @@ const usePopoverProps = (props) => {
         // real content size, not one already truncated by a stale value.
         popoverEl.style.removeProperty("--container-position-remaining-height");
         popoverEl.style.removeProperty("--container-position-remaining-width");
-        position = pickPositionRelativeTo(popoverEl, anchorElement, {
+        const pickOptions = {
           positionArea,
           positionAreaFixed,
           positionAreaWhenAnchorIsInvalid,
@@ -813,8 +813,39 @@ const usePopoverProps = (props) => {
           container: positionedAncestor,
           minLeft,
           event: positionEvent,
-        });
+        };
+        position = pickPositionRelativeTo(popoverEl, anchorElement, pickOptions);
         position = { ...position, left: Math.max(position.left, minLeft) };
+        applyNewPosition(popoverEl, position);
+        // applyNewPosition above just set --container-position-remaining-
+        // width/height to the real available space near the anchor —
+        // narrower than the "natural" size just measured, whenever there
+        // isn't enough room. If that actually changes the popover's own
+        // rendered box (e.g. its text rewraps once truly constrained), the
+        // position picked above was computed against the wrong (wider,
+        // shorter) box — left uncorrected, it paints one frame too high/low
+        // before ever getting a chance to fix itself, since the
+        // ResizeObserver watching this same element for exactly that
+        // (rectEffect.observeSize below) only reacts on the *next*
+        // animation frame (see visible_rect.js's own observeSize comment
+        // for why: reacting synchronously there would re-trigger the very
+        // observer that just fired, the "ResizeObserver loop" it's built to
+        // avoid). Re-measuring here instead, still without clearing the
+        // constraint this time (unlike above — it's now the real, final
+        // value, not a stale one), converges before this function ever
+        // returns, so nothing gets painted in between.
+        if (
+          popoverEl.offsetWidth !== position.width ||
+          popoverEl.offsetHeight !== position.height
+        ) {
+          position = pickPositionRelativeTo(
+            popoverEl,
+            anchorElement,
+            pickOptions,
+          );
+          position = { ...position, left: Math.max(position.left, minLeft) };
+          applyNewPosition(popoverEl, position);
+        }
       } else {
         // No real anchor: dock against a container instead — omitting
         // pickPositionRelativeTo's own `anchor` argument entirely puts it
@@ -824,18 +855,30 @@ const usePopoverProps = (props) => {
         // own computation above), the real positioned ancestor for the
         // custom renderer, already computed above for visibleRectEffect's
         // own observation target regardless.
-        position = pickPositionRelativeTo(popoverEl, null, {
+        const pickOptions = {
           positionArea,
           container: positionedAncestor,
           marginWithContainer: resolveSpacingSize(marginWithContainer),
           event: positionEvent,
-        });
+        };
+        position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+        applyNewPosition(popoverEl, position);
+        // Same reasoning as the real-anchor branch above — a first open
+        // starts from the same unconstrained state (no
+        // --container-position-remaining-width/height set yet either),
+        // so the same rewrap-after-constraint mismatch can happen here too.
+        if (
+          popoverEl.offsetWidth !== position.width ||
+          popoverEl.offsetHeight !== position.height
+        ) {
+          position = pickPositionRelativeTo(popoverEl, null, pickOptions);
+          applyNewPosition(popoverEl, position);
+        }
       }
       debugPopup(
         positionEvent,
         `positionPopover() -> left: ${position.left}, top: ${position.top}`,
       );
-      applyNewPosition(popoverEl, position);
     };
 
     if (scrollCapture) {

@@ -94,8 +94,8 @@
          anchor as the dialog itself moves, not just when its content
          scrolls. */
       .interop-dialog-grab {
-        cursor: grab;
         color: #999;
+        cursor: grab;
         touch-action: none;
       }
       .interop-dialog-grab:active {
@@ -278,7 +278,11 @@
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+            <Dialog
+              id={dialogId}
+              ref={dialogRef}
+              className="interop-dialog-box"
+            >
               <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
@@ -291,6 +295,7 @@
                 >
                   Anchor (toggle popover)
                 </Button>
+                <input />
                 <div class="interop-dialog-filler" />
               </div>
 
@@ -314,10 +319,10 @@
           <h2>1. Dialog containing a Popover (regular size)</h2>
           <p>
             Same anchor-inside-a-dialog case as the Callout section further
-            down, but with a regular, content-sized <code>Popover</code>{" "}
-            instead — confirms the pairing works there too, at a directly
-            comparable size, before the exaggerated "bigger than the dialog"
-            version at the very end.
+            down, but with a regular, content-sized <code>Popover</code> instead
+            — confirms the pairing works there too, at a directly comparable
+            size, before the exaggerated "bigger than the dialog" version at the
+            very end.
           </p>
           <DialogWithNormalPopoverDemo />
         </section>
@@ -340,7 +345,11 @@
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+            <Dialog
+              id={dialogId}
+              ref={dialogRef}
+              className="interop-dialog-box"
+            >
               <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
@@ -380,13 +389,13 @@
           <h2>2. Dialog containing a Popover (layer="local")</h2>
           <p>
             Same as section 1, except the popover uses{" "}
-            <code>layer="local"</code> — it positions relative to the
-            dialog's own box (its nearest positioned ancestor) instead of the
-            top layer, and gets clipped by the dialog's own{" "}
-            <code>overflow: hidden</code> rather than escaping it. Open the
-            popover, then scroll the dialog's own content far enough that it
-            would want to render outside the dialog — it should get clipped
-            instead of overflowing, unlike section 1's top-layer popover.
+            <code>layer="local"</code> — it positions relative to the dialog's
+            own box (its nearest positioned ancestor) instead of the top layer,
+            and gets clipped by the dialog's own <code>overflow: hidden</code>{" "}
+            rather than escaping it. Open the popover, then scroll the dialog's
+            own content far enough that it would want to render outside the
+            dialog — it should get clipped instead of overflowing, unlike
+            section 1's top-layer popover.
           </p>
           <DialogWithLocalPopoverDemo />
         </section>
@@ -408,7 +417,11 @@
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+            <Dialog
+              id={dialogId}
+              ref={dialogRef}
+              className="interop-dialog-box"
+            >
               <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>
@@ -512,7 +525,11 @@
             <Button command="--navi-toggle" commandFor={dialogId}>
               Open dialog
             </Button>
-            <Dialog id={dialogId} ref={dialogRef} className="interop-dialog-box">
+            <Dialog
+              id={dialogId}
+              ref={dialogRef}
+              className="interop-dialog-box"
+            >
               <DialogHead dialogRef={dialogRef} />
               <div class="interop-dialog-content">
                 <p style={{ marginTop: 0 }}>

@@ -658,13 +658,32 @@ const useDialogProps = (props) => {
     // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
-      const position = pickPositionRelativeTo(dialogEl, null, {
+      const pickOptions = {
         positionArea,
         container: positionedAncestor,
         marginWithContainer: resolveSpacingSize(marginWithContainer),
         event: triggerEvent,
-      });
+      };
+      let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
       applyNewPosition(dialogEl, position);
+      // applyNewPosition above just set --container-position-remaining-
+      // width/height to the real available space — narrower than whatever
+      // dialogEl measured at just before (nothing, on a first open — see
+      // popover.jsx's own identical comment on its own positionPopover for
+      // the full reasoning, mirrored here). If that changes dialogEl's own
+      // rendered box (its content rewraps once truly constrained), the
+      // position picked above was computed against the wrong (wider,
+      // shorter) box and needs a synchronous second pass, or it paints one
+      // frame too high/low before the ResizeObserver watching this same
+      // element (rectEffect.observeSize below) ever gets a chance to
+      // correct it — that one only reacts on the *next* animation frame.
+      if (
+        dialogEl.offsetWidth !== position.width ||
+        dialogEl.offsetHeight !== position.height
+      ) {
+        position = pickPositionRelativeTo(dialogEl, null, pickOptions);
+        applyNewPosition(dialogEl, position);
+      }
       // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
       // Callout anchored to something inside this Dialog) know to recheck
       // its own position whenever this dialog itself moves — it already
