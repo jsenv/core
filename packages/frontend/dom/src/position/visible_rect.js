@@ -107,6 +107,21 @@ export const visibleRectEffect = (
   // a target computed from the anchor's current (still mid-flight) rect,
   // and visibly race the frame-by-frame follow loop already in progress.
   let ancestorRepositioningCount = 0;
+  // Last visibleRect reported to update() — check() runs on every scroll/
+  // resize/frame of an ancestor's own transition, but plenty of those calls
+  // land on an identical position (a scroll event firing for an axis this
+  // element doesn't care about, an ancestor-tracking frame once the anchor
+  // has actually stopped moving) — skip calling update() again when
+  // left/top/width/height/visibilityRatio didn't actually change from last
+  // time, so a consumer's own positioning work isn't redone for nothing.
+  // visibilityRatio needs its own check alongside the others, not just
+  // implied by them: it's (visible width * visible height) / (raw width *
+  // raw height) — the raw width/height come from the anchor's own
+  // unclipped getBoundingClientRect(), so it can change (the anchor grows,
+  // say) while the *visible*, already-clipped width/height stay pinned at
+  // the same clamped value, changing the ratio without changing any of the
+  // other four. Popover's own out-of-view gating depends on exactly that.
+  let lastVisibleRect = null;
   let resizeWatchingPaused = false;
   const [publishResizeWatchingPausedChange, onResizeWatchingPausedChange] =
     createPubSub();
@@ -284,10 +299,25 @@ export const visibleRectEffect = (
       visibilityRatio,
     };
 
+    const visibleRectChanged =
+      !lastVisibleRect ||
+      lastVisibleRect.left !== visibleRect.left ||
+      lastVisibleRect.top !== visibleRect.top ||
+      lastVisibleRect.width !== visibleRect.width ||
+      lastVisibleRect.height !== visibleRect.height ||
+      lastVisibleRect.visibilityRatio !== visibleRect.visibilityRatio;
     if (DEBUG) {
-      console.log(`update(${JSON.stringify(visibleRect, null, "  ")})`);
+      console.log(
+        visibleRectChanged
+          ? `update(${JSON.stringify(visibleRect, null, "  ")})`
+          : "update() skipped, left/top/width/height/visibilityRatio unchanged",
+      );
       console.groupEnd();
     }
+    if (!visibleRectChanged) {
+      return;
+    }
+    lastVisibleRect = visibleRect;
     update(visibleRect, {
       event,
       width,
@@ -385,7 +415,9 @@ export const visibleRectEffect = (
         }
         autoCheck(event);
       };
-      addTeardown(subscribeVisualViewportResizeSettled(onWindowOrViewportResize));
+      addTeardown(
+        subscribeVisualViewportResizeSettled(onWindowOrViewportResize),
+      );
       addTeardown(subscribeWindowResizeSettled(onWindowOrViewportResize));
     }
     on_element_resize: {
@@ -484,19 +516,19 @@ export const visibleRectEffect = (
         });
       }
     }
-    on_window_touchmove: {
-      const onWindowTouchMove = (e) => {
-        autoCheck(e);
-      };
-      window.addEventListener("touchmove", onWindowTouchMove, {
-        passive: true,
-      });
-      addTeardown(() => {
-        window.removeEventListener("touchmove", onWindowTouchMove, {
-          passive: true,
-        });
-      });
-    }
+    // on_window_touchmove: {
+    //   const onWindowTouchMove = (e) => {
+    //     autoCheck(e);
+    //   };
+    //   window.addEventListener("touchmove", onWindowTouchMove, {
+    //     passive: true,
+    //   });
+    //   addTeardown(() => {
+    //     window.removeEventListener("touchmove", onWindowTouchMove, {
+    //       passive: true,
+    //     });
+    //   });
+    // }
     on_ancestor_events: {
       let currentOpenableAncestor = closestOpenableAncestor(element);
       while (currentOpenableAncestor) {
@@ -512,6 +544,13 @@ export const visibleRectEffect = (
             if (!isOpen) {
               ancestorClosedCount++;
               pauseResizeWatching();
+              // Invalidates check()'s own "did left/top/width/height/
+              // visibilityRatio actually change" cache — without this,
+              // reopening onto the exact same geometry as before closing
+              // would look unchanged to check() and it would skip calling
+              // update() again, leaving a consumer stuck showing this
+              // closed/zeroed state.
+              lastVisibleRect = null;
               update(
                 {
                   left: 0,
