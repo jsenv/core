@@ -239,6 +239,15 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
+
+    /* An ancestor this popover is anchored inside of is itself
+       mid-repositioning (see the openEffect rectEffect callback's own
+       comment) — the anchor is mid-flight, hidden rather than shown
+       stale/lagging behind it until it settles. */
+    &[data-ancestor-repositioning] {
+      opacity: 0;
+      pointer-events: none;
+    }
   }
 
   /* Sibling element, not a descendant of .navi_popover — see this file's
@@ -879,6 +888,12 @@ const usePopoverProps = (props) => {
         positionEvent,
         `positionPopover() -> left: ${position.left}, top: ${position.top}`,
       );
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout, or another nested Popover, anchored to something inside
+      // this one) knowing to recheck its own position whenever this popover
+      // itself moves is handled generically by applyNewPosition itself
+      // (dispatches navi_position_change on every call) — nothing to do
+      // here.
     };
 
     if (scrollCapture) {
@@ -916,7 +931,22 @@ const usePopoverProps = (props) => {
 
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
-      ({ visibilityRatio }, { event }) => {
+      ({ visibilityRatio }, { event, ancestorRepositioning }) => {
+        // An ancestor dialog/popover this one is anchored inside of is
+        // itself mid-repositioning (its own left/top transition actually
+        // running, not just its target having changed — see
+        // visibleRectEffect's own ancestorRepositioning doc) — the anchor
+        // is mid-flight, so there's no correct position to compute yet.
+        // Hidden (not closed — openController/positionPopover are
+        // untouched) until it settles, same spirit as data-anchor-out-of-
+        // view right below, kept as its own attribute since the reason
+        // (and the CSS it needs) is genuinely different: the anchor here
+        // may well be perfectly in view, just not staying still.
+        if (ancestorRepositioning) {
+          popoverEl.setAttribute("data-ancestor-repositioning", "");
+          return;
+        }
+        popoverEl.removeAttribute("data-ancestor-repositioning");
         // Only a real anchor can meaningfully go "out of view" — gating on
         // document.documentElement's own visibilityRatio (used for
         // anchorless/docked popups) would wrongly skip positioning on a
@@ -941,6 +971,14 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // A descendant anchored to something inside this popover (a Callout, a
+    // further-nested Popover) needing to know about this popover's own
+    // left/top repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own ensurePositionTransitionForwarding
+    // in visible_rect.js), since positionPopover already goes through it
+    // above; nothing to wire up here.
     addCleanup(() => {
       rectEffect.disconnect();
     });

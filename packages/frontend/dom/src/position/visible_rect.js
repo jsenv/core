@@ -1,3 +1,4 @@
+import { dispatchCustomEvent } from "../dom_events.js";
 import { getScrollContainer } from "../interaction/scroll/scroll_container.js";
 import { createPubSub } from "../pub_sub.js";
 import { getBorderSizes } from "../size/get_border_sizes.js";
@@ -42,17 +43,25 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *   Is 0 when ancestorClosed is true.
  *
  * @typedef {Object} VisibleRectInfo
- * @property {Event}   event          - The DOM event (or CustomEvent) that triggered the check.
- * @property {number}  width          - Raw getBoundingClientRect() width of the element.
- * @property {number}  height         - Raw getBoundingClientRect() height of the element.
- * @property {boolean} ancestorClosed - True when a popover, dialog, or details ancestor is
+ * @property {Event}   event                 - The DOM event (or CustomEvent) that triggered the check.
+ * @property {number}  width                 - Raw getBoundingClientRect() width of the element.
+ * @property {number}  height                - Raw getBoundingClientRect() height of the element.
+ * @property {boolean} ancestorClosed        - True when a popover, dialog, or details ancestor is
  *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
  *   update() is called immediately on ancestor close and again (with false) on reopen.
+ * @property {boolean} ancestorRepositioning - True while an ancestor dialog/popover is itself
+ *   mid-repositioning — its own real `left`/`top` CSS transition actually running, dispatched via
+ *   navi_position_transition (distinct from navi_position_change, which fires once with the final
+ *   target, not per animation frame — see applyNewPosition's own ensurePositionTransitionForwarding
+ *   for where navi_position_transition itself comes from). The element's own anchor may be inside
+ *   that ancestor and mid-flight, so any position computed while this is true is unreliable —
+ *   consumers (Popover, Callout) hide themselves for its duration and reposition once it clears.
  *
  * update() is called:
  *   - Once synchronously on initialization (event.type = "initialization")
  *   - On document/container scroll, window resize, element resize, intersection changes, touch move
  *   - Immediately when an ancestor popover/dialog/details opens or closes
+ *   - Immediately when an ancestor popover/dialog starts or stops repositioning itself
  *
  * A bit like https://tetherjs.dev/ but different
  */
@@ -78,6 +87,18 @@ export const visibleRectEffect = (
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   let ancestorClosedCount = 0;
+  // Set while an ancestor dialog/popover is itself mid-repositioning (its
+  // own `left`/`top` CSS transition actually running — see
+  // navi_position_transition below) — as opposed to navi_position_change,
+  // dispatched once with the *final* target position, not per animation
+  // frame. A descendant anchored to something inside that
+  // ancestor has no correct position to compute during that window (the
+  // anchor is still mid-flight) and no way to keep tracking it smoothly
+  // either (that would need its own per-frame loop) — consumers exposing
+  // this flag (Popover/Callout) hide themselves for its duration instead of
+  // showing a stale or lagging position, and reposition for real once it
+  // clears.
+  let ancestorRepositioningCount = 0;
   // Every ResizeObserver this effect owns (its own element-resize watcher
   // below, plus one per observeSize() call) subscribes here and unobserves
   // itself the moment an ancestor closes, reobserving once it reopens — see
@@ -278,6 +299,7 @@ export const visibleRectEffect = (
       width,
       height,
       ancestorClosed: ancestorClosedCount > 0,
+      ancestorRepositioning: ancestorRepositioningCount > 0,
     });
   };
 
@@ -498,6 +520,7 @@ export const visibleRectEffect = (
                   width: 0,
                   height: 0,
                   ancestorClosed: true,
+                  ancestorRepositioning: ancestorRepositioningCount > 0,
                 },
               );
               return;
@@ -519,11 +542,37 @@ export const visibleRectEffect = (
           "navi_position_change",
           onNaviPositionChange,
         );
+        // Dispatched by applyNewPosition's own ensurePositionTransitionForwarding
+        // around this ancestor's real `left`/`top` CSS transition (distinct
+        // from navi_position_change, fired once with the final target, not
+        // per animation frame) — see ancestorRepositioningCount's own doc
+        // above for the full reasoning. e.detail.onEnd registers our own
+        // reaction to the matching transitionend/transitioncancel, rather
+        // than this needing its own separate listener pair for that.
+        // eslint-disable-next-line no-loop-func
+        const onNaviPositionTransition = (e) => {
+          ancestorRepositioningCount++;
+          check(e);
+          e.detail.onEnd(() => {
+            if (ancestorRepositioningCount > 0) {
+              ancestorRepositioningCount--;
+            }
+            check(e);
+          });
+        };
+        openableAncestor.addEventListener(
+          "navi_position_transition",
+          onNaviPositionTransition,
+        );
         addTeardown(() => {
           removeOpenStateObserver();
           openableAncestor.removeEventListener(
             "navi_position_change",
             onNaviPositionChange,
+          );
+          openableAncestor.removeEventListener(
+            "navi_position_transition",
+            onNaviPositionTransition,
           );
         });
         currentOpenableAncestor = closestOpenableAncestor(
@@ -1402,6 +1451,69 @@ export const pickPositionRelativeTo = (
   };
 };
 
+// Ensures exactly one transitionrun listener per element, lazily, the first
+// time applyNewPosition ever touches it — not one per applyNewPosition call
+// (this element's left/top transition only ever needs the one). See
+// ensurePositionTransitionForwarding's own doc for what it actually does.
+const elementsWithPositionTransitionForwarding = new WeakSet();
+
+/**
+ * Forwards `element`'s own real `left` CSS transition (assumed to run
+ * alongside `top`, both driven by the same --popup-position-transition-
+ * duration — see applyNewPosition's own doc) as a single
+ * "navi_position_transition" event, dispatched on `element` the moment the
+ * transition actually starts (`transitionrun`, not just whenever
+ * applyNewPosition sets a new target — a 0s "transition" never fires one at
+ * all, and a real one still takes time to arrive at that target).
+ *
+ * A descendant anchored to something inside `element` (a Callout, a nested
+ * Popover — see visible_rect.js's own ancestorRepositioningCount doc for the
+ * full reasoning) has no correct position to compute until this transition
+ * actually ends, and no way to keep tracking it smoothly without a
+ * per-frame loop of its own — it hides itself for the duration instead.
+ * `event.detail.onEnd(callback)` is how it registers to be told when that
+ * is: rather than a second, separate "end" event every subscriber would
+ * need its own transitionend/transitioncancel listener pair for (each
+ * having to independently guard against bubbling from an unrelated
+ * descendant transition, filter the right propertyName, etc.), the one
+ * "start" dispatch already sets up that plumbing once and lets every
+ * subscriber hook into its result — cancel included (an interrupted
+ * transition, e.g. a second reposition landing mid-way, still calls every
+ * registered `onEnd` exactly once, so nothing is ever left stuck hidden).
+ */
+const ensurePositionTransitionForwarding = (element) => {
+  if (elementsWithPositionTransitionForwarding.has(element)) {
+    return;
+  }
+  elementsWithPositionTransitionForwarding.add(element);
+  element.addEventListener("transitionrun", (transitionEvent) => {
+    if (
+      transitionEvent.target !== element ||
+      transitionEvent.propertyName !== "left"
+    ) {
+      return;
+    }
+    const endCallbacks = [];
+    dispatchCustomEvent(element, "navi_position_transition", {
+      onEnd: (callback) => {
+        endCallbacks.push(callback);
+      },
+    });
+    const onPositionTransitionEnd = (endEvent) => {
+      if (endEvent.target !== element || endEvent.propertyName !== "left") {
+        return;
+      }
+      element.removeEventListener("transitionend", onPositionTransitionEnd);
+      element.removeEventListener("transitioncancel", onPositionTransitionEnd);
+      for (const callback of endCallbacks) {
+        callback();
+      }
+    };
+    element.addEventListener("transitionend", onPositionTransitionEnd);
+    element.addEventListener("transitioncancel", onPositionTransitionEnd);
+  });
+};
+
 /**
  * Applies a `pickPositionRelativeTo` result to `element`. Drives
  * `--popup-position-transition-duration` (0s unless `shouldTransition`) so
@@ -1410,6 +1522,14 @@ export const pickPositionRelativeTo = (
  * it doesn't clobber Popover/Dialog's own opacity/scale transition on the
  * same element; consumers declare `transition-duration:
  * var(--popup-position-transition-duration, 0s)` on `left`/`top` in CSS.
+ * Also lazily wires up navi_position_transition forwarding for `element`
+ * (see ensurePositionTransitionForwarding's own doc), and dispatches
+ * navi_position_change on it — every caller of this function already wants
+ * both (Dialog, Popover, Callout all set their own position through here),
+ * so there's nothing to opt into separately: a descendant anchored to
+ * something inside `element` (visible_rect.js's own on_ancestor_events)
+ * needs to recheck its own position whenever `element` itself moves,
+ * whichever of the three it actually is.
  */
 export const applyNewPosition = (
   element,
@@ -1426,6 +1546,7 @@ export const applyNewPosition = (
   },
   { transitionDuration = "0.25s" } = {},
 ) => {
+  ensurePositionTransitionForwarding(element);
   element.style.setProperty(
     "--popup-position-transition-duration",
     shouldTransition ? transitionDuration : "0s",
@@ -1459,4 +1580,5 @@ export const applyNewPosition = (
   } else {
     element.style.removeProperty("--container-position-remaining-width");
   }
+  dispatchCustomEvent(element, "navi_position_change");
 };

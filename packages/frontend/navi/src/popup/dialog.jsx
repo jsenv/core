@@ -47,7 +47,6 @@
 import {
   applyNewPosition,
   createPubSub,
-  dispatchCustomEvent,
   getElementSignature,
   getPositionedParent,
   parsePositionArea,
@@ -684,12 +683,11 @@ const useDialogProps = (props) => {
         position = pickPositionRelativeTo(dialogEl, null, pickOptions);
         applyNewPosition(dialogEl, position);
       }
-      // Lets a descendant's own visibleRectEffect (visible_rect.js — e.g. a
-      // Callout anchored to something inside this Dialog) know to recheck
-      // its own position whenever this dialog itself moves — it already
-      // walks up the ancestor chain and listens for this event on any
-      // <dialog> ancestor specifically, no wiring needed on that side.
-      dispatchCustomEvent(dialogEl, "navi_position_change");
+      // A descendant's own visibleRectEffect (visible_rect.js — e.g. a
+      // Callout anchored to something inside this Dialog) knowing to
+      // recheck its own position whenever this dialog itself moves is
+      // handled generically by applyNewPosition itself (dispatches
+      // navi_position_change on every call) — nothing to do here.
     };
     positionDialog();
 
@@ -713,6 +711,14 @@ const useDialogProps = (props) => {
     addCleanup(() => {
       rectEffect.disconnect();
     });
+    // A descendant anchored to something inside this dialog (a Callout, a
+    // nested Popover) needing to know about this dialog's own left/top
+    // repositioning transition — not just that the target changed
+    // (navi_position_change above), but that a real, currently-playing
+    // transition is moving it right now — is handled generically by
+    // applyNewPosition itself (see its own ensurePositionTransitionForwarding),
+    // since positionDialog already goes through it above; nothing to wire
+    // up here.
 
     // Final commit — see popover.jsx's own openEffect for the full
     // reasoning behind the `silent` ordering swap (forced reflow between
