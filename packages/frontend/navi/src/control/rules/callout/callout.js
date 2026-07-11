@@ -955,7 +955,7 @@ const positionCallout = (
     anchorElement || document.documentElement,
     (
       { left: anchorLeft, right: anchorRight, visibilityRatio },
-      { event, ancestorClosed, ancestorRepositioning },
+      { event, ancestorClosed },
     ) => {
       if (anchorElement) {
         if (ancestorClosed) {
@@ -970,24 +970,6 @@ const positionCallout = (
           }
           return;
         }
-        if (ancestorRepositioning) {
-          // An ancestor dialog/popover this callout is anchored inside of
-          // is itself mid-repositioning (its own left/top transition
-          // actually running — see visibleRectEffect's own
-          // ancestorRepositioning doc) — the anchor is mid-flight, so
-          // there's no correct position to compute yet. Hidden, not closed
-          // (no hidePopover() — the callout stays logically open): the
-          // normal flow below resets opacity/pointer-events once
-          // ancestorRepositioning goes back to false and repositions for
-          // real against the now-settled anchor.
-          if (debug) {
-            debug(event, "hiding callout while an ancestor is repositioning");
-          }
-          calloutElement.style.opacity = "0";
-          calloutElement.style.pointerEvents = "none";
-          return;
-        }
-        calloutElement.style.pointerEvents = "";
         if (!calloutElement.matches(":popover-open")) {
           if (debug) {
             debug(event, "showing callout because anchor is visible again");

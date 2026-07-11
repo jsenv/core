@@ -50,13 +50,6 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  * @property {boolean} ancestorClosed        - True when a popover, dialog, or details ancestor is
  *   currently closed so the element is not rendered. All visibleRect values are 0 in that case.
  *   update() is called immediately on ancestor close and again (with false) on reopen.
- * @property {boolean} ancestorRepositioning - True while an ancestor dialog/popover is itself
- *   mid-repositioning — its own left/top Web Animations API animation actually running, dispatched
- *   via navi_position_transition (distinct from navi_position_change, which fires once with the
- *   final target, not per animation frame — see applyNewPosition's own notifyPositionTransition for
- *   where navi_position_transition itself comes from). The element's own anchor may be inside
- *   that ancestor and mid-flight, so any position computed while this is true is unreliable —
- *   consumers (Popover, Callout) hide themselves for its duration and reposition once it clears.
  *
  * update() is called:
  *   - Once synchronously on initialization (event.type = "initialization")
@@ -88,18 +81,6 @@ export const visibleRectEffect = (
   let lastMeasuredWidth;
   let lastMeasuredHeight;
   let ancestorClosedCount = 0;
-  // Set while an ancestor dialog/popover is itself mid-repositioning (its
-  // own `left`/`top` CSS transition actually running — see
-  // navi_position_transition below) — as opposed to navi_position_change,
-  // dispatched once with the *final* target position, not per animation
-  // frame. A descendant anchored to something inside that
-  // ancestor has no correct position to compute during that window (the
-  // anchor is still mid-flight) and no way to keep tracking it smoothly
-  // either (that would need its own per-frame loop) — consumers exposing
-  // this flag (Popover/Callout) hide themselves for its duration instead of
-  // showing a stale or lagging position, and reposition for real once it
-  // clears.
-  let ancestorRepositioningCount = 0;
   // Every ResizeObserver this effect owns (its own element-resize watcher
   // below, plus one per observeSize() call) subscribes here and unobserves
   // itself the moment an ancestor closes, reobserving once it reopens — see
@@ -300,7 +281,6 @@ export const visibleRectEffect = (
       width,
       height,
       ancestorClosed: ancestorClosedCount > 0,
-      ancestorRepositioning: ancestorRepositioningCount > 0,
     });
   };
 
@@ -521,7 +501,6 @@ export const visibleRectEffect = (
                   width: 0,
                   height: 0,
                   ancestorClosed: true,
-                  ancestorRepositioning: ancestorRepositioningCount > 0,
                 },
               );
               return;
@@ -546,18 +525,24 @@ export const visibleRectEffect = (
         // Dispatched by applyNewPosition's own notifyPositionTransition
         // around this ancestor's own left/top Web Animations API animation
         // (distinct from navi_position_change, fired once with the final
-        // target, not per animation frame) — see ancestorRepositioningCount's
-        // own doc above for the full reasoning. e.detail.onEnd registers our
-        // own reaction to when that animation actually ends, rather than
-        // this needing its own separate listener/event pair for that.
-        // eslint-disable-next-line no-loop-func
+        // target, not per animation frame). The anchor this element is
+        // positioned against may live inside that ancestor and be moving
+        // right now — rather than hiding for the duration (an opacity
+        // 0/1 flicker once it settles reads worse than a position that's
+        // very slightly behind), check() every frame for as long as the
+        // animation runs, so this element's own position stays in lockstep
+        // with the ancestor's. e.detail.onEnd stops the loop and settles on
+        // one final check once the animation actually ends.
+        let positionTransitionRafId = null;
         const onNaviPositionTransition = (e) => {
-          ancestorRepositioningCount++;
-          check(e);
+          cancelAnimationFrame(positionTransitionRafId);
+          const loop = () => {
+            check(e);
+            positionTransitionRafId = requestAnimationFrame(loop);
+          };
+          loop();
           e.detail.onEnd(() => {
-            if (ancestorRepositioningCount > 0) {
-              ancestorRepositioningCount--;
-            }
+            cancelAnimationFrame(positionTransitionRafId);
             check(e);
           });
         };
@@ -567,6 +552,7 @@ export const visibleRectEffect = (
         );
         addTeardown(() => {
           removeOpenStateObserver();
+          cancelAnimationFrame(positionTransitionRafId);
           openableAncestor.removeEventListener(
             "navi_position_change",
             onNaviPositionChange,
@@ -1499,12 +1485,13 @@ const parseTransitionDurationMs = (element, cssVarName, fallbackMs) => {
  * independent of whatever CSS transitions the element also has running.
  *
  * A descendant anchored to something inside `element` (a Callout, a nested
- * Popover — see visible_rect.js's own ancestorRepositioningCount doc for the
- * full reasoning) has no correct position to compute until this animation
- * actually ends, and no way to keep tracking it smoothly without a
- * per-frame loop of its own — it hides itself for the duration instead.
- * `event.detail.onEnd(callback)` is how it registers to be told when that
- * is, rather than needing its own separate "end" event/listener.
+ * Popover — see visible_rect.js's own on_ancestor_events) re-checks its own
+ * position every frame for as long as this animation runs, to stay in
+ * lockstep with `element` while it's mid-flight instead of momentarily
+ * showing a stale position. `event.detail.onEnd(callback)` is how it
+ * registers to be told when the animation actually ends, so it can settle
+ * on one final check instead of needing its own separate "end"
+ * event/listener.
  *
  * If another position animation starts on the same element before this
  * one's own `finished` promise ever settles (a second reposition landing

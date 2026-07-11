@@ -237,15 +237,6 @@ const css = /* css */ `
       opacity: 0;
       pointer-events: none;
     }
-
-    /* An ancestor this popover is anchored inside of is itself
-       mid-repositioning (see the openEffect rectEffect callback's own
-       comment) — the anchor is mid-flight, hidden rather than shown
-       stale/lagging behind it until it settles. */
-    &[data-ancestor-repositioning] {
-      opacity: 0;
-      pointer-events: none;
-    }
   }
 
   /* Sibling element, not a descendant of .navi_popover — see this file's
@@ -933,22 +924,7 @@ const usePopoverProps = (props) => {
 
     const rectEffect = visibleRectEffect(
       effectiveAnchor,
-      ({ visibilityRatio }, { event, ancestorRepositioning }) => {
-        // An ancestor dialog/popover this one is anchored inside of is
-        // itself mid-repositioning (its own left/top transition actually
-        // running, not just its target having changed — see
-        // visibleRectEffect's own ancestorRepositioning doc) — the anchor
-        // is mid-flight, so there's no correct position to compute yet.
-        // Hidden (not closed — openController/positionPopover are
-        // untouched) until it settles, same spirit as data-anchor-out-of-
-        // view right below, kept as its own attribute since the reason
-        // (and the CSS it needs) is genuinely different: the anchor here
-        // may well be perfectly in view, just not staying still.
-        if (ancestorRepositioning) {
-          popoverEl.setAttribute("data-ancestor-repositioning", "");
-          return;
-        }
-        popoverEl.removeAttribute("data-ancestor-repositioning");
+      ({ visibilityRatio }, { event }) => {
         // Only a real anchor can meaningfully go "out of view" — gating on
         // document.documentElement's own visibilityRatio (used for
         // anchorless/docked popups) would wrongly skip positioning on a
