@@ -46,7 +46,9 @@ import { Text } from "./text.jsx";
  *                    would otherwise collapse to "5 minutes", indistinguishable
  *                    from an actual 5-minute duration: `format="long"` (default)
  *                    says "minuit et 5 minutes" (`format="short"/"narrow"/"compact"`
- *                    keep the zero hour instead — "0 h et 5 min"/"0h 5min"/"0h05")
+ *                    keep the zero hour instead — "0 h et 5 min"/"0h 5min"/"00h05").
+ *                    `format="compact"` also zero-pads any single-digit hour, not
+ *                    just midnight (e.g. "5h30" → "05h30"), closer to "05:30".
  *   - `"hour"`     → hours as duration (e.g. 1.5 → "1 heure 30 minutes")
  *   - `"minute"`   → minutes as duration (e.g. 90 → "1 heure 30 minutes")
  *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
@@ -273,19 +275,27 @@ const TimeTime = ({
   // other hour keeps at least its own "N hour(s)" wording as a hint that
   // this is a time-of-day, not a duration — only hour 0 loses that hint
   // entirely.
+  // clockStyle: this is always a time-of-day here, never a duration — keeps
+  // a zero hour instead of dropping it (midnight would otherwise be
+  // indistinguishable from an actual 5-minute duration), and in
+  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
+  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
   let text;
   if (date.getHours() !== 0) {
-    text = formatMinuteDuration(totalMinutes, { lang, format });
-  } else if (format !== "long") {
-    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
-    // dropping it (formatMinuteDuration's own alwaysShowHours) — e.g.
-    // "0 h et 5 min"/"0h 5min"/"0h05" — rather than substituting a
-    // translated "midnight" word, which would look out of place squeezed
-    // into these otherwise terse, symbol-based formats.
     text = formatMinuteDuration(totalMinutes, {
       lang,
       format,
-      alwaysShowHours: true,
+      clockStyle: true,
+    });
+  } else if (format !== "long") {
+    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
+    // dropping it — e.g. "0 h et 5 min"/"0h 5min"/"00h05" — rather than
+    // substituting a translated "midnight" word, which would look out of
+    // place squeezed into these otherwise terse, symbol-based formats.
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      clockStyle: true,
     });
   } else {
     const midnightWord = naviI18n("time.midnight", undefined, { lang });
@@ -298,7 +308,7 @@ const TimeTime = ({
       text = formatMinuteDuration(totalMinutes, {
         lang,
         format,
-        alwaysShowHours: true,
+        clockStyle: true,
       });
     } else {
       // Swap just the "0 heure(s)" part of the Intl-generated duration

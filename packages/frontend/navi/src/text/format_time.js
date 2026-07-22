@@ -261,15 +261,20 @@ export const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", alwaysShowHours?: boolean }} [options]
- * @param {boolean} [options.alwaysShowHours=false] - Normally a zero-hours
- *   component is dropped entirely (a real 5-minute duration should print as
- *   "5 minutes", not "0 hours 5 minutes") — set this to keep it (e.g. "0 h
- *   et 5 min"/"0h 5min"/"0h05") instead. Only meaningful when `minutes` is
- *   itself less than 60, i.e. the hours component would otherwise be zero;
- *   used by `<Time type="time">` for a time-of-day at midnight, where
- *   dropping the hour would make it indistinguishable from an actual
- *   duration (see time.jsx's own TimeTime).
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean }} [options]
+ * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
+ *   represents a time-of-day rather than a real duration (used by
+ *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
+ *   things at once, both consequences of a clock's "0" being a meaningful
+ *   hour rather than "no hours":
+ *   - a zero-hours component is normally dropped entirely (a real 5-minute
+ *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
+ *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
+ *     doesn't collapse to something indistinguishable from an actual
+ *     5-minute duration.
+ *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
+ *     (e.g. "5h30" → "05h30"), so it reads closer to a "05:30" clock.
+ *   Must not be set for plain duration formatting.
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -277,20 +282,21 @@ export const formatTime = (date, lang) => {
  * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
  * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
- * formatMinuteDuration(5, { lang: "fr", format: "narrow", alwaysShowHours: true }) // "0h 5min"
+ * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
+ * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
  */
 export const formatMinuteDuration = (
   minutes,
-  { lang = languagesSignal.value, format = "long", alwaysShowHours = false } = {},
+  { lang = languagesSignal.value, format = "long", clockStyle = false } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const fmt = new Intl.DurationFormat(lang, {
       style: format, // "long", "short", or "narrow"
-      ...(alwaysShowHours ? { hoursDisplay: "always" } : {}),
+      ...(clockStyle ? { hoursDisplay: "always" } : {}),
     });
-    if (h === 0 && !alwaysShowHours) {
+    if (h === 0 && !clockStyle) {
       return fmt.format({ minutes: m });
     }
     if (m === 0) {
@@ -301,13 +307,14 @@ export const formatMinuteDuration = (
   // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  if (h === 0 && !alwaysShowHours) {
+  const hStr = clockStyle ? String(h).padStart(2, "0") : String(h);
+  if (h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
-    return `${h}${hSym}`;
+    return `${hStr}${hSym}`;
   }
-  return `${h}${hSym}${String(m).padStart(2, "0")}`;
+  return `${hStr}${hSym}${String(m).padStart(2, "0")}`;
 };
 
 /**
