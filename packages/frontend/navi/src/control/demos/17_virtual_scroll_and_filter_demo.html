@@ -85,22 +85,6 @@
         color: #ce9178;
       }
 
-      .value-display {
-        min-height: 20px;
-        margin-top: 12px;
-        padding: 8px;
-        font-size: 0.85rem;
-        font-family: monospace;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 4px;
-      }
-
-      .value-display:empty::before {
-        color: #999;
-        font-style: italic;
-        content: "(none selected)";
-      }
     </style>
   </head>
   <body>
@@ -209,9 +193,6 @@
       };
 
       const VirtualScrollDemo = () => {
-        // Start with an item selected at index 150, well outside the initial
-        // render window (0–30), to verify that the window shifts on mount.
-        const [selected, setSelected] = useState(LARGE_LIST[150]);
         const [searchText, setSearchText] = useState("");
         const [orderedItems, getItemMatchInfo] = useSearchText(
           searchText,
@@ -330,7 +311,6 @@
               <List
                 ref={listRef}
                 maxHeight={maxHeight}
-                uiAction={setSelected}
                 expandX
                 renderBudget={30}
                 searchFallback={
@@ -370,7 +350,6 @@
                       index={i}
                       value={item}
                       matchInfo={getItemMatchInfo(item)}
-                      selected={selected === item}
                       style={{
                         backgroundColor: SUGGESTION_BG,
                         ...(itemHeight
@@ -388,7 +367,6 @@
               </List>
             </NaviDebug>
 
-            <div className="value-display">{selected ?? ""}</div>
             {/* Advanced: max-height controls */}
             <details style={{ marginTop: "16px" }}>
               <summary
