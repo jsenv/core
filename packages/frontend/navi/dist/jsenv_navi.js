@@ -50230,12 +50230,12 @@ const SidePanel = ({
     minHeight: toCssLength(minHeight),
     className: withPropsClassName("navi_side_panel", className),
     "navi-side": side,
+    ...rest,
     style: {
       "--navi-side-panel-width": toCssLength(width, "width"),
       "--navi-side-panel-height": toCssLength(height, "height"),
       ...rest.style
     },
-    ...rest,
     children: children
   });
 };
