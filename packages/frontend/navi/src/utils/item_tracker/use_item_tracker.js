@@ -111,7 +111,11 @@ const createItemTracker = (onChange) => {
       }
 
       // Build allItems and visibleItems in a single pass over allOrderedKeys.
-      // Visible items are those without data.hidden — same relative order as orderedKeys.
+      // Visible items are those without data.hidden or data.filtered — same
+      // relative order as orderedKeys (syncItem already excludes both from
+      // orderedKeys; this must match or consumers relying on visibleCountSignal
+      // for virtual-scroll accounting, e.g. list.jsx's filler sizing, would
+      // count filtered-out items as if they still took up space).
       const prevAllItems = itemsSignal.peek();
       const prevVisibleItems = visibleItemsSignal.peek();
       let allItemsChanged = prevAllItems.length !== allOrderedKeys.length;
@@ -130,7 +134,7 @@ const createItemTracker = (onChange) => {
         if (item.match === false) {
           newNoMatchCount++;
         }
-        if (!item.hidden) {
+        if (!item.hidden && !item.filtered) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
           if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
