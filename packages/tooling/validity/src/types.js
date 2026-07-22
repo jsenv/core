@@ -94,6 +94,12 @@ export const TYPES = {
     representations: {
       string: {
         parse: (value) => {
+          // JSON.parse expects a string; passing a non-string (e.g. an actual array)
+          // would coerce it via String(value) first, silently corrupting the value
+          // (e.g. String([62]) === "62" → JSON.parse("62") === 62, a number).
+          if (typeof value !== "string") {
+            return CANNOT_CONVERT;
+          }
           try {
             const parsed = JSON.parse(value);
             return parsed;
@@ -120,6 +126,9 @@ export const TYPES = {
     representations: {
       string: {
         parse: (value) => {
+          if (typeof value !== "string") {
+            return CANNOT_CONVERT;
+          }
           try {
             const parsed = JSON.parse(value);
             return parsed;

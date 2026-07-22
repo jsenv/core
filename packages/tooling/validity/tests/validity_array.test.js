@@ -13,7 +13,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
   "type": "array"
 });
 
-    const cases = [[1,2,3],[],"{key:\"value\"}","[1,2,3]","not an array",undefined];
+    const cases = [[1,2,3],[],[62],["true"],"{key:\"value\"}","[1,2,3]","not an array",undefined];
     const rows = cases.map((value) => {
       applyOn(value);
       return [
