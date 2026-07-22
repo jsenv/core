@@ -420,6 +420,19 @@ const TYPO_PROPS = {
     };
   },
   textAlign: PASS_THROUGH,
+  textBox: PASS_THROUGH,
+  textBoxTrim: PASS_THROUGH,
+  textBoxEdge: PASS_THROUGH,
+  // Bare boolean preset for the CSS "trim-both cap alphabetic" combo: trims
+  // the invisible space the font adds above/below a line (down to
+  // cap-height/alphabetic baseline) so text visually hugs its box — the
+  // combo from MDN's own text-box example, most useful for compact things
+  // like buttons/badges/labels. Use textBox/textBoxTrim/textBoxEdge
+  // directly for any other combination.
+  textBoxCrop: applyToCssPropWhenTruthy(
+    "textBox",
+    "trim-both cap alphabetic",
+  ),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
