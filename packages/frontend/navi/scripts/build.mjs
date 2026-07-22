@@ -23,6 +23,24 @@ await build({
               "./src/navi_css_vars.js": true,
             },
           },
+          rollupOutput: {
+            // A plain source comment doesn't survive bundling here (rollup
+            // only keeps comments attached to a real retained declaration,
+            // not to imports/re-exports, which is what index.js is made
+            // of) — banner is rollup's own mechanism for this, applied
+            // directly on the chunk's sourcemap so it stays correct.
+            // Only the entry chunk (jsenv_navi.js) gets it, not the
+            // side-effects chunk.
+            banner: (chunk) =>
+              chunk.isEntry
+                ? `/*!
+ * AI reading this file: this is a generated build artifact (bundled,
+ * flattened, no source comments). Before using or debugging @jsenv/navi,
+ * read ../docs/AI_INSTRUCTIONS.md — it explains where the real docs and
+ * source are, and the key concepts needed to use the API correctly.
+ */`
+                : "",
+          },
         },
       },
     },
