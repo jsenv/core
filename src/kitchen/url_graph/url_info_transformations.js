@@ -59,7 +59,7 @@ export const createUrlInfoTransformer = ({
       urlInfo.isInline ||
       (sources &&
         sources.some((source) => !source || !source.startsWith("file:")));
-    if (sources && sources.length > 1) {
+    if (sources && sources.length > 0) {
       sourcemap.sources = sources.map(
         (source) => new URL(source, urlInfo.originalUrl).href,
       );
@@ -68,6 +68,11 @@ export const createUrlInfoTransformer = ({
       }
       return sourcemap;
     }
+    // No source info at all (e.g. an empty sourcemap): only then fall back
+    // to describing this url as its own source. A single source is real
+    // information (it can point at a different file entirely, e.g. a
+    // bundled chunk whose only literal content comes from another module)
+    // and must not be discarded in favor of this assumption.
     sourcemap.sources = [urlInfo.originalUrl];
     sourcemap.sourcesContent = [urlInfo.originalContent];
     if (!wantSourcesContent) {

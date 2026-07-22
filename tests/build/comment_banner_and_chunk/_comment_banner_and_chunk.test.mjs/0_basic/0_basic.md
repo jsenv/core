@@ -67,8 +67,8 @@ see [./build/](./build/)
     "code": "const value = 42;",
     "mapsTo": {
       "source": "../client/main.js",
-      "line": 1,
-      "column": 12,
+      "line": 6,
+      "column": 0,
       "name": null
     }
   },

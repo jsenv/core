@@ -2,10 +2,10 @@
   "version": 3,
   "file": "main.js",
   "sources": [
-    "../client/main.js"
+    "../client/lib.js"
   ],
   "sourcesContent": [
-    "/*!\n * injected via rollup banner\n */\nconst value = 42;\n\nexport { value };\n//# sourceMappingURL=main.js.map\n"
+    "export const value = 42;\n"
   ],
   "names": [],
   "mappings": ";;;AAAY,MAAC,KAAK,GAAG;;;;"

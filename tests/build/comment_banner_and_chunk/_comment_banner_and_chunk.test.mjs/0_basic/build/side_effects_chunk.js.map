@@ -2,10 +2,10 @@
   "version": 3,
   "file": "side_effects_chunk.js",
   "sources": [
-    ""
+    "../client/side_effect.js"
   ],
   "sourcesContent": [
-    "/*!\n * banner text\n */\nconsole.log(\"side effect\");\n//# sourceMappingURL=side_effects_chunk.js.map\n"
+    "console.log(\"side effect\");\n"
   ],
   "names": [],
   "mappings": ";;;AAAA,OAAO,CAAC,GAAG,CAAC,aAAa,CAAC"
