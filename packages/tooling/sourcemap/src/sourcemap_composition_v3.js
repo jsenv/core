@@ -44,7 +44,7 @@ export const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
         line: originalLine,
         column: originalColumn,
       });
-      if (original.source == null) {
+      if (original.source === null) {
         // "first" has no mapping covering that intermediate position either
         // — leave unmapped rather than guessing.
         return;
