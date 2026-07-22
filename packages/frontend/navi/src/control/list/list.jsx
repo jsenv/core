@@ -1493,11 +1493,6 @@ const ListItemReal = (props) => {
       {...columnsOverrideProps}
       index={undefined}
       selected={undefined}
-      // match/matchScore aren't part of the supported API (only matchInfo
-      // is — see ListItem's own doc) but are still cleared here in case a
-      // caller passes them anyway, so they don't leak onto the DOM element.
-      matchScore={undefined}
-      match={undefined}
       // We use aria-hidden and not hidden because hidden would be forced to
       // display: none while here we want to keep it in the DOM to avoid layout shift
       // but visually hidden

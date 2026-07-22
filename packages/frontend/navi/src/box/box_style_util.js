@@ -466,6 +466,7 @@ const VISUAL_PROPS = {
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
   scrollbarWidth: PASS_THROUGH,
+  scrollbarGutter: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
