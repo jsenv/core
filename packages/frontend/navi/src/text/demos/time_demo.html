@@ -353,43 +353,50 @@
                 </em>
                 . Only affects past dates; future dates are unchanged.
               </Text>
-              <Grid cols={["(default)", "bare"]}>
-                <GRow label="now - 1h">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
-                  </Time>
-                  <Time bare lang={lang}>
-                    {new Date(NOW.getTime() - 60 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 30min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
-                  </Time>
-                  <Time bare lang={lang}>
-                    {new Date(NOW.getTime() - 30 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="yesterday">
-                  <Time lang={lang}>{YESTERDAY}</Time>
-                  <Time bare lang={lang}>
-                    {YESTERDAY}
-                  </Time>
-                </GRow>
-                <GRow label="last week">
-                  <Time lang={lang}>{LAST_WEEK}</Time>
-                  <Time bare lang={lang}>
-                    {LAST_WEEK}
-                  </Time>
-                </GRow>
-                <GRow label="now + 2h (future)">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
-                  </Time>
-                  <Time bare lang={lang}>
-                    {new Date(NOW.getTime() + 2 * 60 * 60 * 1000)}
-                  </Time>
-                </GRow>
+              <Grid
+                cols={[
+                  "(default)",
+                  "bare",
+                  'format="short"',
+                  'format="short" bare',
+                  'format="narrow"',
+                  'format="narrow" bare',
+                ]}
+              >
+                {[
+                  ["now - 1h", -60],
+                  ["now - 30min", -30],
+                  ["yesterday", null],
+                  ["last week", null],
+                  ["now + 2h (future)", 120],
+                ].map(([label, offsetMinutes]) => {
+                  const date =
+                    label === "yesterday"
+                      ? YESTERDAY
+                      : label === "last week"
+                        ? LAST_WEEK
+                        : new Date(NOW.getTime() + offsetMinutes * 60 * 1000);
+                  return (
+                    <GRow label={label} key={label}>
+                      <Time lang={lang}>{date}</Time>
+                      <Time bare lang={lang}>
+                        {date}
+                      </Time>
+                      <Time format="short" lang={lang}>
+                        {date}
+                      </Time>
+                      <Time bare format="short" lang={lang}>
+                        {date}
+                      </Time>
+                      <Time format="narrow" lang={lang}>
+                        {date}
+                      </Time>
+                      <Time bare format="narrow" lang={lang}>
+                        {date}
+                      </Time>
+                    </GRow>
+                  );
+                })}
               </Grid>
             </Section>
 
