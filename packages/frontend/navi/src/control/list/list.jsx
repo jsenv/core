@@ -900,6 +900,7 @@ const useListScrollSync = ({
   // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
+  const restoreScrollRafRef = useRef(null);
   useLayoutEffect(() => {
     const listScrollContainerEl = ref.current?.querySelector(
       `.navi_list_scroll_container`,
@@ -922,7 +923,20 @@ const useListScrollSync = ({
         savedScroll.renderWindow.end,
         "restore scroll window",
       );
-      const raf = requestAnimationFrame(() => {
+      // Tracked in a ref rather than cancelled via this effect's own cleanup:
+      // updateRenderWindow above triggers a re-render, which re-runs this
+      // effect (it has no dependency array — it needs to reactively poll
+      // tracker state on every render) *before* the RAF below fires. That
+      // second invocation sees savedScrollRef.current already nulled and
+      // bails out early — if the RAF were tied to this invocation's cleanup,
+      // it would get cancelled right there with nothing to replace it,
+      // silently dropping the scroll restore (renderWindow ends up correct,
+      // but scrollTop stays wherever it was, showing blank filler space).
+      if (restoreScrollRafRef.current) {
+        cancelAnimationFrame(restoreScrollRafRef.current);
+      }
+      restoreScrollRafRef.current = requestAnimationFrame(() => {
+        restoreScrollRafRef.current = null;
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
@@ -952,9 +966,7 @@ const useListScrollSync = ({
           event: new CustomEvent("navi_scroll_restore"),
         });
       });
-      return () => {
-        cancelAnimationFrame(raf);
-      };
+      return undefined;
     }
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
