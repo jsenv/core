@@ -6788,10 +6788,7 @@ const TYPO_PROPS = {
   // combo from MDN's own text-box example, most useful for compact things
   // like buttons/badges/labels. Use textBox/textBoxTrim/textBoxEdge
   // directly for any other combination.
-  textBoxCrop: applyToCssPropWhenTruthy(
-    "textBox",
-    "trim-both cap alphabetic",
-  ),
+  textBoxCrop: applyToCssPropWhenTruthy("textBox", "trim-both cap alphabetic"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -6827,6 +6824,8 @@ const VISUAL_PROPS = {
   overflowY: PASS_THROUGH,
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
+  scrollbarWidth: PASS_THROUGH,
+  scrollbarGutter: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
@@ -40526,7 +40525,11 @@ const createItemTracker = (onChange) => {
       }
 
       // Build allItems and visibleItems in a single pass over allOrderedKeys.
-      // Visible items are those without data.hidden — same relative order as orderedKeys.
+      // Visible items are those without data.hidden or data.filtered — same
+      // relative order as orderedKeys (syncItem already excludes both from
+      // orderedKeys; this must match or consumers relying on visibleCountSignal
+      // for virtual-scroll accounting, e.g. list.jsx's filler sizing, would
+      // count filtered-out items as if they still took up space).
       const prevAllItems = itemsSignal.peek();
       const prevVisibleItems = visibleItemsSignal.peek();
       let allItemsChanged = prevAllItems.length !== allOrderedKeys.length;
@@ -40545,7 +40548,7 @@ const createItemTracker = (onChange) => {
         if (item.match === false) {
           newNoMatchCount++;
         }
-        if (!item.hidden) {
+        if (!item.hidden && !item.filtered) {
           const visibleIdx = visibleItems.length;
           visibleItems.push(item);
           if (!visibleItemsChanged && item !== prevVisibleItems[visibleIdx]) {
@@ -41269,10 +41272,9 @@ const ListItemSelectable = props => {
   const {
     index,
     id = defaultId,
-    highlight,
+    matchInfo,
     hidden,
     filtered,
-    matchScore,
     defaultSelected,
     selected,
     pointed,
@@ -41314,10 +41316,9 @@ const ListItemSelectable = props => {
   return jsxs(Next, {
     id: id,
     index: index,
-    highlight: highlight,
+    matchInfo: matchInfo,
     filtered: filtered,
     hidden: hidden,
-    matchScore: matchScore,
     "aria-selected": checked,
     selected: checked,
     "navi-selectable": "",
@@ -41631,6 +41632,7 @@ const css$m = /* css */`
       flex-wrap: inherit;
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
+      scrollbar-width: inherit;
     }
 
     &[data-expand-x] {
@@ -41922,7 +41924,7 @@ const ListUI = props => {
   import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
-    renderBudget = RENDER_BUDGET_DEFAULT,
+    renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
     renderBudgetSkipCheck,
     role,
     fallback,
@@ -41943,6 +41945,15 @@ const ListUI = props => {
     spacing,
     ...rest
   } = props;
+  // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
+  // same way a bare number would work — arithmetic below (renderBudget / 2,
+  // start + renderBudget, etc.) would silently misbehave on a raw string
+  // ("+" concatenates instead of adding).
+  let renderBudget = renderBudgetProp;
+  if (typeof renderBudget === "string") {
+    const parsed = Number(renderBudget);
+    renderBudget = Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
+  }
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(`List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`);
   }
@@ -42072,7 +42083,7 @@ const ListFirstResolver = props => {
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
- *   renderBudget?: number,
+ *   renderBudget?: number | string,
  *   virtualItemSize?: number,
  *   fallback?: import("ignore:preact").ComponentChildren,
  *   searchFallback?: import("ignore:preact").ComponentChildren,
@@ -42333,6 +42344,7 @@ const useListScrollSync = ({
   // (pour l'instant pas grave car on travaille pour le mode select qui fermera le dialog au select)
   const savedScrollRef = useRef(null);
   const topMatchScoresKeyRef = useRef("");
+  const restoreScrollRafRef = useRef(null);
   useLayoutEffect(() => {
     const listScrollContainerEl = ref.current?.querySelector(`.navi_list_scroll_container`);
     if (!listScrollContainerEl) {
@@ -42349,7 +42361,20 @@ const useListScrollSync = ({
       savedScrollRef.current = null;
       debugScroll("Restoring scroll to", savedScroll);
       updateRenderWindow(savedScroll.renderWindow.start, savedScroll.renderWindow.end, "restore scroll window");
-      const raf = requestAnimationFrame(() => {
+      // Tracked in a ref rather than cancelled via this effect's own cleanup:
+      // updateRenderWindow above triggers a re-render, which re-runs this
+      // effect (it has no dependency array — it needs to reactively poll
+      // tracker state on every render) *before* the RAF below fires. That
+      // second invocation sees savedScrollRef.current already nulled and
+      // bails out early — if the RAF were tied to this invocation's cleanup,
+      // it would get cancelled right there with nothing to replace it,
+      // silently dropping the scroll restore (renderWindow ends up correct,
+      // but scrollTop stays wherever it was, showing blank filler space).
+      if (restoreScrollRafRef.current) {
+        cancelAnimationFrame(restoreScrollRafRef.current);
+      }
+      restoreScrollRafRef.current = requestAnimationFrame(() => {
+        restoreScrollRafRef.current = null;
         const left = savedScroll.left;
         const top = savedScroll.top;
         // use scrollTo to respect eventual css scroll-behavior: smooth;
@@ -42372,13 +42397,11 @@ const useListScrollSync = ({
           event: new CustomEvent("navi_scroll_restore")
         });
       });
-      return () => {
-        cancelAnimationFrame(raf);
-      };
+      return undefined;
     }
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
-    const topMatchScoresKey = topItems.map(i => `${i.id}:${i.matchScore ?? ""}`).join(",");
+    const topMatchScoresKey = topItems.map(i => `${i.id}:${i.matchInfo?.matchScore ?? ""}`).join(",");
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
       // no changes in top matches -> no need to scroll
@@ -42793,9 +42816,13 @@ const ListItemUI = props => {
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
-  // Derive filtered/hidden/nonMatching from the `match` prop + searchNoMatchMode context.
-  // The `match` prop replaces the older `filtered`/`hidden` per-item props.
-  if (props.match === false) {
+  // There is no standalone match/matchScore/highlight prop — participation
+  // in a matching system (search, filter…) only goes through `matchInfo`
+  // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
+  // matchRanges }), so there is exactly one way to wire it up.
+  const matchInfo = props.matchInfo;
+  // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
+  if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
       props.filtered = true;
     } else if (searchNoMatchMode === "invisible_and_inert") {
@@ -42864,7 +42891,7 @@ const ListItemReal = props => {
     id,
     hidden,
     muted,
-    highlight,
+    matchInfo,
     children,
     ...rest
   } = props;
@@ -42882,8 +42909,9 @@ const ListItemReal = props => {
     pendingScroll.resolve(itemEl);
   }, [needScrollOnMount]);
 
-  // CSS Highlight API: mark matching text ranges when highlight prop is set.
-  useSearchHighlight(ref, highlight, [children, hidden]);
+  // CSS Highlight API: mark matching text ranges from matchInfo.matchRanges,
+  // if any (there is no standalone highlight prop — see ListItem's own doc).
+  useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
   return jsx(Box, {
     as: "li",
@@ -42896,9 +42924,7 @@ const ListItemReal = props => {
     ...rest,
     ...columnsOverrideProps,
     index: undefined,
-    selected: undefined,
-    matchScore: undefined,
-    match: undefined
+    selected: undefined
     // We use aria-hidden and not hidden because hidden would be forced to
     // display: none while here we want to keep it in the DOM to avoid layout shift
     // but visually hidden
@@ -42977,7 +43003,21 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute
- *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
+ *   matchInfo — participation in a matching system (search, filter…): the
+ *               object useSearchText's getItemMatchInfo(item) returns
+ *               (or any object shaped the same way):
+ *                 <ListItem matchInfo={getItemMatchInfo(item)} />
+ *               There is no standalone match/matchScore/highlight prop —
+ *               matchInfo is the only way to wire this up:
+ *                 match       — false is interpreted per the List's own
+ *                               searchNoMatchMode ("remove" -> filtered,
+ *                               "invisible_and_inert" -> hidden,
+ *                               "muted" -> muted).
+ *                 matchScore  — this item's search relevance score (higher =
+ *                               more relevant). Only read for search-driven
+ *                               scroll-to-top-match behavior.
+ *                 matchRanges — array of [start, end] ranges to highlight via
+ *                               CSS Highlight API.
  *   ...rest   — forwarded to the rendered <li> element
  */
 const ListItem = createComponentResolver([ListItemFirstResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI]);
@@ -44637,7 +44677,8 @@ const mergeRanges = (ranges) => {
  *
  * const [orderedItems, getItemMatchInfo] = useSearch(search, items, searchPerson);
  * // getItemMatchInfo(item).matchRanges is { ".name": [[start,end],…], ".address": [[start,end],…] }
- * // Pass it to <ListItem highlight={matchRanges} /> — ListItem handles the object format.
+ * // Pass the whole thing: <ListItem matchInfo={getItemMatchInfo(item)} />
+ * // — ListItem handles the per-selector object format for matchRanges.
  * ```
  *
  * Each field config:
@@ -44677,7 +44718,9 @@ const createSearch = (fields) => {
  * followed by non-matched items in their natural order. No item is hidden.
  * Returns [orderedItems, getItemMatchInfo].
  *   - orderedItems: all items, reordered
- *   - getItemMatchInfo(item): { match, score, ranges }
+ *   - getItemMatchInfo(item): { match, matchScore, matchRanges } — pass the
+ *     whole thing straight to <ListItem matchInfo={getItemMatchInfo(item)} />,
+ *     there is no need to destructure the three fields by hand.
  *
  * When searchText is empty, natural order is preserved and all items match with score 0.
  *
@@ -44730,8 +44773,8 @@ const buildMatchInfo = (searchText, items, matchFn) => {
     if (!result.match) {
       nonMatched.push({
         item,
-        score: result.matchScore,
-        ranges: result.matchRanges,
+        matchScore: result.matchScore,
+        matchRanges: result.matchRanges,
       });
       continue;
     }
@@ -44751,23 +44794,23 @@ const buildMatchInfo = (searchText, items, matchFn) => {
       }
     }
     if (lo < scoreEntries.length && scoreEntries[lo][0] === score) {
-      scoreEntries[lo][1].push({ item, ranges: result.matchRanges });
+      scoreEntries[lo][1].push({ item, matchRanges: result.matchRanges });
     } else {
       scoreEntries.splice(lo, 0, [
         score,
-        [{ item, ranges: result.matchRanges }],
+        [{ item, matchRanges: result.matchRanges }],
       ]);
     }
   }
 
   const matchInfoMap = new Map();
   for (const [score, bucket] of scoreEntries) {
-    for (const { item, ranges } of bucket) {
-      matchInfoMap.set(item, { match: true, score, ranges });
+    for (const { item, matchRanges } of bucket) {
+      matchInfoMap.set(item, { match: true, matchScore: score, matchRanges });
     }
   }
-  for (const { item, score, ranges } of nonMatched) {
-    matchInfoMap.set(item, { match: false, score, ranges });
+  for (const { item, matchScore, matchRanges } of nonMatched) {
+    matchInfoMap.set(item, { match: false, matchScore, matchRanges });
   }
 
   return { scoreEntries, nonMatched, matchInfoMap };
