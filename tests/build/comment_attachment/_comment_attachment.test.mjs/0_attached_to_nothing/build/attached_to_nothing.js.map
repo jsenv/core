@@ -5,8 +5,8 @@
     "../client/attached_to_nothing.js"
   ],
   "sourcesContent": [
-    "/*!\n * comment attached to nothing: nothing follows it in the file\n */\n\nconst value = 1;\n\nexport { value };\n//# sourceMappingURL=attached_to_nothing.js.map\n"
+    "const value = 42;\n\nexport { value };\n//# sourceMappingURL=attached_to_nothing.js.map\n"
   ],
   "names": [],
-  "mappings": "AAAA;AACA;AACA;;AAEY,MAAC,KAAK,GAAG;;;;"
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;;;"
 }

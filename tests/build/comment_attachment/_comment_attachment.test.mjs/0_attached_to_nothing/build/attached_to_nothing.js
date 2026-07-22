@@ -1,8 +1,4 @@
-/*!
- * comment attached to nothing: nothing follows it in the file
- */
-
-const value = 1;
+const value = 42;
 
 export { value };
 //# sourceMappingURL=attached_to_nothing.js.map

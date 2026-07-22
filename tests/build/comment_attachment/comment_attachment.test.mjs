@@ -16,14 +16,23 @@
  * before them (including a comment) is ever carried over. There is no
  * rollup option to change this — it is structural, not configurable.
  *
+ * Each case imports a binding from lib.js so rollup actually has to bundle
+ * across modules — a single self-contained file (no cross-module import)
+ * doesn't exercise the rewrite path at all, and can misleadingly look like
+ * "everything survives" since rollup then has little to resolve/rewrite.
+ *
  * Three cases below:
- * - attached to nothing: comment is the last thing in the file, no
- *   statement follows it at all.
+ * - attached to nothing: file is pure `import` + bare re-export, no local
+ *   declaration at all, comment trailing at the end. Nothing here is ever
+ *   copied as literal text (import and re-export are both resynthesized),
+ *   so the comment is dropped.
  * - attached to an export: comment directly above a real declaration
- *   (`export const value = 2`) that rollup keeps and copies verbatim.
+ *   (`export const value = importedValue * 2`) that rollup keeps and
+ *   copies verbatim — survives even though the file also imports another
+ *   module and goes through real bundling.
  * - attached to a re-export: comment directly above
  *   `export { value } from "./lib.js"`, which rollup rewrites rather than
- *   copies.
+ *   copies. Dropped.
  */
 
 import { build } from "@jsenv/core";
