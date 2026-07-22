@@ -792,7 +792,6 @@
                       />
                     </ListItemHeader>
                     {items.map((f, i) => {
-                      const { match, ranges } = getItemMatchInfo(f);
                       return (
                         <ListItem
                           key={f}
@@ -800,8 +799,7 @@
                           id={f}
                           value={f}
                           selected={fruit === f}
-                          filtered={!match}
-                          highlight={ranges}
+                          matchInfo={getItemMatchInfo(f)}
                         >
                           {f}
                         </ListItem>

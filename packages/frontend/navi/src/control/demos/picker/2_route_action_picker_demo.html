@@ -261,7 +261,6 @@
                 }
               >
                 {matchingFruits.map((fruit, i) => {
-                  const { match, score, ranges } = getMatchInfo(fruit);
                   return (
                     <List.Item
                       selectable
@@ -269,9 +268,7 @@
                       id={fruit.id}
                       index={i}
                       value={fruit.slug}
-                      highlight={ranges}
-                      matchScore={score}
-                      filtered={!match}
+                      matchInfo={getMatchInfo(fruit)}
                       selected={fruit.slug === fruitSlug}
                       flex
                       alignY="center"

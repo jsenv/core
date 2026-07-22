@@ -460,10 +460,9 @@ const ListItemSelectable = (props) => {
   const {
     index,
     id = defaultId,
-    highlight,
+    matchInfo,
     hidden,
     filtered,
-    matchScore,
     defaultSelected,
     selected,
     pointed,
@@ -503,10 +502,9 @@ const ListItemSelectable = (props) => {
     <Next
       id={id}
       index={index}
-      highlight={highlight}
+      matchInfo={matchInfo}
       filtered={filtered}
       hidden={hidden}
-      matchScore={matchScore}
       aria-selected={checked}
       selected={checked}
       navi-selectable=""

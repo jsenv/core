@@ -526,7 +526,6 @@
                 }
               >
                 {matchingItems.map((opt, i) => {
-                  const { match, score, ranges } = getMatchInfo(opt);
                   return (
                     <List.Item
                       selectable
@@ -535,9 +534,7 @@
                       index={i}
                       value={opt}
                       selected={selected === opt}
-                      highlight={ranges}
-                      matchScore={score}
-                      filtered={!match}
+                      matchInfo={getMatchInfo(opt)}
                       padding="s"
                       spacing="s"
                     >
@@ -753,7 +750,6 @@
                   maxWidth="250"
                 >
                   {matchingPlaces.map((place, i) => {
-                    const { match, score, ranges } = getPlaceMatchInfo(place);
                     return (
                       <List.Item
                         selectable
@@ -761,9 +757,7 @@
                         id={place.id}
                         index={i}
                         value={place.slug}
-                        highlight={ranges}
-                        matchScore={score}
-                        filtered={!match}
+                        matchInfo={getPlaceMatchInfo(place)}
                         selected={place.slug === placeSlug}
                         flex
                         alignY="center"

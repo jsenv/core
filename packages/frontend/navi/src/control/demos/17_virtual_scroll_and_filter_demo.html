@@ -362,16 +362,13 @@
                 separator
               >
                 {orderedItems.map((item, i) => {
-                  const { match, score, ranges } = getItemMatchInfo(item);
                   return (
                     <ListItem
                       key={item}
                       id={item}
                       index={i}
                       value={item}
-                      highlight={ranges}
-                      matchScore={score}
-                      filtered={!match}
+                      matchInfo={getItemMatchInfo(item)}
                       selected={selected === item}
                       style={{
                         backgroundColor: SUGGESTION_BG,

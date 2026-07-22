@@ -93,7 +93,6 @@
             searchFallback={false}
           >
             {matchingGames.map((game, i) => {
-              const { match, ranges } = getMatchInfo(game);
               return (
                 <List.Item
                   selectable
@@ -102,8 +101,7 @@
                   id={`game_${game.toLowerCase()}`}
                   value={game}
                   selected={selectedGame === game}
-                  match={match}
-                  highlight={ranges}
+                  matchInfo={getMatchInfo(game)}
                   padding="s"
                 >
                   {game}

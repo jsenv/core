@@ -21,7 +21,8 @@ import { applySearch } from "./apply_search.js";
  *
  * const [orderedItems, getItemMatchInfo] = useSearch(search, items, searchPerson);
  * // getItemMatchInfo(item).matchRanges is { ".name": [[start,end],…], ".address": [[start,end],…] }
- * // Pass it to <ListItem highlight={matchRanges} /> — ListItem handles the object format.
+ * // Pass the whole thing: <ListItem matchInfo={getItemMatchInfo(item)} />
+ * // — ListItem handles the per-selector object format for matchRanges.
  * ```
  *
  * Each field config:

@@ -1011,15 +1011,13 @@
                 maxHeight="200"
               >
                 {fruits.map((fruit, i) => {
-                  const { match, ranges } = getItemMatchInfo(fruit);
                   return (
                     <ListItem
                       key={fruit}
                       index={i}
                       id={fruit}
                       value={fruit}
-                      filtered={!match}
-                      highlight={ranges}
+                      matchInfo={getItemMatchInfo(fruit)}
                       paddingX="m"
                       paddingY="s"
                     >
@@ -1056,15 +1054,13 @@
             />
             <List>
               {fruits.map((fruit, i) => {
-                const { match, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     key={fruit}
                     index={i}
                     id={fruit}
                     value={fruit}
-                    filtered={!match}
-                    highlight={ranges}
+                    matchInfo={getItemMatchInfo(fruit)}
                   >
                     {fruit}
                   </ListItem>
@@ -1138,12 +1134,18 @@
                   <ListItemGroup key={group.letter} label={group.letter}>
                     {group.items.map((item) => {
                       const i = globalIndex++;
-                      const { ranges } = getItemMatchInfo(item);
+                      // Force match: true — this demo keeps all items visible
+                      // (see above), only the highlight should reflect the
+                      // actual match info, not the match-based filtering.
+                      const matchInfo = {
+                        ...getItemMatchInfo(item),
+                        match: true,
+                      };
                       return (
                         <ListItem
                           key={item}
                           index={i}
-                          highlight={ranges}
+                          matchInfo={matchInfo}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
                           {item}
@@ -1276,12 +1278,13 @@
                 }
               >
                 {matches.map((item, i) => {
-                  const { ranges } = getItemMatchInfo(item);
+                  // Safe to pass matchInfo directly: `matches` is already
+                  // filtered to match: true items, so nothing gets hidden.
                   return (
                     <ListItem
                       key={item}
                       index={i}
-                      highlight={ranges}
+                      matchInfo={getItemMatchInfo(item)}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}

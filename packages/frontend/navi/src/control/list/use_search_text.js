@@ -6,7 +6,9 @@ import { applySearch } from "./apply_search.js";
  * followed by non-matched items in their natural order. No item is hidden.
  * Returns [orderedItems, getItemMatchInfo].
  *   - orderedItems: all items, reordered
- *   - getItemMatchInfo(item): { match, score, ranges }
+ *   - getItemMatchInfo(item): { match, matchScore, matchRanges } — pass the
+ *     whole thing straight to <ListItem matchInfo={getItemMatchInfo(item)} />,
+ *     there is no need to destructure the three fields by hand.
  *
  * When searchText is empty, natural order is preserved and all items match with score 0.
  *
@@ -59,8 +61,8 @@ const buildMatchInfo = (searchText, items, matchFn) => {
     if (!result.match) {
       nonMatched.push({
         item,
-        score: result.matchScore,
-        ranges: result.matchRanges,
+        matchScore: result.matchScore,
+        matchRanges: result.matchRanges,
       });
       continue;
     }
@@ -80,23 +82,23 @@ const buildMatchInfo = (searchText, items, matchFn) => {
       }
     }
     if (lo < scoreEntries.length && scoreEntries[lo][0] === score) {
-      scoreEntries[lo][1].push({ item, ranges: result.matchRanges });
+      scoreEntries[lo][1].push({ item, matchRanges: result.matchRanges });
     } else {
       scoreEntries.splice(lo, 0, [
         score,
-        [{ item, ranges: result.matchRanges }],
+        [{ item, matchRanges: result.matchRanges }],
       ]);
     }
   }
 
   const matchInfoMap = new Map();
   for (const [score, bucket] of scoreEntries) {
-    for (const { item, ranges } of bucket) {
-      matchInfoMap.set(item, { match: true, score, ranges });
+    for (const { item, matchRanges } of bucket) {
+      matchInfoMap.set(item, { match: true, matchScore: score, matchRanges });
     }
   }
-  for (const { item, score, ranges } of nonMatched) {
-    matchInfoMap.set(item, { match: false, score, ranges });
+  for (const { item, matchScore, matchRanges } of nonMatched) {
+    matchInfoMap.set(item, { match: false, matchScore, matchRanges });
   }
 
   return { scoreEntries, nonMatched, matchInfoMap };

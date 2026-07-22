@@ -510,7 +510,8 @@
               separator={<Separator margin="0" />}
             >
               {orderedItems.map((item, i) => {
-                const { score, ranges } = getItemMatchInfo(item);
+                // Force match: true — sort only, nothing is hidden (see above).
+                const matchInfo = { ...getItemMatchInfo(item), match: true };
                 return (
                   <ListItem
                     role="option"
@@ -518,8 +519,7 @@
                     index={i}
                     id={item}
                     value={item}
-                    highlight={ranges}
-                    matchScore={score}
+                    matchInfo={matchInfo}
                     selected={selected === item}
                   >
                     {item} #{i}

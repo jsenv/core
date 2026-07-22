@@ -298,7 +298,6 @@
               uiAction={setSelected}
             >
               {FRUITS.map((fruit, i) => {
-                const { match, ranges } = getItemMatchInfo(fruit);
                 return (
                   <ListItem
                     role="option"
@@ -306,8 +305,7 @@
                     index={i}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={ranges}
-                    filtered={!match}
+                    matchInfo={getItemMatchInfo(fruit)}
                     style={{
                       "color": "#eaeaea",
                       "backgroundColor": "transparent",
@@ -379,7 +377,10 @@
               uiAction={setSelected}
             >
               {sorted.map((fruit, i) => {
-                const { score, ranges } = getItemMatchInfo(fruit);
+                // Force match: true — this demo shows all items regardless of
+                // match (see above), only highlight/matchScore should reflect
+                // the actual match info, not the match-based filtering.
+                const matchInfo = { ...getItemMatchInfo(fruit), match: true };
                 return (
                   <ListItem
                     role="option"
@@ -387,8 +388,7 @@
                     index={i}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={ranges}
-                    matchScore={score}
+                    matchInfo={matchInfo}
                     style={{ backgroundColor: SUGGESTION_BG }}
                   >
                     {fruit}

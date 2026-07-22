@@ -959,7 +959,7 @@ const useListScrollSync = ({
     const visibleItems = tracker.visibleItemsSignal.peek();
     const topItems = visibleItems.slice(0, renderBudget);
     const topMatchScoresKey = topItems
-      .map((i) => `${i.id}:${i.matchScore ?? ""}`)
+      .map((i) => `${i.id}:${i.matchInfo?.matchScore ?? ""}`)
       .join(",");
     const currentTopMatchScore = topMatchScoresKeyRef.current;
     if (topMatchScoresKey === currentTopMatchScore) {
@@ -1383,9 +1383,13 @@ const ListItemUI = (props) => {
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
-  // Derive filtered/hidden/nonMatching from the `match` prop + searchNoMatchMode context.
-  // The `match` prop replaces the older `filtered`/`hidden` per-item props.
-  if (props.match === false) {
+  // There is no standalone match/matchScore/highlight prop — participation
+  // in a matching system (search, filter…) only goes through `matchInfo`
+  // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
+  // matchRanges }), so there is exactly one way to wire it up.
+  const matchInfo = props.matchInfo;
+  // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
+  if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
       props.filtered = true;
     } else if (searchNoMatchMode === "invisible_and_inert") {
@@ -1455,7 +1459,7 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const { ref, id, hidden, muted, highlight, children, ...rest } = props;
+  const { ref, id, hidden, muted, matchInfo, children, ...rest } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1470,8 +1474,9 @@ const ListItemReal = (props) => {
     pendingScroll.resolve(itemEl);
   }, [needScrollOnMount]);
 
-  // CSS Highlight API: mark matching text ranges when highlight prop is set.
-  useSearchHighlight(ref, highlight, [children, hidden]);
+  // CSS Highlight API: mark matching text ranges from matchInfo.matchRanges,
+  // if any (there is no standalone highlight prop — see ListItem's own doc).
+  useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
 
@@ -1488,6 +1493,9 @@ const ListItemReal = (props) => {
       {...columnsOverrideProps}
       index={undefined}
       selected={undefined}
+      // match/matchScore aren't part of the supported API (only matchInfo
+      // is — see ListItem's own doc) but are still cleared here in case a
+      // caller passes them anyway, so they don't leak onto the DOM element.
       matchScore={undefined}
       match={undefined}
       // We use aria-hidden and not hidden because hidden would be forced to
@@ -1568,7 +1576,21 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute
- *   highlight — array of [start, end] ranges to highlight via CSS Highlight API
+ *   matchInfo — participation in a matching system (search, filter…): the
+ *               object useSearchText's getItemMatchInfo(item) returns
+ *               (or any object shaped the same way):
+ *                 <ListItem matchInfo={getItemMatchInfo(item)} />
+ *               There is no standalone match/matchScore/highlight prop —
+ *               matchInfo is the only way to wire this up:
+ *                 match       — false is interpreted per the List's own
+ *                               searchNoMatchMode ("remove" -> filtered,
+ *                               "invisible_and_inert" -> hidden,
+ *                               "muted" -> muted).
+ *                 matchScore  — this item's search relevance score (higher =
+ *                               more relevant). Only read for search-driven
+ *                               scroll-to-top-match behavior.
+ *                 matchRanges — array of [start, end] ranges to highlight via
+ *                               CSS Highlight API.
  *   ...rest   — forwarded to the rendered <li> element
  */
 export const ListItem = createComponentResolver([

@@ -200,7 +200,8 @@
               </ListItemHeader>
               {orderedFruits.map((fruit, i) => {
                 const selected = selectedFruit === fruit;
-                const { score, ranges } = getItemMatchInfo(fruit);
+                // Force match: true — sort only, no hiding.
+                const matchInfo = { ...getItemMatchInfo(fruit), match: true };
                 return (
                   <ListItem
                     role="option"
@@ -208,8 +209,7 @@
                     index={i}
                     id={fruit}
                     value={fruit}
-                    highlight={ranges}
-                    matchScore={score}
+                    matchInfo={matchInfo}
                     selected={selected}
                     maxLines={1}
                   >
@@ -435,7 +435,8 @@
               </div>
             </ListItemHeader>
             {orderedCountries.map((country, i) => {
-              const { score, ranges } = getItemMatchInfo(country);
+              // Force match: true — sort only, no hiding.
+              const matchInfo = { ...getItemMatchInfo(country), match: true };
               return (
                 <ListItem
                   role="option"
@@ -444,8 +445,7 @@
                   index={i}
                   value={country}
                   selected={selected === country}
-                  highlight={ranges}
-                  matchScore={score}
+                  matchInfo={matchInfo}
                   minHeight="64"
                   flex
                   alignY="center"

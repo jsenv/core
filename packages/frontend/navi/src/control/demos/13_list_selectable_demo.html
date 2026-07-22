@@ -302,7 +302,6 @@
               separator
             >
               {matchingFruits.map((fruit, i) => {
-                const { score, ranges, match } = getMatchInfo(fruit);
                 return (
                   <List.Item
                     selectable
@@ -311,9 +310,7 @@
                     id={`searchable_${fruit.toLowerCase()}`}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={ranges}
-                    matchScore={score}
-                    match={match}
+                    matchInfo={getMatchInfo(fruit)}
                     flex
                     spacing="s"
                   >
@@ -1187,7 +1184,6 @@
               }
             >
               {matchingFruits.map((fruit, i) => {
-                const { match, score, ranges } = getFruitMatchInfo(fruit);
                 return (
                   <List.Item
                     selectable
@@ -1196,9 +1192,7 @@
                     id={`freqd_${fruit.toLowerCase()}`}
                     value={fruit}
                     selected={selected === fruit}
-                    highlight={ranges}
-                    matchScore={score}
-                    filtered={!match}
+                    matchInfo={getFruitMatchInfo(fruit)}
                     flex
                     spacing="s"
                   >
