@@ -1,4 +1,4 @@
-import { a, j, g } from "../jsenv_plugin_toolbar_node_modules.js";
+import { y, j, g } from "../jsenv_plugin_toolbar_node_modules.js";
 
 const paramsFromParentWindow = {};
 const searchParams = new URLSearchParams(window.location.search);
@@ -9,7 +9,7 @@ const parentWindowReloader = window.parent.__reloader__;
 
 const stateFromLocalStorage = localStorage.hasOwnProperty("jsenv_toolbar") ? JSON.parse(localStorage.getItem("jsenv_toolbar")) : {};
 
-const animationsEnabledSignal = a(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
+const animationsEnabledSignal = y(typeof stateFromLocalStorage.animationsEnabled === "boolean" ? stateFromLocalStorage.animationsEnabled : typeof paramsFromParentWindow.animationsEnabled === "boolean" ? paramsFromParentWindow.animationsEnabled : false);
 
 j(() => {
   const animationsEnabled = animationsEnabledSignal.value;
@@ -20,11 +20,11 @@ j(() => {
   }
 });
 
-const executionTooltipOpenedSignal = a(false);
-const executionSignal = a({
+const executionTooltipOpenedSignal = y(false);
+const executionSignal = y({
   status: "running"
 });
-const previousExecutionSignal = a(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
+const previousExecutionSignal = y(sessionStorage.hasOwnProperty(window.location.href) ? JSON.parse(sessionStorage.getItem(window.location.href)) : null);
 window.parent.__supervisor__.getDocumentExecutionResult().then(({
   status,
   startTime,
@@ -39,8 +39,8 @@ window.parent.__supervisor__.getDocumentExecutionResult().then(({
 
 const notificationAPIDetected = typeof window.Notification === "function";
 
-const notificationsEnabledSignal = a(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
-const notificationPermissionSignal = a(Notification.permission);
+const notificationsEnabledSignal = y(typeof stateFromLocalStorage.notificationsEnabled === "boolean" ? stateFromLocalStorage.notificationsEnabled : typeof paramsFromParentWindow.notificationsEnabled === "boolean" ? paramsFromParentWindow.notificationsEnabled : false);
+const notificationPermissionSignal = y(Notification.permission);
 
 const enableNotifications = () => {
   notificationsEnabledSignal.value = true;
@@ -167,7 +167,7 @@ j(() => {
   }
 });
 
-const changesTooltipOpenedSignal = a(false);
+const changesTooltipOpenedSignal = y(false);
 
 const openChangesToolip = () => {
   changesTooltipOpenedSignal.value = true;
@@ -176,9 +176,9 @@ const closeChangesToolip = () => {
   changesTooltipOpenedSignal.value = false;
 };
 
-const autoreloadEnabledSignal = a(false);
-const reloaderStatusSignal = a("idle");
-const changesSignal = a(0);
+const autoreloadEnabledSignal = y(false);
+const reloaderStatusSignal = y("idle");
+const changesSignal = y(0);
 if (parentWindowReloader) {
   autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   parentWindowReloader.autoreload.onchange = () => {
@@ -415,8 +415,8 @@ const renderDocumentIndexLink = () => {
   setLinkHrefForParentWindow(document.querySelector("#document_index_link"), "/");
 };
 
-const serverTooltipOpenedSignal = a(false);
-const serverConnectionSignal = a("default");
+const serverTooltipOpenedSignal = y(false);
+const serverConnectionSignal = y("default");
 const serverEvents$1 = window.__server_events__;
 if (serverEvents$1) {
   serverEvents$1.readyState.onchange = () => {
@@ -480,7 +480,7 @@ const updateServerIndicator = connectionState => {
   }
 };
 
-const openedSignal = a(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
+const openedSignal = y(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
 
 const openToolbar = () => {
   openedSignal.value = true;
@@ -803,7 +803,7 @@ const showToolbar = () => {
   }
 };
 
-const settingsOpenedSignal = a(false);
+const settingsOpenedSignal = y(false);
 
 const openSettings = () => {
   settingsOpenedSignal.value = true;
@@ -1071,7 +1071,7 @@ const applyNotificationNOTGrantedEffects = () => {
   };
 };
 
-const ribbonDisplayedSignal = a(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
+const ribbonDisplayedSignal = y(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
 
 const ribbonBox = document.querySelector("#ribbon_box");
 const ribbonCheckbox = ribbonBox.querySelector("input");
@@ -1098,7 +1098,7 @@ const renderToolbarRibbonSetting = () => {
   }
 };
 
-const themeSignal = a(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
+const themeSignal = y(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
 
 const switchToLightTheme = () => {
   themeSignal.value = "light";

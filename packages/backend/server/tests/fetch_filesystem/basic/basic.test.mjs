@@ -8,6 +8,7 @@ import {
 import { fetchFileSystem } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/server/src/plugins/filesystem/etag.js";
 import { urlToFileSystemPath } from "@jsenv/urls";
+import { unlinkSync } from "node:fs";
 
 if (process.platform === "win32") {
   process.exit(0);
@@ -348,6 +349,58 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     body: actual.body,
   };
   assert({ actual, expect });
+}
+
+// 403 on path traversal (percent-encoded)
+{
+  writeFileStructureSync(gitIgnoredDirectoryUrl, {});
+  const secretFileUrl = new URL("../secret.txt", gitIgnoredDirectoryUrl).href;
+  writeFileSync(secretFileUrl, Buffer.from("secret"));
+  try {
+    const actual = await fetchFileSystem(
+      {
+        method: "GET",
+        resource: "/%2e%2e/secret.txt",
+        url: secretFileUrl,
+        headers: {},
+      },
+      null,
+      gitIgnoredDirectoryUrl,
+    );
+    const expect = {
+      status: 403,
+      statusText: "not allowed to read outside root directory",
+    };
+    assert({ actual, expect });
+  } finally {
+    unlinkSync(new URL(secretFileUrl));
+  }
+}
+
+// 403 on path traversal (unencoded)
+{
+  writeFileStructureSync(gitIgnoredDirectoryUrl, {});
+  const secretFileUrl = new URL("../secret.txt", gitIgnoredDirectoryUrl).href;
+  writeFileSync(secretFileUrl, Buffer.from("secret"));
+  try {
+    const actual = await fetchFileSystem(
+      {
+        method: "GET",
+        resource: "/../secret.txt",
+        url: secretFileUrl,
+        headers: {},
+      },
+      null,
+      gitIgnoredDirectoryUrl,
+    );
+    const expect = {
+      status: 403,
+      statusText: "not allowed to read outside root directory",
+    };
+    assert({ actual, expect });
+  } finally {
+    unlinkSync(new URL(secretFileUrl));
+  }
 }
 
 // directory url missing

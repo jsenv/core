@@ -4,7 +4,11 @@
  * It is meant to be used inside "requestToResponse"
  */
 
-import { urlToExtension, urlToPathname } from "@jsenv/urls";
+import {
+  urlIsOrIsInsideOf,
+  urlToExtension,
+  urlToPathname,
+} from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createReadStream, readFile, statSync } from "node:fs";
 
@@ -62,8 +66,14 @@ export const fetchFileSystem = async (
   } else {
     resource = request.resource.slice(1);
   }
-  const filesystemUrl = new URL(resource, directoryUrl);
+  const filesystemUrl = new URL(resource, directoryUrlString);
   const urlString = asUrlString(filesystemUrl);
+  if (!urlIsOrIsInsideOf(urlString, directoryUrlString)) {
+    return {
+      status: 403,
+      statusText: "not allowed to read outside root directory",
+    };
+  }
 
   if (cacheControl === undefined) {
     cacheControl = isVersioned(request)

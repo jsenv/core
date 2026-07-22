@@ -3930,6 +3930,24 @@ const pathnameToParentPathname = (pathname) => {
   return pathname.slice(0, slashLastIndex + 1);
 };
 
+const urlIsOrIsInsideOf = (url, otherUrl) => {
+  const urlObject = new URL(url);
+  const otherUrlObject = new URL(otherUrl);
+
+  if (urlObject.origin !== otherUrlObject.origin) {
+    return false;
+  }
+
+  const urlPathname = urlObject.pathname;
+  const otherUrlPathname = otherUrlObject.pathname;
+  if (urlPathname === otherUrlPathname) {
+    return true;
+  }
+
+  const isInside = urlPathname.startsWith(otherUrlPathname);
+  return isInside;
+};
+
 const urlToFileSystemPath = (url) => {
   const urlObject = new URL(url);
   let { origin, pathname, hash } = urlObject;
@@ -8734,8 +8752,14 @@ const fetchFileSystem = async (
   } else {
     resource = request.resource.slice(1);
   }
-  const filesystemUrl = new URL(resource, directoryUrl);
+  const filesystemUrl = new URL(resource, directoryUrlString);
   const urlString = asUrlString(filesystemUrl);
+  if (!urlIsOrIsInsideOf(urlString, directoryUrlString)) {
+    return {
+      status: 403,
+      statusText: "not allowed to read outside root directory",
+    };
+  }
 
   if (cacheControl === undefined) {
     cacheControl = isVersioned(request)
