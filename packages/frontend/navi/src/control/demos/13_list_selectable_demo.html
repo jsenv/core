@@ -238,13 +238,29 @@
                 color: "#555",
               }}
             >
-              <legend style={{ padding: "0 4px", fontWeight: 600 }}>searchNoMatchMode</legend>
+              <legend style={{ padding: "0 4px", fontWeight: 600 }}>
+                searchNoMatchMode
+              </legend>
               {[
                 { mode: "remove", desc: "removes non-matching items from DOM" },
-                { mode: "invisible_and_inert", desc: "keeps layout but invisible and non-interactive" },
-                { mode: "muted", desc: "keeps items visible, opacified, and still interactive" },
+                {
+                  mode: "invisible_and_inert",
+                  desc: "keeps layout but invisible and non-interactive",
+                },
+                {
+                  mode: "muted",
+                  desc: "keeps items visible, opacified, and still interactive",
+                },
               ].map(({ mode, desc }) => (
-                <label key={mode} style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
+                <label
+                  key={mode}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    cursor: "pointer",
+                  }}
+                >
                   <input
                     type="radio"
                     name="searchNoMatchMode"
@@ -1853,6 +1869,8 @@
                 action={(value) => {
                   setSelected(value);
                 }}
+                maxHeight="200"
+                border="1px solid grey"
               >
                 {LEGEND_FRUITS.map((fruit, i) => (
                   <List.Item
