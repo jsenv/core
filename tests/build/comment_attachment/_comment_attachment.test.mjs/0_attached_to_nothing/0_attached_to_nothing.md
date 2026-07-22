@@ -1,7 +1,7 @@
-# [basic](../../comment_preserved.test.mjs)
+# [attached to nothing](../../comment_attachment.test.mjs)
 
 ```js
-run()
+runOn("./attached_to_nothing.js")
 ```
 
 # 1/2 write 2 files into "./build/"

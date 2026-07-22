@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "attached_to_reexport.js",
+  "sources": [
+    "../client/attached_to_reexport.js"
+  ],
+  "sourcesContent": [
+    "const value = 42;\n\nexport { value };\n//# sourceMappingURL=attached_to_reexport.js.map\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;;;"
+}

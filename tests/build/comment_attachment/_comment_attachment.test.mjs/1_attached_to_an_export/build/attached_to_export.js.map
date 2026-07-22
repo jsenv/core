@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "attached_to_export.js",
+  "sources": [
+    "../client/attached_to_export.js"
+  ],
+  "sourcesContent": [
+    "/*!\n * comment attached to an export\n */\nconst value = 2;\n\nexport { value };\n//# sourceMappingURL=attached_to_export.js.map\n"
+  ],
+  "names": [],
+  "mappings": "AAAA;AACA;AACA;AACY,MAAC,KAAK,GAAG;;;;"
+}

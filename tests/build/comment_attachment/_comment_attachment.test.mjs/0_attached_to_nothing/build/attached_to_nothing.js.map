@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "attached_to_nothing.js",
+  "sources": [
+    "../client/attached_to_nothing.js"
+  ],
+  "sourcesContent": [
+    "const value = 1;\n\n/*!\n * comment attached to nothing: nothing follows it in the file\n */\n\nexport { value };\n//# sourceMappingURL=attached_to_nothing.js.map\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;AAErB;AACA;AACA;;;;"
+}
