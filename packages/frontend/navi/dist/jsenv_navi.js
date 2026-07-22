@@ -18968,6 +18968,17 @@ CONSTRAINT_ATTRIBUTE_SET.add("data-single-space");
  */
 
 
+// Our own compact/custom duration notation interpolates raw numbers
+// directly (unlike Intl.DurationFormat, which groups thousands on its own,
+// e.g. "5 400 secondes") — this keeps that consistent without reimplementing
+// locale-aware grouping. Falls back to the raw value as-is for a
+// non-numeric mid-edit value (e.g. "2a"), which Intl.NumberFormat can't
+// format anyway.
+const formatCompactNumber = (value, lang) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? new Intl.NumberFormat(lang).format(n) : value;
+};
+
 /**
  * Formats a date as a human-readable day string.
  *
@@ -19221,15 +19232,20 @@ const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", alwaysShowHours?: boolean }} [options]
- * @param {boolean} [options.alwaysShowHours=false] - Normally a zero-hours
- *   component is dropped entirely (a real 5-minute duration should print as
- *   "5 minutes", not "0 hours 5 minutes") — set this to keep it (e.g. "0 h
- *   et 5 min"/"0h 5min"/"0h05") instead. Only meaningful when `minutes` is
- *   itself less than 60, i.e. the hours component would otherwise be zero;
- *   used by `<Time type="time">` for a time-of-day at midnight, where
- *   dropping the hour would make it indistinguishable from an actual
- *   duration (see time.jsx's own TimeTime).
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean }} [options]
+ * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
+ *   represents a time-of-day rather than a real duration (used by
+ *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
+ *   things at once, both consequences of a clock's "0" being a meaningful
+ *   hour rather than "no hours":
+ *   - a zero-hours component is normally dropped entirely (a real 5-minute
+ *     duration should print as "5 minutes", not "0 hours 5 minutes"); this
+ *     keeps it instead (e.g. "0 h et 5 min"/"0h 5min"/"00h05") so midnight
+ *     doesn't collapse to something indistinguishable from an actual
+ *     5-minute duration.
+ *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
+ *     (e.g. "5h30" → "05h30"), so it reads closer to a "05:30" clock.
+ *   Must not be set for plain duration formatting.
  *
  * @example
  * formatMinuteDuration(90, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
@@ -19237,20 +19253,21 @@ const formatTime = (date, lang) => {
  * formatMinuteDuration(90, { lang: "fr", format: "narrow" })    // "1h 30min" (Intl narrow)
  * formatMinuteDuration(90, { lang: "fr", format: "compact" })   // "1h30" (custom, no minute symbol)
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
- * formatMinuteDuration(5, { lang: "fr", format: "narrow", alwaysShowHours: true }) // "0h 5min"
+ * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
+ * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
  */
 const formatMinuteDuration = (
   minutes,
-  { lang = languagesSignal.value, format = "long", alwaysShowHours = false } = {},
+  { lang = languagesSignal.value, format = "long", clockStyle = false } = {},
 ) => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const fmt = new Intl.DurationFormat(lang, {
       style: format, // "long", "short", or "narrow"
-      ...(alwaysShowHours ? { hoursDisplay: "always" } : {}),
+      ...(clockStyle ? { hoursDisplay: "always" } : {}),
     });
-    if (h === 0 && !alwaysShowHours) {
+    if (h === 0 && !clockStyle) {
       return fmt.format({ minutes: m });
     }
     if (m === 0) {
@@ -19261,13 +19278,16 @@ const formatMinuteDuration = (
   // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  if (h === 0 && !alwaysShowHours) {
+  const hStr = clockStyle
+    ? String(h).padStart(2, "0")
+    : formatCompactNumber(h, lang);
+  if (h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
-    return `${h}${hSym}`;
+    return `${hStr}${hSym}`;
   }
-  return `${h}${hSym}${String(m).padStart(2, "0")}`;
+  return `${hStr}${hSym}${String(m).padStart(2, "0")}`;
 };
 
 /**
@@ -19322,7 +19342,9 @@ const formatSecondDuration = (
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
   const parts = [];
-  if (h > 0) parts.push(`${h}${hSym}`);
+  // m/s are always 0-59 by construction (never need grouping); h can be
+  // arbitrarily large for a long duration.
+  if (h > 0) parts.push(`${formatCompactNumber(h, lang)}${hSym}`);
   if (m > 0) parts.push(`${m}${mSym}`);
   if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
   return parts.join("");
@@ -19423,36 +19445,40 @@ const formatDuration = (
   const parts = [];
 
   if (hasNonZero("years")) {
-    parts.push(`${duration.years}${sym("year")}`);
+    parts.push(`${formatCompactNumber(duration.years, lang)}${sym("year")}`);
   }
   if (hasNonZero("months")) {
-    parts.push(`${duration.months}${sym("month")}`);
+    parts.push(`${formatCompactNumber(duration.months, lang)}${sym("month")}`);
   }
   if (hasNonZero("weeks")) {
-    parts.push(`${duration.weeks}${sym("week")}`);
+    parts.push(`${formatCompactNumber(duration.weeks, lang)}${sym("week")}`);
   }
   if (hasNonZero("days")) {
-    parts.push(`${duration.days}${sym("day")}`);
+    parts.push(`${formatCompactNumber(duration.days, lang)}${sym("day")}`);
   }
 
-  // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
+  // Hours + minutes: when both present, pad minutes to 2 digits after the h
+  // symbol — minutes stays a plain 2-digit pad (it's always 0-59 by
+  // convention), only hours goes through grouping.
   const hSym = sym("hour");
   const mSym = sym("minute");
   if (hasNonZero("hours") && hasNonZero("minutes")) {
     parts.push(
-      `${duration.hours}${hSym}${String(duration.minutes).padStart(2, "0")}`,
+      `${formatCompactNumber(duration.hours, lang)}${hSym}${String(duration.minutes).padStart(2, "0")}`,
     );
   } else if (hasNonZero("hours")) {
-    parts.push(`${duration.hours}${hSym}`);
+    parts.push(`${formatCompactNumber(duration.hours, lang)}${hSym}`);
   } else if (hasNonZero("minutes")) {
-    parts.push(`${duration.minutes}${mSym}`);
+    parts.push(`${formatCompactNumber(duration.minutes, lang)}${mSym}`);
   }
 
   if (hasNonZero("seconds")) {
-    parts.push(`${duration.seconds}${sym("second")}`);
+    parts.push(`${formatCompactNumber(duration.seconds, lang)}${sym("second")}`);
   }
   if (hasNonZero("milliseconds")) {
-    parts.push(`${duration.milliseconds}${sym("millisecond")}`);
+    parts.push(
+      `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
+    );
   }
   return parts.join("") || "0";
 };
@@ -33397,13 +33423,30 @@ const InputTextualWithSuggestions = props => {
 // Nice side effect is that input_group.jsx will see all input is selected
 // and arrow left/right will always nav between inputs.
 // (Otherwise we would prevent left/right + show calllout about readonly)
+//
+// Not on touch: .select() there triggers the native mobile text-selection UI
+// (handles + magnifier), which makes no sense for a picker (opens a
+// popover/dialog on tap, not meant for text selection) and isn't wanted on a
+// plain readonly text input either. onPointerDown tracks the pointer type
+// that initiated the interaction (same convention as button_ui.jsx's own
+// `e.pointerType !== "touch"` check) so the focus handler — which fires
+// right after, but as a plain FocusEvent with no pointerType of its own —
+// can also skip select() for that same interaction.
 const useAutoSelectReadOnly = (props) => {
+  const lastPointerTypeRef = useRef(null);
+  const onPointerDown = (e) => {
+    props.onPointerDown?.(e);
+    lastPointerTypeRef.current = e.pointerType;
+  };
   const onFocus = (e) => {
     props.onFocus(e);
     if (e.defaultPrevented) {
       return;
     }
     if (!e.target.readOnly) {
+      return;
+    }
+    if (lastPointerTypeRef.current === "touch") {
       return;
     }
     e.preventDefault();
@@ -33417,11 +33460,14 @@ const useAutoSelectReadOnly = (props) => {
     if (!e.target.readOnly) {
       return;
     }
+    if (lastPointerTypeRef.current === "touch") {
+      return;
+    }
     e.preventDefault();
     e.target.select();
   };
 
-  return { onFocus, onMouseDown };
+  return { onFocus, onMouseDown, onPointerDown };
 };
 
 installImportMetaCssBuild(import.meta);/**
@@ -39974,22 +40020,27 @@ const TimeTime = ({
   // other hour keeps at least its own "N hour(s)" wording as a hint that
   // this is a time-of-day, not a duration — only hour 0 loses that hint
   // entirely.
+  // clockStyle: this is always a time-of-day here, never a duration — keeps
+  // a zero hour instead of dropping it (midnight would otherwise be
+  // indistinguishable from an actual 5-minute duration), and in
+  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
+  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
   let text;
   if (date.getHours() !== 0) {
     text = formatMinuteDuration(totalMinutes, {
       lang,
-      format
+      format,
+      clockStyle: true
     });
   } else if (format !== "long") {
     // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
-    // dropping it (formatMinuteDuration's own alwaysShowHours) — e.g.
-    // "0 h et 5 min"/"0h 5min"/"0h05" — rather than substituting a
-    // translated "midnight" word, which would look out of place squeezed
-    // into these otherwise terse, symbol-based formats.
+    // dropping it — e.g. "0 h et 5 min"/"0h 5min"/"00h05" — rather than
+    // substituting a translated "midnight" word, which would look out of
+    // place squeezed into these otherwise terse, symbol-based formats.
     text = formatMinuteDuration(totalMinutes, {
       lang,
       format,
-      alwaysShowHours: true
+      clockStyle: true
     });
   } else {
     const midnightWord = naviI18n("time.midnight", undefined, {
@@ -40004,7 +40055,7 @@ const TimeTime = ({
       text = formatMinuteDuration(totalMinutes, {
         lang,
         format,
-        alwaysShowHours: true
+        clockStyle: true
       });
     } else {
       // Swap just the "0 heure(s)" part of the Intl-generated duration
