@@ -10,8 +10,8 @@
     "resolve",
     "resolveResultPromise"
   ],
-  "mappings": "AAAAA,AACMA,MADA,AACM,CADLC,AACMA,aADO,AACM,GADH,AACM,IADFC,AACMA,OADC,AACM,CADLC,AACOA,OADA,AACO,IADH,AACQ;AADR,EAC5CH,AACMA,MADA,AACM,CADLI,AACMA,oBADc,AACM,GADHD,AACMA,OADC,AACM;AADL,AAElC,CADL,AACM,CADL,AACM",
+  "mappings": "AACMA,MAAM,CAACC,aAAa,GAAG,IAAIC,OAAO,CAAEC,OAAO,IAAK;AAAA,EAC9CH,MAAM,CAACI,oBAAoB,GAAGD,OAAO;AAAA,CACtC,CAAC",
   "sourcesContent": [
-    "window.resultPromise = new Promise(resolve => {\n  window.resolveResultPromise = resolve;\n});\n//# sourceMappingURL=base/.jsenv_b/entry_main/craft/main.html@L10C5-L14C14.js.map\n"
+    "\n      window.resultPromise = new Promise((resolve) => {\n        window.resolveResultPromise = resolve;\n      });\n    "
   ]
 }

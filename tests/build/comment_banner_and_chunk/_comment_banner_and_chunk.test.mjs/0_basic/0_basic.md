@@ -16,9 +16,9 @@ see [./build/](./build/)
     "line": 1,
     "code": "/*!",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 1,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
@@ -26,9 +26,9 @@ see [./build/](./build/)
     "line": 2,
     "code": " * banner text",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 2,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
@@ -36,9 +36,9 @@ see [./build/](./build/)
     "line": 3,
     "code": " */",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 3,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
@@ -46,9 +46,9 @@ see [./build/](./build/)
     "line": 4,
     "code": 'import "./side_effects_chunk.js";',
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 4,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
@@ -66,9 +66,9 @@ see [./build/](./build/)
     "line": 6,
     "code": "const value = 42;",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 6,
-      "column": 0,
+      "source": "../client/lib.js",
+      "line": 1,
+      "column": 12,
       "name": null
     }
   },
@@ -86,9 +86,9 @@ see [./build/](./build/)
     "line": 8,
     "code": "export { value };",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 8,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
@@ -96,9 +96,9 @@ see [./build/](./build/)
     "line": 9,
     "code": "//# sourceMappingURL=main.js.map",
     "mapsTo": {
-      "source": "../client/main.js",
-      "line": 9,
-      "column": 0,
+      "source": null,
+      "line": null,
+      "column": null,
       "name": null
     }
   },
