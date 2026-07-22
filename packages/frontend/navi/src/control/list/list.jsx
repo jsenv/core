@@ -440,7 +440,7 @@ const ListUI = (props) => {
   import.meta.css = css;
   const {
     ref,
-    renderBudget = RENDER_BUDGET_DEFAULT,
+    renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
     renderBudgetSkipCheck,
     role,
     fallback,
@@ -461,6 +461,15 @@ const ListUI = (props) => {
     spacing,
     ...rest
   } = props;
+  // Accept a string (e.g. from an HTML attribute: renderBudget="50") the
+  // same way a bare number would work — arithmetic below (renderBudget / 2,
+  // start + renderBudget, etc.) would silently misbehave on a raw string
+  // ("+" concatenates instead of adding).
+  let renderBudget = renderBudgetProp;
+  if (typeof renderBudget === "string") {
+    const parsed = Number(renderBudget);
+    renderBudget = Number.isFinite(parsed) ? parsed : RENDER_BUDGET_DEFAULT;
+  }
   if (renderBudget < 30 && !renderBudgetSkipCheck) {
     console.warn(
       `List: renderBudget=${renderBudget} is too low. A renderBudget below 30 is not supported: on large screens or when the list grows, items outside the window would appear as blank space instead of rendered content. Use a value of at least 30, or omit the prop to use the default (${RENDER_BUDGET_DEFAULT}).`,
@@ -614,7 +623,7 @@ const ListFirstResolver = (props) => {
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
- *   renderBudget?: number,
+ *   renderBudget?: number | string,
  *   virtualItemSize?: number,
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
