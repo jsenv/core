@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "main.js",
+  "sources": [
+    "../client/main.js"
+  ],
+  "sourcesContent": [
+    "const value = 42;\n\nexport { value };\n//# sourceMappingURL=main.js.map\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;;;"
+}
