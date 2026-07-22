@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "comment_top_of_file.js",
+  "sources": [
+    "../client/comment_top_of_file.js"
+  ],
+  "sourcesContent": [
+    "const value = 42;\n\nexport { value };\n//# sourceMappingURL=comment_top_of_file.js.map\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;;;"
+}

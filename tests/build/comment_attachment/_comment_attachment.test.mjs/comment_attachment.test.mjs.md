@@ -1,9 +1,10 @@
 # [comment_attachment.test.mjs](../comment_attachment.test.mjs)
 
 
-- [attached to nothing](0_attached_to_nothing/0_attached_to_nothing.md)
-- [attached to an export](1_attached_to_an_export/1_attached_to_an_export.md)
-- [attached to a re-export](2_attached_to_a_re-export/2_attached_to_a_re-export.md)
+- [comment at the top of the file](0_comment_at_the_top_of_the_file/0_comment_at_the_top_of_the_file.md)
+- [comment at the end of the file](1_comment_at_the_end_of_the_file/1_comment_at_the_end_of_the_file.md)
+- [attached to an export](2_attached_to_an_export/2_attached_to_an_export.md)
+- [attached to a re-export](3_attached_to_a_re-export/3_attached_to_a_re-export.md)
 
 ---
 

@@ -21,11 +21,17 @@
  * doesn't exercise the rewrite path at all, and can misleadingly look like
  * "everything survives" since rollup then has little to resolve/rewrite.
  *
- * Three cases below:
- * - attached to nothing: file is pure `import` + bare re-export, no local
- *   declaration at all, comment trailing at the end. Nothing here is ever
- *   copied as literal text (import and re-export are both resynthesized),
- *   so the comment is dropped.
+ * Four cases below (this is the layout of navi's real index.js: a
+ * top-of-file comment, then a bare side-effect `import`, then re-exports —
+ * comment_top_of_file and comment_end_of_file are the two positions we'd
+ * actually consider putting an AI-facing comment):
+ * - comment at the top of the file: comment directly above `import { value }
+ *   from "./lib.js"`. The import is resynthesized, not copied as literal
+ *   text, so the comment is dropped.
+ * - comment at the end of the file: `import` + bare `export { value };`,
+ *   no local declaration at all, comment trailing after both. Neither
+ *   preceding statement is ever copied as literal text, so the comment is
+ *   dropped too.
  * - attached to an export: comment directly above a real declaration
  *   (`export const value = importedValue * 2`) that rollup keeps and
  *   copies verbatim — survives even though the file also imports another
@@ -51,7 +57,8 @@ const runOn = (entryPointRelativeUrl) => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("attached to nothing", () => runOn("./attached_to_nothing.js"));
+  test("comment at the top of the file", () => runOn("./comment_top_of_file.js"));
+  test("comment at the end of the file", () => runOn("./comment_end_of_file.js"));
   test("attached to an export", () => runOn("./attached_to_export.js"));
   test("attached to a re-export", () => runOn("./attached_to_reexport.js"));
 });
