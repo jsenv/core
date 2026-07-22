@@ -135,6 +135,40 @@
       const LAST_WEEK = new Date(TODAY);
       LAST_WEEK.setDate(LAST_WEEK.getDate() - 7);
 
+      // Same offsets shown once per eventDuration value below, with format
+      // as the column this time — otherwise format's effect on the
+      // "En cours" window is invisible (it looked like format changed
+      // nothing when eventDuration was the column and format was fixed).
+      const EVENT_DURATION_OFFSETS = [
+        ["now + 1h", 60],
+        ["now + 10min", 10],
+        ["now - 1min", -1],
+        ["now - 20min", -20],
+        ["now - 31min", -31],
+        ["now - 59min", -59],
+        ["now - 61min", -61],
+      ];
+      const EventDurationGrid = ({ eventDuration, lang }) => (
+        <Grid cols={["(default)", 'format="short"', 'format="narrow"']}>
+          {EVENT_DURATION_OFFSETS.map(([label, offsetMinutes]) => {
+            const date = new Date(NOW.getTime() + offsetMinutes * 60 * 1000);
+            return (
+              <GRow label={label} key={label}>
+                <Time eventDuration={eventDuration} lang={lang}>
+                  {date}
+                </Time>
+                <Time eventDuration={eventDuration} format="short" lang={lang}>
+                  {date}
+                </Time>
+                <Time eventDuration={eventDuration} format="narrow" lang={lang}>
+                  {date}
+                </Time>
+              </GRow>
+            );
+          })}
+        </Grid>
+      );
+
       const Demo = () => {
         const [lang, setLang] = useState("fr");
 
@@ -258,93 +292,33 @@
                   color: "#555",
                 }}
               >
-                eventDuration
+                eventDuration=0
               </Title>
-              <Grid
-                cols={[
-                  "eventDuration=0",
-                  "eventDuration=30min",
-                  "eventDuration=1h",
-                ]}
+              <EventDurationGrid eventDuration={0} lang={lang} />
+
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
               >
-                <GRow label="now + 1h">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() + 60 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now + 10min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() + 10 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 1min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 1 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 20min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 20 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 31min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 31 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 59min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 59 * 60 * 1000)}
-                  </Time>
-                </GRow>
-                <GRow label="now - 61min">
-                  <Time lang={lang}>
-                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={30 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
-                  </Time>
-                  <Time eventDuration={60 * 60 * 1000} lang={lang}>
-                    {new Date(NOW.getTime() - 61 * 60 * 1000)}
-                  </Time>
-                </GRow>
-              </Grid>
+                eventDuration=30min
+              </Title>
+              <EventDurationGrid eventDuration={30 * 60 * 1000} lang={lang} />
+
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
+                eventDuration=1h
+              </Title>
+              <EventDurationGrid eventDuration={60 * 60 * 1000} lang={lang} />
 
               <Title
                 as="h3"
