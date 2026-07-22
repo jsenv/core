@@ -429,10 +429,7 @@ const TYPO_PROPS = {
   // combo from MDN's own text-box example, most useful for compact things
   // like buttons/badges/labels. Use textBox/textBoxTrim/textBoxEdge
   // directly for any other combination.
-  textBoxCrop: applyToCssPropWhenTruthy(
-    "textBox",
-    "trim-both cap alphabetic",
-  ),
+  textBoxCrop: applyToCssPropWhenTruthy("textBox", "trim-both cap alphabetic"),
 };
 const VISUAL_PROPS = {
   outline: PASS_THROUGH,
@@ -468,6 +465,7 @@ const VISUAL_PROPS = {
   overflowY: PASS_THROUGH,
   objectFit: PASS_THROUGH,
   accentColor: PASS_THROUGH,
+  scrollbarWidth: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),

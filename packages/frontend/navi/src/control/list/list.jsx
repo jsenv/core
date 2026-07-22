@@ -147,6 +147,7 @@ const css = /* css */ `
       flex-wrap: inherit;
       overflow: auto;
       overscroll-behavior: inherit; /* inherit select behavior */
+      scrollbar-width: inherit;
     }
 
     &[data-expand-x] {
