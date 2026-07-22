@@ -1101,7 +1101,10 @@ const getScrollInfo = (
       break;
     }
   }
-  if (hitFiller) {
+  // Shared by the "hit a filler" and "hit nothing at all" cases below: both
+  // mean we don't know the real on-screen index, only the scroll position,
+  // so estimate from it rather than assume nothing changed.
+  const estimateFromScrollPos = (reasonPrefix) => {
     const virtualItemSize = virtualItemSizeSignal.peek();
     if (virtualItemSize === 0) {
       return null;
@@ -1111,8 +1114,11 @@ const getScrollInfo = (
     return {
       item: items[index],
       index,
-      reason: `hit filler, estimated at ${index} (${items[index]?.value})`,
+      reason: `${reasonPrefix}, estimated at ${index} (${items[index]?.value})`,
     };
+  };
+  if (hitFiller) {
+    return estimateFromScrollPos("hit filler");
   }
   if (hitEl) {
     const hitId = hitEl.id;
@@ -1126,11 +1132,22 @@ const getScrollInfo = (
       reason: `hit item at ${index} (${items[index].value})`,
     };
   }
+  // Neither a real item nor a filler was hit within listEl — e.g. part of
+  // the scan range fell outside the page's actually reachable viewport
+  // (docked devtools shrinks it, for one). Keeping the stale renderWindow
+  // here (as this used to do) means the DOM never gets asked to catch up
+  // with a scrollTop that may have jumped far away — the user ends up
+  // staring at filler space. Same estimate as the hitFiller case is a safe
+  // fallback: it only needs the scroll position, not a successful hit-test.
+  const estimated = estimateFromScrollPos("no hit");
+  if (estimated) {
+    return estimated;
+  }
   const fallbackIndex = renderWindowRef.current.start;
   return {
     item: items[fallbackIndex],
     index: fallbackIndex,
-    reason: "no hit",
+    reason: "no hit, no virtualItemSize yet",
   };
 };
 

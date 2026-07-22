@@ -84,7 +84,6 @@
       .stat-value.warning {
         color: #ce9178;
       }
-
     </style>
   </head>
   <body>
@@ -94,7 +93,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { signal } from "@preact/signals";
-      import { useState, useRef, useEffect } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -154,48 +153,9 @@
         return `${name}-${num}`;
       });
 
-      // Scoped DOM-item tracking for a second list (the module-level
-      // domItemsSignal/peakDomItemsSignal above track everything under
-      // #root, which would mix counts across both demo sections).
-      const useDomItemTracking = (containerRef) => {
-        const domItemsSignalRef = useRef(null);
-        const peakDomItemsSignalRef = useRef(null);
-        if (!domItemsSignalRef.current) {
-          domItemsSignalRef.current = signal(0);
-          peakDomItemsSignalRef.current = signal(0);
-        }
-        useEffect(() => {
-          const container = containerRef.current;
-          if (!container) {
-            return undefined;
-          }
-          const updateCount = () => {
-            const count = container.querySelectorAll(
-              "[navi-list-item-real]",
-            ).length;
-            domItemsSignalRef.current.value = count;
-            if (count > peakDomItemsSignalRef.current.value) {
-              peakDomItemsSignalRef.current.value = count;
-            }
-          };
-          // The initial items are already in the DOM by the time this effect
-          // runs (mount already committed) — observe() only reports mutations
-          // from here on, so it would miss that first batch without this.
-          updateCount();
-          const observer = new MutationObserver(updateCount);
-          observer.observe(container, { childList: true, subtree: true });
-          return () => observer.disconnect();
-        }, []);
-        return [domItemsSignalRef.current, peakDomItemsSignalRef.current];
-      };
-
-      const StatsBar = ({
-        totalItems,
-        domItemsSignal: domSig = domItemsSignal,
-        peakDomItemsSignal: peakSig = peakDomItemsSignal,
-      }) => {
-        const domItems = domSig.value;
-        const peakDomItems = peakSig.value;
+      const StatsBar = ({ totalItems }) => {
+        const domItems = domItemsSignal.value;
+        const peakDomItems = peakDomItemsSignal.value;
         const savedFromDom = totalItems - domItems;
         return (
           <div className="stats-bar">
@@ -287,6 +247,29 @@
               <code>max-height</code> is set. Scroll programmatically below to
               verify the component renders the correct DOM items at each scroll
               position.
+            </p>
+
+            <p
+              style={{
+                background: "#fff8e1",
+                border: "1px solid #f0d878",
+                borderRadius: "6px",
+                padding: "10px 14px",
+                fontSize: "0.85rem",
+                color: "#7a5c00",
+              }}
+            >
+              <strong>Known bug — how to trigger it:</strong> open devtools
+              docked so its panel partially covers this list, then — without
+              moving the mouse — do one big wheel scroll over the list.
+              Currently this lands you on blank filler space instead of real
+              items. Root cause: the scroll-sync hit-tests the DOM via{" "}
+              <code>document.elementFromPoint</code> to figure out which item
+              is at the new scroll position; devtools shrinks the page's own
+              visible viewport, so part of the scan can fall outside it and
+              find nothing — the current fallback for "found nothing" is to
+              keep the previous (now stale) render window as-is, instead of
+              estimating a new one.
             </p>
 
             <StatsBar totalItems={LARGE_LIST.length} />
@@ -494,98 +477,7 @@
         );
       };
 
-      // Reproduces a scenario where the list's own parent container is
-      // itself scrollable (has more content than fits) — scrolling the list
-      // while the parent is also scrolled can leave filler space visible
-      // instead of items.
-      const NestedScrollDemo = () => {
-        const outerScrollRef = useRef(null);
-        const listRef = useRef(null);
-        const [domItemsSignal2, peakDomItemsSignal2] =
-          useDomItemTracking(outerScrollRef);
-
-        return (
-          <div className="demo-section">
-            <h2>200 items, renderBudget=50 — nested in a scrollable parent</h2>
-            <p>
-              The list (max-height 260px, own internal virtual scroll) sits
-              inside a taller outer container (400px) that itself has extra
-              content above/below — so the outer container has its own
-              scrollbar too, independent of the list's.
-            </p>
-
-            <StatsBar
-              totalItems={LARGE_LIST.length}
-              domItemsSignal={domItemsSignal2}
-              peakDomItemsSignal={peakDomItemsSignal2}
-            />
-
-            <div
-              ref={outerScrollRef}
-              style={{
-                height: "400px",
-                overflow: "auto",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-              }}
-            >
-              <div
-                style={{
-                  height: "250px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#999",
-                  fontSize: "0.85rem",
-                  borderBottom: "1px dashed #ccc",
-                }}
-              >
-                Extra content above the list (scroll to reveal it)
-              </div>
-              <List
-                ref={listRef}
-                maxHeight="260"
-                expandX
-                renderBudget={50}
-                separator
-              >
-                {LARGE_LIST.map((item, i) => (
-                  <ListItem
-                    key={item}
-                    id={`nested_${item}`}
-                    index={i}
-                    style={{ backgroundColor: SUGGESTION_BG }}
-                  >
-                    {item} #{i}
-                  </ListItem>
-                ))}
-              </List>
-              <div
-                style={{
-                  height: "250px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#999",
-                  fontSize: "0.85rem",
-                  borderTop: "1px dashed #ccc",
-                }}
-              >
-                Extra content below the list
-              </div>
-            </div>
-          </div>
-        );
-      };
-
-      const App = () => (
-        <>
-          <VirtualScrollDemo />
-          <NestedScrollDemo />
-        </>
-      );
-
-      render(<App />, document.getElementById("root"));
+      render(<VirtualScrollDemo />, document.getElementById("root"));
     </script>
   </body>
 </html>
