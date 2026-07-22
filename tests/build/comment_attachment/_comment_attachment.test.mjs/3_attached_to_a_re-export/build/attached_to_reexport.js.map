@@ -1,0 +1,12 @@
+{
+  "version": 3,
+  "file": "attached_to_reexport.js",
+  "sources": [
+    "../client/lib.js"
+  ],
+  "sourcesContent": [
+    "export const value = 42;\n"
+  ],
+  "names": [],
+  "mappings": "AAAY,MAAC,KAAK,GAAG;;;;"
+}

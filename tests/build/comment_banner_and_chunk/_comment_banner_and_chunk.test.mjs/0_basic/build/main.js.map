@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "../client/lib.js"
+  ],
+  "names": [],
+  "mappings": ";;;;;AAAY,CAAA,CAAA,CAAA,CAAA,CAAA,CAAC,CAAA,CAAA,CAAA,CAAA,CAAK,CAAA,CAAA,CAAG,CAAA,CAAA",
+  "sourcesContent": [
+    "export const value = 42;\n"
+  ]
+}

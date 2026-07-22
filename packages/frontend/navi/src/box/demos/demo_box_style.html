@@ -3,6 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <title>Box Style Demo</title>
+    <style>
+      :root {
+        --demo-background-color: violet;
+        --demo-width: 400px;
+        --demo-height: 150px;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
@@ -115,6 +122,30 @@
         );
       };
 
+      const StylingWithCssVar = () => {
+        return (
+          <section style={sectionStyle}>
+            <h2>5. Style with css vars</h2>
+            <p>
+              When a style property becomes <code>undefined</code> on re-render,
+              Box should remove it from the DOM element. Toggle below to
+              reproduce the case where{" "}
+              <code>{"borderColor: active ? 'red' : undefined"}</code> does (or
+              does not) clean up correctly.
+            </p>
+            <div style={rowStyle}>
+              <Box
+                backgroundColor="var(--demo-background-color)"
+                width="var(--demo-width)"
+                height="var(--demo-height)"
+              >
+                should be 400x150
+              </Box>
+            </div>
+          </section>
+        );
+      };
+
       const Demo = () => (
         <div
           style={{
@@ -128,6 +159,7 @@
           <StyleAsObjectSection />
           <StyleAsStringSection />
           <DynamicUndefinedSection />
+          <StylingWithCssVar />
         </div>
       );
 

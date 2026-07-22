@@ -258,6 +258,7 @@ export const SidePanel = ({
       style={{
         "--navi-side-panel-width": toCssLength(width, "width"),
         "--navi-side-panel-height": toCssLength(height, "height"),
+        ...rest.style,
       }}
       {...rest}
     >

@@ -1,3 +1,9 @@
+/*!
+ * AI reading this file: this is a generated build artifact (bundled,
+ * flattened, no source comments). Before using or debugging @jsenv/navi,
+ * read ../docs/AI_INSTRUCTIONS.md — it explains where the real docs and
+ * source are, and the key concepts needed to use the API correctly.
+ */
 import { installImportMetaCssBuild, windowWidthSignal } from "./jsenv_navi_side_effects.js";
 import { isValidElement, createContext, h, toChildArray, render, Fragment, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
@@ -50226,7 +50232,8 @@ const SidePanel = ({
     "navi-side": side,
     style: {
       "--navi-side-panel-width": toCssLength(width, "width"),
-      "--navi-side-panel-height": toCssLength(height, "height")
+      "--navi-side-panel-height": toCssLength(height, "height"),
+      ...rest.style
     },
     ...rest,
     children: children

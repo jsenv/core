@@ -4,7 +4,7 @@
     "base/client/main.js"
   ],
   "sourcesContent": [
-    "var answer = 42;\nconsole.log(answer);\n//# sourceMappingURL=main.js.map\n"
+    "const answer = 42;\nconsole.log(answer)"
   ],
   "names": [],
   "mappings": "AAAA,GAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAClB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC"

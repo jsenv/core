@@ -1,0 +1,17 @@
+{
+  "version": 3,
+  "file": "attached_to_export.js",
+  "sources": [
+    "../client/lib.js",
+    "../client/attached_to_export.js"
+  ],
+  "sourcesContent": [
+    "export const value = 42;\n",
+    "import { value as importedValue } from \"./lib.js\";\n\n/*!\n * comment attached to an export\n */\nexport const value = importedValue * 2;\n"
+  ],
+  "names": [
+    "value",
+    "importedValue"
+  ],
+  "mappings": "AAAO,MAAMA,OAAK,GAAG,EAAE;;ACEvB;AACA;AACA;AACY,MAAC,KAAK,GAAGC,OAAa,GAAG;;;;"
+}
