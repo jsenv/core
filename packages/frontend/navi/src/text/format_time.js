@@ -8,6 +8,17 @@ import { parseDuration } from "@jsenv/validity";
 import { languagesSignal } from "./lang_signal.js";
 import { naviI18n } from "./navi_i18n.js";
 
+// Our own compact/custom duration notation interpolates raw numbers
+// directly (unlike Intl.DurationFormat, which groups thousands on its own,
+// e.g. "5 400 secondes") — this keeps that consistent without reimplementing
+// locale-aware grouping. Falls back to the raw value as-is for a
+// non-numeric mid-edit value (e.g. "2a"), which Intl.NumberFormat can't
+// format anyway.
+const formatCompactNumber = (value, lang) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? new Intl.NumberFormat(lang).format(n) : value;
+};
+
 /**
  * Formats a date as a human-readable day string.
  *
@@ -307,7 +318,9 @@ export const formatMinuteDuration = (
   // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
-  const hStr = clockStyle ? String(h).padStart(2, "0") : String(h);
+  const hStr = clockStyle
+    ? String(h).padStart(2, "0")
+    : formatCompactNumber(h, lang);
   if (h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
@@ -369,7 +382,9 @@ export const formatSecondDuration = (
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
   const parts = [];
-  if (h > 0) parts.push(`${h}${hSym}`);
+  // m/s are always 0-59 by construction (never need grouping); h can be
+  // arbitrarily large for a long duration.
+  if (h > 0) parts.push(`${formatCompactNumber(h, lang)}${hSym}`);
   if (m > 0) parts.push(`${m}${mSym}`);
   if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
   return parts.join("");
@@ -470,36 +485,40 @@ export const formatDuration = (
   const parts = [];
 
   if (hasNonZero("years")) {
-    parts.push(`${duration.years}${sym("year")}`);
+    parts.push(`${formatCompactNumber(duration.years, lang)}${sym("year")}`);
   }
   if (hasNonZero("months")) {
-    parts.push(`${duration.months}${sym("month")}`);
+    parts.push(`${formatCompactNumber(duration.months, lang)}${sym("month")}`);
   }
   if (hasNonZero("weeks")) {
-    parts.push(`${duration.weeks}${sym("week")}`);
+    parts.push(`${formatCompactNumber(duration.weeks, lang)}${sym("week")}`);
   }
   if (hasNonZero("days")) {
-    parts.push(`${duration.days}${sym("day")}`);
+    parts.push(`${formatCompactNumber(duration.days, lang)}${sym("day")}`);
   }
 
-  // Hours + minutes: when both present, pad minutes to 2 digits after the h symbol
+  // Hours + minutes: when both present, pad minutes to 2 digits after the h
+  // symbol — minutes stays a plain 2-digit pad (it's always 0-59 by
+  // convention), only hours goes through grouping.
   const hSym = sym("hour");
   const mSym = sym("minute");
   if (hasNonZero("hours") && hasNonZero("minutes")) {
     parts.push(
-      `${duration.hours}${hSym}${String(duration.minutes).padStart(2, "0")}`,
+      `${formatCompactNumber(duration.hours, lang)}${hSym}${String(duration.minutes).padStart(2, "0")}`,
     );
   } else if (hasNonZero("hours")) {
-    parts.push(`${duration.hours}${hSym}`);
+    parts.push(`${formatCompactNumber(duration.hours, lang)}${hSym}`);
   } else if (hasNonZero("minutes")) {
-    parts.push(`${duration.minutes}${mSym}`);
+    parts.push(`${formatCompactNumber(duration.minutes, lang)}${mSym}`);
   }
 
   if (hasNonZero("seconds")) {
-    parts.push(`${duration.seconds}${sym("second")}`);
+    parts.push(`${formatCompactNumber(duration.seconds, lang)}${sym("second")}`);
   }
   if (hasNonZero("milliseconds")) {
-    parts.push(`${duration.milliseconds}${sym("millisecond")}`);
+    parts.push(
+      `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
+    );
   }
   return parts.join("") || "0";
 };
