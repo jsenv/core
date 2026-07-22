@@ -1,12 +1,31 @@
-# Instructions for AI assistants — read this before using @jsenv/navi
+# @jsenv/navi — context for AI assistants
 
-This file is meant for an AI reading `dist/jsenv_navi.js` (e.g. while debugging
-inside `node_modules/@jsenv/navi/`). That file is a **generated build
-artifact** — bundled and flattened, without the comments or JSDoc that live in
-the original source. Don't infer usage or edit behavior from reading it
-directly; treat it as an implementation detail.
+This file gives context for using `@jsenv/navi` as intended, useful whether
+you're reading the source directly or the built `dist/jsenv_navi.js` (e.g.
+inside `node_modules/@jsenv/navi/`).
 
-## Where to find real documentation
+`dist/jsenv_navi.js` is the bundled build of navi's actual source, not an
+opaque blob — JSDoc comments on individual functions/exports are preserved
+and carry real, useful information. What's lost in bundling is only
+file-level comments and anything attached to an import/re-export statement
+(the bundler only keeps a comment that sits directly above a declaration it
+retains as-is).
+
+## Library, but also a framework
+
+Navi is a library in the sense that every export is independently usable —
+pick just `stateSignal` or just `Table` if that's all you need, no
+all-or-nothing adoption required.
+
+But it's also meant as a framework: it provides low-level primitives for
+things most apps otherwise reinvent inconsistently — routing, async data
+lifecycle, CSS layering/design tokens, focus/keyboard handling, and more.
+When building something Navi already has a primitive for, prefer that
+primitive over a custom one, even if the custom one would be quicker to
+write for this one case — the value of using Navi as a framework comes from
+consistency across the app, not from any single call site.
+
+## More context, if the JSDoc on what you're using isn't enough
 
 - `README.md` (package root) — high-level overview of what Navi provides:
   routing, actions, layout (`Box`), typography, icons, forms/validation,
@@ -17,8 +36,8 @@ directly; treat it as an implementation detail.
 - `docs/MOBILE_LAYOUT_PITFALLS.md` — mobile-specific layout gotchas (viewport
   units, virtual keyboard, safe areas).
 - Source code on GitHub: https://github.com/jsenv/core/tree/main/packages/frontend/navi/src
-  — the actual source, with per-file context, is more reliable than the
-  bundled `dist/` output for understanding a specific export.
+  — worth checking if the JSDoc on an export genuinely doesn't answer your
+  question.
 
 ## Key concepts to know before guessing an API
 
@@ -35,5 +54,6 @@ directly; treat it as an implementation detail.
   prop to respond to interaction — this is the standard wiring, not
   `onChange` + manual state.
 
-If unsure which export solves a problem, check `README.md` and the `src/`
-tree on GitHub before assuming behavior from the bundled code.
+If unsure which export solves a problem, check `README.md` first — the
+`src/` tree on GitHub is there too if a specific export's own JSDoc doesn't
+cover what you need.

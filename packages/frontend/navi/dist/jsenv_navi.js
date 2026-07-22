@@ -1,8 +1,6 @@
-/*!
- * AI reading this file: this is a generated build artifact (bundled,
- * flattened, no source comments). Before using or debugging @jsenv/navi,
- * read ../docs/AI_INSTRUCTIONS.md — it explains where the real docs and
- * source are, and the key concepts needed to use the API correctly.
+/*
+ * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
+ * using @jsenv/navi as intended.
  */
 import { installImportMetaCssBuild, windowWidthSignal } from "./jsenv_navi_side_effects.js";
 import { isValidElement, createContext, h, toChildArray, render, Fragment, cloneElement } from "preact";
