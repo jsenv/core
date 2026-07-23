@@ -1,4 +1,4 @@
-import MagicString from "magic-string";
+import { MagicString } from "magic-string";
 
 export const createMagicSource = (content) => {
   if (content === undefined) {

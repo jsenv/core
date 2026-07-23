@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "41.2.13",
+  "version": "41.2.14",
   "type": "module",
   "description": "Tool to develop, test and build js projects",
   "repository": {
@@ -73,13 +73,13 @@
   },
   "dependencies": {
     "@jsenv/ast": "6.8.4",
-    "@jsenv/js-module-fallback": "1.4.35",
-    "@jsenv/plugin-bundling": "2.10.15",
+    "@jsenv/js-module-fallback": "1.4.36",
+    "@jsenv/plugin-bundling": "2.10.16",
     "@jsenv/plugin-minification": "1.7.5",
-    "@jsenv/plugin-supervisor": "1.8.6",
-    "@jsenv/plugin-transpilation": "1.5.77",
+    "@jsenv/plugin-supervisor": "1.8.7",
+    "@jsenv/plugin-transpilation": "1.5.78",
     "@jsenv/server": "17.3.1",
-    "@jsenv/sourcemap": "1.4.1",
+    "@jsenv/sourcemap": "1.4.2",
     "react-table": "7.8.0"
   },
   "devDependencies": {
@@ -132,6 +132,7 @@
     "prettier-plugin-organize-imports": "4.3.0",
     "prettier-plugin-pkg": "0.22.1",
     "prettier-plugin-sql": "0.20.0",
+    "source-map": "0.8.0",
     "strip-ansi": "7.2.0"
   },
   "publishConfig": {
