@@ -9,7 +9,7 @@ Testing in @jsenv/core focuses on **behavior verification** and **regression pre
 
 ## Running Tests
 
-Run tests from the repo root to ensure the correct Node.js version (25.8.1):
+Run tests from the repo root to ensure the correct Node.js version (26.5.0):
 
 ```sh
 node --conditions=dev:jsenv <test-file>
