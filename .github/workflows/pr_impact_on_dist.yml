@@ -24,11 +24,12 @@ jobs:
     name: pr impact
     steps:
       - name: Setup git
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup node ${{ matrix.node }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
+          package-manager-cache: false
       - name: Install node modules
         run: npm install
       - name: Report file size impact
