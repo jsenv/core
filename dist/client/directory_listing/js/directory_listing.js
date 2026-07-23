@@ -1,4 +1,4 @@
-import { G, u, E, k } from "../jsenv_core_node_modules.js";
+import { K, u, N, $ } from "../jsenv_core_node_modules.js";
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
@@ -30,12 +30,12 @@ const updateDirectoryContentItems = value => {
   }
 };
 const DirectoryListing = () => {
-  const directoryItems = E(callback => {
+  const directoryItems = N(callback => {
     directoryItemsChangeCallbackSet.add(callback);
   }, () => {
     return directoryContentItems;
   });
-  return u(k, {
+  return u($, {
     children: [enoentDetails ? u(ErrorMessage, {}) : null, u(Breadcrumb, {
       items: breadcrumb
     }), u(DirectoryContent, {
@@ -50,7 +50,7 @@ const ErrorMessage = () => {
   } = enoentDetails;
   let errorText;
   let errorSuggestion;
-  errorText = u(k, {
+  errorText = u($, {
     children: [u("strong", {
       children: "File not found:"
     }), "\xA0", u(Overflow, {
@@ -65,7 +65,7 @@ const ErrorMessage = () => {
       }), " ", "does not exist on the server."]
     })]
   });
-  errorSuggestion = u(k, {
+  errorSuggestion = u($, {
     children: [u("span", {
       className: "icon",
       children: "\uD83D\uDD0D"
@@ -115,7 +115,7 @@ const Breadcrumb = ({
         isServerRootDirectory
       } = navItem;
       const isDirectory = new URL(url).pathname.endsWith("/");
-      return u(k, {
+      return u($, {
         children: [u(BreadcrumbItem, {
           url: urlRelativeToServer,
           isCurrent: isCurrent,
@@ -210,7 +210,7 @@ const DirectoryContentItem = ({
         className: "directory_content_item_text",
         children: [u(Overflow, {
           children: children
-        }), isDirectory ? u(k, {
+        }), isDirectory ? u($, {
           children: [u("span", {
             style: "flex:1"
           }), u("span", {
@@ -275,4 +275,4 @@ if (autoreload) {
     }
   };
 }
-G(u(DirectoryListing, {}), document.querySelector("#root"));
+K(u(DirectoryListing, {}), document.querySelector("#root"));

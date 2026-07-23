@@ -5284,13 +5284,13 @@ const applyPackageResolve = (packageSpecifier, resolutionContext) => {
       : resolvePackageSymlink(packageDirectoryFacadeUrl);
     const packageJson = readPackageJson(packageDirectoryUrl);
     if (packageJson !== null) {
-      const { exports: exports$1 } = packageJson;
-      if (exports$1 !== null && exports$1 !== undefined) {
+      const { exports } = packageJson;
+      if (exports !== null && exports !== undefined) {
         return applyPackageExportsResolution(packageSubpath, {
           ...resolutionContext,
           packageDirectoryUrl,
           packageJson,
-          exports: exports$1,
+          exports,
         });
       }
     }
@@ -5328,8 +5328,8 @@ const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
   if (packageJson.name !== packageName) {
     return undefined;
   }
-  const { exports: exports$1 } = packageJson;
-  if (!exports$1) {
+  const { exports } = packageJson;
+  if (!exports) {
     const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
       ...resolutionContext,
       packageDirectoryUrl,
