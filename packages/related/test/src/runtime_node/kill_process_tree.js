@@ -1,12 +1,10 @@
-import { importWithRequire } from "../helpers/import_with_require.js";
+import { pidtree } from "pidtree";
 
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (
   processId,
   { signal, timeout = 2000 },
 ) => {
-  const pidtree = importWithRequire("pidtree");
-
   let descendantProcessIds;
   try {
     descendantProcessIds = await pidtree(processId);

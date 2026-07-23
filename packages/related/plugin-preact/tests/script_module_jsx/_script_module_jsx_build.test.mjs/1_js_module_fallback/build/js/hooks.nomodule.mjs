@@ -22,16 +22,19 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
     }], f.__c = r, !r.__f)) {
       var c = function (n, t, r) {
         if (!f.__c.__H) return !0;
-        var u = f.__c.__H.__,
-          i = f.__c.props !== n || u.every(function (n) {
-            return !n.__N;
-          });
-        return u.some(function (n) {
+        var u = !1,
+          i = f.__c.props !== n;
+        if (f.__c.__H.__.some(function (n) {
           if (n.__N) {
+            u = !0;
             var t = n.__[0];
             n.__ = n.__N, n.__N = void 0, o(t, n.__[0]) || (i = !0);
           }
-        }), e && e.call(this, n, t, r) || i;
+        }), e) {
+          var c = e.call(this, n, t, r);
+          return u ? c || i : c;
+        }
+        return !u || i;
       };
       r.__f = !0;
       var e = r.shouldComponentUpdate,
@@ -110,10 +113,13 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
     return n.__;
   }
   function g() {
-    for (var n; n = c.shift();) if (n.__P && n.__H) try {
-      n.__H.__h.some(z), n.__H.__h.some(B), n.__H.__h = [];
-    } catch (t) {
-      n.__H.__h = [], e.__e(t, n.__v);
+    for (var n; n = c.shift();) {
+      var t = n.__H;
+      if (n.__P && t) try {
+        t.__h.some(z), t.__h.some(B), t.__h = [];
+      } catch (r) {
+        t.__h = [], e.__e(r, n.__v);
+      }
     }
   }
   function w(n) {
@@ -175,7 +181,7 @@ System.register([__v__("/js/preact.nomodule.mjs")], function (_export, _context)
         l && l(n);
         var t = n.__c;
         t && t.__H && (t.__H.__h.length && (1 !== c.push(t) && i === e.requestAnimationFrame || ((i = e.requestAnimationFrame) || w)(g)), t.__H.__.some(function (n) {
-          n.u && (n.__H = n.u), n.u = void 0;
+          n.u && (n.__H = n.u, n.u = void 0);
         })), u = r = null;
       }, e.__c = function (n, t) {
         t.some(function (n) {

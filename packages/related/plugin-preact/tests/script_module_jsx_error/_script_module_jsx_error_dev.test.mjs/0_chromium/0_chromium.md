@@ -19,9 +19,9 @@ Unexpected token (6:15)
 base/client/main.noeslint.html:10:5
 ```
 
-# 2/4 write file "./.jsenv/chrome@145.0.0/main.noeslint.html"
+# 2/4 write file "./.jsenv/chrome@149.0.0/main.noeslint.html"
 
-see [./.jsenv/chrome@145.0.0/main.noeslint.html](./.jsenv/chrome@145.0.0/main.noeslint.html)
+see [./.jsenv/chrome@149.0.0/main.noeslint.html](./.jsenv/chrome@149.0.0/main.noeslint.html)
 
 # 3/4 console.error
 
@@ -44,7 +44,9 @@ base/client/main.noeslint.html:10:5
 
 ```console
 Error: chromium "pageerror" {
-  [cause]: SyntaxError: Unexpected token '<',
+  [cause]: PlaywrightError: Unexpected token '<' {
+    log: [],
+  },
 }
 ```
 
