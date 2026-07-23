@@ -17,7 +17,7 @@
   "devDependencies": {
     "@jsenv/snapshot": "../snapshot",
     "@jsenv/terminal-text-size": "./",
-    "string-width": "8.2.1"
+    "string-width": "8.2.2"
   },
   "publishConfig": {
     "access": "public"

@@ -40,8 +40,8 @@
     "@jsenv/core": "../../../",
     "@jsenv/navi": "../navi",
     "@jsenv/snapshot": "../../tooling/snapshot",
-    "@preact/signals": "2.9.3",
-    "preact": "11.0.0-beta.1"
+    "@preact/signals": "2.9.4",
+    "preact": "11.0.0-beta.2"
   },
   "publishConfig": {
     "access": "public"

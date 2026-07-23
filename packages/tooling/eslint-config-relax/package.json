@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config-relax",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "type": "module",
   "description": "A pleaseant ESLint configuration for any project",
   "repository": {
@@ -36,7 +36,7 @@
     "eslint-plugin-import-x": "4.16.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-regexp": "3.1.0",
-    "globals": "17.5.0"
+    "globals": "17.7.0"
   },
   "devDependencies": {},
   "publishConfig": {

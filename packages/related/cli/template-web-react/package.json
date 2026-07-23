@@ -15,23 +15,23 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.28.6",
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@jsenv/assert": "4.5.7",
-    "@jsenv/core": "41.2.12",
-    "@jsenv/plugin-react": "1.7.41",
-    "@jsenv/plugin-bundling": "2.10.14",
-    "@jsenv/plugin-minification": "1.7.4",
-    "@jsenv/eslint-config-relax": "1.8.8",
-    "@jsenv/test": "3.7.25",
+    "@jsenv/core": "41.2.13",
+    "@jsenv/plugin-react": "1.7.42",
+    "@jsenv/plugin-bundling": "2.10.15",
+    "@jsenv/plugin-minification": "1.7.5",
+    "@jsenv/eslint-config-relax": "1.8.9",
+    "@jsenv/test": "3.7.27",
     "eslint": "9.39.2",
     "open": "11.0.0",
-    "@playwright/browser-chromium": "1.58.1",
-    "prettier": "3.8.1",
-    "playwright": "1.58.1"
+    "@playwright/browser-chromium": "1.61.1",
+    "prettier": "3.9.6",
+    "playwright": "1.61.1"
   }
 }

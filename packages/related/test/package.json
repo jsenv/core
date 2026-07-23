@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.7.25",
+  "version": "3.7.27",
   "type": "module",
   "repository": {
     "type": "git",
@@ -30,15 +30,15 @@
   },
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
-    "@jsenv/ast": "6.8.3",
-    "@jsenv/plugin-supervisor": "1.8.5",
-    "@jsenv/sourcemap": "1.4.0",
+    "@jsenv/ast": "6.8.4",
+    "@jsenv/plugin-supervisor": "1.8.6",
+    "@jsenv/sourcemap": "1.4.1",
     "he": "1.2.0",
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.3",
     "istanbul-lib-report": "3.0.1",
     "istanbul-reports": "3.2.0",
-    "pidtree": "0.6.0",
+    "pidtree": "1.0.0",
     "v8-to-istanbul": "9.3.0"
   },
   "optionalDependencies": {
@@ -64,7 +64,7 @@
     "@jsenv/url-meta": "../../tooling/url-meta",
     "@jsenv/urls": "../../tooling/urls",
     "@jsenv/utils": "../../tooling/utils",
-    "prettier": "3.8.1",
+    "prettier": "3.9.6",
     "strip-ansi": "7.2.0",
     "supports-color": "10.2.2"
   },

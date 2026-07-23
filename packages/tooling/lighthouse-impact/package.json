@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/lighthouse-impact",
-  "version": "4.2.49",
+  "version": "4.2.50",
   "type": "module",
   "description": "Package description",
   "repository": {
@@ -31,13 +31,13 @@
     "@jsenv/filesystem": "4.15.17",
     "@jsenv/github-pull-request-impact": "1.8.44",
     "@jsenv/humanize": "1.7.8",
-    "lighthouse": "13.0.1"
+    "lighthouse": "13.4.1"
   },
   "devDependencies": {
     "@jsenv/assert": "../assert",
     "@jsenv/lighthouse-impact": "./",
     "@jsenv/server": "../../backend/server",
-    "playwright": "1.58.1"
+    "playwright": "1.61.1"
   },
   "publishConfig": {
     "access": "public"

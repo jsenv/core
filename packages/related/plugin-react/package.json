@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.7.41",
+  "version": "1.7.42",
   "type": "module",
   "repository": {
     "type": "git",
@@ -24,9 +24,9 @@
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@babel/plugin-transform-react-jsx-development": "7.27.1",
     "@babel/plugin-transform-react-jsx-source": "7.27.1",
-    "@jsenv/ast": "6.8.3",
-    "@jsenv/plugin-commonjs": "2.11.17",
-    "@jsenv/sourcemap": "1.4.0",
+    "@jsenv/ast": "6.8.4",
+    "@jsenv/plugin-commonjs": "2.11.18",
+    "@jsenv/sourcemap": "1.4.1",
     "@jsenv/url-meta": "8.5.7",
     "react-refresh": "0.18.0"
   },
@@ -36,9 +36,9 @@
     "@jsenv/https-local": "../../tooling/https-local",
     "@jsenv/plugin-explorer": "../plugin-explorer",
     "@jsenv/plugin-react": "./",
-    "playwright": "1.58.1",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "playwright": "1.61.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "publishConfig": {
     "access": "public"

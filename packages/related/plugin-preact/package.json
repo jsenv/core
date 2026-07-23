@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.7.37",
+  "version": "1.7.38",
   "type": "module",
   "repository": {
     "type": "git",
@@ -24,11 +24,11 @@
     "@babel/plugin-transform-react-jsx": "7.28.6",
     "@babel/plugin-transform-react-jsx-development": "7.27.1",
     "@babel/plugin-transform-react-jsx-source": "7.27.1",
-    "@jsenv/ast": "6.8.3",
-    "@jsenv/sourcemap": "1.4.0",
+    "@jsenv/ast": "6.8.4",
+    "@jsenv/sourcemap": "1.4.1",
     "@jsenv/url-meta": "8.5.7",
     "@prefresh/babel-plugin": "0.5.3",
-    "@prefresh/core": "1.5.9",
+    "@prefresh/core": "1.5.10",
     "@prefresh/utils": "1.2.1",
     "babel-plugin-transform-hook-names": "1.0.2"
   },
@@ -37,9 +37,9 @@
     "@jsenv/plugin-commonjs": "../plugin-commonjs",
     "@jsenv/plugin-explorer": "../plugin-explorer",
     "@jsenv/plugin-preact": "./",
-    "playwright": "1.58.1",
-    "preact": "11.0.0-beta.1",
-    "react-redux": "9.2.0",
+    "playwright": "1.61.1",
+    "preact": "11.0.0-beta.2",
+    "react-redux": "9.3.0",
     "redux": "5.0.1"
   },
   "publishConfig": {

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/exception",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "type": "module",
   "description": "Error and throw value wrapper",
   "repository": {
@@ -28,7 +28,7 @@
   ],
   "dependencies": {
     "@jsenv/url-meta": "8.5.7",
-    "errorstacks": "2.4.1"
+    "errorstacks": "2.4.2"
   },
   "publishConfig": {
     "access": "public"

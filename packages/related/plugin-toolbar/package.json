@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.5.31",
+  "version": "1.5.32",
   "type": "module",
   "repository": {
     "type": "git",
@@ -28,14 +28,14 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/ast": "6.8.3"
+    "@jsenv/ast": "6.8.4"
   },
   "devDependencies": {
     "@jsenv/core": "../../",
     "@jsenv/filesystem": "../../tooling/filesystem",
     "@jsenv/plugin-toolbar": "./",
     "@jsenv/utils": "../../tooling/utils",
-    "@preact/signals": "2.9.3",
+    "@preact/signals": "2.9.4",
     "playwright": "1.61.1"
   },
   "publishConfig": {

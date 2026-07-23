@@ -19,11 +19,11 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.8.3",
+    "@jsenv/ast": "6.8.4",
     "@jsenv/filesystem": "4.15.17",
     "@jsenv/urls": "2.9.10",
-    "anchor-markdown-header": "0.8.1",
-    "marked": "17.0.1"
+    "anchor-markdown-header": "0.8.4",
+    "marked": "18.0.7"
   },
   "publishConfig": {
     "access": "public"
