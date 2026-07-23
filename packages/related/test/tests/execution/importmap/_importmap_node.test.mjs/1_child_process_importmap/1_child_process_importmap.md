@@ -15,6 +15,16 @@ run({
 })
 ```
 
+# 1/2 process.stderr
+
+```console
+(node:82150) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+```
+
+# 2/2 resolve
+
 ```js
 {
   "status": "completed",

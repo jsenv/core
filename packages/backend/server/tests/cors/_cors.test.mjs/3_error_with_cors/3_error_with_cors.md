@@ -22,8 +22,8 @@ Error: here
     at applyRequestInternalRedirection (@jsenv/core/packages/backend/server/src/start_server.js:466:29)
     at getResponseProperties (@jsenv/core/packages/backend/server/src/start_server.js:599:17)
     at Server.requestEventHandler (@jsenv/core/packages/backend/server/src/start_server.js:807:42)
-    at Server.emit (node:events:520:22)
-    at parserOnIncoming (node:_http_server:1216:12)
+    at Server.emit (node:events:521:24)
+    at parserOnIncoming (node:_http_server:1383:12)
     at HTTPParser.parserOnHeadersComplete (node:_http_common:125:17)
   500 Internal Server Error
 ```
