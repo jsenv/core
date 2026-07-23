@@ -4,9 +4,9 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/3 write 3 files into "./.jsenv/chrome@145.0.0/"
+# 1/3 write 3 files into "./.jsenv/chrome@149.0.0/"
 
-see [./.jsenv/chrome@145.0.0/](./.jsenv/chrome@145.0.0/)
+see [./.jsenv/chrome@149.0.0/](./.jsenv/chrome@149.0.0/)
 
 # 2/3 console.error
 
@@ -22,7 +22,9 @@ Error while handling http://127.0.0.1/js_syntax_error.js:
 
 ```console
 Error: chromium "pageerror" {
-  [cause]: SyntaxError: Unexpected end of input,
+  [cause]: PlaywrightError: Unexpected end of input {
+    log: [],
+  },
 }
 ```
 

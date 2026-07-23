@@ -4,15 +4,17 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write 4 files into "./.jsenv/chrome@145.0.0/"
+# 1/2 write 4 files into "./.jsenv/chrome@149.0.0/"
 
-see [./.jsenv/chrome@145.0.0/](./.jsenv/chrome@145.0.0/)
+see [./.jsenv/chrome@149.0.0/](./.jsenv/chrome@149.0.0/)
 
 # 2/2 reject
 
 ```console
 Error: chromium "pageerror" {
-  [cause]: Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE,
+  [cause]: PlaywrightError: SPECIAL_STRING_UNLIKELY_TO_COLLIDE {
+    log: [],
+  },
 }
 ```
 

@@ -4,9 +4,9 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write file "./.jsenv/chrome@145.0.0/main.html"
+# 1/2 write file "./.jsenv/chrome@149.0.0/main.html"
 
-see [./.jsenv/chrome@145.0.0/main.html](./.jsenv/chrome@145.0.0/main.html)
+see [./.jsenv/chrome@149.0.0/main.html](./.jsenv/chrome@149.0.0/main.html)
 
 # 2/2 resolve
 
