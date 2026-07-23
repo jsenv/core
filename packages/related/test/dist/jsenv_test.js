@@ -14,6 +14,7 @@ import { spawn, spawnSync, fork } from "node:child_process";
 import { availableParallelism, cpus, totalmem, release, freemem } from "node:os";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
+import { pidtree } from "pidtree";
 import { Worker } from "node:worker_threads";
 import he from "he";
 import "node:tty";
@@ -9900,8 +9901,6 @@ const killProcessTree = async (
   processId,
   { signal, timeout = 2000 },
 ) => {
-  const pidtree = importWithRequire("pidtree");
-
   let descendantProcessIds;
   try {
     descendantProcessIds = await pidtree(processId);
