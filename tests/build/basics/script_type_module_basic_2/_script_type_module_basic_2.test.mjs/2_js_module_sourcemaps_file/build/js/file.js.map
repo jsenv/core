@@ -9,6 +9,6 @@
   "sourcesContent": [
     "export const answer = 42;\n"
   ],
-  "mappings": "AAAA,OAAO,MAAMA,MAAM,GAAG,EAAE",
+  "mappings": "AAAA,OAAO,MAAMA,OAAO,EAAE,EAAE",
   "ignoreList": []
 }

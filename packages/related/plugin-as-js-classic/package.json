@@ -18,7 +18,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/js-module-fallback": "1.4.36",
+    "@jsenv/js-module-fallback": "1.4.37",
     "@jsenv/plugin-bundling": "2.10.16",
     "@jsenv/urls": "2.9.10"
   },

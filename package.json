@@ -73,7 +73,7 @@
   },
   "dependencies": {
     "@jsenv/ast": "6.8.4",
-    "@jsenv/js-module-fallback": "1.4.36",
+    "@jsenv/js-module-fallback": "1.4.37",
     "@jsenv/plugin-bundling": "2.10.16",
     "@jsenv/plugin-minification": "1.7.5",
     "@jsenv/plugin-supervisor": "1.8.7",

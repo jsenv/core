@@ -49,7 +49,7 @@
     "@babel/plugin-transform-unicode-property-regex": "7.28.6",
     "@babel/plugin-transform-unicode-regex": "7.27.1",
     "@jsenv/ast": "6.8.4",
-    "@jsenv/js-module-fallback": "1.4.36",
+    "@jsenv/js-module-fallback": "1.4.37",
     "@jsenv/sourcemap": "1.4.2",
     "@jsenv/urls": "2.9.10",
     "@jsenv/utils": "2.3.1",

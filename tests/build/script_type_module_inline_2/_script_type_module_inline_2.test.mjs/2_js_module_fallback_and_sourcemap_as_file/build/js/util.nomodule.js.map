@@ -8,7 +8,7 @@
     "console",
     "log"
   ],
-  "mappings": ";;;;;;;sBAAaA,IAAI,GAAGA,CAAAA,KAAM;AAAA,QACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;AAAA,OACpB,CAAA;AAAA;AAAA,GAAA;AAAA,CAAA,CAAA",
+  "mappings": ";;;;;;;sBAAaA,KAAAA,EAAOA,CAAAA,EAAAA,GAAM;QACxBC,OAAO,CAACC,GAAG,CAAC,MAAM,CAAC;MAAA,CACpB,CAAA;IAAA;EAAA,CAAA;AAAA,CAAA,CAAA",
   "sourcesContent": [
     "export const util = () => {\n  console.log(\"util\");\n};\n"
   ]
