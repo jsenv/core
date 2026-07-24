@@ -291,7 +291,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState, useEffect } from "preact/hooks";
-      import { Button, Popover, NaviDebug, Box } from "@jsenv/navi";
+      import { Button, Popover, NaviDebug, Box, Text } from "@jsenv/navi";
 
       // The full positionArea grammar (see popup_shared.js's own
       // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
@@ -520,7 +520,6 @@
             >
               <p style={{ marginTop: 0, fontWeight: "bold" }}>{label}</p>
               {content}
-              <Button command="--navi-close">Close</Button>
             </Popover>
           </>
         );
@@ -542,6 +541,7 @@
               id={popoverId}
               borderRadius="8px"
               className="demo_popover_flex_box"
+              padding="2px"
             >
               <p style={{ marginTop: 0 }}>Content grows/shrinks below.</p>
               <Button onClick={() => setExpanded((v) => !v)}>
@@ -641,6 +641,7 @@
             <h2>1. Controlled by button</h2>
             <div class="demo-row">
               <AnchoredPopover
+                maxWidth="260"
                 label="Button commanding popover"
                 animation={animation}
                 animationDuration={animationDuration}
@@ -939,8 +940,7 @@
               borderRadius="8px"
               className="demo_popover_box"
             >
-              <p style={{ marginTop: 0 }}>{label}</p>
-              <Button command="--navi-close">Close</Button>
+              {label}
             </Popover>
           </>
         );
@@ -967,7 +967,6 @@
               {...rest}
             >
               <p style={{ marginTop: 0 }}>{label}</p>
-              <Button command="--navi-close">Close</Button>
             </Popover>
           </>
         );
