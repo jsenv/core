@@ -100,7 +100,12 @@
         left: 0;
         z-index: 1;
         height: 32px; /* (96 − 32) / 2, leaving the center row clear */
-        background: rgba(255, 255, 255, 0.55);
+        background: rgba(
+          255,
+          255,
+          255,
+          0.68
+        ); /* matches --wheel-veil default */
         pointer-events: none;
       }
       .native-wheel-veil[data-side="start"] {
@@ -222,7 +227,7 @@
               </li>
               <li>
                 <a href="#customization">Customization</a> — visibleCount,
-                horizontal, spacing, glass
+                horizontal, spacing, glass, frameBorder
               </li>
             </ol>
           </div>
@@ -854,16 +859,14 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3>center window (veil, glass, frame)</h3>
+              <h3>glass (frost the neighbours)</h3>
               <p>
                 Every wheel already veils its neighbours over a clear center
                 window — that veil <em>is</em> the selection emphasis, so a
                 half-scrolled row is half-veiled (tune with{" "}
-                <code>--wheel-veil</code>). <code>glass</code> frosts (blurs)
-                that veil; <code>glassFrame</code> lines the window edges. Each
-                is one prop; on a <code>WheelGroup</code> it applies to every
-                wheel at once (last example). Blur tunes with{" "}
-                <code>--wheel-glass-blur</code>.
+                <code>--wheel-veil</code>). <code>glass</code> additionally
+                frosts (blurs) that veil (tune with{" "}
+                <code>--wheel-glass-blur</code>).
               </p>
               <div className="states">
                 <div>
@@ -875,23 +878,6 @@
                     ))}
                   </Wheel>
                   <span className="col-label">glass</span>
-                </div>
-                <div>
-                  <Wheel
-                    type="integer"
-                    value={gf}
-                    action={setGf}
-                    loop
-                    glass
-                    glassFrame
-                  >
-                    {range(24).map((h) => (
-                      <Wheel.Item key={h} value={h}>
-                        {pad2(h)}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                  <span className="col-label">glass + glassFrame</span>
                 </div>
                 <div>
                   <Wheel
@@ -910,6 +896,59 @@
                   </Wheel>
                   <span className="col-label">stronger blur</span>
                 </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <h3>frameBorder (line the window edges)</h3>
+              <p>
+                <code>frameBorder</code> draws a faint line along the top and
+                bottom of the center window. It's independent of{" "}
+                <code>glass</code> — use it alone or together. Tune the colour
+                with <code>--wheel-frame-color</code>.
+              </p>
+              <div className="states">
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={gf}
+                    action={setGf}
+                    loop
+                    frameBorder
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">frameBorder</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={gf}
+                    action={setGf}
+                    loop
+                    glass
+                    frameBorder
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">glass + frameBorder</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <h3>on a WheelGroup (one prop for all wheels)</h3>
+              <p>
+                Set <code>glass</code> (or <code>frameBorder</code>) once on a{" "}
+                <code>WheelGroup</code> and every wheel inside inherits it.
+              </p>
+              <div className="states">
                 <div>
                   <WheelGroup glass spacing="0.5ch">
                     <Wheel type="integer" value={gh} action={setGh} loop>
