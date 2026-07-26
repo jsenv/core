@@ -96,6 +96,7 @@ Nothing else belongs there. Other sources already cover everything else — the 
 - CSS-in-JS using `import.meta.css` for component styles
 - CSS variables for theming and customization
 - `light-dark()` for automatic theme switching
+- **Transitions/animations play on change, never on first paint**: a transition or animation must fire when something *changes* (interaction, state update, value change) — not when the component first mounts or the page loads. A user should never see an element animate into its initial state just because the page appeared. Set the initial state without a transition, then enable transitions afterward (e.g. gate the `transition` property behind a "mounted"/"ready" flag or attribute, or apply the first state before wiring the transition). This applies to color/opacity/transform transitions and keyframe animations alike.
 
 ## @jsenv/navi Specifics
 

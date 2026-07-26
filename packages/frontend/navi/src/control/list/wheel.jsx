@@ -135,7 +135,6 @@ const css = /* css */ `
     cursor: pointer;
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transition: color 0.15s ease;
     /* Rendering virtualization: only the rows within each wheel's own viewport
        are painted; the rest (clipped by the viewport's overflow) are skipped.
        The box is still laid out (fixed main-axis size below), so offsets, snap
@@ -154,6 +153,12 @@ const css = /* css */ `
         cursor: pointer;
         pointer-events: auto;
       }
+    }
+
+    /* Emphasis fades in/out only once the wheel is ready — never on first paint,
+       so the initially-selected value is simply bold, not animated into bold. */
+    .navi_wheel_container[data-ready] & {
+      transition: color 0.15s ease;
     }
 
     &[data-wheel-current] {
@@ -244,9 +249,9 @@ const css = /* css */ `
   /* ── Glass ───────────────────────────────────────────────────────────────────
      Two frosted panes over the rows on each side of the center, leaving a clear
      "window" one row tall over the selection. Neighbours read as obscured (blur +
-     a translucent veil) rather than merely greyed; the pane edges facing the
-     center draw a faint frame around the window. Purely decorative — pointer
-     events pass straight through to the rows underneath. */
+     a translucent veil) rather than merely greyed. Purely decorative — pointer
+     events pass straight through to the rows underneath. With [data-glass-frame]
+     the pane edge facing the center draws a faint line, framing the window. */
   .navi_wheel_pane {
     position: absolute;
     z-index: 1;
@@ -254,9 +259,11 @@ const css = /* css */ `
       rgba(255, 255, 255, var(--wheel-glass-veil, 0.4)),
       rgba(0, 0, 0, var(--wheel-glass-veil, 0.4))
     );
-    /* 0-width by default; the orientation rule opens the one edge that faces the
-       center window into a faint frame. */
-    border: 0 solid light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18));
+    border: 0 solid
+      var(
+        --wheel-glass-frame-color,
+        light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
+      );
     backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
     -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
     pointer-events: none;
@@ -268,11 +275,9 @@ const css = /* css */ `
 
     &[data-side="start"] {
       top: 0;
-      border-bottom-width: 1px;
     }
     &[data-side="end"] {
       bottom: 0;
-      border-top-width: 1px;
     }
   }
   .navi_wheel_container[data-horizontal] .navi_wheel_pane {
@@ -282,10 +287,22 @@ const css = /* css */ `
 
     &[data-side="start"] {
       left: 0;
-      border-right-width: 1px;
     }
     &[data-side="end"] {
       right: 0;
+    }
+  }
+  .navi_wheel_container[data-glass-frame] {
+    &:not([data-horizontal]) .navi_wheel_pane[data-side="start"] {
+      border-bottom-width: 1px;
+    }
+    &:not([data-horizontal]) .navi_wheel_pane[data-side="end"] {
+      border-top-width: 1px;
+    }
+    &[data-horizontal] .navi_wheel_pane[data-side="start"] {
+      border-right-width: 1px;
+    }
+    &[data-horizontal] .navi_wheel_pane[data-side="end"] {
       border-left-width: 1px;
     }
   }
@@ -427,6 +444,7 @@ const WheelFirstResolver = (props) => {
  * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
+ * @param {boolean} [props.glassFrame] - With glass, line the window edges with a faint frame (off by default). Tune via --wheel-glass-frame-color.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
 export const Wheel = createComponentResolver([
@@ -445,6 +463,7 @@ function WheelUI(props) {
     loop,
     horizontal,
     glass,
+    glassFrame,
     type,
     style,
     basePseudoState,
@@ -455,9 +474,10 @@ function WheelUI(props) {
   const isHorizontal = Boolean(horizontal ?? group?.horizontal);
   const isLoop = Boolean(loop);
   // Glass: frost the neighbouring rows so the center reads as a clear "window"
-  // (like the iOS picker). Inherited from a WheelGroup so a whole group frosts
-  // together with one prop.
+  // (like the iOS picker). glassFrame additionally lines the window edges.
+  // Both inherited from a WheelGroup so a whole group is styled with one prop.
   const showGlass = Boolean(glass ?? group?.glass);
+  const showGlassFrame = Boolean(glassFrame ?? group?.glassFrame);
   const loading = basePseudoState ? basePseudoState[":-navi-loading"] : false;
   const readOnly = basePseudoState ? basePseudoState[":read-only"] : false;
   const disabled = basePseudoState ? basePseudoState[":disabled"] : false;
@@ -803,6 +823,9 @@ function WheelUI(props) {
       const rafId = requestAnimationFrame(() => {
         centeredIdRef.current = null;
         syncCenterToSelection(vp, "auto");
+        // Enable emphasis/state transitions only once the initial value is in
+        // place, so nothing animates just because the wheel appeared.
+        el.setAttribute("data-ready", "");
       });
       return () => {
         cancelAnimationFrame(rafId);
@@ -1010,6 +1033,7 @@ function WheelUI(props) {
       baseClassName="navi_wheel_container"
       data-horizontal={isHorizontal ? "" : undefined}
       data-glass={showGlass ? "" : undefined}
+      data-glass-frame={showGlass && showGlassFrame ? "" : undefined}
       data-wheel-type={type || undefined}
       // Disabled = fully inert: no focus, no keyboard (arrows), no pointer.
       // Programmatic centering still works (inert only blocks user interaction).
@@ -1201,11 +1225,13 @@ Wheel.Item = WheelItem;
  * @param {number|string} [props.spacing] - Scrollable gap each wheel adds toward its neighbours (number = px; default 0.5ch).
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
+ * @param {boolean} [props.glassFrame] - With glass, line every wheel's window edges with a faint frame (off by default).
  */
 export const WheelGroup = ({
   spacing,
   horizontal,
   glass,
+  glassFrame,
   style,
   children,
   ...rest
@@ -1228,7 +1254,7 @@ export const WheelGroup = ({
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
     >
-      <WheelGroupContext.Provider value={{ glass, horizontal }}>
+      <WheelGroupContext.Provider value={{ glass, glassFrame, horizontal }}>
         {children}
       </WheelGroupContext.Provider>
     </Box>
