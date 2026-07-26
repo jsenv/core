@@ -126,6 +126,18 @@ const css = /* css */ `
       cursor: default;
     }
   }
+
+  .navi_wheel_item_decoration {
+    --wheel-item-height: 2.4em;
+
+    display: flex;
+    height: var(--wheel-item-height);
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+  }
 `;
 
 const WheelFirstResolver = (props) => {
@@ -142,6 +154,7 @@ const WheelFirstResolver = (props) => {
   props.selectable = props.selectable ?? true;
   // A wheel is a single vertical column — restrict the focus group to the Y axis.
   props.focusGroupDirection = props.focusGroupDirection || "y";
+
   return <Next {...props} />;
 };
 
