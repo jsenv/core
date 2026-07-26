@@ -124,9 +124,6 @@
                 <a href="#states">States</a>
               </li>
               <li>
-                <a href="#hours">Single column, looping</a>
-              </li>
-              <li>
                 <a href="#loop">Minimal loop (few values)</a>
               </li>
               <li>
@@ -199,28 +196,6 @@
                 <h3>disabled</h3>
                 <StateWheel disabled />
               </div>
-            </div>
-          </div>
-        );
-      };
-
-      // ── Single column, looping ─────────────────────────────────────────────
-
-      const HoursDemo = () => {
-        const [hour, setHour] = useState(4);
-        return (
-          <div id="hours" className="demo-section">
-            <h2>Single column (hours), looping</h2>
-            <p>Past 23 comes 00 again; scrolling up past 00 shows 23.</p>
-            <div className="row">
-              <Wheel type="integer" value={hour} action={setHour} loop>
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <div className="value-display">value: {pad2(hour)}</div>
             </div>
           </div>
         );
@@ -755,7 +730,6 @@
         <NaviDebug>
           <TableOfContents />
           <StatesDemo />
-          <HoursDemo />
           <LoopDemo />
           <TimeDemo />
           <HourMinuteDemo />
