@@ -19,9 +19,20 @@
         padding-bottom: 6px;
         border-bottom: 2px solid #ddd;
       }
+      /* Two groups side by side (matches a WheelGroup); radios stacked
+         vertically inside each (matches the y-axis focus group). */
+      .groups-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
       fieldset {
-        margin-bottom: 16px;
+        display: flex;
+        margin: 0 0 16px;
         padding: 12px 16px;
+        flex-direction: column;
+        gap: 4px;
         border: 1px solid #ccc;
         border-radius: 6px;
       }
@@ -30,10 +41,9 @@
         font-weight: 600;
       }
       label {
-        display: inline-flex;
-        margin-right: 14px;
+        display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
         cursor: pointer;
       }
       label:has(:disabled) {
@@ -73,41 +83,75 @@
   <body>
     <h1>Radio focus test</h1>
     <div class="note">
-      Two separate sections with the same radio groups. Each group has a checked
-      value that is <strong>not</strong> the first, and one
-      <strong>disabled</strong>
-      value. Tab from the anchor into each group, then use ↑/↓. Watch the log
-      below and compare the two sections:
+      Two groups side by side (like a WheelGroup), radios stacked vertically
+      (like the y-axis focus group). Each group has a checked value that is
+      <strong>not</strong> the first, and one <strong>disabled</strong> value.
+      Tab from the anchor into the groups, use ↑/↓ inside, and Tab across to the
+      next group. Compare the two sections and watch:
       <ul style="margin: 6px 0 0">
         <li><strong>Tab entry:</strong> checked value, or first/last?</li>
         <li>
-          <strong>Arrow nav:</strong> does it skip the disabled value, or land
-          on it?
+          <strong>Tab across:</strong> what happens between the two groups?
         </li>
+        <li><strong>Arrow nav:</strong> does it skip the disabled value?</li>
       </ul>
     </div>
 
     <!-- ── 1. Native browser ────────────────────────────────────────────── -->
     <h2>1. Native browser (no framework)</h2>
     <p><a href="#" class="anchor">« tab anchor before section 1 »</a></p>
-    <fieldset>
-      <legend>Group A — name="groupA", A3 checked, A2 disabled</legend>
-      <label><input type="radio" name="groupA" value="A1" /> A1</label>
-      <label><input type="radio" name="groupA" value="A2" disabled /> A2</label>
-      <label><input type="radio" name="groupA" value="A3" checked /> A3</label>
-      <label><input type="radio" name="groupA" value="A4" /> A4</label>
-    </fieldset>
+    <div class="groups-row">
+      <fieldset>
+        <legend>Group A — A3 checked, A2 disabled</legend>
+        <label><input type="radio" name="groupA" value="A1" /> A1</label>
+        <label>
+          <input type="radio" name="groupA" value="A2" disabled /> A2
+        </label>
+        <label
+          ><input type="radio" name="groupA" value="A3" checked /> A3</label
+        >
+        <label><input type="radio" name="groupA" value="A4" /> A4</label>
+      </fieldset>
+      <fieldset>
+        <legend>Group B — B2 checked, B3 disabled</legend>
+        <label><input type="radio" name="groupB" value="B1" /> B1</label>
+        <label
+          ><input type="radio" name="groupB" value="B2" checked /> B2</label
+        >
+        <label>
+          <input type="radio" name="groupB" value="B3" disabled /> B3
+        </label>
+        <label><input type="radio" name="groupB" value="B4" /> B4</label>
+      </fieldset>
+    </div>
 
     <!-- ── 2. Our focus group ──────────────────────────────────────────── -->
-    <h2>2. With our focus group (initFocusGroup)</h2>
+    <h2>2. With our focus group (initFocusGroup, direction "y")</h2>
     <p><a href="#" class="anchor">« tab anchor before section 2 »</a></p>
-    <fieldset id="group-b">
-      <legend>Group B — name="groupB", B3 checked, B2 disabled</legend>
-      <label><input type="radio" name="groupB" value="B1" /> B1</label>
-      <label><input type="radio" name="groupB" value="B2" disabled /> B2</label>
-      <label><input type="radio" name="groupB" value="B3" checked /> B3</label>
-      <label><input type="radio" name="groupB" value="B4" /> B4</label>
-    </fieldset>
+    <div class="groups-row">
+      <fieldset id="group-c">
+        <legend>Group C — C3 checked, C2 disabled</legend>
+        <label><input type="radio" name="groupC" value="C1" /> C1</label>
+        <label>
+          <input type="radio" name="groupC" value="C2" disabled /> C2
+        </label>
+        <label
+          ><input type="radio" name="groupC" value="C3" checked /> C3</label
+        >
+        <label><input type="radio" name="groupC" value="C4" /> C4</label>
+      </fieldset>
+      <fieldset id="group-d">
+        <legend>Group D — D2 checked, D3 disabled</legend>
+        <label><input type="radio" name="groupD" value="D1" /> D1</label>
+        <label
+          ><input type="radio" name="groupD" value="D2" checked /> D2</label
+        >
+        <label>
+          <input type="radio" name="groupD" value="D3" disabled /> D3
+        </label>
+        <label><input type="radio" name="groupD" value="D4" /> D4</label>
+      </fieldset>
+    </div>
 
     <p><a href="#" class="anchor">« tab anchor after »</a></p>
 
@@ -117,12 +161,14 @@
     <script type="module">
       import { initFocusGroup } from "@jsenv/dom";
 
-      // Section 2 only: manage focus with our focus group, exactly like the
-      // selectable list / Wheel does (skipTab default true, arrows over the radios).
-      initFocusGroup(document.getElementById("group-b"), {
-        direction: "y",
-        ySelector: "input[type=radio]",
-      });
+      // Section 2: each group is its own y-axis focus group, exactly like each
+      // wheel inside a WheelGroup (skipTab default true, arrows over the radios).
+      for (const id of ["group-c", "group-d"]) {
+        initFocusGroup(document.getElementById(id), {
+          direction: "y",
+          ySelector: "input[type=radio]",
+        });
+      }
     </script>
 
     <script>
@@ -143,7 +189,7 @@
         const line = `focus → ${describe(e.target)}`;
         log.textContent = `${line}\n${log.textContent}`
           .split("\n")
-          .slice(0, 14)
+          .slice(0, 16)
           .join("\n");
       });
     </script>
