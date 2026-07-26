@@ -64,7 +64,7 @@ const css = /* css */ `
     color: var(--wheel-color-faded);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
-    border-radius: 6px;
+    border-radius: var(--navi-control-border-radius);
 
     /* Keyboard interaction focus-visibles a hidden radio inside; show the focus
        outline on the whole column, not just the selected row. [data-focus-visible]
