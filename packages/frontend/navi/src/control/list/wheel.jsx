@@ -408,8 +408,8 @@ function WheelUI(props) {
 
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
 
-  const findCenteredItem = (viewportEl) => {
-    const items = viewportEl.querySelectorAll("[navi-list-item-real]");
+  const findCenteredMatching = (viewportEl, selector) => {
+    const items = viewportEl.querySelectorAll(selector);
     const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
     let closest = null;
     let closestDistance = Infinity;
@@ -423,6 +423,14 @@ function WheelUI(props) {
     }
     return closest;
   };
+  // Selection tracks the centered *real* item.
+  const findCenteredItem = (viewportEl) =>
+    findCenteredMatching(viewportEl, "[navi-list-item-real]");
+  // The "current" emphasis tracks the centered *rendered row* including loop
+  // proxies, so a proxy lights up exactly like a real value as it reaches the
+  // center — the wrap that swaps it for the real row is then invisible.
+  const findCenteredRow = (viewportEl) =>
+    findCenteredMatching(viewportEl, ".navi_wheel_item");
 
   const centerItem = (viewportEl, itemEl, behavior) => {
     const base =
@@ -545,27 +553,21 @@ function WheelUI(props) {
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
           rafId = null;
-          updateCurrentMarker(viewportEl, findCenteredItem(viewportEl));
+          updateCurrentMarker(viewportEl, findCenteredRow(viewportEl));
         });
       }
       clearTimeout(settleTimer);
       settleTimer = setTimeout(onSettle, 120);
     };
     const onSettle = () => {
-      const centered = findCenteredItem(viewportEl);
-      if (!centered) {
+      // Readonly/disabled never settle-select: user scrolling is blocked
+      // outright (see the scroll-block effect), so a settle here would only be
+      // a programmatic re-center — never a value change.
+      if (!interactive) {
         return;
       }
-      if (!interactive) {
-        // Readonly/disabled: a scroll must not change the value nor pop the
-        // readonly callout (scrolling is a weak, easy-to-trigger gesture).
-        // Silently spring the wheel back to the selected value.
-        const selected = getSelectedItem(viewportEl);
-        if (selected) {
-          centeredIdRef.current = selected.id;
-          updateCurrentMarker(viewportEl, selected);
-          centerItem(viewportEl, selected, "smooth");
-        }
+      const centered = findCenteredItem(viewportEl);
+      if (!centered) {
         return;
       }
       centeredIdRef.current = centered.id;
@@ -616,6 +618,46 @@ function WheelUI(props) {
       el.removeEventListener("focusin", onFocusIn);
     };
   }, [isHorizontal, interactive]);
+
+  // Readonly: block user scrolling outright and show the readonly callout — the
+  // same treatment other readonly controls give scroll-causing interactions.
+  // (Disabled keeps pointer-events:none, so wheel/touch just fall through to the
+  // page's own scroll, which is the expected "inert" behaviour.)
+  useLayoutEffect(() => {
+    if (!readOnly || disabled) {
+      return undefined;
+    }
+    const el = ref.current;
+    const viewportEl = el.querySelector(".navi_wheel_viewport");
+    let calloutCooldown = null;
+    const onScrollAttempt = (e) => {
+      e.preventDefault();
+      if (calloutCooldown !== null) {
+        return;
+      }
+      calloutCooldown = setTimeout(() => {
+        calloutCooldown = null;
+      }, 600);
+      const current =
+        getSelectedItem(viewportEl) || findCenteredItem(viewportEl);
+      if (current) {
+        // Rejected by the selectable layer (readonly) → pops the callout.
+        dispatchCustomEvent(el, "navi_request_select", {
+          event: e,
+          id: current.id,
+        });
+      }
+    };
+    viewportEl.addEventListener("wheel", onScrollAttempt, { passive: false });
+    viewportEl.addEventListener("touchmove", onScrollAttempt, {
+      passive: false,
+    });
+    return () => {
+      clearTimeout(calloutCooldown);
+      viewportEl.removeEventListener("wheel", onScrollAttempt);
+      viewportEl.removeEventListener("touchmove", onScrollAttempt);
+    };
+  }, [readOnly, disabled]);
 
   return (
     <Box

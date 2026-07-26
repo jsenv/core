@@ -91,7 +91,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, Time, Wheel, WheelGroup } from "@jsenv/navi";
+      import {
+        NaviDebug,
+        Time,
+        Wheel,
+        WheelGroup,
+        Form,
+        Button,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
@@ -138,6 +146,12 @@
               </li>
               <li>
                 <a href="#horizontal-group">Horizontal group</a>
+              </li>
+              <li>
+                <a href="#actions">uiAction / action / form</a>
+              </li>
+              <li>
+                <a href="#validation">Validation</a>
               </li>
               <li>
                 <a href="#customization">Customization</a>
@@ -489,6 +503,106 @@
         );
       };
 
+      // ── Actions (uiAction / action / form) ─────────────────────────────────
+
+      const ActionsDemo = () => {
+        const [hour, setHour] = useState(9);
+        const [log, pushLog, clearLog] = useCallLog();
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div id="actions" className="demo-section">
+            <h2>uiAction / action / form</h2>
+            <p>
+              <code>uiAction</code> fires on every settle; <code>action</code>{" "}
+              runs the bound action with the current value. Inside a{" "}
+              <code>Form</code> the value submits under the wheel's{" "}
+              <code>name</code>.
+            </p>
+            <div className="row">
+              <Wheel
+                type="integer"
+                value={hour}
+                loop
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
+                action={(v) => {
+                  setHour(v);
+                  pushLog("action", v);
+                }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <div style={{ flex: 1 }}>
+                <CallLog entries={log} onClear={clearLog} />
+              </div>
+            </div>
+            <h3 style={{ marginTop: 20 }}>Inside a form</h3>
+            <Form
+              flex="y"
+              alignX="start"
+              spacing="m"
+              action={({ hour: submittedHour }) => {
+                setSubmitted(submittedHour);
+              }}
+            >
+              <Wheel type="integer" name="hour" defaultValue={9} loop>
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <div className="value-display">
+              {submitted !== null ? `submitted: ${submitted}` : ""}
+            </div>
+          </div>
+        );
+      };
+
+      // ── Validation ─────────────────────────────────────────────────────────
+
+      const ValidationDemo = () => {
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div id="validation" className="demo-section">
+            <h2>Validation</h2>
+            <p>
+              <code>required</code> is the only constraint that would apply —
+              but a wheel always has a value centered, so the user can never
+              leave it empty or pick an out-of-range value. It therefore always
+              passes.
+            </p>
+            <Form
+              flex="y"
+              alignX="start"
+              spacing="m"
+              action={({ hour }) => {
+                setSubmitted(hour);
+              }}
+            >
+              <Wheel type="integer" name="hour" required defaultValue={9} loop>
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <Button type="submit">Submit (always valid)</Button>
+            </Form>
+            <div className="value-display">
+              {submitted !== null ? `submitted: ${submitted}` : ""}
+            </div>
+          </div>
+        );
+      };
+
       // ── Customization ──────────────────────────────────────────────────────
 
       const CustomizationDemo = () => {
@@ -575,6 +689,8 @@
           <DayDemo />
           <HorizontalDemo />
           <HorizontalGroupDemo />
+          <ActionsDemo />
+          <ValidationDemo />
           <CustomizationDemo />
         </NaviDebug>
       );
