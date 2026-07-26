@@ -105,21 +105,21 @@ const css = /* css */ `
     overflow: hidden;
   }
   .navi_wheel_list {
-    /* Positioned via translate3d — hint the compositor. */
-    will-change: transform;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* NO will-change: transform. translate3d already composites the track for
+       the glide/momentum; will-change additionally pins it to its own layer,
+       which the glass panes' backdrop-filter then samples with a bright fringe
+       (halo) around each glyph, and can shift how the transformed text renders
+       vs the (untransformed) separators. */
   }
 
   /* type is informative metadata; a couple of types get a rendering hint.
      "integer" wants figures to line up column-to-column across rows. */
   .navi_wheel_container[data-wheel-type="integer"] {
     font-variant-numeric: tabular-nums;
-  }
-
-  .navi_wheel_list {
-    display: flex;
-    margin: 0;
-    padding: 0;
-    list-style: none;
   }
 
   .navi_wheel_item {
@@ -175,64 +175,15 @@ const css = /* css */ `
     }
   }
 
-  /* ── Vertical (default) ─────────────────────────────────────────────────── */
-  .navi_wheel_container:not([data-horizontal]) {
-    .navi_wheel_viewport {
-      height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
-      -webkit-mask-image: var(--wheel-fade-y);
-      mask-image: var(--wheel-fade-y);
-    }
-    .navi_wheel_list {
-      /* Blank space so the first and last items can reach the center row. */
-      padding-block: calc(
-        var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
-      );
-      flex-direction: column;
-      &[data-loop] {
-        padding-block: 0;
-      }
-    }
-    .navi_wheel_item {
-      /* Main-axis size is fixed (height); reserve a remembered cross-axis size
-         so a skipped row doesn't collapse the wheel's width. */
-      contain-intrinsic-width: auto 3ch;
-      height: var(--wheel-item-height);
-      padding-inline: var(--wheel-item-padding-x, 0.5ch);
-    }
-  }
-
-  /* ── Horizontal ─────────────────────────────────────────────────────────── */
-  .navi_wheel_container[data-horizontal] {
-    .navi_wheel_viewport {
-      width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
-      -webkit-mask-image: var(--wheel-fade-x);
-      mask-image: var(--wheel-fade-x);
-    }
-    .navi_wheel_list {
-      padding-inline: calc(
-        var(--wheel-item-width) * (var(--wheel-visible-count) - 1) / 2
-      );
-      flex-direction: row;
-      &[data-loop] {
-        padding-inline: 0;
-      }
-    }
-    .navi_wheel_item {
-      /* Main-axis size is fixed (width); reserve a remembered cross-axis size. */
-      contain-intrinsic-height: auto 1.5em;
-      width: var(--wheel-item-width);
-      padding-block: var(--wheel-item-padding-x, 0.5ch);
-    }
-  }
-
+  /* Orientation-specific sizing/layout. The emphasis fade: opacity peaks on the
+     center row and falls off progressively toward the edges (like a physical
+     wheel curving away). Because it is a function of position, a row emphasises
+     smoothly as it scrolls into the middle — no per-row style flip — and a
+     half-scrolled row is half-faded. The center number keeps a small fully-opaque
+     plateau so it stays crisp. */
   .navi_wheel_container {
-    /* The emphasis: opacity peaks on the center row and falls off progressively
-       toward the edges (like a physical wheel curving away). Because it is a
-       function of position, a row emphasises smoothly as it scrolls into the
-       middle — no per-row style flip — and a half-scrolled row is half-faded.
-       The center number keeps a small fully-opaque plateau so it stays crisp. */
-    --wheel-fade-y: linear-gradient(
-      to bottom,
+    --wheel-fade: linear-gradient(
+      var(--wheel-fade-direction),
       transparent 0%,
       rgba(0, 0, 0, 0.4) 34%,
       #000 45%,
@@ -240,15 +191,58 @@ const css = /* css */ `
       rgba(0, 0, 0, 0.4) 66%,
       transparent 100%
     );
-    --wheel-fade-x: linear-gradient(
-      to right,
-      transparent 0%,
-      rgba(0, 0, 0, 0.4) 34%,
-      #000 45%,
-      #000 55%,
-      rgba(0, 0, 0, 0.4) 66%,
-      transparent 100%
-    );
+
+    &:not([data-horizontal]) {
+      --wheel-fade-direction: to bottom;
+
+      .navi_wheel_viewport {
+        height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
+        -webkit-mask-image: var(--wheel-fade);
+        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_list {
+        /* Blank space so the first and last items can reach the center row. */
+        padding-block: calc(
+          var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
+        );
+        flex-direction: column;
+        &[data-loop] {
+          padding-block: 0;
+        }
+      }
+      .navi_wheel_item {
+        /* Main-axis size is fixed (height); reserve a remembered cross-axis size
+           so a skipped row doesn't collapse the wheel's width. */
+        contain-intrinsic-width: auto 3ch;
+        height: var(--wheel-item-height);
+        padding-inline: var(--wheel-item-padding-x, 0.5ch);
+      }
+    }
+
+    &[data-horizontal] {
+      --wheel-fade-direction: to right;
+
+      .navi_wheel_viewport {
+        width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
+        -webkit-mask-image: var(--wheel-fade);
+        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_list {
+        padding-inline: calc(
+          var(--wheel-item-width) * (var(--wheel-visible-count) - 1) / 2
+        );
+        flex-direction: row;
+        &[data-loop] {
+          padding-inline: 0;
+        }
+      }
+      .navi_wheel_item {
+        /* Main-axis size is fixed (width); reserve a remembered cross-axis size. */
+        contain-intrinsic-height: auto 1.5em;
+        width: var(--wheel-item-width);
+        padding-block: var(--wheel-item-padding-x, 0.5ch);
+      }
+    }
   }
 
   /* ── Center window ────────────────────────────────────────────────────────────
@@ -266,55 +260,59 @@ const css = /* css */ `
         light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
       );
     pointer-events: none;
-  }
-  .navi_wheel_container[data-glass] .navi_wheel_pane {
-    /* A faint frost tint over the blur. Without it, blurring dark text on a
-       light backdrop leaves a bright fringe (halo) around each glyph; compositing
-       the blur under a thin opaque layer flattens that fringe. Tune/disable with
-       --wheel-glass-tint. */
-    background: light-dark(
-      rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
-      rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
-    );
-    backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-    -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-  }
-  .navi_wheel_container:not([data-horizontal]) .navi_wheel_pane {
-    right: 0;
-    left: 0;
-    height: calc((100% - var(--wheel-item-height)) / 2);
 
-    &[data-side="start"] {
-      top: 0;
+    .navi_wheel_container[data-glass] & {
+      /* A faint frost tint over the blur. Without it, blurring dark text on a
+         light backdrop leaves a bright fringe (halo) around each glyph;
+         compositing the blur under a thin opaque layer flattens that fringe.
+         Tune/disable with --wheel-glass-tint. */
+      background: light-dark(
+        rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
+        rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
+      );
+      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
     }
-    &[data-side="end"] {
-      bottom: 0;
-    }
-  }
-  .navi_wheel_container[data-horizontal] .navi_wheel_pane {
-    top: 0;
-    bottom: 0;
-    width: calc((100% - var(--wheel-item-width)) / 2);
 
-    &[data-side="start"] {
-      left: 0;
-    }
-    &[data-side="end"] {
+    .navi_wheel_container:not([data-horizontal]) & {
       right: 0;
+      left: 0;
+      height: calc((100% - var(--wheel-item-height)) / 2);
+
+      &[data-side="start"] {
+        top: 0;
+      }
+      &[data-side="end"] {
+        bottom: 0;
+      }
     }
-  }
-  .navi_wheel_container[data-frame-border] {
-    &:not([data-horizontal]) .navi_wheel_pane[data-side="start"] {
-      border-bottom-width: 1px;
+    .navi_wheel_container[data-horizontal] & {
+      top: 0;
+      bottom: 0;
+      width: calc((100% - var(--wheel-item-width)) / 2);
+
+      &[data-side="start"] {
+        left: 0;
+      }
+      &[data-side="end"] {
+        right: 0;
+      }
     }
-    &:not([data-horizontal]) .navi_wheel_pane[data-side="end"] {
-      border-top-width: 1px;
+    .navi_wheel_container[data-frame-border]:not([data-horizontal]) & {
+      &[data-side="start"] {
+        border-bottom-width: 1px;
+      }
+      &[data-side="end"] {
+        border-top-width: 1px;
+      }
     }
-    &[data-horizontal] .navi_wheel_pane[data-side="start"] {
-      border-right-width: 1px;
-    }
-    &[data-horizontal] .navi_wheel_pane[data-side="end"] {
-      border-left-width: 1px;
+    .navi_wheel_container[data-frame-border][data-horizontal] & {
+      &[data-side="start"] {
+        border-right-width: 1px;
+      }
+      &[data-side="end"] {
+        border-left-width: 1px;
+      }
     }
   }
 
@@ -330,42 +328,46 @@ const css = /* css */ `
 
     display: inline-flex;
     align-items: center;
-  }
-  .navi_wheel_group:not([data-horizontal]) .navi_wheel_viewport {
-    padding-inline: var(--wheel-spacing);
-  }
-  .navi_wheel_group[data-horizontal] {
-    flex-direction: column;
-    align-items: center;
 
-    .navi_wheel_viewport {
-      padding-block: var(--wheel-spacing);
+    &:not([data-horizontal]) .navi_wheel_viewport {
+      padding-inline: var(--wheel-spacing);
+    }
+    &[data-horizontal] {
+      flex-direction: column;
+      align-items: center;
+
+      .navi_wheel_viewport {
+        padding-block: var(--wheel-spacing);
+      }
     }
   }
   .navi_wheel_group_separator {
-    /* A sibling of the wheels, so it does NOT inherit their --wheel-item-height
-       (that lives on .navi_wheel_container). Re-expose a default here so custom
-       separator content can rely on it, e.g. line-height: var(--wheel-item-height)
-       to make a single line exactly one row tall. */
+    /* Stretch to the group height (= the wheels' height) and center the inner
+       row, landing it on the middle (selected) row. A sibling of the wheels, so
+       it does NOT inherit their --wheel-item-height — re-expose it here. */
     --wheel-item-height: round(2.4em, 1px);
 
     display: flex;
-    /* Stretch to the group height (= the wheels' height) and center the content,
-       which lands it on the middle (selected) row. */
     align-items: center;
     align-self: stretch;
     justify-content: center;
     color: var(--wheel-color, light-dark(#111, #eee));
-    font-weight: 600;
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     white-space: nowrap;
     user-select: none;
-
-    /* <WheelGroup.Separator center> — snap a single text line onto the row. */
-    &[data-center] {
-      line-height: var(--wheel-item-height);
-    }
+  }
+  .navi_wheel_group_separator_content {
+    /* One wheel row, laid out exactly like a .navi_wheel_item so its glyph
+       baseline lands identically on the center row — rather than centering the
+       raw text in the full group height, which diverges from the item box model
+       and reads as a slight vertical offset. */
+    display: flex;
+    height: var(--wheel-item-height);
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
   }
 `;
 
@@ -716,12 +718,14 @@ function WheelUI(props) {
       animRef.current = null;
     }
     if (glideRef.current !== null) {
-      const { vp, timer } = glideRef.current;
-      clearTimeout(timer);
+      const { vp, animation } = glideRef.current;
       glideRef.current = null;
-      // Freeze where the transition currently is, then drop the transition so
-      // subsequent per-frame updates aren't animated.
+      // Freeze where the glide currently is (read the compositor's value before
+      // cancelling), then render it as a plain transform so subsequent per-frame
+      // momentum/drag updates apply instantly.
       posRef.current = getVisualPos(vp);
+      animation.onfinish = null;
+      animation.cancel();
       renderPos(vp);
     }
   };
@@ -750,11 +754,19 @@ function WheelUI(props) {
     });
   };
 
-  // Glide the position to a target via a CSS transition on the track. A CSS
-  // transition runs on the compositor, so it stays smooth even when the arrow-key
-  // selection change triggers a main-thread re-render that would starve (and
-  // visibly jump) a requestAnimationFrame loop. The transform is set *raw* (no
-  // wrap) so it can travel onto a clone; onDone normalises + selects.
+  // Glide the position to a target with the Web Animations API. WAAPI runs the
+  // transform on the compositor (smooth even while the arrow-key selection change
+  // triggers a main-thread re-render that would starve a rAF loop), and gives a
+  // real handle: onfinish tells us exactly when it's done, and cancelAnim can
+  // read the live value + cancel it to redirect a fresh glide (rapid arrow
+  // presses). The transform is set *raw* (no wrap) so it can travel onto a clone;
+  // onDone normalises + selects.
+  const glideTransform = (pos) => {
+    const p = -pos;
+    return isHorizontal
+      ? `translate3d(${p}px, 0, 0)`
+      : `translate3d(0, ${p}px, 0)`;
+  };
   const animateTo = (vp, target, onDone) => {
     cancelAnim();
     const track = getTrack(vp);
@@ -765,19 +777,28 @@ function WheelUI(props) {
       onDone();
       return;
     }
-    // A single-row step (arrow key, clone click) is only ~one item; the floor
-    // keeps that glide long enough to read as motion rather than a jump.
-    const duration = clampNumber(Math.abs(dist) * 1.4, 280, 460);
+    // A single-row step (arrow key, clone click) is ~one item; the floor keeps
+    // that glide long enough to read as motion rather than a jump, but short
+    // enough to stay snappy under quick key repeats.
+    const duration = clampNumber(Math.abs(dist) * 1.1, 200, 420);
+    const from = glideTransform(posRef.current);
+    const to = glideTransform(target);
     posRef.current = target;
-    track.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
-    applyTransform(track, target);
+    const animation = track.animate([{ transform: from }, { transform: to }], {
+      duration,
+      easing: "cubic-bezier(0.22, 0.61, 0.36, 1)",
+      fill: "forwards",
+    });
     updateCurrentMarker(vp, findCenteredRow(vp));
-    const timer = setTimeout(() => {
+    animation.onfinish = () => {
       glideRef.current = null;
-      track.style.transition = "none";
+      // Commit the end transform to inline style, then drop the animation so it
+      // doesn't keep the property pinned.
+      applyTransform(track, target);
+      animation.cancel();
       onDone();
-    }, duration + 20);
-    glideRef.current = { vp, timer };
+    };
+    glideRef.current = { vp, animation };
   };
 
   // Settle after user input (fling or idle): a single continuous motion that
@@ -1355,6 +1376,7 @@ export const WheelGroup = ({
   ...rest
 }) => {
   import.meta.css = css;
+  const groupRef = useRef(null);
   const groupStyle = {
     ...(spacing === undefined
       ? {}
@@ -1364,10 +1386,55 @@ export const WheelGroup = ({
         }),
     ...style,
   };
+
+  // Cross-axis arrows move focus between wheels (the main axis stays within a
+  // wheel, changing its value). A row of wheels → Left/Right hop columns; a
+  // horizontal group stacks wheels → Up/Down hop rows. Focusing the next wheel's
+  // checked value lets you go straight from hours to minutes.
+  useLayoutEffect(() => {
+    const el = groupRef.current;
+    const prevKey = horizontal ? "ArrowUp" : "ArrowLeft";
+    const nextKey = horizontal ? "ArrowDown" : "ArrowRight";
+    const onKeyDown = (e) => {
+      if (e.key !== prevKey && e.key !== nextKey) {
+        return;
+      }
+      const active = document.activeElement;
+      if (!active || !el.contains(active)) {
+        return;
+      }
+      const currentWheel = active.closest(".navi_wheel_container");
+      if (!currentWheel) {
+        return;
+      }
+      const wheels = [...el.querySelectorAll(".navi_wheel_container")];
+      const targetIndex =
+        wheels.indexOf(currentWheel) + (e.key === nextKey ? 1 : -1);
+      if (targetIndex < 0 || targetIndex >= wheels.length) {
+        return;
+      }
+      const targetWheel = wheels[targetIndex];
+      const radio =
+        targetWheel.querySelector("[navi-selectable-real-input]:checked") ||
+        targetWheel.querySelector("[navi-selectable-real-input]");
+      if (!radio) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      radio.focus();
+    };
+    el.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      el.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [horizontal]);
+
   // A Box (not a plain div) so style props like border/padding work directly.
   return (
     <Box
       {...rest}
+      ref={groupRef}
       baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
@@ -1380,23 +1447,20 @@ export const WheelGroup = ({
 };
 /**
  * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
+ * Its content sits in a one-row box that mirrors a wheel item, so it lines up
+ * with the selected value on the center row automatically.
  *
  * @param {object} props
- * @param {boolean} [props.center] - Snap a single line of text onto the center
- *   row by matching the item height (line-height: var(--wheel-item-height)).
- *   Content is already flex-centered by default; use this to fine-tune glyphs
- *   like ":" without reaching for the CSS variable yourself.
  */
-const WheelGroupSeparator = ({ children, center, ...rest }) => {
+const WheelGroupSeparator = ({ children, ...rest }) => {
   return (
     <Box
       as="span"
       {...rest}
       className="navi_wheel_group_separator"
-      data-center={center ? "" : undefined}
       aria-hidden="true"
     >
-      {children}
+      <span className="navi_wheel_group_separator_content">{children}</span>
     </Box>
   );
 };

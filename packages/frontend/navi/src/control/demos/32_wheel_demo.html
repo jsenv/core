@@ -462,10 +462,9 @@
           <div id="separator" className="demo-section">
             <h2>Separator alignment</h2>
             <p>
-              A separator sits on the center row automatically. Below: the
-              orange square marks where separator content lands, then the same
-              ":" by default and with the <code>center</code> prop (which snaps
-              a single line onto the row).
+              A separator's content sits in a one-row box that mirrors a wheel
+              item, so it lands on the center row automatically. The orange
+              square marks where separator content lands; then the same ":".
             </p>
             <div className="states">
               <div>
@@ -484,15 +483,7 @@
                   <WheelGroup.Separator>:</WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
-                <span className="col-label">":" default</span>
-              </div>
-              <div>
-                <WheelGroup>
-                  <HourWheel />
-                  <WheelGroup.Separator center>:</WheelGroup.Separator>
-                  <QuarterWheel />
-                </WheelGroup>
-                <span className="col-label">":" center</span>
+                <span className="col-label">":"</span>
               </div>
             </div>
 
@@ -898,7 +889,7 @@
                         </Wheel.Item>
                       ))}
                     </Wheel>
-                    <WheelGroup.Separator center>:</WheelGroup.Separator>
+                    <WheelGroup.Separator>:</WheelGroup.Separator>
                     <Wheel type="integer" value={gm} action={setGm} loop>
                       {[0, 15, 30, 45].map((m) => (
                         <Wheel.Item key={m} value={m}>
