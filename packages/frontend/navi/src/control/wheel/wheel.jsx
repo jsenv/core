@@ -127,11 +127,12 @@ const css = /* css */ `
     }
   }
 
+  /* A separator (e.g. ":") placed between wheels. It is a sibling of the wheel,
+     so it spans the full wheel height and centers its content — that lands it on
+     the center row, glyph-centered exactly like .navi_wheel_item does its digits.
+     Relying on the parent row's align-items would only align boxes/baselines, not
+     the center row. */
   .navi_wheel_item_decoration {
-    --wheel-item-height: 2.4em;
-
-    display: flex;
-    height: var(--wheel-item-height);
     align-items: center;
     justify-content: center;
     font-weight: 600;

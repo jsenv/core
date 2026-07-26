@@ -58,7 +58,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, Wheel } from "@jsenv/navi";
+      import { NaviDebug, Wheel, Box } from "@jsenv/navi";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
@@ -94,12 +94,11 @@
         return (
           <div className="demo-section">
             <h2>Three columns (like the screenshot)</h2>
-            <div
-              className="row"
+            <Box
+              flex
+              spacing="xxs"
+              width="fit-content"
               style={{
-                gap: "4px",
-                width: "fit-content",
-                fontSize: "1.6rem",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -110,7 +109,11 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <span className="navi_wheel_item_decoration">:</span>
+              <Box flex alignY="center">
+                <Box className="navi_wheel_item_decoration" lineHeight="2.4em">
+                  :
+                </Box>
+              </Box>
               <Wheel value={m} action={setM}>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -118,7 +121,11 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <span className="navi_wheel_item_decoration">:</span>
+              <Box flex alignY="center">
+                <Box className="navi_wheel_item_decoration" lineHeight="2.4em">
+                  :
+                </Box>
+              </Box>
               <Wheel value={s} action={setS}>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -126,7 +133,7 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-            </div>
+            </Box>
             <div className="value-display">
               {pad2(h)}:{pad2(m)}:{pad2(s)}
             </div>
