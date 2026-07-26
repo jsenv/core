@@ -74,7 +74,7 @@ const css = /* css */ `
       outline-width: var(--navi-focus-outline-width);
       outline-style: solid;
       outline-color: var(--navi-focus-outline-color);
-      outline-offset: 2px;
+      outline-offset: calc(var(--navi-focus-outline-width) / 2);
     }
 
     /* Readonly & disabled look the same: only the *selected* value is dimmed,
