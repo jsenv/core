@@ -254,6 +254,7 @@ const css = /* css */ `
     justify-content: center;
     color: var(--wheel-color, light-dark(#111, #eee));
     font-weight: 600;
+    font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     white-space: nowrap;
     user-select: none;
@@ -555,6 +556,18 @@ function WheelUI(props) {
       if (!centered) {
         return;
       }
+      if (!interactive) {
+        // Readonly/disabled: a scroll must not change the value nor pop the
+        // readonly callout (scrolling is a weak, easy-to-trigger gesture).
+        // Silently spring the wheel back to the selected value.
+        const selected = getSelectedItem(viewportEl);
+        if (selected) {
+          centeredIdRef.current = selected.id;
+          updateCurrentMarker(viewportEl, selected);
+          centerItem(viewportEl, selected, "smooth");
+        }
+        return;
+      }
       centeredIdRef.current = centered.id;
       const input = centered.querySelector("[navi-selectable-real-input]");
       if (input && (input.checked || input.disabled)) {
@@ -574,13 +587,18 @@ function WheelUI(props) {
       clearTimeout(settleTimer);
       viewportEl.removeEventListener("scroll", onScroll);
     };
-  }, [isLoop, isHorizontal]);
+  }, [isLoop, isHorizontal, interactive]);
 
-  // Focus (arrow keys, tab, click) centers the focused item.
+  // Focus (arrow keys, tab, click) centers the focused item. Skipped when not
+  // interactive: clicking a neighbour or arrowing must NOT scroll — it should
+  // let the selectable layer show the readonly callout instead.
   useLayoutEffect(() => {
     const el = ref.current;
     const viewportEl = el.querySelector(".navi_wheel_viewport");
     const onFocusIn = (e) => {
+      if (!interactive) {
+        return;
+      }
       const input = e.target.closest("[navi-selectable-real-input]");
       if (!input) {
         return;
@@ -597,7 +615,7 @@ function WheelUI(props) {
     return () => {
       el.removeEventListener("focusin", onFocusIn);
     };
-  }, [isHorizontal]);
+  }, [isHorizontal, interactive]);
 
   return (
     <Box
@@ -605,6 +623,7 @@ function WheelUI(props) {
       ref={ref}
       baseClassName="navi_wheel_container"
       data-horizontal={isHorizontal ? "" : undefined}
+      data-wheel-type={type || undefined}
       pseudoClasses={WHEEL_PSEUDO_CLASSES}
       basePseudoState={basePseudoState}
       style={styleWithVars}
@@ -784,7 +803,6 @@ Wheel.Item = WheelItem;
 export const WheelGroup = ({
   spacing,
   horizontal,
-  className,
   style,
   children,
   ...rest
@@ -799,17 +817,16 @@ export const WheelGroup = ({
         }),
     ...style,
   };
+  // A Box (not a plain div) so style props like border/padding work directly.
   return (
-    <div
+    <Box
       {...rest}
-      className={
-        className ? `navi_wheel_group ${className}` : "navi_wheel_group"
-      }
+      baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
     >
       {children}
-    </div>
+    </Box>
   );
 };
 const WheelGroupSeparator = ({ children, ...rest }) => {

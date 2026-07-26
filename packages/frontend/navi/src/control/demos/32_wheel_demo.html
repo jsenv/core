@@ -95,6 +95,9 @@
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
+      // Local YYYY-MM-DD (NOT toISOString, which is UTC and can shift the day).
+      const toLocalISODate = (date) =>
+        `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 
       // ── Table of contents ──────────────────────────────────────────────────
 
@@ -216,8 +219,8 @@
               Scroll/drag over a <code>:</code> and it scrolls the neighbouring
               wheel, not the page.
             </p>
-            <WheelGroup style={{ fontVariantNumeric: "tabular-nums" }}>
-              <Wheel value={h} action={setH} loop>
+            <WheelGroup>
+              <Wheel type="integer" value={h} action={setH} loop>
                 {range(24).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -225,7 +228,7 @@
                 ))}
               </Wheel>
               <WheelGroup.Separator>:</WheelGroup.Separator>
-              <Wheel value={m} action={setM} loop>
+              <Wheel type="integer" value={m} action={setM} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -233,7 +236,7 @@
                 ))}
               </Wheel>
               <WheelGroup.Separator>:</WheelGroup.Separator>
-              <Wheel value={s} action={setS} loop>
+              <Wheel type="integer" value={s} action={setS} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -261,8 +264,8 @@
               A short column loops too. Try <kbd>↓</kbd> on 45 — it continues
               onto the looped 00.
             </p>
-            <WheelGroup style={{ fontVariantNumeric: "tabular-nums" }}>
-              <Wheel value={h} action={setH} loop>
+            <WheelGroup>
+              <Wheel type="integer" value={h} action={setH} loop>
                 {range(24).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -270,7 +273,7 @@
                 ))}
               </Wheel>
               <WheelGroup.Separator>:</WheelGroup.Separator>
-              <Wheel value={m} action={setM} loop>
+              <Wheel type="integer" value={m} action={setM} loop>
                 {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -301,7 +304,7 @@
               dead zone.
             </p>
             <WheelGroup spacing="0.75ch">
-              <Wheel value={h} action={setH} loop>
+              <Wheel type="integer" value={h} action={setH} loop>
                 {range(24).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {v}
@@ -309,7 +312,7 @@
                 ))}
               </Wheel>
               <WheelGroup.Separator>hours</WheelGroup.Separator>
-              <Wheel value={m} action={setM} loop>
+              <Wheel type="integer" value={m} action={setM} loop>
                 {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -362,7 +365,7 @@
         const days = range(6).map((offset) => {
           const date = new Date(today);
           date.setDate(today.getDate() + offset);
-          return date.toISOString().slice(0, 10);
+          return toLocalISODate(date);
         });
         const [day, setDay] = useState(days[0]);
         return (
@@ -414,8 +417,7 @@
                 action={setHour}
                 itemWidth="4ch"
                 visibleCount={5}
-                style={{ fontVariantNumeric: "tabular-nums" }}
-              >
+                >
                 {range(24).map((h) => (
                   <Wheel.Item key={h} value={h}>
                     {pad2(h)}
@@ -444,7 +446,6 @@
             <WheelGroup
               horizontal
               spacing="6px"
-              style={{ fontVariantNumeric: "tabular-nums" }}
             >
               <Wheel
                 horizontal
