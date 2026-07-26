@@ -89,6 +89,7 @@ const css = /* css */ `
     position: relative;
     display: flex;
     height: var(--wheel-item-height);
+    padding-inline: var(--wheel-item-padding-x, 0.5ch);
     align-items: center;
     justify-content: center;
     color: var(--wheel-color-faded);
@@ -138,6 +139,43 @@ const css = /* css */ `
     font-weight: 600;
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
+  }
+
+  /* WheelGroup lays out several wheels with separators (e.g. ":") between them.
+     Each wheel touching a separator eats half of it via a negative margin, so
+     the wheel's scrollable viewport — not the inert separator — occupies that
+     half. Between two wheels the separator is eaten from both sides, costing
+     zero net layout width: the number columns sit flush and the ":" floats on
+     the seam. Because the separator is pointer-events:none, scrolling/dragging
+     over the ":" is caught by whichever wheel viewport lies beneath (left half →
+     left wheel, right half → right wheel) instead of scrolling the page. */
+  .navi_wheel_group {
+    --wheel-separator-width: 1ch;
+
+    display: inline-flex;
+    align-items: center;
+  }
+  .navi_wheel_group > .navi_wheel_container:has(+ .navi_wheel_group_separator) {
+    margin-right: calc(-0.5 * var(--wheel-separator-width));
+  }
+  .navi_wheel_group > .navi_wheel_group_separator + .navi_wheel_container {
+    margin-left: calc(-0.5 * var(--wheel-separator-width));
+  }
+  .navi_wheel_group_separator {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    width: var(--wheel-separator-width);
+    align-items: center;
+    /* Match the wheels' height so the glyph centers on the middle (selected) row */
+    align-self: stretch;
+    justify-content: center;
+    color: light-dark(#111, #eee);
+    font-weight: 600;
+    font-family: var(--navi-control-font-family);
+    /* Inert on top of the eaten halves — see the .navi_wheel_group note above */
+    pointer-events: none;
+    user-select: none;
   }
 `;
 
@@ -424,3 +462,59 @@ export const WheelItem = createComponentResolver([
   WheelItemUI,
 ]);
 Wheel.Item = WheelItem;
+
+/**
+ * WheelGroup — lays out several Wheels side by side with separators between
+ * them (e.g. a "HH : MM : SS" time picker).
+ *
+ * Put <Wheel> and <WheelGroup.Separator> as direct children. Each wheel that
+ * touches a separator eats half of it so its scroll surface (not the inert
+ * separator) receives wheel/drag/scroll over the separator glyph — see the
+ * .navi_wheel_group CSS note.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   separatorWidth?: number | string,
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {number|string} [props.separatorWidth] - Width of each separator column (number = px; default 1ch). Also sets how far a neighbouring wheel's scroll surface reaches under the separator.
+ */
+export const WheelGroup = ({
+  separatorWidth,
+  className,
+  style,
+  children,
+  ...rest
+}) => {
+  import.meta.css = css;
+  const groupStyle = {
+    ...(separatorWidth === undefined
+      ? {}
+      : {
+          "--wheel-separator-width":
+            typeof separatorWidth === "number"
+              ? `${separatorWidth}px`
+              : separatorWidth,
+        }),
+    ...style,
+  };
+  return (
+    <div
+      {...rest}
+      className={
+        className ? `navi_wheel_group ${className}` : "navi_wheel_group"
+      }
+      style={groupStyle}
+    >
+      {children}
+    </div>
+  );
+};
+const WheelGroupSeparator = ({ children, ...rest }) => {
+  return (
+    <span {...rest} className="navi_wheel_group_separator" aria-hidden="true">
+      {children}
+    </span>
+  );
+};
+WheelGroup.Separator = WheelGroupSeparator;

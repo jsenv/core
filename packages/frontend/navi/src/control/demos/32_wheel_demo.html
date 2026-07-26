@@ -58,7 +58,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, Wheel, Box } from "@jsenv/navi";
+      import { NaviDebug, Wheel, WheelGroup } from "@jsenv/navi";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
@@ -93,14 +93,53 @@
         const [s, setS] = useState(0);
         return (
           <div className="demo-section">
-            <h2>Three columns (like the screenshot)</h2>
-            <Box
-              flex
-              spacing="xxs"
-              width="fit-content"
-              style={{
-                fontVariantNumeric: "tabular-nums",
-              }}
+            <h2>WheelGroup — three columns (like the screenshot)</h2>
+            <p style={{ color: "#666", fontSize: "0.85rem" }}>
+              Scroll/drag over a ":" and it scrolls the neighbouring wheel (the
+              separator is eaten by half on each side), not the page.
+            </p>
+            <WheelGroup style={{ fontVariantNumeric: "tabular-nums" }}>
+              <Wheel value={h} action={setH}>
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <Wheel value={m} action={setM}>
+                {range(60).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <Wheel value={s} action={setS}>
+                {range(60).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </WheelGroup>
+            <div className="value-display">
+              {pad2(h)}:{pad2(m)}:{pad2(s)}
+            </div>
+          </div>
+        );
+      };
+
+      const HourMinuteDemo = () => {
+        const [h, setH] = useState(9);
+        const [m, setM] = useState(30);
+        const MINUTES = [0, 15, 30, 45];
+        return (
+          <div className="demo-section">
+            <h2>WheelGroup — two columns (hours + quarter minutes)</h2>
+            <WheelGroup
+              separatorWidth="1.5ch"
+              style={{ fontVariantNumeric: "tabular-nums" }}
             >
               <Wheel value={h} action={setH}>
                 {range(24).map((v) => (
@@ -109,33 +148,17 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <Box flex alignY="center">
-                <Box className="navi_wheel_item_decoration" lineHeight="2.4em">
-                  :
-                </Box>
-              </Box>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
               <Wheel value={m} action={setM}>
-                {range(60).map((v) => (
+                {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <Box flex alignY="center">
-                <Box className="navi_wheel_item_decoration" lineHeight="2.4em">
-                  :
-                </Box>
-              </Box>
-              <Wheel value={s} action={setS}>
-                {range(60).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-            </Box>
+            </WheelGroup>
             <div className="value-display">
-              {pad2(h)}:{pad2(m)}:{pad2(s)}
+              {pad2(h)}:{pad2(m)}
             </div>
           </div>
         );
@@ -171,6 +194,7 @@
         <NaviDebug>
           <HoursDemo />
           <TimeDemo />
+          <HourMinuteDemo />
           <FiveVisibleDemo />
         </NaviDebug>
       );
