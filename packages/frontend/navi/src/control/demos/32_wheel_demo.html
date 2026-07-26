@@ -82,6 +82,10 @@
         border: 1px solid #ccc;
         border-radius: 3px;
       }
+      .col-label {
+        color: #888;
+        font-size: 0.8rem;
+      }
     </style>
   </head>
   <body>
@@ -128,15 +132,6 @@
               </li>
               <li>
                 <a href="#separator">Separator alignment</a>
-              </li>
-              <li>
-                <a href="#time">Time HH:MM:SS</a>
-              </li>
-              <li>
-                <a href="#hm">Hours + quarter minutes</a>
-              </li>
-              <li>
-                <a href="#words">Word separators + trailing separator</a>
               </li>
               <li>
                 <a href="#sizes">Sizes (no loop)</a>
@@ -224,132 +219,6 @@
                 ))}
               </Wheel>
               <div className="value-display">value: {pad2(m)}</div>
-            </div>
-          </div>
-        );
-      };
-
-      // ── Time HH:MM:SS ──────────────────────────────────────────────────────
-
-      const TimeDemo = () => {
-        const [h, setH] = useState(0);
-        const [m, setM] = useState(4);
-        const [s, setS] = useState(0);
-        return (
-          <div id="time" className="demo-section">
-            <h2>Time HH:MM:SS</h2>
-            <p>
-              Scroll/drag over a <code>:</code> and it scrolls the neighbouring
-              wheel, not the page.
-            </p>
-            <WheelGroup>
-              <Wheel type="integer" value={h} action={setH} loop>
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
-                :
-              </WheelGroup.Separator>
-              <Wheel type="integer" value={m} action={setM} loop>
-                {range(60).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
-                :
-              </WheelGroup.Separator>
-              <Wheel type="integer" value={s} action={setS} loop>
-                {range(60).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-            </WheelGroup>
-            <div className="value-display">
-              {pad2(h)}:{pad2(m)}:{pad2(s)}
-            </div>
-          </div>
-        );
-      };
-
-      // ── Hours + quarter minutes ────────────────────────────────────────────
-
-      const HourMinuteDemo = () => {
-        const [h, setH] = useState(9);
-        const [m, setM] = useState(30);
-        const MINUTES = [0, 15, 30, 45];
-        return (
-          <div id="hm" className="demo-section">
-            <h2>Hours + quarter minutes</h2>
-            <p>
-              A short column loops too. Try <kbd>↓</kbd> on 45 — it continues
-              onto the looped 00.
-            </p>
-            <WheelGroup>
-              <Wheel type="integer" value={h} action={setH} loop>
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
-              <Wheel type="integer" value={m} action={setM} loop>
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-            </WheelGroup>
-            <div className="value-display">
-              {pad2(h)}:{pad2(m)}
-            </div>
-          </div>
-        );
-      };
-
-      // ── Word separators + trailing separator ───────────────────────────────
-
-      const WordsDemo = () => {
-        const [h, setH] = useState(9);
-        const [m, setM] = useState(30);
-        const MINUTES = [0, 15, 30, 45];
-        return (
-          <div id="words" className="demo-section">
-            <h2>Word separators + trailing separator</h2>
-            <p>
-              Separators take their natural width (here whole words), and there
-              is even a trailing one. The gap around each separator is
-              scrollable (it belongs to the wheel); only the word itself is a
-              dead zone.
-            </p>
-            <WheelGroup spacing="0.75ch">
-              <Wheel type="integer" value={h} action={setH} loop>
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {v}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>hours</WheelGroup.Separator>
-              <Wheel type="integer" value={m} action={setM} loop>
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>minutes</WheelGroup.Separator>
-            </WheelGroup>
-            <div className="value-display">
-              {h} hours {pad2(m)} minutes
             </div>
           </div>
         );
@@ -528,67 +397,121 @@
         />
       );
 
+      // Small self-contained wheels reused across the separator cases.
+      const HourWheel = (props) => {
+        const [v, setV] = useState(9);
+        return (
+          <Wheel type="integer" value={v} action={setV} loop {...props}>
+            {range(24).map((h) => (
+              <Wheel.Item key={h} value={h}>
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+      const MinuteWheel = (props) => {
+        const [v, setV] = useState(30);
+        return (
+          <Wheel type="integer" value={v} action={setV} loop {...props}>
+            {range(60).map((x) => (
+              <Wheel.Item key={x} value={x}>
+                {pad2(x)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+      const SecondWheel = (props) => {
+        const [v, setV] = useState(0);
+        return (
+          <Wheel type="integer" value={v} action={setV} loop {...props}>
+            {range(60).map((x) => (
+              <Wheel.Item key={x} value={x}>
+                {pad2(x)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+      const QuarterWheel = (props) => {
+        const [v, setV] = useState(30);
+        return (
+          <Wheel type="integer" value={v} action={setV} loop {...props}>
+            {[0, 15, 30, 45].map((x) => (
+              <Wheel.Item key={x} value={x}>
+                {pad2(x)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+
       const SeparatorAlignmentDemo = () => {
-        const [h, setH] = useState(9);
-        const [m, setM] = useState(30);
-        const MINUTES = [0, 15, 30, 45];
         return (
           <div id="separator" className="demo-section">
             <h2>Separator alignment</h2>
             <p>
-              A separator stretches to the wheel's height and centers its
-              content, so it sits on the middle (selected) row — no work needed.
-              The orange square marks exactly where the separator content lands:
-              it should line up with the center row of both wheels (one of which
-              is a short looping column, the trickier case).
+              A separator sits on the center row automatically. Below: the
+              orange square marks where separator content lands, then the same
+              ":" rendered by default and with{" "}
+              <code>lineHeight="var(--wheel-item-height)"</code>.
             </p>
+            <div className="states">
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator>
+                    <AlignmentSquare />
+                  </WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">square = separator</span>
+              </div>
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator>:</WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">":" default</span>
+              </div>
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
+                    :
+                  </WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">":" lineHeight</span>
+              </div>
+            </div>
+
+            <h3 style={{ marginTop: 24 }}>1 separator, 2 columns</h3>
             <WheelGroup>
-              <Wheel type="integer" value={h} action={setH} loop>
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>
-                <AlignmentSquare />
-              </WheelGroup.Separator>
-              <Wheel type="integer" value={m} action={setM} loop>
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
+              <HourWheel />
+              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <MinuteWheel />
             </WheelGroup>
 
-            <h3 style={{ marginTop: 20 }}>Centering custom text</h3>
-            <p>
-              Text content is already centered by the default flex layout. If
-              you give the separator your own block/inline element and want a
-              single line to be exactly one row tall, use{" "}
-              <code>line-height: var(--wheel-item-height)</code> — the separator
-              re-exposes that variable (it is a sibling of the wheels, so it
-              does not inherit theirs).
-            </p>
+            <h3 style={{ marginTop: 24 }}>
+              Word separators (hours + minutes), incl. trailing
+            </h3>
+            <WheelGroup spacing="0.75ch">
+              <HourWheel />
+              <WheelGroup.Separator>hours</WheelGroup.Separator>
+              <QuarterWheel />
+              <WheelGroup.Separator>minutes</WheelGroup.Separator>
+            </WheelGroup>
+
+            <h3 style={{ marginTop: 24 }}>3 columns, 2 separators</h3>
             <WheelGroup>
-              <Wheel type="integer" value={h} action={setH} loop>
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
-                :
-              </WheelGroup.Separator>
-              <Wheel type="integer" value={m} action={setM} loop>
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
+              <HourWheel />
+              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <MinuteWheel />
+              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <SecondWheel />
             </WheelGroup>
           </div>
         );
@@ -735,9 +658,6 @@
           <StatesDemo />
           <LoopDemo />
           <SeparatorAlignmentDemo />
-          <TimeDemo />
-          <HourMinuteDemo />
-          <WordsDemo />
           <SizesDemo />
           <DayDemo />
           <HorizontalDemo />
