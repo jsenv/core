@@ -234,19 +234,15 @@ const css = /* css */ `
     --wheel-fade-y: linear-gradient(
       to bottom,
       transparent 0%,
-      rgba(0, 0, 0, 0.12) 28%,
-      #000 44%,
-      #000 56%,
-      rgba(0, 0, 0, 0.12) 72%,
+      #000 36%,
+      #000 64%,
       transparent 100%
     );
     --wheel-fade-x: linear-gradient(
       to right,
       transparent 0%,
-      rgba(0, 0, 0, 0.12) 28%,
-      #000 44%,
-      #000 56%,
-      rgba(0, 0, 0, 0.12) 72%,
+      #000 36%,
+      #000 64%,
       transparent 100%
     );
   }
