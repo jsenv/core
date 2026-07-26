@@ -250,7 +250,9 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
+                :
+              </WheelGroup.Separator>
               <Wheel type="integer" value={m} action={setM} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -258,7 +260,9 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
+                :
+              </WheelGroup.Separator>
               <Wheel type="integer" value={s} action={setS} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -731,6 +735,7 @@
           <TableOfContents />
           <StatesDemo />
           <LoopDemo />
+          <SeparatorAlignmentDemo />
           <TimeDemo />
           <HourMinuteDemo />
           <WordsDemo />
@@ -738,7 +743,6 @@
           <DayDemo />
           <HorizontalDemo />
           <HorizontalGroupDemo />
-          <SeparatorAlignmentDemo />
           <ActionsDemo />
           <CustomizationDemo />
         </NaviDebug>

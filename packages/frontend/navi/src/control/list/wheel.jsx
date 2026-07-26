@@ -55,6 +55,7 @@ const css = /* css */ `
     --wheel-item-height: 2.4em;
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
+    --wheel-loop-filler-count: 12;
     --wheel-color: light-dark(#111, #eee);
     --wheel-color-faded: light-dark(#bbb, #555);
 
@@ -116,6 +117,15 @@ const css = /* css */ `
     display: flex;
     margin: 0;
     padding: 0;
+    list-style: none;
+  }
+
+  /* Invisible scroll runway before/after the loop content so a hard drag/fling
+     never hits the physical scroll edge before the wrap can reposition. Sized in
+     whole item units (a multiple of the item size), and NOT a scroll-snap
+     target, so snapping still only lands on real/clone rows. */
+  .navi_wheel_loop_filler {
+    flex: none;
     list-style: none;
   }
 
@@ -190,6 +200,9 @@ const css = /* css */ `
       height: var(--wheel-item-height);
       padding-inline: var(--wheel-item-padding-x, 0.5ch);
     }
+    .navi_wheel_loop_filler {
+      height: calc(var(--wheel-item-height) * var(--wheel-loop-filler-count));
+    }
   }
 
   /* ── Horizontal ─────────────────────────────────────────────────────────── */
@@ -214,6 +227,9 @@ const css = /* css */ `
     .navi_wheel_item {
       width: var(--wheel-item-width);
       padding-block: var(--wheel-item-padding-x, 0.5ch);
+    }
+    .navi_wheel_loop_filler {
+      width: calc(var(--wheel-item-width) * var(--wheel-loop-filler-count));
     }
   }
 
@@ -512,12 +528,13 @@ function WheelUI(props) {
     if (!realItem || !loopClones.length) {
       return;
     }
-    const itemSize = itemMainSize(realItem);
-    const realSpan = itemSize * loopClones.length;
+    const realSpan = itemMainSize(realItem) * loopClones.length;
     if (realSpan === 0) {
       return;
     }
-    const bufferSpan = itemSize * visibleCount;
+    // Measure the band start from the DOM (offset of the first real item), so
+    // the leading filler + clones are accounted for automatically.
+    const bufferSpan = itemMainStart(realItem);
     const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
     if (center >= bufferSpan && center < bufferSpan + realSpan) {
       return;
@@ -759,6 +776,9 @@ function WheelUI(props) {
       <LoadingOutline loading={loading} inset={-1} />
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
+          {isLoop ? (
+            <li className="navi_wheel_loop_filler" aria-hidden="true" />
+          ) : null}
           {isLoop
             ? renderClones(
                 getLoopBufferItems(loopClones, visibleCount, "before"),
@@ -776,6 +796,9 @@ function WheelUI(props) {
                 handleCloneClick,
               )
             : null}
+          {isLoop ? (
+            <li className="navi_wheel_loop_filler" aria-hidden="true" />
+          ) : null}
         </ul>
       </div>
     </Box>
