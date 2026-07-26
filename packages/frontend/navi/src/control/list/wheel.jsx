@@ -71,8 +71,9 @@ const css = /* css */ `
        lets a caller force the state (e.g. in a demo). */
     &:has([navi-selectable-real-input]:focus-visible),
     &[data-focus-visible] {
-      outline: var(--navi-focus-outline-width, 2px) solid
-        var(--navi-focus-outline-color, light-dark(#4a90d9, #6ab0ff));
+      outline-width: var(--navi-focus-outline-width);
+      outline-style: solid;
+      outline-color: var(--navi-focus-outline-color);
       outline-offset: 2px;
     }
 
