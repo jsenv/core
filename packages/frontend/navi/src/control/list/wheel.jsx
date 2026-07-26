@@ -363,10 +363,15 @@ const css = /* css */ `
 const LOOP_BUFFER_MAX = 20;
 
 // Fling physics (px per ms). Velocity is capped so a violent fling can't outrun
-// the rendered runway and flash blank. Below the snap threshold the settle loop
-// switches from momentum to a spring that eases into the nearest row center.
+// the rendered runway and flash blank. Each frame the velocity is multiplied by
+// WHEEL_DECAY^(dt/16) — closer to 1 glides longer (a touch-scroll feel), like
+// the browser's own fling. Below the snap threshold the settle loop switches
+// from momentum to a spring that eases into the nearest row center; the spring
+// factor is how far toward that center it moves per frame.
 const WHEEL_MAX_VELOCITY = 2.2;
-const WHEEL_SNAP_VELOCITY = 0.35;
+const WHEEL_DECAY = 0.96;
+const WHEEL_SNAP_VELOCITY = 0.3;
+const WHEEL_SPRING_FACTOR = 0.2;
 
 // Keys that move focus between items (and thus trigger the browser's focus
 // scroll-into-view we need to undo — see the focusin effect).
@@ -549,6 +554,29 @@ function WheelUI(props) {
   const itemMainSize = (el) =>
     isHorizontal ? el.offsetWidth : el.offsetHeight;
 
+  // Rows are uniform, so one size drives all geometry. content-visibility:auto
+  // makes an off-screen row report offsetWidth/Height 0 (its offsetLeft/Top stays
+  // correct), so a size read straight off an arbitrary row can be 0 mid-scroll.
+  // Take the gap between two adjacent real rows' starts — always reliable — and
+  // fall back to a rendered row's measured size, then the CSS variable.
+  const getItemSize = (vp) => {
+    const reals = vp.querySelectorAll("[navi-list-item-real]");
+    if (reals.length >= 2) {
+      const gap = itemMainStart(reals[1]) - itemMainStart(reals[0]);
+      if (gap > 0) {
+        return gap;
+      }
+    }
+    if (reals.length >= 1) {
+      const size = itemMainSize(reals[0]);
+      if (size > 0) {
+        return size;
+      }
+    }
+    const anyRow = vp.querySelector(".navi_wheel_item");
+    return anyRow ? itemMainSize(anyRow) : 0;
+  };
+
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
   const getTrack = (vp) => vp.querySelector(".navi_wheel_list");
 
@@ -570,10 +598,11 @@ function WheelUI(props) {
   const findCenteredMatching = (viewportEl, selector) => {
     const items = viewportEl.querySelectorAll(selector);
     const center = posRef.current + viewportMain(viewportEl) / 2;
+    const itemSize = getItemSize(viewportEl);
     let closest = null;
     let closestDistance = Infinity;
     for (const item of items) {
-      const itemCenter = itemMainStart(item) + itemMainSize(item) / 2;
+      const itemCenter = itemMainStart(item) + itemSize / 2;
       const distance = Math.abs(itemCenter - center);
       if (distance < closestDistance) {
         closestDistance = distance;
@@ -593,22 +622,25 @@ function WheelUI(props) {
 
   // The virtual position that centers a given row.
   const centerPosFor = (vp, el) =>
-    itemMainStart(el) - (viewportMain(vp) - itemMainSize(el)) / 2;
+    itemMainStart(el) - (viewportMain(vp) - getItemSize(vp)) / 2;
 
   // Loop: fold the position back into the real-items band [bufferSpan,
   // bufferSpan+realSpan). A real-list extent away shows identical content, so
   // this is invisible — and because it's our own value (not scrollTop) there is
   // no physical edge to get stuck against. Returns true if it moved.
   const wrapPos = (vp) => {
-    const realItem = vp.querySelector("[navi-list-item-real]");
-    if (!realItem || !loopClones.length) {
+    // Real-item count comes from the DOM, not a closed-over `loopClones`: the
+    // input effect binds these helpers once, before Wheel.Item children have
+    // registered, so the captured `loopClones` would still be empty here.
+    const realItems = vp.querySelectorAll("[navi-list-item-real]");
+    if (!isLoop || !realItems.length) {
       return false;
     }
-    const realSpan = itemMainSize(realItem) * loopClones.length;
+    const realSpan = getItemSize(vp) * realItems.length;
     if (realSpan === 0) {
       return false;
     }
-    const bufferSpan = itemMainStart(realItem);
+    const bufferSpan = itemMainStart(realItems[0]);
     const center = posRef.current + viewportMain(vp) / 2;
     if (center >= bufferSpan && center < bufferSpan + realSpan) {
       return false;
@@ -717,7 +749,7 @@ function WheelUI(props) {
       const dt = clampNumber(now - last, 0, 32);
       last = now;
       if (!snapping) {
-        v *= Math.pow(0.95, dt / 16);
+        v *= Math.pow(WHEEL_DECAY, dt / 16);
         setPos(vp, posRef.current + v * dt);
         if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
           snapping = true;
@@ -738,7 +770,7 @@ function WheelUI(props) {
         commitSelection(vp);
         return;
       }
-      setPos(vp, posRef.current + dist * 0.22);
+      setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR);
       animRef.current = requestAnimationFrame(step);
     };
     animRef.current = requestAnimationFrame(step);
@@ -749,8 +781,9 @@ function WheelUI(props) {
   const centerOn = (vp, itemEl, behavior) => {
     const base = centerPosFor(vp, itemEl);
     let target = base;
-    if (isLoop && loopClones.length && behavior === "smooth") {
-      const realSpan = itemMainSize(itemEl) * loopClones.length;
+    const realCount = vp.querySelectorAll("[navi-list-item-real]").length;
+    if (isLoop && realCount && behavior === "smooth") {
+      const realSpan = getItemSize(vp) * realCount;
       if (realSpan > 0) {
         const copies = Math.round((posRef.current - base) / realSpan);
         target = base + copies * realSpan;
@@ -891,9 +924,19 @@ function WheelUI(props) {
     };
 
     const onWheel = (e) => {
-      const delta = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
-      if (!delta) {
+      const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
+      if (!raw) {
         return;
+      }
+      // Normalise to pixels like the browser's own scroller: a pixel-mode
+      // trackpad already carries OS momentum, a line-mode mouse notch is scaled
+      // to one row, page-mode to a viewport. So a physical mouse tick advances a
+      // row and a trackpad flings smoothly, matching native scrolling.
+      let delta = raw;
+      if (e.deltaMode === 1) {
+        delta = raw * getItemSize(vp);
+      } else if (e.deltaMode === 2) {
+        delta = raw * viewportMain(vp);
       }
       if (!interactive) {
         e.preventDefault();

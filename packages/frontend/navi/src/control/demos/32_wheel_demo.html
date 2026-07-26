@@ -134,22 +134,15 @@
                 <a href="#separator">Separator alignment</a>
               </li>
               <li>
-                <a href="#sizes">Sizes (no loop)</a>
-              </li>
-              <li>
-                <a href="#day">Day picker (no loop)</a>
-              </li>
-              <li>
-                <a href="#horizontal">Horizontal</a>
-              </li>
-              <li>
-                <a href="#horizontal-group">Horizontal group</a>
-              </li>
-              <li>
                 <a href="#actions">uiAction / action / form</a>
               </li>
               <li>
-                <a href="#customization">Customization</a>
+                <a href="#practical">Practical examples</a> — size picker, day
+                picker
+              </li>
+              <li>
+                <a href="#customization">Customization</a> — visibleCount,
+                horizontal, spacing, glass
               </li>
             </ol>
           </div>
@@ -224,14 +217,25 @@
         );
       };
 
-      // ── Sizes (no loop) ────────────────────────────────────────────────────
+      // ── Practical examples ─────────────────────────────────────────────────
 
-      const SizesDemo = () => {
+      const PracticalExamplesDemo = () => {
         const [size, setSize] = useState("M");
         const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = range(6).map((offset) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() + offset);
+          return toLocalISODate(date);
+        });
+        // Default to tomorrow so there's a neighbour above (today) and below.
+        const [day, setDay] = useState(days[1]);
         return (
-          <div id="sizes" className="demo-section">
-            <h2>Sizes — loop disabled, visibleCount=5</h2>
+          <div id="practical" className="demo-section">
+            <h2>Practical examples</h2>
+
+            <h3>Size picker (no loop)</h3>
             <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
             <div className="row">
               <Wheel
@@ -249,25 +253,10 @@
               </Wheel>
               <div className="value-display">value: {size}</div>
             </div>
-          </div>
-        );
-      };
 
-      // ── Day picker (no loop) ───────────────────────────────────────────────
-
-      const DayDemo = () => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const days = range(6).map((offset) => {
-          const date = new Date(today);
-          date.setDate(today.getDate() + offset);
-          return toLocalISODate(date);
-        });
-        // Default to tomorrow so there's a neighbour above (today) and below.
-        const [day, setDay] = useState(days[1]);
-        return (
-          <div id="day" className="demo-section">
-            <h2>Day picker — today … +5 days (no loop)</h2>
+            <h3 style={{ marginTop: 24 }}>
+              Day picker — today … +5 days (no loop)
+            </h3>
             <p>
               Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>:
               “Today”, “Tomorrow”, then weekday + date.
@@ -291,93 +280,6 @@
                 ))}
               </Wheel>
               <div className="value-display">value: {day}</div>
-            </div>
-          </div>
-        );
-      };
-
-      // ── Horizontal ─────────────────────────────────────────────────────────
-
-      const HorizontalDemo = () => {
-        const [hour, setHour] = useState(9);
-        return (
-          <div id="horizontal" className="demo-section">
-            <h2>Horizontal, looping</h2>
-            <p>
-              Same wheel, laid out left-to-right with <code>horizontal</code>.
-              Arrow keys become <kbd>←</kbd> <kbd>→</kbd>.
-            </p>
-            <div className="row">
-              <Wheel
-                type="integer"
-                horizontal
-                loop
-                value={hour}
-                action={setHour}
-                itemWidth="4ch"
-                visibleCount={5}
-              >
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <div className="value-display">value: {pad2(hour)}</div>
-            </div>
-          </div>
-        );
-      };
-
-      // ── Horizontal group ───────────────────────────────────────────────────
-
-      const HorizontalGroupDemo = () => {
-        const [h, setH] = useState(9);
-        const [m, setM] = useState(30);
-        const MINUTES = [0, 15, 30, 45];
-        return (
-          <div id="horizontal-group" className="demo-section">
-            <h2>Horizontal group</h2>
-            <p>
-              A <code>WheelGroup horizontal</code> stacks horizontal wheels,
-              with separators between the rows.
-            </p>
-            <WheelGroup horizontal spacing="6px">
-              <Wheel
-                type="integer"
-                horizontal
-                loop
-                value={h}
-                action={setH}
-                itemWidth="4ch"
-                visibleCount={5}
-              >
-                {range(24).map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>hours</WheelGroup.Separator>
-              <Wheel
-                type="integer"
-                horizontal
-                loop
-                value={m}
-                action={setM}
-                itemWidth="4ch"
-                visibleCount={5}
-              >
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <WheelGroup.Separator>minutes</WheelGroup.Separator>
-            </WheelGroup>
-            <div className="value-display">
-              {h} hours {pad2(m)} minutes
             </div>
           </div>
         );
@@ -583,9 +485,16 @@
         const [a, setA] = useState(9);
         const [b, setB] = useState(9);
         const [c, setC] = useState(9);
+        const [vc, setVc] = useState(9);
+        const [hz, setHz] = useState(9);
+        const [hzH, setHzH] = useState(9);
+        const [hzM, setHzM] = useState(30);
         const [g, setG] = useState(9);
+        const [gf, setGf] = useState(9);
         const [gh, setGh] = useState(9);
         const [gm, setGm] = useState(30);
+        const HOURS24 = range(24);
+        const QUARTERS = [0, 15, 30, 45];
         return (
           <div id="customization" className="demo-section">
             <h2>Customization</h2>
@@ -648,6 +557,102 @@
                 ))}
               </Wheel>
             </div>
+            <div style={{ marginBottom: 24 }}>
+              <h3>visibleCount (rows shown around the center)</h3>
+              <p>
+                An odd count; the center row is the selection. More rows show
+                more context above/below.
+              </p>
+              <div className="states">
+                {[3, 5, 7].map((count) => (
+                  <div key={count}>
+                    <Wheel
+                      type="integer"
+                      value={vc}
+                      action={setVc}
+                      loop
+                      visibleCount={count}
+                    >
+                      {HOURS24.map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <span className="col-label">visibleCount={count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h3>horizontal (scrolls left/right)</h3>
+              <p>
+                With <code>horizontal</code> the wheel lays out left-to-right
+                and arrow keys become <kbd>←</kbd> <kbd>→</kbd>. A{" "}
+                <code>WheelGroup horizontal</code> stacks such wheels with
+                separators between the rows.
+              </p>
+              <div
+                className="row"
+                style={{ gap: 40, alignItems: "flex-start" }}
+              >
+                <div>
+                  <Wheel
+                    type="integer"
+                    horizontal
+                    loop
+                    value={hz}
+                    action={setHz}
+                    itemWidth="4ch"
+                    visibleCount={5}
+                  >
+                    {HOURS24.map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">single wheel</span>
+                </div>
+                <div>
+                  <WheelGroup horizontal spacing="6px">
+                    <Wheel
+                      type="integer"
+                      horizontal
+                      loop
+                      value={hzH}
+                      action={setHzH}
+                      itemWidth="4ch"
+                      visibleCount={5}
+                    >
+                      {HOURS24.map((v) => (
+                        <Wheel.Item key={v} value={v}>
+                          {pad2(v)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator>hours</WheelGroup.Separator>
+                    <Wheel
+                      type="integer"
+                      horizontal
+                      loop
+                      value={hzM}
+                      action={setHzM}
+                      itemWidth="4ch"
+                      visibleCount={5}
+                    >
+                      {QUARTERS.map((v) => (
+                        <Wheel.Item key={v} value={v}>
+                          {pad2(v)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator>minutes</WheelGroup.Separator>
+                  </WheelGroup>
+                  <span className="col-label">WheelGroup horizontal</span>
+                </div>
+              </div>
+            </div>
             <div>
               <h3>WheelGroup spacing (gap around separators)</h3>
               <div className="states">
@@ -676,7 +681,8 @@
                 selection reads as a window. On <code>WheelGroup</code> one{" "}
                 <code>glass</code> prop frosts every wheel together. Tune with{" "}
                 <code>--wheel-glass-blur</code> and{" "}
-                <code>--wheel-glass-veil</code>.
+                <code>--wheel-glass-veil</code>; add <code>glassFrame</code> to
+                line the window edges.
               </p>
               <div className="states">
                 <div>
@@ -688,6 +694,23 @@
                     ))}
                   </Wheel>
                   <span className="col-label">glass</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={gf}
+                    action={setGf}
+                    loop
+                    glass
+                    glassFrame
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">glass + glassFrame</span>
                 </div>
                 <div>
                   <Wheel
@@ -741,11 +764,8 @@
           <StatesDemo />
           <LoopDemo />
           <SeparatorAlignmentDemo />
-          <SizesDemo />
-          <DayDemo />
-          <HorizontalDemo />
-          <HorizontalGroupDemo />
           <ActionsDemo />
+          <PracticalExamplesDemo />
           <CustomizationDemo />
         </NaviDebug>
       );
