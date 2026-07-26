@@ -369,6 +369,11 @@ function WheelUI(props) {
   // external value change (or the initial mount) scrolls the selection into
   // place, while our own scroll-driven selection does not scroll a second time.
   const centeredIdRef = useRef(null);
+  // True while a programmatic smooth scroll is animating. The loop wrap is
+  // suspended during it (see onScroll) so the animation isn't cut short when it
+  // heads onto a clone in the wrap zone; the wrap then happens invisibly at rest
+  // on settle. Without this, e.g. arrowing 00 → 23 jumps instead of gliding.
+  const smoothScrollingRef = useRef(false);
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
@@ -448,6 +453,11 @@ function WheelUI(props) {
         const copies = Math.round((readScroll(viewportEl) - base) / realSpan);
         target = base + copies * realSpan;
       }
+    }
+    // Suspend the wrap for the duration of a smooth animation so it can glide
+    // onto a clone without being instant-jumped (settle normalises it after).
+    if (behavior === "smooth") {
+      smoothScrollingRef.current = true;
     }
     writeScroll(viewportEl, target, behavior);
   };
@@ -547,7 +557,10 @@ function WheelUI(props) {
     let settleTimer = null;
 
     const onScroll = () => {
-      if (isLoop) {
+      // During a smooth animation the wrap is suspended (it would jump-cut the
+      // glide onto a clone). User free-scrolling still wraps live for seamless
+      // infinite spinning.
+      if (isLoop && !smoothScrollingRef.current) {
         wrapScrollIntoRealBand(viewportEl);
       }
       if (rafId === null) {
@@ -560,6 +573,12 @@ function WheelUI(props) {
       settleTimer = setTimeout(onSettle, 120);
     };
     const onSettle = () => {
+      // Scrolling stopped: fold any clone we glided onto back onto its real row
+      // (invisible — identical content), then read/select from the real band.
+      if (isLoop) {
+        wrapScrollIntoRealBand(viewportEl);
+      }
+      smoothScrollingRef.current = false;
       // Readonly/disabled never settle-select: user scrolling is blocked
       // outright (see the scroll-block effect), so a settle here would only be
       // a programmatic re-center — never a value change.
