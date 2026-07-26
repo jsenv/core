@@ -86,34 +86,10 @@
         color: #888;
         font-size: 0.8rem;
       }
-      /* A plain HTML/CSS scroll-snap list, sized + veiled like the Wheel, to
+      /* A plain HTML/CSS scroll-snap list, sized + faded like the Wheel, to
          compare the browser's native snapping/momentum against our
-         transform-based one. The veil panes are siblings over the scroller (not
-         inside it) so they stay fixed at the center window while it scrolls. */
-      .native-wheel-wrap {
-        position: relative;
-        width: 3.5ch;
-      }
-      .native-wheel-veil {
-        position: absolute;
-        right: 0;
-        left: 0;
-        z-index: 1;
-        height: 32px; /* (96 − 32) / 2, leaving the center row clear */
-        background: rgba(
-          255,
-          255,
-          255,
-          0.68
-        ); /* matches --wheel-veil default */
-        pointer-events: none;
-      }
-      .native-wheel-veil[data-side="start"] {
-        top: 0;
-      }
-      .native-wheel-veil[data-side="end"] {
-        bottom: 0;
-      }
+         transform-based one. Same progressive fade mask, so only the scroll
+         behaviour differs visually. */
       .native-wheel {
         width: 3.5ch;
         height: 96px; /* 3 rows × 32px, matching the Wheel defaults */
@@ -123,17 +99,21 @@
         text-align: center;
         -webkit-mask-image: linear-gradient(
           to bottom,
-          transparent,
-          #000 14%,
-          #000 86%,
-          transparent
+          transparent 0%,
+          rgba(0, 0, 0, 0.12) 28%,
+          #000 44%,
+          #000 56%,
+          rgba(0, 0, 0, 0.12) 72%,
+          transparent 100%
         );
         mask-image: linear-gradient(
           to bottom,
-          transparent,
-          #000 14%,
-          #000 86%,
-          transparent
+          transparent 0%,
+          rgba(0, 0, 0, 0.12) 28%,
+          #000 44%,
+          #000 56%,
+          rgba(0, 0, 0, 0.12) 72%,
+          transparent 100%
         );
         overflow-y: auto;
         scroll-snap-type: y mandatory;
@@ -284,11 +264,17 @@
         const wheelRef = useRef(null);
         const nativeRef = useRef(null);
         const ITEM = 32; // px, matches the Wheel + native row height
+        // The Wheel loops, so its scroll extent is infinite; the native list
+        // can't loop, so repeat the values ×3 to give a comparable scroll
+        // height to fling through.
+        const COPIES = 3;
+        const nativeValues = range(24 * COPIES).map((i) => i % 24);
 
-        // Start the native list centered on the same value as the Wheel.
+        // Start the native list centered on 09 in the middle copy, so there's
+        // room to fling both ways.
         useEffect(() => {
           if (nativeRef.current) {
-            nativeRef.current.scrollTop = 9 * ITEM;
+            nativeRef.current.scrollTop = (24 + 9) * ITEM;
           }
         }, []);
 
@@ -332,20 +318,16 @@
                   <span className="col-label">Wheel (ours, looping)</span>
                 </div>
                 <div>
-                  <div className="native-wheel-wrap">
-                    <div className="native-wheel" ref={nativeRef}>
-                      <div className="native-wheel-pad" />
-                      {range(24).map((v) => (
-                        <div className="native-wheel-item" key={v}>
-                          {pad2(v)}
-                        </div>
-                      ))}
-                      <div className="native-wheel-pad" />
-                    </div>
-                    <div className="native-wheel-veil" data-side="start" />
-                    <div className="native-wheel-veil" data-side="end" />
+                  <div className="native-wheel" ref={nativeRef}>
+                    <div className="native-wheel-pad" />
+                    {nativeValues.map((v, i) => (
+                      <div className="native-wheel-item" key={i}>
+                        {pad2(v)}
+                      </div>
+                    ))}
+                    <div className="native-wheel-pad" />
                   </div>
-                  <span className="col-label">native scroll-snap</span>
+                  <span className="col-label">native scroll-snap (×3)</span>
                 </div>
               </div>
             </div>
@@ -648,8 +630,7 @@
             <h2>Customization</h2>
             <p>
               Wheel is a <code>Box</code>, so style props work directly. The
-              text colour is <code>--wheel-color</code>; how strongly the
-              off-center rows are veiled is <code>--wheel-veil</code>.
+              text colour is <code>--wheel-color</code>.
             </p>
             <div style={{ marginBottom: 24 }}>
               <h3>border="1px solid grey"</h3>
@@ -669,59 +650,20 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>color &amp; veil (CSS vars)</h3>
-              <div className="states">
-                <div>
-                  <Wheel
-                    type="integer"
-                    value={b}
-                    action={setB}
-                    loop
-                    style={{ "--wheel-color": "#d6336c" }}
-                  >
-                    {range(24).map((h) => (
-                      <Wheel.Item key={h} value={h}>
-                        {pad2(h)}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                  <span className="col-label">--wheel-color</span>
-                </div>
-                <div>
-                  <Wheel
-                    type="integer"
-                    value={b}
-                    action={setB}
-                    loop
-                    style={{ "--wheel-veil": "0.25" }}
-                  >
-                    {range(24).map((h) => (
-                      <Wheel.Item key={h} value={h}>
-                        {pad2(h)}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                  <span className="col-label">--wheel-veil: 0.25 (softer)</span>
-                </div>
-                <div>
-                  <Wheel
-                    type="integer"
-                    value={b}
-                    action={setB}
-                    loop
-                    style={{ "--wheel-veil": "0.8" }}
-                  >
-                    {range(24).map((h) => (
-                      <Wheel.Item key={h} value={h}>
-                        {pad2(h)}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                  <span className="col-label">
-                    --wheel-veil: 0.8 (stronger)
-                  </span>
-                </div>
-              </div>
+              <h3>accent color (--wheel-color)</h3>
+              <Wheel
+                type="integer"
+                value={b}
+                action={setB}
+                loop
+                style={{ "--wheel-color": "#d6336c" }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
               <h3>bigger rows, 5 visible</h3>
@@ -861,11 +803,10 @@
             <div style={{ marginTop: 24 }}>
               <h3>glass (frost the neighbours)</h3>
               <p>
-                Every wheel already veils its neighbours over a clear center
-                window — that veil <em>is</em> the selection emphasis, so a
-                half-scrolled row is half-veiled (tune with{" "}
-                <code>--wheel-veil</code>). <code>glass</code> additionally
-                frosts (blurs) that veil (tune with{" "}
+                Every wheel fades its neighbours out toward the edges — that
+                progressive fade <em>is</em> the selection emphasis, so a
+                half-scrolled row is half-faded. <code>glass</code> additionally
+                frosts (blurs) the faded rows (tune with{" "}
                 <code>--wheel-glass-blur</code>).
               </p>
               <div className="states">

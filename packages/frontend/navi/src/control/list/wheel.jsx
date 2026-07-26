@@ -57,10 +57,6 @@ const css = /* css */ `
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
-    /* How opaque the veil over the off-center rows is — the emphasis is a fixed
-       filter at the center window, not a style on the selected row (see the
-       "Center window" section), so a half-scrolled row is half-veiled. */
-    --wheel-veil: 0.68;
 
     position: relative; /* for the loading outline */
     display: inline-flex;
@@ -230,38 +226,40 @@ const css = /* css */ `
   }
 
   .navi_wheel_container {
-    /* Only the very edges soften (cylinder feel); the veil panes below do the
-       neighbour dimming, so the mask keeps the near rows opaque. */
+    /* The emphasis: opacity peaks on the center row and falls off progressively
+       toward the edges (like a physical wheel curving away). Because it is a
+       function of position, a row emphasises smoothly as it scrolls into the
+       middle — no per-row style flip — and a half-scrolled row is half-faded.
+       The center number keeps a small fully-opaque plateau so it stays crisp. */
     --wheel-fade-y: linear-gradient(
       to bottom,
       transparent 0%,
-      #000 14%,
-      #000 86%,
+      rgba(0, 0, 0, 0.12) 28%,
+      #000 44%,
+      #000 56%,
+      rgba(0, 0, 0, 0.12) 72%,
       transparent 100%
     );
     --wheel-fade-x: linear-gradient(
       to right,
       transparent 0%,
-      #000 14%,
-      #000 86%,
+      rgba(0, 0, 0, 0.12) 28%,
+      #000 44%,
+      #000 56%,
+      rgba(0, 0, 0, 0.12) 72%,
       transparent 100%
     );
   }
 
   /* ── Center window ────────────────────────────────────────────────────────────
-     Two panes veil the rows on each side of the center, leaving a clear window
-     one row tall over the selection. This is what marks the selection: a row is
-     emphasised by *being in the window*, so a half-scrolled row is half-veiled
-     (no abrupt per-row style change). [data-glass] additionally frosts (blurs)
-     the veiled rows; [data-frame-border] lines the pane edge facing the window
-     (independent of glass). Purely decorative — pointer events pass through. */
+     Two invisible panes cover the rows on each side of the center window, used
+     for optional effects only (the fade above already does the dimming):
+     [data-glass] frosts (blurs) the covered rows; [data-frame-border] lines the
+     pane edge facing the window. Purely decorative — pointer events pass
+     through, and with neither attribute the panes render nothing. */
   .navi_wheel_pane {
     position: absolute;
     z-index: 1;
-    background: light-dark(
-      rgba(255, 255, 255, var(--wheel-veil, 0.68)),
-      rgba(0, 0, 0, var(--wheel-veil, 0.68))
-    );
     border: 0 solid
       var(
         --wheel-frame-color,
