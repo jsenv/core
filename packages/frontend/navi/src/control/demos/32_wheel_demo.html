@@ -410,30 +410,9 @@
           </Wheel>
         );
       };
-      const MinuteWheel = (props) => {
-        const [v, setV] = useState(30);
-        return (
-          <Wheel type="integer" value={v} action={setV} loop {...props}>
-            {range(60).map((x) => (
-              <Wheel.Item key={x} value={x}>
-                {pad2(x)}
-              </Wheel.Item>
-            ))}
-          </Wheel>
-        );
-      };
-      const SecondWheel = (props) => {
-        const [v, setV] = useState(0);
-        return (
-          <Wheel type="integer" value={v} action={setV} loop {...props}>
-            {range(60).map((x) => (
-              <Wheel.Item key={x} value={x}>
-                {pad2(x)}
-              </Wheel.Item>
-            ))}
-          </Wheel>
-        );
-      };
+      // Alignment doesn't depend on the value count, so the separator cases use
+      // light 4-value columns (a real HH:MM:SS would use 60-value minute/second
+      // wheels — heavier DOM, not needed to show alignment).
       const QuarterWheel = (props) => {
         const [v, setV] = useState(30);
         return (
@@ -491,12 +470,12 @@
               <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>:</WheelGroup.Separator>
-                <MinuteWheel />
+                <QuarterWheel />
               </WheelGroup>
               <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>ZZ</WheelGroup.Separator>
-                <MinuteWheel />
+                <QuarterWheel />
               </WheelGroup>
             </div>
 
@@ -519,16 +498,16 @@
               <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>:</WheelGroup.Separator>
-                <MinuteWheel />
+                <QuarterWheel />
                 <WheelGroup.Separator>:</WheelGroup.Separator>
-                <SecondWheel />
+                <QuarterWheel />
               </WheelGroup>
               <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>ZZ</WheelGroup.Separator>
-                <MinuteWheel />
+                <QuarterWheel />
                 <WheelGroup.Separator>ZZ</WheelGroup.Separator>
-                <SecondWheel />
+                <QuarterWheel />
               </WheelGroup>
             </div>
           </div>

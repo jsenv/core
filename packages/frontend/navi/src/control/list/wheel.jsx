@@ -285,6 +285,10 @@ const css = /* css */ `
   }
 `;
 
+// Upper bound on the loop runway rendered on each side. A fling never travels
+// this many rows between scroll events, so more would only add invisible DOM.
+const LOOP_BUFFER_MAX = 20;
+
 // Keys that move focus between items (and thus trigger the browser's focus
 // scroll-into-view we need to undo — see the focusin effect).
 const NAV_KEYS = new Set([
@@ -412,14 +416,19 @@ function WheelUI(props) {
   // on settle. Without this, e.g. arrowing 00 → 23 jumps instead of gliding.
   const smoothScrollingRef = useRef(false);
 
-  // How many clone rows to render on each side of the real items. Because the
-  // whole sequence is periodic with period N, the wrap stays seamless for any
-  // count — so we render a generous run of *looping values* (never blank) as the
-  // scroll runway: one full list (the real number of values above/below), with a
-  // floor so very short lists still get a couple of viewports of room.
+  // How many clone rows to render on each side of the real items as scroll
+  // runway. Because the sequence is periodic with period N, the wrap stays
+  // seamless for any count, so we render enough looping values (never blank) to
+  // outrun a fling — but no more, to keep the DOM light: at least a couple of
+  // viewports, at most LOOP_BUFFER_MAX. It doesn't need a whole extra copy; the
+  // runway is invisible (the wrap keeps the center on real items).
   const minBufferCount = visibleCount * 2;
-  const loopBufferCount =
-    loopClones.length > minBufferCount ? loopClones.length : minBufferCount;
+  let loopBufferCount = loopClones.length;
+  if (loopBufferCount < minBufferCount) {
+    loopBufferCount = minBufferCount;
+  } else if (loopBufferCount > LOOP_BUFFER_MAX) {
+    loopBufferCount = LOOP_BUFFER_MAX;
+  }
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
