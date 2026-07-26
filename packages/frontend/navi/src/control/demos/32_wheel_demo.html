@@ -583,6 +583,9 @@
         const [a, setA] = useState(9);
         const [b, setB] = useState(9);
         const [c, setC] = useState(9);
+        const [g, setG] = useState(9);
+        const [gh, setGh] = useState(9);
+        const [gm, setGm] = useState(30);
         return (
           <div id="customization" className="demo-section">
             <h2>Customization</h2>
@@ -663,6 +666,68 @@
                     <QuarterWheel />
                   </WheelGroup>
                   <span className="col-label">spacing="2ch"</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <h3>glass (frosted neighbours, clear center window)</h3>
+              <p>
+                <code>glass</code> frosts the rows around the center so the
+                selection reads as a window. On <code>WheelGroup</code> one{" "}
+                <code>glass</code> prop frosts every wheel together. Tune with{" "}
+                <code>--wheel-glass-blur</code> and{" "}
+                <code>--wheel-glass-veil</code>.
+              </p>
+              <div className="states">
+                <div>
+                  <Wheel type="integer" value={g} action={setG} loop glass>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">glass</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={g}
+                    action={setG}
+                    loop
+                    glass
+                    style={{
+                      "--wheel-glass-blur": "3px",
+                      "--wheel-glass-veil": "0.15",
+                    }}
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">stronger blur, lighter veil</span>
+                </div>
+                <div>
+                  <WheelGroup glass spacing="0.5ch">
+                    <Wheel type="integer" value={gh} action={setGh} loop>
+                      {range(24).map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator center>:</WheelGroup.Separator>
+                    <Wheel type="integer" value={gm} action={setGm} loop>
+                      {[0, 15, 30, 45].map((m) => (
+                        <Wheel.Item key={m} value={m}>
+                          {pad2(m)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                  </WheelGroup>
+                  <span className="col-label">glass on WheelGroup</span>
                 </div>
               </div>
             </div>

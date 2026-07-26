@@ -241,6 +241,55 @@ const css = /* css */ `
     );
   }
 
+  /* ── Glass ───────────────────────────────────────────────────────────────────
+     Two frosted panes over the rows on each side of the center, leaving a clear
+     "window" one row tall over the selection. Neighbours read as obscured (blur +
+     a translucent veil) rather than merely greyed; the pane edges facing the
+     center draw a faint frame around the window. Purely decorative — pointer
+     events pass straight through to the rows underneath. */
+  .navi_wheel_pane {
+    position: absolute;
+    z-index: 1;
+    background: light-dark(
+      rgba(255, 255, 255, var(--wheel-glass-veil, 0.4)),
+      rgba(0, 0, 0, var(--wheel-glass-veil, 0.4))
+    );
+    /* 0-width by default; the orientation rule opens the one edge that faces the
+       center window into a faint frame. */
+    border: 0 solid light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18));
+    backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+    -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+    pointer-events: none;
+  }
+  .navi_wheel_container:not([data-horizontal]) .navi_wheel_pane {
+    right: 0;
+    left: 0;
+    height: calc((100% - var(--wheel-item-height)) / 2);
+
+    &[data-side="start"] {
+      top: 0;
+      border-bottom-width: 1px;
+    }
+    &[data-side="end"] {
+      bottom: 0;
+      border-top-width: 1px;
+    }
+  }
+  .navi_wheel_container[data-horizontal] .navi_wheel_pane {
+    top: 0;
+    bottom: 0;
+    width: calc((100% - var(--wheel-item-width)) / 2);
+
+    &[data-side="start"] {
+      left: 0;
+      border-right-width: 1px;
+    }
+    &[data-side="end"] {
+      right: 0;
+      border-left-width: 1px;
+    }
+  }
+
   /* ── WheelGroup ─────────────────────────────────────────────────────────────
      Several wheels with separators (e.g. ":") between them. The separator column
      keeps its natural content width (small for ":", wide for a word like
@@ -296,6 +345,12 @@ const css = /* css */ `
 // this many rows between scroll events, so more would only add invisible DOM.
 const LOOP_BUFFER_MAX = 20;
 
+// Fling physics (px per ms). Velocity is capped so a violent fling can't outrun
+// the rendered runway and flash blank. Below the snap threshold the settle loop
+// switches from momentum to a spring that eases into the nearest row center.
+const WHEEL_MAX_VELOCITY = 2.2;
+const WHEEL_SNAP_VELOCITY = 0.35;
+
 // Keys that move focus between items (and thus trigger the browser's focus
 // scroll-into-view we need to undo — see the focusin effect).
 const NAV_KEYS = new Set([
@@ -314,6 +369,10 @@ const NAV_KEYS = new Set([
 // indexRef gives each item its position: WheelUI resets it to 0 every render and
 // each item reads-and-increments it as it renders, in document order.
 const WheelItemTrackerContext = createContext(null);
+
+// Lets a WheelGroup push shared presentation (glass, orientation) down to every
+// Wheel inside it without threading the prop through each one.
+const WheelGroupContext = createContext(null);
 
 const WheelFirstResolver = (props) => {
   const Next = useNextResolver();
@@ -367,6 +426,7 @@ const WheelFirstResolver = (props) => {
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
  * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
+ * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
 export const Wheel = createComponentResolver([
@@ -384,14 +444,20 @@ function WheelUI(props) {
     itemWidth,
     loop,
     horizontal,
+    glass,
     type,
     style,
     basePseudoState,
     children,
     ...rest
   } = props;
-  const isHorizontal = Boolean(horizontal);
+  const group = useContext(WheelGroupContext);
+  const isHorizontal = Boolean(horizontal ?? group?.horizontal);
   const isLoop = Boolean(loop);
+  // Glass: frost the neighbouring rows so the center reads as a clear "window"
+  // (like the iOS picker). Inherited from a WheelGroup so a whole group frosts
+  // together with one prop.
+  const showGlass = Boolean(glass ?? group?.glass);
   const loading = basePseudoState ? basePseudoState[":-navi-loading"] : false;
   const readOnly = basePseudoState ? basePseudoState[":read-only"] : false;
   const disabled = basePseudoState ? basePseudoState[":disabled"] : false;
@@ -617,30 +683,42 @@ function WheelUI(props) {
     animRef.current = requestAnimationFrame(step);
   };
 
-  // Snap to the nearest row center, then commit the selection.
-  const snapAndSelect = (vp) => {
-    const row = findCenteredRow(vp);
-    if (!row) {
-      return;
-    }
-    animateTo(vp, centerPosFor(vp, row), () => commitSelection(vp));
-  };
-
-  // Inertia after a drag/fling: decay the velocity, then snap.
-  const startMomentum = (vp, velocity) => {
+  // Settle after user input (fling or idle): a single continuous motion that
+  // decays the initial velocity, then — once slow — springs into the nearest row
+  // center. Momentum and snap are the same loop, so it eases into place instead
+  // of momentum-then-abrupt-jump. Velocity is capped so a huge fling can't shoot
+  // past the rendered runway (which would flash blank until it settles).
+  const settle = (vp, velocity) => {
     cancelAnim();
-    let v = velocity; // px per ms
+    let v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
     let last = performance.now();
+    let snapping = Math.abs(v) < WHEEL_SNAP_VELOCITY;
     const step = (now) => {
-      const dt = now - last;
+      const dt = clampNumber(now - last, 0, 32);
       last = now;
-      v *= Math.pow(0.95, dt / 16);
-      setPos(vp, posRef.current + v * dt);
-      if (Math.abs(v) < 0.02) {
-        animRef.current = null;
-        snapAndSelect(vp);
+      if (!snapping) {
+        v *= Math.pow(0.95, dt / 16);
+        setPos(vp, posRef.current + v * dt);
+        if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
+          snapping = true;
+        }
+        animRef.current = requestAnimationFrame(step);
         return;
       }
+      const row = findCenteredRow(vp);
+      if (!row) {
+        animRef.current = null;
+        commitSelection(vp);
+        return;
+      }
+      const dist = centerPosFor(vp, row) - posRef.current;
+      if (Math.abs(dist) < 0.4) {
+        setPos(vp, posRef.current + dist);
+        animRef.current = null;
+        commitSelection(vp);
+        return;
+      }
+      setPos(vp, posRef.current + dist * 0.22);
       animRef.current = requestAnimationFrame(step);
     };
     animRef.current = requestAnimationFrame(step);
@@ -715,7 +793,20 @@ function WheelUI(props) {
   useDisplayedLayoutEffect(
     ref,
     (el) => {
-      syncCenterToSelection(el.querySelector(".navi_wheel_viewport"), "auto");
+      const vp = el.querySelector(".navi_wheel_viewport");
+      syncCenterToSelection(vp, "auto");
+      // Re-mark once more after a frame: the first pass can run before the flex
+      // rows get their final offsets, which would land the "current" emphasis on
+      // the wrong row — the selected value would show unhighlighted (grey like
+      // its neighbours) until the first interaction. Recompute from stable
+      // layout so it's bold from the start.
+      const rafId = requestAnimationFrame(() => {
+        centeredIdRef.current = null;
+        syncCenterToSelection(vp, "auto");
+      });
+      return () => {
+        cancelAnimationFrame(rafId);
+      };
     },
     [],
   );
@@ -740,7 +831,7 @@ function WheelUI(props) {
 
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => snapAndSelect(vp), 90);
+      settleTimer = setTimeout(() => settle(vp, 0), 90);
     };
     const readonlyCallout = (event) => {
       if (!readOnly || calloutCooldown !== null) {
@@ -855,7 +946,7 @@ function WheelUI(props) {
         return; // a tap → let the underlying radio handle selection
       }
       // Position moves opposite to the finger.
-      startMomentum(vp, -velocity);
+      settle(vp, -velocity);
     };
 
     vp.addEventListener("wheel", onWheel, { passive: false });
@@ -918,6 +1009,7 @@ function WheelUI(props) {
       ref={ref}
       baseClassName="navi_wheel_container"
       data-horizontal={isHorizontal ? "" : undefined}
+      data-glass={showGlass ? "" : undefined}
       data-wheel-type={type || undefined}
       // Disabled = fully inert: no focus, no keyboard (arrows), no pointer.
       // Programmatic centering still works (inert only blocks user interaction).
@@ -947,6 +1039,12 @@ function WheelUI(props) {
               )
             : null}
         </ul>
+        {showGlass ? (
+          <>
+            <div className="navi_wheel_pane" data-side="start" />
+            <div className="navi_wheel_pane" data-side="end" />
+          </>
+        ) : null}
       </div>
     </Box>
   );
@@ -1102,10 +1200,12 @@ Wheel.Item = WheelItem;
  * }>}
  * @param {number|string} [props.spacing] - Scrollable gap each wheel adds toward its neighbours (number = px; default 0.5ch).
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
+ * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  */
 export const WheelGroup = ({
   spacing,
   horizontal,
+  glass,
   style,
   children,
   ...rest
@@ -1128,7 +1228,9 @@ export const WheelGroup = ({
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
     >
-      {children}
+      <WheelGroupContext.Provider value={{ glass, horizontal }}>
+        {children}
+      </WheelGroupContext.Provider>
     </Box>
   );
 };
