@@ -99,6 +99,9 @@ const css = /* css */ `
   .navi_wheel_viewport {
     position: relative;
     -webkit-overflow-scrolling: touch;
+    /* We reposition scrollTop ourselves (loop fold-back); don't let the browser's
+       scroll anchoring adjust it behind our back. */
+    overflow-anchor: none;
     /* No visible scrollbar */
     scrollbar-width: none;
 
@@ -677,13 +680,29 @@ function WheelUI(props) {
       });
     };
 
+    // Fold back BEFORE the browser applies a wheel/touch scroll. The `scroll`
+    // event alone can't fix the physical edge: at scrollTop 0 / max a wheel-up
+    // (or drag) produces no scroll event, so the fold never runs and you get
+    // stuck. Recentering on the input event itself keeps scrollTop away from the
+    // edge, so the ensuing scroll always has room to keep looping. Seamless —
+    // the content is identical a real-list extent away.
+    const onPreScroll = () => {
+      if (isLoop && interactive && !smoothScrollingRef.current) {
+        wrapScrollIntoRealBand(viewportEl);
+      }
+    };
+
     viewportEl.addEventListener("scroll", onScroll, { passive: true });
+    viewportEl.addEventListener("wheel", onPreScroll, { passive: true });
+    viewportEl.addEventListener("touchmove", onPreScroll, { passive: true });
     return () => {
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
       }
       clearTimeout(settleTimer);
       viewportEl.removeEventListener("scroll", onScroll);
+      viewportEl.removeEventListener("wheel", onPreScroll);
+      viewportEl.removeEventListener("touchmove", onPreScroll);
     };
   }, [isLoop, isHorizontal, interactive]);
 
