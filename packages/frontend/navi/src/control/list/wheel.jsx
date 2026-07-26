@@ -268,6 +268,14 @@ const css = /* css */ `
     pointer-events: none;
   }
   .navi_wheel_container[data-glass] .navi_wheel_pane {
+    /* A faint frost tint over the blur. Without it, blurring dark text on a
+       light backdrop leaves a bright fringe (halo) around each glyph; compositing
+       the blur under a thin opaque layer flattens that fringe. Tune/disable with
+       --wheel-glass-tint. */
+    background: light-dark(
+      rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
+      rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
+    );
     backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
     -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
   }
@@ -515,9 +523,10 @@ function WheelUI(props) {
   // position (px, main axis); the list track is translated by -pos. This is the
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
   // there is no physical scroll edge to get stuck at. animRef holds the current
-  // rAF (momentum/glide) so it can be cancelled.
+  // momentum rAF; glideRef the current CSS-transition glide, either cancellable.
   const posRef = useRef(0);
   const animRef = useRef(null);
+  const glideRef = useRef(null);
 
   // How many clone rows to render on each side of the real items as scroll
   // runway. Because the sequence is periodic with period N, the wrap stays
@@ -585,17 +594,39 @@ function WheelUI(props) {
 
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
+  const applyTransform = (track, pos) => {
+    const p = -pos;
+    track.style.transform = isHorizontal
+      ? `translate3d(${p}px, 0, 0)`
+      : `translate3d(0, ${p}px, 0)`;
+  };
+
   // Push the current virtual position onto the track via transform, and refresh
-  // the "current" emphasis. No native scroll is involved.
+  // the "current" emphasis. Transition is cleared so per-frame momentum/drag
+  // updates apply instantly (only glideTo opts into a CSS transition).
   const renderPos = (vp) => {
     const track = getTrack(vp);
     if (track) {
-      const p = -posRef.current;
-      track.style.transform = isHorizontal
-        ? `translate3d(${p}px, 0, 0)`
-        : `translate3d(0, ${p}px, 0)`;
+      track.style.transition = "none";
+      applyTransform(track, posRef.current);
     }
     updateCurrentMarker(vp, findCenteredRow(vp));
+  };
+
+  // The track's actual on-screen main-axis offset, even mid CSS transition
+  // (posRef jumps to the glide target up front, so read the DOM to freeze where
+  // the eye currently sees it when a glide is interrupted).
+  const getVisualPos = (vp) => {
+    const track = getTrack(vp);
+    if (!track) {
+      return posRef.current;
+    }
+    const transform = getComputedStyle(track).transform;
+    if (!transform || transform === "none") {
+      return posRef.current;
+    }
+    const matrix = new DOMMatrixReadOnly(transform);
+    return isHorizontal ? -matrix.m41 : -matrix.m42;
   };
 
   const findCenteredMatching = (viewportEl, selector) => {
@@ -684,6 +715,15 @@ function WheelUI(props) {
       cancelAnimationFrame(animRef.current);
       animRef.current = null;
     }
+    if (glideRef.current !== null) {
+      const { vp, timer } = glideRef.current;
+      clearTimeout(timer);
+      glideRef.current = null;
+      // Freeze where the transition currently is, then drop the transition so
+      // subsequent per-frame updates aren't animated.
+      posRef.current = getVisualPos(vp);
+      renderPos(vp);
+    }
   };
 
   // After motion stops: fold any clone back onto its real row (invisible), then
@@ -710,13 +750,16 @@ function WheelUI(props) {
     });
   };
 
-  // Glide the position to a target (easeOut). The position is set *raw* during
-  // the glide (no wrap) so it can travel onto a clone; onDone normalises + selects.
+  // Glide the position to a target via a CSS transition on the track. A CSS
+  // transition runs on the compositor, so it stays smooth even when the arrow-key
+  // selection change triggers a main-thread re-render that would starve (and
+  // visibly jump) a requestAnimationFrame loop. The transform is set *raw* (no
+  // wrap) so it can travel onto a clone; onDone normalises + selects.
   const animateTo = (vp, target, onDone) => {
     cancelAnim();
-    const start = posRef.current;
-    const dist = target - start;
-    if (Math.abs(dist) < 0.5) {
+    const track = getTrack(vp);
+    const dist = target - posRef.current;
+    if (!track || Math.abs(dist) < 0.5) {
       posRef.current = target;
       renderPos(vp);
       onDone();
@@ -725,19 +768,16 @@ function WheelUI(props) {
     // A single-row step (arrow key, clone click) is only ~one item; the floor
     // keeps that glide long enough to read as motion rather than a jump.
     const duration = clampNumber(Math.abs(dist) * 1.4, 280, 460);
-    const startTime = performance.now();
-    const step = (now) => {
-      const t = clampNumber((now - startTime) / duration, 0, 1);
-      posRef.current = start + dist * (1 - Math.pow(1 - t, 3));
-      renderPos(vp);
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(step);
-      } else {
-        animRef.current = null;
-        onDone();
-      }
-    };
-    animRef.current = requestAnimationFrame(step);
+    posRef.current = target;
+    track.style.transition = `transform ${duration}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
+    applyTransform(track, target);
+    updateCurrentMarker(vp, findCenteredRow(vp));
+    const timer = setTimeout(() => {
+      glideRef.current = null;
+      track.style.transition = "none";
+      onDone();
+    }, duration + 20);
+    glideRef.current = { vp, timer };
   };
 
   // Settle after user input (fling or idle): a single continuous motion that
@@ -1185,7 +1225,12 @@ const renderClones = (bufferItems, position, onCloneClick) => {
       key={`${position}_${offset}`}
       className="navi_wheel_item navi_wheel_item_clone"
       aria-hidden="true"
-      onClick={() => onCloneClick(item.index)}
+      onClick={(e) => {
+        if (e.button !== 0) {
+          return;
+        }
+        onCloneClick(item.index);
+      }}
     >
       {item.label}
     </li>
