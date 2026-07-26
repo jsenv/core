@@ -127,6 +127,9 @@
                 <a href="#hours">Single column, looping</a>
               </li>
               <li>
+                <a href="#loop">Minimal loop (few values)</a>
+              </li>
+              <li>
                 <a href="#time">Time HH:MM:SS</a>
               </li>
               <li>
@@ -152,9 +155,6 @@
               </li>
               <li>
                 <a href="#actions">uiAction / action / form</a>
-              </li>
-              <li>
-                <a href="#validation">Validation</a>
               </li>
               <li>
                 <a href="#customization">Customization</a>
@@ -221,6 +221,34 @@
                 ))}
               </Wheel>
               <div className="value-display">value: {pad2(hour)}</div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Minimal loop (few values) ──────────────────────────────────────────
+
+      const LoopDemo = () => {
+        const [m, setM] = useState(30);
+        // Deliberately few values so loop is easy to eyeball/test.
+        const MINUTES = [15, 30, 45, 0];
+        return (
+          <div id="loop" className="demo-section">
+            <h2>Minimal loop (quarter minutes)</h2>
+            <p>
+              Only four values, looping — the easiest case to test wrapping:
+              scroll or <kbd>↑</kbd> <kbd>↓</kbd> past either end, and click the
+              faded neighbours (which are loop clones).
+            </p>
+            <div className="row">
+              <Wheel type="integer" value={m} action={setM} loop>
+                {MINUTES.map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <div className="value-display">value: {pad2(m)}</div>
             </div>
           </div>
         );
@@ -571,10 +599,8 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>
-                <span style={{ lineHeight: "var(--wheel-item-height)" }}>
-                  :
-                </span>
+              <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
+                :
               </WheelGroup.Separator>
               <Wheel type="integer" value={m} action={setM} loop>
                 {MINUTES.map((v) => (
@@ -643,43 +669,6 @@
                 ))}
               </Wheel>
               <Button type="submit">Submit</Button>
-            </Form>
-            <div className="value-display">
-              {submitted !== null ? `submitted: ${submitted}` : ""}
-            </div>
-          </div>
-        );
-      };
-
-      // ── Validation ─────────────────────────────────────────────────────────
-
-      const ValidationDemo = () => {
-        const [submitted, setSubmitted] = useState(null);
-        return (
-          <div id="validation" className="demo-section">
-            <h2>Validation</h2>
-            <p>
-              <code>required</code> is the only constraint that would apply —
-              but a wheel always has a value centered, so the user can never
-              leave it empty or pick an out-of-range value. It therefore always
-              passes.
-            </p>
-            <Form
-              flex="y"
-              alignX="start"
-              spacing="m"
-              action={({ hour }) => {
-                setSubmitted(hour);
-              }}
-            >
-              <Wheel type="integer" name="hour" required defaultValue={9} loop>
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <Button type="submit">Submit (always valid)</Button>
             </Form>
             <div className="value-display">
               {submitted !== null ? `submitted: ${submitted}` : ""}
@@ -767,6 +756,7 @@
           <TableOfContents />
           <StatesDemo />
           <HoursDemo />
+          <LoopDemo />
           <TimeDemo />
           <HourMinuteDemo />
           <WordsDemo />
@@ -776,7 +766,6 @@
           <HorizontalGroupDemo />
           <SeparatorAlignmentDemo />
           <ActionsDemo />
-          <ValidationDemo />
           <CustomizationDemo />
         </NaviDebug>
       );

@@ -81,6 +81,14 @@ const css = /* css */ `
     &[data-disabled] {
       opacity: 0.5;
       pointer-events: none;
+
+      /* The selectable area re-enables pointer-events on the hidden inputs
+         (so they stay clickable); clear that when disabled so wheel/touch can't
+         scroll the items and just falls through to the page. The extra
+         .navi_wheel_item raises specificity above that area rule. */
+      .navi_wheel_item [navi-selectable-real-input] {
+        pointer-events: none;
+      }
     }
   }
 
@@ -268,6 +276,19 @@ const css = /* css */ `
     user-select: none;
   }
 `;
+
+// Keys that move focus between items (and thus trigger the browser's focus
+// scroll-into-view we need to undo — see the focusin effect).
+const NAV_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+]);
 
 // Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
 // list of items regardless of how children are wrapped (providers, fragments…).
@@ -467,7 +488,13 @@ function WheelUI(props) {
     }
     // Suspend the wrap for the duration of a smooth animation so it can glide
     // onto a clone without being instant-jumped (settle normalises it after).
-    if (behavior === "smooth") {
+    // Only when it actually moves — otherwise no scroll event ever fires to
+    // settle and clear the flag, which would leave the wrap suspended forever
+    // (breaking subsequent clicks/scrolls).
+    if (
+      behavior === "smooth" &&
+      Math.abs(target - readScroll(viewportEl)) > 0.5
+    ) {
       smoothScrollingRef.current = true;
     }
     writeScroll(viewportEl, target, behavior);
@@ -627,6 +654,20 @@ function WheelUI(props) {
   useLayoutEffect(() => {
     const el = ref.current;
     const viewportEl = el.querySelector(".navi_wheel_viewport");
+    // The focus group focuses the target input without preventScroll, so the
+    // browser instant-scrolls a far item (e.g. the last, when wrapping) into
+    // view before we can glide to it. Capture the pre-nav scroll so focusin can
+    // undo that jump and smooth-scroll from where the user actually was.
+    const scrollBeforeNavRef = { current: null };
+    const onKeyDownCapture = (e) => {
+      if (NAV_KEYS.has(e.key)) {
+        scrollBeforeNavRef.current = readScroll(viewportEl);
+        // If focus doesn't actually move (no focusin), don't keep a stale value.
+        requestAnimationFrame(() => {
+          scrollBeforeNavRef.current = null;
+        });
+      }
+    };
     const onFocusIn = (e) => {
       if (!interactive) {
         return;
@@ -641,10 +682,19 @@ function WheelUI(props) {
       }
       centeredIdRef.current = itemEl.id;
       updateCurrentMarker(viewportEl, itemEl);
+      if (scrollBeforeNavRef.current !== null) {
+        // Undo the browser's focus scroll-into-view before gliding, so the
+        // nearest-copy math runs from the real starting point (one step, not a
+        // jump to the far end).
+        writeScroll(viewportEl, scrollBeforeNavRef.current, "auto");
+        scrollBeforeNavRef.current = null;
+      }
       centerItem(viewportEl, itemEl, "smooth");
     };
+    el.addEventListener("keydown", onKeyDownCapture, true);
     el.addEventListener("focusin", onFocusIn);
     return () => {
+      el.removeEventListener("keydown", onKeyDownCapture, true);
       el.removeEventListener("focusin", onFocusIn);
     };
   }, [isHorizontal, interactive]);
@@ -903,9 +953,14 @@ export const WheelGroup = ({
 };
 const WheelGroupSeparator = ({ children, ...rest }) => {
   return (
-    <span {...rest} className="navi_wheel_group_separator" aria-hidden="true">
+    <Box
+      as="span"
+      {...rest}
+      className="navi_wheel_group_separator"
+      aria-hidden="true"
+    >
       {children}
-    </span>
+    </Box>
   );
 };
 WheelGroup.Separator = WheelGroupSeparator;
