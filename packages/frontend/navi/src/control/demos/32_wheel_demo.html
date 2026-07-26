@@ -58,7 +58,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, Wheel, WheelGroup } from "@jsenv/navi";
+      import { NaviDebug, Wheel, WheelGroup, Text, Box } from "@jsenv/navi";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
@@ -106,7 +106,9 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <WheelGroup.Separator>
+                <Text lineHeight="var(--wheel-item-height)">:</Text>
+              </WheelGroup.Separator>
               <Wheel value={m} action={setM}>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -114,7 +116,9 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <WheelGroup.Separator>
+                <Text lineHeight="var(--wheel-item-height)">:</Text>
+              </WheelGroup.Separator>
               <Wheel value={s} action={setS}>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -148,7 +152,9 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>:</WheelGroup.Separator>
+              <WheelGroup.Separator>
+                <Text lineHeight="var(--wheel-item-height)">:</Text>
+              </WheelGroup.Separator>
               <Wheel value={m} action={setM}>
                 {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>

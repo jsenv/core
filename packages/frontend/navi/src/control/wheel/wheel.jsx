@@ -38,6 +38,15 @@ const css = /* css */ `
     color: var(--wheel-color-faded);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
+    border-radius: 6px;
+
+    /* Keyboard interaction (arrows/Tab) focus-visibles a hidden radio inside;
+       show the focus outline on the whole column, not just the selected row. */
+    &:has([navi-selectable-real-input]:focus-visible) {
+      outline: var(--navi-focus-outline-width, 2px) solid
+        var(--navi-focus-outline-color, light-dark(#4a90d9, #6ab0ff));
+      outline-offset: 2px;
+    }
 
     &[data-disabled] {
       opacity: 0.5;
@@ -120,6 +129,13 @@ const css = /* css */ `
     &[data-wheel-current] {
       color: var(--wheel-color);
       font-weight: 600;
+      /* Clicking the current value selects what is already selected — nothing
+         happens, so don't advertise it as clickable. */
+      cursor: default;
+
+      [navi-selectable-real-input] {
+        cursor: default;
+      }
     }
 
     &[data-disabled] {
@@ -162,6 +178,8 @@ const css = /* css */ `
     margin-left: calc(-0.5 * var(--wheel-separator-width));
   }
   .navi_wheel_group_separator {
+    --wheel-item-height: 2.4em;
+
     position: relative;
     z-index: 1;
     display: flex;
@@ -172,6 +190,7 @@ const css = /* css */ `
     justify-content: center;
     color: light-dark(#111, #eee);
     font-weight: 600;
+    font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     /* Inert on top of the eaten halves — see the .navi_wheel_group note above */
     pointer-events: none;
@@ -234,6 +253,10 @@ function WheelUI(props) {
   // the selection into place, while our own scroll-driven selection does not
   // scroll a second time.
   const centeredIdRef = useRef(null);
+  // The id of the real input that currently holds the group's single Tab stop
+  // (roving tabindex). Guards setRovingTabindex so it only rewrites tabindex
+  // when the tabbable element actually changes.
+  const rovingInputIdRef = useRef(null);
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
@@ -254,15 +277,36 @@ function WheelUI(props) {
     viewportEl.scrollTo({ top, behavior });
   };
 
-  // Sync the center row with the current selection (checked radio) — used on
-  // first display and whenever the controlled value changes from outside.
-  const syncCenterToSelection = (viewportEl, behavior) => {
+  const getSelectedItem = (viewportEl) => {
     const checkedInput = viewportEl.querySelector(
       "[navi-selectable-real-input]:checked",
     );
-    const selectedItem = checkedInput
+    return checkedInput
       ? checkedInput.closest("[navi-list-item-real]")
       : viewportEl.querySelector("[navi-list-item-real]");
+  };
+
+  // Roving tabindex: only one item is in the Tab order at a time, so tabbing
+  // into the wheel lands on the current value (like a native radio group) — not
+  // the first or last item — and arrow keys move the Tab stop along with focus.
+  const setRovingTabindex = (viewportEl, activeItemEl) => {
+    const activeInput = activeItemEl?.querySelector(
+      "[navi-selectable-real-input]",
+    );
+    if (!activeInput || activeInput.id === rovingInputIdRef.current) {
+      return;
+    }
+    rovingInputIdRef.current = activeInput.id;
+    const inputs = viewportEl.querySelectorAll("[navi-selectable-real-input]");
+    for (const input of inputs) {
+      input.tabIndex = input === activeInput ? 0 : -1;
+    }
+  };
+
+  // Sync the center row with the current selection (checked radio) — used on
+  // first display and whenever the controlled value changes from outside.
+  const syncCenterToSelection = (viewportEl, behavior) => {
+    const selectedItem = getSelectedItem(viewportEl);
     if (!selectedItem) {
       return;
     }
@@ -281,6 +325,7 @@ function WheelUI(props) {
     (el) => {
       const viewportEl = el.querySelector(".navi_wheel_viewport");
       syncCenterToSelection(viewportEl, "auto");
+      setRovingTabindex(viewportEl, getSelectedItem(viewportEl));
     },
     [],
   );
@@ -292,6 +337,7 @@ function WheelUI(props) {
       return;
     }
     syncCenterToSelection(viewportEl, "auto");
+    setRovingTabindex(viewportEl, getSelectedItem(viewportEl));
   });
 
   // Scroll handling: keep the center marker up to date live, and select the
@@ -354,6 +400,7 @@ function WheelUI(props) {
       }
       centeredIdRef.current = itemEl.id;
       updateCurrentMarker(viewportEl, itemEl);
+      setRovingTabindex(viewportEl, itemEl);
       centerItem(viewportEl, itemEl, "smooth");
     };
     el.addEventListener("focusin", onFocusIn);
