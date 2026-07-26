@@ -99,16 +99,15 @@ const css = /* css */ `
 
   .navi_wheel_viewport {
     position: relative;
-    -webkit-overflow-scrolling: touch;
-    /* We reposition scrollTop ourselves (loop fold-back); don't let the browser's
-       scroll anchoring adjust it behind our back. */
-    overflow-anchor: none;
-    /* No visible scrollbar */
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    touch-action: none;
+    /* No native scroll: the list track is positioned by transform (see
+       renderPos). Overflow clips the off-center rows; touch-action:none routes
+       drags to our pointer handlers instead of the browser's scroll. */
+    overflow: hidden;
+  }
+  .navi_wheel_list {
+    /* Positioned via translate3d — hint the compositor. */
+    will-change: transform;
   }
 
   /* type is informative metadata; a couple of types get a rendering hint.
@@ -135,8 +134,6 @@ const css = /* css */ `
     white-space: nowrap;
     cursor: pointer;
     user-select: none;
-    scroll-snap-align: center;
-    scroll-snap-stop: always;
     -webkit-tap-highlight-color: transparent;
     transition: color 0.15s ease;
     /* Rendering virtualization: only the rows within each wheel's own viewport
@@ -183,9 +180,6 @@ const css = /* css */ `
       height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
       -webkit-mask-image: var(--wheel-fade-y);
       mask-image: var(--wheel-fade-y);
-      overflow-x: hidden;
-      overflow-y: auto;
-      scroll-snap-type: y mandatory;
     }
     .navi_wheel_list {
       /* Blank space so the first and last items can reach the center row. */
@@ -212,9 +206,6 @@ const css = /* css */ `
       width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
       -webkit-mask-image: var(--wheel-fade-x);
       mask-image: var(--wheel-fade-x);
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
     }
     .navi_wheel_list {
       padding-inline: calc(
@@ -426,11 +417,13 @@ function WheelUI(props) {
   // external value change (or the initial mount) scrolls the selection into
   // place, while our own scroll-driven selection does not scroll a second time.
   const centeredIdRef = useRef(null);
-  // True while a programmatic smooth scroll is animating. The loop wrap is
-  // suspended during it (see onScroll) so the animation isn't cut short when it
-  // heads onto a clone in the wrap zone; the wrap then happens invisibly at rest
-  // on settle. Without this, e.g. arrowing 00 → 23 jumps instead of gliding.
-  const smoothScrollingRef = useRef(false);
+  // The wheel does NOT use native scroll. `posRef` is our own virtual scroll
+  // position (px, main axis); the list track is translated by -pos. This is the
+  // single source of truth, wrapped modulo the real-list extent in loop mode, so
+  // there is no physical scroll edge to get stuck at. animRef holds the current
+  // rAF (momentum/glide) so it can be cancelled.
+  const posRef = useRef(0);
+  const animRef = useRef(null);
 
   // How many clone rows to render on each side of the real items as scroll
   // runway. Because the sequence is periodic with period N, the wrap stays
@@ -464,18 +457,6 @@ function WheelUI(props) {
   };
 
   // Main-axis accessors — pick top/height or left/width from the orientation.
-  const readScroll = (vp) => (isHorizontal ? vp.scrollLeft : vp.scrollTop);
-  const writeScroll = (vp, pos, behavior) =>
-    vp.scrollTo(
-      isHorizontal ? { left: pos, behavior } : { top: pos, behavior },
-    );
-  const addScroll = (vp, delta) => {
-    if (isHorizontal) {
-      vp.scrollLeft += delta;
-    } else {
-      vp.scrollTop += delta;
-    }
-  };
   const viewportMain = (vp) =>
     isHorizontal ? vp.clientWidth : vp.clientHeight;
   const itemMainStart = (el) => (isHorizontal ? el.offsetLeft : el.offsetTop);
@@ -483,10 +464,26 @@ function WheelUI(props) {
     isHorizontal ? el.offsetWidth : el.offsetHeight;
 
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
+  const getTrack = (vp) => vp.querySelector(".navi_wheel_list");
+
+  const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+  // Push the current virtual position onto the track via transform, and refresh
+  // the "current" emphasis. No native scroll is involved.
+  const renderPos = (vp) => {
+    const track = getTrack(vp);
+    if (track) {
+      const p = -posRef.current;
+      track.style.transform = isHorizontal
+        ? `translate3d(${p}px, 0, 0)`
+        : `translate3d(0, ${p}px, 0)`;
+    }
+    updateCurrentMarker(vp, findCenteredRow(vp));
+  };
 
   const findCenteredMatching = (viewportEl, selector) => {
     const items = viewportEl.querySelectorAll(selector);
-    const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
+    const center = posRef.current + viewportMain(viewportEl) / 2;
     let closest = null;
     let closestDistance = Infinity;
     for (const item of items) {
@@ -508,82 +505,185 @@ function WheelUI(props) {
   const findCenteredRow = (viewportEl) =>
     findCenteredMatching(viewportEl, ".navi_wheel_item");
 
-  const centerItem = (viewportEl, itemEl, behavior) => {
-    const base =
-      itemMainStart(itemEl) -
-      (viewportMain(viewportEl) - itemMainSize(itemEl)) / 2;
-    let target = base;
-    // In loop mode the same value also lives in the proxy buffers, so a real
-    // item can be centered at base ± k·realSpan. For a *smooth* move (arrows)
-    // pick the copy nearest the current scroll so movement stays minimal and
-    // continuous — e.g. arrowing off the last value glides one step onto the
-    // "first" proxy (which settle then normalises) instead of jumping to the
-    // far end. For an instant move (initial/external), go straight to the real
-    // band: picking a nearest copy there can resolve to the position we are
-    // already at (a no-op that leaves a clone centered instead of the value).
-    if (isLoop && loopClones.length && behavior === "smooth") {
-      const realSpan = itemMainSize(itemEl) * loopClones.length;
-      if (realSpan > 0) {
-        const copies = Math.round((readScroll(viewportEl) - base) / realSpan);
-        target = base + copies * realSpan;
-      }
-    }
-    // Suspend the wrap for the duration of a smooth animation so it can glide
-    // onto a clone without being instant-jumped (settle normalises it after).
-    // Only when it actually moves — otherwise no scroll event ever fires to
-    // settle and clear the flag, which would leave the wrap suspended forever
-    // (breaking subsequent clicks/scrolls).
-    if (
-      behavior === "smooth" &&
-      Math.abs(target - readScroll(viewportEl)) > 0.5
-    ) {
-      smoothScrollingRef.current = true;
-    }
-    writeScroll(viewportEl, target, behavior);
-  };
+  // The virtual position that centers a given row.
+  const centerPosFor = (vp, el) =>
+    itemMainStart(el) - (viewportMain(vp) - itemMainSize(el)) / 2;
 
-  // Fold the viewport center back into the real-items band. The real items own
-  // [bufferSpan, bufferSpan + realSpan); a proxy `realSpan` away shows the exact
-  // same value, so shifting by whole realSpans is invisible and makes the wheel
-  // spin endlessly. Runs on every scroll so even a long fling folds back.
-  const wrapScrollIntoRealBand = (viewportEl) => {
-    const realItem = viewportEl.querySelector("[navi-list-item-real]");
+  // Loop: fold the position back into the real-items band [bufferSpan,
+  // bufferSpan+realSpan). A real-list extent away shows identical content, so
+  // this is invisible — and because it's our own value (not scrollTop) there is
+  // no physical edge to get stuck against. Returns true if it moved.
+  const wrapPos = (vp) => {
+    const realItem = vp.querySelector("[navi-list-item-real]");
     if (!realItem || !loopClones.length) {
-      return;
+      return false;
     }
     const realSpan = itemMainSize(realItem) * loopClones.length;
     if (realSpan === 0) {
-      return;
+      return false;
     }
-    // Measure the band start from the DOM (offset of the first real item), so
-    // the leading filler + clones are accounted for automatically.
     const bufferSpan = itemMainStart(realItem);
-    const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
+    const center = posRef.current + viewportMain(vp) / 2;
     if (center >= bufferSpan && center < bufferSpan + realSpan) {
-      return;
+      return false;
     }
     const offsetInBand =
       (((center - bufferSpan) % realSpan) + realSpan) % realSpan;
-    addScroll(viewportEl, bufferSpan + offsetInBand - center);
+    posRef.current += bufferSpan + offsetInBand - center;
+    return true;
   };
 
-  // A proxy was clicked — select (and center) the real item it stands in for.
+  // Non-loop: clamp so the first/last value can't be scrolled past center.
+  const clampPos = (vp) => {
+    const items = vp.querySelectorAll("[navi-list-item-real]");
+    if (!items.length) {
+      return;
+    }
+    posRef.current = clampNumber(
+      posRef.current,
+      centerPosFor(vp, items[0]),
+      centerPosFor(vp, items[items.length - 1]),
+    );
+  };
+
+  // Set the position from user input: normalise (wrap in loop, clamp otherwise),
+  // then render.
+  const setPos = (vp, pos) => {
+    posRef.current = pos;
+    if (isLoop) {
+      wrapPos(vp);
+    } else {
+      clampPos(vp);
+    }
+    renderPos(vp);
+  };
+
+  const cancelAnim = () => {
+    if (animRef.current !== null) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
+  };
+
+  // After motion stops: fold any clone back onto its real row (invisible), then
+  // select the centered value.
+  const commitSelection = (vp) => {
+    if (isLoop && wrapPos(vp)) {
+      renderPos(vp);
+    }
+    if (!interactive) {
+      return;
+    }
+    const centered = findCenteredItem(vp);
+    if (!centered) {
+      return;
+    }
+    centeredIdRef.current = centered.id;
+    const input = centered.querySelector("[navi-selectable-real-input]");
+    if (input && (input.checked || input.disabled)) {
+      return;
+    }
+    dispatchCustomEvent(ref.current, "navi_request_select", {
+      event: new CustomEvent("navi_wheel_settle"),
+      id: centered.id,
+    });
+  };
+
+  // Glide the position to a target (easeOut). The position is set *raw* during
+  // the glide (no wrap) so it can travel onto a clone; onDone normalises + selects.
+  const animateTo = (vp, target, onDone) => {
+    cancelAnim();
+    const start = posRef.current;
+    const dist = target - start;
+    if (Math.abs(dist) < 0.5) {
+      posRef.current = target;
+      renderPos(vp);
+      onDone();
+      return;
+    }
+    const duration = clampNumber(Math.abs(dist) * 1.1, 160, 420);
+    const startTime = performance.now();
+    const step = (now) => {
+      const t = clampNumber((now - startTime) / duration, 0, 1);
+      posRef.current = start + dist * (1 - Math.pow(1 - t, 3));
+      renderPos(vp);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        animRef.current = null;
+        onDone();
+      }
+    };
+    animRef.current = requestAnimationFrame(step);
+  };
+
+  // Snap to the nearest row center, then commit the selection.
+  const snapAndSelect = (vp) => {
+    const row = findCenteredRow(vp);
+    if (!row) {
+      return;
+    }
+    animateTo(vp, centerPosFor(vp, row), () => commitSelection(vp));
+  };
+
+  // Inertia after a drag/fling: decay the velocity, then snap.
+  const startMomentum = (vp, velocity) => {
+    cancelAnim();
+    let v = velocity; // px per ms
+    let last = performance.now();
+    const step = (now) => {
+      const dt = now - last;
+      last = now;
+      v *= Math.pow(0.95, dt / 16);
+      setPos(vp, posRef.current + v * dt);
+      if (Math.abs(v) < 0.02) {
+        animRef.current = null;
+        snapAndSelect(vp);
+        return;
+      }
+      animRef.current = requestAnimationFrame(step);
+    };
+    animRef.current = requestAnimationFrame(step);
+  };
+
+  // Center a specific item (external value / initial / keyboard). Smooth picks
+  // the nearest copy so arrowing off an end glides one step onto a clone.
+  const centerOn = (vp, itemEl, behavior) => {
+    const base = centerPosFor(vp, itemEl);
+    let target = base;
+    if (isLoop && loopClones.length && behavior === "smooth") {
+      const realSpan = itemMainSize(itemEl) * loopClones.length;
+      if (realSpan > 0) {
+        const copies = Math.round((posRef.current - base) / realSpan);
+        target = base + copies * realSpan;
+      }
+    }
+    if (behavior === "smooth") {
+      animateTo(vp, target, () => commitSelection(vp));
+    } else {
+      setPos(vp, target);
+    }
+  };
+
+  // A proxy was clicked — select (and glide to) the real item it stands in for.
   const handleCloneClick = (index) => {
-    const el = ref.current;
-    const viewportEl = el.querySelector(".navi_wheel_viewport");
-    const realItems = viewportEl.querySelectorAll("[navi-list-item-real]");
-    const target = realItems[index];
+    const vp = getViewport();
+    if (!vp) {
+      return;
+    }
+    const target = vp.querySelectorAll("[navi-list-item-real]")[index];
     if (!target) {
       return;
     }
+    centeredIdRef.current = target.id;
     const input = target.querySelector("[navi-selectable-real-input]");
     if (!input || !input.checked) {
-      dispatchCustomEvent(el, "navi_request_select", {
+      dispatchCustomEvent(ref.current, "navi_request_select", {
         event: new CustomEvent("navi_wheel_clone_click"),
         id: target.id,
       });
     }
-    centerItem(viewportEl, target, "smooth");
+    centerOn(vp, target, "smooth");
   };
 
   const getSelectedItem = (viewportEl) => {
@@ -607,11 +707,11 @@ function WheelUI(props) {
     }
     centeredIdRef.current = selectedItem.id;
     updateCurrentMarker(viewportEl, selectedItem);
-    centerItem(viewportEl, selectedItem, behavior);
+    centerOn(viewportEl, selectedItem, behavior);
   };
 
-  // Initial centering — deferred until the wheel is on screen so scrollTo isn't
-  // a no-op inside a closed popover/dialog.
+  // Initial centering — deferred until the wheel is on screen (offsets need real
+  // layout, e.g. not inside a closed popover/dialog).
   useDisplayedLayoutEffect(
     ref,
     (el) => {
@@ -629,111 +729,164 @@ function WheelUI(props) {
     syncCenterToSelection(viewportEl, "auto");
   });
 
-  // Scroll handling: keep the center marker live, wrap in loop mode, and select
-  // the centered item once scrolling settles.
+  // Input: wheel + pointer drag drive the virtual position; a short idle after
+  // wheel, or the end of a drag's momentum, snaps to the nearest value. Readonly
+  // pops the callout instead of moving; disabled is inert (no events reach here).
   useLayoutEffect(() => {
     const el = ref.current;
-    const viewportEl = el.querySelector(".navi_wheel_viewport");
-    let rafId = null;
+    const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
+    let calloutCooldown = null;
 
-    const onScroll = () => {
-      // During a smooth animation the wrap is suspended (it would jump-cut the
-      // glide onto a clone). User free-scrolling still wraps live for seamless
-      // infinite spinning.
-      if (isLoop && !smoothScrollingRef.current) {
-        wrapScrollIntoRealBand(viewportEl);
+    const scheduleSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => snapAndSelect(vp), 90);
+    };
+    const readonlyCallout = (event) => {
+      if (!readOnly || calloutCooldown !== null) {
+        return;
       }
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          rafId = null;
-          updateCurrentMarker(viewportEl, findCenteredRow(viewportEl));
+      calloutCooldown = setTimeout(() => {
+        calloutCooldown = null;
+      }, 600);
+      const current = getSelectedItem(vp) || findCenteredItem(vp);
+      if (current) {
+        // Rejected by the selectable layer (readonly) → pops the callout.
+        dispatchCustomEvent(el, "navi_request_select", {
+          event,
+          id: current.id,
         });
       }
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(onSettle, 120);
     };
-    const onSettle = () => {
-      // Scrolling stopped: fold any clone we glided onto back onto its real row
-      // (invisible — identical content), then read/select from the real band.
+    // Non-loop only: is a wheel in this direction blocked (so the page should
+    // scroll instead of the wheel trapping it)?
+    const atClampedEnd = (delta) => {
       if (isLoop) {
-        wrapScrollIntoRealBand(viewportEl);
+        return false;
       }
-      smoothScrollingRef.current = false;
-      // Readonly/disabled never settle-select: user scrolling is blocked
-      // outright (see the scroll-block effect), so a settle here would only be
-      // a programmatic re-center — never a value change.
+      const items = vp.querySelectorAll("[navi-list-item-real]");
+      if (!items.length) {
+        return false;
+      }
+      const min = centerPosFor(vp, items[0]);
+      const max = centerPosFor(vp, items[items.length - 1]);
+      return (
+        (delta < 0 && posRef.current <= min + 0.5) ||
+        (delta > 0 && posRef.current >= max - 0.5)
+      );
+    };
+
+    const onWheel = (e) => {
+      const delta = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
+      if (!delta) {
+        return;
+      }
       if (!interactive) {
+        e.preventDefault();
+        readonlyCallout(e);
         return;
       }
-      const centered = findCenteredItem(viewportEl);
-      if (!centered) {
-        return;
+      if (atClampedEnd(delta)) {
+        return; // let the page scroll past a non-looping end
       }
-      centeredIdRef.current = centered.id;
-      const input = centered.querySelector("[navi-selectable-real-input]");
-      if (input && (input.checked || input.disabled)) {
-        return;
-      }
-      dispatchCustomEvent(el, "navi_request_select", {
-        event: new CustomEvent("navi_wheel_settle"),
-        id: centered.id,
-      });
+      e.preventDefault();
+      cancelAnim();
+      setPos(vp, posRef.current + delta);
+      scheduleSettle();
     };
 
-    // Fold back BEFORE the browser applies a wheel/touch scroll. The `scroll`
-    // event alone can't fix the physical edge: at scrollTop 0 / max a wheel-up
-    // (or drag) produces no scroll event, so the fold never runs and you get
-    // stuck. Recentering on the input event itself keeps scrollTop away from the
-    // edge, so the ensuing scroll always has room to keep looping. Seamless —
-    // the content is identical a real-list extent away.
-    const onPreScroll = () => {
-      if (isLoop && interactive && !smoothScrollingRef.current) {
-        wrapScrollIntoRealBand(viewportEl);
+    let drag = null;
+    const onPointerDown = (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) {
+        return;
       }
+      if (!interactive) {
+        readonlyCallout(e);
+        return;
+      }
+      cancelAnim();
+      const client = isHorizontal ? e.clientX : e.clientY;
+      drag = {
+        pointerId: e.pointerId,
+        startClient: client,
+        startPos: posRef.current,
+        lastClient: client,
+        lastTime: performance.now(),
+        velocity: 0,
+        moved: false,
+        captured: false,
+      };
+    };
+    const onPointerMove = (e) => {
+      if (!drag || e.pointerId !== drag.pointerId) {
+        return;
+      }
+      const client = isHorizontal ? e.clientX : e.clientY;
+      const total = client - drag.startClient;
+      if (!drag.moved && Math.abs(total) > 3) {
+        drag.moved = true;
+        drag.captured = true;
+        vp.setPointerCapture(e.pointerId);
+      }
+      if (!drag.moved) {
+        return;
+      }
+      const now = performance.now();
+      const dt = now - drag.lastTime;
+      if (dt > 0) {
+        drag.velocity = (client - drag.lastClient) / dt;
+      }
+      drag.lastClient = client;
+      drag.lastTime = now;
+      // Finger down → content down → position decreases.
+      setPos(vp, drag.startPos - total);
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.pointerId) {
+        return;
+      }
+      const wasDrag = drag.moved;
+      const velocity = drag.velocity;
+      if (drag.captured) {
+        vp.releasePointerCapture(e.pointerId);
+      }
+      drag = null;
+      if (!wasDrag) {
+        return; // a tap → let the underlying radio handle selection
+      }
+      // Position moves opposite to the finger.
+      startMomentum(vp, -velocity);
     };
 
-    viewportEl.addEventListener("scroll", onScroll, { passive: true });
-    viewportEl.addEventListener("wheel", onPreScroll, { passive: true });
-    viewportEl.addEventListener("touchmove", onPreScroll, { passive: true });
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    vp.addEventListener("pointerdown", onPointerDown);
+    vp.addEventListener("pointermove", onPointerMove);
+    vp.addEventListener("pointerup", onPointerUp);
+    vp.addEventListener("pointercancel", onPointerUp);
     return () => {
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-      }
       clearTimeout(settleTimer);
-      viewportEl.removeEventListener("scroll", onScroll);
-      viewportEl.removeEventListener("wheel", onPreScroll);
-      viewportEl.removeEventListener("touchmove", onPreScroll);
+      clearTimeout(calloutCooldown);
+      cancelAnim();
+      vp.removeEventListener("wheel", onWheel);
+      vp.removeEventListener("pointerdown", onPointerDown);
+      vp.removeEventListener("pointermove", onPointerMove);
+      vp.removeEventListener("pointerup", onPointerUp);
+      vp.removeEventListener("pointercancel", onPointerUp);
     };
-  }, [isLoop, isHorizontal, interactive]);
+  }, [isLoop, isHorizontal, interactive, readOnly]);
 
-  // Focus (arrow keys, tab, click) centers the focused item. Skipped when not
-  // interactive: clicking a neighbour or arrowing must NOT scroll — it should
-  // let the selectable layer show the readonly callout instead.
+  // Keyboard: the focus group moves focus between the hidden radios; we glide
+  // the focused value to center. Overflow is hidden, so the browser can't
+  // scroll-into-view and fight us. Arrows are swallowed when not interactive.
   useLayoutEffect(() => {
     const el = ref.current;
-    const viewportEl = el.querySelector(".navi_wheel_viewport");
-    // The focus group focuses the target input without preventScroll, so the
-    // browser instant-scrolls a far item (e.g. the last, when wrapping) into
-    // view before we can glide to it. Capture the pre-nav scroll so focusin can
-    // undo that jump and smooth-scroll from where the user actually was.
-    const scrollBeforeNavRef = { current: null };
+    const vp = el.querySelector(".navi_wheel_viewport");
     const onKeyDownCapture = (e) => {
-      if (!NAV_KEYS.has(e.key)) {
+      if (!NAV_KEYS.has(e.key) || interactive) {
         return;
       }
-      if (!interactive) {
-        // Readonly/disabled: swallow arrow navigation before the focus group
-        // acts on it, so the value can't be changed with the keyboard either.
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        return;
-      }
-      scrollBeforeNavRef.current = readScroll(viewportEl);
-      // If focus doesn't actually move (no focusin), don't keep a stale value.
-      requestAnimationFrame(() => {
-        scrollBeforeNavRef.current = null;
-      });
+      e.preventDefault();
+      e.stopImmediatePropagation();
     };
     const onFocusIn = (e) => {
       if (!interactive) {
@@ -748,15 +901,8 @@ function WheelUI(props) {
         return;
       }
       centeredIdRef.current = itemEl.id;
-      updateCurrentMarker(viewportEl, itemEl);
-      if (scrollBeforeNavRef.current !== null) {
-        // Undo the browser's focus scroll-into-view before gliding, so the
-        // nearest-copy math runs from the real starting point (one step, not a
-        // jump to the far end).
-        writeScroll(viewportEl, scrollBeforeNavRef.current, "auto");
-        scrollBeforeNavRef.current = null;
-      }
-      centerItem(viewportEl, itemEl, "smooth");
+      updateCurrentMarker(vp, itemEl);
+      centerOn(vp, itemEl, "smooth");
     };
     el.addEventListener("keydown", onKeyDownCapture, true);
     el.addEventListener("focusin", onFocusIn);
@@ -765,49 +911,6 @@ function WheelUI(props) {
       el.removeEventListener("focusin", onFocusIn);
     };
   }, [isHorizontal, interactive]);
-
-  // Readonly & disabled: block user scrolling outright (scrolling must never
-  // change the value). Readonly additionally pops the readonly callout — the
-  // same treatment other readonly controls give scroll-causing interactions;
-  // disabled blocks silently (nothing to explain).
-  useLayoutEffect(() => {
-    if (interactive) {
-      return undefined;
-    }
-    const el = ref.current;
-    const viewportEl = el.querySelector(".navi_wheel_viewport");
-    let calloutCooldown = null;
-    const onScrollAttempt = (e) => {
-      e.preventDefault();
-      if (!readOnly) {
-        return; // disabled → block silently
-      }
-      if (calloutCooldown !== null) {
-        return;
-      }
-      calloutCooldown = setTimeout(() => {
-        calloutCooldown = null;
-      }, 600);
-      const current =
-        getSelectedItem(viewportEl) || findCenteredItem(viewportEl);
-      if (current) {
-        // Rejected by the selectable layer (readonly) → pops the callout.
-        dispatchCustomEvent(el, "navi_request_select", {
-          event: e,
-          id: current.id,
-        });
-      }
-    };
-    viewportEl.addEventListener("wheel", onScrollAttempt, { passive: false });
-    viewportEl.addEventListener("touchmove", onScrollAttempt, {
-      passive: false,
-    });
-    return () => {
-      clearTimeout(calloutCooldown);
-      viewportEl.removeEventListener("wheel", onScrollAttempt);
-      viewportEl.removeEventListener("touchmove", onScrollAttempt);
-    };
-  }, [interactive, readOnly]);
 
   return (
     <Box
