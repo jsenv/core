@@ -148,6 +148,9 @@
                 <a href="#horizontal-group">Horizontal group</a>
               </li>
               <li>
+                <a href="#separator">Separator alignment</a>
+              </li>
+              <li>
                 <a href="#actions">uiAction / action / form</a>
               </li>
               <li>
@@ -503,6 +506,88 @@
         );
       };
 
+      // ── Separator alignment ────────────────────────────────────────────────
+
+      const AlignmentSquare = () => (
+        <span
+          style={{
+            display: "block",
+            width: 14,
+            height: 14,
+            background: "#e8590c",
+            borderRadius: 2,
+          }}
+        />
+      );
+
+      const SeparatorAlignmentDemo = () => {
+        const [h, setH] = useState(9);
+        const [m, setM] = useState(30);
+        const MINUTES = [0, 15, 30, 45];
+        return (
+          <div id="separator" className="demo-section">
+            <h2>Separator alignment</h2>
+            <p>
+              A separator stretches to the wheel's height and centers its
+              content, so it sits on the middle (selected) row — no work needed.
+              The orange square marks exactly where the separator content lands:
+              it should line up with the center row of both wheels (one of which
+              is a short looping column, the trickier case).
+            </p>
+            <WheelGroup>
+              <Wheel type="integer" value={h} action={setH} loop>
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>
+                <AlignmentSquare />
+              </WheelGroup.Separator>
+              <Wheel type="integer" value={m} action={setM} loop>
+                {MINUTES.map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </WheelGroup>
+
+            <h3 style={{ marginTop: 20 }}>Centering custom text</h3>
+            <p>
+              Text content is already centered by the default flex layout. If
+              you give the separator your own block/inline element and want a
+              single line to be exactly one row tall, use{" "}
+              <code>line-height: var(--wheel-item-height)</code> — the separator
+              re-exposes that variable (it is a sibling of the wheels, so it
+              does not inherit theirs).
+            </p>
+            <WheelGroup>
+              <Wheel type="integer" value={h} action={setH} loop>
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>
+                <span style={{ lineHeight: "var(--wheel-item-height)" }}>
+                  :
+                </span>
+              </WheelGroup.Separator>
+              <Wheel type="integer" value={m} action={setM} loop>
+                {MINUTES.map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </WheelGroup>
+          </div>
+        );
+      };
+
       // ── Actions (uiAction / action / form) ─────────────────────────────────
 
       const ActionsDemo = () => {
@@ -689,6 +774,7 @@
           <DayDemo />
           <HorizontalDemo />
           <HorizontalGroupDemo />
+          <SeparatorAlignmentDemo />
           <ActionsDemo />
           <ValidationDemo />
           <CustomizationDemo />

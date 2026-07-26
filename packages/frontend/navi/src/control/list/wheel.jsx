@@ -248,7 +248,15 @@ const css = /* css */ `
     }
   }
   .navi_wheel_group_separator {
+    /* A sibling of the wheels, so it does NOT inherit their --wheel-item-height
+       (that lives on .navi_wheel_container). Re-expose a default here so custom
+       separator content can rely on it, e.g. line-height: var(--wheel-item-height)
+       to make a single line exactly one row tall. */
+    --wheel-item-height: 2.4em;
+
     display: flex;
+    /* Stretch to the group height (= the wheels' height) and center the content,
+       which lands it on the middle (selected) row. */
     align-items: center;
     align-self: stretch;
     justify-content: center;
@@ -443,11 +451,14 @@ function WheelUI(props) {
       (viewportMain(viewportEl) - itemMainSize(itemEl)) / 2;
     let target = base;
     // In loop mode the same value also lives in the proxy buffers, so a real
-    // item can be centered at base ± k·realSpan. Pick the copy nearest the
-    // current scroll so movement stays minimal and continuous — e.g. arrowing
-    // off the last value scrolls one step onto the "first" proxy (which the wrap
-    // then normalises) instead of jumping to the far end.
-    if (isLoop && loopClones.length) {
+    // item can be centered at base ± k·realSpan. For a *smooth* move (arrows)
+    // pick the copy nearest the current scroll so movement stays minimal and
+    // continuous — e.g. arrowing off the last value glides one step onto the
+    // "first" proxy (which settle then normalises) instead of jumping to the
+    // far end. For an instant move (initial/external), go straight to the real
+    // band: picking a nearest copy there can resolve to the position we are
+    // already at (a no-op that leaves a clone centered instead of the value).
+    if (isLoop && loopClones.length && behavior === "smooth") {
       const realSpan = itemMainSize(itemEl) * loopClones.length;
       if (realSpan > 0) {
         const copies = Math.round((readScroll(viewportEl) - base) / realSpan);
