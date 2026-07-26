@@ -234,15 +234,15 @@ const css = /* css */ `
     --wheel-fade-y: linear-gradient(
       to bottom,
       transparent 0%,
-      #000 36%,
-      #000 64%,
+      #000 42%,
+      #000 58%,
       transparent 100%
     );
     --wheel-fade-x: linear-gradient(
       to right,
       transparent 0%,
-      #000 36%,
-      #000 64%,
+      #000 42%,
+      #000 58%,
       transparent 100%
     );
   }
@@ -361,14 +361,14 @@ const css = /* css */ `
 // this many rows between scroll events, so more would only add invisible DOM.
 const LOOP_BUFFER_MAX = 20;
 
-// Fling physics (px per ms). Velocity is capped so a violent fling can't outrun
-// the rendered runway and flash blank. Each frame the velocity is multiplied by
-// WHEEL_DECAY^(dt/16) — closer to 1 glides longer (a touch-scroll feel), like
-// the browser's own fling. Below the snap threshold the settle loop switches
-// from momentum to a spring that eases into the nearest row center; the spring
-// factor is how far toward that center it moves per frame.
-const WHEEL_MAX_VELOCITY = 2.2;
-const WHEEL_DECAY = 0.96;
+// Fling physics (px per ms). Velocity is capped so even a violent fling travels
+// only a handful of rows (a picker isn't a free-scrolling list — overshooting
+// dozens of values feels wrong). Each frame the velocity is multiplied by
+// WHEEL_DECAY^(dt/16); lower stops sooner. Below the snap threshold the settle
+// loop switches from momentum to a spring that eases into the nearest row
+// center; the spring factor is how far toward that center it moves per frame.
+const WHEEL_MAX_VELOCITY = 1.2;
+const WHEEL_DECAY = 0.9;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
@@ -923,15 +923,21 @@ function WheelUI(props) {
       if (!raw) {
         return;
       }
-      // Normalise to pixels like the browser's own scroller: a pixel-mode
-      // trackpad already carries OS momentum, a line-mode mouse notch is scaled
-      // to one row, page-mode to a viewport. So a physical mouse tick advances a
-      // row and a trackpad flings smoothly, matching native scrolling.
+      // Normalise to pixels: line-mode → one row, page-mode → a viewport.
       let delta = raw;
       if (e.deltaMode === 1) {
         delta = raw * getItemSize(vp);
       } else if (e.deltaMode === 2) {
         delta = raw * viewportMain(vp);
+      }
+      // Cap one wheel step to a single row so a chunky mouse notch (often ~100px)
+      // advances one value like a native picker, instead of jumping three. A
+      // trackpad's small deltas stay under the cap and scroll smoothly.
+      const itemSize = getItemSize(vp);
+      if (delta > itemSize) {
+        delta = itemSize;
+      } else if (delta < -itemSize) {
+        delta = -itemSize;
       }
       if (!interactive) {
         e.preventDefault();
