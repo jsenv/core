@@ -226,6 +226,9 @@ const WheelFirstResolver = (props) => {
   props.selectable = props.selectable ?? true;
   // A wheel is a single vertical column — restrict the focus group to the Y axis.
   props.focusGroupDirection = props.focusGroupDirection || "y";
+  // When looping, arrowing past an end wraps focus around (last → first) so the
+  // keyboard follows the same endless motion as scrolling.
+  props.focusGroupWrap = props.focusGroupWrap ?? (props.loop ? "y" : undefined);
 
   const { loop, children } = props;
   const clones = loop
@@ -309,8 +312,21 @@ function WheelUI(props) {
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
 
   const centerItem = (viewportEl, itemEl, behavior) => {
-    const top =
+    const base =
       itemEl.offsetTop - (viewportEl.clientHeight - itemEl.clientHeight) / 2;
+    let top = base;
+    // In loop mode the same value also lives in the clone buffers, so a real
+    // item can be centered at base ± k·realHeight. Pick the copy nearest the
+    // current scroll position so movement stays minimal and continuous — e.g.
+    // arrowing down off the last value scrolls one step down onto the "first"
+    // clone (which the wrap then normalises) instead of jumping to the top.
+    if (isLoop && loopClones.length) {
+      const realHeight = itemEl.offsetHeight * loopClones.length;
+      if (realHeight > 0) {
+        const copies = Math.round((viewportEl.scrollTop - base) / realHeight);
+        top = base + copies * realHeight;
+      }
+    }
     viewportEl.scrollTo({ top, behavior });
   };
 
