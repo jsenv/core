@@ -277,6 +277,11 @@ const css = /* css */ `
     font-family: var(--navi-control-font-family);
     white-space: nowrap;
     user-select: none;
+
+    /* <WheelGroup.Separator center> — snap a single text line onto the row. */
+    &[data-center] {
+      line-height: var(--wheel-item-height);
+    }
   }
 `;
 
@@ -978,12 +983,22 @@ export const WheelGroup = ({
     </Box>
   );
 };
-const WheelGroupSeparator = ({ children, ...rest }) => {
+/**
+ * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
+ *
+ * @param {object} props
+ * @param {boolean} [props.center] - Snap a single line of text onto the center
+ *   row by matching the item height (line-height: var(--wheel-item-height)).
+ *   Content is already flex-centered by default; use this to fine-tune glyphs
+ *   like ":" without reaching for the CSS variable yourself.
+ */
+const WheelGroupSeparator = ({ children, center, ...rest }) => {
   return (
     <Box
       as="span"
       {...rest}
       className="navi_wheel_group_separator"
+      data-center={center ? "" : undefined}
       aria-hidden="true"
     >
       {children}

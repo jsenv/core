@@ -454,8 +454,8 @@
             <p>
               A separator sits on the center row automatically. Below: the
               orange square marks where separator content lands, then the same
-              ":" rendered by default and with{" "}
-              <code>lineHeight="var(--wheel-item-height)"</code>.
+              ":" by default and with the <code>center</code> prop (which snaps
+              a single line onto the row).
             </p>
             <div className="states">
               <div>
@@ -479,12 +479,10 @@
               <div>
                 <WheelGroup>
                   <HourWheel />
-                  <WheelGroup.Separator lineHeight="var(--wheel-item-height)">
-                    :
-                  </WheelGroup.Separator>
+                  <WheelGroup.Separator center>:</WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
-                <span className="col-label">":" lineHeight</span>
+                <span className="col-label">":" center</span>
               </div>
             </div>
 
