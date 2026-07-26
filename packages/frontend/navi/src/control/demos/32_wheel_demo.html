@@ -499,9 +499,9 @@
           <div id="customization" className="demo-section">
             <h2>Customization</h2>
             <p>
-              Wheel is a <code>Box</code>, so style props work directly. Colors
-              are CSS variables (<code>--wheel-color</code>,{" "}
-              <code>--wheel-color-faded</code>).
+              Wheel is a <code>Box</code>, so style props work directly. The
+              text colour is <code>--wheel-color</code>; how strongly the
+              off-center rows are veiled is <code>--wheel-veil</code>.
             </p>
             <div style={{ marginBottom: 24 }}>
               <h3>border="1px solid grey"</h3>
@@ -521,23 +521,59 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>accent color (CSS vars)</h3>
-              <Wheel
-                type="integer"
-                value={b}
-                action={setB}
-                loop
-                style={{
-                  "--wheel-color": "#d6336c",
-                  "--wheel-color-faded": "#f3bcd0",
-                }}
-              >
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
+              <h3>color &amp; veil (CSS vars)</h3>
+              <div className="states">
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={b}
+                    action={setB}
+                    loop
+                    style={{ "--wheel-color": "#d6336c" }}
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">--wheel-color</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={b}
+                    action={setB}
+                    loop
+                    style={{ "--wheel-veil": "0.25" }}
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">--wheel-veil: 0.25 (softer)</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={b}
+                    action={setB}
+                    loop
+                    style={{ "--wheel-veil": "0.8" }}
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">
+                    --wheel-veil: 0.8 (stronger)
+                  </span>
+                </div>
+              </div>
             </div>
             <div style={{ marginBottom: 24 }}>
               <h3>bigger rows, 5 visible</h3>
@@ -675,14 +711,16 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3>glass (frosted neighbours, clear center window)</h3>
+              <h3>center window (veil, glass, frame)</h3>
               <p>
-                <code>glass</code> frosts the rows around the center so the
-                selection reads as a window. On <code>WheelGroup</code> one{" "}
-                <code>glass</code> prop frosts every wheel together. Tune with{" "}
-                <code>--wheel-glass-blur</code> and{" "}
-                <code>--wheel-glass-veil</code>; add <code>glassFrame</code> to
-                line the window edges.
+                Every wheel already veils its neighbours over a clear center
+                window — that veil <em>is</em> the selection emphasis, so a
+                half-scrolled row is half-veiled (tune with{" "}
+                <code>--wheel-veil</code>). <code>glass</code> frosts (blurs)
+                that veil; <code>glassFrame</code> lines the window edges. Each
+                is one prop; on a <code>WheelGroup</code> it applies to every
+                wheel at once (last example). Blur tunes with{" "}
+                <code>--wheel-glass-blur</code>.
               </p>
               <div className="states">
                 <div>
@@ -721,7 +759,7 @@
                     glass
                     style={{
                       "--wheel-glass-blur": "3px",
-                      "--wheel-glass-veil": "0.15",
+                      "--wheel-veil": "0.2",
                     }}
                   >
                     {range(24).map((h) => (

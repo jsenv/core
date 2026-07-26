@@ -57,11 +57,14 @@ const css = /* css */ `
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
-    --wheel-color-faded: light-dark(#bbb, #555);
+    /* How opaque the veil over the off-center rows is — the emphasis is a fixed
+       filter at the center window, not a style on the selected row (see the
+       "Center window" section), so a half-scrolled row is half-veiled. */
+    --wheel-veil: 0.55;
 
     position: relative; /* for the loading outline */
     display: inline-flex;
-    color: var(--wheel-color-faded);
+    color: var(--wheel-color);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     border-radius: var(--navi-control-border-radius);
@@ -77,9 +80,9 @@ const css = /* css */ `
       outline-offset: calc(var(--navi-focus-outline-width) / 2);
     }
 
-    /* Readonly & disabled look the same: only the *selected* value is dimmed,
-       the neighbours stay as visible as normal. Disabled dims it a bit more
-       (greyer AND semi-transparent). Scrolling is blocked in JS for both. */
+    /* Readonly & disabled dim the whole column's text (all rows share
+       --wheel-color); disabled dims a touch more (greyer AND semi-transparent).
+       Scrolling is blocked in JS for both. */
     &[data-readonly] {
       --wheel-color: light-dark(#666, #999);
     }
@@ -129,7 +132,11 @@ const css = /* css */ `
     flex: none;
     align-items: center;
     justify-content: center;
-    color: var(--wheel-color-faded);
+    /* Every row is identical: same colour, same weight. What makes the center
+       stand out is the veil over the neighbours (see "Center window"), not any
+       per-row style — so a row emphasises smoothly as it scrolls into place. */
+    color: var(--wheel-color);
+    font-weight: 600;
     text-align: center;
     white-space: nowrap;
     cursor: pointer;
@@ -155,17 +162,10 @@ const css = /* css */ `
       }
     }
 
-    /* Emphasis fades in/out only once the wheel is ready — never on first paint,
-       so the initially-selected value is simply bold, not animated into bold. */
-    .navi_wheel_container[data-ready] & {
-      transition: color 0.15s ease;
-    }
-
     &[data-wheel-current] {
-      color: var(--wheel-color);
-      font-weight: 600;
       /* Clicking the current value re-selects what is already selected —
-         nothing happens, so don't advertise it as clickable. */
+         nothing happens, so don't advertise it as clickable. No visual emphasis
+         here: that comes from the veil, positionally. */
       cursor: default;
 
       [navi-selectable-real-input] {
@@ -230,43 +230,48 @@ const css = /* css */ `
   }
 
   .navi_wheel_container {
+    /* Only the very edges soften (cylinder feel); the veil panes below do the
+       neighbour dimming, so the mask keeps the near rows opaque. */
     --wheel-fade-y: linear-gradient(
       to bottom,
       transparent 0%,
-      #000 32%,
-      #000 68%,
+      #000 14%,
+      #000 86%,
       transparent 100%
     );
     --wheel-fade-x: linear-gradient(
       to right,
       transparent 0%,
-      #000 32%,
-      #000 68%,
+      #000 14%,
+      #000 86%,
       transparent 100%
     );
   }
 
-  /* ── Glass ───────────────────────────────────────────────────────────────────
-     Two frosted panes over the rows on each side of the center, leaving a clear
-     "window" one row tall over the selection. Neighbours read as obscured (blur +
-     a translucent veil) rather than merely greyed. Purely decorative — pointer
-     events pass straight through to the rows underneath. With [data-glass-frame]
-     the pane edge facing the center draws a faint line, framing the window. */
+  /* ── Center window ────────────────────────────────────────────────────────────
+     Two panes veil the rows on each side of the center, leaving a clear window
+     one row tall over the selection. This is what marks the selection: a row is
+     emphasised by *being in the window*, so a half-scrolled row is half-veiled
+     (no abrupt per-row style change). [data-glass] additionally frosts (blurs)
+     the veiled rows; [data-glass-frame] lines the pane edge facing the window.
+     Purely decorative — pointer events pass through to the rows underneath. */
   .navi_wheel_pane {
     position: absolute;
     z-index: 1;
     background: light-dark(
-      rgba(255, 255, 255, var(--wheel-glass-veil, 0.4)),
-      rgba(0, 0, 0, var(--wheel-glass-veil, 0.4))
+      rgba(255, 255, 255, var(--wheel-veil, 0.55)),
+      rgba(0, 0, 0, var(--wheel-veil, 0.55))
     );
     border: 0 solid
       var(
         --wheel-glass-frame-color,
         light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
       );
+    pointer-events: none;
+  }
+  .navi_wheel_container[data-glass] .navi_wheel_pane {
     backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
     -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-    pointer-events: none;
   }
   .navi_wheel_container:not([data-horizontal]) .navi_wheel_pane {
     right: 0;
@@ -848,17 +853,13 @@ function WheelUI(props) {
     (el) => {
       const vp = el.querySelector(".navi_wheel_viewport");
       syncCenterToSelection(vp, "auto");
-      // Re-mark once more after a frame: the first pass can run before the flex
-      // rows get their final offsets, which would land the "current" emphasis on
-      // the wrong row — the selected value would show unhighlighted (grey like
-      // its neighbours) until the first interaction. Recompute from stable
-      // layout so it's bold from the start.
+      // Re-center once more after a frame: the first pass can run before the flex
+      // rows get their final offsets, which would leave the selected value off
+      // the center window until the first interaction. Recompute from stable
+      // layout so it sits in the window from the start.
       const rafId = requestAnimationFrame(() => {
         centeredIdRef.current = null;
         syncCenterToSelection(vp, "auto");
-        // Enable emphasis/state transitions only once the initial value is in
-        // place, so nothing animates just because the wheel appeared.
-        el.setAttribute("data-ready", "");
       });
       return () => {
         cancelAnimationFrame(rafId);
@@ -1106,12 +1107,8 @@ function WheelUI(props) {
               )
             : null}
         </ul>
-        {showGlass ? (
-          <>
-            <div className="navi_wheel_pane" data-side="start" />
-            <div className="navi_wheel_pane" data-side="end" />
-          </>
-        ) : null}
+        <div className="navi_wheel_pane" data-side="start" />
+        <div className="navi_wheel_pane" data-side="end" />
       </div>
     </Box>
   );
