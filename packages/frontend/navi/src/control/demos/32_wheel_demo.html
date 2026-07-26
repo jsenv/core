@@ -140,12 +140,16 @@
         const MINUTES = [0, 15, 30, 45];
         return (
           <div className="demo-section">
-            <h2>WheelGroup — two columns (hours + quarter minutes)</h2>
+            <h2>WheelGroup — two columns (hours + quarter minutes), looping</h2>
+            <p style={{ color: "#666", fontSize: "0.85rem" }}>
+              Both columns <code>loop</code>: past 45 comes 00 again, past 23
+              comes 00.
+            </p>
             <WheelGroup
               separatorWidth="1.5ch"
               style={{ fontVariantNumeric: "tabular-nums" }}
             >
-              <Wheel value={h} action={setH}>
+              <Wheel value={h} action={setH} loop>
                 {range(24).map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}
@@ -155,7 +159,7 @@
               <WheelGroup.Separator>
                 <Text lineHeight="var(--wheel-item-height)">:</Text>
               </WheelGroup.Separator>
-              <Wheel value={m} action={setM}>
+              <Wheel value={m} action={setM} loop>
                 {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>
                     {pad2(v)}

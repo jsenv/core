@@ -1,5 +1,6 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
-import { useId, useLayoutEffect, useRef } from "preact/hooks";
+import { createContext, toChildArray } from "preact";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import {
@@ -92,6 +93,12 @@ const css = /* css */ `
       var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
     );
     list-style: none;
+
+    /* In loop mode the surrounding clone copies already fill the edges, so no
+       blank padding is needed (and it would break the copy-height wrap math). */
+    &[data-loop] {
+      padding-block: 0;
+    }
   }
 
   .navi_wheel_item {
@@ -198,6 +205,13 @@ const css = /* css */ `
   }
 `;
 
+// When loop is on, WheelFirstResolver reads the raw <Wheel.Item> children here
+// (before the selectable layer wraps them) and passes down flat {label}
+// descriptors. WheelUI renders those as inert visual clones above and below the
+// real items — the ingredients for seamless wrapping — without registering
+// duplicate radios/ids in the selectable machinery.
+const WheelLoopClonesContext = createContext(null);
+
 const WheelFirstResolver = (props) => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
@@ -213,7 +227,18 @@ const WheelFirstResolver = (props) => {
   // A wheel is a single vertical column — restrict the focus group to the Y axis.
   props.focusGroupDirection = props.focusGroupDirection || "y";
 
-  return <Next {...props} />;
+  const { loop, children } = props;
+  const clones = loop
+    ? toChildArray(children)
+        .filter((child) => child && typeof child === "object" && child.props)
+        .map((child) => ({ label: child.props.children }))
+    : null;
+
+  return (
+    <WheelLoopClonesContext.Provider value={clones}>
+      <Next {...props} />
+    </WheelLoopClonesContext.Provider>
+  );
 };
 
 /**
@@ -227,6 +252,7 @@ const WheelFirstResolver = (props) => {
  *   selectable?: boolean,
  *   visibleCount?: number,
  *   itemHeight?: number | string,
+ *   loop?: boolean,
  *   name?: string,
  *   required?: boolean,
  *   readOnly?: boolean,
@@ -237,6 +263,7 @@ const WheelFirstResolver = (props) => {
  * }>}
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Height of a single row (number = px). Defaults to the CSS var (2.4em).
+ * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
  */
 export const Wheel = createComponentResolver([
   WheelFirstResolver,
@@ -246,7 +273,17 @@ export const Wheel = createComponentResolver([
 
 function WheelUI(props) {
   import.meta.css = css;
-  const { ref, visibleCount = 3, itemHeight, children, style, ...rest } = props;
+  const {
+    ref,
+    visibleCount = 3,
+    itemHeight,
+    loop, // eslint-disable-line no-unused-vars -- consumed as clones via context
+    children,
+    style,
+    ...rest
+  } = props;
+  const loopClones = useContext(WheelLoopClonesContext);
+  const isLoop = Boolean(loopClones);
 
   // The id of the item currently sitting in the center row. Guards the
   // effects below so an external value change (or the initial mount) scrolls
@@ -275,6 +312,51 @@ function WheelUI(props) {
     const top =
       itemEl.offsetTop - (viewportEl.clientHeight - itemEl.clientHeight) / 2;
     viewportEl.scrollTo({ top, behavior });
+  };
+
+  // Loop mode renders three stacked copies: [clones][real][clones]. The real
+  // copy occupies the middle band [copyHeight, 2·copyHeight). Whenever the
+  // viewport center drifts out of that band we instantly shift scrollTop by a
+  // whole number of copies to bring it back — invisible because the copies are
+  // identical, and this is what makes the wheel spin endlessly. Runs on every
+  // scroll event so even a long fling (which can span several copies at once)
+  // is folded back with the modulo.
+  const wrapScrollIntoRealCopy = (viewportEl) => {
+    const realItem = viewportEl.querySelector("[navi-list-item-real]");
+    if (!realItem || !loopClones.length) {
+      return;
+    }
+    const copyHeight = realItem.offsetHeight * loopClones.length;
+    if (copyHeight === 0) {
+      return;
+    }
+    const center = viewportEl.scrollTop + viewportEl.clientHeight / 2;
+    if (center >= copyHeight && center < copyHeight * 2) {
+      return;
+    }
+    const offsetInBand =
+      (((center - copyHeight) % copyHeight) + copyHeight) % copyHeight;
+    const wrappedCenter = copyHeight + offsetInBand;
+    viewportEl.scrollTop += wrappedCenter - center;
+  };
+
+  // A clone was clicked — select (and center) the real item at the same index.
+  const handleCloneClick = (index) => {
+    const el = ref.current;
+    const viewportEl = el.querySelector(".navi_wheel_viewport");
+    const realItems = viewportEl.querySelectorAll("[navi-list-item-real]");
+    const target = realItems[index];
+    if (!target) {
+      return;
+    }
+    const input = target.querySelector("[navi-selectable-real-input]");
+    if (!input || !input.checked) {
+      dispatchCustomEvent(el, "navi_request_select", {
+        event: new CustomEvent("navi_wheel_clone_click"),
+        id: target.id,
+      });
+    }
+    centerItem(viewportEl, target, "smooth");
   };
 
   const getSelectedItem = (viewportEl) => {
@@ -349,6 +431,9 @@ function WheelUI(props) {
     let settleTimer = null;
 
     const onScroll = () => {
+      if (isLoop) {
+        wrapScrollIntoRealCopy(viewportEl);
+      }
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
           rafId = null;
@@ -383,7 +468,7 @@ function WheelUI(props) {
       clearTimeout(settleTimer);
       viewportEl.removeEventListener("scroll", onScroll);
     };
-  }, []);
+  }, [isLoop]);
 
   // Focus (arrow keys, tab, click) centers the focused item.
   useLayoutEffect(() => {
@@ -418,12 +503,33 @@ function WheelUI(props) {
       style={styleWithVars}
     >
       <div className="navi_wheel_viewport">
-        <ul className="navi_wheel_list">{children}</ul>
+        <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
+          {isLoop ? renderClones(loopClones, "before", handleCloneClick) : null}
+          {children}
+          {isLoop ? renderClones(loopClones, "after", handleCloneClick) : null}
+        </ul>
       </div>
     </Box>
   );
 }
 const WHEEL_PSEUDO_CLASSES = [":focus-within", ":read-only", ":disabled"];
+
+// Inert visual copies of the items (one full copy above and one below the real
+// selectable items) used for seamless looping. They carry no radio input, are
+// hidden from assistive tech, and clicking one selects the real item at the
+// same index (see handleCloneClick).
+const renderClones = (clones, position, onCloneClick) => {
+  return clones.map((clone, index) => (
+    <li
+      key={`${position}_${index}`}
+      className="navi_wheel_item navi_wheel_item_clone"
+      aria-hidden="true"
+      onClick={() => onCloneClick(index)}
+    >
+      {clone.label}
+    </li>
+  ));
+};
 
 const findCenteredItem = (viewportEl) => {
   const items = viewportEl.querySelectorAll("[navi-list-item-real]");
