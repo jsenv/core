@@ -356,8 +356,37 @@ const WheelItemFirstResolver = (props) => {
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
   props.selectable = props.selectable ?? true;
+
   return <Next {...props} />;
 };
+
+const WheelItemUI = (props) => {
+  const { ref, id, children, ...rest } = props;
+
+  return (
+    <Box
+      as="li"
+      baseClassName="navi_wheel_item"
+      id={id}
+      navi-list-item-real=""
+      pseudoClasses={WHEEL_ITEM_PSEUDO_CLASSES}
+      {...rest}
+      index={undefined}
+      selected={undefined}
+      matchInfo={undefined}
+      ref={ref}
+    >
+      {children}
+    </Box>
+  );
+};
+const WHEEL_ITEM_PSEUDO_CLASSES = [
+  ":hover",
+  ":disabled",
+  ":read-only",
+  ":focus-within",
+  ":-navi-selected",
+];
 
 /**
  * Wheel.Item — a selectable value in a Wheel.
@@ -381,30 +410,3 @@ export const WheelItem = createComponentResolver([
   WheelItemUI,
 ]);
 Wheel.Item = WheelItem;
-
-function WheelItemUI(props) {
-  const { ref, id, children, ...rest } = props;
-  return (
-    <Box
-      as="li"
-      baseClassName="navi_wheel_item"
-      id={id}
-      navi-list-item-real=""
-      pseudoClasses={WHEEL_ITEM_PSEUDO_CLASSES}
-      {...rest}
-      index={undefined}
-      selected={undefined}
-      matchInfo={undefined}
-      ref={ref}
-    >
-      {children}
-    </Box>
-  );
-}
-const WHEEL_ITEM_PSEUDO_CLASSES = [
-  ":hover",
-  ":disabled",
-  ":read-only",
-  ":focus-within",
-  ":-navi-selected",
-];
