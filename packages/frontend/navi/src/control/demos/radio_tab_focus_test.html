@@ -7,15 +7,20 @@
     <title>Radio Tab Focus Test</title>
     <style>
       body {
-        max-width: 700px;
+        max-width: 720px;
         margin: 40px auto;
         padding: 0 20px;
         font-family:
           -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.6;
       }
+      h2 {
+        margin-top: 32px;
+        padding-bottom: 6px;
+        border-bottom: 2px solid #ddd;
+      }
       fieldset {
-        margin-bottom: 24px;
+        margin-bottom: 16px;
         padding: 12px 16px;
         border: 1px solid #ccc;
         border-radius: 6px;
@@ -31,12 +36,16 @@
         gap: 4px;
         cursor: pointer;
       }
+      label:has(:disabled) {
+        color: #aaa;
+        cursor: not-allowed;
+      }
       input[type="radio"]:focus-visible {
         outline: 3px solid #4a90d9;
         outline-offset: 2px;
       }
       .note {
-        margin-bottom: 24px;
+        margin-bottom: 16px;
         padding: 10px 14px;
         font-size: 0.9rem;
         background: #f5f7fa;
@@ -53,8 +62,7 @@
         background: #1e1e1e;
         border-radius: 4px;
       }
-      .before,
-      .after {
+      .anchor {
         display: inline-block;
         padding: 6px 10px;
         border: 1px dashed #aaa;
@@ -63,87 +71,71 @@
     </style>
   </head>
   <body>
-    <h1>Native radio Tab focus test</h1>
+    <h1>Radio focus test</h1>
     <div class="note">
-      Groups A/B are <strong>native</strong> radio groups (no framework). Group
-      C is a native radio group with <strong>our</strong> focus group applied
-      (<code>initFocusGroup</code> — same options the Wheel uses). Group D is an
-      actual <code>&lt;Wheel&gt;</code>. Each has a checked value that is
-      <strong>not</strong> the first. Tab from the top link down and watch the
-      focus log: does Tab land on the <em>checked</em> item, or on first/last?
-      Comparing A/B (native) with C/D (our code) tells us whether our focus
-      handling is what breaks Tab-to-checked.
+      Two separate sections with the same radio groups. Each group has a checked
+      value that is <strong>not</strong> the first, and one
+      <strong>disabled</strong>
+      value. Tab from the anchor into each group, then use ↑/↓. Watch the log
+      below and compare the two sections:
+      <ul style="margin: 6px 0 0">
+        <li><strong>Tab entry:</strong> checked value, or first/last?</li>
+        <li>
+          <strong>Arrow nav:</strong> does it skip the disabled value, or land
+          on it?
+        </li>
+      </ul>
     </div>
 
-    <p><a href="#" class="before">« focusable link before »</a></p>
-
+    <!-- ── 1. Native browser ────────────────────────────────────────────── -->
+    <h2>1. Native browser (no framework)</h2>
+    <p><a href="#" class="anchor">« tab anchor before section 1 »</a></p>
     <fieldset>
-      <legend>Group A (name="groupA", "A3" checked)</legend>
+      <legend>Group A — name="groupA", A3 checked, A2 disabled</legend>
       <label><input type="radio" name="groupA" value="A1" /> A1</label>
-      <label><input type="radio" name="groupA" value="A2" /> A2</label>
+      <label><input type="radio" name="groupA" value="A2" disabled /> A2</label>
       <label><input type="radio" name="groupA" value="A3" checked /> A3</label>
       <label><input type="radio" name="groupA" value="A4" /> A4</label>
     </fieldset>
 
-    <fieldset>
-      <legend>Group B (name="groupB", "B2" checked)</legend>
+    <!-- ── 2. Our focus group ──────────────────────────────────────────── -->
+    <h2>2. With our focus group (initFocusGroup)</h2>
+    <p><a href="#" class="anchor">« tab anchor before section 2 »</a></p>
+    <fieldset id="group-b">
+      <legend>Group B — name="groupB", B3 checked, B2 disabled</legend>
       <label><input type="radio" name="groupB" value="B1" /> B1</label>
-      <label><input type="radio" name="groupB" value="B2" checked /> B2</label>
-      <label><input type="radio" name="groupB" value="B3" /> B3</label>
+      <label><input type="radio" name="groupB" value="B2" disabled /> B2</label>
+      <label><input type="radio" name="groupB" value="B3" checked /> B3</label>
       <label><input type="radio" name="groupB" value="B4" /> B4</label>
     </fieldset>
 
-    <fieldset id="group-c">
-      <legend>
-        Group C (name="groupC", "C2" checked) — Tab managed by our focus group
-      </legend>
-      <label><input type="radio" name="groupC" value="C1" /> C1</label>
-      <label><input type="radio" name="groupC" value="C2" checked /> C2</label>
-      <label><input type="radio" name="groupC" value="C3" /> C3</label>
-      <label><input type="radio" name="groupC" value="C4" /> C4</label>
-    </fieldset>
-
-    <fieldset>
-      <legend>Group D — an actual &lt;Wheel&gt; (defaultValue = 2)</legend>
-      <div id="wheel-mount"></div>
-    </fieldset>
-
-    <p><a href="#" class="after">« focusable link after »</a></p>
-
-    <script type="module" jsenv-type="module/jsx">
-      import { initFocusGroup } from "@jsenv/dom";
-      import { render } from "preact";
-      import { Wheel } from "@jsenv/navi";
-
-      // Apply our focus group to Group C, exactly like the selectable list does
-      // (skipTab default true, arrow nav restricted to the radios).
-      initFocusGroup(document.getElementById("group-c"), {
-        direction: "y",
-        ySelector: "input[type=radio]",
-      });
-
-      render(
-        <Wheel defaultValue={2} type="integer">
-          {[0, 1, 2, 3, 4].map((v) => (
-            <Wheel.Item key={v} value={v}>
-              {v}
-            </Wheel.Item>
-          ))}
-        </Wheel>,
-        document.getElementById("wheel-mount"),
-      );
-    </script>
+    <p><a href="#" class="anchor">« tab anchor after »</a></p>
 
     <h3>Focus log</h3>
     <div id="log"></div>
+
+    <script type="module">
+      import { initFocusGroup } from "@jsenv/dom";
+
+      // Section 2 only: manage focus with our focus group, exactly like the
+      // selectable list / Wheel does (skipTab default true, arrows over the radios).
+      initFocusGroup(document.getElementById("group-b"), {
+        direction: "y",
+        ySelector: "input[type=radio]",
+      });
+    </script>
 
     <script>
       const log = document.getElementById("log");
       const describe = (el) => {
         if (el === document.body) return "body";
-        if (el.matches("a")) return `link(${el.textContent.trim()})`;
+        if (el.matches("a")) return `anchor(${el.textContent.trim()})`;
         if (el.matches("input[type=radio]")) {
-          return `radio ${el.name}=${el.value}${el.checked ? " [checked]" : ""}`;
+          const flags = [];
+          if (el.checked) flags.push("checked");
+          if (el.disabled) flags.push("DISABLED");
+          const suffix = flags.length ? ` [${flags.join(", ")}]` : "";
+          return `radio ${el.name}=${el.value}${suffix}`;
         }
         return el.tagName.toLowerCase();
       };
@@ -151,7 +143,7 @@
         const line = `focus → ${describe(e.target)}`;
         log.textContent = `${line}\n${log.textContent}`
           .split("\n")
-          .slice(0, 12)
+          .slice(0, 14)
           .join("\n");
       });
     </script>

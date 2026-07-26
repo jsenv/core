@@ -55,7 +55,6 @@ const css = /* css */ `
     --wheel-item-height: 2.4em;
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
-    --wheel-loop-filler-count: 12;
     --wheel-color: light-dark(#111, #eee);
     --wheel-color-faded: light-dark(#bbb, #555);
 
@@ -117,15 +116,6 @@ const css = /* css */ `
     display: flex;
     margin: 0;
     padding: 0;
-    list-style: none;
-  }
-
-  /* Invisible scroll runway before/after the loop content so a hard drag/fling
-     never hits the physical scroll edge before the wrap can reposition. Sized in
-     whole item units (a multiple of the item size), and NOT a scroll-snap
-     target, so snapping still only lands on real/clone rows. */
-  .navi_wheel_loop_filler {
-    flex: none;
     list-style: none;
   }
 
@@ -200,9 +190,6 @@ const css = /* css */ `
       height: var(--wheel-item-height);
       padding-inline: var(--wheel-item-padding-x, 0.5ch);
     }
-    .navi_wheel_loop_filler {
-      height: calc(var(--wheel-item-height) * var(--wheel-loop-filler-count));
-    }
   }
 
   /* ── Horizontal ─────────────────────────────────────────────────────────── */
@@ -227,9 +214,6 @@ const css = /* css */ `
     .navi_wheel_item {
       width: var(--wheel-item-width);
       padding-block: var(--wheel-item-padding-x, 0.5ch);
-    }
-    .navi_wheel_loop_filler {
-      width: calc(var(--wheel-item-width) * var(--wheel-loop-filler-count));
     }
   }
 
@@ -423,14 +407,17 @@ function WheelUI(props) {
   // on settle. Without this, e.g. arrowing 00 → 23 jumps instead of gliding.
   const smoothScrollingRef = useRef(false);
 
+  // How many clone rows to render on each side of the real items. Because the
+  // whole sequence is periodic with period N, the wrap stays seamless for any
+  // count — so we render a generous run of *looping values* (never blank) as the
+  // scroll runway: one full list (the real number of values above/below), with a
+  // floor so very short lists still get a couple of viewports of room.
+  const minBufferCount = visibleCount * 2;
+  const loopBufferCount =
+    loopClones.length > minBufferCount ? loopClones.length : minBufferCount;
+
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
-    // One full list of runway on each side — i.e. the real count of values that
-    // would sit above/below — so the scroll extent matches the data and a fling
-    // always has a copy's worth of room before the wrap repositions.
-    ...(isLoop && loopClones.length
-      ? { "--wheel-loop-filler-count": loopClones.length }
-      : {}),
     ...(itemHeight === undefined
       ? {}
       : {
@@ -790,12 +777,9 @@ function WheelUI(props) {
       <LoadingOutline loading={loading} inset={-1} />
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
-          {isLoop ? (
-            <li className="navi_wheel_loop_filler" aria-hidden="true" />
-          ) : null}
           {isLoop
             ? renderClones(
-                getLoopBufferItems(loopClones, visibleCount, "before"),
+                getLoopBufferItems(loopClones, loopBufferCount, "before"),
                 "before",
                 handleCloneClick,
               )
@@ -805,14 +789,11 @@ function WheelUI(props) {
           </WheelItemTrackerContext.Provider>
           {isLoop
             ? renderClones(
-                getLoopBufferItems(loopClones, visibleCount, "after"),
+                getLoopBufferItems(loopClones, loopBufferCount, "after"),
                 "after",
                 handleCloneClick,
               )
             : null}
-          {isLoop ? (
-            <li className="navi_wheel_loop_filler" aria-hidden="true" />
-          ) : null}
         </ul>
       </div>
     </Box>
