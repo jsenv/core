@@ -953,6 +953,31 @@ function WheelUI(props) {
       scheduleSettle();
     };
 
+    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
+    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
+    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
+    // scroller to drive here, so this is the seam external code (e.g. a demo
+    // comparing this wheel against a native scroll-snap list) uses to move it.
+    const onNaviScroll = (e) => {
+      if (!interactive || !e.detail) {
+        return;
+      }
+      let delta = e.detail.delta || 0;
+      if (e.detail.items) {
+        delta += e.detail.items * getItemSize(vp);
+      }
+      if (!delta) {
+        return;
+      }
+      cancelAnim();
+      if (e.detail.behavior === "smooth") {
+        animateTo(vp, posRef.current + delta, () => settle(vp, 0));
+      } else {
+        setPos(vp, posRef.current + delta);
+        scheduleSettle();
+      }
+    };
+
     let drag = null;
     const onPointerDown = (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) {
@@ -1021,6 +1046,7 @@ function WheelUI(props) {
     vp.addEventListener("pointermove", onPointerMove);
     vp.addEventListener("pointerup", onPointerUp);
     vp.addEventListener("pointercancel", onPointerUp);
+    el.addEventListener("navi_scroll", onNaviScroll);
     return () => {
       clearTimeout(settleTimer);
       clearTimeout(calloutCooldown);
@@ -1030,6 +1056,7 @@ function WheelUI(props) {
       vp.removeEventListener("pointermove", onPointerMove);
       vp.removeEventListener("pointerup", onPointerUp);
       vp.removeEventListener("pointercancel", onPointerUp);
+      el.removeEventListener("navi_scroll", onNaviScroll);
     };
   }, [isLoop, isHorizontal, interactive, readOnly]);
 

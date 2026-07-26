@@ -86,6 +86,86 @@
         color: #888;
         font-size: 0.8rem;
       }
+      /* A plain HTML/CSS scroll-snap list, sized + veiled like the Wheel, to
+         compare the browser's native snapping/momentum against our
+         transform-based one. The veil panes are siblings over the scroller (not
+         inside it) so they stay fixed at the center window while it scrolls. */
+      .native-wheel-wrap {
+        position: relative;
+        width: 3.5ch;
+      }
+      .native-wheel-veil {
+        position: absolute;
+        right: 0;
+        left: 0;
+        z-index: 1;
+        height: 32px; /* (96 − 32) / 2, leaving the center row clear */
+        background: rgba(255, 255, 255, 0.55);
+        pointer-events: none;
+      }
+      .native-wheel-veil[data-side="start"] {
+        top: 0;
+      }
+      .native-wheel-veil[data-side="end"] {
+        bottom: 0;
+      }
+      .native-wheel {
+        width: 3.5ch;
+        height: 96px; /* 3 rows × 32px, matching the Wheel defaults */
+        color: #111;
+        font-weight: 600;
+        font-size: 13.33px;
+        text-align: center;
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent,
+          #000 14%,
+          #000 86%,
+          transparent
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent,
+          #000 14%,
+          #000 86%,
+          transparent
+        );
+        overflow-y: auto;
+        scroll-snap-type: y mandatory;
+        scrollbar-width: none;
+      }
+      .native-wheel::-webkit-scrollbar {
+        display: none;
+      }
+      .native-wheel-item {
+        display: flex;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        font-variant-numeric: tabular-nums;
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+      }
+      .native-wheel-pad {
+        height: 32px; /* (3 − 1) / 2 rows, so first/last can reach the center */
+      }
+      .scroll-buttons {
+        display: flex;
+        margin-top: 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .scroll-buttons button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .scroll-buttons button:hover {
+        background: #f0f0f0;
+      }
     </style>
   </head>
   <body>
@@ -94,7 +174,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         NaviDebug,
         Time,
@@ -128,7 +208,7 @@
                 <a href="#states">States</a>
               </li>
               <li>
-                <a href="#loop">Minimal loop (few values)</a>
+                <a href="#scroll">Scroll behavior</a> — snapping, momentum, loop
               </li>
               <li>
                 <a href="#separator">Separator alignment</a>
@@ -189,29 +269,94 @@
         );
       };
 
-      // ── Minimal loop (few values) ──────────────────────────────────────────
+      // ── Scroll behavior (snapping, momentum, loop) ─────────────────────────
 
-      const LoopDemo = () => {
-        const [m, setM] = useState(30);
-        // Deliberately few values so loop is easy to eyeball/test.
-        const MINUTES = [15, 30, 45, 0];
+      // Side-by-side harness: our transform-based Wheel vs a plain HTML/CSS
+      // scroll-snap list, driven by the same buttons, so the snapping/momentum
+      // feel can be compared against the browser's own scroller.
+      const ScrollBehaviorDemo = () => {
+        const [h, setH] = useState(9);
+        const wheelRef = useRef(null);
+        const nativeRef = useRef(null);
+        const ITEM = 32; // px, matches the Wheel + native row height
+
+        // Start the native list centered on the same value as the Wheel.
+        useEffect(() => {
+          if (nativeRef.current) {
+            nativeRef.current.scrollTop = 9 * ITEM;
+          }
+        }, []);
+
+        // Drive both scrollers the same way: a custom navi_scroll event for the
+        // Wheel (it has no real scroll), scrollBy for the native list.
+        const drive = (detail) => {
+          wheelRef.current?.dispatchEvent(
+            new CustomEvent("navi_scroll", { detail }),
+          );
+          const top = (detail.delta || 0) + (detail.items || 0) * ITEM;
+          nativeRef.current?.scrollBy({ top, behavior: detail.behavior });
+        };
+
         return (
-          <div id="loop" className="demo-section">
-            <h2>Minimal loop (quarter minutes)</h2>
+          <div id="scroll" className="demo-section">
+            <h2>Scroll behavior — snapping, momentum, loop</h2>
             <p>
-              Only four values, looping — the easiest case to test wrapping:
-              scroll or <kbd>↑</kbd> <kbd>↓</kbd> past either end, and click the
-              faded neighbours (which are loop clones).
+              Scroll, drag or fling either column, or use the buttons (which
+              drive <em>both</em>). Left is our transform-based Wheel (looping);
+              right is a plain HTML/CSS <code>scroll-snap</code> list — compare
+              how each animates the snap. The <kbd>px</kbd> buttons nudge by
+              less than a row to show the snap-back.
             </p>
-            <div className="row">
-              <Wheel type="integer" value={m} action={setM} loop>
-                {MINUTES.map((v) => (
-                  <Wheel.Item key={v} value={v}>
-                    {pad2(v)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-              <div className="value-display">value: {pad2(m)}</div>
+            <div className="row" style={{ gap: 48, alignItems: "flex-start" }}>
+              <div className="states">
+                <div>
+                  <Wheel
+                    ref={wheelRef}
+                    type="integer"
+                    value={h}
+                    action={setH}
+                    loop
+                  >
+                    {range(24).map((v) => (
+                      <Wheel.Item key={v} value={v}>
+                        {pad2(v)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <div className="value-display">value: {pad2(h)}</div>
+                  <span className="col-label">Wheel (ours, looping)</span>
+                </div>
+                <div>
+                  <div className="native-wheel-wrap">
+                    <div className="native-wheel" ref={nativeRef}>
+                      <div className="native-wheel-pad" />
+                      {range(24).map((v) => (
+                        <div className="native-wheel-item" key={v}>
+                          {pad2(v)}
+                        </div>
+                      ))}
+                      <div className="native-wheel-pad" />
+                    </div>
+                    <div className="native-wheel-veil" data-side="start" />
+                    <div className="native-wheel-veil" data-side="end" />
+                  </div>
+                  <span className="col-label">native scroll-snap</span>
+                </div>
+              </div>
+            </div>
+            <div className="scroll-buttons">
+              <button onClick={() => drive({ items: -1, behavior: "smooth" })}>
+                ▲ item
+              </button>
+              <button onClick={() => drive({ items: 1, behavior: "smooth" })}>
+                ▼ item
+              </button>
+              <button onClick={() => drive({ delta: -12, behavior: "smooth" })}>
+                ▲ 12px
+              </button>
+              <button onClick={() => drive({ delta: 12, behavior: "smooth" })}>
+                ▼ 12px
+              </button>
             </div>
           </div>
         );
@@ -251,7 +396,6 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <div className="value-display">value: {size}</div>
             </div>
 
             <h3 style={{ marginTop: 24 }}>
@@ -279,7 +423,6 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <div className="value-display">value: {day}</div>
             </div>
           </div>
         );
@@ -757,10 +900,7 @@
                     action={setG}
                     loop
                     glass
-                    style={{
-                      "--wheel-glass-blur": "3px",
-                      "--wheel-veil": "0.2",
-                    }}
+                    style={{ "--wheel-glass-blur": "4px" }}
                   >
                     {range(24).map((h) => (
                       <Wheel.Item key={h} value={h}>
@@ -768,7 +908,7 @@
                       </Wheel.Item>
                     ))}
                   </Wheel>
-                  <span className="col-label">stronger blur, lighter veil</span>
+                  <span className="col-label">stronger blur</span>
                 </div>
                 <div>
                   <WheelGroup glass spacing="0.5ch">
@@ -800,7 +940,7 @@
         <NaviDebug>
           <TableOfContents />
           <StatesDemo />
-          <LoopDemo />
+          <ScrollBehaviorDemo />
           <SeparatorAlignmentDemo />
           <ActionsDemo />
           <PracticalExamplesDemo />
