@@ -127,6 +127,9 @@
                 <a href="#loop">Minimal loop (few values)</a>
               </li>
               <li>
+                <a href="#separator">Separator alignment</a>
+              </li>
+              <li>
                 <a href="#time">Time HH:MM:SS</a>
               </li>
               <li>
@@ -146,9 +149,6 @@
               </li>
               <li>
                 <a href="#horizontal-group">Horizontal group</a>
-              </li>
-              <li>
-                <a href="#separator">Separator alignment</a>
               </li>
               <li>
                 <a href="#actions">uiAction / action / form</a>
@@ -394,7 +394,8 @@
           date.setDate(today.getDate() + offset);
           return toLocalISODate(date);
         });
-        const [day, setDay] = useState(days[0]);
+        // Default to tomorrow so there's a neighbour above (today) and below.
+        const [day, setDay] = useState(days[1]);
         return (
           <div id="day" className="demo-section">
             <h2>Day picker — today … +5 days (no loop)</h2>
@@ -670,61 +671,59 @@
               are CSS variables (<code>--wheel-color</code>,{" "}
               <code>--wheel-color-faded</code>).
             </p>
-            <div className="states">
-              <div>
-                <h3>border="1px solid grey"</h3>
-                <Wheel
-                  type="integer"
-                  value={a}
-                  action={setA}
-                  loop
-                  border="1px solid grey"
-                  padding="0 6px"
-                >
-                  {range(24).map((h) => (
-                    <Wheel.Item key={h} value={h}>
-                      {pad2(h)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
-              </div>
-              <div>
-                <h3>accent color</h3>
-                <Wheel
-                  type="integer"
-                  value={b}
-                  action={setB}
-                  loop
-                  style={{
-                    "--wheel-color": "#d6336c",
-                    "--wheel-color-faded": "#f3bcd0",
-                  }}
-                >
-                  {range(24).map((h) => (
-                    <Wheel.Item key={h} value={h}>
-                      {pad2(h)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
-              </div>
-              <div>
-                <h3>bigger rows, 5 visible</h3>
-                <Wheel
-                  type="integer"
-                  value={c}
-                  action={setC}
-                  loop
-                  visibleCount={5}
-                  itemHeight={44}
-                  style={{ fontSize: "1.5rem" }}
-                >
-                  {range(24).map((h) => (
-                    <Wheel.Item key={h} value={h}>
-                      {pad2(h)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
-              </div>
+            <div style={{ marginBottom: 24 }}>
+              <h3>border="1px solid grey"</h3>
+              <Wheel
+                type="integer"
+                value={a}
+                action={setA}
+                loop
+                border="1px solid grey"
+                padding="0 6px"
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <h3>accent color (CSS vars)</h3>
+              <Wheel
+                type="integer"
+                value={b}
+                action={setB}
+                loop
+                style={{
+                  "--wheel-color": "#d6336c",
+                  "--wheel-color-faded": "#f3bcd0",
+                }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+            <div>
+              <h3>bigger rows, 5 visible</h3>
+              <Wheel
+                type="integer"
+                value={c}
+                action={setC}
+                loop
+                visibleCount={5}
+                itemHeight={44}
+                style={{ fontSize: "1.5rem" }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
             </div>
           </div>
         );

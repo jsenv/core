@@ -425,6 +425,12 @@ function WheelUI(props) {
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
+    // One full list of runway on each side — i.e. the real count of values that
+    // would sit above/below — so the scroll extent matches the data and a fling
+    // always has a copy's worth of room before the wrap repositions.
+    ...(isLoop && loopClones.length
+      ? { "--wheel-loop-filler-count": loopClones.length }
+      : {}),
     ...(itemHeight === undefined
       ? {}
       : {
@@ -680,13 +686,21 @@ function WheelUI(props) {
     // undo that jump and smooth-scroll from where the user actually was.
     const scrollBeforeNavRef = { current: null };
     const onKeyDownCapture = (e) => {
-      if (NAV_KEYS.has(e.key)) {
-        scrollBeforeNavRef.current = readScroll(viewportEl);
-        // If focus doesn't actually move (no focusin), don't keep a stale value.
-        requestAnimationFrame(() => {
-          scrollBeforeNavRef.current = null;
-        });
+      if (!NAV_KEYS.has(e.key)) {
+        return;
       }
+      if (!interactive) {
+        // Readonly/disabled: swallow arrow navigation before the focus group
+        // acts on it, so the value can't be changed with the keyboard either.
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return;
+      }
+      scrollBeforeNavRef.current = readScroll(viewportEl);
+      // If focus doesn't actually move (no focusin), don't keep a stale value.
+      requestAnimationFrame(() => {
+        scrollBeforeNavRef.current = null;
+      });
     };
     const onFocusIn = (e) => {
       if (!interactive) {
