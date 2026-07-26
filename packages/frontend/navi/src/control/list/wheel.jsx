@@ -75,17 +75,20 @@ const css = /* css */ `
       outline-offset: 2px;
     }
 
+    /* Readonly & disabled look the same: only the *selected* value is dimmed,
+       the neighbours stay as visible as normal. Disabled dims it a bit more
+       (greyer AND semi-transparent). Scrolling is blocked in JS for both. */
     &[data-readonly] {
-      --wheel-color: light-dark(#555, #aaa);
+      --wheel-color: light-dark(#666, #999);
     }
     &[data-disabled] {
-      opacity: 0.5;
-      pointer-events: none;
+      --wheel-color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.45));
 
-      /* The selectable area re-enables pointer-events on the hidden inputs
-         (so they stay clickable); clear that when disabled so wheel/touch can't
-         scroll the items and just falls through to the page. The extra
-         .navi_wheel_item raises specificity above that area rule. */
+      /* Neutralise clicks on the hidden inputs (the selectable area re-enables
+         them). The .navi_wheel_item raises specificity above that rule. Hover
+         then lands on the viewport, so neighbours show the default cursor, not
+         a pointer — and the viewport still receives wheel/touch so the JS block
+         can preventDefault them. */
       .navi_wheel_item [navi-selectable-real-input] {
         pointer-events: none;
       }
@@ -699,12 +702,12 @@ function WheelUI(props) {
     };
   }, [isHorizontal, interactive]);
 
-  // Readonly: block user scrolling outright and show the readonly callout — the
-  // same treatment other readonly controls give scroll-causing interactions.
-  // (Disabled keeps pointer-events:none, so wheel/touch just fall through to the
-  // page's own scroll, which is the expected "inert" behaviour.)
+  // Readonly & disabled: block user scrolling outright (scrolling must never
+  // change the value). Readonly additionally pops the readonly callout — the
+  // same treatment other readonly controls give scroll-causing interactions;
+  // disabled blocks silently (nothing to explain).
   useLayoutEffect(() => {
-    if (!readOnly || disabled) {
+    if (interactive) {
       return undefined;
     }
     const el = ref.current;
@@ -712,6 +715,9 @@ function WheelUI(props) {
     let calloutCooldown = null;
     const onScrollAttempt = (e) => {
       e.preventDefault();
+      if (!readOnly) {
+        return; // disabled → block silently
+      }
       if (calloutCooldown !== null) {
         return;
       }
@@ -737,7 +743,7 @@ function WheelUI(props) {
       viewportEl.removeEventListener("wheel", onScrollAttempt);
       viewportEl.removeEventListener("touchmove", onScrollAttempt);
     };
-  }, [readOnly, disabled]);
+  }, [interactive, readOnly]);
 
   return (
     <Box
