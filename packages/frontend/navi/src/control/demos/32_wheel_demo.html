@@ -7,7 +7,7 @@
     <title>Wheel Demo</title>
     <style>
       body {
-        max-width: 800px;
+        max-width: 820px;
         margin: 0 auto;
         padding: 20px;
         font-family:
@@ -34,6 +34,14 @@
         font-size: 1.4rem;
         border-bottom: 2px solid #ddd;
       }
+      .demo-section h3 {
+        margin: 0 0 8px;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
       .demo-section p {
         margin: 0 0 16px;
         color: #555;
@@ -44,6 +52,17 @@
         display: flex;
         align-items: center;
         gap: 24px;
+      }
+      .states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+      }
+      .states > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
       }
       .value-display {
         min-height: 24px;
@@ -72,7 +91,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { NaviDebug, Text, Time, Wheel, WheelGroup } from "@jsenv/navi";
+      import { NaviDebug, Time, Wheel, WheelGroup } from "@jsenv/navi";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
@@ -82,52 +101,82 @@
       const TableOfContents = () => {
         return (
           <div className="demo-section">
-            <h2>Wheel — a selectable list as a scroll picker</h2>
+            <h2>Wheel</h2>
             <p>
-              A <code>Wheel</code> is the exact same selectable list as{" "}
-              <code>List</code> (same <code>value</code>/<code>action</code>,
-              keyboard, form wiring) rendered as an iOS-style spinner: the
-              selected value sits in the middle, neighbours fade above/below.
+              A scroll picker: pick a value by scrolling, dragging, clicking a
+              neighbour, or with <kbd>↑</kbd> <kbd>↓</kbd> (<kbd>←</kbd>{" "}
+              <kbd>→</kbd> when horizontal). The centered value is the
+              selection.
             </p>
-            <ul style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
               <li>
-                <strong>Change the value</strong> by scrolling / dragging,
-                clicking a neighbour, or with <kbd>↑</kbd> <kbd>↓</kbd>.
-                Whatever lands in the center is selected.
+                <a href="#states">States</a>
               </li>
-              <li>
-                <code>loop</code> makes it endless — past the last value the
-                first reappears (inert clone rows fill the edges).
-              </li>
-              <li>
-                Several columns + separators go in a <code>WheelGroup</code>;
-                each wheel eats half of an adjacent separator so scrolling over
-                the <code>:</code> scrolls the wheel, not the page.
-              </li>
-            </ul>
-            <ol
-              style={{
-                margin: "12px 0 0",
-                paddingLeft: "20px",
-                lineHeight: "2",
-              }}
-            >
               <li>
                 <a href="#hours">Single column, looping</a>
               </li>
               <li>
-                <a href="#time">Time HH:MM:SS (WheelGroup, looping)</a>
+                <a href="#time">Time HH:MM:SS</a>
               </li>
               <li>
-                <a href="#hm">Hours + quarter minutes (looping)</a>
+                <a href="#hm">Hours + quarter minutes</a>
               </li>
               <li>
-                <a href="#sizes">Sizes — loop disabled</a>
+                <a href="#words">Word separators + trailing separator</a>
               </li>
               <li>
-                <a href="#day">Day picker — today … +5 days (no loop)</a>
+                <a href="#sizes">Sizes (no loop)</a>
+              </li>
+              <li>
+                <a href="#day">Day picker (no loop)</a>
+              </li>
+              <li>
+                <a href="#horizontal">Horizontal</a>
+              </li>
+              <li>
+                <a href="#horizontal-group">Horizontal group</a>
               </li>
             </ol>
+          </div>
+        );
+      };
+
+      // ── States ─────────────────────────────────────────────────────────────
+
+      const HOURS = range(24);
+      const StateWheel = (props) => (
+        <Wheel defaultValue={9} {...props}>
+          {HOURS.map((h) => (
+            <Wheel.Item key={h} value={h}>
+              {pad2(h)}
+            </Wheel.Item>
+          ))}
+        </Wheel>
+      );
+
+      const StatesDemo = () => {
+        return (
+          <div id="states" className="demo-section">
+            <h2>States</h2>
+            <p>The same wheel in its different states.</p>
+            <div className="states">
+              <div>
+                <h3>focus-visible</h3>
+                <StateWheel basePseudoState={{ ":focus-visible": true }} />
+              </div>
+              <div>
+                <h3>loading</h3>
+                <StateWheel loading />
+              </div>
+              <div>
+                <h3>readonly</h3>
+                <StateWheel readOnly />
+              </div>
+              <div>
+                <h3>disabled</h3>
+                <StateWheel disabled />
+              </div>
+            </div>
           </div>
         );
       };
@@ -139,7 +188,7 @@
         return (
           <div id="hours" className="demo-section">
             <h2>Single column (hours), looping</h2>
-            <p>Past 23 comes 00 again, and scrolling up past 00 shows 23.</p>
+            <p>Past 23 comes 00 again; scrolling up past 00 shows 23.</p>
             <div className="row">
               <Wheel value={hour} action={setHour} loop>
                 {range(24).map((h) => (
@@ -162,10 +211,10 @@
         const [s, setS] = useState(0);
         return (
           <div id="time" className="demo-section">
-            <h2>WheelGroup — time HH:MM:SS (looping)</h2>
+            <h2>Time HH:MM:SS</h2>
             <p>
               Scroll/drag over a <code>:</code> and it scrolls the neighbouring
-              wheel (the separator is eaten by half on each side), not the page.
+              wheel, not the page.
             </p>
             <WheelGroup style={{ fontVariantNumeric: "tabular-nums" }}>
               <Wheel value={h} action={setH} loop>
@@ -175,9 +224,7 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>
-                <Text lineHeight="var(--wheel-item-height)">:</Text>
-              </WheelGroup.Separator>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
               <Wheel value={m} action={setM} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -185,9 +232,7 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>
-                <Text lineHeight="var(--wheel-item-height)">:</Text>
-              </WheelGroup.Separator>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
               <Wheel value={s} action={setS} loop>
                 {range(60).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -211,15 +256,12 @@
         const MINUTES = [0, 15, 30, 45];
         return (
           <div id="hm" className="demo-section">
-            <h2>WheelGroup — hours + quarter minutes (looping)</h2>
+            <h2>Hours + quarter minutes</h2>
             <p>
-              A short column loops too: past 45 comes 00. Try <kbd>↓</kbd> on 45
-              — it continues onto the looped 00.
+              A short column loops too. Try <kbd>↓</kbd> on 45 — it continues
+              onto the looped 00.
             </p>
-            <WheelGroup
-              separatorWidth="1.5ch"
-              style={{ fontVariantNumeric: "tabular-nums" }}
-            >
+            <WheelGroup style={{ fontVariantNumeric: "tabular-nums" }}>
               <Wheel value={h} action={setH} loop>
                 {range(24).map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -227,9 +269,7 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <WheelGroup.Separator>
-                <Text lineHeight="var(--wheel-item-height)">:</Text>
-              </WheelGroup.Separator>
+              <WheelGroup.Separator>:</WheelGroup.Separator>
               <Wheel value={m} action={setM} loop>
                 {MINUTES.map((v) => (
                   <Wheel.Item key={v} value={v}>
@@ -245,7 +285,47 @@
         );
       };
 
-      // ── Sizes — loop disabled ──────────────────────────────────────────────
+      // ── Word separators + trailing separator ───────────────────────────────
+
+      const WordsDemo = () => {
+        const [h, setH] = useState(9);
+        const [m, setM] = useState(30);
+        const MINUTES = [0, 15, 30, 45];
+        return (
+          <div id="words" className="demo-section">
+            <h2>Word separators + trailing separator</h2>
+            <p>
+              Separators take their natural width (here whole words), and there
+              is even a trailing one. The gap around each separator is
+              scrollable (it belongs to the wheel); only the word itself is a
+              dead zone.
+            </p>
+            <WheelGroup spacing="0.75ch">
+              <Wheel value={h} action={setH} loop>
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {v}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>hours</WheelGroup.Separator>
+              <Wheel value={m} action={setM} loop>
+                {MINUTES.map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>minutes</WheelGroup.Separator>
+            </WheelGroup>
+            <div className="value-display">
+              {h} hours {pad2(m)} minutes
+            </div>
+          </div>
+        );
+      };
+
+      // ── Sizes (no loop) ────────────────────────────────────────────────────
 
       const SizesDemo = () => {
         const [size, setSize] = useState("M");
@@ -253,10 +333,7 @@
         return (
           <div id="sizes" className="demo-section">
             <h2>Sizes — loop disabled, visibleCount=5</h2>
-            <p>
-              Without <code>loop</code> the list has real ends: scrolling stops
-              at XXS / XXL.
-            </p>
+            <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
             <div className="row">
               <Wheel
                 value={size}
@@ -277,11 +354,9 @@
         );
       };
 
-      // ── Day picker (today … +5 days), no loop ──────────────────────────────
+      // ── Day picker (no loop) ───────────────────────────────────────────────
 
       const DayDemo = () => {
-        // Offsets 0..5 from today. Keep the actual dates around so <Time> can
-        // render each one with its day label ("Today", "Tomorrow", weekday…).
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const days = range(6).map((offset) => {
@@ -294,9 +369,8 @@
           <div id="day" className="demo-section">
             <h2>Day picker — today … +5 days (no loop)</h2>
             <p>
-              Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>, so
-              you get “Today”, “Tomorrow”, then weekday + date. A bounded range,
-              so <code>loop</code> stays off.
+              Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>:
+              “Today”, “Tomorrow”, then weekday + date.
             </p>
             <div className="row">
               <Wheel
@@ -321,14 +395,107 @@
         );
       };
 
+      // ── Horizontal ─────────────────────────────────────────────────────────
+
+      const HorizontalDemo = () => {
+        const [hour, setHour] = useState(9);
+        return (
+          <div id="horizontal" className="demo-section">
+            <h2>Horizontal, looping</h2>
+            <p>
+              Same wheel, laid out left-to-right with <code>horizontal</code>.
+              Arrow keys become <kbd>←</kbd> <kbd>→</kbd>.
+            </p>
+            <div className="row">
+              <Wheel
+                horizontal
+                loop
+                value={hour}
+                action={setHour}
+                itemWidth="4ch"
+                visibleCount={5}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <div className="value-display">value: {pad2(hour)}</div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Horizontal group ───────────────────────────────────────────────────
+
+      const HorizontalGroupDemo = () => {
+        const [h, setH] = useState(9);
+        const [m, setM] = useState(30);
+        const MINUTES = [0, 15, 30, 45];
+        return (
+          <div id="horizontal-group" className="demo-section">
+            <h2>Horizontal group</h2>
+            <p>
+              A <code>WheelGroup horizontal</code> stacks horizontal wheels,
+              with separators between the rows.
+            </p>
+            <WheelGroup
+              horizontal
+              spacing="6px"
+              style={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              <Wheel
+                horizontal
+                loop
+                value={h}
+                action={setH}
+                itemWidth="4ch"
+                visibleCount={5}
+              >
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>hours</WheelGroup.Separator>
+              <Wheel
+                horizontal
+                loop
+                value={m}
+                action={setM}
+                itemWidth="4ch"
+                visibleCount={5}
+              >
+                {MINUTES.map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator>minutes</WheelGroup.Separator>
+            </WheelGroup>
+            <div className="value-display">
+              {h} hours {pad2(m)} minutes
+            </div>
+          </div>
+        );
+      };
+
       const App = () => (
         <NaviDebug>
           <TableOfContents />
+          <StatesDemo />
           <HoursDemo />
           <TimeDemo />
           <HourMinuteDemo />
+          <WordsDemo />
           <SizesDemo />
           <DayDemo />
+          <HorizontalDemo />
+          <HorizontalGroupDemo />
         </NaviDebug>
       );
 

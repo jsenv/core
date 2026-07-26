@@ -1,54 +1,83 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
-import { createContext, toChildArray } from "preact";
+import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import {
   ListItemSelectableResolver,
   ListSelectableResolver,
 } from "../list/list_selectable.jsx";
 
-// Wheel is a selectable list rendered as an iOS-style scroll picker: a short
-// viewport shows the selected value in the middle with the neighbouring values
-// faded above and below. The selected value is whichever item sits closest to
-// the vertical center — the user changes it by scrolling (wheel/drag), by
-// clicking a neighbour, or with the arrow keys.
-//
-// All selection/keyboard/action wiring is reused verbatim from the selectable
-// List (ListSelectableResolver + ListItemSelectableResolver): value/defaultValue,
-// action/uiAction, the focus group over the hidden radio inputs, and the
-// navi_request_select/nav/activate event protocol. Only the visual layer and
-// the scroll-to-center behaviour are Wheel-specific:
-//   - scroll settles      → select the centered item
-//   - focus (arrows/tab)  → smooth-scroll the focused item to center
-//   - external value change → instant-scroll the selected item to center
+/*
+ * Wheel — a selectable list rendered as an iOS-style scroll picker. A short
+ * viewport shows the selected value in the middle with the neighbouring values
+ * faded above/below (or left/right when `horizontal`). The selected value is
+ * whichever item is closest to the center; the user changes it by scrolling,
+ * dragging, clicking a neighbour, or with the arrow keys.
+ *
+ * WHAT IS REUSED. All selection/keyboard/action/form wiring comes verbatim from
+ * the selectable List (ListSelectableResolver + ListItemSelectableResolver):
+ * value/defaultValue, action/uiAction, the focus group over the hidden radio
+ * inputs, and the navi_request_select/nav/activate protocol. Wheel only adds the
+ * scroll-picker rendering and these scroll behaviours:
+ *   - scroll settles        → select the centered item
+ *   - focus (arrows/tab)     → scroll the focused item to center
+ *   - external value change  → scroll the selected item to center
+ *
+ * NO ROVING TABINDEX. The hidden radios share the group `name`, so they are a
+ * real native radio group: the browser already Tab-focuses the checked (=
+ * centered) one. We deliberately do NOT manage tabindex ourselves — an earlier
+ * attempt did and it fought the native behaviour. If Tab ever lands on the wrong
+ * item, fix the native grouping/visibility, not this file.
+ *
+ * LOOP. With `loop`, the list wraps endlessly. We render `visibleCount` inert
+ * proxy rows on each side — the last N values before, the first N after — just
+ * enough to fill the viewport at the edges. On every scroll we fold the center
+ * back into the real-items band by whole real-list extents; seamless because a
+ * proxy shows the exact value the real row one extent away would. The proxy
+ * labels come from a Wheel.Item tracker (see WheelItemTrackerContext), NOT from
+ * walking children — children may be wrapped in context providers/fragments.
+ *
+ * ORIENTATION. Everything above is axis-agnostic: helpers read the main axis via
+ * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
+ * a [data-horizontal] variant.
+ */
 
 const css = /* css */ `
   .navi_wheel_container {
     --wheel-item-height: 2.4em;
+    --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
     --wheel-color-faded: light-dark(#bbb, #555);
 
+    position: relative; /* for the loading outline */
     display: inline-flex;
     color: var(--wheel-color-faded);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     border-radius: 6px;
 
-    /* Keyboard interaction (arrows/Tab) focus-visibles a hidden radio inside;
-       show the focus outline on the whole column, not just the selected row. */
-    &:has([navi-selectable-real-input]:focus-visible) {
+    /* Keyboard interaction focus-visibles a hidden radio inside; show the focus
+       outline on the whole column, not just the selected row. [data-focus-visible]
+       lets a caller force the state (e.g. in a demo). */
+    &:has([navi-selectable-real-input]:focus-visible),
+    &[data-focus-visible] {
       outline: var(--navi-focus-outline-width, 2px) solid
         var(--navi-focus-outline-color, light-dark(#4a90d9, #6ab0ff));
       outline-offset: 2px;
     }
 
+    &[data-readonly] {
+      --wheel-color: light-dark(#555, #aaa);
+    }
     &[data-disabled] {
       opacity: 0.5;
       pointer-events: none;
@@ -57,26 +86,8 @@ const css = /* css */ `
 
   .navi_wheel_viewport {
     position: relative;
-    height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
-    overflow-y: auto;
     overscroll-behavior: contain;
-    scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
-    /* Fade the top and bottom rows toward the edges */
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      #000 32%,
-      #000 68%,
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0%,
-      #000 32%,
-      #000 68%,
-      transparent 100%
-    );
     /* No visible scrollbar */
     scrollbar-width: none;
 
@@ -86,26 +97,16 @@ const css = /* css */ `
   }
 
   .navi_wheel_list {
+    display: flex;
     margin: 0;
     padding: 0;
-    /* Blank space so the first and last items can reach the center row */
-    padding-block: calc(
-      var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
-    );
     list-style: none;
-
-    /* In loop mode the surrounding clone copies already fill the edges, so no
-       blank padding is needed (and it would break the copy-height wrap math). */
-    &[data-loop] {
-      padding-block: 0;
-    }
   }
 
   .navi_wheel_item {
     position: relative;
     display: flex;
-    height: var(--wheel-item-height);
-    padding-inline: var(--wheel-item-padding-x, 0.5ch);
+    flex: none;
     align-items: center;
     justify-content: center;
     color: var(--wheel-color-faded);
@@ -116,9 +117,7 @@ const css = /* css */ `
     scroll-snap-align: center;
     scroll-snap-stop: always;
     -webkit-tap-highlight-color: transparent;
-    transition:
-      color 0.15s ease,
-      transform 0.15s ease;
+    transition: color 0.15s ease;
 
     &[navi-selectable-area-all] {
       pointer-events: none;
@@ -136,8 +135,8 @@ const css = /* css */ `
     &[data-wheel-current] {
       color: var(--wheel-color);
       font-weight: 600;
-      /* Clicking the current value selects what is already selected — nothing
-         happens, so don't advertise it as clickable. */
+      /* Clicking the current value re-selects what is already selected —
+         nothing happens, so don't advertise it as clickable. */
       cursor: default;
 
       [navi-selectable-real-input] {
@@ -151,66 +150,116 @@ const css = /* css */ `
     }
   }
 
-  /* A separator (e.g. ":") placed between wheels. It is a sibling of the wheel,
-     so it spans the full wheel height and centers its content — that lands it on
-     the center row, glyph-centered exactly like .navi_wheel_item does its digits.
-     Relying on the parent row's align-items would only align boxes/baselines, not
-     the center row. */
-  .navi_wheel_item_decoration {
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: var(--navi-control-font-size);
-    font-family: var(--navi-control-font-family);
+  /* ── Vertical (default) ─────────────────────────────────────────────────── */
+  .navi_wheel_container:not([data-horizontal]) {
+    .navi_wheel_viewport {
+      height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
+      -webkit-mask-image: var(--wheel-fade-y);
+      mask-image: var(--wheel-fade-y);
+      overflow-x: hidden;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+    }
+    .navi_wheel_list {
+      /* Blank space so the first and last items can reach the center row. */
+      padding-block: calc(
+        var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
+      );
+      flex-direction: column;
+      &[data-loop] {
+        padding-block: 0;
+      }
+    }
+    .navi_wheel_item {
+      height: var(--wheel-item-height);
+      padding-inline: var(--wheel-item-padding-x, 0.5ch);
+    }
   }
 
-  /* WheelGroup lays out several wheels with separators (e.g. ":") between them.
-     Each wheel touching a separator eats half of it via a negative margin, so
-     the wheel's scrollable viewport — not the inert separator — occupies that
-     half. Between two wheels the separator is eaten from both sides, costing
-     zero net layout width: the number columns sit flush and the ":" floats on
-     the seam. Because the separator is pointer-events:none, scrolling/dragging
-     over the ":" is caught by whichever wheel viewport lies beneath (left half →
-     left wheel, right half → right wheel) instead of scrolling the page. */
+  /* ── Horizontal ─────────────────────────────────────────────────────────── */
+  .navi_wheel_container[data-horizontal] {
+    .navi_wheel_viewport {
+      width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
+      -webkit-mask-image: var(--wheel-fade-x);
+      mask-image: var(--wheel-fade-x);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+    }
+    .navi_wheel_list {
+      padding-inline: calc(
+        var(--wheel-item-width) * (var(--wheel-visible-count) - 1) / 2
+      );
+      flex-direction: row;
+      &[data-loop] {
+        padding-inline: 0;
+      }
+    }
+    .navi_wheel_item {
+      width: var(--wheel-item-width);
+      padding-block: var(--wheel-item-padding-x, 0.5ch);
+    }
+  }
+
+  .navi_wheel_container {
+    --wheel-fade-y: linear-gradient(
+      to bottom,
+      transparent 0%,
+      #000 32%,
+      #000 68%,
+      transparent 100%
+    );
+    --wheel-fade-x: linear-gradient(
+      to right,
+      transparent 0%,
+      #000 32%,
+      #000 68%,
+      transparent 100%
+    );
+  }
+
+  /* ── WheelGroup ─────────────────────────────────────────────────────────────
+     Several wheels with separators (e.g. ":") between them. The separator column
+     keeps its natural content width (small for ":", wide for a word like
+     "hours") and is not scrollable. The spacing between a wheel and a separator
+     is provided by the wheel: its scrollable viewport is padded by
+     --wheel-spacing, so scrolling/dragging in that gap scrolls the wheel — only
+     the small separator glyph itself is a dead zone, which keeps the UX good. */
   .navi_wheel_group {
-    --wheel-separator-width: 1ch;
+    --wheel-spacing: 0.5ch;
 
     display: inline-flex;
     align-items: center;
   }
-  .navi_wheel_group > .navi_wheel_container:has(+ .navi_wheel_group_separator) {
-    margin-right: calc(-0.5 * var(--wheel-separator-width));
+  .navi_wheel_group:not([data-horizontal]) .navi_wheel_viewport {
+    padding-inline: var(--wheel-spacing);
   }
-  .navi_wheel_group > .navi_wheel_group_separator + .navi_wheel_container {
-    margin-left: calc(-0.5 * var(--wheel-separator-width));
+  .navi_wheel_group[data-horizontal] {
+    flex-direction: column;
+    align-items: center;
+
+    .navi_wheel_viewport {
+      padding-block: var(--wheel-spacing);
+    }
   }
   .navi_wheel_group_separator {
-    --wheel-item-height: 2.4em;
-
-    position: relative;
-    z-index: 1;
     display: flex;
-    width: var(--wheel-separator-width);
     align-items: center;
-    /* Match the wheels' height so the glyph centers on the middle (selected) row */
     align-self: stretch;
     justify-content: center;
-    color: light-dark(#111, #eee);
+    color: var(--wheel-color, light-dark(#111, #eee));
     font-weight: 600;
-    font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
-    /* Inert on top of the eaten halves — see the .navi_wheel_group note above */
-    pointer-events: none;
+    white-space: nowrap;
     user-select: none;
   }
 `;
 
-// When loop is on, WheelFirstResolver reads the raw <Wheel.Item> children here
-// (before the selectable layer wraps them) and passes down flat {label}
-// descriptors. WheelUI renders those as inert visual clones above and below the
-// real items — the ingredients for seamless wrapping — without registering
-// duplicate radios/ids in the selectable machinery.
-const WheelLoopClonesContext = createContext(null);
+// Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
+// list of items regardless of how children are wrapped (providers, fragments…).
+// indexRef gives each item its position: WheelUI resets it to 0 every render and
+// each item reads-and-increments it as it renders, in document order.
+const WheelItemTrackerContext = createContext(null);
 
 const WheelFirstResolver = (props) => {
   const Next = useNextResolver();
@@ -224,24 +273,16 @@ const WheelFirstResolver = (props) => {
   // List which requires an explicit `selectable`). Pass selectable={false} to
   // get a purely presentational scroller.
   props.selectable = props.selectable ?? true;
-  // A wheel is a single vertical column — restrict the focus group to the Y axis.
-  props.focusGroupDirection = props.focusGroupDirection || "y";
-  // When looping, arrowing past an end wraps focus around (last → first) so the
-  // keyboard follows the same endless motion as scrolling.
-  props.focusGroupWrap = props.focusGroupWrap ?? (props.loop ? "y" : undefined);
+  // Restrict the focus group to the wheel's single axis.
+  props.focusGroupDirection =
+    props.focusGroupDirection || (props.horizontal ? "x" : "y");
+  // When looping, arrowing past an end wraps focus around so the keyboard
+  // follows the same endless motion as scrolling.
+  props.focusGroupWrap =
+    props.focusGroupWrap ??
+    (props.loop ? (props.horizontal ? "x" : "y") : undefined);
 
-  const { loop, children } = props;
-  const clones = loop
-    ? toChildArray(children)
-        .filter((child) => child && typeof child === "object" && child.props)
-        .map((child) => ({ label: child.props.children }))
-    : null;
-
-  return (
-    <WheelLoopClonesContext.Provider value={clones}>
-      <Next {...props} />
-    </WheelLoopClonesContext.Provider>
-  );
+  return <Next {...props} />;
 };
 
 /**
@@ -255,18 +296,22 @@ const WheelFirstResolver = (props) => {
  *   selectable?: boolean,
  *   visibleCount?: number,
  *   itemHeight?: number | string,
+ *   itemWidth?: number | string,
  *   loop?: boolean,
+ *   horizontal?: boolean,
  *   name?: string,
  *   required?: boolean,
  *   readOnly?: boolean,
  *   disabled?: boolean,
- *   focusGroupWrap?: "y" | boolean,
+ *   loading?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
- * @param {number|string} [props.itemHeight] - Height of a single row (number = px). Defaults to the CSS var (2.4em).
+ * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
+ * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
  * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
+ * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  */
 export const Wheel = createComponentResolver([
   WheelFirstResolver,
@@ -280,23 +325,36 @@ function WheelUI(props) {
     ref,
     visibleCount = 3,
     itemHeight,
-    loop, // eslint-disable-line no-unused-vars -- consumed as clones via context
-    children,
+    itemWidth,
+    loop,
+    horizontal,
     style,
+    basePseudoState,
+    children,
     ...rest
   } = props;
-  const loopClones = useContext(WheelLoopClonesContext);
-  const isLoop = Boolean(loopClones);
+  const isHorizontal = Boolean(horizontal);
+  const isLoop = Boolean(loop);
+  const loading = basePseudoState ? basePseudoState[":-navi-loading"] : false;
 
-  // The id of the item currently sitting in the center row. Guards the
-  // effects below so an external value change (or the initial mount) scrolls
-  // the selection into place, while our own scroll-driven selection does not
-  // scroll a second time.
+  // Collect every Wheel.Item's {value, label} in order, robustly (children may
+  // be wrapped). loopClones drives the proxy rows and the wrap math.
+  const tracker = useItemTracker();
+  const indexRef = useRef(0);
+  indexRef.current = 0;
+  const trackerContextRef = useRef(null);
+  if (!trackerContextRef.current) {
+    trackerContextRef.current = { tracker, indexRef };
+  }
+  const trackedItems = tracker.itemsSignal.value;
+  const loopClones = isLoop
+    ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
+    : [];
+
+  // The id of the item currently sitting in the center. Guards the effects so an
+  // external value change (or the initial mount) scrolls the selection into
+  // place, while our own scroll-driven selection does not scroll a second time.
   const centeredIdRef = useRef(null);
-  // The id of the real input that currently holds the group's single Tab stop
-  // (roving tabindex). Guards setRovingTabindex so it only rewrites tabindex
-  // when the tabbable element actually changes.
-  const rovingInputIdRef = useRef(null);
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
@@ -306,61 +364,97 @@ function WheelUI(props) {
           "--wheel-item-height":
             typeof itemHeight === "number" ? `${itemHeight}px` : itemHeight,
         }),
+    ...(itemWidth === undefined
+      ? {}
+      : {
+          "--wheel-item-width":
+            typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth,
+        }),
     ...style,
   };
 
+  // Main-axis accessors — pick top/height or left/width from the orientation.
+  const readScroll = (vp) => (isHorizontal ? vp.scrollLeft : vp.scrollTop);
+  const writeScroll = (vp, pos, behavior) =>
+    vp.scrollTo(
+      isHorizontal ? { left: pos, behavior } : { top: pos, behavior },
+    );
+  const addScroll = (vp, delta) => {
+    if (isHorizontal) {
+      vp.scrollLeft += delta;
+    } else {
+      vp.scrollTop += delta;
+    }
+  };
+  const viewportMain = (vp) =>
+    isHorizontal ? vp.clientWidth : vp.clientHeight;
+  const itemMainStart = (el) => (isHorizontal ? el.offsetLeft : el.offsetTop);
+  const itemMainSize = (el) =>
+    isHorizontal ? el.offsetWidth : el.offsetHeight;
+
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
+
+  const findCenteredItem = (viewportEl) => {
+    const items = viewportEl.querySelectorAll("[navi-list-item-real]");
+    const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
+    let closest = null;
+    let closestDistance = Infinity;
+    for (const item of items) {
+      const itemCenter = itemMainStart(item) + itemMainSize(item) / 2;
+      const distance = Math.abs(itemCenter - center);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = item;
+      }
+    }
+    return closest;
+  };
 
   const centerItem = (viewportEl, itemEl, behavior) => {
     const base =
-      itemEl.offsetTop - (viewportEl.clientHeight - itemEl.clientHeight) / 2;
-    let top = base;
-    // In loop mode the same value also lives in the clone buffers, so a real
-    // item can be centered at base ± k·realHeight. Pick the copy nearest the
-    // current scroll position so movement stays minimal and continuous — e.g.
-    // arrowing down off the last value scrolls one step down onto the "first"
-    // clone (which the wrap then normalises) instead of jumping to the top.
+      itemMainStart(itemEl) -
+      (viewportMain(viewportEl) - itemMainSize(itemEl)) / 2;
+    let target = base;
+    // In loop mode the same value also lives in the proxy buffers, so a real
+    // item can be centered at base ± k·realSpan. Pick the copy nearest the
+    // current scroll so movement stays minimal and continuous — e.g. arrowing
+    // off the last value scrolls one step onto the "first" proxy (which the wrap
+    // then normalises) instead of jumping to the far end.
     if (isLoop && loopClones.length) {
-      const realHeight = itemEl.offsetHeight * loopClones.length;
-      if (realHeight > 0) {
-        const copies = Math.round((viewportEl.scrollTop - base) / realHeight);
-        top = base + copies * realHeight;
+      const realSpan = itemMainSize(itemEl) * loopClones.length;
+      if (realSpan > 0) {
+        const copies = Math.round((readScroll(viewportEl) - base) / realSpan);
+        target = base + copies * realSpan;
       }
     }
-    viewportEl.scrollTo({ top, behavior });
+    writeScroll(viewportEl, target, behavior);
   };
 
-  // Loop layout: [before buffer][real items][after buffer], where each buffer
-  // is only `visibleCount` proxy rows — the last N values above, the first N
-  // below (just enough to fill the viewport at the edges). The real items own
-  // the band [bufferHeight, bufferHeight + realHeight). Whenever the viewport
-  // center drifts out of that band we instantly shift scrollTop by a whole
-  // number of real-list heights to fold it back — invisible because a proxy
-  // shows the exact same value the real row at center±realHeight would. This is
-  // what makes the wheel spin endlessly. Runs on every scroll event so even a
-  // long fling (spanning several list heights) is folded back with the modulo.
-  const wrapScrollIntoRealCopy = (viewportEl) => {
+  // Fold the viewport center back into the real-items band. The real items own
+  // [bufferSpan, bufferSpan + realSpan); a proxy `realSpan` away shows the exact
+  // same value, so shifting by whole realSpans is invisible and makes the wheel
+  // spin endlessly. Runs on every scroll so even a long fling folds back.
+  const wrapScrollIntoRealBand = (viewportEl) => {
     const realItem = viewportEl.querySelector("[navi-list-item-real]");
     if (!realItem || !loopClones.length) {
       return;
     }
-    const itemHeightPx = realItem.offsetHeight;
-    const realHeight = itemHeightPx * loopClones.length;
-    if (realHeight === 0) {
+    const itemSize = itemMainSize(realItem);
+    const realSpan = itemSize * loopClones.length;
+    if (realSpan === 0) {
       return;
     }
-    const bufferHeight = itemHeightPx * visibleCount;
-    const center = viewportEl.scrollTop + viewportEl.clientHeight / 2;
-    if (center >= bufferHeight && center < bufferHeight + realHeight) {
+    const bufferSpan = itemSize * visibleCount;
+    const center = readScroll(viewportEl) + viewportMain(viewportEl) / 2;
+    if (center >= bufferSpan && center < bufferSpan + realSpan) {
       return;
     }
     const offsetInBand =
-      (((center - bufferHeight) % realHeight) + realHeight) % realHeight;
-    const wrappedCenter = bufferHeight + offsetInBand;
-    viewportEl.scrollTop += wrappedCenter - center;
+      (((center - bufferSpan) % realSpan) + realSpan) % realSpan;
+    addScroll(viewportEl, bufferSpan + offsetInBand - center);
   };
 
-  // A clone was clicked — select (and center) the real item at the same index.
+  // A proxy was clicked — select (and center) the real item it stands in for.
   const handleCloneClick = (index) => {
     const el = ref.current;
     const viewportEl = el.querySelector(".navi_wheel_viewport");
@@ -388,25 +482,8 @@ function WheelUI(props) {
       : viewportEl.querySelector("[navi-list-item-real]");
   };
 
-  // Roving tabindex: only one item is in the Tab order at a time, so tabbing
-  // into the wheel lands on the current value (like a native radio group) — not
-  // the first or last item — and arrow keys move the Tab stop along with focus.
-  const setRovingTabindex = (viewportEl, activeItemEl) => {
-    const activeInput = activeItemEl?.querySelector(
-      "[navi-selectable-real-input]",
-    );
-    if (!activeInput || activeInput.id === rovingInputIdRef.current) {
-      return;
-    }
-    rovingInputIdRef.current = activeInput.id;
-    const inputs = viewportEl.querySelectorAll("[navi-selectable-real-input]");
-    for (const input of inputs) {
-      input.tabIndex = input === activeInput ? 0 : -1;
-    }
-  };
-
-  // Sync the center row with the current selection (checked radio) — used on
-  // first display and whenever the controlled value changes from outside.
+  // Sync the center with the current selection (checked radio) — used on first
+  // display and whenever the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
     const selectedItem = getSelectedItem(viewportEl);
     if (!selectedItem) {
@@ -420,14 +497,12 @@ function WheelUI(props) {
     centerItem(viewportEl, selectedItem, behavior);
   };
 
-  // Initial centering — deferred until the wheel is actually on screen so
-  // scrollTo isn't a no-op inside a closed popover/dialog.
+  // Initial centering — deferred until the wheel is on screen so scrollTo isn't
+  // a no-op inside a closed popover/dialog.
   useDisplayedLayoutEffect(
     ref,
     (el) => {
-      const viewportEl = el.querySelector(".navi_wheel_viewport");
-      syncCenterToSelection(viewportEl, "auto");
-      setRovingTabindex(viewportEl, getSelectedItem(viewportEl));
+      syncCenterToSelection(el.querySelector(".navi_wheel_viewport"), "auto");
     },
     [],
   );
@@ -439,11 +514,10 @@ function WheelUI(props) {
       return;
     }
     syncCenterToSelection(viewportEl, "auto");
-    setRovingTabindex(viewportEl, getSelectedItem(viewportEl));
   });
 
-  // Scroll handling: keep the center marker up to date live, and select the
-  // centered item once scrolling settles.
+  // Scroll handling: keep the center marker live, wrap in loop mode, and select
+  // the centered item once scrolling settles.
   useLayoutEffect(() => {
     const el = ref.current;
     const viewportEl = el.querySelector(".navi_wheel_viewport");
@@ -452,13 +526,12 @@ function WheelUI(props) {
 
     const onScroll = () => {
       if (isLoop) {
-        wrapScrollIntoRealCopy(viewportEl);
+        wrapScrollIntoRealBand(viewportEl);
       }
       if (rafId === null) {
         rafId = requestAnimationFrame(() => {
           rafId = null;
-          const centered = findCenteredItem(viewportEl);
-          updateCurrentMarker(viewportEl, centered);
+          updateCurrentMarker(viewportEl, findCenteredItem(viewportEl));
         });
       }
       clearTimeout(settleTimer);
@@ -488,7 +561,7 @@ function WheelUI(props) {
       clearTimeout(settleTimer);
       viewportEl.removeEventListener("scroll", onScroll);
     };
-  }, [isLoop]);
+  }, [isLoop, isHorizontal]);
 
   // Focus (arrow keys, tab, click) centers the focused item.
   useLayoutEffect(() => {
@@ -505,23 +578,25 @@ function WheelUI(props) {
       }
       centeredIdRef.current = itemEl.id;
       updateCurrentMarker(viewportEl, itemEl);
-      setRovingTabindex(viewportEl, itemEl);
       centerItem(viewportEl, itemEl, "smooth");
     };
     el.addEventListener("focusin", onFocusIn);
     return () => {
       el.removeEventListener("focusin", onFocusIn);
     };
-  }, []);
+  }, [isHorizontal]);
 
   return (
     <Box
       {...rest}
       ref={ref}
       baseClassName="navi_wheel_container"
+      data-horizontal={isHorizontal ? "" : undefined}
       pseudoClasses={WHEEL_PSEUDO_CLASSES}
+      basePseudoState={basePseudoState}
       style={styleWithVars}
     >
+      <LoadingOutline loading={loading} inset={-1} />
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
           {isLoop
@@ -531,7 +606,9 @@ function WheelUI(props) {
                 handleCloneClick,
               )
             : null}
-          {children}
+          <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
+            {children}
+          </WheelItemTrackerContext.Provider>
           {isLoop
             ? renderClones(
                 getLoopBufferItems(loopClones, visibleCount, "after"),
@@ -544,17 +621,26 @@ function WheelUI(props) {
     </Box>
   );
 }
-const WHEEL_PSEUDO_CLASSES = [":focus-within", ":read-only", ":disabled"];
+const WHEEL_PSEUDO_CLASSES = [
+  ":focus-within",
+  ":focus-visible",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 
 // The `visibleCount` proxy rows to render on one side of the real items:
-//   - "before" → the last N values (…, len-2, len-1) so that the row just above
-//     the first real item shows the last value (wrap: … 44 45 | 00 …).
-//   - "after"  → the first N values (0, 1, …) so the row just below the last
+//   - "before" → the last N values (…, len-2, len-1) so the row just before the
+//     first real item shows the last value (wrap: … 44 45 | 00 …).
+//   - "after"  → the first N values (0, 1, …) so the row just after the last
 //     real item shows the first value (… 45 | 00 01 …).
-// Each descriptor keeps the real value index so a clone click maps back to it.
+// Each descriptor keeps the real value index so a proxy click maps back to it.
 const getLoopBufferItems = (clones, visibleCount, side) => {
   const count = clones.length;
   const items = [];
+  if (count === 0) {
+    return items;
+  }
   for (let position = 0; position < visibleCount; position++) {
     const index =
       side === "before"
@@ -581,21 +667,6 @@ const renderClones = (bufferItems, position, onCloneClick) => {
   ));
 };
 
-const findCenteredItem = (viewportEl) => {
-  const items = viewportEl.querySelectorAll("[navi-list-item-real]");
-  const center = viewportEl.scrollTop + viewportEl.clientHeight / 2;
-  let closest = null;
-  let closestDistance = Infinity;
-  for (const item of items) {
-    const itemCenter = item.offsetTop + item.offsetHeight / 2;
-    const distance = Math.abs(itemCenter - center);
-    if (distance < closestDistance) {
-      closestDistance = distance;
-      closest = item;
-    }
-  }
-  return closest;
-};
 const updateCurrentMarker = (viewportEl, currentItem) => {
   const previous = viewportEl.querySelector("[data-wheel-current]");
   if (previous && previous !== currentItem) {
@@ -610,7 +681,20 @@ const WheelItemFirstResolver = (props) => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  props.id = props.id || idDefault;
   props.selectable = props.selectable ?? true;
+
+  // Report this item's value + label to the wheel (used to build loop proxies).
+  // Wheel.Item must live inside a Wheel, so the context is always present.
+  const trackerContext = useContext(WheelItemTrackerContext);
+  const index = trackerContext.indexRef.current++;
+  trackerContext.tracker.useTrackItem({
+    id: props.id,
+    index,
+    value: props.value,
+    label: props.children,
+  });
 
   return <Next {...props} />;
 };
@@ -644,10 +728,10 @@ const WHEEL_ITEM_PSEUDO_CLASSES = [
 ];
 
 /**
- * Wheel.Item — a selectable value in a Wheel.
+ * Wheel.Item — a selectable value in a Wheel. Must be used inside <Wheel>.
  *
  * Reuses the selectable List item behaviour (hidden radio + click/keyboard
- * selection). The children are just the label shown in the row.
+ * selection). The children are the label shown in the row.
  *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
@@ -668,22 +752,25 @@ Wheel.Item = WheelItem;
 
 /**
  * WheelGroup — lays out several Wheels side by side with separators between
- * them (e.g. a "HH : MM : SS" time picker).
+ * them (e.g. a "HH : MM : SS" time picker, or "9 hours 30 minutes").
  *
- * Put <Wheel> and <WheelGroup.Separator> as direct children. Each wheel that
- * touches a separator eats half of it so its scroll surface (not the inert
- * separator) receives wheel/drag/scroll over the separator glyph — see the
- * .navi_wheel_group CSS note.
+ * Put <Wheel> and <WheelGroup.Separator> as direct children. Separators take
+ * their natural content width; the scrollable spacing around them is provided by
+ * the wheels (--wheel-spacing padding on their viewport), so scrolling in the
+ * gap scrolls the wheel — only the small separator glyph is a dead zone.
  *
  * @type {import("preact").FunctionComponent<{
- *   separatorWidth?: number | string,
+ *   spacing?: number | string,
+ *   horizontal?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
- * @param {number|string} [props.separatorWidth] - Width of each separator column (number = px; default 1ch). Also sets how far a neighbouring wheel's scroll surface reaches under the separator.
+ * @param {number|string} [props.spacing] - Scrollable gap each wheel adds toward its neighbours (number = px; default 0.5ch).
+ * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  */
 export const WheelGroup = ({
-  separatorWidth,
+  spacing,
+  horizontal,
   className,
   style,
   children,
@@ -691,13 +778,11 @@ export const WheelGroup = ({
 }) => {
   import.meta.css = css;
   const groupStyle = {
-    ...(separatorWidth === undefined
+    ...(spacing === undefined
       ? {}
       : {
-          "--wheel-separator-width":
-            typeof separatorWidth === "number"
-              ? `${separatorWidth}px`
-              : separatorWidth,
+          "--wheel-spacing":
+            typeof spacing === "number" ? `${spacing}px` : spacing,
         }),
     ...style,
   };
@@ -707,6 +792,7 @@ export const WheelGroup = ({
       className={
         className ? `navi_wheel_group ${className}` : "navi_wheel_group"
       }
+      data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
     >
       {children}
