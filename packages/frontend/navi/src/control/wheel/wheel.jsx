@@ -1,5 +1,5 @@
 import { dispatchCustomEvent } from "@jsenv/dom";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import {
@@ -33,7 +33,6 @@ const css = /* css */ `
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
     --wheel-color-faded: light-dark(#bbb, #555);
-    --wheel-selection-border-color: light-dark(#e2e2e2, #3a3a3a);
 
     display: inline-flex;
     color: var(--wheel-color-faded);
@@ -86,19 +85,6 @@ const css = /* css */ `
     list-style: none;
   }
 
-  /* The fixed center row — a subtle pair of separators framing the selection */
-  .navi_wheel_selection {
-    position: absolute;
-    top: 50%;
-    right: 0;
-    left: 0;
-    height: var(--wheel-item-height);
-    border-top: 1px solid var(--wheel-selection-border-color);
-    border-bottom: 1px solid var(--wheel-selection-border-color);
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-
   .navi_wheel_item {
     position: relative;
     display: flex;
@@ -146,6 +132,10 @@ const WheelFirstResolver = (props) => {
   const Next = useNextResolver();
   const refDefault = useRef(null);
   props.ref = props.ref || refDefault;
+  const idDefault = useId();
+  // The selectable layer looks the group's UI state controller up by this id
+  // (getUIStateControllerById), so it must be stable and always present.
+  props.id = props.id || idDefault;
   // Selection is the whole point of a wheel, so it is on by default (unlike
   // List which requires an explicit `selectable`). Pass selectable={false} to
   // get a purely presentational scroller.
@@ -330,7 +320,6 @@ function WheelUI(props) {
     >
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list">{children}</ul>
-        <div className="navi_wheel_selection" aria-hidden="true" />
       </div>
     </Box>
   );
