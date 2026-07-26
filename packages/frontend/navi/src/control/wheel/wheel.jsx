@@ -314,29 +314,33 @@ function WheelUI(props) {
     viewportEl.scrollTo({ top, behavior });
   };
 
-  // Loop mode renders three stacked copies: [clones][real][clones]. The real
-  // copy occupies the middle band [copyHeight, 2·copyHeight). Whenever the
-  // viewport center drifts out of that band we instantly shift scrollTop by a
-  // whole number of copies to bring it back — invisible because the copies are
-  // identical, and this is what makes the wheel spin endlessly. Runs on every
-  // scroll event so even a long fling (which can span several copies at once)
-  // is folded back with the modulo.
+  // Loop layout: [before buffer][real items][after buffer], where each buffer
+  // is only `visibleCount` proxy rows — the last N values above, the first N
+  // below (just enough to fill the viewport at the edges). The real items own
+  // the band [bufferHeight, bufferHeight + realHeight). Whenever the viewport
+  // center drifts out of that band we instantly shift scrollTop by a whole
+  // number of real-list heights to fold it back — invisible because a proxy
+  // shows the exact same value the real row at center±realHeight would. This is
+  // what makes the wheel spin endlessly. Runs on every scroll event so even a
+  // long fling (spanning several list heights) is folded back with the modulo.
   const wrapScrollIntoRealCopy = (viewportEl) => {
     const realItem = viewportEl.querySelector("[navi-list-item-real]");
     if (!realItem || !loopClones.length) {
       return;
     }
-    const copyHeight = realItem.offsetHeight * loopClones.length;
-    if (copyHeight === 0) {
+    const itemHeightPx = realItem.offsetHeight;
+    const realHeight = itemHeightPx * loopClones.length;
+    if (realHeight === 0) {
       return;
     }
+    const bufferHeight = itemHeightPx * visibleCount;
     const center = viewportEl.scrollTop + viewportEl.clientHeight / 2;
-    if (center >= copyHeight && center < copyHeight * 2) {
+    if (center >= bufferHeight && center < bufferHeight + realHeight) {
       return;
     }
     const offsetInBand =
-      (((center - copyHeight) % copyHeight) + copyHeight) % copyHeight;
-    const wrappedCenter = copyHeight + offsetInBand;
+      (((center - bufferHeight) % realHeight) + realHeight) % realHeight;
+    const wrappedCenter = bufferHeight + offsetInBand;
     viewportEl.scrollTop += wrappedCenter - center;
   };
 
@@ -504,9 +508,21 @@ function WheelUI(props) {
     >
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
-          {isLoop ? renderClones(loopClones, "before", handleCloneClick) : null}
+          {isLoop
+            ? renderClones(
+                getLoopBufferItems(loopClones, visibleCount, "before"),
+                "before",
+                handleCloneClick,
+              )
+            : null}
           {children}
-          {isLoop ? renderClones(loopClones, "after", handleCloneClick) : null}
+          {isLoop
+            ? renderClones(
+                getLoopBufferItems(loopClones, visibleCount, "after"),
+                "after",
+                handleCloneClick,
+              )
+            : null}
         </ul>
       </div>
     </Box>
@@ -514,19 +530,37 @@ function WheelUI(props) {
 }
 const WHEEL_PSEUDO_CLASSES = [":focus-within", ":read-only", ":disabled"];
 
-// Inert visual copies of the items (one full copy above and one below the real
-// selectable items) used for seamless looping. They carry no radio input, are
-// hidden from assistive tech, and clicking one selects the real item at the
-// same index (see handleCloneClick).
-const renderClones = (clones, position, onCloneClick) => {
-  return clones.map((clone, index) => (
+// The `visibleCount` proxy rows to render on one side of the real items:
+//   - "before" → the last N values (…, len-2, len-1) so that the row just above
+//     the first real item shows the last value (wrap: … 44 45 | 00 …).
+//   - "after"  → the first N values (0, 1, …) so the row just below the last
+//     real item shows the first value (… 45 | 00 01 …).
+// Each descriptor keeps the real value index so a clone click maps back to it.
+const getLoopBufferItems = (clones, visibleCount, side) => {
+  const count = clones.length;
+  const items = [];
+  for (let position = 0; position < visibleCount; position++) {
+    const index =
+      side === "before"
+        ? (((count - visibleCount + position) % count) + count) % count
+        : position % count;
+    items.push({ label: clones[index].label, index });
+  }
+  return items;
+};
+
+// Inert visual proxies of the real items used for seamless looping. They carry
+// no radio input, are hidden from assistive tech, and clicking one selects the
+// real item it stands in for (see handleCloneClick).
+const renderClones = (bufferItems, position, onCloneClick) => {
+  return bufferItems.map((item, offset) => (
     <li
-      key={`${position}_${index}`}
+      key={`${position}_${offset}`}
       className="navi_wheel_item navi_wheel_item_clone"
       aria-hidden="true"
-      onClick={() => onCloneClick(index)}
+      onClick={() => onCloneClick(item.index)}
     >
-      {clone.label}
+      {item.label}
     </li>
   ));
 };
