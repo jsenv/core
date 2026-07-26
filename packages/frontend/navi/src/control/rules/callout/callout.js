@@ -70,6 +70,7 @@ const css = /* css */ `
     margin: 0;
     padding: 0; /* User agent reset */
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
     border: none;
