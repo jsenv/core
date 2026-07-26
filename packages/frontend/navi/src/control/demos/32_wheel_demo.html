@@ -139,6 +139,9 @@
               <li>
                 <a href="#horizontal-group">Horizontal group</a>
               </li>
+              <li>
+                <a href="#customization">Customization</a>
+              </li>
             </ol>
           </div>
         );
@@ -148,7 +151,7 @@
 
       const HOURS = range(24);
       const StateWheel = (props) => (
-        <Wheel defaultValue={9} {...props}>
+        <Wheel type="integer" defaultValue={9} {...props}>
           {HOURS.map((h) => (
             <Wheel.Item key={h} value={h}>
               {pad2(h)}
@@ -193,7 +196,7 @@
             <h2>Single column (hours), looping</h2>
             <p>Past 23 comes 00 again; scrolling up past 00 shows 23.</p>
             <div className="row">
-              <Wheel value={hour} action={setHour} loop>
+              <Wheel type="integer" value={hour} action={setHour} loop>
                 {range(24).map((h) => (
                   <Wheel.Item key={h} value={h}>
                     {pad2(h)}
@@ -377,6 +380,7 @@
             </p>
             <div className="row">
               <Wheel
+                type="day"
                 value={day}
                 action={(v) => {
                   setDay(v);
@@ -411,13 +415,14 @@
             </p>
             <div className="row">
               <Wheel
+                type="integer"
                 horizontal
                 loop
                 value={hour}
                 action={setHour}
                 itemWidth="4ch"
                 visibleCount={5}
-                >
+              >
                 {range(24).map((h) => (
                   <Wheel.Item key={h} value={h}>
                     {pad2(h)}
@@ -443,11 +448,9 @@
               A <code>WheelGroup horizontal</code> stacks horizontal wheels,
               with separators between the rows.
             </p>
-            <WheelGroup
-              horizontal
-              spacing="6px"
-            >
+            <WheelGroup horizontal spacing="6px">
               <Wheel
+                type="integer"
                 horizontal
                 loop
                 value={h}
@@ -463,6 +466,7 @@
               </Wheel>
               <WheelGroup.Separator>hours</WheelGroup.Separator>
               <Wheel
+                type="integer"
                 horizontal
                 loop
                 value={m}
@@ -485,6 +489,80 @@
         );
       };
 
+      // ── Customization ──────────────────────────────────────────────────────
+
+      const CustomizationDemo = () => {
+        const [a, setA] = useState(9);
+        const [b, setB] = useState(9);
+        const [c, setC] = useState(9);
+        return (
+          <div id="customization" className="demo-section">
+            <h2>Customization</h2>
+            <p>
+              Wheel is a <code>Box</code>, so style props work directly. Colors
+              are CSS variables (<code>--wheel-color</code>,{" "}
+              <code>--wheel-color-faded</code>).
+            </p>
+            <div className="states">
+              <div>
+                <h3>border="1px solid grey"</h3>
+                <Wheel
+                  type="integer"
+                  value={a}
+                  action={setA}
+                  loop
+                  border="1px solid grey"
+                  padding="0 6px"
+                >
+                  {range(24).map((h) => (
+                    <Wheel.Item key={h} value={h}>
+                      {pad2(h)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+              </div>
+              <div>
+                <h3>accent color</h3>
+                <Wheel
+                  type="integer"
+                  value={b}
+                  action={setB}
+                  loop
+                  style={{
+                    "--wheel-color": "#d6336c",
+                    "--wheel-color-faded": "#f3bcd0",
+                  }}
+                >
+                  {range(24).map((h) => (
+                    <Wheel.Item key={h} value={h}>
+                      {pad2(h)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+              </div>
+              <div>
+                <h3>bigger rows, 5 visible</h3>
+                <Wheel
+                  type="integer"
+                  value={c}
+                  action={setC}
+                  loop
+                  visibleCount={5}
+                  itemHeight={44}
+                  style={{ fontSize: "1.5rem" }}
+                >
+                  {range(24).map((h) => (
+                    <Wheel.Item key={h} value={h}>
+                      {pad2(h)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       const App = () => (
         <NaviDebug>
           <TableOfContents />
@@ -497,6 +575,7 @@
           <DayDemo />
           <HorizontalDemo />
           <HorizontalGroupDemo />
+          <CustomizationDemo />
         </NaviDebug>
       );
 
