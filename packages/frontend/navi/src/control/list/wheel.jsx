@@ -52,7 +52,7 @@ import {
 
 const css = /* css */ `
   .navi_wheel_container {
-    --wheel-item-height: 2.4em;
+    --wheel-item-height: round(2.4em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
@@ -263,7 +263,7 @@ const css = /* css */ `
        (that lives on .navi_wheel_container). Re-expose a default here so custom
        separator content can rely on it, e.g. line-height: var(--wheel-item-height)
        to make a single line exactly one row tall. */
-    --wheel-item-height: 2.4em;
+    --wheel-item-height: round(2.4em, 1px);
 
     display: flex;
     /* Stretch to the group height (= the wheels' height) and center the content,
