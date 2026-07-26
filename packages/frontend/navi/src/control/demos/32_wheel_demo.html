@@ -489,11 +489,18 @@
             </div>
 
             <h3 style={{ marginTop: 24 }}>1 separator, 2 columns</h3>
-            <WheelGroup>
-              <HourWheel />
-              <WheelGroup.Separator>:</WheelGroup.Separator>
-              <MinuteWheel />
-            </WheelGroup>
+            <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>:</WheelGroup.Separator>
+                <MinuteWheel />
+              </WheelGroup>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <MinuteWheel />
+              </WheelGroup>
+            </div>
 
             <h3 style={{ marginTop: 24 }}>
               Word separators (hours + minutes), incl. trailing

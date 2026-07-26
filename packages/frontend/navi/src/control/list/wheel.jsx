@@ -770,6 +770,9 @@ function WheelUI(props) {
       baseClassName="navi_wheel_container"
       data-horizontal={isHorizontal ? "" : undefined}
       data-wheel-type={type || undefined}
+      // Disabled = fully inert: no focus, no keyboard (arrows), no pointer.
+      // Programmatic centering still works (inert only blocks user interaction).
+      inert={disabled ? true : undefined}
       pseudoClasses={WHEEL_PSEUDO_CLASSES}
       basePseudoState={basePseudoState}
       style={styleWithVars}
