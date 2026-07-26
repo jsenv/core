@@ -13,7 +13,7 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
 import {
   ListItemSelectableResolver,
   ListSelectableResolver,
-} from "../list/list_selectable.jsx";
+} from "./list_selectable.jsx";
 
 /*
  * Wheel — a selectable list rendered as an iOS-style scroll picker. A short
@@ -86,7 +86,6 @@ const css = /* css */ `
 
   .navi_wheel_viewport {
     position: relative;
-    overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     /* No visible scrollbar */
     scrollbar-width: none;
@@ -94,6 +93,12 @@ const css = /* css */ `
     &::-webkit-scrollbar {
       display: none;
     }
+  }
+
+  /* type is informative metadata; a couple of types get a rendering hint.
+     "integer" wants figures to line up column-to-column across rows. */
+  .navi_wheel_container[data-wheel-type="integer"] {
+    font-variant-numeric: tabular-nums;
   }
 
   .navi_wheel_list {
@@ -299,6 +304,7 @@ const WheelFirstResolver = (props) => {
  *   itemWidth?: number | string,
  *   loop?: boolean,
  *   horizontal?: boolean,
+ *   type?: string,
  *   name?: string,
  *   required?: boolean,
  *   readOnly?: boolean,
@@ -312,6 +318,7 @@ const WheelFirstResolver = (props) => {
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
  * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
+ * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
 export const Wheel = createComponentResolver([
   WheelFirstResolver,
@@ -328,6 +335,7 @@ function WheelUI(props) {
     itemWidth,
     loop,
     horizontal,
+    type,
     style,
     basePseudoState,
     children,
@@ -336,6 +344,11 @@ function WheelUI(props) {
   const isHorizontal = Boolean(horizontal);
   const isLoop = Boolean(loop);
   const loading = basePseudoState ? basePseudoState[":-navi-loading"] : false;
+  const readOnly = basePseudoState ? basePseudoState[":read-only"] : false;
+  const disabled = basePseudoState ? basePseudoState[":disabled"] : false;
+  // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
+  // controlled value stays authoritative and any scroll springs back to it.
+  const interactive = !readOnly && !disabled;
 
   // Collect every Wheel.Item's {value, label} in order, robustly (children may
   // be wrapped). loopClones drives the proxy rows and the wrap math.
