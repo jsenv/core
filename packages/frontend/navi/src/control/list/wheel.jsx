@@ -371,8 +371,8 @@ const LOOP_BUFFER_MAX = 20;
 // WHEEL_DECAY^(dt/16); lower stops sooner. Below the snap threshold the settle
 // loop switches from momentum to a spring that eases into the nearest row
 // center; the spring factor is how far toward that center it moves per frame.
-const WHEEL_MAX_VELOCITY = 1.2;
-const WHEEL_DECAY = 0.9;
+const WHEEL_MAX_VELOCITY = 1;
+const WHEEL_DECAY = 0.88;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
@@ -722,7 +722,9 @@ function WheelUI(props) {
       onDone();
       return;
     }
-    const duration = clampNumber(Math.abs(dist) * 1.1, 160, 420);
+    // A single-row step (arrow key, clone click) is only ~one item; the floor
+    // keeps that glide long enough to read as motion rather than a jump.
+    const duration = clampNumber(Math.abs(dist) * 1.4, 280, 460);
     const startTime = performance.now();
     const step = (now) => {
       const t = clampNumber((now - startTime) / duration, 0, 1);
