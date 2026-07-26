@@ -8,6 +8,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import {
@@ -134,6 +135,12 @@ const css = /* css */ `
     scroll-snap-stop: always;
     -webkit-tap-highlight-color: transparent;
     transition: color 0.15s ease;
+    /* Rendering virtualization: only the rows within each wheel's own viewport
+       are painted; the rest (clipped by the viewport's overflow) are skipped.
+       The box is still laid out (fixed main-axis size below), so offsets, snap
+       and the wrap math are unaffected — this cuts paint/compositing cost so a
+       wheel with many values (or a page full of wheels) scrolls smoothly. */
+    content-visibility: auto;
 
     &[navi-selectable-area-all] {
       pointer-events: none;
@@ -187,6 +194,9 @@ const css = /* css */ `
       }
     }
     .navi_wheel_item {
+      /* Main-axis size is fixed (height); reserve a remembered cross-axis size
+         so a skipped row doesn't collapse the wheel's width. */
+      contain-intrinsic-width: auto 3ch;
       height: var(--wheel-item-height);
       padding-inline: var(--wheel-item-padding-x, 0.5ch);
     }
@@ -212,6 +222,8 @@ const css = /* css */ `
       }
     }
     .navi_wheel_item {
+      /* Main-axis size is fixed (width); reserve a remembered cross-axis size. */
+      contain-intrinsic-height: auto 1.5em;
       width: var(--wheel-item-width);
       padding-block: var(--wheel-item-padding-x, 0.5ch);
     }
@@ -879,6 +891,11 @@ const WheelItemFirstResolver = (props) => {
   const idDefault = useId();
   props.id = props.id || idDefault;
   props.selectable = props.selectable ?? true;
+  // A wheel is readonly/disabled as a whole, not per-option — so a blocked
+  // interaction should say "this control is read-only", not the list's
+  // per-option "this option isn't available".
+  props.readOnlyMessage =
+    props.readOnlyMessage ?? naviI18n("constraint.readonly.default", props);
 
   // Report this item's value + label to the wheel (used to build loop proxies).
   // Wheel.Item must live inside a Wheel, so the context is always present.
