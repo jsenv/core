@@ -506,13 +506,26 @@
             </WheelGroup>
 
             <h3 style={{ marginTop: 24 }}>3 columns, 2 separators</h3>
-            <WheelGroup>
-              <HourWheel />
-              <WheelGroup.Separator>:</WheelGroup.Separator>
-              <MinuteWheel />
-              <WheelGroup.Separator>:</WheelGroup.Separator>
-              <SecondWheel />
-            </WheelGroup>
+            <p style={{ marginBottom: 8 }}>
+              A tall glyph like <code>ZZ</code> (right) makes any misalignment
+              obvious that ":" (left) can hide.
+            </p>
+            <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>:</WheelGroup.Separator>
+                <MinuteWheel />
+                <WheelGroup.Separator>:</WheelGroup.Separator>
+                <SecondWheel />
+              </WheelGroup>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <MinuteWheel />
+                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <SecondWheel />
+              </WheelGroup>
+            </div>
           </div>
         );
       };
@@ -630,7 +643,7 @@
                 ))}
               </Wheel>
             </div>
-            <div>
+            <div style={{ marginBottom: 24 }}>
               <h3>bigger rows, 5 visible</h3>
               <Wheel
                 type="integer"
@@ -647,6 +660,27 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
+            </div>
+            <div>
+              <h3>WheelGroup spacing (gap around separators)</h3>
+              <div className="states">
+                <div>
+                  <WheelGroup spacing="0">
+                    <HourWheel />
+                    <WheelGroup.Separator>:</WheelGroup.Separator>
+                    <QuarterWheel />
+                  </WheelGroup>
+                  <span className="col-label">spacing="0"</span>
+                </div>
+                <div>
+                  <WheelGroup spacing="2ch">
+                    <HourWheel />
+                    <WheelGroup.Separator>:</WheelGroup.Separator>
+                    <QuarterWheel />
+                  </WheelGroup>
+                  <span className="col-label">spacing="2ch"</span>
+                </div>
+              </div>
             </div>
           </div>
         );
