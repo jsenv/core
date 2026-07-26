@@ -65,31 +65,33 @@ const css = /* css */ `
     font-family: var(--navi-control-font-family);
     border-radius: var(--navi-control-border-radius);
 
-    /* Keyboard interaction focus-visibles a hidden radio inside; show the focus
-       outline on the whole column, not just the selected row. [data-focus-visible]
-       lets a caller force the state (e.g. in a demo). */
-    &:has([navi-selectable-real-input]:focus-visible),
-    &[data-focus-visible] {
-      outline-width: var(--navi-focus-outline-width);
-      outline-style: solid;
-      outline-color: var(--navi-focus-outline-color);
-      outline-offset: calc(var(--navi-focus-outline-width) / 2);
+    /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
+       the neighbours are just hints, so the outline belongs on the selected
+       value, not the whole column. [data-focus-visible] lets a caller force it. */
+    &:has([navi-selectable-real-input]:focus-visible) .navi_wheel_focus_ring,
+    &[data-focus-visible] .navi_wheel_focus_ring {
+      outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
+      outline-offset: calc(-1 * var(--navi-focus-outline-width));
     }
 
-    /* Readonly & disabled dim the whole column's text (all rows share
-       --wheel-color); disabled dims a touch more (greyer AND semi-transparent).
-       Scrolling is blocked in JS for both. */
+    /* Readonly & disabled dim the neighbour text identically; disabled dims the
+       centered value further (so the state reads on the value itself). Both
+       neutralise pointer events on the rows: a click can't then produce a
+       per-row callout, so the wheel-level readonly callout is the only one. */
     &[data-readonly] {
       --wheel-color: light-dark(#666, #999);
     }
     &[data-disabled] {
-      --wheel-color: light-dark(rgba(0, 0, 0, 0.4), rgba(255, 255, 255, 0.45));
+      --wheel-color: light-dark(#666, #999);
 
-      /* Neutralise clicks on the hidden inputs (the selectable area re-enables
-         them). The .navi_wheel_item raises specificity above that rule. Hover
-         then lands on the viewport, so neighbours show the default cursor, not
-         a pointer — and the viewport still receives wheel/touch so the JS block
-         can preventDefault them. */
+      .navi_wheel_item[data-wheel-current] {
+        color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
+      }
+    }
+    &[data-readonly],
+    &[data-disabled] {
       .navi_wheel_item [navi-selectable-real-input] {
         pointer-events: none;
       }
@@ -192,6 +194,39 @@ const css = /* css */ `
       transparent 100%
     );
 
+    /* Two invisible panes cover the rows on each side of the center window, used
+       only for optional effects (the fade already dims): [data-glass] frosts
+       (blurs) them; [data-frame-border] lines the edge facing the window. The
+       .navi_wheel_focus_ring outlines the window itself. Pane geometry, the ring
+       geometry, and the frame edges are all orientation-specific, so they live in
+       the branches below and reuse them. */
+    .navi_wheel_pane {
+      position: absolute;
+      z-index: 1;
+      border: 0 solid
+        var(
+          --wheel-frame-color,
+          light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
+        );
+      pointer-events: none;
+    }
+    .navi_wheel_focus_ring {
+      position: absolute;
+      z-index: 2;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+    &[data-glass] .navi_wheel_pane {
+      /* A faint frost tint under the blur flattens the halo a bare
+         backdrop-filter leaves around dark glyphs. Tune with --wheel-glass-tint. */
+      background: light-dark(
+        rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
+        rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
+      );
+      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+    }
+
     &:not([data-horizontal]) {
       --wheel-fade-direction: to bottom;
 
@@ -216,6 +251,31 @@ const css = /* css */ `
         contain-intrinsic-width: auto 3ch;
         height: var(--wheel-item-height);
         padding-inline: var(--wheel-item-padding-x, 0.5ch);
+      }
+      .navi_wheel_pane {
+        right: 0;
+        left: 0;
+        height: calc((100% - var(--wheel-item-height)) / 2);
+        &[data-side="start"] {
+          top: 0;
+        }
+        &[data-side="end"] {
+          bottom: 0;
+        }
+      }
+      .navi_wheel_focus_ring {
+        top: calc((100% - var(--wheel-item-height)) / 2);
+        right: 0;
+        left: 0;
+        height: var(--wheel-item-height);
+      }
+      &[data-frame-border] .navi_wheel_pane {
+        &[data-side="start"] {
+          border-bottom-width: 1px;
+        }
+        &[data-side="end"] {
+          border-top-width: 1px;
+        }
       }
     }
 
@@ -242,76 +302,30 @@ const css = /* css */ `
         width: var(--wheel-item-width);
         padding-block: var(--wheel-item-padding-x, 0.5ch);
       }
-    }
-  }
-
-  /* ── Center window ────────────────────────────────────────────────────────────
-     Two invisible panes cover the rows on each side of the center window, used
-     for optional effects only (the fade above already does the dimming):
-     [data-glass] frosts (blurs) the covered rows; [data-frame-border] lines the
-     pane edge facing the window. Purely decorative — pointer events pass
-     through, and with neither attribute the panes render nothing. */
-  .navi_wheel_pane {
-    position: absolute;
-    z-index: 1;
-    border: 0 solid
-      var(
-        --wheel-frame-color,
-        light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
-      );
-    pointer-events: none;
-
-    .navi_wheel_container[data-glass] & {
-      /* A faint frost tint over the blur. Without it, blurring dark text on a
-         light backdrop leaves a bright fringe (halo) around each glyph;
-         compositing the blur under a thin opaque layer flattens that fringe.
-         Tune/disable with --wheel-glass-tint. */
-      background: light-dark(
-        rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
-        rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
-      );
-      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-    }
-
-    .navi_wheel_container:not([data-horizontal]) & {
-      right: 0;
-      left: 0;
-      height: calc((100% - var(--wheel-item-height)) / 2);
-
-      &[data-side="start"] {
+      .navi_wheel_pane {
         top: 0;
-      }
-      &[data-side="end"] {
         bottom: 0;
+        width: calc((100% - var(--wheel-item-width)) / 2);
+        &[data-side="start"] {
+          left: 0;
+        }
+        &[data-side="end"] {
+          right: 0;
+        }
       }
-    }
-    .navi_wheel_container[data-horizontal] & {
-      top: 0;
-      bottom: 0;
-      width: calc((100% - var(--wheel-item-width)) / 2);
-
-      &[data-side="start"] {
-        left: 0;
+      .navi_wheel_focus_ring {
+        top: 0;
+        bottom: 0;
+        left: calc((100% - var(--wheel-item-width)) / 2);
+        width: var(--wheel-item-width);
       }
-      &[data-side="end"] {
-        right: 0;
-      }
-    }
-    .navi_wheel_container[data-frame-border]:not([data-horizontal]) & {
-      &[data-side="start"] {
-        border-bottom-width: 1px;
-      }
-      &[data-side="end"] {
-        border-top-width: 1px;
-      }
-    }
-    .navi_wheel_container[data-frame-border][data-horizontal] & {
-      &[data-side="start"] {
-        border-right-width: 1px;
-      }
-      &[data-side="end"] {
-        border-left-width: 1px;
+      &[data-frame-border] .navi_wheel_pane {
+        &[data-side="start"] {
+          border-right-width: 1px;
+        }
+        &[data-side="end"] {
+          border-left-width: 1px;
+        }
       }
     }
   }
@@ -1203,6 +1217,7 @@ function WheelUI(props) {
         </ul>
         <div className="navi_wheel_pane" data-side="start" />
         <div className="navi_wheel_pane" data-side="end" />
+        <div className="navi_wheel_focus_ring" />
       </div>
     </Box>
   );

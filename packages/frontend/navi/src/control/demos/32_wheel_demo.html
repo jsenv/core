@@ -86,6 +86,18 @@
         color: #888;
         font-size: 0.8rem;
       }
+      .toc {
+        line-height: 1.9;
+      }
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
+      }
+      .toc ul a {
+        color: #555;
+        font-size: 0.9rem;
+      }
       /* A plain HTML/CSS scroll-snap list, sized + faded like the Wheel, to
          compare the browser's native snapping/momentum against our
          transform-based one. Same progressive fade mask, so only the scroll
@@ -187,12 +199,20 @@
               <kbd>→</kbd> when horizontal). The centered value is the
               selection.
             </p>
-            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
               <li>
                 <a href="#states">States</a>
               </li>
               <li>
                 <a href="#scroll">Scroll behavior</a> — snapping, momentum, loop
+                <ul>
+                  <li>
+                    <a href="#scroll-small">Small list (4 values)</a>
+                  </li>
+                  <li>
+                    <a href="#scroll-long">Long list (100 values)</a>
+                  </li>
+                </ul>
               </li>
               <li>
                 <a href="#separator">Separator alignment</a>
@@ -201,12 +221,35 @@
                 <a href="#actions">uiAction / action / form</a>
               </li>
               <li>
-                <a href="#practical">Practical examples</a> — size picker, day
-                picker
+                <a href="#practical">Practical examples</a>
+                <ul>
+                  <li>
+                    <a href="#practical-size">Size picker</a>
+                  </li>
+                  <li>
+                    <a href="#practical-day">Day picker</a>
+                  </li>
+                </ul>
               </li>
               <li>
-                <a href="#customization">Customization</a> — visibleCount,
-                horizontal, spacing, glass, frameBorder
+                <a href="#customization">Customization</a>
+                <ul>
+                  <li>
+                    <a href="#cust-visiblecount">visibleCount</a>
+                  </li>
+                  <li>
+                    <a href="#cust-horizontal">horizontal</a>
+                  </li>
+                  <li>
+                    <a href="#cust-spacing">WheelGroup spacing</a>
+                  </li>
+                  <li>
+                    <a href="#cust-glass">glass</a>
+                  </li>
+                  <li>
+                    <a href="#cust-frame">frameBorder</a>
+                  </li>
+                </ul>
               </li>
             </ol>
           </div>
@@ -258,76 +301,66 @@
       // Side-by-side harness: our transform-based Wheel vs a plain HTML/CSS
       // scroll-snap list, driven by the same buttons, so the snapping/momentum
       // feel can be compared against the browser's own scroller.
-      const ScrollBehaviorDemo = () => {
-        const [h, setH] = useState(9);
+      const ITEM_PX = 32; // matches the Wheel + native row height
+      const ScrollPair = ({ values, repeatNative }) => {
+        const startIndex = Math.floor(values.length / 2);
+        const [v, setV] = useState(values[startIndex]);
         const wheelRef = useRef(null);
         const nativeRef = useRef(null);
-        const ITEM = 32; // px, matches the Wheel + native row height
-        // The Wheel loops, so its scroll extent is infinite; the native list
-        // can't loop, so repeat the values ×3 to give a comparable scroll
-        // height to fling through.
-        const COPIES = 3;
-        const nativeValues = range(24 * COPIES).map((i) => i % 24);
-
-        // Start the native list centered on 09 in the middle copy, so there's
-        // room to fling both ways.
+        // The Wheel loops; the native list can't. For a short list, repeat the
+        // values so the native side has a comparable scroll extent to fling.
+        const copies = repeatNative ? 3 : 1;
+        const nativeValues = range(values.length * copies).map(
+          (i) => values[i % values.length],
+        );
+        const nativeStart = (repeatNative ? values.length : 0) + startIndex;
         useEffect(() => {
           if (nativeRef.current) {
-            nativeRef.current.scrollTop = (24 + 9) * ITEM;
+            nativeRef.current.scrollTop = nativeStart * ITEM_PX;
           }
         }, []);
-
-        // Drive both scrollers the same way: a custom navi_scroll event for the
-        // Wheel (it has no real scroll), scrollBy for the native list.
+        // Drive both the same way: a custom navi_scroll event for the Wheel (no
+        // real scroll), scrollBy for the native list.
         const drive = (detail) => {
           wheelRef.current?.dispatchEvent(
             new CustomEvent("navi_scroll", { detail }),
           );
-          const top = (detail.delta || 0) + (detail.items || 0) * ITEM;
+          const top = (detail.delta || 0) + (detail.items || 0) * ITEM_PX;
           nativeRef.current?.scrollBy({ top, behavior: detail.behavior });
         };
-
         return (
-          <div id="scroll" className="demo-section">
-            <h2>Scroll behavior — snapping, momentum, loop</h2>
-            <p>
-              Scroll, drag or fling either column, or use the buttons (which
-              drive <em>both</em>). Left is our transform-based Wheel (looping);
-              right is a plain HTML/CSS <code>scroll-snap</code> list — compare
-              how each animates the snap. The <kbd>px</kbd> buttons nudge by
-              less than a row to show the snap-back.
-            </p>
+          <div>
             <div className="row" style={{ gap: 48, alignItems: "flex-start" }}>
-              <div className="states">
-                <div>
-                  <Wheel
-                    ref={wheelRef}
-                    type="integer"
-                    value={h}
-                    action={setH}
-                    loop
-                  >
-                    {range(24).map((v) => (
-                      <Wheel.Item key={v} value={v}>
-                        {pad2(v)}
-                      </Wheel.Item>
-                    ))}
-                  </Wheel>
-                  <div className="value-display">value: {pad2(h)}</div>
-                  <span className="col-label">Wheel (ours, looping)</span>
+              <div>
+                <Wheel
+                  ref={wheelRef}
+                  type="integer"
+                  value={v}
+                  action={setV}
+                  loop
+                >
+                  {values.map((value) => (
+                    <Wheel.Item key={value} value={value}>
+                      {pad2(value)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+                <div className="value-display">value: {pad2(v)}</div>
+                <span className="col-label">Wheel (ours, looping)</span>
+              </div>
+              <div>
+                <div className="native-wheel" ref={nativeRef}>
+                  <div className="native-wheel-pad" />
+                  {nativeValues.map((value, i) => (
+                    <div className="native-wheel-item" key={i}>
+                      {pad2(value)}
+                    </div>
+                  ))}
+                  <div className="native-wheel-pad" />
                 </div>
-                <div>
-                  <div className="native-wheel" ref={nativeRef}>
-                    <div className="native-wheel-pad" />
-                    {nativeValues.map((v, i) => (
-                      <div className="native-wheel-item" key={i}>
-                        {pad2(v)}
-                      </div>
-                    ))}
-                    <div className="native-wheel-pad" />
-                  </div>
-                  <span className="col-label">native scroll-snap (×3)</span>
-                </div>
+                <span className="col-label">
+                  native scroll-snap{repeatNative ? " (×3)" : ""}
+                </span>
               </div>
             </div>
             <div className="scroll-buttons">
@@ -344,6 +377,34 @@
                 ▼ 12px
               </button>
             </div>
+          </div>
+        );
+      };
+
+      const ScrollBehaviorDemo = () => {
+        return (
+          <div id="scroll" className="demo-section">
+            <h2>Scroll behavior — snapping, momentum, loop</h2>
+            <p>
+              Scroll, drag or fling either column, or use the buttons (which
+              drive <em>both</em>). Left is our transform-based Wheel (looping);
+              right is a plain HTML/CSS <code>scroll-snap</code> list — compare
+              how each animates the snap. The <kbd>px</kbd> buttons nudge by
+              less than a row to show the snap-back.
+            </p>
+
+            <h3 id="scroll-small">Small list (4 values)</h3>
+            <p>Few values — easiest to eyeball the wrap and each snap.</p>
+            <ScrollPair values={[0, 15, 30, 45]} repeatNative />
+
+            <h3 id="scroll-long" style={{ marginTop: 24 }}>
+              Long list (100 values)
+            </h3>
+            <p>
+              Many values — stress-tests momentum and the loop runway against a
+              tall native scroller.
+            </p>
+            <ScrollPair values={range(100)} />
           </div>
         );
       };
@@ -366,7 +427,7 @@
           <div id="practical" className="demo-section">
             <h2>Practical examples</h2>
 
-            <h3>Size picker (no loop)</h3>
+            <h3 id="practical-size">Size picker (no loop)</h3>
             <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
             <div className="row">
               <Wheel
@@ -384,7 +445,7 @@
               </Wheel>
             </div>
 
-            <h3 style={{ marginTop: 24 }}>
+            <h3 id="practical-day" style={{ marginTop: 24 }}>
               Day picker — today … +5 days (no loop)
             </h3>
             <p>
@@ -551,7 +612,7 @@
               <code>Form</code> the value submits under the wheel's{" "}
               <code>name</code>.
             </p>
-            <div className="row">
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Wheel
                 type="integer"
                 value={hour}
@@ -570,9 +631,7 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
-              <div style={{ flex: 1 }}>
-                <CallLog entries={log} onClear={clearLog} />
-              </div>
+              <CallLog entries={log} onClear={clearLog} />
             </div>
             <h3 style={{ marginTop: 20 }}>Inside a form</h3>
             <Form
@@ -674,7 +733,9 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>visibleCount (rows shown around the center)</h3>
+              <h3 id="cust-visiblecount">
+                visibleCount (rows shown around the center)
+              </h3>
               <p>
                 An odd count; the center row is the selection. More rows show
                 more context above/below.
@@ -701,7 +762,7 @@
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>horizontal (scrolls left/right)</h3>
+              <h3 id="cust-horizontal">horizontal (scrolls left/right)</h3>
               <p>
                 With <code>horizontal</code> the wheel lays out left-to-right
                 and arrow keys become <kbd>←</kbd> <kbd>→</kbd>. A{" "}
@@ -709,10 +770,12 @@
                 separators between the rows.
               </p>
               <div
-                className="row"
-                style={{ gap: 40, alignItems: "flex-start" }}
+                style={{ display: "flex", flexDirection: "column", gap: 24 }}
               >
                 <div>
+                  <div className="col-label" style={{ marginBottom: 6 }}>
+                    single wheel
+                  </div>
                   <Wheel
                     type="integer"
                     horizontal
@@ -728,9 +791,11 @@
                       </Wheel.Item>
                     ))}
                   </Wheel>
-                  <span className="col-label">single wheel</span>
                 </div>
                 <div>
+                  <div className="col-label" style={{ marginBottom: 6 }}>
+                    WheelGroup horizontal
+                  </div>
                   <WheelGroup horizontal spacing="6px">
                     <Wheel
                       type="integer"
@@ -765,12 +830,13 @@
                     </Wheel>
                     <WheelGroup.Separator>minutes</WheelGroup.Separator>
                   </WheelGroup>
-                  <span className="col-label">WheelGroup horizontal</span>
                 </div>
               </div>
             </div>
             <div>
-              <h3>WheelGroup spacing (gap around separators)</h3>
+              <h3 id="cust-spacing">
+                WheelGroup spacing (gap around separators)
+              </h3>
               <div className="states">
                 <div>
                   <WheelGroup spacing="0">
@@ -791,7 +857,7 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3>glass (frost the neighbours)</h3>
+              <h3 id="cust-glass">glass (frost the neighbours)</h3>
               <p>
                 Every wheel fades its neighbours out toward the edges — that
                 progressive fade <em>is</em> the selection emphasis, so a
@@ -830,7 +896,7 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3>frameBorder (line the window edges)</h3>
+              <h3 id="cust-frame">frameBorder (line the window edges)</h3>
               <p>
                 <code>frameBorder</code> draws a faint line along the top and
                 bottom of the center window. It's independent of{" "}
