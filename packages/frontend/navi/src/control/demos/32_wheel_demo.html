@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wheel Demo</title>
+    <style>
+      body {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .value-display {
+        min-height: 24px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Wheel Demo</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { NaviDebug, Wheel } from "@jsenv/navi";
+
+      const range = (n) => Array.from({ length: n }, (_, i) => i);
+      const pad2 = (n) => String(n).padStart(2, "0");
+
+      const HoursDemo = () => {
+        const [hour, setHour] = useState(4);
+        return (
+          <div className="demo-section">
+            <h2>Single column (hours)</h2>
+            <div className="row">
+              <Wheel
+                value={hour}
+                action={(v) => {
+                  setHour(v);
+                }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <div className="value-display">value: {pad2(hour)}</div>
+            </div>
+          </div>
+        );
+      };
+
+      const TimeDemo = () => {
+        const [h, setH] = useState(0);
+        const [m, setM] = useState(4);
+        const [s, setS] = useState(0);
+        return (
+          <div className="demo-section">
+            <h2>Three columns (like the screenshot)</h2>
+            <div
+              className="row"
+              style={{
+                gap: "4px",
+                width: "fit-content",
+                fontSize: "1.6rem",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <Wheel value={h} action={setH}>
+                {range(24).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <span>:</span>
+              <Wheel value={m} action={setM}>
+                {range(60).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <span>:</span>
+              <Wheel value={s} action={setS}>
+                {range(60).map((v) => (
+                  <Wheel.Item key={v} value={v}>
+                    {pad2(v)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+            <div className="value-display">
+              {pad2(h)}:{pad2(m)}:{pad2(s)}
+            </div>
+          </div>
+        );
+      };
+
+      const FiveVisibleDemo = () => {
+        const [size, setSize] = useState("M");
+        const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
+        return (
+          <div className="demo-section">
+            <h2>visibleCount=5, string values</h2>
+            <div className="row">
+              <Wheel
+                value={size}
+                visibleCount={5}
+                action={(v) => {
+                  setSize(v);
+                }}
+              >
+                {SIZES.map((s) => (
+                  <Wheel.Item key={s} value={s}>
+                    {s}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <div className="value-display">value: {size}</div>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <NaviDebug>
+          <HoursDemo />
+          <TimeDemo />
+          <FiveVisibleDemo />
+        </NaviDebug>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -134,6 +134,7 @@ export { List, ListItem, ListItemGroup } from "./src/control/list/list.jsx";
 export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
+export { Wheel, WheelItem } from "./src/control/wheel/wheel.jsx";
 // --- Table start---
 export {
   filterTableSelection,
