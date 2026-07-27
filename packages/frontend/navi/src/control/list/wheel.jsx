@@ -1,42 +1,40 @@
-import { dispatchCustomEvent } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
+import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import {
-  createComponentResolver,
-  useNextResolver,
-} from "@jsenv/navi/src/resolver/resolver.jsx";
-import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+  ControlFacadeChildrenWrapper,
+  useControlFacadeProps,
+} from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-import {
-  ListItemSelectableResolver,
-  ListSelectableResolver,
-} from "./list_selectable.jsx";
 
 /*
- * Wheel — a selectable list rendered as an iOS-style scroll picker. A short
+ * Wheel — a single-value control rendered as an iOS-style scroll picker. A short
  * viewport shows the selected value in the middle with the neighbouring values
  * faded above/below (or left/right when `horizontal`). The selected value is
  * whichever item is closest to the center; the user changes it by scrolling,
  * dragging, clicking a neighbour, or with the arrow keys.
  *
- * WHAT IS REUSED. All selection/keyboard/action/form wiring comes verbatim from
- * the selectable List (ListSelectableResolver + ListItemSelectableResolver):
- * value/defaultValue, action/uiAction, the focus group over the hidden radio
- * inputs, and the navi_request_select/nav/activate protocol. Wheel only adds the
- * scroll-picker rendering and these scroll behaviours:
- *   - scroll settles        → select the centered item
- *   - focus (arrows/tab)     → scroll the focused item to center
- *   - external value change  → scroll the selected item to center
+ * A SPINBUTTON, NOT A RADIO GROUP. The whole wheel is one focusable element
+ * (role=spinbutton, the container) whose value lives in an invisible input for
+ * the form. The rows (Wheel.Item) are inert, aria-hidden <li>s that only register
+ * their {value, label} with the wheel; they carry no focusable input. The
+ * main-axis arrows step the value by one row (a focus-free value change — no DOM
+ * focus moves between rows, which is what makes keyboard nav cheap); the value
+ * updates immediately while the row glides to center.
  *
- * NO ROVING TABINDEX. The hidden radios share the group `name`, so they are a
- * real native radio group: the browser already Tab-focuses the checked (=
- * centered) one. We deliberately do NOT manage tabindex ourselves — an earlier
- * attempt did and it fought the native behaviour. If Tab ever lands on the wrong
- * item, fix the native grouping/visibility, not this file.
+ * FRAMEWORK REUSE. value/defaultValue, action/uiAction, validation, states and
+ * the readonly/disabled callouts all come from the single-value control facade
+ * (useControlFacadeProps → hidden input + facade container; see picker.jsx).
+ * Wheel adds the scroll-picker rendering and these scroll behaviours:
+ *   - scroll settles        → select the centered item
+ *   - arrow key             → step + glide the new value to center
+ *   - external value change  → scroll the selected item to center
  *
  * LOOP. With `loop`, the list wraps endlessly. We render `visibleCount` inert
  * proxy rows on each side — the last N values before, the first N after — just
@@ -66,9 +64,14 @@ const css = /* css */ `
     border-radius: var(--navi-control-border-radius);
 
     /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
-       the neighbours are just hints, so the outline belongs on the selected
-       value, not the whole column. [data-focus-visible] lets a caller force it. */
-    &:has([navi-selectable-real-input]:focus-visible) .navi_wheel_focus_ring,
+       the neighbours are just hints, so the ring belongs on the selected value,
+       not the whole column. The spinbutton container is the focusable element, so
+       suppress its own UA outline in favour of the ring. [data-focus-visible] lets
+       a caller force the ring. */
+    &:focus {
+      outline: none;
+    }
+    &:focus-visible .navi_wheel_focus_ring,
     &[data-focus-visible] .navi_wheel_focus_ring {
       outline: var(--navi-focus-outline-width) solid
         var(--navi-focus-outline-color);
@@ -77,9 +80,7 @@ const css = /* css */ `
     }
 
     /* Readonly & disabled dim the neighbour text identically; disabled dims the
-       centered value further (so the state reads on the value itself). Both
-       neutralise pointer events on the rows: a click can't then produce a
-       per-row callout, so the wheel-level readonly callout is the only one. */
+       centered value further so the state reads on the value itself. */
     &[data-readonly] {
       --wheel-color: light-dark(#666, #999);
     }
@@ -92,10 +93,24 @@ const css = /* css */ `
     }
     &[data-readonly],
     &[data-disabled] {
-      .navi_wheel_item [navi-selectable-real-input] {
+      /* Rows can't take a click, so the wheel-level readonly callout is the only
+         one — no per-row callouts fire. */
+      .navi_wheel_item {
         pointer-events: none;
       }
     }
+  }
+
+  /* Holds the value for the form. Invisible and inert: it keeps a box (for the
+     callout to anchor to) but never takes focus, pointer, or paint. */
+  .navi_wheel_input {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    opacity: 0;
+    appearance: none;
+    pointer-events: none;
   }
 
   .navi_wheel_viewport {
@@ -147,32 +162,10 @@ const css = /* css */ `
        wheel with many values (or a page full of wheels) scrolls smoothly. */
     content-visibility: auto;
 
-    &[navi-selectable-area-all] {
-      pointer-events: none;
-
-      [navi-selectable-real-input] {
-        z-index: 0;
-        outline: none;
-        opacity: 0;
-        clip-path: none;
-        cursor: pointer;
-        pointer-events: auto;
-      }
-    }
-
     &[data-wheel-current] {
       /* Clicking the current value re-selects what is already selected —
          nothing happens, so don't advertise it as clickable. No visual emphasis
          here: that comes from the veil, positionally. */
-      cursor: default;
-
-      [navi-selectable-real-input] {
-        cursor: default;
-      }
-    }
-
-    &[data-disabled] {
-      opacity: 0.4;
       cursor: default;
     }
   }
@@ -420,19 +413,6 @@ const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
 const WHEEL_GLIDE_MIN_MS = 140;
 const WHEEL_GLIDE_MAX_MS = 600;
 
-// Keys that move focus between items (and thus trigger the browser's focus
-// scroll-into-view we need to undo — see the focusin effect).
-const NAV_KEYS = new Set([
-  "ArrowUp",
-  "ArrowDown",
-  "ArrowLeft",
-  "ArrowRight",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-]);
-
 // Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
 // list of items regardless of how children are wrapped (providers, fragments…).
 // indexRef gives each item its position: WheelUI resets it to 0 every render and
@@ -443,39 +423,17 @@ const WheelItemTrackerContext = createContext(null);
 // Wheel inside it without threading the prop through each one.
 const WheelGroupContext = createContext(null);
 
-const WheelFirstResolver = (props) => {
-  const Next = useNextResolver();
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const idDefault = useId();
-  // The selectable layer looks the group's UI state controller up by this id
-  // (getUIStateControllerById), so it must be stable and always present.
-  props.id = props.id || idDefault;
-  // Selection is the whole point of a wheel, so it is on by default (unlike
-  // List which requires an explicit `selectable`). Pass selectable={false} to
-  // get a purely presentational scroller.
-  props.selectable = props.selectable ?? true;
-  // Restrict the focus group to the wheel's single axis.
-  props.focusGroupDirection =
-    props.focusGroupDirection || (props.horizontal ? "x" : "y");
-  // When looping, arrowing past an end wraps focus around so the keyboard
-  // follows the same endless motion as scrolling.
-  props.focusGroupWrap =
-    props.focusGroupWrap ??
-    (props.loop ? (props.horizontal ? "x" : "y") : undefined);
-
-  return <Next {...props} />;
-};
-
 /**
- * Wheel — a selectable list rendered as a scroll picker (see the file header).
+ * Wheel — a scroll picker (see the file header). It is a single value control
+ * (role=spinbutton), NOT a radio list: one focusable element, arrows change the
+ * value, the value lives in one hidden input for the form. The visible rows are
+ * presentational.
  *
  * @type {import("preact").FunctionComponent<{
  *   value?: any,
  *   defaultValue?: any,
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
- *   selectable?: boolean,
  *   visibleCount?: number,
  *   itemHeight?: number | string,
  *   itemWidth?: number | string,
@@ -499,11 +457,23 @@ const WheelFirstResolver = (props) => {
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
-export const Wheel = createComponentResolver([
-  WheelFirstResolver,
-  ListSelectableResolver,
-  WheelUI,
-]);
+export const Wheel = (props) => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  return <WheelUI {...props} />;
+};
+
+// Wheel-only props: consumed here, must not leak onto the container DOM element.
+const WHEEL_OWN_PROP_KEYS = [
+  "visibleCount",
+  "itemHeight",
+  "itemWidth",
+  "loop",
+  "horizontal",
+  "glass",
+  "frameBorder",
+  "type",
+];
 
 function WheelUI(props) {
   import.meta.css = css;
@@ -518,9 +488,6 @@ function WheelUI(props) {
     frameBorder,
     type,
     style,
-    basePseudoState,
-    children,
-    ...rest
   } = props;
   const group = useContext(WheelGroupContext);
   const isHorizontal = Boolean(horizontal ?? group?.horizontal);
@@ -530,12 +497,39 @@ function WheelUI(props) {
   // Both inherited from a WheelGroup so a whole group is styled with one prop.
   const showGlass = Boolean(glass ?? group?.glass);
   const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
-  const loading = basePseudoState ? basePseudoState[":-navi-loading"] : false;
-  const readOnly = basePseudoState ? basePseudoState[":read-only"] : false;
-  const disabled = basePseudoState ? basePseudoState[":disabled"] : false;
+
+  // A single value control backed by a hidden input (facade pattern, like
+  // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
+  // <input> holding the value for the form. `type` is a rendering hint only —
+  // keep it off the input, which would otherwise become <input type="integer">.
+  const inputRef = useRef(null);
+  const [controlRootProps, controlHostProps, { facadeController }] =
+    useControlFacadeProps(
+      { ...props, ref: inputRef, type: undefined },
+      { controlType: "input" },
+    );
+  const uiStateController = getUIStateControllerById(controlHostProps.id);
+  const { basePseudoState, children } = controlHostProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
   // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
   // controlled value stays authoritative and any scroll springs back to it.
   const interactive = !readOnly && !disabled;
+  const currentValue = uiStateController.uiState;
+  for (const key of WHEEL_OWN_PROP_KEYS) {
+    delete controlRootProps[key];
+  }
+
+  // Ask the framework to change the value (respects readonly/disabled and pops
+  // the readonly callout for free); the controlled value / action flow then
+  // updates uiState, which syncCenterToSelection reacts to.
+  const requestSelectValue = (newValue, event) => {
+    if (compareTwoJsValues(newValue, currentValue) === 0) {
+      return;
+    }
+    dispatchRequestSetUIState(inputRef.current, newValue, { event });
+  };
 
   // Collect every Wheel.Item's {value, label} in order, robustly (children may
   // be wrapped). loopClones drives the proxy rows and the wrap math.
@@ -550,6 +544,40 @@ function WheelUI(props) {
   const loopClones = isLoop
     ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
     : [];
+
+  // Real rows are the tracked items (clones carry .navi_wheel_item_clone). The
+  // selection is the wheel's single value, mapped to a row via the tracker.
+  const REAL_ITEM_SELECTOR = ".navi_wheel_item:not(.navi_wheel_item_clone)";
+  const getItemValueById = (id) => {
+    const match = trackedItems.find((it) => it.id === id);
+    return match ? match.value : undefined;
+  };
+  const getIdForValue = (value) => {
+    const match = trackedItems.find(
+      (it) => compareTwoJsValues(it.value, value) === 0,
+    );
+    if (match) {
+      return match.id;
+    }
+    return trackedItems.length ? trackedItems[0].id : null;
+  };
+
+  // What the spinbutton announces: the selected row's label when it is text (the
+  // human wording, e.g. "09" or "Monday"); otherwise the raw primitive value.
+  // aria-valuenow additionally carries the number for numeric wheels.
+  const selectedTracked = trackedItems.find(
+    (it) => compareTwoJsValues(it.value, currentValue) === 0,
+  );
+  let ariaValueText;
+  if (selectedTracked && typeof selectedTracked.label === "string") {
+    ariaValueText = selectedTracked.label;
+  } else if (typeof currentValue === "string") {
+    ariaValueText = currentValue;
+  } else if (typeof currentValue === "number") {
+    ariaValueText = String(currentValue);
+  } else {
+    ariaValueText = undefined;
+  }
 
   // The id of the item currently sitting in the center. Guards the effects so an
   // external value change (or the initial mount) scrolls the selection into
@@ -608,7 +636,7 @@ function WheelUI(props) {
   // Take the gap between two adjacent real rows' starts — always reliable — and
   // fall back to a rendered row's measured size, then the CSS variable.
   const getItemSize = (vp) => {
-    const reals = vp.querySelectorAll("[navi-list-item-real]");
+    const reals = vp.querySelectorAll(REAL_ITEM_SELECTOR);
     if (reals.length >= 2) {
       const gap = itemMainStart(reals[1]) - itemMainStart(reals[0]);
       if (gap > 0) {
@@ -684,7 +712,7 @@ function WheelUI(props) {
   };
   // Selection tracks the centered *real* item.
   const findCenteredItem = (viewportEl) =>
-    findCenteredMatching(viewportEl, "[navi-list-item-real]");
+    findCenteredMatching(viewportEl, REAL_ITEM_SELECTOR);
   // The "current" emphasis tracks the centered *rendered row* including loop
   // proxies, so a proxy lights up exactly like a real value as it reaches the
   // center — the wrap that swaps it for the real row is then invisible.
@@ -703,7 +731,7 @@ function WheelUI(props) {
     // Real-item count comes from the DOM, not a closed-over `loopClones`: the
     // input effect binds these helpers once, before Wheel.Item children have
     // registered, so the captured `loopClones` would still be empty here.
-    const realItems = vp.querySelectorAll("[navi-list-item-real]");
+    const realItems = vp.querySelectorAll(REAL_ITEM_SELECTOR);
     if (!isLoop || !realItems.length) {
       return false;
     }
@@ -724,7 +752,7 @@ function WheelUI(props) {
 
   // Non-loop: clamp so the first/last value can't be scrolled past center.
   const clampPos = (vp) => {
-    const items = vp.querySelectorAll("[navi-list-item-real]");
+    const items = vp.querySelectorAll(REAL_ITEM_SELECTOR);
     if (!items.length) {
       return;
     }
@@ -778,14 +806,10 @@ function WheelUI(props) {
       return;
     }
     centeredIdRef.current = centered.id;
-    const input = centered.querySelector("[navi-selectable-real-input]");
-    if (input && (input.checked || input.disabled)) {
-      return;
-    }
-    dispatchCustomEvent(ref.current, "navi_request_select", {
-      event: new CustomEvent("navi_wheel_settle"),
-      id: centered.id,
-    });
+    requestSelectValue(
+      getItemValueById(centered.id),
+      new CustomEvent("navi_wheel_settle"),
+    );
   };
 
   // Glide the position to a target with the Web Animations API. WAAPI runs the
@@ -893,7 +917,7 @@ function WheelUI(props) {
   const centerOn = (vp, itemEl, behavior) => {
     const base = centerPosFor(vp, itemEl);
     let target = base;
-    const realCount = vp.querySelectorAll("[navi-list-item-real]").length;
+    const realCount = vp.querySelectorAll(REAL_ITEM_SELECTOR).length;
     if (isLoop && realCount && behavior === "smooth") {
       const realSpan = getItemSize(vp) * realCount;
       if (realSpan > 0) {
@@ -914,32 +938,27 @@ function WheelUI(props) {
     if (!vp) {
       return;
     }
-    const target = vp.querySelectorAll("[navi-list-item-real]")[index];
+    const target = vp.querySelectorAll(REAL_ITEM_SELECTOR)[index];
     if (!target) {
       return;
     }
     centeredIdRef.current = target.id;
-    const input = target.querySelector("[navi-selectable-real-input]");
-    if (!input || !input.checked) {
-      dispatchCustomEvent(ref.current, "navi_request_select", {
-        event: new CustomEvent("navi_wheel_clone_click"),
-        id: target.id,
-      });
-    }
+    requestSelectValue(
+      getItemValueById(target.id),
+      new CustomEvent("navi_wheel_clone_click"),
+    );
     centerOn(vp, target, "smooth");
   };
 
+  // The row for the current value (the selection), else the first row.
   const getSelectedItem = (viewportEl) => {
-    const checkedInput = viewportEl.querySelector(
-      "[navi-selectable-real-input]:checked",
-    );
-    return checkedInput
-      ? checkedInput.closest("[navi-list-item-real]")
-      : viewportEl.querySelector("[navi-list-item-real]");
+    const id = getIdForValue(currentValue);
+    const byId = id ? viewportEl.querySelector(`#${CSS.escape(id)}`) : null;
+    return byId || viewportEl.querySelector(REAL_ITEM_SELECTOR);
   };
 
-  // Sync the center with the current selection (checked radio) — used on first
-  // display and whenever the controlled value changes from outside.
+  // Sync the center with the current value — used on first display and whenever
+  // the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
     const selectedItem = getSelectedItem(viewportEl);
     if (!selectedItem) {
@@ -1004,14 +1023,9 @@ function WheelUI(props) {
       calloutCooldown = setTimeout(() => {
         calloutCooldown = null;
       }, 600);
-      const current = getSelectedItem(vp) || findCenteredItem(vp);
-      if (current) {
-        // Rejected by the selectable layer (readonly) → pops the callout.
-        dispatchCustomEvent(el, "navi_request_select", {
-          event,
-          id: current.id,
-        });
-      }
+      // A set-request the framework rejects because the control is read-only →
+      // pops the read-only callout (the single, control-level one).
+      dispatchRequestSetUIState(inputRef.current, currentValue, { event });
     };
     // Non-loop only: is a wheel in this direction blocked (so the page should
     // scroll instead of the wheel trapping it)?
@@ -1019,7 +1033,7 @@ function WheelUI(props) {
       if (isLoop) {
         return false;
       }
-      const items = vp.querySelectorAll("[navi-list-item-real]");
+      const items = vp.querySelectorAll(REAL_ITEM_SELECTOR);
       if (!items.length) {
         return false;
       }
@@ -1180,48 +1194,80 @@ function WheelUI(props) {
     };
   }, [isLoop, isHorizontal, interactive, readOnly]);
 
-  // Keyboard: the focus group moves focus between the hidden radios; we glide
-  // the focused value to center. Overflow is hidden, so the browser can't
-  // scroll-into-view and fight us. Arrows are swallowed when not interactive.
+  // Keyboard: the spinbutton container is the single focusable element. The
+  // main-axis arrows step the value by one row (a fast, focus-free value change,
+  // unlike a radio group that moves DOM focus per step); the value updates
+  // immediately (for AT) while the row glides to center. Cross-axis arrows are
+  // left for the WheelGroup to move focus between wheels.
   useLayoutEffect(() => {
     const el = ref.current;
     const vp = el.querySelector(".navi_wheel_viewport");
-    const onKeyDownCapture = (e) => {
-      if (!NAV_KEYS.has(e.key) || interactive) {
+    const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
+    const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+    const stepKeys = new Set([prevKey, nextKey, "Home", "End"]);
+    const onKeyDown = (e) => {
+      if (!stepKeys.has(e.key)) {
         return;
       }
       e.preventDefault();
-      e.stopImmediatePropagation();
-    };
-    const onFocusIn = (e) => {
       if (!interactive) {
+        return; // readonly/disabled: swallow, value can't change
+      }
+      const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
+      if (!reals.length) {
         return;
       }
-      const input = e.target.closest("[navi-selectable-real-input]");
-      if (!input) {
-        return;
+      // The centered row is the source of truth for "where we are now": a ref, so
+      // rapid presses step from the latest position (the closure's currentValue
+      // would be a render behind). Fall back to the selection, then the first row.
+      const centeredId = centeredIdRef.current;
+      let selectedIndex = centeredId
+        ? reals.findIndex((row) => row.id === centeredId)
+        : -1;
+      if (selectedIndex < 0) {
+        selectedIndex = reals.indexOf(getSelectedItem(vp));
       }
-      const itemEl = input.closest("[navi-list-item-real]");
-      if (!itemEl) {
-        return;
+      if (selectedIndex < 0) {
+        selectedIndex = 0;
       }
-      centeredIdRef.current = itemEl.id;
-      updateCurrentMarker(vp, itemEl);
-      centerOn(vp, itemEl, "smooth");
+      let nextIndex;
+      if (e.key === "Home") {
+        nextIndex = 0;
+      } else if (e.key === "End") {
+        nextIndex = reals.length - 1;
+      } else {
+        nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
+        if (isLoop) {
+          nextIndex =
+            ((nextIndex % reals.length) + reals.length) % reals.length;
+        } else {
+          nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+        }
+      }
+      const targetItem = reals[nextIndex];
+      centeredIdRef.current = targetItem.id;
+      updateCurrentMarker(vp, targetItem);
+      requestSelectValue(getItemValueById(targetItem.id), e);
+      centerOn(vp, targetItem, "smooth");
     };
-    el.addEventListener("keydown", onKeyDownCapture, true);
-    el.addEventListener("focusin", onFocusIn);
+    el.addEventListener("keydown", onKeyDown);
     return () => {
-      el.removeEventListener("keydown", onKeyDownCapture, true);
-      el.removeEventListener("focusin", onFocusIn);
+      el.removeEventListener("keydown", onKeyDown);
     };
-  }, [isHorizontal, interactive]);
+  }, [isHorizontal, interactive, isLoop]);
 
   return (
     <Box
-      {...rest}
       ref={ref}
+      {...controlRootProps}
       baseClassName="navi_wheel_container"
+      // A spinbutton: one focusable element, arrows adjust the value.
+      role="spinbutton"
+      tabindex={disabled ? undefined : 0}
+      aria-valuenow={
+        typeof currentValue === "number" ? currentValue : undefined
+      }
+      aria-valuetext={ariaValueText}
       data-horizontal={isHorizontal ? "" : undefined}
       data-glass={showGlass ? "" : undefined}
       data-frame-border={showFrameBorder ? "" : undefined}
@@ -1233,6 +1279,19 @@ function WheelUI(props) {
       basePseudoState={basePseudoState}
       style={styleWithVars}
     >
+      {/* The value lives in this input for the form; the wheel is its facade. An
+          invisible overlay (not type=hidden) so it keeps a box the readonly/error
+          callout can anchor to. It is not the focus/pointer target: the container
+          is the spinbutton, the rows take the clicks. */}
+      <Box
+        as="input"
+        {...controlHostProps}
+        tabindex={-1}
+        aria-hidden="true"
+        className="navi_wheel_input"
+        // eslint-disable-next-line react/no-children-prop
+        children={undefined}
+      />
       <LoadingOutline
         loading={loading}
         color="var(--navi-loader-color)"
@@ -1248,7 +1307,9 @@ function WheelUI(props) {
               )
             : null}
           <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
-            {children}
+            <ControlFacadeChildrenWrapper facadeController={facadeController}>
+              {children}
+            </ControlFacadeChildrenWrapper>
           </WheelItemTrackerContext.Provider>
           {isLoop
             ? renderClones(
@@ -1328,79 +1389,47 @@ const updateCurrentMarker = (viewportEl, currentItem) => {
   }
 };
 
-const WheelItemFirstResolver = (props) => {
-  const Next = useNextResolver();
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const idDefault = useId();
-  props.id = props.id || idDefault;
-  props.selectable = props.selectable ?? true;
-  // A wheel is readonly/disabled as a whole, not per-option — so a blocked
-  // interaction should say "this control is read-only", not the list's
-  // per-option "this option isn't available".
-  props.readOnlyMessage =
-    props.readOnlyMessage ?? naviI18n("constraint.readonly.default", props);
-
-  // Report this item's value + label to the wheel (used to build loop proxies).
-  // Wheel.Item must live inside a Wheel, so the context is always present.
-  const trackerContext = useContext(WheelItemTrackerContext);
-  const index = trackerContext.indexRef.current++;
-  trackerContext.tracker.useTrackItem({
-    id: props.id,
-    index,
-    value: props.value,
-    label: props.children,
-  });
-
-  return <Next {...props} />;
-};
-
-const WheelItemUI = (props) => {
-  const { ref, id, children, ...rest } = props;
-
-  return (
-    <Box
-      as="li"
-      baseClassName="navi_wheel_item"
-      id={id}
-      navi-list-item-real=""
-      pseudoClasses={WHEEL_ITEM_PSEUDO_CLASSES}
-      {...rest}
-      index={undefined}
-      selected={undefined}
-      matchInfo={undefined}
-      ref={ref}
-    >
-      {children}
-    </Box>
-  );
-};
-const WHEEL_ITEM_PSEUDO_CLASSES = [
-  ":hover",
-  ":disabled",
-  ":read-only",
-  ":focus-within",
-  ":-navi-selected",
-];
-
 /**
- * Wheel.Item — a selectable value in a Wheel. Must be used inside <Wheel>.
+ * Wheel.Item — a value in a Wheel. Must be used inside <Wheel>.
+ *
+ * The item is a plain, inert <li>: the wheel's spinbutton container owns focus
+ * and announces the value, so an item is a decorative row (aria-hidden) whose
+ * only job is to register its {value, label} with the wheel and be clickable to
+ * center itself. Selection lives on the wheel's value, not per item.
  *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
- *   selected?: boolean,
- *   selectable?: boolean,
- *   readOnly?: boolean,
- *   disabled?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
  */
-export const WheelItem = createComponentResolver([
-  WheelItemFirstResolver,
-  ListItemSelectableResolver,
-  WheelItemUI,
-]);
+export const WheelItem = ({ value, id, children, ...rest }) => {
+  const idDefault = useId();
+  const resolvedId = id || idDefault;
+
+  // Report this item's value + label to the wheel (used to build loop proxies
+  // and to map a value back to its row). Wheel.Item must live inside a Wheel, so
+  // the context is always present.
+  const trackerContext = useContext(WheelItemTrackerContext);
+  const index = trackerContext.indexRef.current++;
+  trackerContext.tracker.useTrackItem({
+    id: resolvedId,
+    index,
+    value,
+    label: children,
+  });
+
+  return (
+    <li
+      {...rest}
+      id={resolvedId}
+      className="navi_wheel_item"
+      aria-hidden="true"
+    >
+      {children}
+    </li>
+  );
+};
 Wheel.Item = WheelItem;
 
 /**
@@ -1447,7 +1476,7 @@ export const WheelGroup = ({
   // Cross-axis arrows move focus between wheels (the main axis stays within a
   // wheel, changing its value). A row of wheels → Left/Right hop columns; a
   // horizontal group stacks wheels → Up/Down hop rows. Focusing the next wheel's
-  // checked value lets you go straight from hours to minutes.
+  // spinbutton lets you go straight from hours to minutes.
   useLayoutEffect(() => {
     const el = groupRef.current;
     const prevKey = horizontal ? "ArrowUp" : "ArrowLeft";
@@ -1471,15 +1500,9 @@ export const WheelGroup = ({
         return;
       }
       const targetWheel = wheels[targetIndex];
-      const radio =
-        targetWheel.querySelector("[navi-selectable-real-input]:checked") ||
-        targetWheel.querySelector("[navi-selectable-real-input]");
-      if (!radio) {
-        return;
-      }
       e.preventDefault();
       e.stopPropagation();
-      radio.focus();
+      targetWheel.focus();
     };
     el.addEventListener("keydown", onKeyDown, true);
     return () => {
