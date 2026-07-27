@@ -210,6 +210,16 @@ export const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
+          // Write the new state back into a bound signal (the two-way `signal`
+          // prop). Setting it re-renders and re-syncs via state_prop_change, but
+          // with the same value → guarded as a no-op, so no loop. For a
+          // checkbox/radio the signal holds the boolean checked state.
+          const boundSignal = s.controlInfo?.signal;
+          if (boundSignal) {
+            boundSignal.value = s.controlInfo.signalHoldsChecked
+              ? currentUIState !== undefined
+              : currentUIState;
+          }
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             debugUIState(`calling uiAction for ${controlType}`, currentUIState);

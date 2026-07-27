@@ -198,14 +198,7 @@
             >
               <Field>
                 <Label>Heures</Label>
-                <Input
-                  name={name}
-                  value={valueSignal}
-                  action={(v) => {
-                    valueSignal.value = v;
-                  }}
-                  {...inputProps}
-                />
+                <Input name={name} signal={valueSignal} {...inputProps} />
               </Field>
               {children}
               <Button type="submit">Submit</Button>

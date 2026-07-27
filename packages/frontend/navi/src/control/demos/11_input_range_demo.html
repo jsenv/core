@@ -334,10 +334,7 @@
                     <div className="range-group">
                       <Input
                         type="range"
-                        value={basicDefaultSignal}
-                        action={(v) => {
-                          basicDefaultSignal.value = v;
-                        }}
+                        signal={basicDefaultSignal}
                         min="0"
                         max="100"
                       />
@@ -476,10 +473,7 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={focusValueSignal}
-                      action={(v) => {
-                        focusValueSignal.value = v;
-                      }}
+                      signal={focusValueSignal}
                       min="0"
                       max="100"
                       pseudoState={{ ":focus-visible": true }}
@@ -773,12 +767,11 @@
                     type="range"
                     min="10"
                     max="100"
-                    value={immediateRadiusSignal}
+                    signal={immediateRadiusSignal}
                     uiAction={(value) => {
                       pushImmediateLog("uiAction", value);
                     }}
                     action={(value) => {
-                      immediateRadiusSignal.value = value;
                       pushImmediateLog("action", value);
                     }}
                   />
@@ -829,7 +822,7 @@
                     name="slow_action"
                     min="10"
                     max="100"
-                    value={slowRadiusSignal}
+                    signal={slowRadiusSignal}
                     uiAction={(value) => {
                       pushSlowLog("uiAction", value);
                     }}
@@ -938,10 +931,7 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={redValueSignal}
-                      action={(v) => {
-                        redValueSignal.value = Number(v);
-                      }}
+                      signal={redValueSignal}
                       min="0"
                       max="100"
                       accentColor="red"
@@ -1012,10 +1002,7 @@
                   <div className="range-group">
                     <Input
                       type="range"
-                      value={greenValueSignal}
-                      action={(v) => {
-                        greenValueSignal.value = v;
-                      }}
+                      signal={greenValueSignal}
                       min="0"
                       max="100"
                       accentColor="green"

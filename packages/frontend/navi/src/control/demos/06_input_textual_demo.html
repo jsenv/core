@@ -696,7 +696,7 @@
             <Box flex="y" spacing="s">
               <Input
                 placeholder="Type something (debounced 600ms)..."
-                value={searchValueSignal}
+                signal={searchValueSignal}
                 uiAction={(v, e) => {
                   push("uiAction", v, e);
                 }}
