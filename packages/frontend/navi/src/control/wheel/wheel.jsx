@@ -394,7 +394,7 @@ const css = /* css */ `
   .navi_wheel_colon {
     display: block;
     width: auto;
-    height: 0.62em;
+    height: 1em;
   }
 `;
 
@@ -1637,8 +1637,8 @@ WheelGroup.Separator = WheelGroupSeparator;
 const WheelColon = (props) => {
   return (
     <svg {...props} className="navi_wheel_colon" viewBox="0 0 8 24">
-      <circle cx="4" cy="8" r="4" fill="currentColor" />
-      <circle cx="4" cy="20" r="4" fill="currentColor" />
+      <circle cx="4" cy="8" r="2" fill="currentColor" />
+      <circle cx="4" cy="16" r="2" fill="currentColor" />
     </svg>
   );
 };
