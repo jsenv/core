@@ -260,17 +260,15 @@ const css = /* css */ `
         flex-direction: column;
       }
       .navi_wheel_item {
-        /* Fixed main-axis size (height); the cross axis follows the content. */
+        /* Fixed main-axis size (height); the cross axis follows the content.
+           box-sizing so per-item padding (below) doesn't grow the fixed row. */
+        box-sizing: border-box;
         height: var(--wheel-item-height);
-        /* No breathing room by default — the wheel shows its true content size, and
-           spacing (between wheels in a group, or around a value) is the caller's
-           choice: set --wheel-item-padding-x on the wheel/group, or the global
-           --navi-wheel-item-padding-x-default. It lives on the ITEM (not the
-           viewport) so the padded area is still scrollable/clickable. */
-        padding-inline: var(
-          --wheel-item-padding-x,
-          var(--navi-wheel-item-padding-x-default, 0px)
-        );
+        /* No breathing room by default — the wheel shows its true content size.
+           Spacing is the caller's choice, set PER ITEM (each Wheel.Item is a Box:
+           paddingX="0.5ch") so the padded area stays scrollable; a global default
+           is the --navi-wheel-item-padding-x-default CSS var. */
+        padding-inline: var(--navi-wheel-item-padding-x-default, 0px);
         /* A full-row line-height so the glyph's line box fills the (even) row
            height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
            centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
@@ -325,14 +323,12 @@ const css = /* css */ `
         transform: translate3d(var(--wheel-offset, 0px), 0, 0);
       }
       .navi_wheel_item {
-        /* Fixed main-axis size (width); the cross axis follows the content. The
-           cross axis is vertical here, but the spacing var stays the same one (see
-           the vertical branch) — 0 by default, the caller opts into padding. */
+        /* Fixed main-axis size (width); the cross axis (vertical here) follows the
+           content. The global padding default is the same var as the vertical
+           branch — 0 by default, opt in per item (see the vertical note). */
+        box-sizing: border-box;
         width: var(--wheel-item-width);
-        padding-block: var(
-          --wheel-item-padding-x,
-          var(--navi-wheel-item-padding-x-default, 0px)
-        );
+        padding-block: var(--navi-wheel-item-padding-x-default, 0px);
       }
       .navi_wheel_pane {
         top: 0;
@@ -367,15 +363,19 @@ const css = /* css */ `
   /* ── WheelGroup ─────────────────────────────────────────────────────────────
      Several wheels with separators (e.g. ":") between them. The separator column
      keeps its natural content width (small for ":", wide for a word like "hours")
-     and is not scrollable. Spacing around the wheels is NOT a group property — it's
-     the wheels' own item padding (--wheel-item-padding-x, see .navi_wheel_item), so
-     the gap stays scrollable and there's a single place that owns padding. A group
-     with no padding shows the wheels at their true content width. */
+     and is not scrollable. Spacing around a wheel is that wheel's own item padding
+     (set per Wheel.Item, see .navi_wheel_item) so it stays scrollable — a group
+     with no padding shows the wheels at their true content width. The "spacing"
+     prop is a separate lever: it pads the VIEWPORT (a fixed gap toward the
+     separator), but that area is a dead zone, so prefer item padding. */
   .navi_wheel_group {
     display: inline-flex;
     align-items: center;
 
     &:not([data-horizontal]) {
+      .navi_wheel_viewport {
+        padding-inline: var(--wheel-spacing, 0px);
+      }
       /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
          whole pixel and lands on the numbers' line (see the note there). Without
          it the separator sits ~1px off the transformed numbers. Vertical only: on
@@ -388,6 +388,10 @@ const css = /* css */ `
     &[data-horizontal] {
       flex-direction: column;
       align-items: center;
+
+      .navi_wheel_viewport {
+        padding-block: var(--wheel-spacing, 0px);
+      }
     }
   }
   .navi_wheel_group_separator {
@@ -512,7 +516,6 @@ const WheelGroupContext = createContext(null);
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
- * @param {number|string} [props.itemPadding] - Cross-axis padding around each value (number = px), i.e. breathing room / spacing toward neighbours. 0 by default; also settable globally via the `--navi-wheel-item-padding-x-default` CSS var.
  * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
@@ -531,7 +534,6 @@ const WHEEL_OWN_PROP_KEYS = [
   "visibleCount",
   "itemHeight",
   "itemWidth",
-  "itemPadding",
   "bounded",
   "horizontal",
   "glass",
@@ -547,7 +549,6 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
-    itemPadding,
     bounded,
     horizontal,
     glass,
@@ -736,15 +737,6 @@ function WheelUI(props) {
       : {
           "--wheel-item-width":
             typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth,
-        }),
-    // Breathing room around each value (the cross axis: horizontal on a vertical
-    // wheel, vertical on a horizontal one). 0 by default — opt in here or globally
-    // via --navi-wheel-item-padding-x-default.
-    ...(itemPadding === undefined
-      ? {}
-      : {
-          "--wheel-item-padding-x":
-            typeof itemPadding === "number" ? `${itemPadding}px` : itemPadding,
         }),
     ...style,
   };
@@ -1708,9 +1700,9 @@ Wheel.Item = WheelItem;
  * them (e.g. a "HH : MM : SS" time picker, or "9 hours 30 minutes").
  *
  * Put <Wheel> and <WheelGroup.Separator> as direct children. Separators take
- * their natural content width; spacing around the wheels is the wheels' own item
- * padding (see `spacing`), so the gap stays scrollable — only the small separator
- * glyph is a dead zone. No spacing by default.
+ * their natural content width. No spacing by default; to add breathing room, set
+ * item padding on each wheel (each Wheel.Item is a Box: paddingX="0.5ch") so the
+ * gap stays scrollable.
  *
  * @type {import("preact").FunctionComponent<{
  *   spacing?: number | string,
@@ -1718,7 +1710,7 @@ Wheel.Item = WheelItem;
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
- * @param {number|string} [props.spacing] - Item padding applied to every wheel in the group (number = px), i.e. the scrollable gap toward neighbours. Unset = no spacing.
+ * @param {number|string} [props.spacing] - Discouraged: pads the wheels' VIEWPORT (a fixed gap toward the separator, number = px). That area is a non-scrollable dead zone — prefer item padding on each wheel.
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
@@ -1750,12 +1742,12 @@ export const WheelGroup = (props) => {
   const { children } = controlgroupProps;
 
   const groupStyle = {
-    // `spacing` is the wheels' item padding (inherited by every wheel in the
-    // group) — the single, scrollable place spacing lives now (see the CSS note).
+    // `spacing` pads the viewport (a fixed gap toward the separator). Prefer item
+    // padding on each wheel instead — this gap is a non-scrollable dead zone.
     ...(spacing === undefined
       ? {}
       : {
-          "--wheel-item-padding-x":
+          "--wheel-spacing":
             typeof spacing === "number" ? `${spacing}px` : spacing,
         }),
     ...style,
