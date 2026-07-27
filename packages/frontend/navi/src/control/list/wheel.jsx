@@ -117,6 +117,9 @@ const css = /* css */ `
 
   .navi_wheel_viewport {
     position: relative;
+    /* Default before the first pointer move; updateCursor refines it to plain in
+       the center window. The rows inherit this. */
+    cursor: pointer;
     touch-action: none;
     /* No native scroll: the list track is positioned by transform (see
        renderPos). Overflow clips the off-center rows; touch-action:none routes
@@ -154,7 +157,9 @@ const css = /* css */ `
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
-    cursor: pointer;
+    /* Cursor is set on the viewport by pointer position (see updateCursor) and
+       inherited here, so it stays fixed to the center window rather than flipping
+       as rows scroll under the pointer. */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
     /* Rendering virtualization: only the rows within each wheel's own viewport
@@ -163,13 +168,6 @@ const css = /* css */ `
        and the wrap math are unaffected — this cuts paint/compositing cost so a
        wheel with many values (or a page full of wheels) scrolls smoothly. */
     content-visibility: auto;
-
-    &[data-wheel-current] {
-      /* Clicking the current value re-selects what is already selected —
-         nothing happens, so don't advertise it as clickable. No visual emphasis
-         here: that comes from the veil, positionally. */
-      cursor: default;
-    }
   }
 
   /* Orientation-specific sizing/layout. The emphasis fade: opacity peaks on the
@@ -379,6 +377,13 @@ const css = /* css */ `
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     white-space: nowrap;
+
+    /* Rasterize on the same grid as the wheels' transformed (translate3d) track.
+       Without a compositing layer of its own, this static glyph is painted in the
+       main layer and can land ~1px off from the GPU-composited digits — invisible
+       for ":" but obvious for a tall glyph like "ZZ". translateZ(0) promotes it to
+       a layer so both go through the same rasterization. */
+    transform: translateZ(0);
     user-select: none;
 
     /* [center]: vertically center the glyph in the row instead of baseline-
@@ -543,15 +548,23 @@ function WheelUI(props) {
 
   // A single value control backed by a hidden input (facade pattern, like
   // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
-  // <input> holding the value for the form. `type` is a rendering hint only —
-  // keep it off the input, which would otherwise become <input type="integer">.
+  // <input> holding the value for the form.
+  //
+  // type="navi_js" is what keeps the value TYPED end to end. Wheel.Item values
+  // are arbitrary JS (numbers, ISO strings, day objects…); a plain text input
+  // would let readControlValue read them back as DOM strings — the framework
+  // re-syncs uiState from the input after every change, so `9` would come back as
+  // "9" and action/aria would see a string. navi_js makes readControlValue return
+  // the controller's real JS value instead (same mechanism Picker uses for its
+  // complex values). The wheel's own `type` prop ("integer", "day"…) is a
+  // rendering hint kept on the container (data-wheel-type), never on the input.
   const inputRef = useRef(null);
   const [controlRootProps, controlHostProps, { facadeController }] =
     useControlFacadeProps(
       {
         ...props,
         ref: inputRef,
-        type: undefined,
+        type: "navi_js",
       },
       { controlType: "input" },
     );
@@ -563,9 +576,8 @@ function WheelUI(props) {
   // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
   // controlled value stays authoritative and any scroll springs back to it.
   const interactive = !readOnly && !disabled;
-  // The framework keeps uiState as the exact JS value we set it to (the typed
-  // value from Wheel.Item, e.g. the number 9) — the DOM <input> carries a
-  // serialized string for the form, but the value we compare and expose is typed.
+  // The typed selected value (see the navi_js note above): what the rest of the
+  // file compares (compareTwoJsValues) and exposes (action/uiAction, aria).
   const currentValue = uiStateController.uiState;
   for (const key of WHEEL_OWN_PROP_KEYS) {
     delete controlRootProps[key];
@@ -703,16 +715,13 @@ function WheelUI(props) {
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   const applyTransform = (track, pos) => {
-    // Snap to the DEVICE-pixel grid, not the CSS-pixel grid. The digits live in
-    // this transformed layer; the WheelGroup separators are static, rasterized by
-    // the browser on the device grid. Rounding pos to a whole CSS px can still
-    // leave the digits up to half a CSS px off from that grid — one whole device
-    // pixel at DPR 2 — which reads as the separator sitting ~1px above/below the
-    // numbers. Rounding to device px lands both on the same grid: aligned and
-    // crisp. (The WAAPI glide interpolates its own keyframes, so mid-animation
-    // smoothness is unaffected.)
-    const dpr = window.devicePixelRatio || 1;
-    const p = -Math.round(pos * dpr) / dpr;
+    // Snap to a whole pixel so the digits stay crisp. The separators are promoted
+    // to their own compositing layer (see .navi_wheel_group_separator) so they
+    // rasterize on the same grid as this transformed track — otherwise GPU-layer
+    // text can land ~1px off from main-layer text, which a tall separator glyph
+    // (e.g. "ZZ") makes obvious. (The WAAPI glide interpolates its own keyframes,
+    // so mid-animation smoothness is unaffected.)
+    const p = -Math.round(pos);
     track.style.transform = isHorizontal
       ? `translate3d(${p}px, 0, 0)`
       : `translate3d(0, ${p}px, 0)`;
@@ -1169,6 +1178,24 @@ function WheelUI(props) {
       }
     };
 
+    // Cursor by POSITION, not by which row is under the pointer: the center
+    // window (already-selected value) is a plain cursor, everywhere else is a
+    // pointer (click to select). Set on the viewport — the rows inherit it — so a
+    // fixed mouse doesn't flicker between default/pointer as rows scroll under it.
+    const updateCursor = (e) => {
+      if (!interactive) {
+        vp.style.cursor = "default";
+        return;
+      }
+      const rect = vp.getBoundingClientRect();
+      const along = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top;
+      const size = isHorizontal ? rect.width : rect.height;
+      const half = getItemSize(vp) / 2;
+      const mid = size / 2;
+      const inCenter = along >= mid - half && along <= mid + half;
+      vp.style.cursor = inCenter ? "default" : "pointer";
+    };
+
     let drag = null;
     const onPointerDown = (e) => {
       if (e.pointerType === "mouse" && e.button !== 0) {
@@ -1192,7 +1219,11 @@ function WheelUI(props) {
       };
     };
     const onPointerMove = (e) => {
-      if (!drag || e.pointerId !== drag.pointerId) {
+      if (!drag) {
+        updateCursor(e); // hovering (no button): keep the position cursor fresh
+        return;
+      }
+      if (e.pointerId !== drag.pointerId) {
         return;
       }
       const client = isHorizontal ? e.clientX : e.clientY;
@@ -1226,7 +1257,16 @@ function WheelUI(props) {
       }
       drag = null;
       if (!wasDrag) {
-        return; // a tap → let the underlying radio handle selection
+        // A tap: glide the tapped neighbour to center and select it. The centered
+        // row is a no-op; clones keep their own handler (handleCloneClick).
+        const tapped = e.target.closest(REAL_ITEM_SELECTOR);
+        if (tapped && tapped.id !== centeredIdRef.current) {
+          centeredIdRef.current = tapped.id;
+          updateCurrentMarker(vp, tapped);
+          requestSelectValue(getItemValueById(tapped.id), e);
+          centerOn(vp, tapped, "smooth");
+        }
+        return;
       }
       // Position moves opposite to the finger.
       settle(vp, -velocity);
