@@ -369,9 +369,10 @@ const css = /* css */ `
     }
   }
   .navi_wheel_group_separator {
-    /* Stretch to the group height (= the wheels' height) and center the inner
-       row, landing it on the middle (selected) row. A sibling of the wheels, so
-       it does NOT inherit their --wheel-item-height — re-expose it here. */
+    /* Stretch to the group height (= the wheels' height) and center the content,
+       landing it on the middle (selected) row and sharing the numbers' baseline
+       (right for words / letters like "ZZ"). A sibling of the wheels, so it does
+       NOT inherit their --wheel-item-height — re-expose it here. */
     --wheel-item-height: round(2.4em, 1px);
 
     display: flex;
@@ -379,26 +380,18 @@ const css = /* css */ `
     align-self: stretch;
     justify-content: center;
     color: var(--wheel-color, light-dark(#111, #eee));
+    font-weight: 600;
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     white-space: nowrap;
     user-select: none;
-  }
-  .navi_wheel_group_separator_content {
-    /* One wheel row, laid out exactly like a .navi_wheel_item so its glyph shares
-       the numbers' text baseline (right for words / letters like "ZZ"). */
-    display: flex;
-    height: var(--wheel-item-height);
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-  }
-  /* [center]: vertically center the glyph in the row instead of baseline-aligning
-     it — glyphs that sit low on the baseline (e.g. ":") then land on the numbers'
-     optical center. A full-row line-height does the centering. */
-  .navi_wheel_group_separator[data-center] .navi_wheel_group_separator_content {
-    line-height: var(--wheel-item-height);
+
+    /* [center]: vertically center the glyph in the row instead of baseline-
+       aligning it — glyphs that sit low on the baseline (e.g. ":") then land on
+       the numbers' optical center. A full-row line-height does the centering. */
+    &[data-center] {
+      line-height: var(--wheel-item-height);
+    }
   }
 `;
 
@@ -638,7 +631,12 @@ function WheelUI(props) {
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   const applyTransform = (track, pos) => {
-    const p = -pos;
+    // Snap to a whole pixel: a fractional translate renders the digits at a
+    // sub-pixel offset (blurred and ~1px off) from the static, pixel-aligned
+    // separators. The nearest-integer rest position is what the separators sit
+    // on, so rounding keeps them exactly aligned and crisp. (The WAAPI glide
+    // interpolates its own keyframes, so mid-animation smoothness is unaffected.)
+    const p = -Math.round(pos);
     track.style.transform = isHorizontal
       ? `translate3d(${p}px, 0, 0)`
       : `translate3d(0, ${p}px, 0)`;
@@ -1085,6 +1083,13 @@ function WheelUI(props) {
         return;
       }
       cancelAnim();
+      // Fold the (possibly accumulated) position back into the real-items band
+      // first — seamless, since a whole extent away shows identical content — so
+      // repeated ±item never walks the glide off the end of the clone runway
+      // into blank space (which also desynced the centered value).
+      if (isLoop) {
+        wrapPos(vp);
+      }
       if (e.detail.behavior === "smooth") {
         animateTo(vp, posRef.current + delta, () => settle(vp, 0));
       } else {
@@ -1519,7 +1524,7 @@ const WheelGroupSeparator = ({ children, center, ...rest }) => {
       data-center={center ? "" : undefined}
       aria-hidden="true"
     >
-      <span className="navi_wheel_group_separator_content">{children}</span>
+      {children}
     </Box>
   );
 };
