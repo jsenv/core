@@ -36,7 +36,8 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
  *   - arrow key             → step + glide the new value to center
  *   - external value change  → scroll the selected item to center
  *
- * LOOP. With `loop`, the list wraps endlessly. We render `visibleCount` inert
+ * LOOP. A wheel wraps endlessly by default (`bounded` opts out, giving fixed
+ * ends). When looping, we render `visibleCount` inert
  * proxy rows on each side — the last N values before, the first N after — just
  * enough to fill the viewport at the edges. On every scroll we fold the center
  * back into the real-items band by whole real-list extents; seamless because a
@@ -437,7 +438,7 @@ const WheelGroupContext = createContext(null);
  *   visibleCount?: number,
  *   itemHeight?: number | string,
  *   itemWidth?: number | string,
- *   loop?: boolean,
+ *   bounded?: boolean,
  *   horizontal?: boolean,
  *   type?: string,
  *   name?: string,
@@ -451,7 +452,7 @@ const WheelGroupContext = createContext(null);
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
- * @param {boolean} [props.loop] - Wrap around endlessly: past the last value the first reappears (and vice-versa).
+ * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
@@ -468,7 +469,7 @@ const WHEEL_OWN_PROP_KEYS = [
   "visibleCount",
   "itemHeight",
   "itemWidth",
-  "loop",
+  "bounded",
   "horizontal",
   "glass",
   "frameBorder",
@@ -482,7 +483,7 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
-    loop,
+    bounded,
     horizontal,
     glass,
     frameBorder,
@@ -491,7 +492,8 @@ function WheelUI(props) {
   } = props;
   const group = useContext(WheelGroupContext);
   const isHorizontal = Boolean(horizontal ?? group?.horizontal);
-  const isLoop = Boolean(loop);
+  // A wheel turns by default; `bounded` gives it fixed ends (no wrap).
+  const isLoop = !bounded;
   // Glass: frost the neighbouring rows so the center reads as a clear "window"
   // (like the iOS picker). frameBorder lines the window edges (independent).
   // Both inherited from a WheelGroup so a whole group is styled with one prop.

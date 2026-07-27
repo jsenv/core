@@ -375,6 +375,29 @@ focus_classes: {
     { capture: true },
   );
 
+  // A keystroke flips keyboardNavigationUsed, which can turn :focus-visible on —
+  // but only for the element that holds focus, directly or through aria-controls
+  // / a proxy. Pressing a key cannot reveal a focus ring on an unfocused element.
+  // So a single shared handler re-checks just that focus chain (the active
+  // element, what it controls, and its proxy — the last two via
+  // requestPseudoStateCheck / notifyAriaControlled). This runs in the bubble
+  // phase, after the capture-phase listener above has updated the flag.
+  //
+  // The alternative — each registered :focus-visible element adding its own
+  // document keydown listener that re-tests itself — makes one keypress cost
+  // O(number-of-boxes) full-document [aria-controls] / proxy queries, since every
+  // unfocused element falls through matches(":focus-visible") into hasIndirectFocus.
+  const recheckFocusChainOnKey = (e) => {
+    const active = document.activeElement;
+    if (!active || active === document.body) {
+      return;
+    }
+    requestPseudoStateCheck(active, { event: e });
+    notifyAriaControlled(active, e);
+  };
+  document.addEventListener("keydown", recheckFocusChainOnKey);
+  document.addEventListener("keyup", recheckFocusChainOnKey);
+
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
@@ -483,15 +506,11 @@ focus_classes: {
   });
   definePseudoClass(":focus-visible", {
     attribute: "data-focus-visible",
+    // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
+    // handler re-checks the focused element (the only one a keystroke can turn
+    // focus-visible) so a keypress stays O(1), not O(number-of-boxes).
     setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        cleanup();
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
+      return setupFocus(el, callback);
     },
     test: (el) => {
       if (el.matches(":focus-visible")) {

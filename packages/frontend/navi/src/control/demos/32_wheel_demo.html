@@ -431,6 +431,7 @@
             <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
             <div className="row">
               <Wheel
+                bounded
                 value={size}
                 visibleCount={5}
                 action={(v) => {
@@ -454,6 +455,7 @@
             </p>
             <div className="row">
               <Wheel
+                bounded
                 type="day"
                 value={day}
                 action={(v) => {
