@@ -52,7 +52,9 @@ import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import {
   ControlFacadeChildrenWrapper,
+  ControlgroupChildrenWrapper,
   useControlFacadeProps,
+  useControlgroupProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
@@ -1655,17 +1657,34 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
  */
-export const WheelGroup = ({
-  spacing,
-  horizontal,
-  glass,
-  frameBorder,
-  style,
-  children,
-  ...rest
-}) => {
+export const WheelGroup = (props) => {
   import.meta.css = css;
-  const groupRef = useRef(null);
+  // WheelGroup IS a control group: it aggregates its named wheels ("hours",
+  // "minutes"…) into one object value, so it can sit directly inside a Form or a
+  // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
+  // props are consumed here; the rest flow into the group hook.
+  const { spacing, horizontal, glass, frameBorder, style } = props;
+  // Consumed here — must not reach the group hook (it would spread them onto the
+  // DOM as unknown attributes). `style` is re-applied below via groupStyle.
+  delete props.spacing;
+  delete props.horizontal;
+  delete props.glass;
+  delete props.frameBorder;
+  delete props.style;
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const groupRef = props.ref;
+
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
+    useControlgroupProps(props, {
+      allowCapture: true,
+      wantRequesterButtonState: true,
+      controlType: "wheel_group",
+      stateType: "object",
+      cascadeValidationToChildren: true,
+    });
+  const { children } = controlgroupProps;
+
   const groupStyle = {
     ...(spacing === undefined
       ? {}
@@ -1716,18 +1735,32 @@ export const WheelGroup = ({
   // A Box (not a plain div) so style props like border/padding work directly.
   return (
     <Box
-      {...rest}
-      ref={groupRef}
+      {...controlgroupRootProps}
+      {...controlgroupProps}
       baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
+      pseudoClasses={WHEEL_GROUP_PSEUDO_CLASSES}
     >
       <WheelGroupContext.Provider value={{ glass, frameBorder, horizontal }}>
-        {children}
+        <ControlgroupChildrenWrapper
+          {...childrenWrapperProps}
+          // Don't propagate the group name to children (an anonymous wheel would
+          // otherwise inherit it) — each wheel is named individually.
+          name={undefined}
+        >
+          {children}
+        </ControlgroupChildrenWrapper>
       </WheelGroupContext.Provider>
     </Box>
   );
 };
+const WHEEL_GROUP_PSEUDO_CLASSES = [
+  ":focus-within",
+  ":read-only",
+  ":disabled",
+  ":-navi-loading",
+];
 /**
  * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
  * Its content sits in a one-row box that mirrors a wheel item — same full-row
