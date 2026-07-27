@@ -573,10 +573,6 @@ const LinkPlain = (props) => {
         blankTargetIcon === undefined
           ? innerTarget === "_blank"
           : blankTargetIcon;
-      // The auto anchor icon is only a stand-in for missing content: an anchor
-      // link with children (e.g. writing "#" directly) renders those instead.
-      const innerAnchorIcon =
-        anchorIcon === undefined ? isAnchor && !children : anchorIcon;
       if (innerBlankTargetIcon) {
         innerEndIcon =
           innerBlankTargetIcon === true ? (
@@ -584,9 +580,16 @@ const LinkPlain = (props) => {
           ) : (
             innerBlankTargetIcon
           );
-      } else if (innerAnchorIcon) {
-        innerEndIcon =
-          innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
+      } else if (anchorIcon === undefined) {
+        if (anchor) {
+          if (!children) {
+            innerEndIcon = <LinkAnchorSvg />;
+          }
+        } else if (isAnchor) {
+          innerEndIcon = <LinkAnchorSvg />;
+        }
+      } else {
+        innerEndIcon = anchorIcon;
       }
     }
   } else {
