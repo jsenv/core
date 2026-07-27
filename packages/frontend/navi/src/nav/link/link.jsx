@@ -104,22 +104,10 @@ const css = /* css */ `
 
     position: relative;
     aspect-ratio: inherit;
-    padding-top: max(
-      var(--x-link-padding-top),
-      var(--link-loading-outline-size)
-    );
-    padding-right: max(
-      var(--x-link-padding-right),
-      var(--link-loading-outline-size)
-    );
-    padding-bottom: max(
-      var(--x-link-padding-bottom),
-      var(--link-loading-outline-size)
-    );
-    padding-left: max(
-      var(--x-link-padding-left),
-      var(--link-loading-outline-size)
-    );
+    padding-top: var(--x-link-padding-top);
+    padding-right: var(--x-link-padding-right);
+    padding-bottom: var(--link-loading-outline-size);
+    padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
