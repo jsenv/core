@@ -673,31 +673,31 @@
 
             <h3 style={{ marginTop: 24 }}>1 separator, 2 columns</h3>
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
-              <WheelGroup>
-                <HourWheel />
+              <WheelGroup spacing="0">
+                <HourWheel itemProps={{ padding: 0 }} />
                 <WheelGroup.Separator center>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: 0 }} />
               </WheelGroup>
-              <WheelGroup>
-                <HourWheel />
+              <WheelGroup spacing="0">
+                <HourWheel itemProps={{ padding: 0 }} />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: 0 }} />
               </WheelGroup>
             </div>
 
             <h3 style={{ marginTop: 24 }}>
               Word separators (hours + minutes), incl. trailing
             </h3>
-            <WheelGroup spacing="0.75ch">
-              <HourWheel />
+            <WheelGroup spacing="0">
+              <HourWheel itemProps={{ padding: 0 }} />
               <WheelGroup.Separator>
                 <Boxed>hours</Boxed>
               </WheelGroup.Separator>
-              <QuarterWheel />
+              <QuarterWheel itemProps={{ padding: 0 }} />
               <WheelGroup.Separator>
                 <Boxed>minutes</Boxed>
               </WheelGroup.Separator>

@@ -251,7 +251,7 @@ const css = /* css */ `
       .navi_wheel_item {
         /* Main-axis size is fixed (height); reserve a remembered cross-axis size
            so a skipped row doesn't collapse the wheel's width. */
-        contain-intrinsic-width: auto 3ch;
+        /* contain-intrinsic-width: auto 3ch; */
         height: var(--wheel-item-height);
         padding-inline: var(--wheel-item-padding-x, 0.5ch);
       }
@@ -303,7 +303,7 @@ const css = /* css */ `
       }
       .navi_wheel_item {
         /* Main-axis size is fixed (width); reserve a remembered cross-axis size. */
-        contain-intrinsic-height: auto 1.5em;
+        /* contain-intrinsic-height: auto 1.5em; */
         width: var(--wheel-item-width);
         padding-block: var(--wheel-item-padding-x, 0.5ch);
       }
