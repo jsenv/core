@@ -519,6 +519,10 @@ const usePopoverProps = (props) => {
     positionAreaWhenAnchorIsInvalid,
     marginWithContainer = 0,
     pointerInteractionOutsideEffect = "none",
+    // Whether closing via a pointer press OUTSIDE the popover counts as a cancel
+    // (revert) or a plain close (commit). Default true (Escape-like). A picker sets
+    // it false so clicking away commits the edited value — see picker_custom.jsx.
+    pointerOutsideCloseIsCancel = true,
     scrollCapture,
     focusCapture,
     animation,
@@ -1181,7 +1185,9 @@ const usePopoverProps = (props) => {
         return;
       }
       if (pointerInteractionOutsideEffect === "close") {
-        openController.requestClose(mouseDownEvent, { isCancel: true });
+        openController.requestClose(mouseDownEvent, {
+          isCancel: pointerOutsideCloseIsCancel,
+        });
         return;
       }
     },

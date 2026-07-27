@@ -155,6 +155,7 @@ export const Popup = (props) => {
     marginWithAnchor,
     focusCapture,
     positionAreaFixed,
+    pointerOutsideCloseIsCancel,
     ...rest
   } = props;
 
@@ -185,6 +186,7 @@ export const Popup = (props) => {
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
       positionAreaFixed={positionAreaFixed}
+      pointerOutsideCloseIsCancel={pointerOutsideCloseIsCancel}
       className={withPropsClassName("navi_popup", className)}
     >
       {children}

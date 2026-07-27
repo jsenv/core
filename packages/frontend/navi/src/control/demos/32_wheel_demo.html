@@ -630,17 +630,20 @@
               the value changed.
             </p>
             <div className="row">
-              <Picker
-                type="controlgroup"
-                ui={<DurationWheelUI />}
-                placeholder="Choisir une durée"
-                popoverWidthFitContent
-                action={(v) => {
-                  setDuration(v);
-                }}
-              >
-                <DurationPickerContent />
-              </Picker>
+              <NaviDebug debugAll>
+                <Picker
+                  type="controlgroup"
+                  ui={<DurationWheelUI />}
+                  placeholder="Choisir une durée"
+                  popoverWidthFitContent
+                  commitOnClickOutside
+                  action={(v) => {
+                    setDuration(v);
+                  }}
+                >
+                  <DurationPickerContent />
+                </Picker>
+              </NaviDebug>
               <span className="col-label">
                 {pad2(duration.hours ?? durationHoursSignal.value)}:
                 {pad2(duration.minutes ?? durationMinutesSignal.value)}
@@ -670,11 +673,13 @@
         <span className="dbg-text">{children}</span>
       );
 
-      // Small self-contained wheels reused across the separator cases.
+      // Small self-contained wheels reused across the separator cases. Named so
+      // the WheelGroup (a control group) can include them in its value without
+      // warning; the caller can override the name.
       const HourWheel = (props) => {
         const [v, setV] = useState(9);
         return (
-          <Wheel type="integer" value={v} action={setV} {...props}>
+          <Wheel name="hour" type="integer" value={v} action={setV} {...props}>
             {range(24).map((h) => (
               <Wheel.Item key={h} value={h} {...props?.itemProps}>
                 <Boxed>{pad2(h)}</Boxed>
@@ -689,7 +694,13 @@
       const QuarterWheel = (props) => {
         const [v, setV] = useState(30);
         return (
-          <Wheel type="integer" value={v} action={setV} {...props}>
+          <Wheel
+            name="quarter"
+            type="integer"
+            value={v}
+            action={setV}
+            {...props}
+          >
             {[0, 15, 30, 45].map((x) => (
               <Wheel.Item key={x} value={x} {...props?.itemProps}>
                 <Boxed>{pad2(x)}</Boxed>
@@ -1031,6 +1042,7 @@
                   </div>
                   <WheelGroup horizontal spacing="6px">
                     <Wheel
+                      name="hours"
                       type="integer"
                       horizontal
                       value={hzH}
@@ -1048,6 +1060,7 @@
                       <Boxed>hours</Boxed>
                     </WheelGroup.Separator>
                     <Wheel
+                      name="minutes"
                       type="integer"
                       horizontal
                       value={hzM}
@@ -1179,7 +1192,12 @@
               <div className="states">
                 <div>
                   <WheelGroup glass spacing="0.5ch">
-                    <Wheel type="integer" value={gh} action={setGh}>
+                    <Wheel
+                      name="hours"
+                      type="integer"
+                      value={gh}
+                      action={setGh}
+                    >
                       {range(24).map((h) => (
                         <Wheel.Item key={h} value={h}>
                           {pad2(h)}
@@ -1189,7 +1207,12 @@
                     <WheelGroup.Separator>
                       <Boxed>:</Boxed>
                     </WheelGroup.Separator>
-                    <Wheel type="integer" value={gm} action={setGm}>
+                    <Wheel
+                      name="minutes"
+                      type="integer"
+                      value={gm}
+                      action={setGm}
+                    >
                       {[0, 15, 30, 45].map((m) => (
                         <Wheel.Item key={m} value={m}>
                           {pad2(m)}
