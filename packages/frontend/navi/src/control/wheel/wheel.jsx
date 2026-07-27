@@ -244,6 +244,7 @@ const css = /* css */ `
 
     &:not([data-horizontal]) {
       --wheel-fade-direction: to bottom;
+      width: fit-content;
 
       .navi_wheel_viewport {
         width: 100%;
@@ -306,6 +307,7 @@ const css = /* css */ `
 
     &[data-horizontal] {
       --wheel-fade-direction: to right;
+      height: fit-content;
 
       .navi_wheel_viewport {
         width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
@@ -506,6 +508,7 @@ const WheelGroupContext = createContext(null);
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
+ * @param {number|string} [props.itemPadding] - Cross-axis padding around each value (number = px), i.e. breathing room / spacing toward neighbours. 0 by default; also settable globally via the `--navi-wheel-item-padding-x-default` CSS var.
  * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
@@ -524,6 +527,7 @@ const WHEEL_OWN_PROP_KEYS = [
   "visibleCount",
   "itemHeight",
   "itemWidth",
+  "itemPadding",
   "bounded",
   "horizontal",
   "glass",
@@ -539,6 +543,7 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
+    itemPadding,
     bounded,
     horizontal,
     glass,
@@ -727,6 +732,15 @@ function WheelUI(props) {
       : {
           "--wheel-item-width":
             typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth,
+        }),
+    // Breathing room around each value (the cross axis: horizontal on a vertical
+    // wheel, vertical on a horizontal one). 0 by default — opt in here or globally
+    // via --navi-wheel-item-padding-x-default.
+    ...(itemPadding === undefined
+      ? {}
+      : {
+          "--wheel-item-padding-x":
+            typeof itemPadding === "number" ? `${itemPadding}px` : itemPadding,
         }),
     ...style,
   };
@@ -1018,12 +1032,19 @@ function WheelUI(props) {
     if (size === 0) {
       return;
     }
-    if (forcedTarget !== null && forcedTarget !== undefined) {
-      glideTo(vp, forcedTarget);
-      return;
+    let target =
+      forcedTarget !== null && forcedTarget !== undefined
+        ? forcedTarget
+        : snapPosToRow(vp, posRef.current + velocity * WHEEL_MOMENTUM_MS);
+    // Bounded: never glide past the first/last row. glideStep sets pos directly
+    // (no setPos clamp), so a high leftover velocity — e.g. flicking hard to the
+    // end then whipping the mouse off the wheel before it decays — would otherwise
+    // project a target beyond the end and leave the wheel overscrolled there.
+    if (!isLoop) {
+      const count = trackedItemsRef.current.length;
+      target = clampNumber(target, 0, (count - 1) * size);
     }
-    const projected = posRef.current + velocity * WHEEL_MOMENTUM_MS;
-    glideTo(vp, snapPosToRow(vp, projected));
+    glideTo(vp, target);
   };
 
   // Center value `index` (external value / initial / keyboard / click). Smooth
@@ -1681,9 +1702,9 @@ Wheel.Item = WheelItem;
  * them (e.g. a "HH : MM : SS" time picker, or "9 hours 30 minutes").
  *
  * Put <Wheel> and <WheelGroup.Separator> as direct children. Separators take
- * their natural content width; the scrollable spacing around them is provided by
- * the wheels (--wheel-spacing padding on their viewport), so scrolling in the
- * gap scrolls the wheel — only the small separator glyph is a dead zone.
+ * their natural content width; spacing around the wheels is the wheels' own item
+ * padding (see `spacing`), so the gap stays scrollable — only the small separator
+ * glyph is a dead zone. No spacing by default.
  *
  * @type {import("preact").FunctionComponent<{
  *   spacing?: number | string,
@@ -1691,7 +1712,7 @@ Wheel.Item = WheelItem;
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
- * @param {number|string} [props.spacing] - Scrollable gap each wheel adds toward its neighbours (number = px; default 0.5ch).
+ * @param {number|string} [props.spacing] - Item padding applied to every wheel in the group (number = px), i.e. the scrollable gap toward neighbours. Unset = no spacing.
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
@@ -1723,10 +1744,12 @@ export const WheelGroup = (props) => {
   const { children } = controlgroupProps;
 
   const groupStyle = {
+    // `spacing` is the wheels' item padding (inherited by every wheel in the
+    // group) — the single, scrollable place spacing lives now (see the CSS note).
     ...(spacing === undefined
       ? {}
       : {
-          "--wheel-spacing":
+          "--wheel-item-padding-x":
             typeof spacing === "number" ? `${spacing}px` : spacing,
         }),
     ...style,
