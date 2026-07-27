@@ -216,15 +216,24 @@ const css = /* css */ `
       border-radius: 3px;
       pointer-events: none;
     }
+    /* The loading outline (rendered as a container child, outside the viewport)
+       tracks the center window like the focus ring, above the glass/fade so it
+       is never dimmed. Geometry lives in the orientation branches. */
+    .navi_loading_outline_wrapper {
+      z-index: 3;
+    }
     &[data-glass] .navi_wheel_pane {
       /* A faint frost tint under the blur flattens the halo a bare
-         backdrop-filter leaves around dark glyphs. Tune with --wheel-glass-tint. */
+         backdrop-filter leaves around dark glyphs; saturate revives the colours
+         the blur washes out, for a truer glass look. Tune via --wheel-glass-*. */
       background: light-dark(
         rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
         rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
       );
-      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
-      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px));
+      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
+        saturate(var(--wheel-glass-saturate, 160%));
+      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
+        saturate(var(--wheel-glass-saturate, 160%));
     }
 
     &:not([data-horizontal]) {
@@ -263,11 +272,13 @@ const css = /* css */ `
           bottom: 0;
         }
       }
-      .navi_wheel_focus_ring {
+      .navi_wheel_focus_ring,
+      .navi_loading_outline_wrapper {
         top: calc((100% - var(--wheel-item-height)) / 2);
         right: 0;
+        bottom: calc((100% - var(--wheel-item-height)) / 2);
         left: 0;
-        height: var(--wheel-item-height);
+        height: auto;
       }
       &[data-frame-border] .navi_wheel_pane {
         &[data-side="start"] {
@@ -313,11 +324,13 @@ const css = /* css */ `
           right: 0;
         }
       }
-      .navi_wheel_focus_ring {
+      .navi_wheel_focus_ring,
+      .navi_loading_outline_wrapper {
         top: 0;
+        right: calc((100% - var(--wheel-item-width)) / 2);
         bottom: 0;
         left: calc((100% - var(--wheel-item-width)) / 2);
-        width: var(--wheel-item-width);
+        width: auto;
       }
       &[data-frame-border] .navi_wheel_pane {
         &[data-side="start"] {
@@ -372,16 +385,20 @@ const css = /* css */ `
     user-select: none;
   }
   .navi_wheel_group_separator_content {
-    /* One wheel row, laid out exactly like a .navi_wheel_item so its glyph
-       baseline lands identically on the center row — rather than centering the
-       raw text in the full group height, which diverges from the item box model
-       and reads as a slight vertical offset. */
+    /* One wheel row, laid out exactly like a .navi_wheel_item so its glyph shares
+       the numbers' text baseline (right for words / letters like "ZZ"). */
     display: flex;
     height: var(--wheel-item-height);
     flex: none;
     align-items: center;
     justify-content: center;
     font-weight: 600;
+  }
+  /* [center]: vertically center the glyph in the row instead of baseline-aligning
+     it — glyphs that sit low on the baseline (e.g. ":") then land on the numbers'
+     optical center. A full-row line-height does the centering. */
+  .navi_wheel_group_separator[data-center] .navi_wheel_group_separator_content {
+    line-height: var(--wheel-item-height);
   }
 `;
 
@@ -399,6 +416,16 @@ const WHEEL_MAX_VELOCITY = 1;
 const WHEEL_DECAY = 0.88;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
+
+// Programmatic glide (arrow keys, clone click). Duration is proportional to the
+// distance (constant speed, px/ms) so a redirect to a farther target — e.g. a
+// second arrow press before the first glide finishes — lengthens the glide to
+// match instead of speeding up: the wheel keeps travelling at a steady, readable
+// pace. Bounded so a one-row step is still visible and a long redirect stays
+// snappy.
+const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
+const WHEEL_GLIDE_MIN_MS = 140;
+const WHEEL_GLIDE_MAX_MS = 600;
 
 // Keys that move focus between items (and thus trigger the browser's focus
 // scroll-into-view we need to undo — see the focusin effect).
@@ -782,6 +809,10 @@ function WheelUI(props) {
       : `translate3d(0, ${p}px, 0)`;
   };
   const animateTo = (vp, target, onDone) => {
+    // A redirect mid-glide (e.g. a second arrow press) continues at the same
+    // constant speed with linear easing, so rapid presses read as steady motion
+    // rather than a re-accelerating jump each time. A glide from rest eases out.
+    const redirecting = glideRef.current !== null;
     cancelAnim();
     const track = getTrack(vp);
     const dist = target - posRef.current;
@@ -791,16 +822,17 @@ function WheelUI(props) {
       onDone();
       return;
     }
-    // A single-row step (arrow key, clone click) is ~one item; the floor keeps
-    // that glide long enough to read as motion rather than a jump, but short
-    // enough to stay snappy under quick key repeats.
-    const duration = clampNumber(Math.abs(dist) * 1.1, 200, 420);
+    const duration = clampNumber(
+      Math.abs(dist) / WHEEL_GLIDE_SPEED,
+      WHEEL_GLIDE_MIN_MS,
+      WHEEL_GLIDE_MAX_MS,
+    );
     const from = glideTransform(posRef.current);
     const to = glideTransform(target);
     posRef.current = target;
     const animation = track.animate([{ transform: from }, { transform: to }], {
       duration,
-      easing: "cubic-bezier(0.22, 0.61, 0.36, 1)",
+      easing: redirecting ? "linear" : "cubic-bezier(0.22, 0.61, 0.36, 1)",
       fill: "forwards",
     });
     updateCurrentMarker(vp, findCenteredRow(vp));
@@ -1194,7 +1226,11 @@ function WheelUI(props) {
       basePseudoState={basePseudoState}
       style={styleWithVars}
     >
-      <LoadingOutline loading={loading} inset={-1} />
+      <LoadingOutline
+        loading={loading}
+        color="var(--navi-loader-color)"
+        inset={-1}
+      />
       <div className="navi_wheel_viewport">
         <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
           {isLoop
@@ -1217,8 +1253,10 @@ function WheelUI(props) {
         </ul>
         <div className="navi_wheel_pane" data-side="start" />
         <div className="navi_wheel_pane" data-side="end" />
-        <div className="navi_wheel_focus_ring" />
       </div>
+      {/* Outside the viewport: the viewport's fade mask + glass panes must not
+          dim the focus ring — it marks the center window, above all of it. */}
+      <div className="navi_wheel_focus_ring" />
     </Box>
   );
 }
@@ -1462,17 +1500,21 @@ export const WheelGroup = ({
 };
 /**
  * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
- * Its content sits in a one-row box that mirrors a wheel item, so it lines up
- * with the selected value on the center row automatically.
+ * Its content sits in a one-row box that mirrors a wheel item, so by default it
+ * shares the numbers' text baseline (right for words / letters like "ZZ").
  *
  * @param {object} props
+ * @param {boolean} [props.center] - Vertically center the glyph in the row
+ *   instead of baseline-aligning it. Use for glyphs that sit low on the baseline
+ *   (e.g. ":") so they land on the numbers' optical center.
  */
-const WheelGroupSeparator = ({ children, ...rest }) => {
+const WheelGroupSeparator = ({ children, center, ...rest }) => {
   return (
     <Box
       as="span"
       {...rest}
       className="navi_wheel_group_separator"
+      data-center={center ? "" : undefined}
       aria-hidden="true"
     >
       <span className="navi_wheel_group_separator_content">{children}</span>
