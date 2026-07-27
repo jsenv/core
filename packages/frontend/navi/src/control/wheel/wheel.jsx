@@ -1236,6 +1236,15 @@ function WheelUI(props) {
       if (e.pointerId !== drag.pointerId) {
         return;
       }
+      // Safety net for a missed pointerup: if the mouse button is no longer held
+      // while we still think we're dragging, the release was lost (it can land
+      // outside a capture, or be swallowed). End the drag now instead of letting
+      // the wheel keep following the released pointer. Only for mouse — touch/pen
+      // report buttons=0 during a normal move, so we rely on pointerup/cancel there.
+      if (e.pointerType === "mouse" && e.buttons === 0) {
+        endDrag(e);
+        return;
+      }
       const client = isHorizontal ? e.clientX : e.clientY;
       if (!drag.moved && Math.abs(client - drag.startClient) > 3) {
         // A real drag begins: stop the glide and re-anchor to here so the wheel
@@ -1259,14 +1268,22 @@ function WheelUI(props) {
       // Finger down → content down → position decreases.
       setPos(vp, drag.startPos - total);
     };
-    const onPointerUp = (e) => {
-      if (!drag || e.pointerId !== drag.pointerId) {
-        return;
-      }
+    const endDrag = (e) => {
       const wasDrag = drag.moved;
-      const velocity = drag.velocity;
+      let velocity = drag.velocity;
+      // If the pointer sat still for a moment before release, don't fling: a stale
+      // velocity from an earlier fast move would send the wheel gliding after the
+      // user had already stopped. (No pointermove fires while still, so the last
+      // computed velocity lingers.)
+      if (performance.now() - drag.lastTime > 60) {
+        velocity = 0;
+      }
       if (drag.captured) {
-        vp.releasePointerCapture(e.pointerId);
+        try {
+          vp.releasePointerCapture(drag.pointerId);
+        } catch {
+          // capture already lost (e.g. the pointer is gone) — nothing to release.
+        }
       }
       drag = null;
       if (!wasDrag) {
@@ -1292,12 +1309,21 @@ function WheelUI(props) {
       // Position moves opposite to the finger.
       settle(vp, -velocity);
     };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.pointerId) {
+        return;
+      }
+      endDrag(e);
+    };
 
     vp.addEventListener("wheel", onWheel, { passive: false });
     vp.addEventListener("pointerdown", onPointerDown);
     vp.addEventListener("pointermove", onPointerMove);
     vp.addEventListener("pointerup", onPointerUp);
     vp.addEventListener("pointercancel", onPointerUp);
+    // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
+    // ends the gesture too — otherwise the drag would stay latched.
+    vp.addEventListener("lostpointercapture", onPointerUp);
     el.addEventListener("navi_scroll", onNaviScroll);
     return () => {
       clearTimeout(settleTimer);
@@ -1307,6 +1333,7 @@ function WheelUI(props) {
       vp.removeEventListener("pointermove", onPointerMove);
       vp.removeEventListener("pointerup", onPointerUp);
       vp.removeEventListener("pointercancel", onPointerUp);
+      vp.removeEventListener("lostpointercapture", onPointerUp);
       el.removeEventListener("navi_scroll", onNaviScroll);
     };
   }, [isLoop, isHorizontal, interactive]);

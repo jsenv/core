@@ -199,12 +199,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { signal } from "@preact/signals";
       import { useEffect, useRef, useState } from "preact/hooks";
       import {
         NaviDebug,
         Time,
         Wheel,
         WheelGroup,
+        Picker,
         Form,
         Button,
       } from "@jsenv/navi";
@@ -267,6 +269,9 @@
                   </li>
                   <li>
                     <a href="#practical-day">Day picker</a>
+                  </li>
+                  <li>
+                    <a href="#practical-duration">Duration picker</a>
                   </li>
                 </ul>
               </li>
@@ -499,8 +504,25 @@
 
       // ── Practical examples ─────────────────────────────────────────────────
 
+      // Duration picker: two wheels (hours 1–5, minutes every 15) live inside a
+      // Picker popup. Each wheel's value feeds a signal so the trigger UI can
+      // show the current duration; the picker also aggregates the named children
+      // into one { hours, minutes } value (its action/uiAction).
+      const DURATION_HOURS = [1, 2, 3, 4, 5];
+      const DURATION_MINUTES = [0, 15, 30, 45];
+      const durationHoursSignal = signal(DURATION_HOURS[0]);
+      const durationMinutesSignal = signal(DURATION_MINUTES[0]);
+      const DurationWheelUI = () => {
+        return (
+          <Time type="time">
+            {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+          </Time>
+        );
+      };
+
       const PracticalExamplesDemo = () => {
         const [size, setSize] = useState("M");
+        const [duration, setDuration] = useState({});
         const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -560,6 +582,70 @@
                   </Wheel.Item>
                 ))}
               </Wheel>
+            </div>
+
+            <h3 id="practical-duration" style={{ marginTop: 24 }}>
+              Duration picker (hours + minutes)
+            </h3>
+            <p>
+              A wheel belongs inside a deliberately-opened surface (see the
+              warning up top) — a <code>Picker</code> popup is exactly that.
+              Here a duration Picker opens a <code>WheelGroup</code> of two
+              wheels: hours (1–5) and minutes (every 15). Each wheel is a named
+              control (<code>hours</code> / <code>minutes</code>) the picker
+              aggregates into one value.
+            </p>
+            <div className="row">
+              <Picker
+                type="controlgroup"
+                ui={<DurationWheelUI />}
+                placeholder="Choisir une durée"
+                action={(v) => {
+                  setDuration(v);
+                }}
+              >
+                <WheelGroup glass>
+                  <Wheel
+                    name="hours"
+                    bounded
+                    type="integer"
+                    visibleCount={5}
+                    value={durationHoursSignal.value}
+                    uiAction={(v) => {
+                      durationHoursSignal.value = v;
+                    }}
+                  >
+                    {DURATION_HOURS.map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <WheelGroup.Separator>
+                    <Wheel.Colon />
+                  </WheelGroup.Separator>
+                  <Wheel
+                    name="minutes"
+                    bounded
+                    type="integer"
+                    visibleCount={5}
+                    value={durationMinutesSignal.value}
+                    uiAction={(v) => {
+                      durationMinutesSignal.value = v;
+                    }}
+                  >
+                    {DURATION_MINUTES.map((m) => (
+                      <Wheel.Item key={m} value={m}>
+                        {pad2(m)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </WheelGroup>
+              </Picker>
+              <span className="col-label">
+                {pad2(duration.hours ?? durationHoursSignal.value)}:
+                {pad2(duration.minutes ?? durationMinutesSignal.value)}
+              </span>
             </div>
           </div>
         );
