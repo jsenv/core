@@ -225,9 +225,13 @@ const css = /* css */ `
     /* The loading outline (rendered as a container child, outside the viewport)
        tracks the center window like the focus ring, above the glass/fade so it
        is never dimmed. Geometry lives in the orientation branches. */
-    .navi_loading_outline_wrapper {
+    .navi_wheel_outline_wrapper {
+      position: absolute;
       z-index: 3;
+      border-radius: inherit;
+      pointer-events: none;
     }
+
     &[data-glass] .navi_wheel_pane {
       /* A faint frost tint under the blur flattens the halo a bare
          backdrop-filter leaves around dark glyphs; saturate revives the colours
@@ -288,7 +292,7 @@ const css = /* css */ `
         }
       }
       .navi_wheel_focus_ring,
-      .navi_loading_outline_wrapper {
+      .navi_wheel_outline_wrapper {
         top: calc((100% - var(--wheel-item-height)) / 2);
         right: 0;
         bottom: calc((100% - var(--wheel-item-height)) / 2);
@@ -342,7 +346,7 @@ const css = /* css */ `
         }
       }
       .navi_wheel_focus_ring,
-      .navi_loading_outline_wrapper {
+      .navi_wheel_outline_wrapper {
         top: 0;
         right: calc((100% - var(--wheel-item-width)) / 2);
         bottom: 0;
@@ -1578,11 +1582,13 @@ function WheelUI(props) {
         // eslint-disable-next-line react/no-children-prop
         children={undefined}
       />
-      <LoadingOutline
-        loading={loading}
-        color="var(--navi-loader-color)"
-        inset={-1}
-      />
+      <div className="navi_wheel_outline_wrapper">
+        <LoadingOutline
+          loading={loading}
+          color="var(--navi-loader-color)"
+          inset={-1}
+        />
+      </div>
       <div className="navi_wheel_viewport">
         {/* Wheel.Item children register their {value,label,itemProps} here and
             render nothing (see WheelItem). The visible rows are the recycled

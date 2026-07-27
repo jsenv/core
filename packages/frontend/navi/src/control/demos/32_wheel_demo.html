@@ -287,7 +287,7 @@
                     <a href="#cust-horizontal">horizontal</a>
                   </li>
                   <li>
-                    <a href="#cust-spacing">WheelGroup spacing</a>
+                    <a href="#cust-padding">Item padding</a>
                   </li>
                   <li>
                     <a href="#cust-glass">glass</a>
@@ -531,10 +531,7 @@
         // spacing = item padding on the wheels → breathing room around hours and
         // minutes (a bit roomier in a dialog).
         return (
-          <WheelGroup
-            padding="s"
-            spacing={mode === "dialog" ? "1ch" : "0.6ch"}
-          >
+          <WheelGroup padding="s" spacing={mode === "dialog" ? "1ch" : "0.6ch"}>
             <Wheel name="hours" type="integer" signal={durationHoursSignal}>
               {DURATION_HOURS.map((h) => (
                 <Wheel.Item key={h} value={h}>
@@ -684,10 +681,10 @@
               Duration wheels (outside a picker)
             </h3>
             <p>
-              The same two wheels used directly (no picker). This is how you'd put
-              a duration wheel on any deliberately-opened surface. Spacing around
-              hours/minutes is <code>WheelGroup spacing</code> — item padding on
-              the wheels, so the gap stays scrollable.
+              The same two wheels used directly (no picker). This is how you'd
+              put a duration wheel on any deliberately-opened surface. Spacing
+              around hours/minutes is <code>WheelGroup spacing</code> — item
+              padding on the wheels, so the gap stays scrollable.
             </p>
             <div className="row">
               <DurationWheels />
@@ -775,9 +772,9 @@
               <code>Wheel.Colon</code> draws the ":" as an SVG whose dots are
               symmetric about the row's middle, so it centers optically against
               the numbers — use it for every ":" separator. A <em>font</em> ":"
-              shares the line but sits on the baseline, so its dots hug the lower
-              half of the digits and read as sunk. Compare the two below (colon
-              first, font ":" second).
+              shares the line but sits on the baseline, so its dots hug the
+              lower half of the digits and read as sunk. Compare the two below
+              (colon first, font ":" second).
             </p>
             <label className="box-toggle">
               <input
@@ -824,14 +821,14 @@
 
             <h3 style={{ marginTop: 24 }}>1 separator, 2 columns</h3>
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
-              <WheelGroup spacing="0">
+              <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>
-                  <Boxed>:</Boxed>
+                  <Wheel.Colon />
                 </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
-              <WheelGroup spacing="0">
+              <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
@@ -843,7 +840,7 @@
             <h3 style={{ marginTop: 24 }}>
               Word separators (hours + minutes), incl. trailing
             </h3>
-            <WheelGroup spacing="0">
+            <WheelGroup>
               <HourWheel />
               <WheelGroup.Separator>
                 <Boxed>hours</Boxed>
@@ -860,22 +857,18 @@
               obvious that ":" (left) can hide.
             </p>
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
-              <WheelGroup spacing="0">
+              <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>
-                  <Boxed>
-                    <Wheel.Colon />
-                  </Boxed>
+                  <Wheel.Colon />
                 </WheelGroup.Separator>
                 <QuarterWheel />
                 <WheelGroup.Separator>
-                  <Boxed>
-                    <Wheel.Colon />
-                  </Boxed>
+                  <Wheel.Colon />
                 </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
-              <WheelGroup spacing="0">
+              <WheelGroup>
                 <HourWheel />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
@@ -1126,29 +1119,59 @@
               </div>
             </div>
             <div>
-              <h3 id="cust-spacing">
-                WheelGroup spacing (gap around separators)
-              </h3>
+              <h3 id="cust-padding">Item padding (spacing)</h3>
+              <p>
+                No padding by default — a wheel shows its true content size, and
+                spacing is the caller's choice (so nothing is imposed). Set it
+                per wheel with <code>itemPadding</code>, or on a group with{" "}
+                <code>spacing</code> (item padding applied to every wheel, so
+                the gap stays scrollable), or once for all with the{" "}
+                <code>--navi-wheel-item-padding-x-default</code> CSS var. It's
+                the cross axis: horizontal on a vertical wheel, vertical on a
+                horizontal one.
+              </p>
               <div className="states">
                 <div>
-                  <WheelGroup spacing="0">
+                  <WheelGroup>
                     <HourWheel />
                     <WheelGroup.Separator>
-                      <Boxed>:</Boxed>
+                      <Wheel.Colon />
                     </WheelGroup.Separator>
                     <QuarterWheel />
                   </WheelGroup>
-                  <span className="col-label">spacing="0"</span>
+                  <span className="col-label">none (default)</span>
                 </div>
                 <div>
-                  <WheelGroup spacing="2ch">
+                  <WheelGroup spacing="0.75ch">
                     <HourWheel />
                     <WheelGroup.Separator>
-                      <Boxed>:</Boxed>
+                      <Wheel.Colon />
                     </WheelGroup.Separator>
                     <QuarterWheel />
                   </WheelGroup>
-                  <span className="col-label">spacing="2ch"</span>
+                  <span className="col-label">spacing="0.75ch"</span>
+                </div>
+                <div>
+                  <WheelGroup horizontal spacing="0.5ch">
+                    <HourWheel horizontal itemWidth="3ch" />
+                    <WheelGroup.Separator>
+                      <Wheel.Colon />
+                    </WheelGroup.Separator>
+                    <QuarterWheel horizontal itemWidth="3ch" />
+                  </WheelGroup>
+                  <span className="col-label">horizontal, spacing="0.5ch"</span>
+                </div>
+                <div>
+                  <div style={{ "--navi-wheel-item-padding-x-default": "1ch" }}>
+                    <WheelGroup>
+                      <HourWheel />
+                      <WheelGroup.Separator>
+                        <Wheel.Colon />
+                      </WheelGroup.Separator>
+                      <QuarterWheel />
+                    </WheelGroup>
+                  </div>
+                  <span className="col-label">via CSS var (1ch)</span>
                 </div>
               </div>
             </div>
@@ -1249,7 +1272,7 @@
                       ))}
                     </Wheel>
                     <WheelGroup.Separator>
-                      <Boxed>:</Boxed>
+                      <Wheel.Colon />
                     </WheelGroup.Separator>
                     <Wheel
                       name="minutes"
