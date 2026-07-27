@@ -608,9 +608,7 @@
                 <WheelGroup glass>
                   <Wheel
                     name="hours"
-                    bounded
                     type="integer"
-                    visibleCount={5}
                     value={durationHoursSignal.value}
                     uiAction={(v) => {
                       durationHoursSignal.value = v;
@@ -627,9 +625,7 @@
                   </WheelGroup.Separator>
                   <Wheel
                     name="minutes"
-                    bounded
                     type="integer"
-                    visibleCount={5}
                     value={durationMinutesSignal.value}
                     uiAction={(v) => {
                       durationMinutesSignal.value = v;

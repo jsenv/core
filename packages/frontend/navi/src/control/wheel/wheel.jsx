@@ -403,10 +403,10 @@ const css = /* css */ `
 // fling's resting point from this velocity and glides to the nearest row (see
 // settle) — there is no separate momentum-then-spring phase.
 const WHEEL_MAX_VELOCITY = 1;
-// How far a fling carries: projected rest = pos + velocity × this (ms). At max
-// velocity (1 px/ms) that is ~7 rows; a typical flick a couple. Also ≈ the settle
-// duration, since a fling glides its distance at roughly its release speed.
-const WHEEL_FLING_REACH = 220;
+// Fling deceleration (px per ms²), constant — exactly how native inertial scroll
+// decelerates. The projected travel is v² / (2·decel): quadratic, so a gentle
+// flick barely moves and a hard one flies. At max velocity that is ~7 rows.
+const WHEEL_FLING_DECEL = 0.0022;
 // Glide duration clamps (ms): a tiny snap isn't instant, a long glide isn't slow.
 const GLIDE_MIN_DURATION = 90;
 const GLIDE_MAX_DURATION = 600;
@@ -894,9 +894,12 @@ function WheelUI(props) {
   };
 
   // Normalized ease f(p) over p ∈ [0,1]: f(0)=0, f(1)=1, f'(0)=s0, f'(1)=0. The
-  // cubic with those boundary conditions — leaves at the start speed (s0), arrives
-  // at rest. s0 ∈ [0,1] keeps it monotonic (no overshoot); s0=0 is a symmetric
-  // ease-in-out (from rest), s0=1 a pure decelerating ease-out (from full speed).
+  // cubic with those boundary conditions leaves at the start speed (s0) and arrives
+  // at rest. s0 ∈ [0,2]: s0=0 is a symmetric ease-in-out (from rest); s0=2 is
+  // ease-out quad — velocity falls LINEARLY from full speed to 0 (constant
+  // deceleration, like native inertial scroll). Only s0 ≥ 1.5 keeps the velocity
+  // monotonically decreasing; below that it rises before falling, which reads as a
+  // late snap — so a fling uses s0=2 (see glideTo).
   const glideEase = (p, s0) =>
     (s0 - 2) * p * p * p + (3 - 2 * s0) * p * p + s0 * p;
   const glideEaseSlope = (p, s0) =>
@@ -942,12 +945,14 @@ function WheelUI(props) {
     renderPos(vp);
     glideRef.current = requestAnimationFrame(() => glideStep(vp));
   };
-  // Glide to `target` in one time-based ease-out. `velocity` (px/ms, optional) is
-  // the incoming speed — the fling's on a settle; when omitted, a retarget keeps
-  // the current glide's speed (so a second arrow/click accelerates rather than
-  // restarts) and a from-rest glide starts at 0. Duration covers the distance at a
-  // comfortable speed (glideSpeed) or faster if flung harder, so a hard fling
-  // arrives quicker; the ease then decelerates to rest exactly on the target.
+  // Glide to `target` in one time-based ease. `velocity` (px/ms, optional) is the
+  // incoming speed — the fling's on a settle; when omitted, a retarget keeps the
+  // current glide's speed (so a second arrow/click accelerates rather than
+  // restarts) and a from-rest glide starts at 0. Under constant deceleration a
+  // fling's average speed is half its release speed, so it covers the distance in
+  // 2·dist/|v0| — or, if that would be slower, at the comfortable from-rest speed.
+  // s0 is then set so the ease leaves at exactly |v0| and decelerates to rest on
+  // the target: no acceleration jump at the start, no crawling tail at the end.
   const glideTo = (vp, target, velocity) => {
     // Bounded: never glide past the first/last row into empty space (the ease sets
     // pos directly, without setPos's clamp). Start and target both in range → every
@@ -972,15 +977,18 @@ function WheelUI(props) {
     if (v0 === undefined) {
       v0 = glideRef.current === null ? 0 : glideVelocity();
     }
-    let speed = Math.abs(v0);
+    // Under constant deceleration the average speed is half the release speed.
+    let speed = Math.abs(v0) / 2;
     if (glideSpeedRef.current > speed) {
       speed = glideSpeedRef.current;
     }
     let duration = Math.abs(dist) / speed;
     duration = clampNumber(duration, GLIDE_MIN_DURATION, GLIDE_MAX_DURATION);
-    // s0 = start slope = start velocity ÷ average velocity (dist/duration). speed
-    // ≥ |v0| keeps this in [0,1]; clamp guards the rare wrong-direction v0.
-    const s0 = clampNumber((v0 * duration) / dist, 0, 1);
+    // s0 = start slope = start velocity ÷ average velocity (dist/duration). A fling
+    // lands on s0=2 (ease-out quad, constant deceleration); from rest → 0. Clamp to
+    // [0,2] to keep the velocity monotonically decreasing (no mid-glide speed-up
+    // that would read as a late snap) and guard a wrong-direction v0.
+    const s0 = clampNumber((v0 * duration) / dist, 0, 2);
     glideStartPosRef.current = start;
     glideStartTimeRef.current = performance.now();
     glideDurationRef.current = duration;
@@ -994,13 +1002,13 @@ function WheelUI(props) {
   // Settle after user input (fling or idle). Native scroll-snap doesn't decay to
   // an arbitrary spot and then spring onto a row — that second phase can pull
   // backward (a bounce) and reads as a separate ease. Instead it projects where
-  // the fling would naturally rest, snaps THAT to a row, and hands it to glideTo
-  // WITH the release velocity — so the whole settle is one time-based ease-out
-  // that leaves at the fling's speed and decelerates to rest exactly on the row
-  // (no acceleration jump at release, no crawling tail at the end). A near-zero
-  // velocity (idle settle, center tap) glides gently to the nearest row. Velocity
-  // is capped so a violent fling lands a few rows away, not dozens (a picker isn't
-  // a free-scrolling list); WHEEL_FLING_REACH sets how far a given speed carries.
+  // the fling would naturally rest under constant deceleration (distance =
+  // v² / 2·decel), snaps THAT to a row, and hands it to glideTo WITH the release
+  // velocity — so the whole settle is one motion whose velocity falls linearly
+  // from the fling's speed to 0 exactly on the row (no acceleration jump at
+  // release, no crawling tail at the end). A near-zero velocity (idle settle,
+  // center tap) glides gently to the nearest row. Velocity is capped so a violent
+  // fling lands a few rows away, not dozens (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
     const size = getItemSize(vp);
@@ -1008,7 +1016,8 @@ function WheelUI(props) {
       return;
     }
     const v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
-    const projectedRest = posRef.current + v * WHEEL_FLING_REACH;
+    const reach = (v * v) / (2 * WHEEL_FLING_DECEL);
+    const projectedRest = posRef.current + (v < 0 ? -reach : reach);
     glideTo(vp, snapPosToRow(vp, projectedRest), v);
   };
 
