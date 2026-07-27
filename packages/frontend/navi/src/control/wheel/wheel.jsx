@@ -169,13 +169,6 @@ const css = /* css */ `
     color: var(--wheel-color);
     font-weight: 600;
     text-align: center;
-    /* A full-row line-height so the glyph's line box fills the (even) row height
-       and centers on a WHOLE pixel. A "normal" line box is ~15px (odd): centered
-       in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way for this
-       transformed track and the other for the static separators — a 1px vertical
-       misalignment. Matching var(--wheel-item-height) here and on the separators
-       removes the .5. */
-    line-height: var(--wheel-item-height);
     white-space: nowrap;
     /* Cursor is set on the viewport by pointer position (see updateCursor) and
        inherited here, so it stays fixed to the center window rather than flipping
@@ -264,6 +257,14 @@ const css = /* css */ `
         /* Fixed main-axis size (height); the cross axis follows the content. */
         height: var(--wheel-item-height);
         padding-inline: var(--wheel-item-padding-x, 0.5ch);
+        /* A full-row line-height so the glyph's line box fills the (even) row
+           height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
+           centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
+           for this transformed track and the other for the static separators — a
+           1px vertical misalignment. Matching var(--wheel-item-height) here and on
+           the separators removes the .5. Vertical only: a horizontal wheel has no
+           row height to fill, and forcing it would blow up the separator height. */
+        line-height: var(--wheel-item-height);
       }
       .navi_wheel_pane {
         right: 0;

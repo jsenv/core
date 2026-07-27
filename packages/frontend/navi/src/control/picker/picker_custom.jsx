@@ -29,6 +29,12 @@ const css = /* css */ `
        picker-specific bits below (anchor-width min-width, the anchor clone,
        the nested list). */
 
+    /* matchAnchorWidth=false (picker.jsx): drop the trigger-width floor so the
+       popup shrinks to its content. Inherits down to the popover/dialog. */
+    &[data-match-anchor-width="false"] {
+      --picker-popover-min-width: 0px;
+    }
+
     /* popover */
     &[aria-haspopup="listbox"] {
       .navi_popover {
@@ -39,7 +45,9 @@ const css = /* css */ `
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
 
-        min-width: var(--anchor-width, 0px);
+        /* At least as wide as the trigger — unless matchAnchorWidth=false, then
+           let the content (e.g. a Wheel) size the popover (see picker.jsx). */
+        min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */
 
         /* The anchor placeholder is a non-interactive visual clone of the
