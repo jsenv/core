@@ -89,7 +89,7 @@ const css = /* css */ `
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
  *   use case).
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - Forwarded to whichever component renders, defaulted here to `"close"`
  *   specifically to override `Popover`'s own different default (`"none"`)
  *   — without this, the exact same `<Popup>` usage would behave
@@ -155,7 +155,6 @@ export const Popup = (props) => {
     marginWithAnchor,
     focusCapture,
     positionAreaFixed,
-    pointerOutsideCloseIsCancel,
     ...rest
   } = props;
 
@@ -186,7 +185,6 @@ export const Popup = (props) => {
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
       positionAreaFixed={positionAreaFixed}
-      pointerOutsideCloseIsCancel={pointerOutsideCloseIsCancel}
       className={withPropsClassName("navi_popup", className)}
     >
       {children}

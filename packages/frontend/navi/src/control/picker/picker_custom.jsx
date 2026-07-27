@@ -594,11 +594,10 @@ const PickerContentInsidePopup = (props) => {
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
     closeOnFocusOut = false,
-    // When true, clicking OUTSIDE the popover commits the current value (fires the
-    // picker action if it changed) instead of cancelling — Escape still cancels.
-    // Suits an edit-in-place popover (e.g. a wheel duration): spin, click away to
-    // validate. Popover mode only.
-    commitOnClickOutside = false,
+    // Clicking outside the popup closes it and COMMITS by default (fires the
+    // action if the value changed) — Escape still cancels. Pass "cancel" to make
+    // clicking outside revert instead, or "capture" to keep it open.
+    pointerInteractionOutsideEffect = "close",
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
@@ -651,9 +650,8 @@ const PickerContentInsidePopup = (props) => {
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
         marginWithContainer={isPopover ? marginWithContainer : undefined}
         scrollCapture={scrollCapture}
-        pointerInteractionOutsideEffect={pointerLock ? "capture" : "close"}
-        pointerOutsideCloseIsCancel={
-          isPopover && commitOnClickOutside ? false : undefined
+        pointerInteractionOutsideEffect={
+          pointerLock ? "capture" : pointerInteractionOutsideEffect
         }
         focusCapture={isPopover ? focusCapture : undefined}
         expandX={!isPopover ? expandX : undefined}

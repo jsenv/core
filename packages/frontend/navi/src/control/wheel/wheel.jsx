@@ -1004,10 +1004,16 @@ function WheelUI(props) {
   // just short of the next row still lands ON it (never snaps backward), and the
   // glide there decelerates as the motion dies — no separate spring-to-nearest, no
   // long idle wait. velocity is px/ms, signed with the scroll direction.
-  const wheelSettle = (vp, velocity) => {
+  // `forcedTarget` (px) overrides the projection — used by the first event of a
+  // gesture to always advance one item, however small the delta (see onWheel).
+  const wheelSettle = (vp, velocity, forcedTarget) => {
     cancelAnim();
     const size = getItemSize(vp);
     if (size === 0) {
+      return;
+    }
+    if (forcedTarget !== null && forcedTarget !== undefined) {
+      glideTo(vp, forcedTarget);
       return;
     }
     const projected = posRef.current + velocity * WHEEL_MOMENTUM_MS;
@@ -1135,6 +1141,10 @@ function WheelUI(props) {
     // settle can snap to the row the scroll was heading for (see wheelSettle).
     let wheelVelocity = 0;
     let lastWheelTime = 0;
+    // Set on the first event of a gesture to force the settle onto the adjacent row
+    // (native-like: the slightest scroll still snaps to the next item); null once
+    // the gesture continues, so momentum projection takes over.
+    let wheelForcedTarget = null;
 
     // Non-wheel settle (drag momentum, programmatic jump): spring to the nearest row.
     const scheduleSettle = () => {
@@ -1146,7 +1156,7 @@ function WheelUI(props) {
     const scheduleWheelSettle = () => {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(
-        () => wheelSettle(vp, wheelVelocity),
+        () => wheelSettle(vp, wheelVelocity, wheelForcedTarget),
         WHEEL_SETTLE_DELAY,
       );
     };
@@ -1222,13 +1232,29 @@ function WheelUI(props) {
           // the scroll was heading for. Clamp dt so a first event / long pause after
           // one doesn't blow the estimate up.
           const now = performance.now();
-          const dt = clampNumber(now - lastWheelTime, 8, 120);
+          const gap = now - lastWheelTime;
+          const dt = clampNumber(gap, 8, 120);
           lastWheelTime = now;
           wheelVelocity = clampNumber(
             delta / dt,
             -WHEEL_MAX_VELOCITY,
             WHEEL_MAX_VELOCITY,
           );
+          // First event of a fresh gesture: advance one item whatever the delta, so
+          // even the lightest scroll snaps to the next (like native scroll-snap on a
+          // section). Force the settle onto the adjacent row in the scroll direction.
+          if (gap > WHEEL_GESTURE_MAX_GAP && itemSize > 0) {
+            let target =
+              snapPosToRow(vp, posRef.current) +
+              (delta < 0 ? -itemSize : itemSize);
+            if (!isLoop) {
+              const count = trackedItemsRef.current.length;
+              target = clampNumber(target, 0, (count - 1) * itemSize);
+            }
+            wheelForcedTarget = target;
+          } else {
+            wheelForcedTarget = null;
+          }
           setPos(vp, posRef.current + delta);
           scheduleWheelSettle();
           keepClaimingGesture();

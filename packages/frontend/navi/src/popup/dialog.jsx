@@ -274,7 +274,8 @@ const css = /* css */ `
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"] {
+    &[data-pointer-interaction-outside="close"],
+    &[data-pointer-interaction-outside="cancel"] {
       background: var(--navi-backdrop-close-background);
     }
     &[data-pointer-interaction-outside="capture"] {
@@ -323,7 +324,7 @@ const css = /* css */ `
  *   `inset(top)`) for the overlapping variant.
  * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
  *   between the dialog and the edges of its container.
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
@@ -750,7 +751,11 @@ const useDialogProps = (props) => {
     // this is a plain document-level listener rather than anything
     // dialogEl/its native ::backdrop dispatches on their own) — active for
     // the dialog's entire open lifetime, not just mid-transition.
-    if (isModal && pointerInteractionOutsideEffect === "close") {
+    if (
+      isModal &&
+      (pointerInteractionOutsideEffect === "close" ||
+        pointerInteractionOutsideEffect === "cancel")
+    ) {
       const onDocumentMouseDown = (mouseDownEvent) => {
         if (mouseDownEvent.button !== 0) {
           return;
@@ -781,7 +786,9 @@ const useDialogProps = (props) => {
         if (!isOutside) {
           return;
         }
-        openController.requestClose(mouseDownEvent, { isCancel: true });
+        openController.requestClose(mouseDownEvent, {
+          isCancel: pointerInteractionOutsideEffect === "cancel",
+        });
       };
       document.addEventListener("mousedown", onDocumentMouseDown, {
         capture: true,
@@ -938,8 +945,13 @@ const useDialogProps = (props) => {
       if (mouseDownEvent.button !== 0) {
         return;
       }
-      if (pointerInteractionOutsideEffect === "close") {
-        openController.requestClose(mouseDownEvent, { isCancel: true });
+      if (
+        pointerInteractionOutsideEffect === "close" ||
+        pointerInteractionOutsideEffect === "cancel"
+      ) {
+        openController.requestClose(mouseDownEvent, {
+          isCancel: pointerInteractionOutsideEffect === "cancel",
+        });
       }
       // "capture"/"none" both just absorb the click without closing — see
       // this hook's own destructuring comment for why the two collapse to

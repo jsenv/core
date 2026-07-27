@@ -284,7 +284,8 @@ const css = /* css */ `
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"] {
+    &[data-pointer-interaction-outside="close"],
+    &[data-pointer-interaction-outside="cancel"] {
       background: var(--navi-backdrop-close-background);
     }
     &[data-pointer-interaction-outside="capture"] {
@@ -349,7 +350,7 @@ const css = /* css */ `
  *   between the popover and the edges of its container.
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
  *   between the popover and the edges of its anchor.
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
  *   - `"none"` (default): no backdrop at all, outside clicks pass straight
  *   through. `"close"` closes the popover on an outside click. `"capture"`
  *   absorbs the click (dims the backdrop) without closing. Note this
@@ -518,11 +519,11 @@ const usePopoverProps = (props) => {
     // "center" default.
     positionAreaWhenAnchorIsInvalid,
     marginWithContainer = 0,
+    // "close"  → pointer press outside closes (a plain close = commit)
+    // "cancel" → pointer press outside closes AS A CANCEL (revert)
+    // "capture"→ absorb the press, stay open
+    // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
-    // Whether closing via a pointer press OUTSIDE the popover counts as a cancel
-    // (revert) or a plain close (commit). Default true (Escape-like). A picker sets
-    // it false so clicking away commits the edited value — see picker_custom.jsx.
-    pointerOutsideCloseIsCancel = true,
     scrollCapture,
     focusCapture,
     animation,
@@ -1184,9 +1185,13 @@ const usePopoverProps = (props) => {
         mouseDownEvent.preventDefault();
         return;
       }
-      if (pointerInteractionOutsideEffect === "close") {
+      // "close" commits (plain close), "cancel" reverts. Both dismiss.
+      if (
+        pointerInteractionOutsideEffect === "close" ||
+        pointerInteractionOutsideEffect === "cancel"
+      ) {
         openController.requestClose(mouseDownEvent, {
-          isCancel: pointerOutsideCloseIsCancel,
+          isCancel: pointerInteractionOutsideEffect === "cancel",
         });
         return;
       }
