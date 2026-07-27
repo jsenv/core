@@ -1144,6 +1144,9 @@ function WheelUI(props) {
     const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
     let wheelIdleTimer = null;
+    // Timestamp of the last wheel event, to derive the scroll velocity so the
+    // glide starts moving immediately (at the scroll speed) instead of easing in.
+    let lastWheelTime = 0;
 
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
@@ -1191,6 +1194,14 @@ function WheelUI(props) {
           if (size === 0 || count === 0) {
             return;
           }
+          // Scroll velocity (px/ms) from the gap since the last wheel event — the
+          // glide starts at this speed so it moves the instant you scroll instead
+          // of easing in (which read as a late start). dt is clamped so a first
+          // event / long pause still yields a brisk, finite start speed.
+          const now = performance.now();
+          const dt = clampNumber(now - lastWheelTime, 16, 120);
+          lastWheelTime = now;
+          const wheelVelocity = delta / dt;
           // Accumulate the wheel delta into an unsnapped target, then glide to the
           // ROW it snaps to. Because the target is always a row, the wheel heads
           // straight for a value and eases onto it — it never follows the raw
@@ -1207,13 +1218,15 @@ function WheelUI(props) {
           }
           wheelTargetRef.current = target;
           scheduleWheelReset();
-          // Only (re)glide when the destination ROW changes — sub-row deltas just
-          // accumulate, so a small trackpad nudge doesn't cancel/restart the glide.
+          // Recompute the destination on EVERY event and adapt the glide at once —
+          // never wait for the gesture to end. Only (re)glide when the destination
+          // ROW changes, so sub-row deltas just accumulate without cancelling the
+          // in-flight glide; passing the scroll velocity keeps it moving smoothly.
           const snapped = snapPosToRow(vp, target);
           const currentDest =
             glideRef.current !== null ? targetPosRef.current : posRef.current;
           if (Math.abs(snapped - currentDest) > 0.4) {
-            glideTo(vp, snapped);
+            glideTo(vp, snapped, wheelVelocity);
           }
         },
         prevented: () => {
