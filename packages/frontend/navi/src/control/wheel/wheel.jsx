@@ -157,6 +157,13 @@ const css = /* css */ `
     color: var(--wheel-color);
     font-weight: 600;
     text-align: center;
+    /* A full-row line-height so the glyph's line box fills the (even) row height
+       and centers on a WHOLE pixel. A "normal" line box is ~15px (odd): centered
+       in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way for this
+       transformed track and the other for the static separators — a 1px vertical
+       misalignment. Matching var(--wheel-item-height) here and on the separators
+       removes the .5. */
+    line-height: var(--wheel-item-height);
     white-space: nowrap;
     /* Cursor is set on the viewport by pointer position (see updateCursor) and
        inherited here, so it stays fixed to the center window rather than flipping
@@ -377,22 +384,13 @@ const css = /* css */ `
     font-weight: 600;
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
+    /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
+       whole pixel and lands on the numbers' line (see the note there). Without it
+       the separator sits ~1px off the transformed numbers. */
+    line-height: var(--wheel-item-height);
     white-space: nowrap;
 
-    /* Rasterize on the same grid as the wheels' transformed (translate3d) track.
-       Without a compositing layer of its own, this static glyph is painted in the
-       main layer and can land ~1px off from the GPU-composited digits — invisible
-       for ":" but obvious for a tall glyph like "ZZ". translateZ(0) promotes it to
-       a layer so both go through the same rasterization. */
-    transform: translateZ(0);
     user-select: none;
-
-    /* [center]: vertically center the glyph in the row instead of baseline-
-       aligning it — glyphs that sit low on the baseline (e.g. ":") then land on
-       the numbers' optical center. A full-row line-height does the centering. */
-    &[data-center] {
-      line-height: var(--wheel-item-height);
-    }
   }
 `;
 
@@ -1353,48 +1351,58 @@ function WheelUI(props) {
       if (!stepKeys.has(e.key)) {
         return;
       }
-      e.preventDefault();
-      // A blocked wheel (readonly is focusable, so arrows can reach it) pops the
-      // matching callout instead of stepping.
-      attemptInteraction(e, "step", () => {
-        const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
-        if (!reals.length) {
-          return;
-        }
-        // The centered row is the source of truth for "where we are now": a ref,
-        // so rapid presses step from the latest position (the closure's
-        // currentValue would be a render behind). Fall back to the selection,
-        // then the first row.
-        const centeredId = centeredIdRef.current;
-        let selectedIndex = centeredId
-          ? reals.findIndex((row) => row.id === centeredId)
-          : -1;
-        if (selectedIndex < 0) {
-          selectedIndex = reals.indexOf(getSelectedItem(vp));
-        }
-        if (selectedIndex < 0) {
-          selectedIndex = 0;
-        }
-        let nextIndex;
-        if (e.key === "Home") {
-          nextIndex = 0;
-        } else if (e.key === "End") {
-          nextIndex = reals.length - 1;
-        } else {
-          nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
-          if (isLoop) {
-            nextIndex =
-              ((nextIndex % reals.length) + reals.length) % reals.length;
-          } else {
-            nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+      // preventDefault must happen INSIDE the gate callbacks, not before: the gate
+      // refuses an already-defaultPrevented event, so preventing up front would
+      // make it treat every step as blocked. Swallow the key in both branches (so
+      // arrows never scroll the page); a blocked wheel (readonly is focusable, so
+      // arrows can reach it) pops the matching callout instead of stepping.
+      attemptInteraction(
+        e,
+        "step",
+        () => {
+          e.preventDefault();
+          const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
+          if (!reals.length) {
+            return;
           }
-        }
-        const targetItem = reals[nextIndex];
-        centeredIdRef.current = targetItem.id;
-        updateCurrentMarker(vp, targetItem);
-        requestSelectValue(getItemValueById(targetItem.id), e);
-        centerOn(vp, targetItem, "smooth");
-      });
+          // The centered row is the source of truth for "where we are now": a ref,
+          // so rapid presses step from the latest position (the closure's
+          // currentValue would be a render behind). Fall back to the selection,
+          // then the first row.
+          const centeredId = centeredIdRef.current;
+          let selectedIndex = centeredId
+            ? reals.findIndex((row) => row.id === centeredId)
+            : -1;
+          if (selectedIndex < 0) {
+            selectedIndex = reals.indexOf(getSelectedItem(vp));
+          }
+          if (selectedIndex < 0) {
+            selectedIndex = 0;
+          }
+          let nextIndex;
+          if (e.key === "Home") {
+            nextIndex = 0;
+          } else if (e.key === "End") {
+            nextIndex = reals.length - 1;
+          } else {
+            nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
+            if (isLoop) {
+              nextIndex =
+                ((nextIndex % reals.length) + reals.length) % reals.length;
+            } else {
+              nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+            }
+          }
+          const targetItem = reals[nextIndex];
+          centeredIdRef.current = targetItem.id;
+          updateCurrentMarker(vp, targetItem);
+          requestSelectValue(getItemValueById(targetItem.id), e);
+          centerOn(vp, targetItem, "smooth");
+        },
+        () => {
+          e.preventDefault();
+        },
+      );
     };
     el.addEventListener("keydown", onKeyDown);
     return () => {
@@ -1685,21 +1693,17 @@ export const WheelGroup = ({
 };
 /**
  * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
- * Its content sits in a one-row box that mirrors a wheel item, so by default it
- * shares the numbers' text baseline (right for words / letters like "ZZ").
+ * Its content sits in a one-row box that mirrors a wheel item — same full-row
+ * line-height — so the glyph lands on the numbers' line (see .navi_wheel_item).
  *
  * @param {object} props
- * @param {boolean} [props.center] - Vertically center the glyph in the row
- *   instead of baseline-aligning it. Use for glyphs that sit low on the baseline
- *   (e.g. ":") so they land on the numbers' optical center.
  */
-const WheelGroupSeparator = ({ children, center, ...rest }) => {
+const WheelGroupSeparator = ({ children, ...rest }) => {
   return (
     <Box
       as="span"
       {...rest}
       className="navi_wheel_group_separator"
-      data-center={center ? "" : undefined}
       aria-hidden="true"
     >
       {children}

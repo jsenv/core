@@ -626,9 +626,11 @@
             <h2>Separator alignment</h2>
             <p>
               A separator's content sits in a one-row box that mirrors a wheel
-              item, so it shares the numbers' baseline by default (right for the
-              square, words, "ZZ"). A glyph that sits low on the baseline like
-              ":" looks better centered — add <code>center</code>.
+              item — same full-row line-height — so its glyph lands on the
+              numbers' line whatever it is (a square, a word, ":", "ZZ"). The
+              wheel numbers live in a transformed track; matching the
+              line-height is what keeps the static separator from rendering ~1px
+              off them.
             </p>
             <label className="box-toggle">
               <input
@@ -649,7 +651,7 @@
                   </WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
-                <span className="col-label">square = separator</span>
+                <span className="col-label">square</span>
               </div>
               <div>
                 <WheelGroup>
@@ -659,17 +661,7 @@
                   </WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
-                <span className="col-label">":" default (baseline)</span>
-              </div>
-              <div>
-                <WheelGroup>
-                  <HourWheel />
-                  <WheelGroup.Separator center>
-                    <Boxed>:</Boxed>
-                  </WheelGroup.Separator>
-                  <QuarterWheel />
-                </WheelGroup>
-                <span className="col-label">":" center</span>
+                <span className="col-label">":"</span>
               </div>
             </div>
 
@@ -677,7 +669,7 @@
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
               <WheelGroup spacing="0">
                 <HourWheel itemProps={{ padding: 0 }} />
-                <WheelGroup.Separator center>
+                <WheelGroup.Separator>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
                 <QuarterWheel itemProps={{ padding: 0 }} />
@@ -713,11 +705,11 @@
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
               <WheelGroup spacing="0">
                 <HourWheel itemProps={{ padding: "0" }} />
-                <WheelGroup.Separator center>
+                <WheelGroup.Separator>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
                 <QuarterWheel itemProps={{ padding: "0" }} />
-                <WheelGroup.Separator center>
+                <WheelGroup.Separator>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
                 <QuarterWheel itemProps={{ padding: "0" }} />
@@ -978,7 +970,7 @@
                 <div>
                   <WheelGroup spacing="0">
                     <HourWheel />
-                    <WheelGroup.Separator center>
+                    <WheelGroup.Separator>
                       <Boxed>:</Boxed>
                     </WheelGroup.Separator>
                     <QuarterWheel />
@@ -988,7 +980,7 @@
                 <div>
                   <WheelGroup spacing="2ch">
                     <HourWheel />
-                    <WheelGroup.Separator center>
+                    <WheelGroup.Separator>
                       <Boxed>:</Boxed>
                     </WheelGroup.Separator>
                     <QuarterWheel />
@@ -1088,7 +1080,7 @@
                         </Wheel.Item>
                       ))}
                     </Wheel>
-                    <WheelGroup.Separator center>
+                    <WheelGroup.Separator>
                       <Boxed>:</Boxed>
                     </WheelGroup.Separator>
                     <Wheel type="integer" value={gm} action={setGm}>
