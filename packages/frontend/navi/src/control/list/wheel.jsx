@@ -37,9 +37,10 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
  *   - external value change  → scroll the selected item to center
  *
  * LOOP. A wheel wraps endlessly by default (`bounded` opts out, giving fixed
- * ends). When looping, we render `visibleCount` inert
- * proxy rows on each side — the last N values before, the first N after — just
- * enough to fill the viewport at the edges. On every scroll we fold the center
+ * ends). When looping, we render a runway of inert proxy rows on each side of the
+ * real items — the last values before the first row, the first values after the
+ * last — as scroll runway (loopBufferCount rows, a couple of viewports, capped at
+ * LOOP_BUFFER_MAX, not just visibleCount). On every scroll we fold the center
  * back into the real-items band by whole real-list extents; seamless because a
  * proxy shows the exact value the real row one extent away would. The proxy
  * labels come from a Wheel.Item tracker (see WheelItemTrackerContext), NOT from
@@ -414,6 +415,27 @@ const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
 const WHEEL_GLIDE_MIN_MS = 140;
 const WHEEL_GLIDE_MAX_MS = 600;
 
+// Whether a wheel value equals an item's value. The wheel's value round-trips
+// through its form <input> as a string (like a native <select>: an option with
+// value={9} comes back as "9"), so a numeric item value no longer strict-equals
+// the controlled value after the first selection. compareTwoJsValues handles
+// objects/identity/Date; a stringified compare of two primitives catches the
+// number↔string round-trip it (correctly) rejects.
+const valuesMatch = (a, b) => {
+  if (compareTwoJsValues(a, b)) {
+    return true;
+  }
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return false;
+  }
+  const aIsPrimitive = typeof a !== "object" && typeof a !== "function";
+  const bIsPrimitive = typeof b !== "object" && typeof b !== "function";
+  if (aIsPrimitive && bIsPrimitive) {
+    return String(a) === String(b);
+  }
+  return false;
+};
+
 // Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
 // list of items regardless of how children are wrapped (providers, fragments…).
 // indexRef gives each item its position: WheelUI resets it to 0 every render and
@@ -523,11 +545,18 @@ function WheelUI(props) {
     delete controlRootProps[key];
   }
 
+  // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
+  // value and item list here; a plain closure would freeze the mount render's
+  // values (empty item list, initial value) and later clear or mis-map the
+  // selection. Refs keep the mapping helpers reading fresh data.
+  const currentValueRef = useRef(currentValue);
+  currentValueRef.current = currentValue;
+
   // Ask the framework to change the value (respects readonly/disabled and pops
   // the readonly callout for free); the controlled value / action flow then
   // updates uiState, which syncCenterToSelection reacts to.
   const requestSelectValue = (newValue, event) => {
-    if (compareTwoJsValues(newValue, currentValue)) {
+    if (valuesMatch(newValue, currentValueRef.current)) {
       return;
     }
     dispatchRequestSetUIState(inputRef.current, newValue, { event });
@@ -543,6 +572,8 @@ function WheelUI(props) {
     trackerContextRef.current = { tracker, indexRef };
   }
   const trackedItems = tracker.itemsSignal.value;
+  const trackedItemsRef = useRef(trackedItems);
+  trackedItemsRef.current = trackedItems;
   const loopClones = isLoop
     ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
     : [];
@@ -551,32 +582,34 @@ function WheelUI(props) {
   // selection is the wheel's single value, mapped to a row via the tracker.
   const REAL_ITEM_SELECTOR = ".navi_wheel_item:not(.navi_wheel_item_clone)";
   const getItemValueById = (id) => {
-    const match = trackedItems.find((it) => it.id === id);
+    const match = trackedItemsRef.current.find((it) => it.id === id);
     return match ? match.value : undefined;
   };
   const getIdForValue = (value) => {
-    const match = trackedItems.find(
-      (it) => compareTwoJsValues(it.value, value),
-    );
+    const items = trackedItemsRef.current;
+    const match = items.find((it) => valuesMatch(it.value, value));
     if (match) {
       return match.id;
     }
-    return trackedItems.length ? trackedItems[0].id : null;
+    return items.length ? items[0].id : null;
   };
 
   // What the spinbutton announces: the selected row's label when it is text (the
   // human wording, e.g. "09" or "Monday"); otherwise the raw primitive value.
-  // aria-valuenow additionally carries the number for numeric wheels.
-  const selectedTracked = trackedItems.find(
-    (it) => compareTwoJsValues(it.value, currentValue),
+  // aria-valuenow carries the number for numeric wheels — read from the matched
+  // item's real value, since currentValue round-trips through the input as a
+  // string (so it would no longer be typeof number after the first selection).
+  const selectedTracked = trackedItems.find((it) =>
+    valuesMatch(it.value, currentValue),
   );
+  const selectedValue = selectedTracked ? selectedTracked.value : currentValue;
   let ariaValueText;
   if (selectedTracked && typeof selectedTracked.label === "string") {
     ariaValueText = selectedTracked.label;
-  } else if (typeof currentValue === "string") {
-    ariaValueText = currentValue;
-  } else if (typeof currentValue === "number") {
-    ariaValueText = String(currentValue);
+  } else if (typeof selectedValue === "string") {
+    ariaValueText = selectedValue;
+  } else if (typeof selectedValue === "number") {
+    ariaValueText = String(selectedValue);
   } else {
     ariaValueText = undefined;
   }
@@ -954,7 +987,7 @@ function WheelUI(props) {
 
   // The row for the current value (the selection), else the first row.
   const getSelectedItem = (viewportEl) => {
-    const id = getIdForValue(currentValue);
+    const id = getIdForValue(currentValueRef.current);
     const byId = id ? viewportEl.querySelector(`#${CSS.escape(id)}`) : null;
     return byId || viewportEl.querySelector(REAL_ITEM_SELECTOR);
   };
@@ -1034,7 +1067,9 @@ function WheelUI(props) {
       }, 600);
       // A set-request the framework rejects because the control is read-only →
       // pops the read-only callout (the single, control-level one).
-      dispatchRequestSetUIState(inputRef.current, currentValue, { event });
+      dispatchRequestSetUIState(inputRef.current, currentValueRef.current, {
+        event,
+      });
     };
     // Non-loop only: is a wheel in this direction blocked (so the page should
     // scroll instead of the wheel trapping it)?
@@ -1274,7 +1309,7 @@ function WheelUI(props) {
       role="spinbutton"
       tabindex={disabled ? undefined : 0}
       aria-valuenow={
-        typeof currentValue === "number" ? currentValue : undefined
+        typeof selectedValue === "number" ? selectedValue : undefined
       }
       aria-valuetext={ariaValueText}
       data-horizontal={isHorizontal ? "" : undefined}
