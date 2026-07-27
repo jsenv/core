@@ -256,7 +256,7 @@ const css = /* css */ `
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
-      --anchor-spacing: 3px; /* outline width + 1px */
+      --anchor-spacing: 0px; /* outline width + 1px */
 
       display: inline-flex;
       width: round(1em, 1px);
@@ -435,7 +435,9 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.anchor] - Marks this as an in-page anchor link:
  *   sets `data-anchor`, derives `id` from `href` (the part after `#`) when no
  *   `id` is given, drops the visited color, keeps a pointer cursor even when
- *   current, and defaults `hrefFallback` to `false` (no auto text).
+ *   current, and defaults `hrefFallback` to `false` (no auto text). With no
+ *   children it shows the anchor icon; give it children (e.g. `"#"`) to render
+ *   those instead.
  * @param {string} [props.value] - Value emitted by the control facade
  *   (`navi_value`); defaults to `href`.
  * @param {boolean} [props.current] - Forces the "current" state on (otherwise
@@ -457,7 +459,10 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean|import("preact").ComponentChild} [props.blankTargetIcon] -
  *   Override/suppress the auto external-link icon.
  * @param {boolean|import("preact").ComponentChild} [props.anchorIcon] -
- *   Override/suppress the auto anchor icon.
+ *   Controls the auto anchor icon shown for a childless anchor link:
+ *   `true`/`undefined` uses the default chain SVG, `false` suppresses it, any
+ *   other node replaces it. To render a plain `#` instead, prefer writing it as
+ *   the link's children (`<Link anchor href="#x">#</Link>`).
  * @param {boolean} [props.revealOnInteraction] - Hide the link until its
  *   container is hovered/focused (`data-reveal-on-interaction`), floating it
  *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
@@ -580,7 +585,10 @@ const LinkPlain = (props) => {
         blankTargetIcon === undefined
           ? innerTarget === "_blank"
           : blankTargetIcon;
-      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
+      // The auto anchor icon is only a stand-in for missing content: an anchor
+      // link with children (e.g. writing "#" directly) renders those instead.
+      const innerAnchorIcon =
+        anchorIcon === undefined ? isAnchor && !children : anchorIcon;
       if (innerBlankTargetIcon) {
         innerEndIcon =
           innerBlankTargetIcon === true ? (

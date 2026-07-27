@@ -496,32 +496,68 @@
             <Title as="h2">Anchor Feature</Title>
             <Text>
               Use the <code>anchor</code> prop to mark the clickable anchor of a
-              section or element. It displays a small anchor affordance that
-              users can click to copy the URL with the hash and understand the
-              exact same-document target.
+              section or element. It links to a same-document target so users
+              can click to jump to (and copy the URL of) that exact spot.
             </Text>
             <Text>
-              With <code>revealOnInteraction</code>, the anchor sits in a
-              floating area to the left and only appears on hover or focus.
+              The recommended affordance is a plain <code>#</code> written as
+              the link's children — crisp at any size and unambiguous:
+            </Text>
+
+            <Box row marginTop="m">
+              <Box>
+                <Caption>{"<Link anchor>#</Link>"}</Caption>
+                <br />
+                <Link href="#anchor-hash" anchor>
+                  #
+                </Link>{" "}
+                Some text
+              </Box>
+
+              <Box>
+                <Caption># + revealOnInteraction</Caption>
+                <br />
+
+                <Text relative>
+                  <Link href="#anchor-hash-reveal" anchor revealOnInteraction>
+                    #
+                  </Link>
+                  Some text
+                </Text>
+              </Box>
+
+              <Box row>
+                <Caption>Inside Title — #</Caption>
+
+                <Title as="h3" marginTop="0">
+                  <Link href="#anchor-hash-title" anchor revealOnInteraction>
+                    #
+                  </Link>
+                  Section Title
+                </Title>
+              </Box>
+            </Box>
+
+            <Text marginTop="md">
+              When an anchor link has <strong>no children</strong>, it falls
+              back to the anchor icon (the chain SVG). With
+              <code>revealOnInteraction</code> it sits in a floating area to the
+              left and only appears on hover or focus.
             </Text>
 
             <Box row marginTop="md">
               <Box>
-                <Caption>anchor</Caption>
+                <Caption>anchor (no children → icon)</Caption>
                 <br />
-                <Link href="#anchor-to-text" anchor /> Some text
+                <Link href="#anchor-icon" anchor /> Some text
               </Box>
 
               <Box>
-                <Caption>anchor + revealOnInteraction</Caption>
+                <Caption>icon + revealOnInteraction</Caption>
                 <br />
 
                 <Text relative>
-                  <Link
-                    href="#anchor-to-text-reveal"
-                    anchor
-                    revealOnInteraction
-                  />
+                  <Link href="#anchor-icon-reveal" anchor revealOnInteraction />
                   Some text
                 </Text>
               </Box>
@@ -533,24 +569,15 @@
                 </Caption>
 
                 <Box background="green" width="50" height="50" relative>
-                  <Link href="#anchor-to-box" anchor revealOnInteraction />
+                  <Link href="#anchor-icon-box" anchor revealOnInteraction />
                 </Box>
               </Box>
 
               <Box row>
-                <Caption>Inside Title — revealOnInteraction</Caption>
+                <Caption>Inside Title — icon</Caption>
 
                 <Title as="h3" marginTop="0">
-                  <Link href="#anchor-to-link" anchor revealOnInteraction />
-                  Section Title
-                </Title>
-              </Box>
-
-              <Box row>
-                <Caption>Inside Title — no revealOnInteraction</Caption>
-
-                <Title as="h3" marginTop="0">
-                  <Link href="#anchor-to-link-static" anchor />
+                  <Link href="#anchor-icon-title" anchor revealOnInteraction />
                   Section Title
                 </Title>
               </Box>
