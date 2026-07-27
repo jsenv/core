@@ -7,11 +7,20 @@
  *
  * A SPINBUTTON, NOT A RADIO GROUP. The whole wheel is one focusable element
  * (role=spinbutton, the container) whose value lives in an invisible input for
- * the form. The rows (Wheel.Item) are inert, aria-hidden <li>s that only register
- * their {value, label} with the wheel; they carry no focusable input. The
- * main-axis arrows step the value by one row (a focus-free value change — no DOM
- * focus moves between rows, which is what makes keyboard nav cheap); the value
- * updates immediately while the row glides to center.
+ * the form. Wheel.Item children only register their {value, label, itemProps}
+ * with the wheel and render nothing; they carry no focusable input. The main-axis
+ * arrows step the value by one row (a focus-free value change — no DOM focus moves
+ * between rows, which is what makes keyboard nav cheap); the value updates
+ * immediately while the selection glides to center.
+ *
+ * VIRTUALIZED. The DOM is NOT the source of truth — the ordered tracked-item list
+ * is. Only visibleCount + 2 <li> slots are rendered (WheelWindow) and recycled: as
+ * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
+ * re-render on demand — only when the wheel crosses a row (the window base index
+ * changes) — never per frame; the per-frame motion is a single imperative
+ * transform on the track (--wheel-offset, see applyOffset). All geometry is
+ * computed from the value index and a measured uniform row size, not read off the
+ * DOM.
  *
  * FRAMEWORK REUSE. value/defaultValue, action/uiAction, validation, states and
  * the readonly/disabled/busy callouts all come from the single-value control
@@ -22,20 +31,19 @@
  *   - external value change  → scroll the selected item to center
  *
  * LOOP. A wheel wraps endlessly by default (`bounded` opts out, giving fixed
- * ends). When looping, we render a runway of inert proxy rows on each side of the
- * real items — the last values before the first row, the first values after the
- * last — as scroll runway (loopBufferCount rows, a couple of viewports, capped at
- * LOOP_BUFFER_MAX, not just visibleCount). On every scroll we fold the center
- * back into the real-items band by whole real-list extents; seamless because a
- * proxy shows the exact value the real row one extent away would. The proxy
- * labels come from a Wheel.Item tracker (see WheelItemTrackerContext), NOT from
- * walking children — children may be wrapped in context providers/fragments.
+ * ends). Looping needs no extra rows: the window's slots wrap their value index
+ * modulo the item count (wrapIndex), so the row after the last value shows the
+ * first, seamlessly, in both directions. The position (pos) is folded back to the
+ * canonical index * itemSize only when the wheel comes to rest (commitSelection),
+ * never mid-glide — the transform stays bounded regardless because it is written
+ * relative to the base the window currently shows (renderedBaseRef).
  *
  * ORIENTATION. Everything above is axis-agnostic: helpers read the main axis via
  * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
  * a [data-horizontal] variant.
  */
 
+import { useSignal } from "@preact/signals";
 import { createContext } from "preact";
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
@@ -248,14 +256,7 @@ const css = /* css */ `
         mask-image: var(--wheel-fade);
       }
       .navi_wheel_list {
-        /* Blank space so the first and last items can reach the center row. */
-        padding-block: calc(
-          var(--wheel-item-height) * (var(--wheel-visible-count) - 1) / 2
-        );
         flex-direction: column;
-        &[data-loop] {
-          padding-block: 0;
-        }
       }
       .navi_wheel_item {
         /* Fixed main-axis size (height); the cross axis follows the content. */
@@ -300,15 +301,9 @@ const css = /* css */ `
         mask-image: var(--wheel-fade);
       }
       .navi_wheel_list {
-        padding-inline: calc(
-          var(--wheel-item-width) * (var(--wheel-visible-count) - 1) / 2
-        );
         flex-direction: row;
         /* Horizontal wheels scroll along X (see --wheel-offset on the base rule). */
         transform: translate3d(var(--wheel-offset, 0px), 0, 0);
-        &[data-loop] {
-          padding-inline: 0;
-        }
       }
       .navi_wheel_item {
         /* Fixed main-axis size (width); the cross axis follows the content. */
@@ -402,10 +397,6 @@ const css = /* css */ `
     height: 0.62em;
   }
 `;
-
-// Upper bound on the loop runway rendered on each side. A fling never travels
-// this many rows between scroll events, so more would only add invisible DOM.
-const LOOP_BUFFER_MAX = 20;
 
 // Fling physics (px per ms). Velocity is capped so even a violent fling travels
 // only a handful of rows (a picker isn't a free-scrolling list — overshooting
@@ -536,8 +527,9 @@ function WheelUI(props) {
   const showGlass = Boolean(glass ?? group?.glass);
   const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
 
-  // Collect every Wheel.Item's {value, label} in order, robustly (children may
-  // be wrapped). loopClones drives the proxy rows and the wrap math.
+  // Collect every Wheel.Item's {value, label, itemProps} in order, robustly
+  // (children may be wrapped). This ordered list is the source of truth for the
+  // whole wheel — the rendered rows are a small recycled window over it.
   const tracker = useItemTracker();
   const indexRef = useRef(0);
   indexRef.current = 0;
@@ -548,13 +540,26 @@ function WheelUI(props) {
   const trackedItems = tracker.itemsSignal.value;
   const trackedItemsRef = useRef(trackedItems);
   trackedItemsRef.current = trackedItems;
-  const loopClones = isLoop
-    ? trackedItems.map((item) => ({
-        value: item.value,
-        label: item.label,
-        itemProps: item.itemProps,
-      }))
-    : [];
+  const itemCount = trackedItems.length;
+
+  // Virtualization: render only visibleCount + 2 rows (one buffer each side to
+  // cover the partial rows a scroll reveals + a re-render's one-frame lag) and
+  // recycle them, filling each from trackedItems. `baseIndexSignal` holds the
+  // value index shown in the top slot; it changes only when the wheel crosses a
+  // row (not every frame), so the window re-renders on demand, not per frame. The
+  // per-frame transform is imperative (--wheel-offset); renderedBaseRef mirrors
+  // the base the DOM currently shows so that transform stays consistent with it.
+  // visibleCount + 2, but never more rows than there are values.
+  let windowSize = visibleCount + 2;
+  if (windowSize > itemCount) {
+    windowSize = itemCount;
+  }
+  const baseIndexSignal = useSignal(0);
+  const renderedBaseRef = useRef(0);
+  // Which window slot currently carries data-wheel-current (the center row).
+  const markedSlotRef = useRef(-1);
+  // Row size in px, measured once from a rendered slot (rows are uniform).
+  const itemSizeRef = useRef(0);
 
   // A single value control backed by a hidden input (facade pattern, like
   // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
@@ -625,20 +630,12 @@ function WheelUI(props) {
     dispatchRequestInteraction(inputRef.current, params);
   };
 
-  // Real rows are the tracked items (clones carry .navi_wheel_item_clone). The
-  // selection is the wheel's single value, mapped to a row via the tracker.
-  const REAL_ITEM_SELECTOR = ".navi_wheel_item:not(.navi_wheel_item_clone)";
-  const getItemValueById = (id) => {
-    const match = trackedItemsRef.current.find((it) => it.id === id);
-    return match ? match.value : undefined;
-  };
-  const getIdForValue = (value) => {
-    const items = trackedItemsRef.current;
-    const match = items.find((it) => compareTwoJsValues(it.value, value));
-    if (match) {
-      return match.id;
-    }
-    return items.length ? items[0].id : null;
+  // Map a value to its index in the tracked list (the selection is one value,
+  // located in the ordered data — not a DOM row). -1 when absent.
+  const getIndexForValue = (value) => {
+    return trackedItemsRef.current.findIndex((it) =>
+      compareTwoJsValues(it.value, value),
+    );
   };
 
   // What the spinbutton announces. currentValue is already the typed item value.
@@ -660,10 +657,11 @@ function WheelUI(props) {
   }
   const numericRange = getNumericRange(trackedItems);
 
-  // The id of the item currently sitting in the center. Guards the effects so an
-  // external value change (or the initial mount) scrolls the selection into
-  // place, while our own scroll-driven selection does not scroll a second time.
-  const centeredIdRef = useRef(null);
+  // The value index we are heading to (the glide/selection target). Guards the
+  // effects so an external value change (or the initial mount) scrolls into place,
+  // while our own scroll-driven selection does not scroll a second time. Holds the
+  // TARGET so rapid inputs step from it and accumulate. null = nothing pending.
+  const centeredIndexRef = useRef(null);
   // The wheel does NOT use native scroll. `posRef` is our own virtual scroll
   // position (px, main axis); the list track is translated by -pos. This is the
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
@@ -683,20 +681,6 @@ function WheelUI(props) {
   const glideSpeedRef = useRef(glideSpeed);
   glideSpeedRef.current = glideSpeed;
 
-  // How many clone rows to render on each side of the real items as scroll
-  // runway. Because the sequence is periodic with period N, the wrap stays
-  // seamless for any count, so we render enough looping values (never blank) to
-  // outrun a fling — but no more, to keep the DOM light: at least a couple of
-  // viewports, at most LOOP_BUFFER_MAX. It doesn't need a whole extra copy; the
-  // runway is invisible (the wrap keeps the center on real items).
-  const minBufferCount = visibleCount * 2;
-  let loopBufferCount = loopClones.length;
-  if (loopBufferCount < minBufferCount) {
-    loopBufferCount = minBufferCount;
-  } else if (loopBufferCount > LOOP_BUFFER_MAX) {
-    loopBufferCount = LOOP_BUFFER_MAX;
-  }
-
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
     ...(itemHeight === undefined
@@ -714,152 +698,155 @@ function WheelUI(props) {
     ...style,
   };
 
-  // Main-axis accessors — pick top/height or left/width from the orientation.
+  // Main-axis size of the viewport, from the orientation.
   const viewportMain = (vp) =>
     isHorizontal ? vp.clientWidth : vp.clientHeight;
-  const itemMainStart = (el) => (isHorizontal ? el.offsetLeft : el.offsetTop);
-  const itemMainSize = (el) =>
-    isHorizontal ? el.offsetWidth : el.offsetHeight;
 
-  // Rows are uniform, so one size drives all geometry. content-visibility:auto
-  // makes an off-screen row report offsetWidth/Height 0 (its offsetLeft/Top stays
-  // correct), so a size read straight off an arbitrary row can be 0 mid-scroll.
-  // Take the gap between two adjacent real rows' starts — always reliable — and
-  // fall back to a rendered row's measured size, then the CSS variable.
+  // Row size (px). Rows are uniform, so one measurement (cached) drives all the
+  // geometry — positions are then computed from value indices, not read off the
+  // DOM. Measured from a rendered window slot; refreshed while still 0.
   const getItemSize = (vp) => {
-    const reals = vp.querySelectorAll(REAL_ITEM_SELECTOR);
-    if (reals.length >= 2) {
-      const gap = itemMainStart(reals[1]) - itemMainStart(reals[0]);
-      if (gap > 0) {
-        return gap;
-      }
+    if (itemSizeRef.current > 0) {
+      return itemSizeRef.current;
     }
-    if (reals.length >= 1) {
-      const size = itemMainSize(reals[0]);
-      if (size > 0) {
-        return size;
-      }
+    const slot = vp.querySelector(".navi_wheel_item");
+    const size = slot
+      ? isHorizontal
+        ? slot.offsetWidth
+        : slot.offsetHeight
+      : 0;
+    if (size > 0) {
+      itemSizeRef.current = size;
     }
-    const anyRow = vp.querySelector(".navi_wheel_item");
-    return anyRow ? itemMainSize(anyRow) : 0;
+    return size;
   };
 
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
   const getTrack = (vp) => vp.querySelector(".navi_wheel_list");
 
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-
-  const applyTransform = (track, pos) => {
-    // Expose the position as a CSS var and let the stylesheet apply it (translate
-    // vs translate3d, X vs Y). Snap to a whole pixel: a transformed row's text
-    // renders 1px off a static element sitting at a half-pixel, so the separators
-    // match this track's line-height to share the same whole-pixel grid (see
-    // .navi_wheel_item / .navi_wheel_group_separator).
-    track.style.setProperty("--wheel-offset", `${-Math.round(pos)}px`);
+  // An index wrapped into [0, count) when looping, else clamped.
+  const wrapIndex = (index) => {
+    const count = trackedItemsRef.current.length;
+    if (count === 0) {
+      return 0;
+    }
+    return isLoop
+      ? ((index % count) + count) % count
+      : clampNumber(index, 0, count - 1);
   };
 
-  // Push the current virtual position onto the track (via --wheel-offset) and
-  // refresh the "current" emphasis. Every motion — drag, momentum, glide — is a
-  // per-frame rAF that calls this, so updates apply immediately with no CSS
-  // transition to fight.
-  const renderPos = (vp) => {
+  // Push the current position onto the track and re-render the recycled window ON
+  // DEMAND. Every frame the transform (--wheel-offset) is updated imperatively
+  // (cheap); the window's slot VALUES re-render only when the top value index
+  // changes (i.e. we cross a row), via baseIndexSignal. renderedBaseRef mirrors
+  // the base the DOM currently shows, so the imperative transform stays consistent
+  // with it even when a re-render lags a frame — the buffer row absorbs the gap.
+  // The transform that positions the track so the value at pos/itemSize sits in
+  // the center window, given the base value the DOM currently shows
+  // (renderedBaseRef). Snap to a whole pixel (a transformed row's text renders 1px
+  // off a static element at a half-pixel; the separators share this line-height to
+  // match the grid).
+  const applyOffset = (vp) => {
     const track = getTrack(vp);
-    if (track) {
-      applyTransform(track, posRef.current);
-    }
-    updateCurrentMarker(vp, findCenteredRow(vp));
-  };
-
-  const findCenteredMatching = (viewportEl, selector) => {
-    const items = viewportEl.querySelectorAll(selector);
-    const center = posRef.current + viewportMain(viewportEl) / 2;
-    const itemSize = getItemSize(viewportEl);
-    let closest = null;
-    let closestDistance = Infinity;
-    for (const item of items) {
-      const itemCenter = itemMainStart(item) + itemSize / 2;
-      const distance = Math.abs(itemCenter - center);
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closest = item;
-      }
-    }
-    return closest;
-  };
-  // Selection tracks the centered *real* item.
-  const findCenteredItem = (viewportEl) =>
-    findCenteredMatching(viewportEl, REAL_ITEM_SELECTOR);
-  // The "current" emphasis tracks the centered *rendered row* including loop
-  // proxies, so a proxy lights up exactly like a real value as it reaches the
-  // center — the wrap that swaps it for the real row is then invisible.
-  const findCenteredRow = (viewportEl) =>
-    findCenteredMatching(viewportEl, ".navi_wheel_item");
-
-  // The virtual position that centers a given row.
-  const centerPosFor = (vp, el) =>
-    itemMainStart(el) - (viewportMain(vp) - getItemSize(vp)) / 2;
-
-  // Nearest whole-row position to `pos` (rows are spaced by itemSize; phase taken
-  // from a real row's center). Snaps a sub-row nudge back onto a value.
-  const snapPosToRow = (vp, pos) => {
-    const reals = vp.querySelectorAll(REAL_ITEM_SELECTOR);
     const size = getItemSize(vp);
-    if (!reals.length || size === 0) {
-      return pos;
-    }
-    const anchor = centerPosFor(vp, reals[0]);
-    return Math.round((pos - anchor) / size) * size + anchor;
-  };
-
-  // Loop: fold the position back into the real-items band [bufferSpan,
-  // bufferSpan+realSpan). A real-list extent away shows identical content, so
-  // this is invisible — and because it's our own value (not scrollTop) there is
-  // no physical edge to get stuck against. Returns the px delta applied to posRef
-  // (0 when nothing moved) so a caller mid-glide can shift its target by the same.
-  const wrapPos = (vp) => {
-    // Real-item count comes from the DOM, not a closed-over `loopClones`: the
-    // input effect binds these helpers once, before Wheel.Item children have
-    // registered, so the captured `loopClones` would still be empty here.
-    const realItems = vp.querySelectorAll(REAL_ITEM_SELECTOR);
-    if (!isLoop || !realItems.length) {
-      return 0;
-    }
-    const realSpan = getItemSize(vp) * realItems.length;
-    if (realSpan === 0) {
-      return 0;
-    }
-    const bufferSpan = itemMainStart(realItems[0]);
-    const center = posRef.current + viewportMain(vp) / 2;
-    if (center >= bufferSpan && center < bufferSpan + realSpan) {
-      return 0;
-    }
-    const offsetInBand =
-      (((center - bufferSpan) % realSpan) + realSpan) % realSpan;
-    const delta = bufferSpan + offsetInBand - center;
-    posRef.current += delta;
-    return delta;
-  };
-
-  // Non-loop: clamp so the first/last value can't be scrolled past center.
-  const clampPos = (vp) => {
-    const items = vp.querySelectorAll(REAL_ITEM_SELECTOR);
-    if (!items.length) {
+    if (!track || size === 0) {
       return;
     }
-    posRef.current = clampNumber(
-      posRef.current,
-      centerPosFor(vp, items[0]),
-      centerPosFor(vp, items[items.length - 1]),
-    );
+    const t =
+      viewportMain(vp) / 2 -
+      size / 2 -
+      posRef.current +
+      renderedBaseRef.current * size;
+    track.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
+    // Mark the row currently in the center window (its value is the selection).
+    // The slot recycles, so the marked node changes as we scroll — move the
+    // attribute only when the center slot index actually changes. Only [disabled]
+    // styling reads it; the fade/focus-ring center is geometric (CSS).
+    const centerSlot =
+      Math.round(posRef.current / size) - renderedBaseRef.current;
+    if (centerSlot !== markedSlotRef.current) {
+      const slots = track.children;
+      const previous = slots[markedSlotRef.current];
+      if (previous) {
+        previous.removeAttribute("data-wheel-current");
+      }
+      const current = slots[centerSlot];
+      if (current) {
+        current.setAttribute("data-wheel-current", "");
+      }
+      markedSlotRef.current = centerSlot;
+    }
+  };
+  const renderPos = (vp) => {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (size === 0 || count === 0) {
+      return;
+    }
+    let base = Math.round(posRef.current / size) - Math.floor(windowSize / 2);
+    // Non-loop: keep the window inside the value range so every slot maps to a
+    // real value; the transform then leaves the blank runway above the first /
+    // below the last value on its own (no rows are drawn there).
+    if (!isLoop) {
+      base = clampNumber(base, 0, count - windowSize);
+    }
+    if (base !== baseIndexSignal.peek()) {
+      baseIndexSignal.value = base;
+    }
+    applyOffset(vp);
+  };
+  // The window subcomponent calls this once it has committed a new base to the
+  // DOM: sync renderedBaseRef then re-apply the offset so the imperative transform
+  // matches the freshly rendered rows within the same frame (no jump).
+  const commitRenderedBase = (base) => {
+    renderedBaseRef.current = base;
+    const vp = getViewport();
+    if (vp) {
+      applyOffset(vp);
+    }
   };
 
-  // Set the position from user input: normalise (wrap in loop, clamp otherwise),
-  // then render.
+  // The value index at the center for the current position.
+  const centeredIndex = (vp) => {
+    const size = getItemSize(vp);
+    return size === 0 ? 0 : wrapIndex(Math.round(posRef.current / size));
+  };
+
+  // The canonical position that centers value `index` (index * itemSize). For a
+  // loop, glideTargetFor picks the copy nearest the current pos so a wrap goes the
+  // short way round instead of unwinding the whole list.
+  const centerPosFor = (vp, index) => index * getItemSize(vp);
+  const glideTargetFor = (vp, index) => {
+    const canonical = centerPosFor(vp, index);
+    const span = trackedItemsRef.current.length * getItemSize(vp);
+    if (!isLoop || span === 0) {
+      return canonical;
+    }
+    return canonical + Math.round((posRef.current - canonical) / span) * span;
+  };
+
+  // Nearest whole-row position to `pos` (rows are spaced by itemSize).
+  const snapPosToRow = (vp, pos) => {
+    const size = getItemSize(vp);
+    return size === 0 ? pos : Math.round(pos / size) * size;
+  };
+
+  // Bounded: clamp so the first/last value can't be scrolled past center. A loop
+  // never clamps — its position is free and folds back to a canonical value on
+  // settle (commitSelection) so it can't drift unbounded.
+  const clampPos = (vp) => {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (count === 0 || size === 0) {
+      return;
+    }
+    posRef.current = clampNumber(posRef.current, 0, (count - 1) * size);
+  };
+
   const setPos = (vp, pos) => {
     posRef.current = pos;
-    if (isLoop) {
-      wrapPos(vp);
-    } else {
+    if (!isLoop) {
       clampPos(vp);
     }
     renderPos(vp);
@@ -877,22 +864,27 @@ function WheelUI(props) {
     }
   };
 
-  // After motion stops: fold any clone back onto its real row (invisible), then
-  // select the centered value.
+  // After motion stops: fold a looped position back to the centered value's
+  // canonical spot (index*itemSize) so it can't drift unbounded, then select it.
+  // The fold happens here at rest, atomically with the settle re-render, so the
+  // window/transform stay consistent (no mid-glide fold).
   const commitSelection = (vp) => {
-    if (isLoop && wrapPos(vp)) {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (size === 0 || count === 0) {
+      return;
+    }
+    const index = centeredIndex(vp);
+    if (isLoop) {
+      posRef.current = index * size;
       renderPos(vp);
     }
     if (!interactive) {
       return;
     }
-    const centered = findCenteredItem(vp);
-    if (!centered) {
-      return;
-    }
-    centeredIdRef.current = centered.id;
+    centeredIndexRef.current = index;
     requestSelectValue(
-      getItemValueById(centered.id),
+      trackedItemsRef.current[index].value,
       new CustomEvent("navi_wheel_settle"),
     );
   };
@@ -901,8 +893,8 @@ function WheelUI(props) {
   // a fraction of the remaining distance each frame (so it eases out into place)
   // and continuing from wherever it is when the target moves (so a second input
   // mid-glide accelerates toward the farther target instead of restarting). The
-  // position travels raw (no wrap) so it can cross onto a clone; the loop folds
-  // whole extents back seamlessly in loop mode, and commits (selects) on arrival.
+  // position runs free (the window recycles values as it goes); it commits and
+  // folds back to a canonical spot on arrival.
   const glideStep = (vp, prevTime) => {
     const now = performance.now();
     const dt = clampNumber(now - prevTime, 0, 32);
@@ -911,7 +903,7 @@ function WheelUI(props) {
       glideRef.current = null;
       return;
     }
-    let dist = target - posRef.current;
+    const dist = target - posRef.current;
     // < ~half a pixel from target → snap, commit, done.
     if (Math.abs(dist) < 0.4) {
       posRef.current = target;
@@ -925,15 +917,6 @@ function WheelUI(props) {
     // control still slows it down; a farther target moves faster (distance × factor).
     const factor = 1 - Math.pow(1 - glideSpringFactor(), dt / 16);
     posRef.current += dist * factor;
-    if (isLoop) {
-      // Fold the runway back so a long accumulated chase never runs off the clone
-      // band into blank space; shift the target by the same extent so the spring
-      // is uninterrupted.
-      const delta = wrapPos(vp);
-      if (delta !== 0) {
-        targetPosRef.current += delta;
-      }
-    }
     renderPos(vp);
     glideRef.current = requestAnimationFrame(() => glideStep(vp, now));
   };
@@ -960,8 +943,8 @@ function WheelUI(props) {
   // Settle after user input (fling or idle): a single continuous motion that
   // decays the initial velocity, then — once slow — springs into the nearest row
   // center. Momentum and snap are the same loop, so it eases into place instead
-  // of momentum-then-abrupt-jump. Velocity is capped so a huge fling can't shoot
-  // past the rendered runway (which would flash blank until it settles).
+  // of momentum-then-abrupt-jump. Velocity is capped so even a violent fling
+  // overshoots only a handful of rows (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
     let v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
@@ -979,15 +962,10 @@ function WheelUI(props) {
         momentumRef.current = requestAnimationFrame(step);
         return;
       }
-      const row = findCenteredRow(vp);
-      if (!row) {
-        momentumRef.current = null;
-        commitSelection(vp);
-        return;
-      }
-      const dist = centerPosFor(vp, row) - posRef.current;
+      const snapTo = snapPosToRow(vp, posRef.current);
+      const dist = snapTo - posRef.current;
       if (Math.abs(dist) < 0.4) {
-        setPos(vp, posRef.current + dist);
+        setPos(vp, snapTo);
         momentumRef.current = null;
         commitSelection(vp);
         return;
@@ -998,19 +976,10 @@ function WheelUI(props) {
     momentumRef.current = requestAnimationFrame(step);
   };
 
-  // Center a specific item (external value / initial / keyboard). Smooth picks
-  // the nearest copy so arrowing off an end glides one step onto a clone.
-  const centerOn = (vp, itemEl, behavior) => {
-    const base = centerPosFor(vp, itemEl);
-    let target = base;
-    const realCount = vp.querySelectorAll(REAL_ITEM_SELECTOR).length;
-    if (isLoop && realCount && behavior === "smooth") {
-      const realSpan = getItemSize(vp) * realCount;
-      if (realSpan > 0) {
-        const copies = Math.round((posRef.current - base) / realSpan);
-        target = base + copies * realSpan;
-      }
-    }
+  // Center value `index` (external value / initial / keyboard / click). Smooth
+  // glides to the nearest copy (glideTargetFor) so a wrap goes the short way.
+  const centerOnIndex = (vp, index, behavior) => {
+    const target = glideTargetFor(vp, index);
     if (behavior === "smooth") {
       glideTo(vp, target);
     } else {
@@ -1018,27 +987,23 @@ function WheelUI(props) {
     }
   };
 
-  // Select real-item `nextIndex`: update the value + emphasis immediately (so N
-  // inputs land N rows away right now) and glide the row to center (the animation
-  // lags and catches up). centeredIdRef holds the TARGET, so the next input steps
-  // from it — rapid inputs accumulate.
-  const glideToIndex = (vp, reals, nextIndex, event) => {
-    const targetItem = reals[nextIndex];
-    centeredIdRef.current = targetItem.id;
-    updateCurrentMarker(vp, targetItem);
-    requestSelectValue(getItemValueById(targetItem.id), event);
-    centerOn(vp, targetItem, "smooth");
+  // Select value `index`: update the value immediately (so N inputs land N rows
+  // away right now) and glide there (the animation lags and catches up).
+  // centeredIndexRef holds the TARGET so the next input steps from it — rapid
+  // inputs accumulate.
+  const glideToIndex = (vp, index, event) => {
+    centeredIndexRef.current = index;
+    requestSelectValue(trackedItemsRef.current[index].value, event);
+    centerOnIndex(vp, index, "smooth");
   };
-  const wrapIndex = (index, length) =>
-    isLoop
-      ? ((index % length) + length) % length
-      : clampNumber(index, 0, length - 1);
   // Index we are heading to (the target, not the mid-glide visual center).
-  const currentTargetIndex = (vp, reals) => {
-    const centeredId = centeredIdRef.current;
-    let index = centeredId ? reals.findIndex((r) => r.id === centeredId) : -1;
-    if (index < 0) {
-      index = reals.indexOf(getSelectedItem(vp));
+  const currentTargetIndex = (vp) => {
+    let index = centeredIndexRef.current;
+    if (index === null) {
+      index = getIndexForValue(currentValueRef.current);
+    }
+    if (index < 0 || index === null) {
+      index = centeredIndex(vp);
     }
     if (index < 0) {
       index = 0;
@@ -1048,19 +1013,11 @@ function WheelUI(props) {
   // Move the target by `offset` rows (arrow key = ±1, click = its distance from
   // the center window). Relative to the current target so it accumulates.
   const stepTarget = (vp, offset, event) => {
-    const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
-    if (!reals.length) {
+    if (trackedItemsRef.current.length === 0) {
       return;
     }
-    const index = currentTargetIndex(vp, reals);
-    glideToIndex(vp, reals, wrapIndex(index + offset, reals.length), event);
-  };
-
-  // The row for the current value (the selection), else the first row.
-  const getSelectedItem = (viewportEl) => {
-    const id = getIdForValue(currentValueRef.current);
-    const byId = id ? viewportEl.querySelector(`#${CSS.escape(id)}`) : null;
-    return byId || viewportEl.querySelector(REAL_ITEM_SELECTOR);
+    const index = currentTargetIndex(vp);
+    glideToIndex(vp, wrapIndex(index + offset), event);
   };
 
   // Sync the center with the current value — used on first display and whenever
@@ -1068,24 +1025,26 @@ function WheelUI(props) {
   const syncCenterToSelection = (viewportEl, behavior) => {
     // A glide or momentum in flight (tap, arrow, fling) is already taking the
     // wheel to the right row. This runs on every controlled-value re-render, which
-    // lags a frame behind our own centeredIdRef — so on rapid taps its guard below
-    // would miss and it would snap instantly mid-glide, leaving the wheel stuck
-    // off-center. Let the motion finish: commitSelection settles the value and the
-    // next render is a no-op. A genuine external change made during motion is
-    // honoured once it settles (centeredIdRef then differs from the selection).
+    // lags a frame behind our own centeredIndexRef — so on rapid taps its guard
+    // below would miss and it would snap instantly mid-glide, leaving the wheel
+    // stuck off-center. Let the motion finish: commitSelection settles the value
+    // and the next render is a no-op. A genuine external change made during motion
+    // is honoured once it settles (centeredIndexRef then differs from selection).
     if (glideRef.current !== null || momentumRef.current !== null) {
       return;
     }
-    const selectedItem = getSelectedItem(viewportEl);
-    if (!selectedItem) {
+    if (trackedItemsRef.current.length === 0) {
       return;
     }
-    if (selectedItem.id === centeredIdRef.current) {
+    let selectedIndex = getIndexForValue(currentValueRef.current);
+    if (selectedIndex < 0) {
+      selectedIndex = 0;
+    }
+    if (selectedIndex === centeredIndexRef.current) {
       return;
     }
-    centeredIdRef.current = selectedItem.id;
-    updateCurrentMarker(viewportEl, selectedItem);
-    centerOn(viewportEl, selectedItem, behavior);
+    centeredIndexRef.current = selectedIndex;
+    centerOnIndex(viewportEl, selectedIndex, behavior);
   };
   // The deferred re-center below fires a frame later, by which point the items
   // have registered and the value has resolved; a closure would still hold the
@@ -1107,7 +1066,7 @@ function WheelUI(props) {
       // interaction. Recompute from stable layout so it sits in the window from
       // the start.
       const rafId = requestAnimationFrame(() => {
-        centeredIdRef.current = null;
+        centeredIndexRef.current = null;
         syncCenterToSelectionRef.current(vp, "auto");
       });
       return () => {
@@ -1145,14 +1104,13 @@ function WheelUI(props) {
       if (isLoop) {
         return false;
       }
-      const items = vp.querySelectorAll(REAL_ITEM_SELECTOR);
-      if (!items.length) {
+      const count = trackedItemsRef.current.length;
+      if (!count) {
         return false;
       }
-      const min = centerPosFor(vp, items[0]);
-      const max = centerPosFor(vp, items[items.length - 1]);
+      const max = (count - 1) * getItemSize(vp);
       return (
-        (delta < 0 && posRef.current <= min + 0.5) ||
+        (delta < 0 && posRef.current <= 0.5) ||
         (delta > 0 && posRef.current >= max - 0.5)
       );
     };
@@ -1220,13 +1178,6 @@ function WheelUI(props) {
         name: "scroll",
         allowed: () => {
           cancelAnim();
-          // Fold the (possibly accumulated) position back into the real-items
-          // band first — seamless, since a whole extent away shows identical
-          // content — so repeated ±item never walks the glide off the end of the
-          // clone runway into blank space (which also desynced the centered value).
-          if (isLoop) {
-            wrapPos(vp);
-          }
           if (e.detail.behavior === "smooth") {
             // Glide to the nearest row after the nudge (a sub-row nudge springs
             // back); a whole-row/items delta already lands on a row.
@@ -1401,11 +1352,11 @@ function WheelUI(props) {
         allowed: () => {
           e.preventDefault();
           if (e.key === "Home" || e.key === "End") {
-            const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
-            if (!reals.length) {
+            const count = trackedItemsRef.current.length;
+            if (!count) {
               return;
             }
-            glideToIndex(vp, reals, e.key === "Home" ? 0 : reals.length - 1, e);
+            glideToIndex(vp, e.key === "Home" ? 0 : count - 1, e);
           } else {
             // Steps from the TARGET, so a second press mid-glide accumulates (the
             // spring accelerates toward the farther target).
@@ -1466,24 +1417,22 @@ function WheelUI(props) {
         inset={-1}
       />
       <div className="navi_wheel_viewport">
-        <ul className="navi_wheel_list" data-loop={isLoop ? "" : undefined}>
-          {isLoop
-            ? renderClones(
-                getLoopBufferItems(loopClones, loopBufferCount, "before"),
-                "before",
-              )
-            : null}
-          <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
-            <ControlFacadeChildrenWrapper facadeController={facadeController}>
-              {children}
-            </ControlFacadeChildrenWrapper>
-          </WheelItemTrackerContext.Provider>
-          {isLoop
-            ? renderClones(
-                getLoopBufferItems(loopClones, loopBufferCount, "after"),
-                "after",
-              )
-            : null}
+        {/* Wheel.Item children register their {value,label,itemProps} here and
+            render nothing (see WheelItem). The visible rows are the recycled
+            window below, filled from that tracked list. */}
+        <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
+          <ControlFacadeChildrenWrapper facadeController={facadeController}>
+            {children}
+          </ControlFacadeChildrenWrapper>
+        </WheelItemTrackerContext.Provider>
+        <ul className="navi_wheel_list">
+          <WheelWindow
+            baseSignal={baseIndexSignal}
+            windowSize={windowSize}
+            trackedItems={trackedItems}
+            isLoop={isLoop}
+            onBaseCommit={commitRenderedBase}
+          />
         </ul>
         <div className="navi_wheel_pane" data-side="start" />
         <div className="navi_wheel_pane" data-side="end" />
@@ -1502,67 +1451,53 @@ const WHEEL_PSEUDO_CLASSES = [
   ":-navi-loading",
 ];
 
-// The `count` proxy rows to render on one side of the real items:
-//   - "before" → the last N values (…, len-2, len-1) so the row just before the
-//     first real item shows the last value (wrap: … 44 45 | 00 …).
-//   - "after"  → the first N values (0, 1, …) so the row just after the last
-//     real item shows the first value (… 45 | 00 01 …).
-const getLoopBufferItems = (clones, bufferCount, side) => {
-  const count = clones.length;
-  const items = [];
-  if (count === 0) {
-    return items;
+// The recycled window: a fixed set of `windowSize` <li> slots (one per visible
+// row + 2 buffer), keyed by slot position so each DOM node is reused and only its
+// content re-renders. Each slot shows trackedItems[base + slot] (wrapped when
+// looping); `base` comes from a signal so this re-renders ONLY when the wheel
+// crosses a row (base changes), not every frame — the per-frame motion is the
+// imperative transform in applyOffset. On each new base it calls onBaseCommit so
+// the transform re-syncs to the freshly rendered rows in the same frame.
+const WheelWindow = ({
+  baseSignal,
+  windowSize,
+  trackedItems,
+  isLoop,
+  onBaseCommit,
+}) => {
+  const base = baseSignal.value;
+  const count = trackedItems.length;
+  useLayoutEffect(() => {
+    onBaseCommit(base);
+  });
+  const slots = [];
+  for (let slot = 0; slot < windowSize; slot++) {
+    let index = base + slot;
+    if (isLoop) {
+      index = ((index % count) + count) % count;
+    }
+    const item = trackedItems[index];
+    slots.push(
+      <Box
+        as="li"
+        key={slot}
+        {...item.itemProps}
+        baseClassName="navi_wheel_item"
+      >
+        {item.label}
+      </Box>,
+    );
   }
-  for (let position = 0; position < bufferCount; position++) {
-    const index =
-      side === "before"
-        ? (((count - bufferCount + position) % count) + count) % count
-        : position % count;
-    items.push({
-      label: clones[index].label,
-      itemProps: clones[index].itemProps,
-    });
-  }
-  return items;
-};
-
-// Inert visual proxies of the real items used for seamless looping. They are
-// hidden from assistive tech and copy the real row's styling (itemProps) so
-// widths match. Clicks are handled by position on the viewport (see the tap in
-// the pointer effect), so a clone needs no click handler of its own.
-const renderClones = (bufferItems, position) => {
-  return bufferItems.map((item, offset) => (
-    <Box
-      as="li"
-      key={`${position}_${offset}`}
-      {...item.itemProps}
-      baseClassName="navi_wheel_item navi_wheel_item_clone"
-      aria-hidden="true"
-    >
-      {item.label}
-    </Box>
-  ));
-};
-
-const updateCurrentMarker = (viewportEl, currentItem) => {
-  const previous = viewportEl.querySelector("[data-wheel-current]");
-  if (previous && previous !== currentItem) {
-    previous.removeAttribute("data-wheel-current");
-  }
-  if (currentItem) {
-    currentItem.setAttribute("data-wheel-current", "");
-  }
+  return slots;
 };
 
 /**
  * Wheel.Item — a value in a Wheel. Must be used inside <Wheel>.
  *
- * The item is an inert, aria-hidden row (a Box, so it can be styled): the wheel's
- * spinbutton container owns focus and announces the value, so an item's only job
- * is to register its {value, label} with the wheel and be clickable to center
- * itself. Selection lives on the wheel's value, not per item. Any extra props
- * (style, padding, className…) are applied here AND mirrored onto the loop
- * proxies so a real row and its proxy stay dimensionally identical.
+ * Registration only: it records its {value, label, itemProps} with the wheel and
+ * renders NOTHING. The wheel is virtualized — it renders a small recycled window
+ * of rows and fills each from this tracked data — so the value list is the source
+ * of truth, not a per-item DOM node. Selection lives on the wheel's value.
  *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
@@ -1573,11 +1508,7 @@ const updateCurrentMarker = (viewportEl, currentItem) => {
 export const WheelItem = ({ value, id, children, ...rest }) => {
   const idDefault = useId();
   const resolvedId = id || idDefault;
-
-  // Report this item's value + label to the wheel (used to build loop proxies
-  // and to map a value back to its row). Wheel.Item must live inside a Wheel, so
-  // the context is always present. itemProps rides along so the clones can copy
-  // this row's styling.
+  // Wheel.Item must live inside a Wheel, so the context is always present.
   const trackerContext = useContext(WheelItemTrackerContext);
   const index = trackerContext.indexRef.current++;
   trackerContext.tracker.useTrackItem({
@@ -1587,18 +1518,7 @@ export const WheelItem = ({ value, id, children, ...rest }) => {
     label: children,
     itemProps: rest,
   });
-
-  return (
-    <Box
-      as="li"
-      {...rest}
-      id={resolvedId}
-      baseClassName="navi_wheel_item"
-      aria-hidden="true"
-    >
-      {children}
-    </Box>
-  );
+  return null;
 };
 Wheel.Item = WheelItem;
 
