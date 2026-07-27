@@ -1,18 +1,3 @@
-import { createContext } from "preact";
-import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
-
-import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
-import {
-  ControlFacadeChildrenWrapper,
-  useControlFacadeProps,
-} from "../control_hooks.jsx";
-import { getUIStateControllerById } from "../controller_registry.js";
-import { dispatchRequestSetUIState } from "../ui_state_dom.js";
-import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
-import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
-
 /*
  * Wheel — a single-value control rendered as an iOS-style scroll picker. A short
  * viewport shows the selected value in the middle with the neighbouring values
@@ -29,9 +14,9 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
  * updates immediately while the row glides to center.
  *
  * FRAMEWORK REUSE. value/defaultValue, action/uiAction, validation, states and
- * the readonly/disabled callouts all come from the single-value control facade
- * (useControlFacadeProps → hidden input + facade container; see picker.jsx).
- * Wheel adds the scroll-picker rendering and these scroll behaviours:
+ * the readonly/disabled/busy callouts all come from the single-value control
+ * facade (useControlFacadeProps → hidden input + facade container; see
+ * picker.jsx). Wheel adds the scroll-picker rendering and these scroll behaviours:
  *   - scroll settles        → select the centered item
  *   - arrow key             → step + glide the new value to center
  *   - external value change  → scroll the selected item to center
@@ -50,6 +35,22 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
  * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
  * a [data-horizontal] variant.
  */
+
+import { createContext } from "preact";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
+
+import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
+import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
+import {
+  ControlFacadeChildrenWrapper,
+  useControlFacadeProps,
+} from "../control_hooks.jsx";
+import { getUIStateControllerById } from "../controller_registry.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
+import { dispatchRequestSetUIState } from "../ui_state_dom.js";
+import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
+import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 
 const css = /* css */ `
   .navi_wheel_container {
@@ -547,7 +548,11 @@ function WheelUI(props) {
   const trackedItemsRef = useRef(trackedItems);
   trackedItemsRef.current = trackedItems;
   const loopClones = isLoop
-    ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
+    ? trackedItems.map((item) => ({
+        value: item.value,
+        label: item.label,
+        itemProps: item.itemProps,
+      }))
     : [];
 
   // A single value control backed by a hidden input (facade pattern, like
@@ -577,9 +582,11 @@ function WheelUI(props) {
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
-  // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
-  // controlled value stays authoritative and any scroll springs back to it.
-  const interactive = !readOnly && !disabled;
+  // Scroll/arrows/clicks must not change a readonly, disabled or loading (busy)
+  // wheel — the controlled value stays authoritative and any scroll springs back
+  // to it. Interaction attempts still go through the gate (attemptInteraction) so
+  // the matching readonly/disabled/busy callout is shown.
+  const interactive = !readOnly && !disabled && !loading;
   // The typed selected value (see the navi_js note above): what the rest of the
   // file compares (compareTwoJsValues) and exposes (action/uiAction, aria).
   const currentValue = uiStateController.uiState;
@@ -602,6 +609,19 @@ function WheelUI(props) {
       return;
     }
     dispatchRequestSetUIState(inputRef.current, newValue, { event });
+  };
+
+  // Gate a user gesture (scroll, drag, tap, arrow) through the framework's
+  // interactivity check. When the wheel is readonly/disabled/busy the gate pops
+  // the matching callout and runs onPrevented (e.g. to trap the page scroll);
+  // otherwise it runs onAllowed. One path covers all three blocked states.
+  const attemptInteraction = (event, name, onAllowed, onPrevented) => {
+    dispatchRequestInteraction(inputRef.current, {
+      event,
+      name,
+      allowed: onAllowed,
+      prevented: onPrevented,
+    });
   };
 
   // Real rows are the tracked items (clones carry .navi_wheel_item_clone). The
@@ -1010,7 +1030,7 @@ function WheelUI(props) {
   };
 
   // A proxy was clicked — select (and glide to) the real item it stands in for.
-  const handleCloneClick = (index) => {
+  const handleCloneClick = (index, event) => {
     const vp = getViewport();
     if (!vp) {
       return;
@@ -1019,12 +1039,11 @@ function WheelUI(props) {
     if (!target) {
       return;
     }
-    centeredIdRef.current = target.id;
-    requestSelectValue(
-      getItemValueById(target.id),
-      new CustomEvent("navi_wheel_clone_click"),
-    );
-    centerOn(vp, target, "smooth");
+    attemptInteraction(event, "select", () => {
+      centeredIdRef.current = target.id;
+      requestSelectValue(getItemValueById(target.id), event);
+      centerOn(vp, target, "smooth");
+    });
   };
 
   // The row for the current value (the selection), else the first row.
@@ -1098,30 +1117,17 @@ function WheelUI(props) {
   });
 
   // Input: wheel + pointer drag drive the virtual position; a short idle after
-  // wheel, or the end of a drag's momentum, snaps to the nearest value. Readonly
-  // pops the callout instead of moving; disabled is inert (no events reach here).
+  // wheel, or the end of a drag's momentum, snaps to the nearest value. When the
+  // wheel is readonly/disabled/busy the interaction gate (attemptInteraction)
+  // shows the matching callout instead of moving, and traps the page scroll.
   useLayoutEffect(() => {
     const el = ref.current;
     const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
-    let calloutCooldown = null;
 
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(() => settle(vp, 0), 90);
-    };
-    const readonlyCallout = (event) => {
-      if (!readOnly || calloutCooldown !== null) {
-        return;
-      }
-      calloutCooldown = setTimeout(() => {
-        calloutCooldown = null;
-      }, 600);
-      // A set-request the framework rejects because the control is read-only →
-      // pops the read-only callout (the single, control-level one).
-      dispatchRequestSetUIState(inputRef.current, currentValueRef.current, {
-        event,
-      });
     };
     // Non-loop only: is a wheel in this direction blocked (so the page should
     // scroll instead of the wheel trapping it)?
@@ -1162,18 +1168,25 @@ function WheelUI(props) {
       } else if (delta < -itemSize) {
         delta = -itemSize;
       }
-      if (!interactive) {
-        e.preventDefault();
-        readonlyCallout(e);
-        return;
-      }
-      if (atClampedEnd(delta)) {
-        return; // let the page scroll past a non-looping end
-      }
-      e.preventDefault();
-      cancelAnim();
-      setPos(vp, posRef.current + delta);
-      scheduleSettle();
+      attemptInteraction(
+        e,
+        "scroll",
+        () => {
+          if (atClampedEnd(delta)) {
+            return; // let the page scroll past a non-looping end
+          }
+          e.preventDefault();
+          cancelAnim();
+          setPos(vp, posRef.current + delta);
+          scheduleSettle();
+        },
+        () => {
+          // Blocked (readonly/disabled/busy): the gate showed the callout; trap
+          // the scroll so the page doesn't move under the control the user is
+          // trying to use.
+          e.preventDefault();
+        },
+      );
     };
 
     // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
@@ -1182,7 +1195,7 @@ function WheelUI(props) {
     // scroller to drive here, so this is the seam external code (e.g. a demo
     // comparing this wheel against a native scroll-snap list) uses to move it.
     const onNaviScroll = (e) => {
-      if (!interactive || !e.detail) {
+      if (!e.detail) {
         return;
       }
       let delta = e.detail.delta || 0;
@@ -1192,20 +1205,22 @@ function WheelUI(props) {
       if (!delta) {
         return;
       }
-      cancelAnim();
-      // Fold the (possibly accumulated) position back into the real-items band
-      // first — seamless, since a whole extent away shows identical content — so
-      // repeated ±item never walks the glide off the end of the clone runway
-      // into blank space (which also desynced the centered value).
-      if (isLoop) {
-        wrapPos(vp);
-      }
-      if (e.detail.behavior === "smooth") {
-        animateTo(vp, posRef.current + delta, () => settle(vp, 0));
-      } else {
-        setPos(vp, posRef.current + delta);
-        scheduleSettle();
-      }
+      attemptInteraction(e, "scroll", () => {
+        cancelAnim();
+        // Fold the (possibly accumulated) position back into the real-items band
+        // first — seamless, since a whole extent away shows identical content — so
+        // repeated ±item never walks the glide off the end of the clone runway
+        // into blank space (which also desynced the centered value).
+        if (isLoop) {
+          wrapPos(vp);
+        }
+        if (e.detail.behavior === "smooth") {
+          animateTo(vp, posRef.current + delta, () => settle(vp, 0));
+        } else {
+          setPos(vp, posRef.current + delta);
+          scheduleSettle();
+        }
+      });
     };
 
     // Cursor by POSITION, not by which row is under the pointer: the center
@@ -1231,22 +1246,20 @@ function WheelUI(props) {
       if (e.pointerType === "mouse" && e.button !== 0) {
         return;
       }
-      if (!interactive) {
-        readonlyCallout(e);
-        return;
-      }
-      cancelAnim();
-      const client = isHorizontal ? e.clientX : e.clientY;
-      drag = {
-        pointerId: e.pointerId,
-        startClient: client,
-        startPos: posRef.current,
-        lastClient: client,
-        lastTime: performance.now(),
-        velocity: 0,
-        moved: false,
-        captured: false,
-      };
+      attemptInteraction(e, "select", () => {
+        cancelAnim();
+        const client = isHorizontal ? e.clientX : e.clientY;
+        drag = {
+          pointerId: e.pointerId,
+          startClient: client,
+          startPos: posRef.current,
+          lastClient: client,
+          lastTime: performance.now(),
+          velocity: 0,
+          moved: false,
+          captured: false,
+        };
+      });
     };
     const onPointerMove = (e) => {
       if (!drag) {
@@ -1315,7 +1328,6 @@ function WheelUI(props) {
     el.addEventListener("navi_scroll", onNaviScroll);
     return () => {
       clearTimeout(settleTimer);
-      clearTimeout(calloutCooldown);
       cancelAnim();
       vp.removeEventListener("wheel", onWheel);
       vp.removeEventListener("pointerdown", onPointerDown);
@@ -1324,7 +1336,7 @@ function WheelUI(props) {
       vp.removeEventListener("pointercancel", onPointerUp);
       el.removeEventListener("navi_scroll", onNaviScroll);
     };
-  }, [isLoop, isHorizontal, interactive, readOnly]);
+  }, [isLoop, isHorizontal, interactive]);
 
   // Keyboard: the spinbutton container is the single focusable element. The
   // main-axis arrows step the value by one row (a fast, focus-free value change,
@@ -1342,45 +1354,47 @@ function WheelUI(props) {
         return;
       }
       e.preventDefault();
-      if (!interactive) {
-        return; // readonly/disabled: swallow, value can't change
-      }
-      const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
-      if (!reals.length) {
-        return;
-      }
-      // The centered row is the source of truth for "where we are now": a ref, so
-      // rapid presses step from the latest position (the closure's currentValue
-      // would be a render behind). Fall back to the selection, then the first row.
-      const centeredId = centeredIdRef.current;
-      let selectedIndex = centeredId
-        ? reals.findIndex((row) => row.id === centeredId)
-        : -1;
-      if (selectedIndex < 0) {
-        selectedIndex = reals.indexOf(getSelectedItem(vp));
-      }
-      if (selectedIndex < 0) {
-        selectedIndex = 0;
-      }
-      let nextIndex;
-      if (e.key === "Home") {
-        nextIndex = 0;
-      } else if (e.key === "End") {
-        nextIndex = reals.length - 1;
-      } else {
-        nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
-        if (isLoop) {
-          nextIndex =
-            ((nextIndex % reals.length) + reals.length) % reals.length;
-        } else {
-          nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+      // A blocked wheel (readonly is focusable, so arrows can reach it) pops the
+      // matching callout instead of stepping.
+      attemptInteraction(e, "step", () => {
+        const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
+        if (!reals.length) {
+          return;
         }
-      }
-      const targetItem = reals[nextIndex];
-      centeredIdRef.current = targetItem.id;
-      updateCurrentMarker(vp, targetItem);
-      requestSelectValue(getItemValueById(targetItem.id), e);
-      centerOn(vp, targetItem, "smooth");
+        // The centered row is the source of truth for "where we are now": a ref,
+        // so rapid presses step from the latest position (the closure's
+        // currentValue would be a render behind). Fall back to the selection,
+        // then the first row.
+        const centeredId = centeredIdRef.current;
+        let selectedIndex = centeredId
+          ? reals.findIndex((row) => row.id === centeredId)
+          : -1;
+        if (selectedIndex < 0) {
+          selectedIndex = reals.indexOf(getSelectedItem(vp));
+        }
+        if (selectedIndex < 0) {
+          selectedIndex = 0;
+        }
+        let nextIndex;
+        if (e.key === "Home") {
+          nextIndex = 0;
+        } else if (e.key === "End") {
+          nextIndex = reals.length - 1;
+        } else {
+          nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
+          if (isLoop) {
+            nextIndex =
+              ((nextIndex % reals.length) + reals.length) % reals.length;
+          } else {
+            nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+          }
+        }
+        const targetItem = reals[nextIndex];
+        centeredIdRef.current = targetItem.id;
+        updateCurrentMarker(vp, targetItem);
+        requestSelectValue(getItemValueById(targetItem.id), e);
+        centerOn(vp, targetItem, "smooth");
+      });
     };
     el.addEventListener("keydown", onKeyDown);
     return () => {
@@ -1393,20 +1407,21 @@ function WheelUI(props) {
       ref={ref}
       {...controlRootProps}
       baseClassName="navi_wheel_container"
-      // A spinbutton: one focusable element, arrows adjust the value.
+      // A spinbutton: one focusable element, arrows adjust the value. Disabled is
+      // not focusable (no tabindex), but the wheel is deliberately NOT inert:
+      // scroll/click still reach the interaction gate so the "disabled" callout
+      // can be shown (inert would swallow the events silently).
       role="spinbutton"
       tabindex={disabled ? undefined : 0}
       aria-valuenow={ariaValueNow}
       aria-valuetext={ariaValueText}
       aria-valuemin={numericRange ? numericRange.min : undefined}
       aria-valuemax={numericRange ? numericRange.max : undefined}
+      aria-disabled={disabled ? "true" : undefined}
       data-horizontal={isHorizontal ? "" : undefined}
       data-glass={showGlass ? "" : undefined}
       data-frame-border={showFrameBorder ? "" : undefined}
       data-wheel-type={type || undefined}
-      // Disabled = fully inert: no focus, no keyboard (arrows), no pointer.
-      // Programmatic centering still works (inert only blocks user interaction).
-      inert={disabled ? true : undefined}
       pseudoClasses={WHEEL_PSEUDO_CLASSES}
       basePseudoState={basePseudoState}
       style={styleWithVars}
@@ -1485,29 +1500,35 @@ const getLoopBufferItems = (clones, visibleCount, side) => {
       side === "before"
         ? (((count - visibleCount + position) % count) + count) % count
         : position % count;
-    items.push({ label: clones[index].label, index });
+    items.push({
+      label: clones[index].label,
+      itemProps: clones[index].itemProps,
+      index,
+    });
   }
   return items;
 };
 
-// Inert visual proxies of the real items used for seamless looping. They carry
-// no radio input, are hidden from assistive tech, and clicking one selects the
-// real item it stands in for (see handleCloneClick).
+// Inert visual proxies of the real items used for seamless looping. They are
+// hidden from assistive tech, copy the real row's styling (itemProps) so widths
+// match, and clicking one selects the real item it stands in for (handleCloneClick).
 const renderClones = (bufferItems, position, onCloneClick) => {
   return bufferItems.map((item, offset) => (
-    <li
+    <Box
+      as="li"
       key={`${position}_${offset}`}
-      className="navi_wheel_item navi_wheel_item_clone"
+      {...item.itemProps}
+      baseClassName="navi_wheel_item navi_wheel_item_clone"
       aria-hidden="true"
       onClick={(e) => {
         if (e.button !== 0) {
           return;
         }
-        onCloneClick(item.index);
+        onCloneClick(item.index, e);
       }}
     >
       {item.label}
-    </li>
+    </Box>
   ));
 };
 
@@ -1524,10 +1545,12 @@ const updateCurrentMarker = (viewportEl, currentItem) => {
 /**
  * Wheel.Item — a value in a Wheel. Must be used inside <Wheel>.
  *
- * The item is a plain, inert <li>: the wheel's spinbutton container owns focus
- * and announces the value, so an item is a decorative row (aria-hidden) whose
- * only job is to register its {value, label} with the wheel and be clickable to
- * center itself. Selection lives on the wheel's value, not per item.
+ * The item is an inert, aria-hidden row (a Box, so it can be styled): the wheel's
+ * spinbutton container owns focus and announces the value, so an item's only job
+ * is to register its {value, label} with the wheel and be clickable to center
+ * itself. Selection lives on the wheel's value, not per item. Any extra props
+ * (style, padding, className…) are applied here AND mirrored onto the loop
+ * proxies so a real row and its proxy stay dimensionally identical.
  *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
@@ -1541,7 +1564,8 @@ export const WheelItem = ({ value, id, children, ...rest }) => {
 
   // Report this item's value + label to the wheel (used to build loop proxies
   // and to map a value back to its row). Wheel.Item must live inside a Wheel, so
-  // the context is always present.
+  // the context is always present. itemProps rides along so the clones can copy
+  // this row's styling.
   const trackerContext = useContext(WheelItemTrackerContext);
   const index = trackerContext.indexRef.current++;
   trackerContext.tracker.useTrackItem({
@@ -1549,17 +1573,19 @@ export const WheelItem = ({ value, id, children, ...rest }) => {
     index,
     value,
     label: children,
+    itemProps: rest,
   });
 
   return (
-    <li
+    <Box
+      as="li"
       {...rest}
       id={resolvedId}
-      className="navi_wheel_item"
+      baseClassName="navi_wheel_item"
       aria-hidden="true"
     >
       {children}
-    </li>
+    </Box>
   );
 };
 Wheel.Item = WheelItem;
