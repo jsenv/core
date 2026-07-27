@@ -444,7 +444,7 @@ const WHEEL_MOMENTUM_MS = 55; // velocity projection horizon (px = velocity × t
 // between events still counted as the same gesture; kept short so that once the
 // browser stops sending events (gesture over) the page is free again almost
 // immediately — a fresh gesture on the page scrolls normally.
-const WHEEL_GESTURE_MAX_GAP = 100;
+const WHEEL_GESTURE_MAX_GAP = 50;
 
 // Default glide speed (px/ms). Feeds the spring stiffness that chases the target
 // on arrow keys / clicks (see glideSpringFactor); the demo can override it.
