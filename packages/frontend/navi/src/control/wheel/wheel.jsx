@@ -356,8 +356,18 @@ const css = /* css */ `
     display: inline-flex;
     align-items: center;
 
-    &:not([data-horizontal]) .navi_wheel_viewport {
-      padding-inline: var(--wheel-spacing);
+    &:not([data-horizontal]) {
+      .navi_wheel_viewport {
+        padding-inline: var(--wheel-spacing);
+      }
+      /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
+         whole pixel and lands on the numbers' line (see the note there). Without
+         it the separator sits ~1px off the transformed numbers. Vertical only: on
+         a horizontal group it has no row height to fill and would over-tall the
+         separator. */
+      .navi_wheel_group_separator {
+        line-height: var(--wheel-item-height);
+      }
     }
     &[data-horizontal] {
       flex-direction: column;
@@ -383,10 +393,6 @@ const css = /* css */ `
     font-weight: 600;
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
-    /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
-       whole pixel and lands on the numbers' line (see the note there). Without it
-       the separator sits ~1px off the transformed numbers. */
-    line-height: var(--wheel-item-height);
     white-space: nowrap;
 
     user-select: none;

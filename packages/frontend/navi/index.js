@@ -122,6 +122,7 @@ export { Input } from "./src/control/input/input.jsx";
 export { InputDuration } from "./src/control/input/input_duration.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
+export { usePickerMode } from "./src/control/picker/picker_context.jsx";
 export {
   getNowHours,
   getNowHoursRoundedToStep,

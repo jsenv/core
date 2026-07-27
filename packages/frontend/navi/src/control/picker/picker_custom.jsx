@@ -18,6 +18,7 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
+import { PickerModeContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -29,9 +30,9 @@ const css = /* css */ `
        picker-specific bits below (anchor-width min-width, the anchor clone,
        the nested list). */
 
-    /* matchAnchorWidth=false (picker.jsx): drop the trigger-width floor so the
-       popup shrinks to its content. Inherits down to the popover/dialog. */
-    &[data-match-anchor-width="false"] {
+    /* popoverWidthFitContent (picker.jsx): drop the trigger-width floor so the
+       popover shrinks to its content. Inherits down to the popover. */
+    &[data-popover-width-fit-content] {
       --picker-popover-min-width: 0px;
     }
 
@@ -45,7 +46,7 @@ const css = /* css */ `
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
 
-        /* At least as wide as the trigger — unless matchAnchorWidth=false, then
+        /* At least as wide as the trigger — unless popoverWidthFitContent, then
            let the content (e.g. a Wheel) size the popover (see picker.jsx). */
         min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */
@@ -666,7 +667,10 @@ const PickerContentInsidePopup = (props) => {
             {props.trigger}
           </div>
         ) : null}
-        {children}
+        {/* Let the popup content branch on the mode via usePickerMode(). */}
+        <PickerModeContext.Provider value={mode}>
+          {children}
+        </PickerModeContext.Provider>
       </Popup>
     </Next>
   );
