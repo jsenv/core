@@ -264,11 +264,13 @@ const css = /* css */ `
            box-sizing so per-item padding (below) doesn't grow the fixed row. */
         box-sizing: border-box;
         height: var(--wheel-item-height);
+        padding-block: var(--navi-wheel-item-padding-main-default, 0px);
         /* No breathing room by default — the wheel shows its true content size.
            Spacing is the caller's choice, set PER ITEM (each Wheel.Item is a Box:
-           paddingX="0.5ch") so the padded area stays scrollable; a global default
-           is the --navi-wheel-item-padding-x-default CSS var. */
-        padding-inline: var(--navi-wheel-item-padding-x-default, 0px);
+           paddingX here, since horizontal is the cross axis of a vertical wheel) so
+           the padded area stays scrollable. Global defaults are the axis-named CSS
+           vars — cross = perpendicular to scroll (the gap), main = along scroll. */
+        padding-inline: var(--navi-wheel-item-padding-cross-default, 0px);
         /* A full-row line-height so the glyph's line box fills the (even) row
            height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
            centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
@@ -324,11 +326,13 @@ const css = /* css */ `
       }
       .navi_wheel_item {
         /* Fixed main-axis size (width); the cross axis (vertical here) follows the
-           content. The global padding default is the same var as the vertical
-           branch — 0 by default, opt in per item (see the vertical note). */
+           content. Same axis-named global defaults as the vertical branch, mapped
+           to this orientation: cross = block (vertical), main = inline. 0 by
+           default; opt in per item (paddingY here — see the vertical note). */
         box-sizing: border-box;
         width: var(--wheel-item-width);
-        padding-block: var(--navi-wheel-item-padding-x-default, 0px);
+        padding-block: var(--navi-wheel-item-padding-cross-default, 0px);
+        padding-inline: var(--navi-wheel-item-padding-main-default, 0px);
       }
       .navi_wheel_pane {
         top: 0;
@@ -365,17 +369,12 @@ const css = /* css */ `
      keeps its natural content width (small for ":", wide for a word like "hours")
      and is not scrollable. Spacing around a wheel is that wheel's own item padding
      (set per Wheel.Item, see .navi_wheel_item) so it stays scrollable — a group
-     with no padding shows the wheels at their true content width. The "spacing"
-     prop is a separate lever: it pads the VIEWPORT (a fixed gap toward the
-     separator), but that area is a dead zone, so prefer item padding. */
+     with no padding shows the wheels at their true content width. */
   .navi_wheel_group {
     display: inline-flex;
     align-items: center;
 
     &:not([data-horizontal]) {
-      .navi_wheel_viewport {
-        padding-inline: var(--wheel-spacing, 0px);
-      }
       /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
          whole pixel and lands on the numbers' line (see the note there). Without
          it the separator sits ~1px off the transformed numbers. Vertical only: on
@@ -388,10 +387,6 @@ const css = /* css */ `
     &[data-horizontal] {
       flex-direction: column;
       align-items: center;
-
-      .navi_wheel_viewport {
-        padding-block: var(--wheel-spacing, 0px);
-      }
     }
   }
   .navi_wheel_group_separator {
@@ -442,12 +437,14 @@ const WHEEL_SPRING_FACTOR = 0.2;
 // far (in ms of travel) the velocity projects, so a faster flick lands a row ahead.
 const WHEEL_SETTLE_DELAY = 50; // ms of idle that ends the wheel gesture
 const WHEEL_MOMENTUM_MS = 55; // velocity projection horizon (px = velocity × this)
-// A mouse-wheel gesture is a burst of wheel events. Once this wheel has claimed a
-// gesture, keep swallowing that gesture's remaining events even if the pointer
-// drifts off onto the page — otherwise the document scrolls under the leftover
-// events, which feels broken. This is the max gap (ms) between events still counted
-// as the same gesture; a longer pause ends it, so a fresh gesture scrolls normally.
-const WHEEL_GESTURE_MAX_GAP = 250;
+// A mouse-wheel gesture is a burst of wheel events spaced only a few ms apart.
+// Once this wheel has claimed a gesture, keep swallowing that gesture's remaining
+// events even if the pointer drifts off onto the page — otherwise the document
+// scrolls under the leftover events, which feels broken. This is the max gap (ms)
+// between events still counted as the same gesture; kept short so that once the
+// browser stops sending events (gesture over) the page is free again almost
+// immediately — a fresh gesture on the page scrolls normally.
+const WHEEL_GESTURE_MAX_GAP = 100;
 
 // Default glide speed (px/ms). Feeds the spring stiffness that chases the target
 // on arrow keys / clicks (see glideSpringFactor); the demo can override it.
@@ -1700,17 +1697,15 @@ Wheel.Item = WheelItem;
  * them (e.g. a "HH : MM : SS" time picker, or "9 hours 30 minutes").
  *
  * Put <Wheel> and <WheelGroup.Separator> as direct children. Separators take
- * their natural content width. No spacing by default; to add breathing room, set
- * item padding on each wheel (each Wheel.Item is a Box: paddingX="0.5ch") so the
- * gap stays scrollable.
+ * their natural content width. No spacing by default; to add breathing room, pad
+ * each Wheel.Item (it's a Box: paddingX="0.5ch") so the gap stays scrollable.
+ * `spacing` is just the Box flex gap between children (a layout gap, not padding).
  *
  * @type {import("preact").FunctionComponent<{
- *   spacing?: number | string,
  *   horizontal?: boolean,
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
- * @param {number|string} [props.spacing] - Discouraged: pads the wheels' VIEWPORT (a fixed gap toward the separator, number = px). That area is a non-scrollable dead zone — prefer item padding on each wheel.
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
@@ -1721,7 +1716,9 @@ export const WheelGroup = (props) => {
   // "minutes"…) into one object value, so it can sit directly inside a Form or a
   // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
   // props are consumed here; the rest flow into the group hook.
-  const { spacing, horizontal, glass, frameBorder, style } = props;
+  // `spacing` is NOT consumed here — it flows through to the underlying Box as a
+  // plain flex gap between the wheels/separators (not a wheel concept).
+  const { horizontal, glass, frameBorder, style } = props;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
@@ -1742,14 +1739,6 @@ export const WheelGroup = (props) => {
   const { children } = controlgroupProps;
 
   const groupStyle = {
-    // `spacing` pads the viewport (a fixed gap toward the separator). Prefer item
-    // padding on each wheel instead — this gap is a non-scrollable dead zone.
-    ...(spacing === undefined
-      ? {}
-      : {
-          "--wheel-spacing":
-            typeof spacing === "number" ? `${spacing}px` : spacing,
-        }),
     ...style,
   };
 

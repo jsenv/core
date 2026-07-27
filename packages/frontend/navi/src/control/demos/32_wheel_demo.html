@@ -28,19 +28,40 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       .demo-section h2 {
+        position: relative;
         margin: 0 0 12px;
         padding-bottom: 10px;
         color: #333;
         font-size: 1.4rem;
         border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
       }
+      /* Subsections read as headings (not tiny labels): larger, darker, spaced. */
       .demo-section h3 {
-        margin: 0 0 8px;
+        position: relative;
+        margin: 28px 0 10px;
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 1.08rem;
+        scroll-margin-top: 12px;
+      }
+      /* A "#" anchor beside each heading (like other demos), revealed on hover. */
+      .heading-anchor {
+        position: absolute;
+        left: -0.85em;
+        color: #bbb;
+        font-weight: 400;
+        text-decoration: none;
+        opacity: 0;
+        transition: opacity 0.1s;
+      }
+      h2:hover > .heading-anchor,
+      h3:hover > .heading-anchor,
+      .heading-anchor:focus {
+        opacity: 1;
+      }
+      .heading-anchor:hover {
         color: #666;
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
       }
       .demo-section p {
         margin: 0 0 16px;
@@ -216,6 +237,24 @@
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
+
+      // Section (h2) / subsection (h3) heading with a hover "#" anchor. Pass `id`
+      // to anchor to itself (subsections); pass `href` to anchor to an existing id
+      // (sections, whose id lives on the wrapping .demo-section div).
+      const Heading = ({ level = 3, id, href, children, ...rest }) => {
+        const Tag = `h${level}`;
+        const anchor = href || (id ? `#${id}` : null);
+        return (
+          <Tag id={id} {...rest}>
+            {anchor && (
+              <a className="heading-anchor" href={anchor} aria-label="Anchor">
+                #
+              </a>
+            )}
+            {children}
+          </Tag>
+        );
+      };
       // Local YYYY-MM-DD (NOT toISOString, which is UTC and can shift the day).
       const toLocalISODate = (date) =>
         `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
@@ -225,7 +264,9 @@
       const TableOfContents = () => {
         return (
           <div className="demo-section">
-            <h2>Wheel</h2>
+            <Heading level={2} id="wheel">
+              Wheel
+            </Heading>
             <p>
               A scroll picker: pick a value by scrolling, dragging, clicking a
               neighbour, or with <kbd>↑</kbd> <kbd>↓</kbd> (<kbd>←</kbd>{" "}
@@ -318,23 +359,25 @@
       const StatesDemo = () => {
         return (
           <div id="states" className="demo-section">
-            <h2>States</h2>
+            <Heading level={2} href="#states">
+              States
+            </Heading>
             <p>The same wheel in its different states.</p>
             <div className="states">
               <div>
-                <h3>focus-visible</h3>
+                <Heading id="states-focus">focus-visible</Heading>
                 <StateWheel basePseudoState={{ ":focus-visible": true }} />
               </div>
               <div>
-                <h3>loading</h3>
+                <Heading id="states-loading">loading</Heading>
                 <StateWheel loading />
               </div>
               <div>
-                <h3>readonly</h3>
+                <Heading id="states-readonly">readonly</Heading>
                 <StateWheel readOnly />
               </div>
               <div>
-                <h3>disabled</h3>
+                <Heading id="states-disabled">disabled</Heading>
                 <StateWheel disabled />
               </div>
             </div>
@@ -437,7 +480,9 @@
         return (
           <NaviDebug debugAll>
             <div id="scroll" className="demo-section">
-              <h2>Scroll behavior — snapping, momentum, loop</h2>
+              <Heading level={2} href="#scroll">
+                Scroll behavior — snapping, momentum, loop
+              </Heading>
               <p>
                 Scroll, drag or fling either column, or use the buttons (which
                 drive <em>both</em>). Left is our transform-based Wheel
@@ -483,7 +528,7 @@
                 stretching into one long, detached slide.
               </p>
 
-              <h3 id="scroll-small">Small list (4 values)</h3>
+              <Heading id="scroll-small">Small list (4 values)</Heading>
               <p>Few values — easiest to eyeball the wrap and each snap.</p>
               <ScrollPair
                 values={[0, 15, 30, 45]}
@@ -491,9 +536,7 @@
                 glideSpeed={glideSpeed}
               />
 
-              <h3 id="scroll-long" style={{ marginTop: 24 }}>
-                Long list (100 values)
-              </h3>
+              <Heading id="scroll-long">Long list (100 values)</Heading>
               <p>
                 Many values — stress-tests momentum and the loop runway against
                 a tall native scroller.
@@ -552,7 +595,9 @@
 
       const DurationPickerContent = () => {
         const mode = usePickerMode();
-        return <DurationHourMinuteWheels pad={mode === "dialog" ? "1ch" : "0.6ch"} />;
+        return (
+          <DurationHourMinuteWheels pad={mode === "dialog" ? "1ch" : "0.6ch"} />
+        );
       };
 
       // Same wheels, standalone (outside a Picker) — the intended way to use a
@@ -574,9 +619,11 @@
         const [day, setDay] = useState(days[1]);
         return (
           <div id="practical" className="demo-section">
-            <h2>Practical examples</h2>
+            <Heading level={2} href="#practical">
+              Practical examples
+            </Heading>
 
-            <h3 id="practical-size">Size picker (no loop)</h3>
+            <Heading id="practical-size">Size picker (no loop)</Heading>
             <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
             <div className="row">
               <Wheel
@@ -595,9 +642,9 @@
               </Wheel>
             </div>
 
-            <h3 id="practical-day" style={{ marginTop: 24 }}>
+            <Heading id="practical-day">
               Day picker — today … +5 days (no loop)
-            </h3>
+            </Heading>
             <p>
               Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>:
               “Today”, “Tomorrow”, then weekday + date.
@@ -624,9 +671,9 @@
               </Wheel>
             </div>
 
-            <h3 id="practical-duration" style={{ marginTop: 24 }}>
+            <Heading id="practical-duration">
               Duration picker (hours + minutes)
-            </h3>
+            </Heading>
             <p>
               A wheel belongs inside a deliberately-opened surface (see the
               warning up top) — a <code>Picker</code> popup is exactly that.
@@ -658,9 +705,9 @@
               </span>
             </div>
 
-            <h3 id="practical-duration-inline" style={{ marginTop: 24 }}>
+            <Heading id="practical-duration-inline">
               Duration wheels (outside a picker)
-            </h3>
+            </Heading>
             <p>
               The same two wheels used directly (no picker). This is how you'd
               put a duration wheel on any deliberately-opened surface. Breathing
@@ -740,7 +787,9 @@
               showBoxes ? "demo-section show-text-boxes" : "demo-section"
             }
           >
-            <h2>Separator alignment</h2>
+            <Heading level={2} href="#separator">
+              Separator alignment
+            </Heading>
             <p>
               A separator's content sits in a one-row box that mirrors a wheel
               item — same full-row line-height — so its glyph lands on the
@@ -800,7 +849,7 @@
               </div>
             </div>
 
-            <h3 style={{ marginTop: 24 }}>1 separator, 2 columns</h3>
+            <Heading id="sep-1sep2col">1 separator, 2 columns</Heading>
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
               <WheelGroup>
                 <HourWheel />
@@ -818,9 +867,9 @@
               </WheelGroup>
             </div>
 
-            <h3 style={{ marginTop: 24 }}>
+            <Heading id="sep-words">
               Word separators (hours + minutes), incl. trailing
-            </h3>
+            </Heading>
             <WheelGroup>
               <HourWheel />
               <WheelGroup.Separator>
@@ -832,7 +881,7 @@
               </WheelGroup.Separator>
             </WheelGroup>
 
-            <h3 style={{ marginTop: 24 }}>3 columns, 2 separators</h3>
+            <Heading id="sep-3col2sep">3 columns, 2 separators</Heading>
             <p style={{ marginBottom: 8 }}>
               A tall glyph like <code>ZZ</code> (right) makes any misalignment
               obvious that ":" (left) can hide.
@@ -873,7 +922,9 @@
         const [submitted, setSubmitted] = useState(null);
         return (
           <div id="actions" className="demo-section">
-            <h2>uiAction / action / form</h2>
+            <Heading level={2} href="#actions">
+              uiAction / action / form
+            </Heading>
             <p>
               <code>uiAction</code> fires on every settle; <code>action</code>{" "}
               runs the bound action with the current value. Inside a{" "}
@@ -900,7 +951,7 @@
               </Wheel>
               <CallLog entries={log} onClear={clearLog} />
             </div>
-            <h3 style={{ marginTop: 20 }}>Inside a form</h3>
+            <Heading id="actions-form">Inside a form</Heading>
             <Form
               flex="y"
               alignX="start"
@@ -943,13 +994,15 @@
         const QUARTERS = [0, 15, 30, 45];
         return (
           <div id="customization" className="demo-section">
-            <h2>Customization</h2>
+            <Heading level={2} href="#customization">
+              Customization
+            </Heading>
             <p>
               Wheel is a <code>Box</code>, so style props work directly. The
               text colour is <code>--wheel-color</code>.
             </p>
             <div style={{ marginBottom: 24 }}>
-              <h3>border="1px solid grey"</h3>
+              <Heading id="cust-border">border="1px solid grey"</Heading>
               <Wheel
                 type="integer"
                 value={a}
@@ -965,7 +1018,7 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>accent color (--wheel-color)</h3>
+              <Heading id="cust-color">accent color (--wheel-color)</Heading>
               <Wheel
                 type="integer"
                 value={b}
@@ -980,7 +1033,7 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3>bigger rows, 5 visible</h3>
+              <Heading id="cust-bigger">bigger rows, 5 visible</Heading>
               <Wheel
                 type="integer"
                 value={c}
@@ -997,9 +1050,9 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3 id="cust-visiblecount">
+              <Heading id="cust-visiblecount">
                 visibleCount (rows shown around the center)
-              </h3>
+              </Heading>
               <p>
                 An odd count; the center row is the selection. More rows show
                 more context above/below.
@@ -1025,7 +1078,9 @@
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <h3 id="cust-horizontal">horizontal (scrolls left/right)</h3>
+              <Heading id="cust-horizontal">
+                horizontal (scrolls left/right)
+              </Heading>
               <p>
                 With <code>horizontal</code> the wheel lays out left-to-right
                 and arrow keys become <kbd>←</kbd> <kbd>→</kbd>. A{" "}
@@ -1100,7 +1155,7 @@
               </div>
             </div>
             <div>
-              <h3 id="cust-padding">Item padding (spacing)</h3>
+              <Heading id="cust-padding">Item padding (spacing)</Heading>
               <p>
                 No padding by default — a wheel shows its true content size, so
                 nothing is imposed. Add breathing room by padding each{" "}
@@ -1108,9 +1163,9 @@
                 <code>paddingX</code> on a vertical wheel, <code>paddingY</code>{" "}
                 on a horizontal one), which keeps the padded area scrollable; or
                 set it once for all wheels with the{" "}
-                <code>--navi-wheel-item-padding-x-default</code> CSS var.{" "}
-                <code>WheelGroup spacing</code> exists too but pads the viewport (a
-                non-scrollable dead zone), so avoid it.
+                <code>--navi-wheel-item-padding-cross-default</code> CSS var.{" "}
+                <code>WheelGroup spacing</code> exists too but pads the viewport
+                (a non-scrollable dead zone), so avoid it.
               </p>
               <div className="states">
                 <div>
@@ -1131,7 +1186,9 @@
                     </WheelGroup.Separator>
                     <QuarterWheel itemProps={{ paddingX: "0.75ch" }} />
                   </WheelGroup>
-                  <span className="col-label">Wheel.Item paddingX="0.75ch"</span>
+                  <span className="col-label">
+                    Wheel.Item paddingX="0.75ch"
+                  </span>
                 </div>
                 <div>
                   <WheelGroup horizontal>
@@ -1154,7 +1211,9 @@
                   </span>
                 </div>
                 <div>
-                  <div style={{ "--navi-wheel-item-padding-x-default": "1ch" }}>
+                  <div
+                    style={{ "--navi-wheel-item-padding-cross-default": "1ch" }}
+                  >
                     <WheelGroup>
                       <HourWheel />
                       <WheelGroup.Separator>
@@ -1168,7 +1227,7 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3 id="cust-glass">glass (frost the neighbours)</h3>
+              <Heading id="cust-glass">glass (frost the neighbours)</Heading>
               <p>
                 Every wheel fades its neighbours out toward the edges — that
                 progressive fade <em>is</em> the selection emphasis, so a
@@ -1206,7 +1265,9 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3 id="cust-frame">frameBorder (line the window edges)</h3>
+              <Heading id="cust-frame">
+                frameBorder (line the window edges)
+              </Heading>
               <p>
                 <code>frameBorder</code> draws a faint line along the top and
                 bottom of the center window. It's independent of{" "}
@@ -1243,7 +1304,9 @@
               </div>
             </div>
             <div style={{ marginTop: 24 }}>
-              <h3>on a WheelGroup (one prop for all wheels)</h3>
+              <Heading id="cust-group-glass">
+                on a WheelGroup (one prop for all wheels)
+              </Heading>
               <p>
                 Set <code>glass</code> (or <code>frameBorder</code>) once on a{" "}
                 <code>WheelGroup</code> and every wheel inside inherits it.
