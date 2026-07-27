@@ -1664,22 +1664,20 @@ export const WheelGroup = (props) => {
   // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
   // props are consumed here; the rest flow into the group hook.
   const { spacing, horizontal, glass, frameBorder, style } = props;
-  // Consumed here — must not reach the group hook (it would spread them onto the
-  // DOM as unknown attributes). `style` is re-applied below via groupStyle.
-  delete props.spacing;
-  delete props.horizontal;
-  delete props.glass;
-  delete props.frameBorder;
-  delete props.style;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
 
+  // controlType "control_group" (not a bespoke "wheel_group") so a Picker with
+  // type="controlgroup" recognises this as its aggregating child (it only syncs
+  // with a control_group — see useUIFacadeStateController). Named wheels aggregate
+  // into { hours, minutes, … }; a nameless wheel warns (name it or it won't be in
+  // the value), same as any control group.
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       allowCapture: true,
       wantRequesterButtonState: true,
-      controlType: "wheel_group",
+      controlType: "control_group",
       stateType: "object",
       cascadeValidationToChildren: true,
     });
@@ -1737,6 +1735,13 @@ export const WheelGroup = (props) => {
     <Box
       {...controlgroupRootProps}
       {...controlgroupProps}
+      // The wheel-specific props are consumed here; blank them AFTER the spreads
+      // (the group hook, not knowing them, would otherwise pass them through onto
+      // the DOM as unknown attributes) — cleaner than mutating the props object.
+      spacing={undefined}
+      horizontal={undefined}
+      glass={undefined}
+      frameBorder={undefined}
       baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
