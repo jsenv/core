@@ -259,11 +259,11 @@ const css = /* css */ `
       --anchor-spacing: 3px; /* outline width + 1px */
 
       display: inline-flex;
-      width: 1em;
-      height: 1em;
-      height: 1lh;
+      width: round(1em, 1px);
+      height: round(1em, 1px);
+      /* height: 1lh; */
       margin-right: var(--anchor-spacing);
-      margin-left: calc(-1 * calc(1em + var(--anchor-spacing)));
+      margin-left: round(calc(-1 * calc(1em + var(--anchor-spacing))), 1px);
       align-items: center;
       justify-content: center;
       font-size: 1em;
@@ -280,6 +280,15 @@ const css = /* css */ `
       &[data-focus-visible] {
         opacity: 1;
       }
+    }
+
+    .navi_icon > svg {
+      /* icon.jsx forces backface-visibility: hidden, which composites the
+           SVG onto its own GPU layer. On focus the generic z-index:1 rule adds
+           a stacking context that lands that layer on a sub-pixel origin, so it
+           rasterizes blurry. Not compositing lets it paint with its parent,
+           pixel-snapped and crisp — and it can still sit above via z-index. */
+      backface-visibility: visible;
     }
 
     &[data-appearance="text"] {
