@@ -656,20 +656,16 @@ function WheelUI(props) {
     updateCurrentMarker(vp, findCenteredRow(vp));
   };
 
-  // The track's actual on-screen main-axis offset, even mid CSS transition
-  // (posRef jumps to the glide target up front, so read the DOM to freeze where
-  // the eye currently sees it when a glide is interrupted).
-  const getVisualPos = (vp) => {
-    const track = getTrack(vp);
-    if (!track) {
-      return posRef.current;
+  // Where the running glide currently is, computed from the animation's eased
+  // progress between its recorded from/to — NOT getComputedStyle, which on a live
+  // compositor animation forces an expensive style+compositor sync (that sync,
+  // run once per arrow keypress, is what stalled rapid navigation).
+  const getGlidePos = (glide) => {
+    const progress = glide.animation.effect.getComputedTiming().progress;
+    if (progress === null || progress === undefined) {
+      return glide.toPos;
     }
-    const transform = getComputedStyle(track).transform;
-    if (!transform || transform === "none") {
-      return posRef.current;
-    }
-    const matrix = new DOMMatrixReadOnly(transform);
-    return isHorizontal ? -matrix.m41 : -matrix.m42;
+    return glide.fromPos + (glide.toPos - glide.fromPos) * progress;
   };
 
   const findCenteredMatching = (viewportEl, selector) => {
@@ -759,15 +755,14 @@ function WheelUI(props) {
       animRef.current = null;
     }
     if (glideRef.current !== null) {
-      const { vp, animation } = glideRef.current;
+      const glide = glideRef.current;
       glideRef.current = null;
-      // Freeze where the glide currently is (read the compositor's value before
-      // cancelling), then render it as a plain transform so subsequent per-frame
-      // momentum/drag updates apply instantly.
-      posRef.current = getVisualPos(vp);
-      animation.onfinish = null;
-      animation.cancel();
-      renderPos(vp);
+      // Freeze where the glide currently is, then render it as a plain transform
+      // so subsequent momentum/drag/redirect updates continue from there.
+      posRef.current = getGlidePos(glide);
+      glide.animation.onfinish = null;
+      glide.animation.cancel();
+      renderPos(glide.vp);
     }
   };
 
@@ -813,9 +808,12 @@ function WheelUI(props) {
     // constant speed with linear easing, so rapid presses read as steady motion
     // rather than a re-accelerating jump each time. A glide from rest eases out.
     const redirecting = glideRef.current !== null;
+    const fromPos = redirecting
+      ? getGlidePos(glideRef.current)
+      : posRef.current;
     cancelAnim();
     const track = getTrack(vp);
-    const dist = target - posRef.current;
+    const dist = target - fromPos;
     if (!track || Math.abs(dist) < 0.5) {
       posRef.current = target;
       renderPos(vp);
@@ -827,14 +825,18 @@ function WheelUI(props) {
       WHEEL_GLIDE_MIN_MS,
       WHEEL_GLIDE_MAX_MS,
     );
-    const from = glideTransform(posRef.current);
-    const to = glideTransform(target);
     posRef.current = target;
-    const animation = track.animate([{ transform: from }, { transform: to }], {
-      duration,
-      easing: redirecting ? "linear" : "cubic-bezier(0.22, 0.61, 0.36, 1)",
-      fill: "forwards",
-    });
+    const animation = track.animate(
+      [
+        { transform: glideTransform(fromPos) },
+        { transform: glideTransform(target) },
+      ],
+      {
+        duration,
+        easing: redirecting ? "linear" : "cubic-bezier(0.22, 0.61, 0.36, 1)",
+        fill: "forwards",
+      },
+    );
     updateCurrentMarker(vp, findCenteredRow(vp));
     animation.onfinish = () => {
       glideRef.current = null;
@@ -844,7 +846,7 @@ function WheelUI(props) {
       animation.cancel();
       onDone();
     };
-    glideRef.current = { vp, animation };
+    glideRef.current = { vp, animation, fromPos, toPos: target };
   };
 
   // Settle after user input (fling or idle): a single continuous motion that
