@@ -79,7 +79,7 @@ const css = /* css */ `
       outline: var(--navi-focus-outline-width) solid
         var(--navi-focus-outline-color);
       /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-      outline-offset: calc(-1 * var(--navi-focus-outline-width));
+      outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
     }
 
     /* Readonly & disabled dim the neighbour text identically; disabled dims the
