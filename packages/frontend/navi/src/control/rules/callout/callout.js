@@ -551,33 +551,35 @@ export const openCallout = (
         document.removeEventListener("keydown", handleSpaceOutside, true);
       });
     };
-    if (
-      closeOnClickOutside &&
-      openingEvent &&
-      findEvent(openingEvent, "mousedown")
-    ) {
+    // A callout opened during a press (mousedown or pointerdown) must wait for the
+    // matching release before listening for click-outside, otherwise the same
+    // gesture's trailing click would immediately close it. Covers pointerdown too
+    // (e.g. a readonly control popping its callout from a pointerdown handler).
+    const openingDownEvent =
+      findEvent(openingEvent, "mousedown") ||
+      findEvent(openingEvent, "pointerdown");
+    if (closeOnClickOutside && openingEvent && openingDownEvent) {
+      const upType =
+        openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
       debug(
         openingEvent,
-        "deferring click-outside listener registration to avoid immediate close",
+        `deferring click-outside listener registration until ${upType} to avoid immediate close`,
       );
-      // The callout was opened during a mousedown — wait for the corresponding
-      // mouseup before registering the click-outside listener, otherwise the
-      // upcoming click event from the same gesture would immediately close it.
-      const onMouseUp = () => {
+      const onUp = () => {
         setTimeout(() => {
           debug(
             openingEvent,
-            "registering click-outside listener after mouseup",
+            `registering click-outside listener after ${upType}`,
           );
           registerClickOutsideListener();
         });
       };
-      document.addEventListener("mouseup", onMouseUp, {
+      document.addEventListener(upType, onUp, {
         once: true,
         capture: true,
       });
       addTeardown(() => {
-        document.removeEventListener("mouseup", onMouseUp, true);
+        document.removeEventListener(upType, onUp, true);
       });
     } else {
       registerClickOutsideListener();

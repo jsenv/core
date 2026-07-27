@@ -422,15 +422,9 @@ const WHEEL_DECAY = 0.88;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
-// Programmatic glide (arrow keys, clone click). Duration is proportional to the
-// distance (constant speed, px/ms) so a redirect to a farther target — e.g. a
-// second arrow press before the first glide finishes — lengthens the glide to
-// match instead of speeding up: the wheel keeps travelling at a steady, readable
-// pace. Bounded so a one-row step is still visible and a long redirect stays
-// snappy.
-const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
-const WHEEL_GLIDE_MIN_MS = 140;
-const WHEEL_GLIDE_MAX_MS = 600;
+// Default glide speed (px/ms). Feeds the spring stiffness that chases the target
+// on arrow keys / clicks (see glideSpringFactor); the demo can override it.
+const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in ~200ms at rest
 
 // aria-valuemin / aria-valuemax bounds when every item value is a number, else
 // null. Assistive tech reads it as the spinbutton's range. No Math.min/Math.max:
@@ -677,13 +671,19 @@ function WheelUI(props) {
   // The wheel does NOT use native scroll. `posRef` is our own virtual scroll
   // position (px, main axis); the list track is translated by -pos. This is the
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
-  // there is no physical scroll edge to get stuck at. animRef holds the current
-  // momentum rAF; glideRef the current Web Animation glide, either cancellable.
+  // there is no physical scroll edge to get stuck at.
   const posRef = useRef(0);
-  const animRef = useRef(null);
+  // momentumRef: the fling/settle rAF (velocity decay → snap).
+  const momentumRef = useRef(null);
+  // The discrete glide is a spring toward targetPosRef: arrow keys and clicks set
+  // the target (accumulating — each press/click moves it another row), and one
+  // rAF loop (glideRef) chases it. The chase LAGS the target on purpose, so N fast
+  // inputs land N rows away and the animation catches up; a farther target springs
+  // faster, so a second press mid-glide reads as accelerating, not restarting.
+  const targetPosRef = useRef(null);
   const glideRef = useRef(null);
-  // The glide code is bound once (mount effect) but the speed can change live
-  // (e.g. a demo control) — read it through a ref so redirects use the latest.
+  // The glide loop is bound once (mount effect) but the speed can change live
+  // (e.g. a demo control) — read it through a ref so it uses the latest.
   const glideSpeedRef = useRef(glideSpeed);
   glideSpeedRef.current = glideSpeed;
 
@@ -773,18 +773,6 @@ function WheelUI(props) {
     updateCurrentMarker(vp, findCenteredRow(vp));
   };
 
-  // Where the running glide currently is, computed from the animation's eased
-  // progress between its recorded from/to — NOT getComputedStyle, which on a live
-  // compositor animation forces an expensive style+compositor sync (that sync,
-  // run once per arrow keypress, is what stalled rapid navigation).
-  const getGlidePos = (glide) => {
-    const progress = glide.animation.effect.getComputedTiming().progress;
-    if (progress === null || progress === undefined) {
-      return glide.toPos;
-    }
-    return glide.fromPos + (glide.toPos - glide.fromPos) * progress;
-  };
-
   const findCenteredMatching = (viewportEl, selector) => {
     const items = viewportEl.querySelectorAll(selector);
     const center = posRef.current + viewportMain(viewportEl) / 2;
@@ -814,31 +802,45 @@ function WheelUI(props) {
   const centerPosFor = (vp, el) =>
     itemMainStart(el) - (viewportMain(vp) - getItemSize(vp)) / 2;
 
+  // Nearest whole-row position to `pos` (rows are spaced by itemSize; phase taken
+  // from a real row's center). Snaps a sub-row nudge back onto a value.
+  const snapPosToRow = (vp, pos) => {
+    const reals = vp.querySelectorAll(REAL_ITEM_SELECTOR);
+    const size = getItemSize(vp);
+    if (!reals.length || size === 0) {
+      return pos;
+    }
+    const anchor = centerPosFor(vp, reals[0]);
+    return Math.round((pos - anchor) / size) * size + anchor;
+  };
+
   // Loop: fold the position back into the real-items band [bufferSpan,
   // bufferSpan+realSpan). A real-list extent away shows identical content, so
   // this is invisible — and because it's our own value (not scrollTop) there is
-  // no physical edge to get stuck against. Returns true if it moved.
+  // no physical edge to get stuck against. Returns the px delta applied to posRef
+  // (0 when nothing moved) so a caller mid-glide can shift its target by the same.
   const wrapPos = (vp) => {
     // Real-item count comes from the DOM, not a closed-over `loopClones`: the
     // input effect binds these helpers once, before Wheel.Item children have
     // registered, so the captured `loopClones` would still be empty here.
     const realItems = vp.querySelectorAll(REAL_ITEM_SELECTOR);
     if (!isLoop || !realItems.length) {
-      return false;
+      return 0;
     }
     const realSpan = getItemSize(vp) * realItems.length;
     if (realSpan === 0) {
-      return false;
+      return 0;
     }
     const bufferSpan = itemMainStart(realItems[0]);
     const center = posRef.current + viewportMain(vp) / 2;
     if (center >= bufferSpan && center < bufferSpan + realSpan) {
-      return false;
+      return 0;
     }
     const offsetInBand =
       (((center - bufferSpan) % realSpan) + realSpan) % realSpan;
-    posRef.current += bufferSpan + offsetInBand - center;
-    return true;
+    const delta = bufferSpan + offsetInBand - center;
+    posRef.current += delta;
+    return delta;
   };
 
   // Non-loop: clamp so the first/last value can't be scrolled past center.
@@ -867,19 +869,14 @@ function WheelUI(props) {
   };
 
   const cancelAnim = () => {
-    if (animRef.current !== null) {
-      cancelAnimationFrame(animRef.current);
-      animRef.current = null;
+    if (momentumRef.current !== null) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = null;
     }
     if (glideRef.current !== null) {
-      const glide = glideRef.current;
+      cancelAnimationFrame(glideRef.current);
       glideRef.current = null;
-      // Freeze where the glide currently is, then render it as a plain transform
-      // so subsequent momentum/drag/redirect updates continue from there.
-      posRef.current = getGlidePos(glide);
-      glide.animation.onfinish = null;
-      glide.animation.cancel();
-      renderPos(glide.vp);
+      targetPosRef.current = null;
     }
   };
 
@@ -903,75 +900,64 @@ function WheelUI(props) {
     );
   };
 
-  // Glide the position to a target with the Web Animations API. WAAPI runs the
-  // transform on the compositor (smooth even while the arrow-key selection change
-  // triggers a main-thread re-render that would starve a rAF loop), and gives a
-  // real handle: onfinish tells us exactly when it's done, and cancelAnim can
-  // read the live value + cancel it to redirect a fresh glide (rapid arrow
-  // presses). The transform is set *raw* (no wrap) so it can travel onto a clone;
-  // onDone normalises + selects.
-  const glideTransform = (pos) => {
-    const p = -pos;
-    return isHorizontal
-      ? `translate3d(${p}px, 0, 0)`
-      : `translate3d(0, ${p}px, 0)`;
-  };
-  const animateTo = (vp, target, onDone) => {
-    // A redirect mid-glide (e.g. a second arrow press) continues at the same
-    // constant speed with linear easing, so rapid presses read as steady motion
-    // rather than a re-accelerating jump each time. A glide from rest eases out.
-    const redirecting = glideRef.current !== null;
-    const fromPos = redirecting
-      ? getGlidePos(glideRef.current)
-      : posRef.current;
-    cancelAnim();
-    const track = getTrack(vp);
-    const dist = target - fromPos;
-    if (!track || Math.abs(dist) < 0.5) {
-      posRef.current = target;
-      renderPos(vp);
-      onDone();
+  // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
+  // a fraction of the remaining distance each frame (so it eases out into place)
+  // and continuing from wherever it is when the target moves (so a second input
+  // mid-glide accelerates toward the farther target instead of restarting). The
+  // position travels raw (no wrap) so it can cross onto a clone; the loop folds
+  // whole extents back seamlessly in loop mode, and commits (selects) on arrival.
+  const glideStep = (vp, prevTime) => {
+    const now = performance.now();
+    const dt = clampNumber(now - prevTime, 0, 32);
+    const target = targetPosRef.current;
+    if (target === null) {
+      glideRef.current = null;
       return;
     }
-    // Constant speed (px/ms) → duration proportional to distance. On a redirect
-    // (a second arrow/tap before the glide finished) the target is farther, so
-    // cap the duration at roughly one row's travel time: the wheel then covers
-    // however many rows it is behind within that window, i.e. it speeds up the
-    // more you're behind. This keeps rapid presses feeling tied to how fast you
-    // press instead of stretching into one long, detached smooth glide. A glide
-    // from rest keeps the full range so a single step eases out naturally.
-    const speed = glideSpeedRef.current;
-    const rowMs = getItemSize(vp) / speed;
-    const maxMs = redirecting
-      ? clampNumber(rowMs, WHEEL_GLIDE_MIN_MS, WHEEL_GLIDE_MAX_MS)
-      : WHEEL_GLIDE_MAX_MS;
-    const duration = clampNumber(
-      Math.abs(dist) / speed,
-      WHEEL_GLIDE_MIN_MS,
-      maxMs,
-    );
-    posRef.current = target;
-    const animation = track.animate(
-      [
-        { transform: glideTransform(fromPos) },
-        { transform: glideTransform(target) },
-      ],
-      {
-        duration,
-        easing: redirecting ? "linear" : "cubic-bezier(0.22, 0.61, 0.36, 1)",
-        fill: "forwards",
-      },
-    );
-    updateCurrentMarker(vp, findCenteredRow(vp));
-    animation.onfinish = () => {
+    let dist = target - posRef.current;
+    // < ~half a pixel from target → snap, commit, done.
+    if (Math.abs(dist) < 0.4) {
+      posRef.current = target;
+      targetPosRef.current = null;
       glideRef.current = null;
-      // Commit the end transform to inline style, then drop the animation so it
-      // doesn't keep the property pinned.
-      applyTransform(track, target);
-      animation.cancel();
-      onDone();
-    };
-    glideRef.current = { vp, animation, fromPos, toPos: target };
+      renderPos(vp);
+      commitSelection(vp);
+      return;
+    }
+    // Frame-rate-independent spring. Stiffness scales with glideSpeed so the demo
+    // control still slows it down; a farther target moves faster (distance × factor).
+    const factor = 1 - Math.pow(1 - glideSpringFactor(), dt / 16);
+    posRef.current += dist * factor;
+    if (isLoop) {
+      // Fold the runway back so a long accumulated chase never runs off the clone
+      // band into blank space; shift the target by the same extent so the spring
+      // is uninterrupted.
+      const delta = wrapPos(vp);
+      if (delta !== 0) {
+        targetPosRef.current += delta;
+      }
+    }
+    renderPos(vp);
+    glideRef.current = requestAnimationFrame(() => glideStep(vp, now));
+  };
+  // Spring stiffness (fraction of remaining distance per ~frame). Scales with the
+  // glide speed so slower = gentler chase; clamped so it never crawls or snaps.
+  const glideSpringFactor = () =>
+    clampNumber(glideSpeedRef.current * 1.4, 0.06, 0.45);
+  const glideTo = (vp, target) => {
+    // A discrete glide overrides any fling momentum.
+    if (momentumRef.current !== null) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = null;
+    }
+    targetPosRef.current = target;
+    if (glideRef.current === null) {
+      glideRef.current = requestAnimationFrame(() =>
+        glideStep(vp, performance.now()),
+      );
+    }
+    // else: the loop is already running and will chase the updated target — no
+    // restart, so rapid inputs read as one accelerating motion, not a stutter.
   };
 
   // Settle after user input (fling or idle): a single continuous motion that
@@ -993,26 +979,26 @@ function WheelUI(props) {
         if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
           snapping = true;
         }
-        animRef.current = requestAnimationFrame(step);
+        momentumRef.current = requestAnimationFrame(step);
         return;
       }
       const row = findCenteredRow(vp);
       if (!row) {
-        animRef.current = null;
+        momentumRef.current = null;
         commitSelection(vp);
         return;
       }
       const dist = centerPosFor(vp, row) - posRef.current;
       if (Math.abs(dist) < 0.4) {
         setPos(vp, posRef.current + dist);
-        animRef.current = null;
+        momentumRef.current = null;
         commitSelection(vp);
         return;
       }
       setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR);
-      animRef.current = requestAnimationFrame(step);
+      momentumRef.current = requestAnimationFrame(step);
     };
-    animRef.current = requestAnimationFrame(step);
+    momentumRef.current = requestAnimationFrame(step);
   };
 
   // Center a specific item (external value / initial / keyboard). Smooth picks
@@ -1029,31 +1015,48 @@ function WheelUI(props) {
       }
     }
     if (behavior === "smooth") {
-      animateTo(vp, target, () => commitSelection(vp));
+      glideTo(vp, target);
     } else {
       setPos(vp, target);
     }
   };
 
-  // A proxy was clicked — select (and glide to) the real item it stands in for.
-  const handleCloneClick = (index, event) => {
-    const vp = getViewport();
-    if (!vp) {
+  // Select real-item `nextIndex`: update the value + emphasis immediately (so N
+  // inputs land N rows away right now) and glide the row to center (the animation
+  // lags and catches up). centeredIdRef holds the TARGET, so the next input steps
+  // from it — rapid inputs accumulate.
+  const glideToIndex = (vp, reals, nextIndex, event) => {
+    const targetItem = reals[nextIndex];
+    centeredIdRef.current = targetItem.id;
+    updateCurrentMarker(vp, targetItem);
+    requestSelectValue(getItemValueById(targetItem.id), event);
+    centerOn(vp, targetItem, "smooth");
+  };
+  const wrapIndex = (index, length) =>
+    isLoop
+      ? ((index % length) + length) % length
+      : clampNumber(index, 0, length - 1);
+  // Index we are heading to (the target, not the mid-glide visual center).
+  const currentTargetIndex = (vp, reals) => {
+    const centeredId = centeredIdRef.current;
+    let index = centeredId ? reals.findIndex((r) => r.id === centeredId) : -1;
+    if (index < 0) {
+      index = reals.indexOf(getSelectedItem(vp));
+    }
+    if (index < 0) {
+      index = 0;
+    }
+    return index;
+  };
+  // Move the target by `offset` rows (arrow key = ±1, click = its distance from
+  // the center window). Relative to the current target so it accumulates.
+  const stepTarget = (vp, offset, event) => {
+    const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
+    if (!reals.length) {
       return;
     }
-    const target = vp.querySelectorAll(REAL_ITEM_SELECTOR)[index];
-    if (!target) {
-      return;
-    }
-    attemptInteraction({
-      event,
-      name: "select",
-      allowed: () => {
-        centeredIdRef.current = target.id;
-        requestSelectValue(getItemValueById(target.id), event);
-        centerOn(vp, target, "smooth");
-      },
-    });
+    const index = currentTargetIndex(vp, reals);
+    glideToIndex(vp, reals, wrapIndex(index + offset, reals.length), event);
   };
 
   // The row for the current value (the selection), else the first row.
@@ -1073,7 +1076,7 @@ function WheelUI(props) {
     // off-center. Let the motion finish: commitSelection settles the value and the
     // next render is a no-op. A genuine external change made during motion is
     // honoured once it settles (centeredIdRef then differs from the selection).
-    if (glideRef.current !== null || animRef.current !== null) {
+    if (glideRef.current !== null || momentumRef.current !== null) {
       return;
     }
     const selectedItem = getSelectedItem(viewportEl);
@@ -1228,7 +1231,9 @@ function WheelUI(props) {
             wrapPos(vp);
           }
           if (e.detail.behavior === "smooth") {
-            animateTo(vp, posRef.current + delta, () => settle(vp, 0));
+            // Glide to the nearest row after the nudge (a sub-row nudge springs
+            // back); a whole-row/items delta already lands on a row.
+            glideTo(vp, snapPosToRow(vp, posRef.current + delta));
           } else {
             setPos(vp, posRef.current + delta);
             scheduleSettle();
@@ -1264,7 +1269,9 @@ function WheelUI(props) {
         event: e,
         name: "select",
         allowed: () => {
-          cancelAnim();
+          // Do NOT cancel the glide here: a click that isn't a drag should let the
+          // in-flight glide keep running and just nudge its target (smooth, like
+          // arrows). The glide is only cancelled once a real drag starts (below).
           const client = isHorizontal ? e.clientX : e.clientY;
           drag = {
             pointerId: e.pointerId,
@@ -1276,6 +1283,17 @@ function WheelUI(props) {
             moved: false,
             captured: false,
           };
+          // Capture on pointerDOWN, not on first move: a fast drag can leave the
+          // viewport before the first pointermove fires, and without capture the
+          // pointerup then lands outside and is never caught — leaving `drag` set
+          // so the wheel keeps scrolling after release. Capture routes every
+          // move/up back here regardless of where the pointer goes.
+          try {
+            vp.setPointerCapture(e.pointerId);
+            drag.captured = true;
+          } catch {
+            // pointer already gone (e.g. released same tick) — nothing to capture.
+          }
         },
       });
     };
@@ -1288,15 +1306,18 @@ function WheelUI(props) {
         return;
       }
       const client = isHorizontal ? e.clientX : e.clientY;
-      const total = client - drag.startClient;
-      if (!drag.moved && Math.abs(total) > 3) {
+      if (!drag.moved && Math.abs(client - drag.startClient) > 3) {
+        // A real drag begins: stop the glide and re-anchor to here so the wheel
+        // doesn't jump (startPos = the just-frozen position, startClient = now).
         drag.moved = true;
-        drag.captured = true;
-        vp.setPointerCapture(e.pointerId);
+        cancelAnim();
+        drag.startPos = posRef.current;
+        drag.startClient = client;
       }
       if (!drag.moved) {
         return;
       }
+      const total = client - drag.startClient;
       const now = performance.now();
       const dt = now - drag.lastTime;
       if (dt > 0) {
@@ -1318,18 +1339,21 @@ function WheelUI(props) {
       }
       drag = null;
       if (!wasDrag) {
-        // A tap: glide the tapped neighbour to center and select it. The centered
-        // row is a no-op; clones keep their own handler (handleCloneClick).
-        const tapped = e.target.closest(REAL_ITEM_SELECTOR);
-        if (tapped && tapped.id !== centeredIdRef.current) {
-          centeredIdRef.current = tapped.id;
-          updateCurrentMarker(vp, tapped);
-          requestSelectValue(getItemValueById(tapped.id), e);
-          centerOn(vp, tapped, "smooth");
+        // A tap: step by the click's row-distance from the center window, NOT by
+        // the item under the pointer. The pointer sits over a static zone while
+        // rows scroll beneath it, so a fast series of clicks in the "one below"
+        // zone each add +1 to the target and accumulate — the glide catches up.
+        const rect = vp.getBoundingClientRect();
+        const along = isHorizontal
+          ? e.clientX - rect.left
+          : e.clientY - rect.top;
+        const size = isHorizontal ? rect.width : rect.height;
+        const offset = Math.round((along - size / 2) / getItemSize(vp));
+        if (offset !== 0) {
+          stepTarget(vp, offset, e);
         } else {
-          // Tapped the already-centered row (common when spam-clicking one spot):
-          // the pointerdown froze any in-flight glide at a fractional position, so
-          // snap cleanly to the nearest row instead of resting off-center.
+          // Clicked the center zone: no step, but the pointerdown cancelled any
+          // in-flight glide (freezing the position), so snap cleanly to the row.
           settle(vp, 0);
         }
         return;
@@ -1379,43 +1403,17 @@ function WheelUI(props) {
         name: "step",
         allowed: () => {
           e.preventDefault();
-          const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
-          if (!reals.length) {
-            return;
-          }
-          // The centered row is the source of truth for "where we are now": a ref,
-          // so rapid presses step from the latest position (the closure's
-          // currentValue would be a render behind). Fall back to the selection,
-          // then the first row.
-          const centeredId = centeredIdRef.current;
-          let selectedIndex = centeredId
-            ? reals.findIndex((row) => row.id === centeredId)
-            : -1;
-          if (selectedIndex < 0) {
-            selectedIndex = reals.indexOf(getSelectedItem(vp));
-          }
-          if (selectedIndex < 0) {
-            selectedIndex = 0;
-          }
-          let nextIndex;
-          if (e.key === "Home") {
-            nextIndex = 0;
-          } else if (e.key === "End") {
-            nextIndex = reals.length - 1;
-          } else {
-            nextIndex = selectedIndex + (e.key === nextKey ? 1 : -1);
-            if (isLoop) {
-              nextIndex =
-                ((nextIndex % reals.length) + reals.length) % reals.length;
-            } else {
-              nextIndex = clampNumber(nextIndex, 0, reals.length - 1);
+          if (e.key === "Home" || e.key === "End") {
+            const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
+            if (!reals.length) {
+              return;
             }
+            glideToIndex(vp, reals, e.key === "Home" ? 0 : reals.length - 1, e);
+          } else {
+            // Steps from the TARGET, so a second press mid-glide accumulates (the
+            // spring accelerates toward the farther target).
+            stepTarget(vp, e.key === nextKey ? 1 : -1, e);
           }
-          const targetItem = reals[nextIndex];
-          centeredIdRef.current = targetItem.id;
-          updateCurrentMarker(vp, targetItem);
-          requestSelectValue(getItemValueById(targetItem.id), e);
-          centerOn(vp, targetItem, "smooth");
         },
         prevented: () => {
           e.preventDefault();
@@ -1476,7 +1474,6 @@ function WheelUI(props) {
             ? renderClones(
                 getLoopBufferItems(loopClones, loopBufferCount, "before"),
                 "before",
-                handleCloneClick,
               )
             : null}
           <WheelItemTrackerContext.Provider value={trackerContextRef.current}>
@@ -1488,7 +1485,6 @@ function WheelUI(props) {
             ? renderClones(
                 getLoopBufferItems(loopClones, loopBufferCount, "after"),
                 "after",
-                handleCloneClick,
               )
             : null}
         </ul>
@@ -1536,9 +1532,10 @@ const getLoopBufferItems = (clones, visibleCount, side) => {
 };
 
 // Inert visual proxies of the real items used for seamless looping. They are
-// hidden from assistive tech, copy the real row's styling (itemProps) so widths
-// match, and clicking one selects the real item it stands in for (handleCloneClick).
-const renderClones = (bufferItems, position, onCloneClick) => {
+// hidden from assistive tech and copy the real row's styling (itemProps) so
+// widths match. Clicks are handled by position on the viewport (see the tap in
+// the pointer effect), so a clone needs no click handler of its own.
+const renderClones = (bufferItems, position) => {
   return bufferItems.map((item, offset) => (
     <Box
       as="li"
@@ -1546,12 +1543,6 @@ const renderClones = (bufferItems, position, onCloneClick) => {
       {...item.itemProps}
       baseClassName="navi_wheel_item navi_wheel_item_clone"
       aria-hidden="true"
-      onClick={(e) => {
-        if (e.button !== 0) {
-          return;
-        }
-        onCloneClick(item.index, e);
-      }}
     >
       {item.label}
     </Box>
