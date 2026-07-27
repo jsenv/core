@@ -406,6 +406,72 @@ Object.assign(PSEUDO_CLASSES, {
   },
 });
 
+/**
+ * An anchor (`<a>`) rendered as a navi control: it carries the full control
+ * facade (name/value, pseudo-state, disabled/readOnly/loading, selection when
+ * inside a `SelectionContext`) on top of the native link behavior, plus
+ * navi-specific styling hooks and href-derived state.
+ *
+ * Href-derived behavior (all computed from `href`, recomputed on navigation):
+ * - internal vs external target (`data-href-internal`/`data-href-external`),
+ *   with `target`/`rel` auto-defaulted (`_self` internal, `_blank` +
+ *   `noopener noreferrer` external) unless explicitly set.
+ * - "current page" detection (`data-href-current`, `aria-current="page"`).
+ * - anchor links (`href` starting with `#`) get `data-href-anchor`.
+ * - an automatic end icon for `tel:`/`sms:`/`mailto:`/`github.com`, external
+ *   (blank-target) links, and anchor links — each overridable/suppressible.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - Destination. Also the default `value`, and
+ *   (when `hrefFallback`) the default visible text.
+ * @param {import("../route.js").Route} [props.route] - Renders via `route`
+ *   instead of a raw `href`: the URL is built from the route (see
+ *   `routeParams`) and "current" is derived from whether the route matches.
+ * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
+ * @param {string} [props.target] - Native anchor target; defaults from
+ *   internal/external detection when omitted.
+ * @param {string} [props.rel] - Native anchor rel; defaults to
+ *   `"noopener noreferrer"` for external links when omitted.
+ * @param {boolean} [props.anchor] - Marks this as an in-page anchor link:
+ *   sets `data-anchor`, derives `id` from `href` (the part after `#`) when no
+ *   `id` is given, drops the visited color, keeps a pointer cursor even when
+ *   current, and defaults `hrefFallback` to `false` (no auto text).
+ * @param {string} [props.value] - Value emitted by the control facade
+ *   (`navi_value`); defaults to `href`.
+ * @param {boolean} [props.current] - Forces the "current" state on (otherwise
+ *   derived from the href/route).
+ * @param {"text"|"icon"|"tab"} [props.appearance] - Visual variant
+ *   (`data-appearance`); `"text"`/`"icon"` drop the link color/underline,
+ *   `"tab"` renders a tab-like affordance.
+ * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
+ *   bar drawn on the given edge (or bottom when `true`) while current.
+ * @param {boolean} [props.currentEffectBold] - Bold the text while current
+ *   (reserving the bold width so layout doesn't shift).
+ * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
+ *   current (used with `appearance="tab"`).
+ * @param {boolean|import("preact").ComponentChild} [props.startIcon] - Icon
+ *   placed before the text.
+ * @param {boolean|import("preact").ComponentChild} [props.endIcon] - Icon
+ *   placed after the text; when omitted, an icon may be auto-chosen from the
+ *   href (see above).
+ * @param {boolean|import("preact").ComponentChild} [props.blankTargetIcon] -
+ *   Override/suppress the auto external-link icon.
+ * @param {boolean|import("preact").ComponentChild} [props.anchorIcon] -
+ *   Override/suppress the auto anchor icon.
+ * @param {boolean} [props.revealOnInteraction] - Hide the link until its
+ *   container is hovered/focused (`data-reveal-on-interaction`); defaults to
+ *   `true` inside a `Title` (the "#" anchor-on-hover pattern).
+ * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
+ *   no children are given; defaults to `true` unless `anchor`.
+ * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
+ *   click (navigation suppressed; `onClick` still runs).
+ * @param {(event: MouseEvent) => void} [props.onClick]
+ * @param {import("preact").ComponentChildren} [props.children] - Link content;
+ *   falls back to the route's relative URL / `href` per the rules above.
+ * @param {string} [props.name] - Control facade name (links may be nameless).
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.readOnly]
+ */
 export const Link = (props) => {
   import.meta.css = css;
 
