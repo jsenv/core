@@ -527,7 +527,7 @@ function WheelUI(props) {
   // the readonly callout for free); the controlled value / action flow then
   // updates uiState, which syncCenterToSelection reacts to.
   const requestSelectValue = (newValue, event) => {
-    if (compareTwoJsValues(newValue, currentValue) === 0) {
+    if (compareTwoJsValues(newValue, currentValue)) {
       return;
     }
     dispatchRequestSetUIState(inputRef.current, newValue, { event });
@@ -556,7 +556,7 @@ function WheelUI(props) {
   };
   const getIdForValue = (value) => {
     const match = trackedItems.find(
-      (it) => compareTwoJsValues(it.value, value) === 0,
+      (it) => compareTwoJsValues(it.value, value),
     );
     if (match) {
       return match.id;
@@ -568,7 +568,7 @@ function WheelUI(props) {
   // human wording, e.g. "09" or "Monday"); otherwise the raw primitive value.
   // aria-valuenow additionally carries the number for numeric wheels.
   const selectedTracked = trackedItems.find(
-    (it) => compareTwoJsValues(it.value, currentValue) === 0,
+    (it) => compareTwoJsValues(it.value, currentValue),
   );
   let ariaValueText;
   if (selectedTracked && typeof selectedTracked.label === "string") {
@@ -973,6 +973,12 @@ function WheelUI(props) {
     updateCurrentMarker(viewportEl, selectedItem);
     centerOn(viewportEl, selectedItem, behavior);
   };
+  // The deferred re-center below fires a frame later, by which point the items
+  // have registered and the value has resolved; a closure would still hold the
+  // mount render's empty item list and re-center on the first row. A ref always
+  // points at the current render's syncCenterToSelection.
+  const syncCenterToSelectionRef = useRef(null);
+  syncCenterToSelectionRef.current = syncCenterToSelection;
 
   // Initial centering — deferred until the wheel is on screen (offsets need real
   // layout, e.g. not inside a closed popover/dialog).
@@ -980,14 +986,15 @@ function WheelUI(props) {
     ref,
     (el) => {
       const vp = el.querySelector(".navi_wheel_viewport");
-      syncCenterToSelection(vp, "auto");
+      syncCenterToSelectionRef.current(vp, "auto");
       // Re-center once more after a frame: the first pass can run before the flex
-      // rows get their final offsets, which would leave the selected value off
-      // the center window until the first interaction. Recompute from stable
-      // layout so it sits in the window from the start.
+      // rows get their final offsets (or before the items have registered), which
+      // would leave the selected value off the center window until the first
+      // interaction. Recompute from stable layout so it sits in the window from
+      // the start.
       const rafId = requestAnimationFrame(() => {
         centeredIdRef.current = null;
-        syncCenterToSelection(vp, "auto");
+        syncCenterToSelectionRef.current(vp, "auto");
       });
       return () => {
         cancelAnimationFrame(rafId);
