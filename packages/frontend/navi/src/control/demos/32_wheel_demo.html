@@ -609,10 +609,7 @@
                   <Wheel
                     name="hours"
                     type="integer"
-                    value={durationHoursSignal.value}
-                    uiAction={(v) => {
-                      durationHoursSignal.value = v;
-                    }}
+                    signal={durationHoursSignal}
                   >
                     {DURATION_HOURS.map((h) => (
                       <Wheel.Item key={h} value={h}>
@@ -626,10 +623,7 @@
                   <Wheel
                     name="minutes"
                     type="integer"
-                    value={durationMinutesSignal.value}
-                    uiAction={(v) => {
-                      durationMinutesSignal.value = v;
-                    }}
+                    signal={durationMinutesSignal}
                   >
                     {DURATION_MINUTES.map((m) => (
                       <Wheel.Item key={m} value={m}>
