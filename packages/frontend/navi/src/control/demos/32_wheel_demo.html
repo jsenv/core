@@ -222,13 +222,15 @@
       const pad2 = (n) => String(n).padStart(2, "0");
 
       // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
-      // anchor>` owns the id (derived from its href) and renders the hover anchor
-      // icon — the same pattern the other demos use.
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
       const Heading = ({ level = 3, id, children, ...rest }) => {
         const Tag = `h${level}`;
         return (
           <Tag {...rest}>
-            <Link anchor revealOnInteraction href={`#${id}`} />
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
             {children}
           </Tag>
         );
@@ -263,56 +265,57 @@
             </div>
             <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
               <li>
-                <a href="#states">States</a>
+                <Link href="#states">States</Link>
               </li>
               <li>
-                <a href="#scroll">Scroll behavior</a> — snapping, momentum, loop
+                <Link href="#scroll">Scroll behavior</Link> — snapping,
+                momentum, loop
                 <ul>
                   <li>
-                    <a href="#scroll-small">Small list (4 values)</a>
+                    <Link href="#scroll-small">Small list (4 values)</Link>
                   </li>
                   <li>
-                    <a href="#scroll-long">Long list (100 values)</a>
+                    <Link href="#scroll-long">Long list (100 values)</Link>
                   </li>
                 </ul>
               </li>
               <li>
-                <a href="#separator">Separator alignment</a>
+                <Link href="#separator">Separator alignment</Link>
               </li>
               <li>
-                <a href="#actions">uiAction / action / form</a>
+                <Link href="#actions">uiAction / action / form</Link>
               </li>
               <li>
-                <a href="#practical">Practical examples</a>
+                <Link href="#practical">Practical examples</Link>
                 <ul>
                   <li>
-                    <a href="#practical-size">Size picker</a>
+                    <Link href="#practical-size">Size picker</Link>
                   </li>
                   <li>
-                    <a href="#practical-day">Day picker</a>
+                    <Link href="#practical-day">Day picker</Link>
                   </li>
                   <li>
-                    <a href="#practical-duration">Duration picker</a>
+                    <Link href="#practical-duration">Duration picker</Link>
                   </li>
                 </ul>
               </li>
               <li>
-                <a href="#customization">Customization</a>
+                <Link href="#customization">Customization</Link>
                 <ul>
                   <li>
-                    <a href="#cust-visiblecount">visibleCount</a>
+                    <Link href="#cust-visiblecount">visibleCount</Link>
                   </li>
                   <li>
-                    <a href="#cust-horizontal">horizontal</a>
+                    <Link href="#cust-horizontal">horizontal</Link>
                   </li>
                   <li>
-                    <a href="#cust-padding">Item padding</a>
+                    <Link href="#cust-padding">Item padding</Link>
                   </li>
                   <li>
-                    <a href="#cust-glass">glass</a>
+                    <Link href="#cust-glass">glass</Link>
                   </li>
                   <li>
-                    <a href="#cust-frame">frameBorder</a>
+                    <Link href="#cust-frame">frameBorder</Link>
                   </li>
                 </ul>
               </li>
