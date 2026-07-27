@@ -409,6 +409,15 @@ const WHEEL_DECAY = 0.88;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
+// Mouse-wheel settle. Rather than waiting out a long idle and then springing to
+// whichever row is nearest (which snaps BACKWARD when you overshot, and reads as a
+// late correction), we snap almost immediately to the row the scroll was HEADING
+// for — the current position biased by the last scroll velocity. WHEEL_SETTLE_DELAY
+// is just long enough to tell one gesture from the next; WHEEL_MOMENTUM_MS is how
+// far (in ms of travel) the velocity projects, so a faster flick lands a row ahead.
+const WHEEL_SETTLE_DELAY = 50; // ms of idle that ends the wheel gesture
+const WHEEL_MOMENTUM_MS = 55; // velocity projection horizon (px = velocity × this)
+
 // Default glide speed (px/ms). Feeds the spring stiffness that chases the target
 // on arrow keys / clicks (see glideSpringFactor); the demo can override it.
 const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in ~200ms at rest
@@ -975,6 +984,21 @@ function WheelUI(props) {
     momentumRef.current = requestAnimationFrame(step);
   };
 
+  // Wheel gesture end: land on the row the scroll was heading for. The position
+  // is biased by the last scroll velocity before snapping, so a flick that stopped
+  // just short of the next row still lands ON it (never snaps backward), and the
+  // glide there decelerates as the motion dies — no separate spring-to-nearest, no
+  // long idle wait. velocity is px/ms, signed with the scroll direction.
+  const wheelSettle = (vp, velocity) => {
+    cancelAnim();
+    const size = getItemSize(vp);
+    if (size === 0) {
+      return;
+    }
+    const projected = posRef.current + velocity * WHEEL_MOMENTUM_MS;
+    glideTo(vp, snapPosToRow(vp, projected));
+  };
+
   // Center value `index` (external value / initial / keyboard / click). Smooth
   // glides to the nearest copy (glideTargetFor) so a wrap goes the short way.
   const centerOnIndex = (vp, index, behavior) => {
@@ -1092,10 +1116,24 @@ function WheelUI(props) {
     const el = ref.current;
     const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
+    // Last wheel event's scroll velocity (px/ms, signed) and timestamp, so the
+    // settle can snap to the row the scroll was heading for (see wheelSettle).
+    let wheelVelocity = 0;
+    let lastWheelTime = 0;
 
+    // Non-wheel settle (drag momentum, programmatic jump): spring to the nearest row.
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(() => settle(vp, 0), 90);
+    };
+    // Wheel settle: fire soon after the last wheel event and land on the projected
+    // row (velocity-biased), not after a long idle then a spring to nearest.
+    const scheduleWheelSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(
+        () => wheelSettle(vp, wheelVelocity),
+        WHEEL_SETTLE_DELAY,
+      );
     };
 
     const onWheel = (e) => {
@@ -1128,8 +1166,19 @@ function WheelUI(props) {
           // a non-looping wheel, so an overscroll past the end is simply a no-op.
           e.preventDefault();
           cancelAnim();
+          // Track the scroll velocity (px/ms, capped) so the settle lands on the row
+          // the scroll was heading for. Clamp dt so a first event / long pause after
+          // one doesn't blow the estimate up.
+          const now = performance.now();
+          const dt = clampNumber(now - lastWheelTime, 8, 120);
+          lastWheelTime = now;
+          wheelVelocity = clampNumber(
+            delta / dt,
+            -WHEEL_MAX_VELOCITY,
+            WHEEL_MAX_VELOCITY,
+          );
           setPos(vp, posRef.current + delta);
-          scheduleSettle();
+          scheduleWheelSettle();
         },
         prevented: () => {
           // Blocked (readonly/disabled/busy): the gate showed the callout; trap
