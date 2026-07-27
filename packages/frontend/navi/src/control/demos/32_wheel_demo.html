@@ -428,70 +428,72 @@
         const [speedName, setSpeedName] = useState("normal");
         const glideSpeed = GLIDE_SPEEDS[speedName];
         return (
-          <div id="scroll" className="demo-section">
-            <h2>Scroll behavior — snapping, momentum, loop</h2>
-            <p>
-              Scroll, drag or fling either column, or use the buttons (which
-              drive <em>both</em>). Left is our transform-based Wheel (looping);
-              right is a plain HTML/CSS <code>scroll-snap</code> list — compare
-              how each animates the snap. The <kbd>px</kbd> buttons nudge by
-              less than a row to show the snap-back.
-            </p>
-            <div
-              className="scroll-buttons"
-              style={{ marginTop: 0, marginBottom: 8 }}
-            >
-              <span
-                style={{
-                  alignSelf: "center",
-                  color: "#555",
-                  fontSize: "0.85rem",
-                }}
+          <NaviDebug debugAll>
+            <div id="scroll" className="demo-section">
+              <h2>Scroll behavior — snapping, momentum, loop</h2>
+              <p>
+                Scroll, drag or fling either column, or use the buttons (which
+                drive <em>both</em>). Left is our transform-based Wheel
+                (looping); right is a plain HTML/CSS <code>scroll-snap</code>{" "}
+                list — compare how each animates the snap. The <kbd>px</kbd>{" "}
+                buttons nudge by less than a row to show the snap-back.
+              </p>
+              <div
+                className="scroll-buttons"
+                style={{ marginTop: 0, marginBottom: 8 }}
               >
-                Wheel glide speed:
-              </span>
-              {["slow", "normal", "fast"].map((name) => (
-                <button
-                  key={name}
-                  onClick={() => setSpeedName(name)}
-                  style={
-                    speedName === name
-                      ? {
-                          background: "#4a90d9",
-                          color: "#fff",
-                          borderColor: "#4a90d9",
-                        }
-                      : undefined
-                  }
+                <span
+                  style={{
+                    alignSelf: "center",
+                    color: "#555",
+                    fontSize: "0.85rem",
+                  }}
                 >
-                  {name}
-                </button>
-              ))}
+                  Wheel glide speed:
+                </span>
+                {["slow", "normal", "fast"].map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => setSpeedName(name)}
+                    style={
+                      speedName === name
+                        ? {
+                            background: "#4a90d9",
+                            color: "#fff",
+                            borderColor: "#4a90d9",
+                          }
+                        : undefined
+                    }
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <p style={{ marginTop: 0 }}>
+                Try <strong>slow</strong>, then tap <kbd>▼ item</kbd> (or hold{" "}
+                <kbd>↓</kbd> on a focused wheel) faster than the glide finishes:
+                the glide speeds up to stay tied to your input rate instead of
+                stretching into one long, detached slide.
+              </p>
+
+              <h3 id="scroll-small">Small list (4 values)</h3>
+              <p>Few values — easiest to eyeball the wrap and each snap.</p>
+              <ScrollPair
+                values={[0, 15, 30, 45]}
+                repeatNative
+                glideSpeed={glideSpeed}
+              />
+
+              <h3 id="scroll-long" style={{ marginTop: 24 }}>
+                Long list (100 values)
+              </h3>
+              <p>
+                Many values — stress-tests momentum and the loop runway against
+                a tall native scroller.
+              </p>
+              <ScrollPair values={range(100)} glideSpeed={glideSpeed} />
             </div>
-            <p style={{ marginTop: 0 }}>
-              Try <strong>slow</strong>, then tap <kbd>▼ item</kbd> (or hold{" "}
-              <kbd>↓</kbd> on a focused wheel) faster than the glide finishes:
-              the glide speeds up to stay tied to your input rate instead of
-              stretching into one long, detached slide.
-            </p>
-
-            <h3 id="scroll-small">Small list (4 values)</h3>
-            <p>Few values — easiest to eyeball the wrap and each snap.</p>
-            <ScrollPair
-              values={[0, 15, 30, 45]}
-              repeatNative
-              glideSpeed={glideSpeed}
-            />
-
-            <h3 id="scroll-long" style={{ marginTop: 24 }}>
-              Long list (100 values)
-            </h3>
-            <p>
-              Many values — stress-tests momentum and the loop runway against a
-              tall native scroller.
-            </p>
-            <ScrollPair values={range(100)} glideSpeed={glideSpeed} />
-          </div>
+          </NaviDebug>
         );
       };
 
