@@ -415,23 +415,6 @@ const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
 const WHEEL_GLIDE_MIN_MS = 140;
 const WHEEL_GLIDE_MAX_MS = 600;
 
-// Two primitives whose string forms are equal (e.g. 9 and "9"). Used once, at the
-// framework boundary (resolveItemValue), to recover a numeric item value from the
-// string its form <input> round-trips through — like reading a native <select>,
-// whose option value={9} comes back as "9". Objects never reach here: they match
-// exactly via compareTwoJsValues first.
-const primitivesStringEqual = (a, b) => {
-  if (a === null || a === undefined || b === null || b === undefined) {
-    return false;
-  }
-  const aIsPrimitive = typeof a !== "object" && typeof a !== "function";
-  const bIsPrimitive = typeof b !== "object" && typeof b !== "function";
-  if (aIsPrimitive && bIsPrimitive) {
-    return String(a) === String(b);
-  }
-  return false;
-};
-
 // aria-valuemin / aria-valuemax bounds when every item value is a number, else
 // null. Assistive tech reads it as the spinbutton's range. No Math.min/Math.max:
 // a plain scan is easier to follow.
@@ -558,47 +541,15 @@ function WheelUI(props) {
     ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
     : [];
 
-  // The one boundary bridge. A control's value round-trips through its form
-  // <input> as a string (like a native <select>: an option with value={9} comes
-  // back as "9"), so the framework hands us a stringified scalar. resolveItemValue
-  // maps it back to the authoritative item value (the exact JS the caller gave
-  // Wheel.Item), so everything past this point — action/uiAction, aria, and the
-  // compareTwoJsValues matches — works in typed values and never has to care about
-  // the string round-trip. Objects survive the round-trip already (control_value
-  // keeps them), so a strict compareTwoJsValues match is tried first.
-  const resolveItemValue = (frameworkValue) => {
-    const items = trackedItemsRef.current;
-    const exact = items.find((it) =>
-      compareTwoJsValues(it.value, frameworkValue),
-    );
-    if (exact) {
-      return exact.value;
-    }
-    const stringified = items.find((it) =>
-      primitivesStringEqual(it.value, frameworkValue),
-    );
-    return stringified ? stringified.value : frameworkValue;
-  };
-
   // A single value control backed by a hidden input (facade pattern, like
   // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
   // <input> holding the value for the form. `type` is a rendering hint only —
   // keep it off the input, which would otherwise become <input type="integer">.
-  // action/uiAction are wrapped so the caller's callback receives the typed item
-  // value, not the DOM string the framework would otherwise pass.
   const inputRef = useRef(null);
-  const withResolvedValue = (fn) => {
-    if (!fn) {
-      return fn;
-    }
-    return (value, event) => fn(resolveItemValue(value), event);
-  };
   const [controlRootProps, controlHostProps, { facadeController }] =
     useControlFacadeProps(
       {
         ...props,
-        action: withResolvedValue(props.action),
-        uiAction: withResolvedValue(props.uiAction),
         ref: inputRef,
         type: undefined,
       },
@@ -612,9 +563,10 @@ function WheelUI(props) {
   // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
   // controlled value stays authoritative and any scroll springs back to it.
   const interactive = !readOnly && !disabled;
-  // The selection as a typed value (see resolveItemValue): the rest of the file
-  // compares and exposes this, never the raw DOM string.
-  const currentValue = resolveItemValue(uiStateController.uiState);
+  // The framework keeps uiState as the exact JS value we set it to (the typed
+  // value from Wheel.Item, e.g. the number 9) — the DOM <input> carries a
+  // serialized string for the form, but the value we compare and expose is typed.
+  const currentValue = uiStateController.uiState;
   for (const key of WHEEL_OWN_PROP_KEYS) {
     delete controlRootProps[key];
   }
