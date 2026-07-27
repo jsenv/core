@@ -246,6 +246,7 @@ const css = /* css */ `
       --wheel-fade-direction: to bottom;
 
       .navi_wheel_viewport {
+        width: 100%;
         height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
         -webkit-mask-image: var(--wheel-fade);
         mask-image: var(--wheel-fade);
@@ -300,6 +301,7 @@ const css = /* css */ `
 
       .navi_wheel_viewport {
         width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
+        height: 100%;
         -webkit-mask-image: var(--wheel-fade);
         mask-image: var(--wheel-fade);
       }
