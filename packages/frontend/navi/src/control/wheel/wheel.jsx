@@ -133,9 +133,8 @@ const css = /* css */ `
     padding: 0;
     list-style: none;
     /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
-       whole pixel), CSS decides how to apply it. translate3d keeps the track on
-       its own composited layer for smooth momentum/glide. The Web Animation glide
-       (animateTo) sets transform inline while it runs, overriding this. */
+       whole pixel) each frame and CSS decides how to apply it. translate3d keeps
+       the track on its own composited layer for smooth momentum/glide. */
     transform: translate3d(0, var(--wheel-offset, 0px), 0);
     /* NO will-change: transform. translate3d already composites the track;
        will-change additionally pins it to its own layer, which the glass panes'
@@ -259,9 +258,7 @@ const css = /* css */ `
         }
       }
       .navi_wheel_item {
-        /* Main-axis size is fixed (height); reserve a remembered cross-axis size
-           so a skipped row doesn't collapse the wheel's width. */
-        /* contain-intrinsic-width: auto 3ch; */
+        /* Fixed main-axis size (height); the cross axis follows the content. */
         height: var(--wheel-item-height);
         padding-inline: var(--wheel-item-padding-x, 0.5ch);
       }
@@ -314,8 +311,7 @@ const css = /* css */ `
         }
       }
       .navi_wheel_item {
-        /* Main-axis size is fixed (width); reserve a remembered cross-axis size. */
-        /* contain-intrinsic-height: auto 1.5em; */
+        /* Fixed main-axis size (width); the cross axis follows the content. */
         width: var(--wheel-item-width);
         padding-block: var(--wheel-item-padding-x, 0.5ch);
       }
@@ -606,9 +602,9 @@ function WheelUI(props) {
   const currentValueRef = useRef(currentValue);
   currentValueRef.current = currentValue;
 
-  // Ask the framework to change the value (respects readonly/disabled and pops
-  // the readonly callout for free); the controlled value / action flow then
-  // updates uiState, which syncCenterToSelection reacts to.
+  // Ask the framework to change the value; the controlled value / action flow
+  // then updates uiState, which syncCenterToSelection reacts to. Callers reach
+  // this only when interactive (the gate blocks readonly/disabled/busy upstream).
   const requestSelectValue = (newValue, event) => {
     if (compareTwoJsValues(newValue, currentValueRef.current)) {
       return;
@@ -762,9 +758,10 @@ function WheelUI(props) {
     track.style.setProperty("--wheel-offset", `${-Math.round(pos)}px`);
   };
 
-  // Push the current virtual position onto the track and refresh the "current"
-  // emphasis. There is no CSS transition on the track — the glide is a Web
-  // Animation (animateTo) — so per-frame momentum/drag updates apply instantly.
+  // Push the current virtual position onto the track (via --wheel-offset) and
+  // refresh the "current" emphasis. Every motion — drag, momentum, glide — is a
+  // per-frame rAF that calls this, so updates apply immediately with no CSS
+  // transition to fight.
   const renderPos = (vp) => {
     const track = getTrack(vp);
     if (track) {
@@ -1505,27 +1502,25 @@ const WHEEL_PSEUDO_CLASSES = [
   ":-navi-loading",
 ];
 
-// The `visibleCount` proxy rows to render on one side of the real items:
+// The `count` proxy rows to render on one side of the real items:
 //   - "before" → the last N values (…, len-2, len-1) so the row just before the
 //     first real item shows the last value (wrap: … 44 45 | 00 …).
 //   - "after"  → the first N values (0, 1, …) so the row just after the last
 //     real item shows the first value (… 45 | 00 01 …).
-// Each descriptor keeps the real value index so a proxy click maps back to it.
-const getLoopBufferItems = (clones, visibleCount, side) => {
+const getLoopBufferItems = (clones, bufferCount, side) => {
   const count = clones.length;
   const items = [];
   if (count === 0) {
     return items;
   }
-  for (let position = 0; position < visibleCount; position++) {
+  for (let position = 0; position < bufferCount; position++) {
     const index =
       side === "before"
-        ? (((count - visibleCount + position) % count) + count) % count
+        ? (((count - bufferCount + position) % count) + count) % count
         : position % count;
     items.push({
       label: clones[index].label,
       itemProps: clones[index].itemProps,
-      index,
     });
   }
   return items;
