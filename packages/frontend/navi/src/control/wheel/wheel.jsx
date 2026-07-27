@@ -257,7 +257,15 @@ const css = /* css */ `
       .navi_wheel_item {
         /* Fixed main-axis size (height); the cross axis follows the content. */
         height: var(--wheel-item-height);
-        padding-inline: var(--wheel-item-padding-x, 0.5ch);
+        /* No breathing room by default — the wheel shows its true content size, and
+           spacing (between wheels in a group, or around a value) is the caller's
+           choice: set --wheel-item-padding-x on the wheel/group, or the global
+           --navi-wheel-item-padding-x-default. It lives on the ITEM (not the
+           viewport) so the padded area is still scrollable/clickable. */
+        padding-inline: var(
+          --wheel-item-padding-x,
+          var(--navi-wheel-item-padding-x-default, 0px)
+        );
         /* A full-row line-height so the glyph's line box fills the (even) row
            height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
            centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
@@ -311,9 +319,14 @@ const css = /* css */ `
         transform: translate3d(var(--wheel-offset, 0px), 0, 0);
       }
       .navi_wheel_item {
-        /* Fixed main-axis size (width); the cross axis follows the content. */
+        /* Fixed main-axis size (width); the cross axis follows the content. The
+           cross axis is vertical here, but the spacing var stays the same one (see
+           the vertical branch) — 0 by default, the caller opts into padding. */
         width: var(--wheel-item-width);
-        padding-block: var(--wheel-item-padding-x, 0.5ch);
+        padding-block: var(
+          --wheel-item-padding-x,
+          var(--navi-wheel-item-padding-x-default, 0px)
+        );
       }
       .navi_wheel_pane {
         top: 0;
@@ -347,21 +360,16 @@ const css = /* css */ `
 
   /* ── WheelGroup ─────────────────────────────────────────────────────────────
      Several wheels with separators (e.g. ":") between them. The separator column
-     keeps its natural content width (small for ":", wide for a word like
-     "hours") and is not scrollable. The spacing between a wheel and a separator
-     is provided by the wheel: its scrollable viewport is padded by
-     --wheel-spacing, so scrolling/dragging in that gap scrolls the wheel — only
-     the small separator glyph itself is a dead zone, which keeps the UX good. */
+     keeps its natural content width (small for ":", wide for a word like "hours")
+     and is not scrollable. Spacing around the wheels is NOT a group property — it's
+     the wheels' own item padding (--wheel-item-padding-x, see .navi_wheel_item), so
+     the gap stays scrollable and there's a single place that owns padding. A group
+     with no padding shows the wheels at their true content width. */
   .navi_wheel_group {
-    --wheel-spacing: 0.5ch;
-
     display: inline-flex;
     align-items: center;
 
     &:not([data-horizontal]) {
-      .navi_wheel_viewport {
-        padding-inline: var(--wheel-spacing);
-      }
       /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
          whole pixel and lands on the numbers' line (see the note there). Without
          it the separator sits ~1px off the transformed numbers. Vertical only: on
@@ -374,10 +382,6 @@ const css = /* css */ `
     &[data-horizontal] {
       flex-direction: column;
       align-items: center;
-
-      .navi_wheel_viewport {
-        padding-block: var(--wheel-spacing);
-      }
     }
   }
   .navi_wheel_group_separator {
