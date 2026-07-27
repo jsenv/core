@@ -632,6 +632,13 @@
               line-height is what keeps the static separator from rendering ~1px
               off them.
             </p>
+            <p>
+              A <em>font</em> ":" shares that line but sits on the baseline, so
+              its dots hug the lower half of the digits and read as sunk.{" "}
+              <code>WheelGroup.Colon</code> draws the ":" as an SVG whose dots
+              are symmetric about the row's middle, so it centers optically
+              against the numbers. Compare the last two below.
+            </p>
             <label className="box-toggle">
               <input
                 type="checkbox"
@@ -661,7 +668,15 @@
                   </WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
-                <span className="col-label">":"</span>
+                <span className="col-label">font ":" (baseline)</span>
+              </div>
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Colon />
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">WheelGroup.Colon (SVG)</span>
               </div>
             </div>
 

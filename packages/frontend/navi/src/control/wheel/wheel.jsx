@@ -132,11 +132,14 @@ const css = /* css */ `
     margin: 0;
     padding: 0;
     list-style: none;
-    /* NO will-change: transform. translate3d already composites the track for
-       the glide/momentum; will-change additionally pins it to its own layer,
-       which the glass panes' backdrop-filter then samples with a bright fringe
-       (halo) around each glyph, and can shift how the transformed text renders
-       vs the (untransformed) separators. */
+    /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
+       whole pixel), CSS decides how to apply it. translate3d keeps the track on
+       its own composited layer for smooth momentum/glide. The Web Animation glide
+       (animateTo) sets transform inline while it runs, overriding this. */
+    transform: translate3d(0, var(--wheel-offset, 0px), 0);
+    /* NO will-change: transform. translate3d already composites the track;
+       will-change additionally pins it to its own layer, which the glass panes'
+       backdrop-filter then samples with a bright fringe (halo) around each glyph. */
   }
 
   /* type is informative metadata; a couple of types get a rendering hint.
@@ -304,6 +307,8 @@ const css = /* css */ `
           var(--wheel-item-width) * (var(--wheel-visible-count) - 1) / 2
         );
         flex-direction: row;
+        /* Horizontal wheels scroll along X (see --wheel-offset on the base rule). */
+        transform: translate3d(var(--wheel-offset, 0px), 0, 0);
         &[data-loop] {
           padding-inline: 0;
         }
@@ -391,6 +396,14 @@ const css = /* css */ `
     white-space: nowrap;
 
     user-select: none;
+  }
+  /* SVG ":" (WheelGroup.Colon). Height ≈ the digits' cap height so the two dots
+     span a similar range; centered in the row (flex) → dots on the numbers'
+     optical center. Width follows the viewBox aspect. */
+  .navi_wheel_colon {
+    display: block;
+    width: auto;
+    height: 0.62em;
   }
 `;
 
@@ -611,15 +624,15 @@ function WheelUI(props) {
 
   // Gate a user gesture (scroll, drag, tap, arrow) through the framework's
   // interactivity check. When the wheel is readonly/disabled/busy the gate pops
-  // the matching callout and runs onPrevented (e.g. to trap the page scroll);
-  // otherwise it runs onAllowed. One path covers all three blocked states.
-  const attemptInteraction = (event, name, onAllowed, onPrevented) => {
-    dispatchRequestInteraction(inputRef.current, {
-      event,
-      name,
-      allowed: onAllowed,
-      prevented: onPrevented,
-    });
+  // the matching callout and runs `prevented`; otherwise it runs `allowed`. One
+  // path covers all three blocked states. Params are forwarded to
+  // dispatchRequestInteraction verbatim — { event, name, allowed, prevented }.
+  //
+  // Do NOT preventDefault the event before calling this: the gate refuses an
+  // already-defaultPrevented event, so it would read every gesture as blocked.
+  // preventDefault inside `allowed`/`prevented` once we know what to do with it.
+  const attemptInteraction = (params) => {
+    dispatchRequestInteraction(inputRef.current, params);
   };
 
   // Real rows are the tracked items (clones carry .navi_wheel_item_clone). The
@@ -665,7 +678,7 @@ function WheelUI(props) {
   // position (px, main axis); the list track is translated by -pos. This is the
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
   // there is no physical scroll edge to get stuck at. animRef holds the current
-  // momentum rAF; glideRef the current CSS-transition glide, either cancellable.
+  // momentum rAF; glideRef the current Web Animation glide, either cancellable.
   const posRef = useRef(0);
   const animRef = useRef(null);
   const glideRef = useRef(null);
@@ -741,25 +754,20 @@ function WheelUI(props) {
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   const applyTransform = (track, pos) => {
-    // Snap to a whole pixel so the digits stay crisp. The separators are promoted
-    // to their own compositing layer (see .navi_wheel_group_separator) so they
-    // rasterize on the same grid as this transformed track — otherwise GPU-layer
-    // text can land ~1px off from main-layer text, which a tall separator glyph
-    // (e.g. "ZZ") makes obvious. (The WAAPI glide interpolates its own keyframes,
-    // so mid-animation smoothness is unaffected.)
-    const p = -Math.round(pos);
-    track.style.transform = isHorizontal
-      ? `translate3d(${p}px, 0, 0)`
-      : `translate3d(0, ${p}px, 0)`;
+    // Expose the position as a CSS var and let the stylesheet apply it (translate
+    // vs translate3d, X vs Y). Snap to a whole pixel: a transformed row's text
+    // renders 1px off a static element sitting at a half-pixel, so the separators
+    // match this track's line-height to share the same whole-pixel grid (see
+    // .navi_wheel_item / .navi_wheel_group_separator).
+    track.style.setProperty("--wheel-offset", `${-Math.round(pos)}px`);
   };
 
-  // Push the current virtual position onto the track via transform, and refresh
-  // the "current" emphasis. Transition is cleared so per-frame momentum/drag
-  // updates apply instantly (only glideTo opts into a CSS transition).
+  // Push the current virtual position onto the track and refresh the "current"
+  // emphasis. There is no CSS transition on the track — the glide is a Web
+  // Animation (animateTo) — so per-frame momentum/drag updates apply instantly.
   const renderPos = (vp) => {
     const track = getTrack(vp);
     if (track) {
-      track.style.transition = "none";
       applyTransform(track, posRef.current);
     }
     updateCurrentMarker(vp, findCenteredRow(vp));
@@ -1037,10 +1045,14 @@ function WheelUI(props) {
     if (!target) {
       return;
     }
-    attemptInteraction(event, "select", () => {
-      centeredIdRef.current = target.id;
-      requestSelectValue(getItemValueById(target.id), event);
-      centerOn(vp, target, "smooth");
+    attemptInteraction({
+      event,
+      name: "select",
+      allowed: () => {
+        centeredIdRef.current = target.id;
+        requestSelectValue(getItemValueById(target.id), event);
+        centerOn(vp, target, "smooth");
+      },
     });
   };
 
@@ -1166,10 +1178,10 @@ function WheelUI(props) {
       } else if (delta < -itemSize) {
         delta = -itemSize;
       }
-      attemptInteraction(
-        e,
-        "scroll",
-        () => {
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
           if (atClampedEnd(delta)) {
             return; // let the page scroll past a non-looping end
           }
@@ -1178,13 +1190,13 @@ function WheelUI(props) {
           setPos(vp, posRef.current + delta);
           scheduleSettle();
         },
-        () => {
+        prevented: () => {
           // Blocked (readonly/disabled/busy): the gate showed the callout; trap
           // the scroll so the page doesn't move under the control the user is
           // trying to use.
           e.preventDefault();
         },
-      );
+      });
     };
 
     // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
@@ -1203,21 +1215,25 @@ function WheelUI(props) {
       if (!delta) {
         return;
       }
-      attemptInteraction(e, "scroll", () => {
-        cancelAnim();
-        // Fold the (possibly accumulated) position back into the real-items band
-        // first — seamless, since a whole extent away shows identical content — so
-        // repeated ±item never walks the glide off the end of the clone runway
-        // into blank space (which also desynced the centered value).
-        if (isLoop) {
-          wrapPos(vp);
-        }
-        if (e.detail.behavior === "smooth") {
-          animateTo(vp, posRef.current + delta, () => settle(vp, 0));
-        } else {
-          setPos(vp, posRef.current + delta);
-          scheduleSettle();
-        }
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
+          cancelAnim();
+          // Fold the (possibly accumulated) position back into the real-items
+          // band first — seamless, since a whole extent away shows identical
+          // content — so repeated ±item never walks the glide off the end of the
+          // clone runway into blank space (which also desynced the centered value).
+          if (isLoop) {
+            wrapPos(vp);
+          }
+          if (e.detail.behavior === "smooth") {
+            animateTo(vp, posRef.current + delta, () => settle(vp, 0));
+          } else {
+            setPos(vp, posRef.current + delta);
+            scheduleSettle();
+          }
+        },
       });
     };
 
@@ -1244,19 +1260,23 @@ function WheelUI(props) {
       if (e.pointerType === "mouse" && e.button !== 0) {
         return;
       }
-      attemptInteraction(e, "select", () => {
-        cancelAnim();
-        const client = isHorizontal ? e.clientX : e.clientY;
-        drag = {
-          pointerId: e.pointerId,
-          startClient: client,
-          startPos: posRef.current,
-          lastClient: client,
-          lastTime: performance.now(),
-          velocity: 0,
-          moved: false,
-          captured: false,
-        };
+      attemptInteraction({
+        event: e,
+        name: "select",
+        allowed: () => {
+          cancelAnim();
+          const client = isHorizontal ? e.clientX : e.clientY;
+          drag = {
+            pointerId: e.pointerId,
+            startClient: client,
+            startPos: posRef.current,
+            lastClient: client,
+            lastTime: performance.now(),
+            velocity: 0,
+            moved: false,
+            captured: false,
+          };
+        },
       });
     };
     const onPointerMove = (e) => {
@@ -1351,15 +1371,13 @@ function WheelUI(props) {
       if (!stepKeys.has(e.key)) {
         return;
       }
-      // preventDefault must happen INSIDE the gate callbacks, not before: the gate
-      // refuses an already-defaultPrevented event, so preventing up front would
-      // make it treat every step as blocked. Swallow the key in both branches (so
-      // arrows never scroll the page); a blocked wheel (readonly is focusable, so
-      // arrows can reach it) pops the matching callout instead of stepping.
-      attemptInteraction(
-        e,
-        "step",
-        () => {
+      // Swallow the key in both branches (so arrows never scroll the page); a
+      // blocked wheel (readonly is focusable, so arrows can reach it) pops the
+      // matching callout instead of stepping.
+      attemptInteraction({
+        event: e,
+        name: "step",
+        allowed: () => {
           e.preventDefault();
           const reals = [...vp.querySelectorAll(REAL_ITEM_SELECTOR)];
           if (!reals.length) {
@@ -1399,10 +1417,10 @@ function WheelUI(props) {
           requestSelectValue(getItemValueById(targetItem.id), e);
           centerOn(vp, targetItem, "smooth");
         },
-        () => {
+        prevented: () => {
           e.preventDefault();
         },
-      );
+      });
     };
     el.addEventListener("keydown", onKeyDown);
     return () => {
@@ -1711,3 +1729,21 @@ const WheelGroupSeparator = ({ children, ...rest }) => {
   );
 };
 WheelGroup.Separator = WheelGroupSeparator;
+
+/**
+ * WheelGroup.Colon — a ":" separator drawn as an SVG. A font colon sits on the
+ * baseline (its dots hug the lower half of the digits, looking sunk); this one is
+ * two dots symmetric about the SVG's middle, so — centered in the separator's row
+ * like the numbers are in theirs — it lands on the numbers' optical center.
+ */
+const WheelColon = (props) => {
+  return (
+    <WheelGroupSeparator {...props}>
+      <svg className="navi_wheel_colon" viewBox="0 0 8 24">
+        <circle cx="4" cy="8" r="4" fill="currentColor" />
+        <circle cx="4" cy="20" r="4" fill="currentColor" />
+      </svg>
+    </WheelGroupSeparator>
+  );
+};
+WheelGroup.Colon = WheelColon;
