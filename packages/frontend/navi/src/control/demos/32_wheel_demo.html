@@ -332,13 +332,7 @@
           <div>
             <div className="row" style={{ gap: 48, alignItems: "flex-start" }}>
               <div>
-                <Wheel
-                  ref={wheelRef}
-                  type="integer"
-                  value={v}
-                  action={setV}
-                  loop
-                >
+                <Wheel ref={wheelRef} type="integer" value={v} action={setV}>
                   {values.map((value) => (
                     <Wheel.Item key={value} value={value}>
                       {pad2(value)}
@@ -495,7 +489,7 @@
       const HourWheel = (props) => {
         const [v, setV] = useState(9);
         return (
-          <Wheel type="integer" value={v} action={setV} loop {...props}>
+          <Wheel type="integer" value={v} action={setV} {...props}>
             {range(24).map((h) => (
               <Wheel.Item key={h} value={h}>
                 {pad2(h)}
@@ -510,7 +504,7 @@
       const QuarterWheel = (props) => {
         const [v, setV] = useState(30);
         return (
-          <Wheel type="integer" value={v} action={setV} loop {...props}>
+          <Wheel type="integer" value={v} action={setV} {...props}>
             {[0, 15, 30, 45].map((x) => (
               <Wheel.Item key={x} value={x}>
                 {pad2(x)}
@@ -627,7 +621,6 @@
               <Wheel
                 type="integer"
                 value={hour}
-                loop
                 uiAction={(v) => {
                   pushLog("uiAction", v);
                 }}
@@ -653,7 +646,7 @@
                 setSubmitted(submittedHour);
               }}
             >
-              <Wheel type="integer" name="hour" defaultValue={9} loop>
+              <Wheel type="integer" name="hour" defaultValue={9}>
                 {range(24).map((h) => (
                   <Wheel.Item key={h} value={h}>
                     {pad2(h)}
@@ -698,7 +691,6 @@
                 type="integer"
                 value={a}
                 action={setA}
-                loop
                 border="1px solid grey"
                 padding="0 6px"
               >
@@ -715,7 +707,6 @@
                 type="integer"
                 value={b}
                 action={setB}
-                loop
                 style={{ "--wheel-color": "#d6336c" }}
               >
                 {range(24).map((h) => (
@@ -731,7 +722,6 @@
                 type="integer"
                 value={c}
                 action={setC}
-                loop
                 visibleCount={5}
                 itemHeight={44}
                 style={{ fontSize: "1.5rem" }}
@@ -758,7 +748,6 @@
                       type="integer"
                       value={vc}
                       action={setVc}
-                      loop
                       visibleCount={count}
                     >
                       {HOURS24.map((h) => (
@@ -790,7 +779,6 @@
                   <Wheel
                     type="integer"
                     horizontal
-                    loop
                     value={hz}
                     action={setHz}
                     itemWidth="4ch"
@@ -811,7 +799,6 @@
                     <Wheel
                       type="integer"
                       horizontal
-                      loop
                       value={hzH}
                       action={setHzH}
                       itemWidth="4ch"
@@ -827,7 +814,6 @@
                     <Wheel
                       type="integer"
                       horizontal
-                      loop
                       value={hzM}
                       action={setHzM}
                       itemWidth="4ch"
@@ -878,7 +864,7 @@
               </p>
               <div className="states">
                 <div>
-                  <Wheel type="integer" value={g} action={setG} loop glass>
+                  <Wheel type="integer" value={g} action={setG} glass>
                     {range(24).map((h) => (
                       <Wheel.Item key={h} value={h}>
                         {pad2(h)}
@@ -892,7 +878,6 @@
                     type="integer"
                     value={g}
                     action={setG}
-                    loop
                     glass
                     style={{ "--wheel-glass-blur": "4px" }}
                   >
@@ -916,13 +901,7 @@
               </p>
               <div className="states">
                 <div>
-                  <Wheel
-                    type="integer"
-                    value={gf}
-                    action={setGf}
-                    loop
-                    frameBorder
-                  >
+                  <Wheel type="integer" value={gf} action={setGf} frameBorder>
                     {range(24).map((h) => (
                       <Wheel.Item key={h} value={h}>
                         {pad2(h)}
@@ -936,7 +915,6 @@
                     type="integer"
                     value={gf}
                     action={setGf}
-                    loop
                     glass
                     frameBorder
                   >
@@ -959,7 +937,7 @@
               <div className="states">
                 <div>
                   <WheelGroup glass spacing="0.5ch">
-                    <Wheel type="integer" value={gh} action={setGh} loop>
+                    <Wheel type="integer" value={gh} action={setGh}>
                       {range(24).map((h) => (
                         <Wheel.Item key={h} value={h}>
                           {pad2(h)}
@@ -967,7 +945,7 @@
                       ))}
                     </Wheel>
                     <WheelGroup.Separator center>:</WheelGroup.Separator>
-                    <Wheel type="integer" value={gm} action={setGm} loop>
+                    <Wheel type="integer" value={gm} action={setGm}>
                       {[0, 15, 30, 45].map((m) => (
                         <Wheel.Item key={m} value={m}>
                           {pad2(m)}
