@@ -564,6 +564,11 @@ function WheelUI(props) {
   const renderedBaseRef = useRef(0);
   // Which window slot currently carries data-wheel-current (the center row).
   const markedSlotRef = useRef(-1);
+  // Mouse-wheel accumulation: the (unsnapped) position wheel deltas add up to. The
+  // wheel glides to the ROW this snaps to — so it heads straight for a value and
+  // lands on it, never following the raw scroll offset and re-snapping at the end.
+  // Reset to null once settled (commitSelection) so the next scroll starts fresh.
+  const wheelTargetRef = useRef(null);
   // Row size in px, measured once from a rendered slot (rows are uniform).
   const itemSizeRef = useRef(0);
 
@@ -1138,10 +1143,19 @@ function WheelUI(props) {
     const el = ref.current;
     const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
+    let wheelIdleTimer = null;
 
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(() => settle(vp, 0), 90);
+    };
+    // Drop the wheel accumulator once the gesture stops, so the next scroll starts
+    // fresh from wherever the wheel settled.
+    const scheduleWheelReset = () => {
+      clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = setTimeout(() => {
+        wheelTargetRef.current = null;
+      }, 150);
     };
 
     const onWheel = (e) => {
@@ -1170,12 +1184,37 @@ function WheelUI(props) {
         name: "scroll",
         allowed: () => {
           // Always trap the scroll (like overscroll-behavior: contain): the page
-          // never scrolls from within a wheel, even at a bounded end. setPos clamps
-          // a non-looping wheel, so an overscroll past the end is simply a no-op.
+          // never scrolls from within a wheel, even at a bounded end.
           e.preventDefault();
-          cancelAnim();
-          setPos(vp, posRef.current + delta);
-          scheduleSettle();
+          const size = getItemSize(vp);
+          const count = trackedItemsRef.current.length;
+          if (size === 0 || count === 0) {
+            return;
+          }
+          // Accumulate the wheel delta into an unsnapped target, then glide to the
+          // ROW it snaps to. Because the target is always a row, the wheel heads
+          // straight for a value and eases onto it — it never follows the raw
+          // scroll offset and then re-adjusts (accelerate forward / jump back) at
+          // the end. A fresh gesture starts from the current row; keeping the
+          // accumulator unsnapped means small trackpad deltas add up smoothly.
+          let target = wheelTargetRef.current;
+          if (target === null) {
+            target = snapPosToRow(vp, posRef.current);
+          }
+          target += delta;
+          if (!isLoop) {
+            target = clampNumber(target, 0, (count - 1) * size);
+          }
+          wheelTargetRef.current = target;
+          scheduleWheelReset();
+          // Only (re)glide when the destination ROW changes — sub-row deltas just
+          // accumulate, so a small trackpad nudge doesn't cancel/restart the glide.
+          const snapped = snapPosToRow(vp, target);
+          const currentDest =
+            glideRef.current !== null ? targetPosRef.current : posRef.current;
+          if (Math.abs(snapped - currentDest) > 0.4) {
+            glideTo(vp, snapped);
+          }
         },
         prevented: () => {
           // Blocked (readonly/disabled/busy): the gate showed the callout; trap
@@ -1249,6 +1288,8 @@ function WheelUI(props) {
           // Do NOT cancel the glide here: a click that isn't a drag should let the
           // in-flight glide keep running and just nudge its target (smooth, like
           // arrows). The glide is only cancelled once a real drag starts (below).
+          // A pointer gesture ends any wheel accumulation (it moves pos itself).
+          wheelTargetRef.current = null;
           const client = isHorizontal ? e.clientX : e.clientY;
           drag = {
             pointerId: e.pointerId,
@@ -1373,6 +1414,7 @@ function WheelUI(props) {
     el.addEventListener("navi_scroll", onNaviScroll);
     return () => {
       clearTimeout(settleTimer);
+      clearTimeout(wheelIdleTimer);
       cancelAnim();
       vp.removeEventListener("wheel", onWheel);
       vp.removeEventListener("pointerdown", onPointerDown);
@@ -1407,6 +1449,8 @@ function WheelUI(props) {
         name: "step",
         allowed: () => {
           e.preventDefault();
+          // A key step ends any wheel accumulation (it drives pos itself).
+          wheelTargetRef.current = null;
           if (e.key === "Home" || e.key === "End") {
             const count = trackedItemsRef.current.length;
             if (!count) {
