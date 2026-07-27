@@ -1386,9 +1386,6 @@ const WHEEL_ITEM_PSEUDO_CLASSES = [
 /**
  * Wheel.Item — a selectable value in a Wheel. Must be used inside <Wheel>.
  *
- * Reuses the selectable List item behaviour (hidden radio + click/keyboard
- * selection). The children are the label shown in the row.
- *
  * @type {import("preact").FunctionComponent<{
  *   value: any,
  *   selected?: boolean,
