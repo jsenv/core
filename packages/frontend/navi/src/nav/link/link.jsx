@@ -204,6 +204,7 @@ const css = /* css */ `
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
         /* as anchor link will still scroll to the section even if it's the current page */
         --x-link-cursor: pointer;
+        --x-link-color: var(--link-color-current); /* override visited */
       }
       &[data-current-effect-bold] {
         font-weight: bold;
