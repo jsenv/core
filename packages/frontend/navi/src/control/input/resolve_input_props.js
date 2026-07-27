@@ -1,23 +1,6 @@
 import { CHAR_CLASS_PRESETS } from "../char_guard_presets.js";
 import { timeStringToSeconds } from "../picker/time_helpers.js";
 
-// Wires a default `uiAction` that writes user interactions back into
-// `props.signal`, and still calls whatever `uiAction` was explicitly passed.
-// Mutates `props.uiAction`. Guarded by a marker so the recursive
-// normalization below doesn't wrap an already-wrapped uiAction again.
-const wireUIActionToSignal = (props, signal, toSignalValue = (v) => v) => {
-  const existingUIAction = props.uiAction;
-  if (existingUIAction && existingUIAction.autoUpdateSignalWrapper) {
-    return;
-  }
-  const uiAction = (value, event) => {
-    signal.value = toSignalValue(value);
-    existingUIAction?.(value, event);
-  };
-  uiAction.autoUpdateSignalWrapper = true;
-  props.uiAction = uiAction;
-};
-
 // Maps validity type names → navi input type names.
 // Numeric signal types must not fall through to the native type="number"
 // (which adds spinner buttons and has poor UX) — they map to navi_number instead.
@@ -85,16 +68,16 @@ const NAVI_TYPE_DEFAULTS = {
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
 export const resolveInputProps = (props) => {
-  // `signal` is the only prop carrying a signal — `value`/`checked` are plain
-  // props like any other. Consumed and cleared up front so it never leaks
-  // onto the DOM element.
+  // `signal` carries a bound state signal. It is left on `props` on purpose:
+  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
+  // `onUIAction` (ui_state_controller.js) writes user interactions back into
+  // it. Here we only derive input defaults (type/min/max, defaultValue/
+  // defaultChecked) from the signal's `options`, so the control ends up
+  // uncontrolled-with-default while still write-syncing the signal.
   const signal = props.signal;
   if (signal) {
-    props.signal = undefined;
-
     const signalOptions = signal.options;
     if (signalOptions) {
-      const signalOptions = signal.options;
       for (const key of ["min", "max", "step"]) {
         if (props[key] === undefined && signalOptions[key] !== undefined) {
           props[key] = signalOptions[key];
@@ -136,7 +119,6 @@ export const resolveInputProps = (props) => {
             Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
         }
       }
-      wireUIActionToSignal(props, signal, (v) => Boolean(v));
       return;
     }
 
@@ -153,7 +135,6 @@ export const resolveInputProps = (props) => {
         }
       }
     }
-    wireUIActionToSignal(props, signal);
   }
 
   const currentType = props.type;

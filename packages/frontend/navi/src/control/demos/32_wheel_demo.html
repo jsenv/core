@@ -45,24 +45,6 @@
         font-size: 1.08rem;
         scroll-margin-top: 12px;
       }
-      /* A "#" anchor beside each heading (like other demos), revealed on hover. */
-      .heading-anchor {
-        position: absolute;
-        left: -0.85em;
-        color: #bbb;
-        font-weight: 400;
-        text-decoration: none;
-        opacity: 0;
-        transition: opacity 0.1s;
-      }
-      h2:hover > .heading-anchor,
-      h3:hover > .heading-anchor,
-      .heading-anchor:focus {
-        opacity: 1;
-      }
-      .heading-anchor:hover {
-        color: #666;
-      }
       .demo-section p {
         margin: 0 0 16px;
         color: #555;
@@ -232,25 +214,21 @@
         usePickerMode,
         Form,
         Button,
+        Link,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
 
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       const pad2 = (n) => String(n).padStart(2, "0");
 
-      // Section (h2) / subsection (h3) heading with a hover "#" anchor. Pass `id`
-      // to anchor to itself (subsections); pass `href` to anchor to an existing id
-      // (sections, whose id lives on the wrapping .demo-section div).
-      const Heading = ({ level = 3, id, href, children, ...rest }) => {
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href) and renders the hover anchor
+      // icon — the same pattern the other demos use.
+      const Heading = ({ level = 3, id, children, ...rest }) => {
         const Tag = `h${level}`;
-        const anchor = href || (id ? `#${id}` : null);
         return (
-          <Tag id={id} {...rest}>
-            {anchor && (
-              <a className="heading-anchor" href={anchor} aria-label="Anchor">
-                #
-              </a>
-            )}
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`} />
             {children}
           </Tag>
         );
@@ -358,8 +336,8 @@
 
       const StatesDemo = () => {
         return (
-          <div id="states" className="demo-section">
-            <Heading level={2} href="#states">
+          <div className="demo-section">
+            <Heading level={2} id="states">
               States
             </Heading>
             <p>The same wheel in its different states.</p>
@@ -479,8 +457,8 @@
         const glideSpeed = GLIDE_SPEEDS[speedName];
         return (
           <NaviDebug debugAll>
-            <div id="scroll" className="demo-section">
-              <Heading level={2} href="#scroll">
+            <div className="demo-section">
+              <Heading level={2} id="scroll">
                 Scroll behavior — snapping, momentum, loop
               </Heading>
               <p>
@@ -618,8 +596,8 @@
         // Default to tomorrow so there's a neighbour above (today) and below.
         const [day, setDay] = useState(days[1]);
         return (
-          <div id="practical" className="demo-section">
-            <Heading level={2} href="#practical">
+          <div className="demo-section">
+            <Heading level={2} id="practical">
               Practical examples
             </Heading>
 
@@ -782,12 +760,11 @@
         const [showBoxes, setShowBoxes] = useState(true);
         return (
           <div
-            id="separator"
             className={
               showBoxes ? "demo-section show-text-boxes" : "demo-section"
             }
           >
-            <Heading level={2} href="#separator">
+            <Heading level={2} id="separator">
               Separator alignment
             </Heading>
             <p>
@@ -921,8 +898,8 @@
         const [log, pushLog, clearLog] = useCallLog();
         const [submitted, setSubmitted] = useState(null);
         return (
-          <div id="actions" className="demo-section">
-            <Heading level={2} href="#actions">
+          <div className="demo-section">
+            <Heading level={2} id="actions">
               uiAction / action / form
             </Heading>
             <p>
@@ -993,8 +970,8 @@
         const HOURS24 = range(24);
         const QUARTERS = [0, 15, 30, 45];
         return (
-          <div id="customization" className="demo-section">
-            <Heading level={2} href="#customization">
+          <div className="demo-section">
+            <Heading level={2} id="customization">
               Customization
             </Heading>
             <p>

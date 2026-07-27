@@ -556,6 +556,7 @@ const LinkPlain = (props) => {
       {...controlHostProps}
       preventDefault={undefined}
       anchor={undefined}
+      revealOnInteraction={undefined}
       onClick={(e) => {
         onClick?.(e);
         if (preventDefault) {
