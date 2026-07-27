@@ -415,16 +415,12 @@ const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in 200ms
 const WHEEL_GLIDE_MIN_MS = 140;
 const WHEEL_GLIDE_MAX_MS = 600;
 
-// Whether a wheel value equals an item's value. The wheel's value round-trips
-// through its form <input> as a string (like a native <select>: an option with
-// value={9} comes back as "9"), so a numeric item value no longer strict-equals
-// the controlled value after the first selection. compareTwoJsValues handles
-// objects/identity/Date; a stringified compare of two primitives catches the
-// number↔string round-trip it (correctly) rejects.
-const valuesMatch = (a, b) => {
-  if (compareTwoJsValues(a, b)) {
-    return true;
-  }
+// Two primitives whose string forms are equal (e.g. 9 and "9"). Used once, at the
+// framework boundary (resolveItemValue), to recover a numeric item value from the
+// string its form <input> round-trips through — like reading a native <select>,
+// whose option value={9} comes back as "9". Objects never reach here: they match
+// exactly via compareTwoJsValues first.
+const primitivesStringEqual = (a, b) => {
   if (a === null || a === undefined || b === null || b === undefined) {
     return false;
   }
@@ -434,6 +430,30 @@ const valuesMatch = (a, b) => {
     return String(a) === String(b);
   }
   return false;
+};
+
+// aria-valuemin / aria-valuemax bounds when every item value is a number, else
+// null. Assistive tech reads it as the spinbutton's range. No Math.min/Math.max:
+// a plain scan is easier to follow.
+const getNumericRange = (items) => {
+  if (items.length === 0) {
+    return null;
+  }
+  let min = items[0].value;
+  let max = items[0].value;
+  for (const item of items) {
+    const { value } = item;
+    if (typeof value !== "number") {
+      return null;
+    }
+    if (value < min) {
+      min = value;
+    }
+    if (value > max) {
+      max = value;
+    }
+  }
+  return { min, max };
 };
 
 // Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
@@ -522,46 +542,6 @@ function WheelUI(props) {
   const showGlass = Boolean(glass ?? group?.glass);
   const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
 
-  // A single value control backed by a hidden input (facade pattern, like
-  // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
-  // <input> holding the value for the form. `type` is a rendering hint only —
-  // keep it off the input, which would otherwise become <input type="integer">.
-  const inputRef = useRef(null);
-  const [controlRootProps, controlHostProps, { facadeController }] =
-    useControlFacadeProps(
-      { ...props, ref: inputRef, type: undefined },
-      { controlType: "input" },
-    );
-  const uiStateController = getUIStateControllerById(controlHostProps.id);
-  const { basePseudoState, children } = controlHostProps;
-  const loading = basePseudoState[":-navi-loading"];
-  const readOnly = basePseudoState[":read-only"];
-  const disabled = basePseudoState[":disabled"];
-  // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
-  // controlled value stays authoritative and any scroll springs back to it.
-  const interactive = !readOnly && !disabled;
-  const currentValue = uiStateController.uiState;
-  for (const key of WHEEL_OWN_PROP_KEYS) {
-    delete controlRootProps[key];
-  }
-
-  // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
-  // value and item list here; a plain closure would freeze the mount render's
-  // values (empty item list, initial value) and later clear or mis-map the
-  // selection. Refs keep the mapping helpers reading fresh data.
-  const currentValueRef = useRef(currentValue);
-  currentValueRef.current = currentValue;
-
-  // Ask the framework to change the value (respects readonly/disabled and pops
-  // the readonly callout for free); the controlled value / action flow then
-  // updates uiState, which syncCenterToSelection reacts to.
-  const requestSelectValue = (newValue, event) => {
-    if (valuesMatch(newValue, currentValueRef.current)) {
-      return;
-    }
-    dispatchRequestSetUIState(inputRef.current, newValue, { event });
-  };
-
   // Collect every Wheel.Item's {value, label} in order, robustly (children may
   // be wrapped). loopClones drives the proxy rows and the wrap math.
   const tracker = useItemTracker();
@@ -578,6 +558,84 @@ function WheelUI(props) {
     ? trackedItems.map((item) => ({ value: item.value, label: item.label }))
     : [];
 
+  // The one boundary bridge. A control's value round-trips through its form
+  // <input> as a string (like a native <select>: an option with value={9} comes
+  // back as "9"), so the framework hands us a stringified scalar. resolveItemValue
+  // maps it back to the authoritative item value (the exact JS the caller gave
+  // Wheel.Item), so everything past this point — action/uiAction, aria, and the
+  // compareTwoJsValues matches — works in typed values and never has to care about
+  // the string round-trip. Objects survive the round-trip already (control_value
+  // keeps them), so a strict compareTwoJsValues match is tried first.
+  const resolveItemValue = (frameworkValue) => {
+    const items = trackedItemsRef.current;
+    const exact = items.find((it) =>
+      compareTwoJsValues(it.value, frameworkValue),
+    );
+    if (exact) {
+      return exact.value;
+    }
+    const stringified = items.find((it) =>
+      primitivesStringEqual(it.value, frameworkValue),
+    );
+    return stringified ? stringified.value : frameworkValue;
+  };
+
+  // A single value control backed by a hidden input (facade pattern, like
+  // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
+  // <input> holding the value for the form. `type` is a rendering hint only —
+  // keep it off the input, which would otherwise become <input type="integer">.
+  // action/uiAction are wrapped so the caller's callback receives the typed item
+  // value, not the DOM string the framework would otherwise pass.
+  const inputRef = useRef(null);
+  const withResolvedValue = (fn) => {
+    if (!fn) {
+      return fn;
+    }
+    return (value, event) => fn(resolveItemValue(value), event);
+  };
+  const [controlRootProps, controlHostProps, { facadeController }] =
+    useControlFacadeProps(
+      {
+        ...props,
+        action: withResolvedValue(props.action),
+        uiAction: withResolvedValue(props.uiAction),
+        ref: inputRef,
+        type: undefined,
+      },
+      { controlType: "input" },
+    );
+  const uiStateController = getUIStateControllerById(controlHostProps.id);
+  const { basePseudoState, children } = controlHostProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  // Scroll/arrows/clicks must not change a readonly or disabled wheel — the
+  // controlled value stays authoritative and any scroll springs back to it.
+  const interactive = !readOnly && !disabled;
+  // The selection as a typed value (see resolveItemValue): the rest of the file
+  // compares and exposes this, never the raw DOM string.
+  const currentValue = resolveItemValue(uiStateController.uiState);
+  for (const key of WHEEL_OWN_PROP_KEYS) {
+    delete controlRootProps[key];
+  }
+
+  // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
+  // value and item list here; a plain closure would freeze the mount render's
+  // values (empty item list, initial value) and later clear or mis-map the
+  // selection. Refs keep the mapping helpers reading fresh data.
+  const currentValueRef = useRef(currentValue);
+  currentValueRef.current = currentValue;
+
+  // Ask the framework to change the value (respects readonly/disabled and pops
+  // the readonly callout for free); the controlled value / action flow then
+  // updates uiState, which syncCenterToSelection reacts to.
+  const requestSelectValue = (newValue, event) => {
+    if (compareTwoJsValues(newValue, currentValueRef.current)) {
+      return;
+    }
+    dispatchRequestSetUIState(inputRef.current, newValue, { event });
+  };
+
   // Real rows are the tracked items (clones carry .navi_wheel_item_clone). The
   // selection is the wheel's single value, mapped to a row via the tracker.
   const REAL_ITEM_SELECTOR = ".navi_wheel_item:not(.navi_wheel_item_clone)";
@@ -587,32 +645,31 @@ function WheelUI(props) {
   };
   const getIdForValue = (value) => {
     const items = trackedItemsRef.current;
-    const match = items.find((it) => valuesMatch(it.value, value));
+    const match = items.find((it) => compareTwoJsValues(it.value, value));
     if (match) {
       return match.id;
     }
     return items.length ? items[0].id : null;
   };
 
-  // What the spinbutton announces: the selected row's label when it is text (the
-  // human wording, e.g. "09" or "Monday"); otherwise the raw primitive value.
-  // aria-valuenow carries the number for numeric wheels — read from the matched
-  // item's real value, since currentValue round-trips through the input as a
-  // string (so it would no longer be typeof number after the first selection).
+  // What the spinbutton announces. currentValue is already the typed item value.
+  // aria-valuenow carries it whether numeric or a short string (e.g. "M"); a
+  // richer label ("Monday, July 28") goes on aria-valuetext. When every item is
+  // numeric, aria-valuemin/valuemax bound the range for assistive tech.
   const selectedTracked = trackedItems.find((it) =>
-    valuesMatch(it.value, currentValue),
+    compareTwoJsValues(it.value, currentValue),
   );
-  const selectedValue = selectedTracked ? selectedTracked.value : currentValue;
+  const ariaValueNow =
+    typeof currentValue === "number" || typeof currentValue === "string"
+      ? currentValue
+      : undefined;
   let ariaValueText;
   if (selectedTracked && typeof selectedTracked.label === "string") {
     ariaValueText = selectedTracked.label;
-  } else if (typeof selectedValue === "string") {
-    ariaValueText = selectedValue;
-  } else if (typeof selectedValue === "number") {
-    ariaValueText = String(selectedValue);
   } else {
     ariaValueText = undefined;
   }
+  const numericRange = getNumericRange(trackedItems);
 
   // The id of the item currently sitting in the center. Guards the effects so an
   // external value change (or the initial mount) scrolls the selection into
@@ -1308,10 +1365,10 @@ function WheelUI(props) {
       // A spinbutton: one focusable element, arrows adjust the value.
       role="spinbutton"
       tabindex={disabled ? undefined : 0}
-      aria-valuenow={
-        typeof selectedValue === "number" ? selectedValue : undefined
-      }
+      aria-valuenow={ariaValueNow}
       aria-valuetext={ariaValueText}
+      aria-valuemin={numericRange ? numericRange.min : undefined}
+      aria-valuemax={numericRange ? numericRange.max : undefined}
       data-horizontal={isHorizontal ? "" : undefined}
       data-glass={showGlass ? "" : undefined}
       data-frame-border={showFrameBorder ? "" : undefined}
