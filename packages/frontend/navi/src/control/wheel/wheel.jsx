@@ -398,19 +398,22 @@ const css = /* css */ `
   }
 `;
 
-// Fling physics (px per ms). Velocity is capped so even a violent fling travels
-// only a handful of rows (a picker isn't a free-scrolling list — overshooting
-// dozens of values feels wrong). Each frame the velocity is multiplied by
-// WHEEL_DECAY^(dt/16); lower stops sooner. Below the snap threshold the settle
-// loop switches from momentum to a spring that eases into the nearest row
-// center; the spring factor is how far toward that center it moves per frame.
+// Max fling speed (px per ms). Capped so even a violent flick lands a few rows
+// away, not dozens (a picker isn't a free-scrolling list). settle() projects the
+// fling's resting point from this velocity and glides to the nearest row (see
+// settle) — there is no separate momentum-then-spring phase.
 const WHEEL_MAX_VELOCITY = 1;
-const WHEEL_DECAY = 0.88;
-const WHEEL_SNAP_VELOCITY = 0.3;
-const WHEEL_SPRING_FACTOR = 0.2;
+// How far a fling carries: projected rest = pos + velocity × this (ms). At max
+// velocity (1 px/ms) that is ~7 rows; a typical flick a couple. Also ≈ the settle
+// duration, since a fling glides its distance at roughly its release speed.
+const WHEEL_FLING_REACH = 220;
+// Glide duration clamps (ms): a tiny snap isn't instant, a long glide isn't slow.
+const GLIDE_MIN_DURATION = 90;
+const GLIDE_MAX_DURATION = 600;
 
-// Default glide speed (px/ms). Feeds the spring stiffness that chases the target
-// on arrow keys / clicks (see glideSpringFactor); the demo can override it.
+// Default glide speed (px/ms) — the comfortable pace a from-rest glide (arrow key,
+// click, idle settle) covers ground at; the demo can override it. A harder fling
+// glides faster than this.
 const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in ~200ms at rest
 
 // aria-valuemin / aria-valuemax bounds when every item value is a number, else
@@ -670,15 +673,21 @@ function WheelUI(props) {
   // single source of truth, wrapped modulo the real-list extent in loop mode, so
   // there is no physical scroll edge to get stuck at.
   const posRef = useRef(0);
-  // momentumRef: the fling/settle rAF (velocity decay → snap).
-  const momentumRef = useRef(null);
-  // The discrete glide is a spring toward targetPosRef: arrow keys and clicks set
-  // the target (accumulating — each press/click moves it another row), and one
-  // rAF loop (glideRef) chases it. The chase LAGS the target on purpose, so N fast
-  // inputs land N rows away and the animation catches up; a farther target springs
-  // faster, so a second press mid-glide reads as accelerating, not restarting.
+  // The glide is a time-based ease-out toward targetPosRef: it starts at a given
+  // velocity (the fling's, or the current glide's when retargeted) and decelerates
+  // to rest EXACTLY on the target at a finite time — no asymptotic tail that would
+  // crawl the last pixels onto the row and read as a late snap. Arrow keys / clicks
+  // set the target (accumulating — each press moves it another row); retargeting
+  // mid-glide preserves the current speed, so a second press reads as accelerating,
+  // not restarting. glideStep interpolates startPos → target over the duration.
   const targetPosRef = useRef(null);
   const glideRef = useRef(null);
+  const glideStartPosRef = useRef(0);
+  const glideStartTimeRef = useRef(0);
+  const glideDurationRef = useRef(0);
+  // s0 = the ease's initial slope (start velocity ÷ average velocity); shapes the
+  // cubic so it leaves at the release speed and arrives at rest. See glideTo.
+  const glideS0Ref = useRef(0);
   // The glide loop is bound once (mount effect) but the speed can change live
   // (e.g. a demo control) — read it through a ref so it uses the latest.
   const glideSpeedRef = useRef(glideSpeed);
@@ -852,10 +861,6 @@ function WheelUI(props) {
   };
 
   const cancelAnim = () => {
-    if (momentumRef.current !== null) {
-      cancelAnimationFrame(momentumRef.current);
-      momentumRef.current = null;
-    }
     if (glideRef.current !== null) {
       cancelAnimationFrame(glideRef.current);
       glideRef.current = null;
@@ -888,23 +893,41 @@ function WheelUI(props) {
     );
   };
 
-  // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
-  // a fraction of the remaining distance each frame (so it eases out into place)
-  // and continuing from wherever it is when the target moves (so a second input
-  // mid-glide accelerates toward the farther target instead of restarting). The
-  // position runs free (the window recycles values as it goes); it commits and
-  // folds back to a canonical spot on arrival.
-  const glideStep = (vp, prevTime) => {
-    const now = performance.now();
-    const dt = clampNumber(now - prevTime, 0, 32);
+  // Normalized ease f(p) over p ∈ [0,1]: f(0)=0, f(1)=1, f'(0)=s0, f'(1)=0. The
+  // cubic with those boundary conditions — leaves at the start speed (s0), arrives
+  // at rest. s0 ∈ [0,1] keeps it monotonic (no overshoot); s0=0 is a symmetric
+  // ease-in-out (from rest), s0=1 a pure decelerating ease-out (from full speed).
+  const glideEase = (p, s0) =>
+    (s0 - 2) * p * p * p + (3 - 2 * s0) * p * p + s0 * p;
+  const glideEaseSlope = (p, s0) =>
+    3 * (s0 - 2) * p * p + 2 * (3 - 2 * s0) * p + s0;
+  // Current glide speed (px/ms), for a retarget that must not lose momentum.
+  const glideVelocity = () => {
+    if (glideRef.current === null || targetPosRef.current === null) {
+      return 0;
+    }
+    const T = glideDurationRef.current;
+    if (T <= 0) {
+      return 0;
+    }
+    const p = clampNumber(
+      (performance.now() - glideStartTimeRef.current) / T,
+      0,
+      1,
+    );
+    const dist = targetPosRef.current - glideStartPosRef.current;
+    return (dist * glideEaseSlope(p, glideS0Ref.current)) / T;
+  };
+  const glideStep = (vp) => {
     const target = targetPosRef.current;
     if (target === null) {
       glideRef.current = null;
       return;
     }
-    const dist = target - posRef.current;
-    // < ~half a pixel from target → snap, commit, done.
-    if (Math.abs(dist) < 0.4) {
+    const T = glideDurationRef.current;
+    const elapsed = performance.now() - glideStartTimeRef.current;
+    if (T <= 0 || elapsed >= T) {
+      // Time's up → land exactly on the row (no asymptotic tail), commit, done.
       posRef.current = target;
       targetPosRef.current = null;
       glideRef.current = null;
@@ -912,67 +935,81 @@ function WheelUI(props) {
       commitSelection(vp);
       return;
     }
-    // Frame-rate-independent spring. Stiffness scales with glideSpeed so the demo
-    // control still slows it down; a farther target moves faster (distance × factor).
-    const factor = 1 - Math.pow(1 - glideSpringFactor(), dt / 16);
-    posRef.current += dist * factor;
+    const p = elapsed / T;
+    const start = glideStartPosRef.current;
+    posRef.current =
+      start + (target - start) * glideEase(p, glideS0Ref.current);
     renderPos(vp);
-    glideRef.current = requestAnimationFrame(() => glideStep(vp, now));
+    glideRef.current = requestAnimationFrame(() => glideStep(vp));
   };
-  // Spring stiffness (fraction of remaining distance per ~frame). Scales with the
-  // glide speed so slower = gentler chase; clamped so it never crawls or snaps.
-  const glideSpringFactor = () =>
-    clampNumber(glideSpeedRef.current * 1.4, 0.06, 0.45);
-  const glideTo = (vp, target) => {
-    // A discrete glide overrides any fling momentum.
-    if (momentumRef.current !== null) {
-      cancelAnimationFrame(momentumRef.current);
-      momentumRef.current = null;
+  // Glide to `target` in one time-based ease-out. `velocity` (px/ms, optional) is
+  // the incoming speed — the fling's on a settle; when omitted, a retarget keeps
+  // the current glide's speed (so a second arrow/click accelerates rather than
+  // restarts) and a from-rest glide starts at 0. Duration covers the distance at a
+  // comfortable speed (glideSpeed) or faster if flung harder, so a hard fling
+  // arrives quicker; the ease then decelerates to rest exactly on the target.
+  const glideTo = (vp, target, velocity) => {
+    // Bounded: never glide past the first/last row into empty space (the ease sets
+    // pos directly, without setPos's clamp). Start and target both in range → every
+    // eased position in between is too.
+    if (!isLoop) {
+      const count = trackedItemsRef.current.length;
+      const size = getItemSize(vp);
+      if (count > 0 && size > 0) {
+        target = clampNumber(target, 0, (count - 1) * size);
+      }
     }
+    const start = posRef.current;
+    const dist = target - start;
+    if (Math.abs(dist) < 0.4) {
+      cancelAnim();
+      posRef.current = target;
+      renderPos(vp);
+      commitSelection(vp);
+      return;
+    }
+    let v0 = velocity;
+    if (v0 === undefined) {
+      v0 = glideRef.current === null ? 0 : glideVelocity();
+    }
+    let speed = Math.abs(v0);
+    if (glideSpeedRef.current > speed) {
+      speed = glideSpeedRef.current;
+    }
+    let duration = Math.abs(dist) / speed;
+    duration = clampNumber(duration, GLIDE_MIN_DURATION, GLIDE_MAX_DURATION);
+    // s0 = start slope = start velocity ÷ average velocity (dist/duration). speed
+    // ≥ |v0| keeps this in [0,1]; clamp guards the rare wrong-direction v0.
+    const s0 = clampNumber((v0 * duration) / dist, 0, 1);
+    glideStartPosRef.current = start;
+    glideStartTimeRef.current = performance.now();
+    glideDurationRef.current = duration;
+    glideS0Ref.current = s0;
     targetPosRef.current = target;
     if (glideRef.current === null) {
-      glideRef.current = requestAnimationFrame(() =>
-        glideStep(vp, performance.now()),
-      );
+      glideRef.current = requestAnimationFrame(() => glideStep(vp));
     }
-    // else: the loop is already running and will chase the updated target — no
-    // restart, so rapid inputs read as one accelerating motion, not a stutter.
   };
 
-  // Settle after user input (fling or idle): a single continuous motion that
-  // decays the initial velocity, then — once slow — springs into the nearest row
-  // center. Momentum and snap are the same loop, so it eases into place instead
-  // of momentum-then-abrupt-jump. Velocity is capped so even a violent fling
-  // overshoots only a handful of rows (a picker isn't a free-scrolling list).
+  // Settle after user input (fling or idle). Native scroll-snap doesn't decay to
+  // an arbitrary spot and then spring onto a row — that second phase can pull
+  // backward (a bounce) and reads as a separate ease. Instead it projects where
+  // the fling would naturally rest, snaps THAT to a row, and hands it to glideTo
+  // WITH the release velocity — so the whole settle is one time-based ease-out
+  // that leaves at the fling's speed and decelerates to rest exactly on the row
+  // (no acceleration jump at release, no crawling tail at the end). A near-zero
+  // velocity (idle settle, center tap) glides gently to the nearest row. Velocity
+  // is capped so a violent fling lands a few rows away, not dozens (a picker isn't
+  // a free-scrolling list); WHEEL_FLING_REACH sets how far a given speed carries.
   const settle = (vp, velocity) => {
     cancelAnim();
-    let v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
-    let last = performance.now();
-    let snapping = Math.abs(v) < WHEEL_SNAP_VELOCITY;
-    const step = (now) => {
-      const dt = clampNumber(now - last, 0, 32);
-      last = now;
-      if (!snapping) {
-        v *= Math.pow(WHEEL_DECAY, dt / 16);
-        setPos(vp, posRef.current + v * dt);
-        if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
-          snapping = true;
-        }
-        momentumRef.current = requestAnimationFrame(step);
-        return;
-      }
-      const snapTo = snapPosToRow(vp, posRef.current);
-      const dist = snapTo - posRef.current;
-      if (Math.abs(dist) < 0.4) {
-        setPos(vp, snapTo);
-        momentumRef.current = null;
-        commitSelection(vp);
-        return;
-      }
-      setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR);
-      momentumRef.current = requestAnimationFrame(step);
-    };
-    momentumRef.current = requestAnimationFrame(step);
+    const size = getItemSize(vp);
+    if (size === 0) {
+      return;
+    }
+    const v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
+    const projectedRest = posRef.current + v * WHEEL_FLING_REACH;
+    glideTo(vp, snapPosToRow(vp, projectedRest), v);
   };
 
   // Center value `index` (external value / initial / keyboard / click). Smooth
@@ -1022,14 +1059,14 @@ function WheelUI(props) {
   // Sync the center with the current value — used on first display and whenever
   // the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
-    // A glide or momentum in flight (tap, arrow, fling) is already taking the
+    // A glide in flight (tap, arrow, fling, settle) is already taking the
     // wheel to the right row. This runs on every controlled-value re-render, which
     // lags a frame behind our own centeredIndexRef — so on rapid taps its guard
     // below would miss and it would snap instantly mid-glide, leaving the wheel
     // stuck off-center. Let the motion finish: commitSelection settles the value
     // and the next render is a no-op. A genuine external change made during motion
     // is honoured once it settles (centeredIndexRef then differs from selection).
-    if (glideRef.current !== null || momentumRef.current !== null) {
+    if (glideRef.current !== null) {
       return;
     }
     if (trackedItemsRef.current.length === 0) {
@@ -1085,7 +1122,7 @@ function WheelUI(props) {
   });
 
   // Input: wheel + pointer drag drive the virtual position; a short idle after
-  // wheel, or the end of a drag's momentum, snaps to the nearest value. When the
+  // wheel, or a drag release, glides to the settling value. When the
   // wheel is readonly/disabled/busy the interaction gate (attemptInteraction)
   // shows the matching callout instead of moving, and traps the page scroll.
   useLayoutEffect(() => {
