@@ -604,7 +604,7 @@
         return (
           <Wheel type="integer" value={v} action={setV} {...props}>
             {[0, 15, 30, 45].map((x) => (
-              <Wheel.Item key={x} value={x}>
+              <Wheel.Item key={x} value={x} {...props?.itemProps}>
                 <Boxed>{pad2(x)}</Boxed>
               </Wheel.Item>
             ))}
@@ -721,15 +721,15 @@
                 <QuarterWheel itemProps={{ padding: "0" }} />
               </WheelGroup>
               <WheelGroup spacing="0">
-                <HourWheel />
+                <HourWheel itemProps={{ padding: "0" }} />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: "0" }} />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: "0" }} />
               </WheelGroup>
             </div>
           </div>
