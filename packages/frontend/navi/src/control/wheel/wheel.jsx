@@ -417,6 +417,12 @@ const WHEEL_SPRING_FACTOR = 0.2;
 // far (in ms of travel) the velocity projects, so a faster flick lands a row ahead.
 const WHEEL_SETTLE_DELAY = 50; // ms of idle that ends the wheel gesture
 const WHEEL_MOMENTUM_MS = 55; // velocity projection horizon (px = velocity × this)
+// A mouse-wheel gesture is a burst of wheel events. Once this wheel has claimed a
+// gesture, keep swallowing that gesture's remaining events even if the pointer
+// drifts off onto the page — otherwise the document scrolls under the leftover
+// events, which feels broken. This is the max gap (ms) between events still counted
+// as the same gesture; a longer pause ends it, so a fresh gesture scrolls normally.
+const WHEEL_GESTURE_MAX_GAP = 250;
 
 // Default glide speed (px/ms). Feeds the spring stiffness that chases the target
 // on arrow keys / clicks (see glideSpringFactor); the demo can override it.
@@ -1136,6 +1142,43 @@ function WheelUI(props) {
       );
     };
 
+    // Once this wheel has claimed a wheel gesture, keep swallowing the rest of that
+    // gesture's events even if the pointer drifts off onto the page — otherwise the
+    // document scrolls under the leftover events, which feels broken (especially when
+    // the wheel was readonly and only showed a callout). A document-level capture
+    // listener preventDefaults wheel events that are NOT on our scroll surface (the
+    // viewport `vp`); it self-removes once a gesture-length gap passes, so a
+    // genuinely new gesture on the page scrolls normally. The check is `vp`, not
+    // `el`: an event inside the container but outside the viewport (padding, the
+    // overlays) isn't handled by our onWheel, so it too must be prevented or it
+    // would scroll an ancestor.
+    let gestureGuardTimer = null;
+    const onDocumentWheel = (documentWheelEvent) => {
+      if (vp.contains(documentWheelEvent.target)) {
+        return; // on the scroll surface → its own onWheel handles it
+      }
+      documentWheelEvent.preventDefault();
+      keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
+    };
+    const stopClaimingGesture = () => {
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = null;
+      document.removeEventListener("wheel", onDocumentWheel, { capture: true });
+    };
+    const keepClaimingGesture = () => {
+      if (!gestureGuardTimer) {
+        document.addEventListener("wheel", onDocumentWheel, {
+          capture: true,
+          passive: false,
+        });
+      }
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = setTimeout(
+        stopClaimingGesture,
+        WHEEL_GESTURE_MAX_GAP,
+      );
+    };
+
     const onWheel = (e) => {
       const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
       if (!raw) {
@@ -1179,12 +1222,14 @@ function WheelUI(props) {
           );
           setPos(vp, posRef.current + delta);
           scheduleWheelSettle();
+          keepClaimingGesture();
         },
         prevented: () => {
           // Blocked (readonly/disabled/busy): the gate showed the callout; trap
           // the scroll so the page doesn't move under the control the user is
-          // trying to use.
+          // trying to use, now and for the rest of this gesture even off-element.
           e.preventDefault();
+          keepClaimingGesture();
         },
       });
     };
@@ -1376,6 +1421,7 @@ function WheelUI(props) {
     el.addEventListener("navi_scroll", onNaviScroll);
     return () => {
       clearTimeout(settleTimer);
+      stopClaimingGesture();
       cancelAnim();
       vp.removeEventListener("wheel", onWheel);
       vp.removeEventListener("pointerdown", onPointerDown);
