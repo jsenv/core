@@ -388,7 +388,7 @@ const css = /* css */ `
 
     user-select: none;
   }
-  /* SVG ":" (WheelGroup.Colon). Height ≈ the digits' cap height so the two dots
+  /* SVG ":" (Wheel.Colon). Height ≈ the digits' cap height so the two dots
      span a similar range; centered in the row (flex) → dots on the numbers'
      optical center. Width follows the viewBox aspect. */
   .navi_wheel_colon {
@@ -544,17 +544,20 @@ function WheelUI(props) {
 
   // Virtualization: render only visibleCount + 2 rows (one buffer each side to
   // cover the partial rows a scroll reveals + a re-render's one-frame lag) and
-  // recycle them, filling each from trackedItems. `baseIndexSignal` holds the
-  // value index shown in the top slot; it changes only when the wheel crosses a
-  // row (not every frame), so the window re-renders on demand, not per frame. The
-  // per-frame transform is imperative (--wheel-offset); renderedBaseRef mirrors
-  // the base the DOM currently shows so that transform stays consistent with it.
+  // recycle them, filling each from trackedItems. `centerRowSignal` holds the row
+  // currently at the center (round(pos / itemSize)); it changes only when the
+  // wheel crosses a row (not every frame), so the window re-renders on demand, not
+  // per frame. WheelWindow derives its top slot (base) from that row and its own
+  // windowSize — so a windowSize change (items still registering) recomputes base
+  // instead of leaving the top rows unrendered. The per-frame transform is
+  // imperative (--wheel-offset); renderedBaseRef mirrors the base the DOM shows so
+  // the transform stays consistent with it.
   // visibleCount + 2, but never more rows than there are values.
   let windowSize = visibleCount + 2;
   if (windowSize > itemCount) {
     windowSize = itemCount;
   }
-  const baseIndexSignal = useSignal(0);
+  const centerRowSignal = useSignal(0);
   const renderedBaseRef = useRef(0);
   // Which window slot currently carries data-wheel-current (the center row).
   const markedSlotRef = useRef(-1);
@@ -784,15 +787,11 @@ function WheelUI(props) {
     if (size === 0 || count === 0) {
       return;
     }
-    let base = Math.round(posRef.current / size) - Math.floor(windowSize / 2);
-    // Non-loop: keep the window inside the value range so every slot maps to a
-    // real value; the transform then leaves the blank runway above the first /
-    // below the last value on its own (no rows are drawn there).
-    if (!isLoop) {
-      base = clampNumber(base, 0, count - windowSize);
-    }
-    if (base !== baseIndexSignal.peek()) {
-      baseIndexSignal.value = base;
+    // Publish the center row; WheelWindow turns it into the top slot (base). The
+    // signal only fires on a row change, so the window re-renders on demand.
+    const row = Math.round(posRef.current / size);
+    if (row !== centerRowSignal.peek()) {
+      centerRowSignal.value = row;
     }
     applyOffset(vp);
   };
@@ -1098,22 +1097,6 @@ function WheelUI(props) {
       clearTimeout(settleTimer);
       settleTimer = setTimeout(() => settle(vp, 0), 90);
     };
-    // Non-loop only: is a wheel in this direction blocked (so the page should
-    // scroll instead of the wheel trapping it)?
-    const atClampedEnd = (delta) => {
-      if (isLoop) {
-        return false;
-      }
-      const count = trackedItemsRef.current.length;
-      if (!count) {
-        return false;
-      }
-      const max = (count - 1) * getItemSize(vp);
-      return (
-        (delta < 0 && posRef.current <= 0.5) ||
-        (delta > 0 && posRef.current >= max - 0.5)
-      );
-    };
 
     const onWheel = (e) => {
       const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
@@ -1140,9 +1123,9 @@ function WheelUI(props) {
         event: e,
         name: "scroll",
         allowed: () => {
-          if (atClampedEnd(delta)) {
-            return; // let the page scroll past a non-looping end
-          }
+          // Always trap the scroll (like overscroll-behavior: contain): the page
+          // never scrolls from within a wheel, even at a bounded end. setPos clamps
+          // a non-looping wheel, so an overscroll past the end is simply a no-op.
           e.preventDefault();
           cancelAnim();
           setPos(vp, posRef.current + delta);
@@ -1427,7 +1410,7 @@ function WheelUI(props) {
         </WheelItemTrackerContext.Provider>
         <ul className="navi_wheel_list">
           <WheelWindow
-            baseSignal={baseIndexSignal}
+            centerRowSignal={centerRowSignal}
             windowSize={windowSize}
             trackedItems={trackedItems}
             isLoop={isLoop}
@@ -1453,20 +1436,28 @@ const WHEEL_PSEUDO_CLASSES = [
 
 // The recycled window: a fixed set of `windowSize` <li> slots (one per visible
 // row + 2 buffer), keyed by slot position so each DOM node is reused and only its
-// content re-renders. Each slot shows trackedItems[base + slot] (wrapped when
-// looping); `base` comes from a signal so this re-renders ONLY when the wheel
-// crosses a row (base changes), not every frame — the per-frame motion is the
-// imperative transform in applyOffset. On each new base it calls onBaseCommit so
-// the transform re-syncs to the freshly rendered rows in the same frame.
+// content re-renders. `base` (the top slot's value index) is derived here from the
+// center row + windowSize — computing it here, not upstream, means a windowSize
+// change (items still registering) recomputes base correctly. Each slot shows
+// trackedItems[base + slot] (wrapped when looping). It reads centerRowSignal, so
+// it re-renders ONLY when the wheel crosses a row, not every frame — the per-frame
+// motion is the imperative transform in applyOffset. On each new base it calls
+// onBaseCommit so the transform re-syncs to the freshly rendered rows same-frame.
 const WheelWindow = ({
-  baseSignal,
+  centerRowSignal,
   windowSize,
   trackedItems,
   isLoop,
   onBaseCommit,
 }) => {
-  const base = baseSignal.value;
   const count = trackedItems.length;
+  let base = centerRowSignal.value - Math.floor(windowSize / 2);
+  // Non-loop: keep the window inside the value range so every slot maps to a real
+  // value; the transform then leaves the blank runway above the first / below the
+  // last value on its own (no rows are drawn there).
+  if (!isLoop && count > 0) {
+    base = base < 0 ? 0 : base > count - windowSize ? count - windowSize : base;
+  }
   useLayoutEffect(() => {
     onBaseCommit(base);
   });
@@ -1637,19 +1628,18 @@ const WheelGroupSeparator = ({ children, ...rest }) => {
 WheelGroup.Separator = WheelGroupSeparator;
 
 /**
- * WheelGroup.Colon — a ":" separator drawn as an SVG. A font colon sits on the
+ * Wheel.Colon — a ":" drawn as an SVG (not a separator; wrap it in a
+ * WheelGroup.Separator to place it between wheels). A font colon sits on the
  * baseline (its dots hug the lower half of the digits, looking sunk); this one is
  * two dots symmetric about the SVG's middle, so — centered in the separator's row
  * like the numbers are in theirs — it lands on the numbers' optical center.
  */
 const WheelColon = (props) => {
   return (
-    <WheelGroupSeparator {...props}>
-      <svg className="navi_wheel_colon" viewBox="0 0 8 24">
-        <circle cx="4" cy="8" r="4" fill="currentColor" />
-        <circle cx="4" cy="20" r="4" fill="currentColor" />
-      </svg>
-    </WheelGroupSeparator>
+    <svg {...props} className="navi_wheel_colon" viewBox="0 0 8 24">
+      <circle cx="4" cy="8" r="4" fill="currentColor" />
+      <circle cx="4" cy="20" r="4" fill="currentColor" />
+    </svg>
   );
 };
-WheelGroup.Colon = WheelColon;
+Wheel.Colon = WheelColon;
