@@ -17,7 +17,6 @@ import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
-import { TitleLevelContext } from "../../text/title.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -257,12 +256,14 @@ const css = /* css */ `
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
-      position: absolute !important;
-      top: 0;
-      left: -1em;
+      --anchor-spacing: 3px; /* outline width + 1px */
+
       display: inline-flex;
       width: 1em;
       height: 1em;
+      height: 1lh;
+      margin-right: var(--anchor-spacing);
+      margin-left: calc(-1 * calc(1em + var(--anchor-spacing)));
       align-items: center;
       justify-content: center;
       font-size: 1em;
@@ -278,11 +279,6 @@ const css = /* css */ `
       &[data-focus],
       &[data-focus-visible] {
         opacity: 1;
-      }
-
-      .navi_icon {
-        font-size: 0.7em;
-        vertical-align: top;
       }
     }
 
@@ -329,12 +325,6 @@ const css = /* css */ `
 
   *:hover > .navi_link[data-reveal-on-interaction] {
     opacity: 1;
-  }
-  .navi_text .navi_link[data-reveal-on-interaction] {
-    top: 0.1em;
-  }
-  .navi_title .navi_link[data-reveal-on-interaction] {
-    top: 0.25em;
   }
 `;
 
@@ -459,8 +449,8 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean|import("preact").ComponentChild} [props.anchorIcon] -
  *   Override/suppress the auto anchor icon.
  * @param {boolean} [props.revealOnInteraction] - Hide the link until its
- *   container is hovered/focused (`data-reveal-on-interaction`); defaults to
- *   `true` inside a `Title` (the "#" anchor-on-hover pattern).
+ *   container is hovered/focused (`data-reveal-on-interaction`), floating it
+ *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
  * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
  *   no children are given; defaults to `true` unless `anchor`.
  * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
@@ -498,7 +488,6 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
 };
 
 const LinkPlain = (props) => {
-  const titleLevel = useContext(TitleLevelContext);
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -518,7 +507,7 @@ const LinkPlain = (props) => {
     anchorIcon,
     startIcon,
     endIcon,
-    revealOnInteraction = Boolean(titleLevel),
+    revealOnInteraction = false,
     hrefFallback = !anchor,
 
     children,

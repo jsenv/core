@@ -503,8 +503,6 @@
             <Text>
               With <code>revealOnInteraction</code>, the anchor sits in a
               floating area to the left and only appears on hover or focus.
-              Inside a <code>Title</code>, <code>revealOnInteraction</code> is
-              enabled by default.
             </Text>
 
             <Box row marginTop="md">
@@ -519,12 +517,16 @@
                 <br />
 
                 <Text relative>
-                  <Link href="#anchor-to-text" anchor revealOnInteraction />
+                  <Link
+                    href="#anchor-to-text-reveal"
+                    anchor
+                    revealOnInteraction
+                  />
                   Some text
                 </Text>
               </Box>
 
-              <Box row>
+              <Box row lineHeight="1">
                 <Caption>
                   revealOnInteraction — anchor floats left and appears on
                   hover/focus
@@ -536,25 +538,19 @@
               </Box>
 
               <Box row>
-                <Caption>
-                  Inside Title — revealOnInteraction auto enabled
-                </Caption>
+                <Caption>Inside Title — revealOnInteraction</Caption>
 
                 <Title as="h3" marginTop="0">
-                  <Link href="#anchor-to-link" anchor />
+                  <Link href="#anchor-to-link" anchor revealOnInteraction />
                   Section Title
                 </Title>
               </Box>
 
               <Box row>
-                <Caption>Inside Title — disabling revealOnInteraction</Caption>
+                <Caption>Inside Title — no revealOnInteraction</Caption>
 
                 <Title as="h3" marginTop="0">
-                  <Link
-                    href="#anchor-to-link-static"
-                    anchor
-                    revealOnInteraction={false}
-                  />
+                  <Link href="#anchor-to-link-static" anchor />
                   Section Title
                 </Title>
               </Box>
