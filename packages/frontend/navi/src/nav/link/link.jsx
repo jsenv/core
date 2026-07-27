@@ -267,6 +267,7 @@ const css = /* css */ `
       align-items: center;
       justify-content: center;
       font-size: 1em;
+      text-decoration: none;
       opacity: 0;
       /* The anchor link is displayed only on :hover */
       /* So we "need" a visual indicator when it's shown by focus */
