@@ -86,6 +86,24 @@
         color: #888;
         font-size: 0.8rem;
       }
+      /* Debug: reveal each glyph's text bounding box so vertical alignment
+         between the wheel numbers and the separators is obvious. Toggled by the
+         "Show text boxes" checkbox (adds .show-text-boxes on the section). The
+         span is inline, so its background hugs the text line box, not the row. */
+      .show-text-boxes .navi_wheel_item .dbg-text {
+        background: rgba(232, 89, 12, 0.35); /* numbers */
+      }
+      .show-text-boxes .navi_wheel_group_separator .dbg-text {
+        background: rgba(34, 139, 230, 0.4); /* separators */
+      }
+      .box-toggle {
+        display: inline-flex;
+        margin-bottom: 16px;
+        align-items: center;
+        gap: 6px;
+        color: #555;
+        font-size: 0.85rem;
+      }
       .toc {
         line-height: 1.9;
       }
@@ -485,6 +503,12 @@
         />
       );
 
+      // Inline wrapper whose background (when boxes are shown) hugs the text so
+      // the number/separator line boxes can be compared vertically.
+      const Boxed = ({ children }) => (
+        <span className="dbg-text">{children}</span>
+      );
+
       // Small self-contained wheels reused across the separator cases.
       const HourWheel = (props) => {
         const [v, setV] = useState(9);
@@ -492,7 +516,7 @@
           <Wheel type="integer" value={v} action={setV} {...props}>
             {range(24).map((h) => (
               <Wheel.Item key={h} value={h}>
-                {pad2(h)}
+                <Boxed>{pad2(h)}</Boxed>
               </Wheel.Item>
             ))}
           </Wheel>
@@ -507,7 +531,7 @@
           <Wheel type="integer" value={v} action={setV} {...props}>
             {[0, 15, 30, 45].map((x) => (
               <Wheel.Item key={x} value={x}>
-                {pad2(x)}
+                <Boxed>{pad2(x)}</Boxed>
               </Wheel.Item>
             ))}
           </Wheel>
@@ -515,8 +539,14 @@
       };
 
       const SeparatorAlignmentDemo = () => {
+        const [showBoxes, setShowBoxes] = useState(true);
         return (
-          <div id="separator" className="demo-section">
+          <div
+            id="separator"
+            className={
+              showBoxes ? "demo-section show-text-boxes" : "demo-section"
+            }
+          >
             <h2>Separator alignment</h2>
             <p>
               A separator's content sits in a one-row box that mirrors a wheel
@@ -524,6 +554,16 @@
               square, words, "ZZ"). A glyph that sits low on the baseline like
               ":" looks better centered — add <code>center</code>.
             </p>
+            <label className="box-toggle">
+              <input
+                type="checkbox"
+                checked={showBoxes}
+                onChange={(e) => {
+                  setShowBoxes(e.target.checked);
+                }}
+              />
+              Show text boxes (orange = numbers, blue = separators)
+            </label>
             <div className="states">
               <div>
                 <WheelGroup>
@@ -538,7 +578,9 @@
               <div>
                 <WheelGroup>
                   <HourWheel />
-                  <WheelGroup.Separator>:</WheelGroup.Separator>
+                  <WheelGroup.Separator>
+                    <Boxed>:</Boxed>
+                  </WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
                 <span className="col-label">":" default (baseline)</span>
@@ -546,7 +588,9 @@
               <div>
                 <WheelGroup>
                   <HourWheel />
-                  <WheelGroup.Separator center>:</WheelGroup.Separator>
+                  <WheelGroup.Separator center>
+                    <Boxed>:</Boxed>
+                  </WheelGroup.Separator>
                   <QuarterWheel />
                 </WheelGroup>
                 <span className="col-label">":" center</span>
@@ -557,12 +601,16 @@
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
               <WheelGroup>
                 <HourWheel />
-                <WheelGroup.Separator center>:</WheelGroup.Separator>
+                <WheelGroup.Separator center>
+                  <Boxed>:</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
               <WheelGroup>
                 <HourWheel />
-                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
             </div>
@@ -572,9 +620,13 @@
             </h3>
             <WheelGroup spacing="0.75ch">
               <HourWheel />
-              <WheelGroup.Separator>hours</WheelGroup.Separator>
+              <WheelGroup.Separator>
+                <Boxed>hours</Boxed>
+              </WheelGroup.Separator>
               <QuarterWheel />
-              <WheelGroup.Separator>minutes</WheelGroup.Separator>
+              <WheelGroup.Separator>
+                <Boxed>minutes</Boxed>
+              </WheelGroup.Separator>
             </WheelGroup>
 
             <h3 style={{ marginTop: 24 }}>3 columns, 2 separators</h3>
@@ -585,16 +637,24 @@
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
               <WheelGroup>
                 <HourWheel />
-                <WheelGroup.Separator center>:</WheelGroup.Separator>
+                <WheelGroup.Separator center>
+                  <Boxed>:</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
-                <WheelGroup.Separator center>:</WheelGroup.Separator>
+                <WheelGroup.Separator center>
+                  <Boxed>:</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
               <WheelGroup>
                 <HourWheel />
-                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
-                <WheelGroup.Separator>ZZ</WheelGroup.Separator>
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
                 <QuarterWheel />
               </WheelGroup>
             </div>
@@ -810,7 +870,9 @@
                         </Wheel.Item>
                       ))}
                     </Wheel>
-                    <WheelGroup.Separator>hours</WheelGroup.Separator>
+                    <WheelGroup.Separator>
+                      <Boxed>hours</Boxed>
+                    </WheelGroup.Separator>
                     <Wheel
                       type="integer"
                       horizontal
@@ -825,7 +887,9 @@
                         </Wheel.Item>
                       ))}
                     </Wheel>
-                    <WheelGroup.Separator>minutes</WheelGroup.Separator>
+                    <WheelGroup.Separator>
+                      <Boxed>minutes</Boxed>
+                    </WheelGroup.Separator>
                   </WheelGroup>
                 </div>
               </div>
@@ -838,7 +902,9 @@
                 <div>
                   <WheelGroup spacing="0">
                     <HourWheel />
-                    <WheelGroup.Separator center>:</WheelGroup.Separator>
+                    <WheelGroup.Separator center>
+                      <Boxed>:</Boxed>
+                    </WheelGroup.Separator>
                     <QuarterWheel />
                   </WheelGroup>
                   <span className="col-label">spacing="0"</span>
@@ -846,7 +912,9 @@
                 <div>
                   <WheelGroup spacing="2ch">
                     <HourWheel />
-                    <WheelGroup.Separator center>:</WheelGroup.Separator>
+                    <WheelGroup.Separator center>
+                      <Boxed>:</Boxed>
+                    </WheelGroup.Separator>
                     <QuarterWheel />
                   </WheelGroup>
                   <span className="col-label">spacing="2ch"</span>
@@ -944,7 +1012,9 @@
                         </Wheel.Item>
                       ))}
                     </Wheel>
-                    <WheelGroup.Separator center>:</WheelGroup.Separator>
+                    <WheelGroup.Separator center>
+                      <Boxed>:</Boxed>
+                    </WheelGroup.Separator>
                     <Wheel type="integer" value={gm} action={setGm}>
                       {[0, 15, 30, 45].map((m) => (
                         <Wheel.Item key={m} value={m}>

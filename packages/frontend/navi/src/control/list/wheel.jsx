@@ -1017,6 +1017,16 @@ function WheelUI(props) {
   // Sync the center with the current value — used on first display and whenever
   // the controlled value changes from outside.
   const syncCenterToSelection = (viewportEl, behavior) => {
+    // A glide or momentum in flight (tap, arrow, fling) is already taking the
+    // wheel to the right row. This runs on every controlled-value re-render, which
+    // lags a frame behind our own centeredIdRef — so on rapid taps its guard below
+    // would miss and it would snap instantly mid-glide, leaving the wheel stuck
+    // off-center. Let the motion finish: commitSelection settles the value and the
+    // next render is a no-op. A genuine external change made during motion is
+    // honoured once it settles (centeredIdRef then differs from the selection).
+    if (glideRef.current !== null || animRef.current !== null) {
+      return;
+    }
     const selectedItem = getSelectedItem(viewportEl);
     if (!selectedItem) {
       return;
@@ -1265,6 +1275,11 @@ function WheelUI(props) {
           updateCurrentMarker(vp, tapped);
           requestSelectValue(getItemValueById(tapped.id), e);
           centerOn(vp, tapped, "smooth");
+        } else {
+          // Tapped the already-centered row (common when spam-clicking one spot):
+          // the pointerdown froze any in-flight glide at a fractional position, so
+          // snap cleanly to the nearest row instead of resting off-center.
+          settle(vp, 0);
         }
         return;
       }
