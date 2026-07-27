@@ -410,6 +410,10 @@ const WHEEL_FLING_DECEL = 0.0022;
 // Glide duration clamps (ms): a tiny snap isn't instant, a long glide isn't slow.
 const GLIDE_MIN_DURATION = 90;
 const GLIDE_MAX_DURATION = 600;
+// Mouse-wheel spring stiffness: fraction of the gap to the target closed per ~16ms
+// frame. Higher = snappier chase / shorter settle. The wheel chases a moving,
+// row-snapped target with this (see springTo) instead of a per-event ease-out.
+const WHEEL_SPRING_STIFFNESS = 0.28;
 
 // Default glide speed (px/ms) — the comfortable pace a from-rest glide (arrow key,
 // click, idle settle) covers ground at; the demo can override it. A harder fling
@@ -693,6 +697,14 @@ function WheelUI(props) {
   // s0 = the ease's initial slope (start velocity ÷ average velocity); shapes the
   // cubic so it leaves at the release speed and arrives at rest. See glideTo.
   const glideS0Ref = useRef(0);
+  // The glide loop runs in one of two modes. "ease": the time-based ease-out above
+  // (a fling/arrow/click with ONE known target). "spring": a chase toward a moving
+  // target for the mouse wheel — pos closes a fraction of the gap each frame, so it
+  // starts the instant you scroll, speeds up while events pile the target further
+  // ahead, and eases onto the row on its own once events stop (no per-event
+  // momentum decelerating over the last row). See springTo.
+  const glideModeRef = useRef("ease");
+  const glidePrevTimeRef = useRef(0);
   // The glide loop is bound once (mount effect) but the speed can change live
   // (e.g. a demo control) — read it through a ref so it uses the latest.
   const glideSpeedRef = useRef(glideSpeed);
@@ -932,6 +944,29 @@ function WheelUI(props) {
       glideRef.current = null;
       return;
     }
+    if (glideModeRef.current === "spring") {
+      const now = performance.now();
+      const dt = clampNumber(now - glidePrevTimeRef.current, 0, 32);
+      glidePrevTimeRef.current = now;
+      const dist = target - posRef.current;
+      if (Math.abs(dist) < 0.5) {
+        // Caught up to the (row-snapped) target → land on it and commit.
+        posRef.current = target;
+        targetPosRef.current = null;
+        glideRef.current = null;
+        renderPos(vp);
+        commitSelection(vp);
+        return;
+      }
+      // Close a fraction of the gap this frame (frame-rate independent). Speed is
+      // proportional to the gap: fast while the target races ahead of more wheel
+      // events, tapering to a gentle settle once the target stops moving.
+      const k = 1 - Math.pow(1 - WHEEL_SPRING_STIFFNESS, dt / 16);
+      posRef.current += dist * k;
+      renderPos(vp);
+      glideRef.current = requestAnimationFrame(() => glideStep(vp));
+      return;
+    }
     const T = glideDurationRef.current;
     const elapsed = performance.now() - glideStartTimeRef.current;
     if (T <= 0 || elapsed >= T) {
@@ -949,6 +984,25 @@ function WheelUI(props) {
       start + (target - start) * glideEase(p, glideS0Ref.current);
     renderPos(vp);
     glideRef.current = requestAnimationFrame(() => glideStep(vp));
+  };
+  // Chase a (row-snapped) target with the spring above — the mouse-wheel motion.
+  // Called on every wheel event: it just updates the target (and starts the loop
+  // if idle), so the chase continuously adapts as the target accumulates ahead,
+  // then settles onto the row by itself when events stop.
+  const springTo = (vp, target) => {
+    if (!isLoop) {
+      const count = trackedItemsRef.current.length;
+      const size = getItemSize(vp);
+      if (count > 0 && size > 0) {
+        target = clampNumber(target, 0, (count - 1) * size);
+      }
+    }
+    targetPosRef.current = target;
+    glideModeRef.current = "spring";
+    if (glideRef.current === null) {
+      glidePrevTimeRef.current = performance.now();
+      glideRef.current = requestAnimationFrame(() => glideStep(vp));
+    }
   };
   // Glide to `target` in one time-based ease. `velocity` (px/ms, optional) is the
   // incoming speed — the fling's on a settle; when omitted, a retarget keeps the
@@ -998,6 +1052,7 @@ function WheelUI(props) {
     glideStartTimeRef.current = performance.now();
     glideDurationRef.current = duration;
     glideS0Ref.current = s0;
+    glideModeRef.current = "ease";
     targetPosRef.current = target;
     if (glideRef.current === null) {
       glideRef.current = requestAnimationFrame(() => glideStep(vp));
@@ -1144,9 +1199,6 @@ function WheelUI(props) {
     const vp = el.querySelector(".navi_wheel_viewport");
     let settleTimer = null;
     let wheelIdleTimer = null;
-    // Timestamp of the last wheel event, to derive the scroll velocity so the
-    // glide starts moving immediately (at the scroll speed) instead of easing in.
-    let lastWheelTime = 0;
 
     const scheduleSettle = () => {
       clearTimeout(settleTimer);
@@ -1194,19 +1246,11 @@ function WheelUI(props) {
           if (size === 0 || count === 0) {
             return;
           }
-          // Scroll velocity (px/ms) from the gap since the last wheel event — the
-          // glide starts at this speed so it moves the instant you scroll instead
-          // of easing in (which read as a late start). dt is clamped so a first
-          // event / long pause still yields a brisk, finite start speed.
-          const now = performance.now();
-          const dt = clampNumber(now - lastWheelTime, 16, 120);
-          lastWheelTime = now;
-          const wheelVelocity = delta / dt;
-          // Accumulate the wheel delta into an unsnapped target, then glide to the
-          // ROW it snaps to. Because the target is always a row, the wheel heads
-          // straight for a value and eases onto it — it never follows the raw
-          // scroll offset and then re-adjusts (accelerate forward / jump back) at
-          // the end. A fresh gesture starts from the current row; keeping the
+          // Accumulate the wheel delta into an unsnapped target, then chase the ROW
+          // it snaps to. Because the target is always a row, the wheel heads
+          // straight for a value and settles on it — it never follows the raw
+          // scroll offset and re-adjusts (accelerate forward / jump back) at the
+          // end. A fresh gesture starts from the current row; keeping the
           // accumulator unsnapped means small trackpad deltas add up smoothly.
           let target = wheelTargetRef.current;
           if (target === null) {
@@ -1218,15 +1262,17 @@ function WheelUI(props) {
           }
           wheelTargetRef.current = target;
           scheduleWheelReset();
-          // Recompute the destination on EVERY event and adapt the glide at once —
-          // never wait for the gesture to end. Only (re)glide when the destination
-          // ROW changes, so sub-row deltas just accumulate without cancelling the
-          // in-flight glide; passing the scroll velocity keeps it moving smoothly.
+          // Update the chase target on EVERY event and adapt at once — never wait
+          // for the gesture to end. The spring closes the gap continuously: it
+          // moves the instant you scroll, tracks the accumulating target while
+          // events keep coming, and eases onto the row once they stop. Only retarget
+          // when the destination ROW changes, so sub-row (trackpad) deltas just
+          // accumulate without re-committing the current row every event.
           const snapped = snapPosToRow(vp, target);
-          const currentDest =
+          const dest =
             glideRef.current !== null ? targetPosRef.current : posRef.current;
-          if (Math.abs(snapped - currentDest) > 0.4) {
-            glideTo(vp, snapped, wheelVelocity);
+          if (Math.abs(snapped - dest) > 0.5) {
+            springTo(vp, snapped);
           }
         },
         prevented: () => {
