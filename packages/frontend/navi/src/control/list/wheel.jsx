@@ -751,12 +751,16 @@ function WheelUI(props) {
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
   const applyTransform = (track, pos) => {
-    // Snap to a whole pixel: a fractional translate renders the digits at a
-    // sub-pixel offset (blurred and ~1px off) from the static, pixel-aligned
-    // separators. The nearest-integer rest position is what the separators sit
-    // on, so rounding keeps them exactly aligned and crisp. (The WAAPI glide
-    // interpolates its own keyframes, so mid-animation smoothness is unaffected.)
-    const p = -Math.round(pos);
+    // Snap to the DEVICE-pixel grid, not the CSS-pixel grid. The digits live in
+    // this transformed layer; the WheelGroup separators are static, rasterized by
+    // the browser on the device grid. Rounding pos to a whole CSS px can still
+    // leave the digits up to half a CSS px off from that grid — one whole device
+    // pixel at DPR 2 — which reads as the separator sitting ~1px above/below the
+    // numbers. Rounding to device px lands both on the same grid: aligned and
+    // crisp. (The WAAPI glide interpolates its own keyframes, so mid-animation
+    // smoothness is unaffected.)
+    const dpr = window.devicePixelRatio || 1;
+    const p = -Math.round(pos * dpr) / dpr;
     track.style.transform = isHorizontal
       ? `translate3d(${p}px, 0, 0)`
       : `translate3d(0, ${p}px, 0)`;
