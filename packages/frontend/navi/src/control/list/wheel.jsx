@@ -470,6 +470,7 @@ const WheelGroupContext = createContext(null);
  *   itemWidth?: number | string,
  *   bounded?: boolean,
  *   horizontal?: boolean,
+ *   glideSpeed?: number,
  *   type?: string,
  *   name?: string,
  *   required?: boolean,
@@ -486,6 +487,7 @@ const WheelGroupContext = createContext(null);
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
+ * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
 export const Wheel = (props) => {
@@ -503,6 +505,7 @@ const WHEEL_OWN_PROP_KEYS = [
   "horizontal",
   "glass",
   "frameBorder",
+  "glideSpeed",
   "type",
 ];
 
@@ -517,6 +520,7 @@ function WheelUI(props) {
     horizontal,
     glass,
     frameBorder,
+    glideSpeed = WHEEL_GLIDE_SPEED,
     type,
     style,
   } = props;
@@ -647,6 +651,10 @@ function WheelUI(props) {
   const posRef = useRef(0);
   const animRef = useRef(null);
   const glideRef = useRef(null);
+  // The glide code is bound once (mount effect) but the speed can change live
+  // (e.g. a demo control) — read it through a ref so redirects use the latest.
+  const glideSpeedRef = useRef(glideSpeed);
+  glideSpeedRef.current = glideSpeed;
 
   // How many clone rows to render on each side of the real items as scroll
   // runway. Because the sequence is periodic with period N, the wrap stays
@@ -899,10 +907,22 @@ function WheelUI(props) {
       onDone();
       return;
     }
+    // Constant speed (px/ms) → duration proportional to distance. On a redirect
+    // (a second arrow/tap before the glide finished) the target is farther, so
+    // cap the duration at roughly one row's travel time: the wheel then covers
+    // however many rows it is behind within that window, i.e. it speeds up the
+    // more you're behind. This keeps rapid presses feeling tied to how fast you
+    // press instead of stretching into one long, detached smooth glide. A glide
+    // from rest keeps the full range so a single step eases out naturally.
+    const speed = glideSpeedRef.current;
+    const rowMs = getItemSize(vp) / speed;
+    const maxMs = redirecting
+      ? clampNumber(rowMs, WHEEL_GLIDE_MIN_MS, WHEEL_GLIDE_MAX_MS)
+      : WHEEL_GLIDE_MAX_MS;
     const duration = clampNumber(
-      Math.abs(dist) / WHEEL_GLIDE_SPEED,
+      Math.abs(dist) / speed,
       WHEEL_GLIDE_MIN_MS,
-      WHEEL_GLIDE_MAX_MS,
+      maxMs,
     );
     posRef.current = target;
     const animation = track.animate(

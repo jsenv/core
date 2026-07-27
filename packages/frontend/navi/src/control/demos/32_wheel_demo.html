@@ -104,6 +104,17 @@
         color: #555;
         font-size: 0.85rem;
       }
+      .disclaimer {
+        margin: 0 0 4px;
+        padding: 12px 14px;
+        color: #7a4a00;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
       .toc {
         line-height: 1.9;
       }
@@ -217,6 +228,16 @@
               <kbd>→</kbd> when horizontal). The centered value is the
               selection.
             </p>
+            <div className="disclaimer">
+              ⚠️{" "}
+              <strong>Don't place a Wheel on a normally-scrolling page.</strong>{" "}
+              It captures wheel/drag scrolling with no visible scrollbar, so a
+              user can scroll it by accident and be unable to tell why the page
+              stopped scrolling — confusing at best, and they may change the
+              value without realising. Use it inside a <strong>Dialog</strong>{" "}
+              (or another deliberately-opened surface) where trapping the scroll
+              is expected.
+            </div>
             <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
               <li>
                 <a href="#states">States</a>
@@ -320,7 +341,7 @@
       // scroll-snap list, driven by the same buttons, so the snapping/momentum
       // feel can be compared against the browser's own scroller.
       const ITEM_PX = 32; // matches the Wheel + native row height
-      const ScrollPair = ({ values, repeatNative }) => {
+      const ScrollPair = ({ values, repeatNative, glideSpeed }) => {
         const startIndex = Math.floor(values.length / 2);
         const [v, setV] = useState(values[startIndex]);
         const wheelRef = useRef(null);
@@ -350,7 +371,13 @@
           <div>
             <div className="row" style={{ gap: 48, alignItems: "flex-start" }}>
               <div>
-                <Wheel ref={wheelRef} type="integer" value={v} action={setV}>
+                <Wheel
+                  ref={wheelRef}
+                  type="integer"
+                  value={v}
+                  action={setV}
+                  glideSpeed={glideSpeed}
+                >
                   {values.map((value) => (
                     <Wheel.Item key={value} value={value}>
                       {pad2(value)}
@@ -393,7 +420,13 @@
         );
       };
 
+      // Glide speed presets (px/ms) for the Wheel. "slow" makes a single row take
+      // ~0.8s so it's easy to see the transition — and to feel how rapid arrow /
+      // click input behaves when it outpaces one transition.
+      const GLIDE_SPEEDS = { slow: 0.04, normal: 0.16, fast: 0.5 };
       const ScrollBehaviorDemo = () => {
+        const [speedName, setSpeedName] = useState("normal");
+        const glideSpeed = GLIDE_SPEEDS[speedName];
         return (
           <div id="scroll" className="demo-section">
             <h2>Scroll behavior — snapping, momentum, loop</h2>
@@ -404,10 +437,51 @@
               how each animates the snap. The <kbd>px</kbd> buttons nudge by
               less than a row to show the snap-back.
             </p>
+            <div
+              className="scroll-buttons"
+              style={{ marginTop: 0, marginBottom: 8 }}
+            >
+              <span
+                style={{
+                  alignSelf: "center",
+                  color: "#555",
+                  fontSize: "0.85rem",
+                }}
+              >
+                Wheel glide speed:
+              </span>
+              {["slow", "normal", "fast"].map((name) => (
+                <button
+                  key={name}
+                  onClick={() => setSpeedName(name)}
+                  style={
+                    speedName === name
+                      ? {
+                          background: "#4a90d9",
+                          color: "#fff",
+                          borderColor: "#4a90d9",
+                        }
+                      : undefined
+                  }
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <p style={{ marginTop: 0 }}>
+              Try <strong>slow</strong>, then tap <kbd>▼ item</kbd> (or hold{" "}
+              <kbd>↓</kbd> on a focused wheel) faster than the glide finishes:
+              the glide speeds up to stay tied to your input rate instead of
+              stretching into one long, detached slide.
+            </p>
 
             <h3 id="scroll-small">Small list (4 values)</h3>
             <p>Few values — easiest to eyeball the wrap and each snap.</p>
-            <ScrollPair values={[0, 15, 30, 45]} repeatNative />
+            <ScrollPair
+              values={[0, 15, 30, 45]}
+              repeatNative
+              glideSpeed={glideSpeed}
+            />
 
             <h3 id="scroll-long" style={{ marginTop: 24 }}>
               Long list (100 values)
@@ -416,7 +490,7 @@
               Many values — stress-tests momentum and the loop runway against a
               tall native scroller.
             </p>
-            <ScrollPair values={range(100)} />
+            <ScrollPair values={range(100)} glideSpeed={glideSpeed} />
           </div>
         );
       };
@@ -515,7 +589,7 @@
         return (
           <Wheel type="integer" value={v} action={setV} {...props}>
             {range(24).map((h) => (
-              <Wheel.Item key={h} value={h}>
+              <Wheel.Item key={h} value={h} {...props?.itemProps}>
                 <Boxed>{pad2(h)}</Boxed>
               </Wheel.Item>
             ))}
@@ -635,18 +709,18 @@
               obvious that ":" (left) can hide.
             </p>
             <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
-              <WheelGroup>
-                <HourWheel />
+              <WheelGroup spacing="0">
+                <HourWheel itemProps={{ padding: "0" }} />
                 <WheelGroup.Separator center>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: "0" }} />
                 <WheelGroup.Separator center>
                   <Boxed>:</Boxed>
                 </WheelGroup.Separator>
-                <QuarterWheel />
+                <QuarterWheel itemProps={{ padding: "0" }} />
               </WheelGroup>
-              <WheelGroup>
+              <WheelGroup spacing="0">
                 <HourWheel />
                 <WheelGroup.Separator>
                   <Boxed>ZZ</Boxed>
