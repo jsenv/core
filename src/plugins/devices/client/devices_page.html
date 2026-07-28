@@ -92,13 +92,14 @@
     <h1>Devices</h1>
     <p class="intro">
       Every browser that has connected to this dev server since it started. Open
-      a device's tracker to watch its console logs live.
+      a device's monitor to watch its console logs live.
     </p>
     <table>
       <thead>
         <tr>
           <th>Status</th>
-          <th>User agent</th>
+          <th>Browser</th>
+          <th>OS</th>
           <th>Last activity</th>
           <th>Logs</th>
           <th></th>
@@ -106,7 +107,7 @@
       </thead>
       <tbody id="rows">
         <tr>
-          <td class="empty" colspan="5">Loading…</td>
+          <td class="empty" colspan="6">Loading…</td>
         </tr>
       </tbody>
     </table>
@@ -128,12 +129,19 @@
           /[&<>"]/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
         );
+      const named = ({ name, version } = {}) => {
+        if (!name || name === "unknown") {
+          return '<span class="muted">unknown</span>';
+        }
+        const v = version && version !== "unknown" ? ` ${version}` : "";
+        return escapeHtml(`${name}${v}`);
+      };
 
       let lastDevices = [];
       const render = (devices) => {
         lastDevices = devices;
         if (!devices.length) {
-          rows.innerHTML = `<tr><td class="empty" colspan="5">No device has connected yet.</td></tr>`;
+          rows.innerHTML = `<tr><td class="empty" colspan="6">No device has connected yet.</td></tr>`;
           return;
         }
         devices.sort((a, b) => b.lastActivity - a.lastActivity);
@@ -142,43 +150,31 @@
             (d) => `
           <tr>
             <td><span class="dot ${d.online ? "on" : "off"}"></span>${d.online ? "online" : "offline"}</td>
-            <td class="ua" title="${escapeHtml(d.userAgent)}">${escapeHtml(d.userAgent) || '<span class="muted">unknown</span>'}</td>
+            <td title="${escapeHtml(d.userAgent)}">${named(d.runtime)}</td>
+            <td>${named(d.os)}</td>
             <td>${ago(d.lastActivity)}</td>
             <td>${d.logCount}</td>
-            <td><a class="track" href="/.internal/device?id=${encodeURIComponent(d.id)}">track →</a></td>
+            <td><a class="track" href="/.internal/device?id=${encodeURIComponent(d.id)}">monitor →</a></td>
           </tr>`,
           )
           .join("");
       };
 
-      // This page is cooked through the dev server, so it gets the jsenv
-      // server-events client injected (window.__server_events__) — the same
-      // channel autoreload rides. The server pushes the full list on every
-      // change; no polling. Initial snapshot via the JSON route.
-      fetch("/.internal/devices.json")
-        .then((r) => r.json())
-        .then(render)
-        .catch(() => {});
-
-      const whenServerEvents = (callback) => {
-        const ready = () =>
-          window.__server_events__ &&
-          typeof window.__server_events__.listenEvents === "function";
-        if (ready()) {
-          callback(window.__server_events__);
-          return;
+      // This page is cooked through the dev server, so it gets both the jsenv
+      // server-events client (window.__server_events__, injected first — the
+      // same channel autoreload rides) and the devices client (so opening this
+      // page counts as a connected device). The server pushes the full list on
+      // every change; no polling. Initial snapshot via the JSON route.
+      (async () => {
+        try {
+          render(await (await fetch("/.internal/devices.json")).json());
+        } catch {
+          // dev server unreachable — the live channel will fill the list in.
         }
-        const id = setInterval(() => {
-          if (ready()) {
-            clearInterval(id);
-            callback(window.__server_events__);
-          }
-        }, 100);
-      };
-      whenServerEvents((serverEvents) => {
-        serverEvents.listenEvents({
-          devices_list: (event) => render(event.data),
-        });
+      })();
+
+      window.__server_events__.listenEvents({
+        devices_list: (event) => render(event.data),
       });
 
       // Refresh the relative "ago" labels between server pushes.

@@ -71,36 +71,15 @@ const formatArg = (arg) => {
 };
 const formatArgs = (args) => args.map(formatArg).join(" ");
 
-// Wait until the jsenv server-events client is ready, then hand it over.
-const whenServerEvents = (callback) => {
-  const ready = () => {
-    const serverEvents = window.__server_events__;
-    return serverEvents && typeof serverEvents.listenEvents === "function"
-      ? serverEvents
-      : null;
-  };
-  const serverEvents = ready();
-  if (serverEvents) {
-    callback(serverEvents);
-    return;
-  }
-  const intervalId = setInterval(() => {
-    const serverEvents = ready();
-    if (serverEvents) {
-      clearInterval(intervalId);
-      callback(serverEvents);
-    }
-  }, 100);
-};
-
 const setup = () => {
   const deviceId = getDeviceId();
-  const userAgent = navigator.userAgent;
 
-  // Buffer log entries and POST them in batches.
+  // Buffer log entries and POST them in batches. The server reads the browser
+  // and OS from the request's own user-agent/sec-ch-ua headers, so the body
+  // only carries the id and the log entries.
   let pending = [];
-  const post = (entries, { beacon = false } = {}) => {
-    const payload = JSON.stringify({ deviceId, userAgent, entries });
+  const post = async (entries, { beacon = false } = {}) => {
+    const payload = JSON.stringify({ deviceId, entries });
     if (beacon && navigator.sendBeacon) {
       navigator.sendBeacon(
         LOG_ENDPOINT,
@@ -108,14 +87,16 @@ const setup = () => {
       );
       return;
     }
-    fetch(LOG_ENDPOINT, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: payload,
-      keepalive: true,
-    }).catch(() => {
+    try {
+      await fetch(LOG_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: payload,
+        keepalive: true,
+      });
+    } catch {
       // dev server gone or offline — dropping logs is acceptable.
-    });
+    }
   };
 
   let flushScheduled = false;
@@ -177,17 +158,30 @@ const setup = () => {
   });
 
   // Toast when another device appears — reusing the server-events channel.
-  whenServerEvents((serverEvents) => {
-    serverEvents.listenEvents({
-      device_here: (event) => {
-        const { device, reason } = event.data;
-        if (device.id === deviceId) {
-          return; // don't toast a device about itself
-        }
-        showDeviceToast({ device, reason });
-      },
-    });
+  // window.__server_events__ is injected before this script, so it's ready.
+  window.__server_events__.listenEvents({
+    device_here: (event) => {
+      const { device, reason } = event.data;
+      if (device.id === deviceId) {
+        return; // don't toast a device about itself
+      }
+      showDeviceToast({ device, reason });
+    },
   });
+};
+
+// "Chrome 149 · iOS 17.2" from the parsed runtime/os, falling back gracefully.
+const describeDevice = (device) => {
+  const version = (v) => (v && v !== "unknown" ? ` ${v.split(".")[0]}` : "");
+  const runtime = device.runtime || {};
+  const os = device.os || {};
+  const browserLabel =
+    runtime.name && runtime.name !== "unknown"
+      ? `${runtime.name}${version(runtime.version)}`
+      : "";
+  const osLabel =
+    os.name && os.name !== "unknown" ? `${os.name}${version(os.version)}` : "";
+  return [browserLabel, osLabel].filter(Boolean).join(" · ") || "unknown device";
 };
 
 const showDeviceToast = ({ device, reason }) => {
@@ -208,12 +202,11 @@ const showDeviceToast = ({ device, reason }) => {
     "border-radius:8px",
     "box-shadow:0 6px 20px rgba(0,0,0,0.35)",
   ].join(";");
-  const shortUA = (device.userAgent || "unknown").slice(0, 60);
-  el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${label}</div><div style="opacity:.8;margin-bottom:8px">${shortUA}</div>`;
+  el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${label}</div><div style="opacity:.8;margin-bottom:8px">${describeDevice(device)}</div>`;
   const link = document.createElement("a");
   link.href = `/.internal/device?id=${encodeURIComponent(device.id)}`;
   link.target = "_blank";
-  link.textContent = "Track its logs →";
+  link.textContent = "Monitor its logs →";
   link.style.cssText = "color:#93c5fd;text-decoration:none;font-weight:600";
   el.appendChild(link);
   const close = document.createElement("button");

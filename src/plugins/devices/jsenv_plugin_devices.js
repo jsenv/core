@@ -9,7 +9,7 @@
  * - server → clients uses the jsenv "server events" channel (the same websocket
  *   the autoreload feature rides on). This plugin declares three server events:
  *     - "devices_list"  the whole registry (the dashboard renders it)
- *     - "device_log"    a single log line (a tracker appends it)
+ *     - "device_log"    a single log line (a monitor appends it)
  *     - "device_here"   a device just appeared/resumed (every page can toast it)
  *   Server events are broadcast, so consumers filter what they care about.
  * - clients → server uses a plain HTTP POST (/.internal/devices/log). A browser
@@ -18,9 +18,13 @@
  * A device is considered "online" when it has reported activity within
  * INACTIVITY_MS — there is no dedicated connection to track.
  *
+ * The client is injected into EVERY cooked page, including our own dashboard and
+ * monitor pages — so opening one of those counts as a connected device, and any
+ * open page gets toasted when another device appears.
+ *
  * Pages:
  * - /.internal/devices     → dashboard listing every device seen
- * - /.internal/device?id=… → live console-log tracker for one device
+ * - /.internal/device?id=… → live console-log monitor for one device
  *
  * Both pages are served THROUGH the graph (via redirectReference to a real HTML
  * file) rather than as a raw route response, so they get cooked like any app
@@ -30,7 +34,7 @@
  */
 
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
-import { asUrlWithoutSearch } from "@jsenv/urls";
+import { getRuntimeFromRequest } from "../../dev/dev_server_plugins/runtime_from_request.js";
 
 const devicesClientFileUrl = new URL(
   "./client/devices_client.js",
@@ -40,19 +44,57 @@ const devicesPageFileUrl = new URL(
   "./client/devices_page.html",
   import.meta.url,
 ).href;
-const deviceTrackerPageFileUrl = new URL(
-  "./client/device_tracker_page.html",
+const deviceMonitorPageFileUrl = new URL(
+  "./client/device_monitor_page.html",
   import.meta.url,
 ).href;
 
 // Keep at most this many log entries per device, and drop entries older than
-// LOG_TTL_MS — the buffer only exists so a tracker opened a bit late can still
+// LOG_TTL_MS — the buffer only exists so a monitor opened a bit late can still
 // show recent history; it is not a persistent store.
 const LOG_MAX_PER_DEVICE = 1000;
 const LOG_TTL_MS = 60 * 60 * 1000; // 1h
 // A device silent for longer than this, then active again, is reported as
 // "resumed" (the other pages get a fresh toast). It also defines "online".
 const INACTIVITY_MS = 60 * 1000;
+
+// The dev server already parses browser + version from a request (sec-ch-ua or
+// user-agent) via getRuntimeFromRequest; it does not cover the OS, so this fills
+// that gap from the user-agent string.
+const osFromUserAgent = (userAgent) => {
+  const iosMatch = userAgent.match(/iPhone OS (\d+)[._](\d+)/);
+  if (iosMatch) {
+    return { name: "iOS", version: `${iosMatch[1]}.${iosMatch[2]}` };
+  }
+  if (/iPad/.test(userAgent)) {
+    const ipadMatch = userAgent.match(/OS (\d+)[._](\d+)/);
+    return {
+      name: "iPadOS",
+      version: ipadMatch ? `${ipadMatch[1]}.${ipadMatch[2]}` : "",
+    };
+  }
+  const androidMatch = userAgent.match(/Android (\d+(?:\.\d+)*)/);
+  if (androidMatch) {
+    return { name: "Android", version: androidMatch[1] };
+  }
+  if (/Windows NT/.test(userAgent)) {
+    const winMatch = userAgent.match(/Windows NT (\d+\.\d+)/);
+    const version = winMatch && winMatch[1] === "10.0" ? "10/11" : winMatch?.[1];
+    return { name: "Windows", version: version || "" };
+  }
+  const macMatch = userAgent.match(/Mac OS X (\d+)[._](\d+)(?:[._](\d+))?/);
+  if (macMatch) {
+    const patch = macMatch[3] ? `.${macMatch[3]}` : "";
+    return { name: "macOS", version: `${macMatch[1]}.${macMatch[2]}${patch}` };
+  }
+  if (/CrOS/.test(userAgent)) {
+    return { name: "ChromeOS", version: "" };
+  }
+  if (/Linux/.test(userAgent)) {
+    return { name: "Linux", version: "" };
+  }
+  return { name: "unknown", version: "" };
+};
 
 export const jsenvPluginDevices = () => {
   // id -> device record
@@ -66,20 +108,25 @@ export const jsenvPluginDevices = () => {
   const now = () => Date.now();
   const isOnline = (device) => now() - device.lastActivity < INACTIVITY_MS;
 
-  const getOrCreateDevice = (id, userAgent) => {
+  const getOrCreateDevice = (id, request) => {
+    const userAgent = request.headers["user-agent"] || "";
     let device = devices.get(id);
     if (!device) {
       device = {
         id,
         userAgent,
+        runtime: getRuntimeFromRequest(request),
+        os: osFromUserAgent(userAgent),
         firstSeen: now(),
         lastActivity: now(),
         everSeen: false,
         logs: [],
       };
       devices.set(id, device);
-    } else if (userAgent) {
+    } else if (userAgent && userAgent !== device.userAgent) {
       device.userAgent = userAgent;
+      device.runtime = getRuntimeFromRequest(request);
+      device.os = osFromUserAgent(userAgent);
     }
     return device;
   };
@@ -97,6 +144,10 @@ export const jsenvPluginDevices = () => {
   const serializeDevice = (device) => ({
     id: device.id,
     userAgent: device.userAgent,
+    // parsed { name, version } so pages can show a friendly browser/OS instead
+    // of the raw user-agent string.
+    runtime: device.runtime,
+    os: device.os,
     firstSeen: device.firstSeen,
     lastActivity: device.lastActivity,
     online: isOnline(device),
@@ -138,8 +189,7 @@ export const jsenvPluginDevices = () => {
     if (!deviceId || typeof deviceId !== "string") {
       return { status: 400 };
     }
-    const userAgent = body.userAgent || request.headers["user-agent"] || "";
-    const device = getOrCreateDevice(deviceId, userAgent);
+    const device = getOrCreateDevice(deviceId, request);
 
     const firstEver = !device.everSeen;
     const wasOnline = !firstEver && isOnline(device);
@@ -196,18 +246,10 @@ export const jsenvPluginDevices = () => {
       return devicesPageFileUrl;
     }
     if (pathname.endsWith("/.internal/device")) {
-      // carry ?id=… so the tracker page knows which device to watch
-      return `${deviceTrackerPageFileUrl}${search}`;
+      // carry ?id=… so the monitor page knows which device to watch
+      return `${deviceMonitorPageFileUrl}${search}`;
     }
     return null;
-  };
-
-  const isOwnPage = (url) => {
-    const withoutSearch = asUrlWithoutSearch(url);
-    return (
-      withoutSearch === devicesPageFileUrl ||
-      withoutSearch === deviceTrackerPageFileUrl
-    );
   };
 
   return {
@@ -227,11 +269,9 @@ export const jsenvPluginDevices = () => {
     },
     transformUrlContent: {
       html: (urlInfo) => {
-        // Our own dashboard/tracker pages should not report their own logs or
-        // toast themselves — they only consume the server events.
-        if (isOwnPage(urlInfo.url)) {
-          return null;
-        }
+        // Injected into every page, including our own dashboard/monitor pages,
+        // so opening one registers that browser as a device and any open page
+        // gets toasted when another device appears.
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         injectJsenvScript(htmlAst, {
           src: devicesClientFileUrl,
@@ -262,7 +302,7 @@ export const jsenvPluginDevices = () => {
       {
         endpoint: "GET /.internal/device.json",
         description:
-          "One device's record — info plus buffered logs (?id=…), so a tracker opened late still has recent history.",
+          "One device's record — info plus buffered logs (?id=…), so a monitor opened late still has recent history.",
         availableMediaTypes: ["application/json"],
         declarationSource: import.meta.url,
         fetch: (request) => {
