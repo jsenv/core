@@ -543,6 +543,436 @@ const WHEEL_OWN_PROP_KEYS = [
   "type",
 ];
 
+// Pointer drag, mouse-wheel, programmatic `navi_scroll`, and the document-level
+// gesture guard: all the ways raw input drives the virtual position. Bound once
+// to the viewport/container (re-bound only when orientation/loop/interactive
+// change). A pure consumer of the animation core (setPos/settle/glideTo/… and the
+// interaction gate) — it produces nothing the rest of the wheel needs back.
+//
+// Input: wheel + pointer drag drive the virtual position; a short idle after
+// wheel, or the end of a drag's momentum, snaps to the nearest value. When the
+// wheel is readonly/disabled/busy the interaction gate (attemptInteraction)
+// shows the matching callout instead of moving, and traps the page scroll.
+const useWheelInteractions = ({
+  ref,
+  isHorizontal,
+  isLoop,
+  interactive,
+  posRef,
+  trackedItemsRef,
+  clampNumber,
+  attemptInteraction,
+  cancelAnim,
+  setPos,
+  snapPosToRow,
+  getItemSize,
+  viewportMain,
+  settle,
+  wheelSettle,
+  glideTo,
+  stepTarget,
+}) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const vp = el.querySelector(".navi_wheel_viewport");
+    let settleTimer = null;
+    // Last wheel event's scroll velocity (px/ms, signed) and timestamp, so the
+    // settle can snap to the row the scroll was heading for (see wheelSettle).
+    let wheelVelocity = 0;
+    let lastWheelTime = 0;
+    // Set on the first event of a gesture to force the settle onto the adjacent row
+    // (native-like: the slightest scroll still snaps to the next item); null once
+    // the gesture continues, so momentum projection takes over.
+    let wheelForcedTarget = null;
+
+    // Non-wheel settle (drag momentum, programmatic jump): spring to the nearest row.
+    const scheduleSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => settle(vp, 0), 90);
+    };
+    // Wheel settle: fire soon after the last wheel event and land on the projected
+    // row (velocity-biased), not after a long idle then a spring to nearest.
+    const scheduleWheelSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(
+        () => wheelSettle(vp, wheelVelocity, wheelForcedTarget),
+        WHEEL_SETTLE_DELAY,
+      );
+    };
+
+    // Once this wheel has claimed a wheel gesture, keep swallowing the rest of that
+    // gesture's events even if the pointer drifts off onto the page — otherwise the
+    // document scrolls under the leftover events, which feels broken (especially when
+    // the wheel was readonly and only showed a callout). A document-level capture
+    // listener preventDefaults wheel events that are NOT on our scroll surface (the
+    // viewport `vp`); it self-removes once a gesture-length gap passes, so a
+    // genuinely new gesture on the page scrolls normally. The check is `vp`, not
+    // `el`: an event inside the container but outside the viewport (padding, the
+    // overlays) isn't handled by our onWheel, so it too must be prevented or it
+    // would scroll an ancestor.
+    let gestureGuardTimer = null;
+    const onDocumentWheel = (documentWheelEvent) => {
+      if (vp.contains(documentWheelEvent.target)) {
+        return; // on the scroll surface → its own onWheel handles it
+      }
+      documentWheelEvent.preventDefault();
+      keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
+    };
+    const stopClaimingGesture = () => {
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = null;
+      document.removeEventListener("wheel", onDocumentWheel, { capture: true });
+    };
+    const keepClaimingGesture = () => {
+      if (!gestureGuardTimer) {
+        document.addEventListener("wheel", onDocumentWheel, {
+          capture: true,
+          passive: false,
+        });
+      }
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = setTimeout(
+        stopClaimingGesture,
+        WHEEL_GESTURE_MAX_GAP,
+      );
+    };
+
+    const onWheel = (e) => {
+      const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
+      if (!raw) {
+        return;
+      }
+      // Normalise to pixels: line-mode → one row, page-mode → a viewport.
+      let delta = raw;
+      if (e.deltaMode === 1) {
+        delta = raw * getItemSize(vp);
+      } else if (e.deltaMode === 2) {
+        delta = raw * viewportMain(vp);
+      }
+      // Cap one wheel step to a single row so a chunky mouse notch (often ~100px)
+      // advances one value like a native picker, instead of jumping three. A
+      // trackpad's small deltas stay under the cap and scroll smoothly.
+      const itemSize = getItemSize(vp);
+      if (delta > itemSize) {
+        delta = itemSize;
+      } else if (delta < -itemSize) {
+        delta = -itemSize;
+      }
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
+          // Always trap the scroll (like overscroll-behavior: contain): the page
+          // never scrolls from within a wheel, even at a bounded end. setPos clamps
+          // a non-looping wheel, so an overscroll past the end is simply a no-op.
+          e.preventDefault();
+          cancelAnim();
+          // Track the scroll velocity (px/ms, capped) so the settle lands on the row
+          // the scroll was heading for. Clamp dt so a first event / long pause after
+          // one doesn't blow the estimate up.
+          const now = performance.now();
+          const gap = now - lastWheelTime;
+          const dt = clampNumber(gap, 8, 120);
+          lastWheelTime = now;
+          wheelVelocity = clampNumber(
+            delta / dt,
+            -WHEEL_MAX_VELOCITY,
+            WHEEL_MAX_VELOCITY,
+          );
+          // First event of a fresh gesture: advance one item whatever the delta, so
+          // even the lightest scroll snaps to the next (like native scroll-snap on a
+          // section). Force the settle onto the adjacent row in the scroll direction.
+          if (gap > WHEEL_GESTURE_MAX_GAP && itemSize > 0) {
+            let target =
+              snapPosToRow(vp, posRef.current) +
+              (delta < 0 ? -itemSize : itemSize);
+            if (!isLoop) {
+              const count = trackedItemsRef.current.length;
+              target = clampNumber(target, 0, (count - 1) * itemSize);
+            }
+            wheelForcedTarget = target;
+          } else {
+            wheelForcedTarget = null;
+          }
+          setPos(vp, posRef.current + delta);
+          scheduleWheelSettle();
+          keepClaimingGesture();
+        },
+        prevented: () => {
+          // Blocked (readonly/disabled/busy): the gate showed the callout; trap
+          // the scroll so the page doesn't move under the control the user is
+          // trying to use, now and for the rest of this gesture even off-element.
+          e.preventDefault();
+          keepClaimingGesture();
+        },
+      });
+    };
+
+    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
+    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
+    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
+    // scroller to drive here, so this is the seam external code (e.g. a demo
+    // comparing this wheel against a native scroll-snap list) uses to move it.
+    const onNaviScroll = (e) => {
+      if (!e.detail) {
+        return;
+      }
+      let delta = e.detail.delta || 0;
+      if (e.detail.items) {
+        delta += e.detail.items * getItemSize(vp);
+      }
+      if (!delta) {
+        return;
+      }
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
+          cancelAnim();
+          if (e.detail.behavior === "smooth") {
+            // Glide to the nearest row after the nudge (a sub-row nudge springs
+            // back); a whole-row/items delta already lands on a row.
+            glideTo(vp, snapPosToRow(vp, posRef.current + delta));
+          } else {
+            setPos(vp, posRef.current + delta);
+            scheduleSettle();
+          }
+        },
+      });
+    };
+
+    // Cursor by POSITION, not by which row is under the pointer: the center
+    // window (already-selected value) is a plain cursor, everywhere else is a
+    // pointer (click to select). Set on the viewport — the rows inherit it — so a
+    // fixed mouse doesn't flicker between default/pointer as rows scroll under it.
+    const updateCursor = (e) => {
+      if (!interactive) {
+        vp.style.cursor = "default";
+        return;
+      }
+      const rect = vp.getBoundingClientRect();
+      const along = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top;
+      const size = isHorizontal ? rect.width : rect.height;
+      const half = getItemSize(vp) / 2;
+      const mid = size / 2;
+      const inCenter = along >= mid - half && along <= mid + half;
+      vp.style.cursor = inCenter ? "default" : "pointer";
+    };
+
+    let drag = null;
+    const onPointerDown = (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) {
+        return;
+      }
+      attemptInteraction({
+        event: e,
+        name: "select",
+        allowed: () => {
+          // Do NOT cancel the glide here: a click that isn't a drag should let the
+          // in-flight glide keep running and just nudge its target (smooth, like
+          // arrows). The glide is only cancelled once a real drag starts (below).
+          const client = isHorizontal ? e.clientX : e.clientY;
+          drag = {
+            pointerId: e.pointerId,
+            startClient: client,
+            startPos: posRef.current,
+            lastClient: client,
+            lastTime: performance.now(),
+            velocity: 0,
+            moved: false,
+            captured: false,
+          };
+          // Capture on pointerDOWN, not on first move: a fast drag can leave the
+          // viewport before the first pointermove fires, and without capture the
+          // pointerup then lands outside and is never caught — leaving `drag` set
+          // so the wheel keeps scrolling after release. Capture routes every
+          // move/up back here regardless of where the pointer goes.
+          try {
+            vp.setPointerCapture(e.pointerId);
+            drag.captured = true;
+          } catch {
+            // pointer already gone (e.g. released same tick) — nothing to capture.
+          }
+        },
+      });
+    };
+    const onPointerMove = (e) => {
+      if (!drag) {
+        updateCursor(e); // hovering (no button): keep the position cursor fresh
+        return;
+      }
+      if (e.pointerId !== drag.pointerId) {
+        return;
+      }
+      // Safety net for a missed pointerup: if the mouse button is no longer held
+      // while we still think we're dragging, the release was lost (it can land
+      // outside a capture, or be swallowed). End the drag now instead of letting
+      // the wheel keep following the released pointer. Only for mouse — touch/pen
+      // report buttons=0 during a normal move, so we rely on pointerup/cancel there.
+      if (e.pointerType === "mouse" && e.buttons === 0) {
+        endDrag(e);
+        return;
+      }
+      const client = isHorizontal ? e.clientX : e.clientY;
+      if (!drag.moved && Math.abs(client - drag.startClient) > 3) {
+        // A real drag begins: stop the glide and re-anchor to here so the wheel
+        // doesn't jump (startPos = the just-frozen position, startClient = now).
+        drag.moved = true;
+        cancelAnim();
+        drag.startPos = posRef.current;
+        drag.startClient = client;
+      }
+      if (!drag.moved) {
+        return;
+      }
+      const total = client - drag.startClient;
+      const now = performance.now();
+      const dt = now - drag.lastTime;
+      if (dt > 0) {
+        drag.velocity = (client - drag.lastClient) / dt;
+      }
+      drag.lastClient = client;
+      drag.lastTime = now;
+      // Finger down → content down → position decreases.
+      setPos(vp, drag.startPos - total);
+    };
+    const endDrag = (e) => {
+      const wasDrag = drag.moved;
+      let velocity = drag.velocity;
+      // If the pointer sat still for a moment before release, don't fling: a stale
+      // velocity from an earlier fast move would send the wheel gliding after the
+      // user had already stopped. (No pointermove fires while still, so the last
+      // computed velocity lingers.)
+      if (performance.now() - drag.lastTime > 60) {
+        velocity = 0;
+      }
+      if (drag.captured) {
+        try {
+          vp.releasePointerCapture(drag.pointerId);
+        } catch {
+          // capture already lost (e.g. the pointer is gone) — nothing to release.
+        }
+      }
+      drag = null;
+      if (!wasDrag) {
+        // A tap: step by the click's row-distance from the center window, NOT by
+        // the item under the pointer. The pointer sits over a static zone while
+        // rows scroll beneath it, so a fast series of clicks in the "one below"
+        // zone each add +1 to the target and accumulate — the glide catches up.
+        const rect = vp.getBoundingClientRect();
+        const along = isHorizontal
+          ? e.clientX - rect.left
+          : e.clientY - rect.top;
+        const size = isHorizontal ? rect.width : rect.height;
+        const offset = Math.round((along - size / 2) / getItemSize(vp));
+        if (offset !== 0) {
+          stepTarget(vp, offset, e);
+        } else {
+          // Clicked the center zone: no step, but the pointerdown cancelled any
+          // in-flight glide (freezing the position), so snap cleanly to the row.
+          settle(vp, 0);
+        }
+        return;
+      }
+      // Position moves opposite to the finger.
+      settle(vp, -velocity);
+    };
+    const onPointerUp = (e) => {
+      if (!drag || e.pointerId !== drag.pointerId) {
+        return;
+      }
+      endDrag(e);
+    };
+
+    vp.addEventListener("wheel", onWheel, { passive: false });
+    vp.addEventListener("pointerdown", onPointerDown);
+    vp.addEventListener("pointermove", onPointerMove);
+    vp.addEventListener("pointerup", onPointerUp);
+    vp.addEventListener("pointercancel", onPointerUp);
+    // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
+    // ends the gesture too — otherwise the drag would stay latched.
+    vp.addEventListener("lostpointercapture", onPointerUp);
+    el.addEventListener("navi_scroll", onNaviScroll);
+    return () => {
+      clearTimeout(settleTimer);
+      stopClaimingGesture();
+      cancelAnim();
+      vp.removeEventListener("wheel", onWheel);
+      vp.removeEventListener("pointerdown", onPointerDown);
+      vp.removeEventListener("pointermove", onPointerMove);
+      vp.removeEventListener("pointerup", onPointerUp);
+      vp.removeEventListener("pointercancel", onPointerUp);
+      vp.removeEventListener("lostpointercapture", onPointerUp);
+      el.removeEventListener("navi_scroll", onNaviScroll);
+    };
+  }, [isLoop, isHorizontal, interactive]);
+};
+
+// Keyboard: the spinbutton container is the single focusable element. The
+// main-axis arrows step the value by one row (a fast, focus-free value change,
+// unlike a radio group that moves DOM focus per step); the value updates
+// immediately (for AT) while the row glides to center. Home/End jump to the ends.
+// Keys the wheel doesn't step on (Enter, Escape, …) are forwarded to the facade
+// input handler so the wheel submits/cancels like any control. Cross-axis arrows
+// are left for the WheelGroup to move focus between wheels.
+const useWheelKeyboard = ({
+  ref,
+  isHorizontal,
+  isLoop,
+  interactive,
+  trackedItemsRef,
+  hostKeyDownRef,
+  attemptInteraction,
+  glideToIndex,
+  stepTarget,
+}) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const vp = el.querySelector(".navi_wheel_viewport");
+    const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
+    const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+    const stepKeys = new Set([prevKey, nextKey, "Home", "End"]);
+    const onKeyDown = (e) => {
+      if (!stepKeys.has(e.key)) {
+        // Keys the wheel doesn't step on (Enter, Escape, …) go to the facade
+        // input handler so the wheel behaves like any other control: Enter
+        // submits the enclosing form or sends the enclosing picker, Escape
+        // closes it. See hostKeyDownRef above.
+        hostKeyDownRef.current?.(e);
+        return;
+      }
+      // Swallow the key in both branches (so arrows never scroll the page); a
+      // blocked wheel (readonly is focusable, so arrows can reach it) pops the
+      // matching callout instead of stepping.
+      attemptInteraction({
+        event: e,
+        name: "step",
+        allowed: () => {
+          e.preventDefault();
+          if (e.key === "Home" || e.key === "End") {
+            const count = trackedItemsRef.current.length;
+            if (!count) {
+              return;
+            }
+            glideToIndex(vp, e.key === "Home" ? 0 : count - 1, e);
+          } else {
+            // Steps from the TARGET, so a second press mid-glide accumulates (the
+            // spring accelerates toward the farther target).
+            stepTarget(vp, e.key === nextKey ? 1 : -1, e);
+          }
+        },
+        prevented: () => {
+          e.preventDefault();
+        },
+      });
+    };
+    el.addEventListener("keydown", onKeyDown);
+    return () => {
+      el.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isHorizontal, interactive, isLoop]);
+};
+
 function WheelUI(props) {
   import.meta.css = css;
   const {
@@ -1161,395 +1591,37 @@ function WheelUI(props) {
     syncCenterToSelection(viewportEl, "auto");
   });
 
-  // Input: wheel + pointer drag drive the virtual position; a short idle after
-  // wheel, or the end of a drag's momentum, snaps to the nearest value. When the
-  // wheel is readonly/disabled/busy the interaction gate (attemptInteraction)
-  // shows the matching callout instead of moving, and traps the page scroll.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const vp = el.querySelector(".navi_wheel_viewport");
-    let settleTimer = null;
-    // Last wheel event's scroll velocity (px/ms, signed) and timestamp, so the
-    // settle can snap to the row the scroll was heading for (see wheelSettle).
-    let wheelVelocity = 0;
-    let lastWheelTime = 0;
-    // Set on the first event of a gesture to force the settle onto the adjacent row
-    // (native-like: the slightest scroll still snaps to the next item); null once
-    // the gesture continues, so momentum projection takes over.
-    let wheelForcedTarget = null;
+  useWheelInteractions({
+    ref,
+    isHorizontal,
+    isLoop,
+    interactive,
+    posRef,
+    trackedItemsRef,
+    clampNumber,
+    attemptInteraction,
+    cancelAnim,
+    setPos,
+    snapPosToRow,
+    getItemSize,
+    viewportMain,
+    settle,
+    wheelSettle,
+    glideTo,
+    stepTarget,
+  });
 
-    // Non-wheel settle (drag momentum, programmatic jump): spring to the nearest row.
-    const scheduleSettle = () => {
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => settle(vp, 0), 90);
-    };
-    // Wheel settle: fire soon after the last wheel event and land on the projected
-    // row (velocity-biased), not after a long idle then a spring to nearest.
-    const scheduleWheelSettle = () => {
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(
-        () => wheelSettle(vp, wheelVelocity, wheelForcedTarget),
-        WHEEL_SETTLE_DELAY,
-      );
-    };
-
-    // Once this wheel has claimed a wheel gesture, keep swallowing the rest of that
-    // gesture's events even if the pointer drifts off onto the page — otherwise the
-    // document scrolls under the leftover events, which feels broken (especially when
-    // the wheel was readonly and only showed a callout). A document-level capture
-    // listener preventDefaults wheel events that are NOT on our scroll surface (the
-    // viewport `vp`); it self-removes once a gesture-length gap passes, so a
-    // genuinely new gesture on the page scrolls normally. The check is `vp`, not
-    // `el`: an event inside the container but outside the viewport (padding, the
-    // overlays) isn't handled by our onWheel, so it too must be prevented or it
-    // would scroll an ancestor.
-    let gestureGuardTimer = null;
-    const onDocumentWheel = (documentWheelEvent) => {
-      if (vp.contains(documentWheelEvent.target)) {
-        return; // on the scroll surface → its own onWheel handles it
-      }
-      documentWheelEvent.preventDefault();
-      keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
-    };
-    const stopClaimingGesture = () => {
-      clearTimeout(gestureGuardTimer);
-      gestureGuardTimer = null;
-      document.removeEventListener("wheel", onDocumentWheel, { capture: true });
-    };
-    const keepClaimingGesture = () => {
-      if (!gestureGuardTimer) {
-        document.addEventListener("wheel", onDocumentWheel, {
-          capture: true,
-          passive: false,
-        });
-      }
-      clearTimeout(gestureGuardTimer);
-      gestureGuardTimer = setTimeout(
-        stopClaimingGesture,
-        WHEEL_GESTURE_MAX_GAP,
-      );
-    };
-
-    const onWheel = (e) => {
-      const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
-      if (!raw) {
-        return;
-      }
-      // Normalise to pixels: line-mode → one row, page-mode → a viewport.
-      let delta = raw;
-      if (e.deltaMode === 1) {
-        delta = raw * getItemSize(vp);
-      } else if (e.deltaMode === 2) {
-        delta = raw * viewportMain(vp);
-      }
-      // Cap one wheel step to a single row so a chunky mouse notch (often ~100px)
-      // advances one value like a native picker, instead of jumping three. A
-      // trackpad's small deltas stay under the cap and scroll smoothly.
-      const itemSize = getItemSize(vp);
-      if (delta > itemSize) {
-        delta = itemSize;
-      } else if (delta < -itemSize) {
-        delta = -itemSize;
-      }
-      attemptInteraction({
-        event: e,
-        name: "scroll",
-        allowed: () => {
-          // Always trap the scroll (like overscroll-behavior: contain): the page
-          // never scrolls from within a wheel, even at a bounded end. setPos clamps
-          // a non-looping wheel, so an overscroll past the end is simply a no-op.
-          e.preventDefault();
-          cancelAnim();
-          // Track the scroll velocity (px/ms, capped) so the settle lands on the row
-          // the scroll was heading for. Clamp dt so a first event / long pause after
-          // one doesn't blow the estimate up.
-          const now = performance.now();
-          const gap = now - lastWheelTime;
-          const dt = clampNumber(gap, 8, 120);
-          lastWheelTime = now;
-          wheelVelocity = clampNumber(
-            delta / dt,
-            -WHEEL_MAX_VELOCITY,
-            WHEEL_MAX_VELOCITY,
-          );
-          // First event of a fresh gesture: advance one item whatever the delta, so
-          // even the lightest scroll snaps to the next (like native scroll-snap on a
-          // section). Force the settle onto the adjacent row in the scroll direction.
-          if (gap > WHEEL_GESTURE_MAX_GAP && itemSize > 0) {
-            let target =
-              snapPosToRow(vp, posRef.current) +
-              (delta < 0 ? -itemSize : itemSize);
-            if (!isLoop) {
-              const count = trackedItemsRef.current.length;
-              target = clampNumber(target, 0, (count - 1) * itemSize);
-            }
-            wheelForcedTarget = target;
-          } else {
-            wheelForcedTarget = null;
-          }
-          setPos(vp, posRef.current + delta);
-          scheduleWheelSettle();
-          keepClaimingGesture();
-        },
-        prevented: () => {
-          // Blocked (readonly/disabled/busy): the gate showed the callout; trap
-          // the scroll so the page doesn't move under the control the user is
-          // trying to use, now and for the rest of this gesture even off-element.
-          e.preventDefault();
-          keepClaimingGesture();
-        },
-      });
-    };
-
-    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
-    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
-    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
-    // scroller to drive here, so this is the seam external code (e.g. a demo
-    // comparing this wheel against a native scroll-snap list) uses to move it.
-    const onNaviScroll = (e) => {
-      if (!e.detail) {
-        return;
-      }
-      let delta = e.detail.delta || 0;
-      if (e.detail.items) {
-        delta += e.detail.items * getItemSize(vp);
-      }
-      if (!delta) {
-        return;
-      }
-      attemptInteraction({
-        event: e,
-        name: "scroll",
-        allowed: () => {
-          cancelAnim();
-          if (e.detail.behavior === "smooth") {
-            // Glide to the nearest row after the nudge (a sub-row nudge springs
-            // back); a whole-row/items delta already lands on a row.
-            glideTo(vp, snapPosToRow(vp, posRef.current + delta));
-          } else {
-            setPos(vp, posRef.current + delta);
-            scheduleSettle();
-          }
-        },
-      });
-    };
-
-    // Cursor by POSITION, not by which row is under the pointer: the center
-    // window (already-selected value) is a plain cursor, everywhere else is a
-    // pointer (click to select). Set on the viewport — the rows inherit it — so a
-    // fixed mouse doesn't flicker between default/pointer as rows scroll under it.
-    const updateCursor = (e) => {
-      if (!interactive) {
-        vp.style.cursor = "default";
-        return;
-      }
-      const rect = vp.getBoundingClientRect();
-      const along = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top;
-      const size = isHorizontal ? rect.width : rect.height;
-      const half = getItemSize(vp) / 2;
-      const mid = size / 2;
-      const inCenter = along >= mid - half && along <= mid + half;
-      vp.style.cursor = inCenter ? "default" : "pointer";
-    };
-
-    let drag = null;
-    const onPointerDown = (e) => {
-      if (e.pointerType === "mouse" && e.button !== 0) {
-        return;
-      }
-      attemptInteraction({
-        event: e,
-        name: "select",
-        allowed: () => {
-          // Do NOT cancel the glide here: a click that isn't a drag should let the
-          // in-flight glide keep running and just nudge its target (smooth, like
-          // arrows). The glide is only cancelled once a real drag starts (below).
-          const client = isHorizontal ? e.clientX : e.clientY;
-          drag = {
-            pointerId: e.pointerId,
-            startClient: client,
-            startPos: posRef.current,
-            lastClient: client,
-            lastTime: performance.now(),
-            velocity: 0,
-            moved: false,
-            captured: false,
-          };
-          // Capture on pointerDOWN, not on first move: a fast drag can leave the
-          // viewport before the first pointermove fires, and without capture the
-          // pointerup then lands outside and is never caught — leaving `drag` set
-          // so the wheel keeps scrolling after release. Capture routes every
-          // move/up back here regardless of where the pointer goes.
-          try {
-            vp.setPointerCapture(e.pointerId);
-            drag.captured = true;
-          } catch {
-            // pointer already gone (e.g. released same tick) — nothing to capture.
-          }
-        },
-      });
-    };
-    const onPointerMove = (e) => {
-      if (!drag) {
-        updateCursor(e); // hovering (no button): keep the position cursor fresh
-        return;
-      }
-      if (e.pointerId !== drag.pointerId) {
-        return;
-      }
-      // Safety net for a missed pointerup: if the mouse button is no longer held
-      // while we still think we're dragging, the release was lost (it can land
-      // outside a capture, or be swallowed). End the drag now instead of letting
-      // the wheel keep following the released pointer. Only for mouse — touch/pen
-      // report buttons=0 during a normal move, so we rely on pointerup/cancel there.
-      if (e.pointerType === "mouse" && e.buttons === 0) {
-        endDrag(e);
-        return;
-      }
-      const client = isHorizontal ? e.clientX : e.clientY;
-      if (!drag.moved && Math.abs(client - drag.startClient) > 3) {
-        // A real drag begins: stop the glide and re-anchor to here so the wheel
-        // doesn't jump (startPos = the just-frozen position, startClient = now).
-        drag.moved = true;
-        cancelAnim();
-        drag.startPos = posRef.current;
-        drag.startClient = client;
-      }
-      if (!drag.moved) {
-        return;
-      }
-      const total = client - drag.startClient;
-      const now = performance.now();
-      const dt = now - drag.lastTime;
-      if (dt > 0) {
-        drag.velocity = (client - drag.lastClient) / dt;
-      }
-      drag.lastClient = client;
-      drag.lastTime = now;
-      // Finger down → content down → position decreases.
-      setPos(vp, drag.startPos - total);
-    };
-    const endDrag = (e) => {
-      const wasDrag = drag.moved;
-      let velocity = drag.velocity;
-      // If the pointer sat still for a moment before release, don't fling: a stale
-      // velocity from an earlier fast move would send the wheel gliding after the
-      // user had already stopped. (No pointermove fires while still, so the last
-      // computed velocity lingers.)
-      if (performance.now() - drag.lastTime > 60) {
-        velocity = 0;
-      }
-      if (drag.captured) {
-        try {
-          vp.releasePointerCapture(drag.pointerId);
-        } catch {
-          // capture already lost (e.g. the pointer is gone) — nothing to release.
-        }
-      }
-      drag = null;
-      if (!wasDrag) {
-        // A tap: step by the click's row-distance from the center window, NOT by
-        // the item under the pointer. The pointer sits over a static zone while
-        // rows scroll beneath it, so a fast series of clicks in the "one below"
-        // zone each add +1 to the target and accumulate — the glide catches up.
-        const rect = vp.getBoundingClientRect();
-        const along = isHorizontal
-          ? e.clientX - rect.left
-          : e.clientY - rect.top;
-        const size = isHorizontal ? rect.width : rect.height;
-        const offset = Math.round((along - size / 2) / getItemSize(vp));
-        if (offset !== 0) {
-          stepTarget(vp, offset, e);
-        } else {
-          // Clicked the center zone: no step, but the pointerdown cancelled any
-          // in-flight glide (freezing the position), so snap cleanly to the row.
-          settle(vp, 0);
-        }
-        return;
-      }
-      // Position moves opposite to the finger.
-      settle(vp, -velocity);
-    };
-    const onPointerUp = (e) => {
-      if (!drag || e.pointerId !== drag.pointerId) {
-        return;
-      }
-      endDrag(e);
-    };
-
-    vp.addEventListener("wheel", onWheel, { passive: false });
-    vp.addEventListener("pointerdown", onPointerDown);
-    vp.addEventListener("pointermove", onPointerMove);
-    vp.addEventListener("pointerup", onPointerUp);
-    vp.addEventListener("pointercancel", onPointerUp);
-    // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
-    // ends the gesture too — otherwise the drag would stay latched.
-    vp.addEventListener("lostpointercapture", onPointerUp);
-    el.addEventListener("navi_scroll", onNaviScroll);
-    return () => {
-      clearTimeout(settleTimer);
-      stopClaimingGesture();
-      cancelAnim();
-      vp.removeEventListener("wheel", onWheel);
-      vp.removeEventListener("pointerdown", onPointerDown);
-      vp.removeEventListener("pointermove", onPointerMove);
-      vp.removeEventListener("pointerup", onPointerUp);
-      vp.removeEventListener("pointercancel", onPointerUp);
-      vp.removeEventListener("lostpointercapture", onPointerUp);
-      el.removeEventListener("navi_scroll", onNaviScroll);
-    };
-  }, [isLoop, isHorizontal, interactive]);
-
-  // Keyboard: the spinbutton container is the single focusable element. The
-  // main-axis arrows step the value by one row (a fast, focus-free value change,
-  // unlike a radio group that moves DOM focus per step); the value updates
-  // immediately (for AT) while the row glides to center. Cross-axis arrows are
-  // left for the WheelGroup to move focus between wheels.
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const vp = el.querySelector(".navi_wheel_viewport");
-    const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
-    const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
-    const stepKeys = new Set([prevKey, nextKey, "Home", "End"]);
-    const onKeyDown = (e) => {
-      if (!stepKeys.has(e.key)) {
-        // Keys the wheel doesn't step on (Enter, Escape, …) go to the facade
-        // input handler so the wheel behaves like any other control: Enter
-        // submits the enclosing form or sends the enclosing picker, Escape
-        // closes it. See hostKeyDownRef above.
-        hostKeyDownRef.current?.(e);
-        return;
-      }
-      // Swallow the key in both branches (so arrows never scroll the page); a
-      // blocked wheel (readonly is focusable, so arrows can reach it) pops the
-      // matching callout instead of stepping.
-      attemptInteraction({
-        event: e,
-        name: "step",
-        allowed: () => {
-          e.preventDefault();
-          if (e.key === "Home" || e.key === "End") {
-            const count = trackedItemsRef.current.length;
-            if (!count) {
-              return;
-            }
-            glideToIndex(vp, e.key === "Home" ? 0 : count - 1, e);
-          } else {
-            // Steps from the TARGET, so a second press mid-glide accumulates (the
-            // spring accelerates toward the farther target).
-            stepTarget(vp, e.key === nextKey ? 1 : -1, e);
-          }
-        },
-        prevented: () => {
-          e.preventDefault();
-        },
-      });
-    };
-    el.addEventListener("keydown", onKeyDown);
-    return () => {
-      el.removeEventListener("keydown", onKeyDown);
-    };
-  }, [isHorizontal, interactive, isLoop]);
+  useWheelKeyboard({
+    ref,
+    isHorizontal,
+    isLoop,
+    interactive,
+    trackedItemsRef,
+    hostKeyDownRef,
+    attemptInteraction,
+    glideToIndex,
+    stepTarget,
+  });
 
   return (
     <Box
