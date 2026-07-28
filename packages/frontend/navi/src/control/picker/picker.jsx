@@ -546,6 +546,7 @@ const MOBILE_KEYBOARD_TYPES = new Set([
   "password",
   "tel",
   "number",
+  "navi_js",
 ]);
 
 const PICKER_BUTTON_PSEUDO_CLASSES = [

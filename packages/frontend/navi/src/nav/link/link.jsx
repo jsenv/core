@@ -8,7 +8,6 @@ import {
 } from "../../control/selection/selection.jsx";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
-  LinkAnchorSvg,
   LinkBlankTargetSvg,
   LinkGithubSvg,
   LinkSmsSvg,
@@ -164,6 +163,12 @@ const css = /* css */ `
         width: var(--link-current-indicator-size);
         height: 100%;
       }
+    }
+
+    [data-icon-text] {
+      display: inline-block; /* Allow to skip the underlining */
+      font-size: 80%;
+      vertical-align: text-top;
     }
 
     /* Interactive */
@@ -584,10 +589,10 @@ const LinkPlain = (props) => {
       } else if (anchorIcon === undefined) {
         if (anchor) {
           if (!children) {
-            innerEndIcon = <LinkAnchorSvg />;
+            innerEndIcon = "⤵";
           }
         } else if (isAnchor) {
-          innerEndIcon = <LinkAnchorSvg />;
+          innerEndIcon = "⤵";
         }
       } else {
         innerEndIcon = anchorIcon;

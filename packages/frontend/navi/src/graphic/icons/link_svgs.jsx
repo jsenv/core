@@ -13,6 +13,21 @@ export const LinkBlankTargetSvg = () => {
   );
 };
 
+export const ArrowTurningDownRightSvg = () => {
+  return (
+    <svg viewBox="0 0 16 16">
+      <path
+        d="M5.5 3V10H12M9 7 12 10 9 13"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
 export const LinkAnchorSvg = () => {
   return (
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
