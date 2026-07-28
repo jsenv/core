@@ -415,7 +415,7 @@ const css = /* css */ `
   .navi_wheel_colon {
     display: block;
     width: auto;
-    height: 1em;
+    height: round(1em, 1px);
   }
 `;
 
@@ -626,6 +626,14 @@ function WheelUI(props) {
     );
   const uiStateController = getUIStateControllerById(controlHostProps.id);
   const { basePseudoState, children } = controlHostProps;
+  // The facade's own keydown handler (Enter → submit form / send picker, Escape
+  // → close, …) is wired to the hidden input, which is never focused (focus is
+  // on the spinbutton container). Held in a ref so the container's keydown
+  // effect can forward the keys it doesn't handle to it — mirroring how
+  // picker.jsx re-dispatches bubbling keydowns to its input. Recreated each
+  // render, so a stable ref (not a dependency) keeps the effect from re-binding.
+  const hostKeyDownRef = useRef();
+  hostKeyDownRef.current = controlHostProps.onKeyDown;
   const loading = basePseudoState[":-navi-loading"];
   const readOnly = basePseudoState[":read-only"];
   const disabled = basePseudoState[":disabled"];
@@ -1502,6 +1510,11 @@ function WheelUI(props) {
     const stepKeys = new Set([prevKey, nextKey, "Home", "End"]);
     const onKeyDown = (e) => {
       if (!stepKeys.has(e.key)) {
+        // Keys the wheel doesn't step on (Enter, Escape, …) go to the facade
+        // input handler so the wheel behaves like any other control: Enter
+        // submits the enclosing form or sends the enclosing picker, Escape
+        // closes it. See hostKeyDownRef above.
+        hostKeyDownRef.current?.(e);
         return;
       }
       // Swallow the key in both branches (so arrows never scroll the page); a
