@@ -5,14 +5,64 @@
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Picker Wheel Demo</title>
+    <style>
+      body {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #222;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .repro {
+        margin: 0 0 20px;
+        padding: 12px 14px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .value {
+        padding: 6px 10px;
+        font-family: monospace;
+        background: #f4f4f5;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+      }
+    </style>
   </head>
   <body>
-    <h1>Wheel Demo</h1>
+    <h1>Picker + Wheel — performance repro</h1>
+    <p class="repro">
+      Standalone, minimal reproduction of the slow commit.
+      <code>mode="dialog"</code>
+      forces the dialog surface (Annuler / Définir) on desktop too — the default
+      is popover on desktop, dialog on mobile.
+      <br />
+      <strong>To reproduce:</strong> open the picker, scroll the minutes wheel a
+      lot, wait for the glide to finish, then click <strong>Définir</strong>.
+      The dialog takes a long time to close. With
+      <code>NaviDebug debugAll</code> on, the console shows
+      <code>[command] "--navi-define" implementation ran in Xms</code> — X is
+      the synchronous cost.
+    </p>
+
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
       import {
         NaviDebug,
         Time,
@@ -20,49 +70,105 @@
         WheelGroup,
         Picker,
         usePickerMode,
-        Form,
         Button,
         Box,
-        Link,
         Unit,
       } from "@jsenv/navi";
 
-      const App = () => {
-        const [duration, setDuration] = useState({});
-
-        return (
-          <NaviDebug debugAll>
-            <Picker
-              type="controlgroup"
-              ui={<DurationWheelUI />}
-              placeholder="Choisir une durée"
-              popupWidthFitContent
-              // animation
-              scrollCapture="dialog"
-              action={(v) => {
-                setDuration(v);
-              }}
-            >
-              <DurationPickerContent />
-            </Picker>
-
-            <span className="col-label">
-              {pad2(duration.hours ?? durationHoursSignal.value)}:
-              {pad2(duration.minutes ?? durationMinutesSignal.value)}
-            </span>
-          </NaviDebug>
-        );
-      };
+      const pad2 = (n) => String(n).padStart(2, "0");
 
       const DURATION_HOURS = [1, 2, 3, 4, 5];
       const DURATION_MINUTES = [0, 15, 30, 45];
       const durationHoursSignal = signal(DURATION_HOURS[0]);
       const durationMinutesSignal = signal(DURATION_MINUTES[0]);
-      const DurationWheelUI = () => {
+
+      // The picker trigger display.
+      const DurationWheelUI = () => (
+        <Time type="time">
+          {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+        </Time>
+      );
+
+      // The hours/minutes wheels. `big` scales them up for the dialog surface.
+      const DurationWheelsGroup = ({ big }) => (
+        <WheelGroup>
+          <Wheel
+            name="hours"
+            type="integer"
+            signal={durationHoursSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_HOURS.map((h) => (
+              <Wheel.Item key={h} value={h} paddingX="s">
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          <WheelGroup.Separator size={big ? "xxl" : undefined}>
+            <Unit unit="hour" format="short" size="inherit" />
+          </WheelGroup.Separator>
+          <Wheel
+            name="minutes"
+            type="integer"
+            signal={durationMinutesSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_MINUTES.map((m) => (
+              <Wheel.Item key={m} value={m} paddingX="s">
+                {pad2(m)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        </WheelGroup>
+      );
+
+      // Dialog surface: bigger wheels + explicit Annuler / Définir actions.
+      const DurationPickerContent = () => {
+        const mode = usePickerMode();
+        if (mode === "dialog") {
+          return (
+            <Box flex="y" spacing="l" padding="xl" alignX="center">
+              <DurationWheelsGroup big />
+              <Box flex="x" spacing="s" alignX="end" expandX>
+                <Button command="--navi-cancel" variant="discrete">
+                  Annuler
+                </Button>
+                <Button command="--navi-define" variant="discrete">
+                  Définir
+                </Button>
+              </Box>
+            </Box>
+          );
+        }
         return (
-          <Time type="time">
-            {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
-          </Time>
+          <Box padding="s">
+            <DurationWheelsGroup />
+          </Box>
+        );
+      };
+
+      const App = () => {
+        const [duration, setDuration] = useState({});
+        return (
+          <NaviDebug debugAll>
+            <div class="row">
+              <Picker
+                type="controlgroup"
+                mode="dialog"
+                ui={<DurationWheelUI />}
+                placeholder="Choisir une durée"
+                popupWidthFitContent
+                scrollCapture="dialog"
+                action={(v) => setDuration(v)}
+              >
+                <DurationPickerContent />
+              </Picker>
+              <span class="value">
+                {pad2(duration.hours ?? durationHoursSignal.value)}:
+                {pad2(duration.minutes ?? durationMinutesSignal.value)}
+              </span>
+            </div>
+          </NaviDebug>
         );
       };
 
