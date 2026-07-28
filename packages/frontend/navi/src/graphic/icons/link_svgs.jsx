@@ -15,7 +15,7 @@ export const LinkBlankTargetSvg = () => {
 
 export const ArrowTurningDownRightSvg = () => {
   return (
-    <svg viewBox="0 0 16 16">
+    <svg viewBox="5.4 3.4 6.2 9.2">
       <path
         d="M6 4H7.5Q9 4 9 5.5V12M7 9.5 9 12 11 9.5"
         fill="none"
