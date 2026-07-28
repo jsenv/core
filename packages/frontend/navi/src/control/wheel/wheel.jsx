@@ -420,14 +420,18 @@ const css = /* css */ `
   }
 `;
 
-// Fling physics (px per ms). Velocity is capped so even a violent fling travels
-// only a handful of rows (a picker isn't a free-scrolling list — overshooting
-// dozens of values feels wrong). Each frame the velocity is multiplied by
-// WHEEL_DECAY^(dt/16); lower stops sooner. Below the snap threshold the settle
-// loop switches from momentum to a spring that eases into the nearest row
-// center; the spring factor is how far toward that center it moves per frame.
+// Fling physics (px per ms). WHEEL_MAX_VELOCITY caps the MOUSE-WHEEL settle
+// projection (kept small — a notch shouldn't fling far). A touch/pointer drag
+// fling goes through settle() instead and gets its own, much larger cap
+// (WHEEL_FLING_MAX_VELOCITY) so a hard swipe carries across the list like a
+// native scroller — a fast finger easily reaches 5-10 px/ms and shouldn't be
+// clipped to a few rows. Each frame the velocity is multiplied by
+// WHEEL_DECAY^(dt/16); closer to 1 coasts further. Below the snap threshold the
+// settle loop switches from momentum to a spring that eases into the nearest
+// row center; the spring factor is how far toward that center it moves per frame.
 const WHEEL_MAX_VELOCITY = 1;
-const WHEEL_DECAY = 0.88;
+const WHEEL_FLING_MAX_VELOCITY = 10;
+const WHEEL_DECAY = 0.95;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
@@ -1455,7 +1459,14 @@ function WheelUI(props) {
   // overshoots only a handful of rows (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
-    let v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
+    // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
+    // so a hard swipe carries across the list instead of being clipped to a few
+    // rows. The mouse wheel never reaches here (it uses wheelSettle/glide).
+    let v = clampNumber(
+      velocity,
+      -WHEEL_FLING_MAX_VELOCITY,
+      WHEEL_FLING_MAX_VELOCITY,
+    );
     let last = performance.now();
     let snapping = Math.abs(v) < WHEEL_SNAP_VELOCITY;
     const step = (now) => {
