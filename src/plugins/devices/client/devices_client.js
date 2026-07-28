@@ -94,7 +94,53 @@ const formatArg = (arg) => {
     return String(arg);
   }
 };
-const formatArgs = (args) => args.map(formatArg).join(" ");
+// Reproduce console formatting: %c sets CSS for the following text, %s/%d/%i/%f
+// substitute values, %o/%O stringify objects. Returns a plain `text` (no CSS,
+// good for copy/paste) plus, when any styling is present, `segments` of
+// { text, css } so the monitor can render colors like the devtools console do.
+const formatConsole = (args) => {
+  const first = args[0];
+  if (typeof first !== "string" || !/%[csdifoO]/.test(first)) {
+    return { text: args.map(formatArg).join(" ") };
+  }
+  const segments = [];
+  let buffer = "";
+  let css = "";
+  const flush = () => {
+    if (buffer) {
+      segments.push({ text: buffer, css });
+      buffer = "";
+    }
+  };
+  let argIndex = 1;
+  let i = 0;
+  while (i < first.length) {
+    const char = first[i];
+    const spec = char === "%" ? first[i + 1] : "";
+    if (spec === "%") {
+      buffer += "%";
+      i += 2;
+    } else if (spec === "c") {
+      flush();
+      css = argIndex < args.length ? String(args[argIndex++]) : "";
+      i += 2;
+    } else if (spec !== "" && "sdifoO".includes(spec)) {
+      const value = argIndex < args.length ? args[argIndex++] : undefined;
+      buffer += spec === "s" ? String(value) : formatArg(value);
+      i += 2;
+    } else {
+      buffer += char;
+      i += 1;
+    }
+  }
+  flush();
+  while (argIndex < args.length) {
+    segments.push({ text: ` ${formatArg(args[argIndex++])}`, css: "" });
+  }
+  const text = segments.map((segment) => segment.text).join("");
+  const styled = segments.some((segment) => segment.css);
+  return styled ? { text, segments } : { text };
+};
 
 const setup = () => {
   const deviceId = getDeviceId();
@@ -160,8 +206,8 @@ const setup = () => {
     }, FLUSH_INTERVAL_MS);
   };
 
-  const recordLog = (level, text) => {
-    pendingLogs.push({ level, text, ts: Date.now() });
+  const pushLog = (entry) => {
+    pendingLogs.push({ ...entry, ts: Date.now() });
     if (pendingLogs.length > 500) {
       pendingLogs.shift(); // cap the buffer if the server is unreachable
     }
@@ -184,17 +230,20 @@ const setup = () => {
     }
     console[level] = (...args) => {
       original.apply(console, args);
-      recordLog(level, formatArgs(args));
+      pushLog({ level, ...formatConsole(args) });
     };
   }
   window.addEventListener("error", (event) => {
     const location = event.filename
       ? ` (${event.filename}:${event.lineno})`
       : "";
-    recordLog("error", `${event.message}${location}`);
+    pushLog({ level: "error", text: `${event.message}${location}` });
   });
   window.addEventListener("unhandledrejection", (event) => {
-    recordLog("error", `Unhandled rejection: ${formatArg(event.reason)}`);
+    pushLog({
+      level: "error",
+      text: `Unhandled rejection: ${formatArg(event.reason)}`,
+    });
   });
 
   // Qualified activity so the dashboard can say what the tab was last doing.

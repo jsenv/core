@@ -321,6 +321,11 @@ export const jsenvPluginDevices = () => {
         text: typeof rawLog.text === "string" ? rawLog.text : "",
         ts: rawLog.ts || now(),
       };
+      // styled console segments ({ text, css } per %c run), when present, so a
+      // monitor can render colors; the plain text stays for copy/paste.
+      if (Array.isArray(rawLog.segments)) {
+        entry.segments = rawLog.segments;
+      }
       device.logs.push(entry);
       sendDeviceLog({ deviceId, ...entry });
     }

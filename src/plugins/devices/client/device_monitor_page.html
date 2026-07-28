@@ -164,11 +164,13 @@
         const d = new Date(ts);
         return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
       };
-      const escapeHtml = (str) =>
-        String(str).replace(
-          /[&<>]/g,
-          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c],
-        );
+      // The %c styling comes from the reported page; applying it via cssText
+      // (not innerHTML) can't inject markup, but drop the obvious escape hatches.
+      const sanitizeCss = (css) =>
+        String(css)
+          .replace(/url\(/gi, "")
+          .replace(/expression/gi, "")
+          .replace(/[<>]/g, "");
 
       const addEntry = (entry) => {
         entries.push(entry);
@@ -180,7 +182,25 @@
           logsEl.scrollHeight - logsEl.scrollTop - logsEl.clientHeight < 40;
         const row = document.createElement("div");
         row.className = "entry";
-        row.innerHTML = `<span class="time">${fmtTime(entry.ts)}</span><span class="lvl lvl-${entry.level}">${entry.level}</span>${escapeHtml(entry.text)}`;
+        const time = document.createElement("span");
+        time.className = "time";
+        time.textContent = fmtTime(entry.ts);
+        const lvl = document.createElement("span");
+        lvl.className = `lvl lvl-${entry.level}`;
+        lvl.textContent = entry.level;
+        row.append(time, lvl);
+        if (entry.segments && entry.segments.length) {
+          for (const segment of entry.segments) {
+            const span = document.createElement("span");
+            span.textContent = segment.text;
+            if (segment.css) {
+              span.style.cssText = sanitizeCss(segment.css);
+            }
+            row.appendChild(span);
+          }
+        } else {
+          row.appendChild(document.createTextNode(entry.text));
+        }
         logsEl.appendChild(row);
         if (atBottom) {
           logsEl.scrollTop = logsEl.scrollHeight;
