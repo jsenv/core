@@ -15,12 +15,12 @@ export const LinkBlankTargetSvg = () => {
 
 export const ArrowTurningDownRightSvg = () => {
   return (
-    <svg viewBox="5.4 3.4 7.2 10.1">
+    <svg viewBox="0.25 0.35 9.7 11.6">
       <path
-        d="M6 4H7.2A1.8 1.8 0 0 1 9 5.8V12.9M6 9.4 9 12.9 12 9.4"
+        d="M1 1H2.9A2.2 2.2 0 0 1 5.1 3.2V11.3M0.9 7.2 5.1 11.3 9.3 7.2"
         fill="none"
         stroke="currentColor"
-        stroke-width="1"
+        stroke-width="1.3"
         stroke-linecap="round"
         stroke-linejoin="round"
       />

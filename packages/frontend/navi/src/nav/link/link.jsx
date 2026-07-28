@@ -606,11 +606,7 @@ const LinkPlain = (props) => {
           if (children) {
             // keep innerEndIcon unset, we got children
           } else {
-            innerEndIcon = (
-              <Icon size="xs" textAnchor="char-top">
-                <ArrowTurningDownRightSvg />
-              </Icon>
-            );
+            innerEndIcon = <Icon>#</Icon>;
           }
         } else {
           innerEndIcon = (
