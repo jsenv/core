@@ -343,7 +343,7 @@ focus_classes: {
   // on mobile (or when the user hasn't used keyboard nav yet) an input that
   // controls a radio should not cause the radio to show a focus ring.
   // (Declared at module scope — see keyboardNavigationUsed above.)
-  const NAVIGATION_KEYS = new Set([
+  const NAVIGATION_KEY_SET = new Set([
     "ArrowUp",
     "ArrowDown",
     "ArrowLeft",
@@ -354,6 +354,7 @@ focus_classes: {
     "Alt",
     "Shift",
     " ",
+    "Tab",
   ]);
   const isEditableTarget = (target) => {
     if (!target) {
@@ -375,6 +376,9 @@ focus_classes: {
         type === "tel" ||
         type === "number"
       ) {
+        if (target.readOnly) {
+          return false;
+        }
         return true;
       }
     }
@@ -386,7 +390,7 @@ focus_classes: {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (!NAVIGATION_KEYS.has(e.key)) {
+      if (!NAVIGATION_KEY_SET.has(e.key)) {
         return;
       }
       if (e.key === " " && isEditableTarget(e.target)) {
