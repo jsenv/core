@@ -17,10 +17,10 @@ export const ArrowTurningDownRightSvg = () => {
   return (
     <svg viewBox="0 0 16 16">
       <path
-        d="M5.5 3V10H12M9 7 12 10 9 13"
+        d="M4 4H9.5Q11 4 11 5.5V12M8.5 9.5 11 12 13.5 9.5"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.5"
+        stroke-width="1.2"
         stroke-linecap="round"
         stroke-linejoin="round"
       />

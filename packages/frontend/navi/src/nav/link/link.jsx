@@ -11,6 +11,7 @@ import {
   LinkBlankTargetSvg,
   LinkGithubSvg,
   LinkSmsSvg,
+  ArrowTurningDownRightSvg,
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
@@ -167,8 +168,6 @@ const css = /* css */ `
 
     [data-icon-text] {
       display: inline-block; /* Allow to skip the underlining */
-      font-size: 80%;
-      vertical-align: text-top;
     }
 
     /* Interactive */
@@ -589,10 +588,10 @@ const LinkPlain = (props) => {
       } else if (anchorIcon === undefined) {
         if (anchor) {
           if (!children) {
-            innerEndIcon = "⤵";
+            innerEndIcon = <ArrowTurningDownRightSvg />;
           }
         } else if (isAnchor) {
-          innerEndIcon = "⤵";
+          innerEndIcon = <ArrowTurningDownRightSvg />;
         }
       } else {
         innerEndIcon = anchorIcon;
