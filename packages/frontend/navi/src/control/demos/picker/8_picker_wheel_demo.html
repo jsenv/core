@@ -224,6 +224,30 @@
       };
 
       render(<App />, document.getElementById("app"));
+
+      // DIAGNOSTIC: is Chromium natively scrolling/flinging something during the
+      // wheel drag? A native scroll → a fling → its TapSuppressionController
+      // eats the next tap's click for ~500ms, which would explain the bug. If
+      // NONE of these fire during a repro, it is NOT a fling and we look
+      // elsewhere. Remove once understood.
+      const sig = (el) =>
+        !el || el === document
+          ? "document"
+          : el === document.scrollingElement
+            ? "scrollingElement"
+            : `${el.tagName || el.nodeName}.${(el.className || "").toString().split(" ")[0]}`;
+      document.addEventListener(
+        "scroll",
+        (e) => console.debug(`[probe] native scroll on ${sig(e.target)}`),
+        { capture: true },
+      );
+      for (const type of ["touchcancel", "gesturestart"]) {
+        document.addEventListener(
+          type,
+          (e) => console.debug(`[probe] ${type} on ${sig(e.target)}`),
+          { capture: true },
+        );
+      }
     </script>
   </body>
 </html>
