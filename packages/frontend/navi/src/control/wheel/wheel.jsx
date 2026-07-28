@@ -794,16 +794,31 @@ const useWheelInteractions = ({
           // pointerup then lands outside and is never caught — leaving `drag` set
           // so the wheel keeps scrolling after release. Capture routes every
           // move/up back here regardless of where the pointer goes.
-          try {
-            vp.setPointerCapture(e.pointerId);
-            drag.captured = true;
+          //
+          // BUT only take EXPLICIT capture for mouse/pen. Touch pointers are
+          // already implicitly captured to the pointerdown target (move/up keep
+          // targeting the viewport), so explicit capture is redundant — and on
+          // iOS Safari calling setPointerCapture for a touch makes it drop the
+          // synthesized click of the NEXT tap (the capture/release leaves the
+          // touch subsystem thinking a gesture is still in progress). That's the
+          // "tap a dialog button right after a fling and nothing happens" bug.
+          if (e.pointerType === "touch") {
             debug(
               e,
-              `pointer down: capture set (id=${e.pointerId}, ${e.pointerType})`,
+              `pointer down: touch, implicit capture (id=${e.pointerId})`,
             );
-          } catch {
-            // pointer already gone (e.g. released same tick) — nothing to capture.
-            debug(e, `pointer down: capture FAILED (id=${e.pointerId})`);
+          } else {
+            try {
+              vp.setPointerCapture(e.pointerId);
+              drag.captured = true;
+              debug(
+                e,
+                `pointer down: capture set (id=${e.pointerId}, ${e.pointerType})`,
+              );
+            } catch {
+              // pointer already gone (e.g. released same tick) — nothing to capture.
+              debug(e, `pointer down: capture FAILED (id=${e.pointerId})`);
+            }
           }
         },
       });
@@ -860,7 +875,8 @@ const useWheelInteractions = ({
       if (performance.now() - drag.lastTime > 60) {
         velocity = 0;
       }
-      if (drag.captured) {
+      const wasCaptured = drag.captured;
+      if (wasCaptured) {
         try {
           vp.releasePointerCapture(pointerId);
         } catch {
@@ -869,7 +885,7 @@ const useWheelInteractions = ({
       }
       debug(
         e,
-        `${e.type}: ${wasDrag ? "drag end" : "tap"}, capture released (id=${pointerId})`,
+        `${e.type}: ${wasDrag ? "drag end" : "tap"}${wasCaptured ? `, capture released` : ``} (id=${pointerId})`,
       );
       drag = null;
       if (!wasDrag) {
