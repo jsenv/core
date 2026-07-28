@@ -962,10 +962,10 @@
               uiAction / action / form
             </Heading>
             <p>
-              <code>uiAction</code> fires on every settle; <code>action</code>{" "}
-              runs the bound action with the current value. Inside a{" "}
-              <code>Form</code> the value submits under the wheel's{" "}
-              <code>name</code>.
+              <code>uiAction</code> fires live — each time an item passes the
+              center, even mid-scroll; <code>action</code> runs once the wheel
+              settles on a value. Inside a <code>Form</code> the value submits
+              under the wheel's <code>name</code>.
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <Wheel

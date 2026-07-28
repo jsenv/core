@@ -57,6 +57,7 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
@@ -693,7 +694,7 @@ const useWheelInteractions = ({
           } else {
             wheelForcedTarget = null;
           }
-          setPos(vp, posRef.current + delta);
+          setPos(vp, posRef.current + delta, { live: true });
           scheduleWheelSettle();
           keepClaimingGesture();
         },
@@ -733,7 +734,7 @@ const useWheelInteractions = ({
             // back); a whole-row/items delta already lands on a row.
             glideTo(vp, snapPosToRow(vp, posRef.current + delta));
           } else {
-            setPos(vp, posRef.current + delta);
+            setPos(vp, posRef.current + delta, { live: true });
             scheduleSettle();
           }
         },
@@ -833,7 +834,7 @@ const useWheelInteractions = ({
       drag.lastClient = client;
       drag.lastTime = now;
       // Finger down → content down → position decreases.
-      setPos(vp, drag.startPos - total);
+      setPos(vp, drag.startPos - total, { live: true });
     };
     const endDrag = (e) => {
       const wasDrag = drag.moved;
@@ -1053,6 +1054,12 @@ function WheelUI(props) {
         ...props,
         ref: inputRef,
         type: "navi_js",
+        // uiAction fires live (every center-crossing, via setPos live reports);
+        // the committed action must fire only when the wheel stabilizes. "custom"
+        // stops setUIState from auto-firing the action on every value change, so
+        // the live reports are uiAction-only; commitSelection then dispatches the
+        // action explicitly on settle. A caller can still override actionEvent.
+        actionEvent: props.actionEvent ?? "custom",
       },
       { controlType: "input" },
     );
@@ -1321,12 +1328,31 @@ function WheelUI(props) {
     posRef.current = clampNumber(posRef.current, 0, (count - 1) * size);
   };
 
-  const setPos = (vp, pos) => {
+  // `live` (user scrubs: drag, momentum, wheel scroll) reports the value as each
+  // item crosses the center, so uiAction tracks the wheel in real time — like
+  // every other control. The committed action still fires only once it settles
+  // (commitSelection). A programmatic move (centerOnIndex on an external value
+  // sync) omits it, so scrolling the wheel into place doesn't echo the value
+  // back out.
+  const setPos = (vp, pos, { live = false } = {}) => {
     posRef.current = pos;
     if (!isLoop) {
       clampPos(vp);
     }
     renderPos(vp);
+    if (live && interactive) {
+      const index = centeredIndex(vp);
+      if (index !== centeredIndexRef.current) {
+        const item = trackedItemsRef.current[index];
+        if (item) {
+          // Keep centeredIndexRef in step so the every-render
+          // syncCenterToSelection doesn't read this as an external change and
+          // fight the in-progress motion.
+          centeredIndexRef.current = index;
+          requestSelectValue(item.value, new CustomEvent("navi_wheel_scrub"));
+        }
+      }
+    }
   };
 
   const cancelAnim = () => {
@@ -1359,11 +1385,16 @@ function WheelUI(props) {
     if (!interactive) {
       return;
     }
+    const settleEvent = new CustomEvent("navi_wheel_settle");
     centeredIndexRef.current = index;
-    requestSelectValue(
-      trackedItemsRef.current[index].value,
-      new CustomEvent("navi_wheel_settle"),
-    );
+    requestSelectValue(trackedItemsRef.current[index].value, settleEvent);
+    // The value is now stable → commit the action. The wheel runs actionEvent
+    // "custom" (see the facade above) so setUIState during the motion only fired
+    // uiAction; here we fire the action explicitly, once, on the settled value.
+    const input = inputRef.current;
+    if (input) {
+      dispatchRequestAction(input, { event: settleEvent });
+    }
   };
 
   // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
@@ -1432,7 +1463,7 @@ function WheelUI(props) {
       last = now;
       if (!snapping) {
         v *= Math.pow(WHEEL_DECAY, dt / 16);
-        setPos(vp, posRef.current + v * dt);
+        setPos(vp, posRef.current + v * dt, { live: true });
         if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
           snapping = true;
         }
@@ -1442,12 +1473,12 @@ function WheelUI(props) {
       const snapTo = snapPosToRow(vp, posRef.current);
       const dist = snapTo - posRef.current;
       if (Math.abs(dist) < 0.4) {
-        setPos(vp, snapTo);
+        setPos(vp, snapTo, { live: true });
         momentumRef.current = null;
         commitSelection(vp);
         return;
       }
-      setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR);
+      setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR, { live: true });
       momentumRef.current = requestAnimationFrame(step);
     };
     momentumRef.current = requestAnimationFrame(step);
