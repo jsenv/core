@@ -74,7 +74,6 @@ export const useDebugUIState = () => {
  *
  * Pass a boolean `true` to use `console.debug`, or pass a custom function.
  */
-
 export const NaviDebug = ({
   debugAll,
   debugCommand = debugAll,

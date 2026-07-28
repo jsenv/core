@@ -34,6 +34,21 @@
         margin: 0;
         font-size: 1rem;
       }
+      .back {
+        display: inline-flex;
+        width: 26px;
+        height: 26px;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 1.1rem;
+        text-decoration: none;
+        border-radius: 6px;
+      }
+      .back:hover {
+        color: #e5e7eb;
+        background: #1f2937;
+      }
       .status {
         color: #9ca3af;
         font-size: 0.8rem;
@@ -65,20 +80,27 @@
       button:hover {
         background: #4b5563;
       }
-      /* The panels share the remaining height; each grows when open, shrinks to
-         just its header when collapsed — so you can monitor one, both, or none. */
+      /* Each stream is a card floating on the page background so logs and
+         activity read as two distinct things. They share the remaining height;
+         each grows when open, shrinks to just its header when collapsed — so you
+         can monitor one, both, or none. */
       .panels {
         display: flex;
         min-height: 0;
+        padding: 12px;
         flex: 1;
         flex-direction: column;
+        gap: 12px;
       }
       .panel {
         display: flex;
         min-height: 0;
         flex: 0 0 auto;
         flex-direction: column;
-        border-top: 1px solid #1f2937;
+        background: #111a2e;
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        overflow: hidden;
       }
       .panel[data-open] {
         flex: 1;
@@ -88,12 +110,27 @@
         padding: 8px 12px;
         align-items: center;
         gap: 8px;
-        background: #0f1626;
+        border-left: 3px solid transparent;
         cursor: pointer;
         user-select: none;
       }
       .panel-head:hover {
-        background: #131c30;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      /* Distinct accent per stream so they don't blur together. */
+      #logs-panel .panel-head {
+        background: rgba(167, 139, 250, 0.08);
+        border-left-color: #a78bfa;
+      }
+      #logs-panel .panel-title {
+        color: #c4b5fd;
+      }
+      #activity-panel .panel-head {
+        background: rgba(52, 211, 153, 0.08);
+        border-left-color: #34d399;
+      }
+      #activity-panel .panel-title {
+        color: #6ee7b7;
       }
       .chevron::before {
         display: inline-block;
@@ -168,6 +205,7 @@
   </head>
   <body>
     <header>
+      <a class="back" id="back" title="Back to devices">←</a>
       <h1>Monitor <span id="devinfo"></span></h1>
       <span class="status" id="status"
         ><span class="dot"></span>connecting…</span
@@ -210,6 +248,9 @@
       const statusEl = document.getElementById("status");
       const devinfoEl = document.getElementById("devinfo");
       devinfoEl.textContent = deviceId.slice(0, 8);
+      // Set at runtime so the dev server doesn't rewrite the static href to the
+      // internal graph URL of the dashboard page.
+      document.getElementById("back").href = "/.internal/devices";
 
       const pad = (n) => String(n).padStart(2, "0");
       const fmtTime = (ts) => {

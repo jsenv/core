@@ -447,7 +447,7 @@ const showDeviceToast = ({ device, reason }) => {
   const link = document.createElement("a");
   link.href = `/.internal/device?id=${encodeURIComponent(device.id)}`;
   link.target = "_blank";
-  link.textContent = "Monitor its logs →";
+  link.textContent = "Monitor →";
   link.style.cssText = "color:#93c5fd;text-decoration:none;font-weight:600";
   el.appendChild(link);
   const close = document.createElement("button");
