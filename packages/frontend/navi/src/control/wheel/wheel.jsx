@@ -576,6 +576,7 @@ const useWheelInteractions = ({
   wheelSettle,
   glideTo,
   stepTarget,
+  commitIfAnimating,
   debug,
 }) => {
   useLayoutEffect(() => {
@@ -904,6 +905,20 @@ const useWheelInteractions = ({
       endDrag(e);
     };
 
+    // A press ANYWHERE outside the wheel while it's coasting settles it now, so
+    // that press (a tap on a dialog button, a click-outside) lands on a stable
+    // surface instead of one a late momentum re-render would move. Capture phase
+    // so it runs before the target's own handlers.
+    const onDocumentPointerDown = (e) => {
+      if (el.contains(e.target)) {
+        return; // presses inside the wheel are handled by onPointerDown above
+      }
+      commitIfAnimating();
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown, {
+      capture: true,
+    });
+
     vp.addEventListener("wheel", onWheel, { passive: false });
     vp.addEventListener("pointerdown", onPointerDown);
     vp.addEventListener("pointermove", onPointerMove);
@@ -917,6 +932,9 @@ const useWheelInteractions = ({
       clearTimeout(settleTimer);
       stopClaimingGesture();
       cancelAnim();
+      document.removeEventListener("pointerdown", onDocumentPointerDown, {
+        capture: true,
+      });
       vp.removeEventListener("wheel", onWheel);
       vp.removeEventListener("pointerdown", onPointerDown);
       vp.removeEventListener("pointermove", onPointerMove);
@@ -1430,6 +1448,25 @@ function WheelUI(props) {
     }
   };
 
+  // If the wheel is still coasting (momentum or glide), stop and commit NOW.
+  // Used when the user presses somewhere else: the coast keeps re-rendering the
+  // surface for up to a second, and on touch the tap's `click` is dispatched a
+  // beat after `pointerup` — long enough for one of those re-renders to move the
+  // element under the pending click, so the browser drops it (visible on mobile:
+  // press a dialog button right after a fling and nothing happens). Committing
+  // on the press settles the DOM up front, before the tap completes.
+  const commitIfAnimating = () => {
+    if (momentumRef.current === null && glideRef.current === null) {
+      return;
+    }
+    const vp = getViewport();
+    if (!vp) {
+      return;
+    }
+    cancelAnim();
+    commitSelection(vp);
+  };
+
   // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
   // a fraction of the remaining distance each frame (so it eases out into place)
   // and continuing from wherever it is when the target moves (so a second input
@@ -1681,6 +1718,7 @@ function WheelUI(props) {
     wheelSettle,
     glideTo,
     stepTarget,
+    commitIfAnimating,
     debug: debugScroll,
   });
 
