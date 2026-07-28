@@ -154,7 +154,14 @@
       for (const type of ["scroll", "touchcancel", "gesturestart"]) {
         document.addEventListener(
           type,
-          (e) => log(`native ${type} on ${sig(e.target)}`),
+          (e) => {
+            if (e.target === logEl) {
+              // The log panel scrolls itself each time we append a line; logging
+              // that would append again and scroll again — an infinite loop.
+              return;
+            }
+            log(`native ${type} on ${sig(e.target)}`);
+          },
           { capture: true },
         );
       }

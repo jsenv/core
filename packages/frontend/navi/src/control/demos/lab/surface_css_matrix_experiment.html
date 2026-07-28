@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surface CSS matrix — tap-after-drag</title>
+    <style>
+      body {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+        color: #222;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      .note {
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .row {
+        display: flex;
+        align-items: stretch;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid #eee;
+      }
+      .meta {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      .meta .label {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .meta .desc {
+        font-size: 0.75rem;
+        color: #666;
+        font-family: monospace;
+        word-break: break-word;
+      }
+      .surface {
+        width: 52px;
+        height: 96px;
+        flex: none;
+        background: #9ca3af;
+        color: #374151;
+        overflow: hidden;
+        border-radius: 6px;
+        text-align: center;
+        font-size: 11px;
+        line-height: 1.5;
+        user-select: none;
+      }
+      .target {
+        width: 84px;
+        flex: none;
+        font-size: 0.85rem;
+        border: 1px solid #2563eb;
+        background: #eff6ff;
+        color: #1d4ed8;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .target.ok {
+        background: #dcfce7;
+        border-color: #16a34a;
+        color: #15803d;
+      }
+      .target.bad {
+        background: #fee2e2;
+        border-color: #dc2626;
+        color: #b91c1c;
+      }
+      #log {
+        margin-top: 14px;
+        padding: 10px 12px;
+        height: 200px;
+        overflow: auto;
+        font-family: monospace;
+        font-size: 11px;
+        line-height: 1.45;
+        background: #0b1020;
+        color: #d6e2ff;
+        border-radius: 6px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Surface CSS matrix — tap-after-drag</h1>
+    <p class="note">
+      Each row is the reproduction with <strong>one</strong> variable changed
+      from the baseline. For each row: drag the grey surface up/down, then within
+      ~300ms tap its blue button. The button turns
+      <strong style="color: #15803d">green</strong> if
+      <code>click</code> fired, <strong style="color: #b91c1c">red</strong> if it
+      was suppressed. The log shows the ms gap between the surface release and
+      the tap — the native fling window is ~180ms.
+    </p>
+
+    <div id="rows"></div>
+    <pre id="log"></pre>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const stamp = () => {
+        const d = new Date();
+        const p = (n, w = 2) => String(n).padStart(w, "0");
+        return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+      };
+      const log = (msg) => {
+        console.debug(`[matrix] ${msg}`);
+        logEl.textContent += `${stamp()}  ${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+
+      // Time of the most recent surface pointerup/touchend, to measure the gap
+      // to the following tap (the native suppression window is ~180ms).
+      let lastReleaseAt = null;
+      let lastReleaseLabel = null;
+
+      // Each config changes ONE trait from the baseline (the first row), so a
+      // difference in behavior isolates that trait as the trigger.
+      const TESTS = [
+        {
+          label: "baseline",
+          desc: "touch-action:none · overflow:hidden · transforms inner · pointer events · no preventDefault",
+          touchAction: "none",
+          overflow: "hidden",
+        },
+        {
+          label: "touch-action: auto",
+          desc: "default touch-action (nothing else scrollable)",
+          touchAction: "auto",
+          overflow: "hidden",
+        },
+        {
+          label: "touch-action: manipulation",
+          desc: "manipulation",
+          touchAction: "manipulation",
+          overflow: "hidden",
+        },
+        {
+          label: "touch-action: pan-y",
+          desc: "pan-y (browser may own vertical)",
+          touchAction: "pan-y",
+          overflow: "hidden",
+        },
+        {
+          label: "overflow: visible",
+          desc: "touch-action:none but overflow visible",
+          touchAction: "none",
+          overflow: "visible",
+        },
+        {
+          label: "no movement",
+          desc: "listeners present but never transform anything",
+          touchAction: "none",
+          overflow: "hidden",
+          move: false,
+        },
+        {
+          label: "no pointermove listener",
+          desc: "only pointerdown/up attached (finger still drags)",
+          touchAction: "none",
+          overflow: "hidden",
+          noMove: true,
+        },
+        {
+          label: "preventDefault()",
+          desc: "e.preventDefault() in pointerdown + pointermove",
+          touchAction: "none",
+          overflow: "hidden",
+          preventDefault: true,
+        },
+        {
+          label: "setPointerCapture",
+          desc: "explicit pointer capture on down (like the old wheel)",
+          touchAction: "none",
+          overflow: "hidden",
+          capture: true,
+        },
+        {
+          label: "touch events + preventDefault",
+          desc: "touchstart/move/end with e.preventDefault()",
+          touchAction: "none",
+          overflow: "hidden",
+          useTouch: true,
+        },
+        {
+          label: "REAL native scroll",
+          desc: "overflow:auto + tall content, NO listeners — genuine scroll/fling (control)",
+          touchAction: "auto",
+          overflow: "auto",
+          realScroll: true,
+        },
+      ];
+
+      const rowsEl = document.getElementById("rows");
+
+      const buildSurface = (cfg) => {
+        const surface = document.createElement("div");
+        surface.className = "surface";
+        surface.style.touchAction = cfg.touchAction;
+        surface.style.overflow = cfg.overflow;
+
+        const inner = document.createElement("div");
+        if (cfg.realScroll) {
+          // Tall content so the browser genuinely scrolls + flings.
+          inner.textContent = "";
+          for (let i = 0; i < 40; i++) {
+            const line = document.createElement("div");
+            line.textContent = String(i);
+            inner.appendChild(line);
+          }
+          surface.appendChild(inner);
+          return surface;
+        }
+        inner.textContent = "";
+        for (let i = 0; i < 8; i++) {
+          inner.appendChild(document.createTextNode("▤"));
+          inner.appendChild(document.createElement("br"));
+        }
+        surface.appendChild(inner);
+
+        if (cfg.noMove) {
+          surface.addEventListener("pointerdown", () =>
+            log(`[${cfg.label}] surface pointerdown`),
+          );
+          surface.addEventListener("pointerup", () => {
+            lastReleaseAt = new Date().getTime();
+            lastReleaseLabel = cfg.label;
+            log(`[${cfg.label}] surface pointerup`);
+          });
+          return surface;
+        }
+
+        if (cfg.useTouch) {
+          const drag = { start: null, base: 0, offset: 0 };
+          surface.addEventListener("touchstart", (e) => {
+            e.preventDefault();
+            drag.start = e.touches[0].clientY;
+            drag.base = drag.offset;
+            log(`[${cfg.label}] surface touchstart`);
+          });
+          surface.addEventListener("touchmove", (e) => {
+            e.preventDefault();
+            if (drag.start === null) {
+              return;
+            }
+            drag.offset = drag.base + (e.touches[0].clientY - drag.start);
+            inner.style.transform = `translateY(${drag.offset}px)`;
+          });
+          surface.addEventListener("touchend", () => {
+            lastReleaseAt = new Date().getTime();
+            lastReleaseLabel = cfg.label;
+            drag.start = null;
+            log(`[${cfg.label}] surface touchend`);
+          });
+          return surface;
+        }
+
+        const drag = { start: null, base: 0, offset: 0 };
+        surface.addEventListener("pointerdown", (e) => {
+          if (cfg.preventDefault) {
+            e.preventDefault();
+          }
+          if (cfg.capture) {
+            surface.setPointerCapture(e.pointerId);
+          }
+          drag.start = e.clientY;
+          drag.base = drag.offset;
+          log(`[${cfg.label}] surface pointerdown`);
+        });
+        surface.addEventListener("pointermove", (e) => {
+          if (cfg.preventDefault) {
+            e.preventDefault();
+          }
+          if (drag.start === null) {
+            return;
+          }
+          if (cfg.move === false) {
+            return;
+          }
+          drag.offset = drag.base + (e.clientY - drag.start);
+          inner.style.transform = `translateY(${drag.offset}px)`;
+        });
+        surface.addEventListener("pointerup", () => {
+          lastReleaseAt = new Date().getTime();
+          lastReleaseLabel = cfg.label;
+          drag.start = null;
+          log(`[${cfg.label}] surface pointerup`);
+        });
+        return surface;
+      };
+
+      for (const cfg of TESTS) {
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const surface = buildSurface(cfg);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = cfg.label;
+        const desc = document.createElement("div");
+        desc.className = "desc";
+        desc.textContent = cfg.desc;
+        meta.appendChild(label);
+        meta.appendChild(desc);
+
+        const target = document.createElement("button");
+        target.type = "button";
+        target.className = "target";
+        target.textContent = "Tap me";
+        target.addEventListener("pointerdown", () => {
+          const gap =
+            lastReleaseAt === null
+              ? "?"
+              : `${new Date().getTime() - lastReleaseAt}ms after [${lastReleaseLabel}]`;
+          log(`[${cfg.label}] TARGET pointerdown (${gap})`);
+        });
+        target.addEventListener("pointerup", () =>
+          log(`[${cfg.label}] TARGET pointerup`),
+        );
+        target.addEventListener("click", () => {
+          target.classList.remove("bad");
+          target.classList.add("ok");
+          target.textContent = "click ✅";
+          log(`[${cfg.label}] TARGET click ✅`);
+        });
+        // If a click never arrives, the button stays blue; mark it red as soon
+        // as the tap completes without one, on the next frame after pointerup.
+        target.addEventListener("pointerup", () => {
+          const el = target;
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              if (!el.classList.contains("ok")) {
+                el.classList.add("bad");
+                el.textContent = "no click ❌";
+                log(`[${cfg.label}] TARGET no click ❌`);
+              }
+            }),
+          );
+        });
+
+        row.appendChild(surface);
+        row.appendChild(meta);
+        row.appendChild(target);
+        rowsEl.appendChild(row);
+      }
+
+      // Native scroll/fling probes — does any row trigger a real scroll?
+      const sig = (el) =>
+        !el || el === document
+          ? "document"
+          : `${el.tagName || el.nodeName}.${(el.className || "").toString().split(" ")[0]}`;
+      for (const type of ["scroll", "touchcancel", "gesturestart"]) {
+        document.addEventListener(
+          type,
+          (e) => {
+            if (e.target === logEl) {
+              // The log panel scrolls itself each time we append a line; logging
+              // that would append again and scroll again — an infinite loop.
+              return;
+            }
+            log(`native ${type} on ${sig(e.target)}`);
+          },
+          { capture: true },
+        );
+      }
+    </script>
+  </body>
+</html>
