@@ -66,7 +66,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import { signal } from "@preact/signals";
       import {
         NaviDebug,
@@ -127,13 +127,64 @@
         </WheelGroup>
       );
 
+      // DIAGNOSTIC: a bare grey rectangle that mimics ONLY the wheel's browser-
+      // facing traits — overflow:hidden + touch-action:none + trivial pointer
+      // listeners that translate an inner block (a drag). No momentum, no
+      // capture, no preventDefault, no navi. If dragging THIS and then quickly
+      // tapping a button also eats the click, the suppression is a plain browser
+      // behavior of "touch-action:none surface + drag", not navi's wheel.
+      const GreyDragSurface = () => {
+        const innerRef = useRef();
+        const drag = useRef({ start: null, base: 0, offset: 0 });
+        return (
+          <div
+            style={{
+              width: "56px",
+              height: "150px",
+              background: "#9ca3af",
+              color: "#374151",
+              overflow: "hidden",
+              touchAction: "none",
+              borderRadius: "6px",
+              textAlign: "center",
+              fontSize: "12px",
+              userSelect: "none",
+            }}
+            onPointerDown={(e) => {
+              console.debug("[probe] GREY pointerdown");
+              drag.current.start = e.clientY;
+              drag.current.base = drag.current.offset;
+            }}
+            onPointerMove={(e) => {
+              const d = drag.current;
+              if (d.start === null) {
+                return;
+              }
+              d.offset = d.base + (e.clientY - d.start);
+              innerRef.current.style.transform = `translateY(${d.offset}px)`;
+            }}
+            onPointerUp={() => {
+              console.debug("[probe] GREY pointerup");
+              drag.current.start = null;
+            }}
+          >
+            <div ref={innerRef}>
+              ▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤
+            </div>
+          </div>
+        );
+      };
+
       // Dialog surface: bigger wheels + explicit Annuler / Définir actions.
       const DurationPickerContent = () => {
         const mode = usePickerMode();
         if (mode === "dialog") {
           return (
             <Box flex="y" spacing="l" padding="xl" alignX="center">
-              <DurationWheelsGroup big />
+              <Box flex="x" spacing="m" alignY="center">
+                <DurationWheelsGroup big />
+                <GreyDragSurface />
+              </Box>
               <Box flex="x" spacing="s" alignX="end" expandX>
                 {/* Native pointer/click probes: the wheel logs can't show the
                     button tap, so these reveal whether a tap after a drag-fling
