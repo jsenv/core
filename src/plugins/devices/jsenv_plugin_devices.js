@@ -8,9 +8,10 @@
  * websocket:
  * - server → clients uses the jsenv "server events" channel (the same websocket
  *   the autoreload feature rides on). This plugin declares three server events:
- *     - "devices_list"  the whole registry (the dashboard renders it)
- *     - "device_log"    a single log line (a monitor appends it)
- *     - "device_here"   a device just appeared/resumed (every page can toast it)
+ *     - "devices_list"    the whole registry (the dashboard renders it)
+ *     - "device_log"      a single log line (a monitor appends it)
+ *     - "device_activity" a single qualified activity (a monitor appends it)
+ *     - "device_here"     a device just appeared/resumed (every page can toast it)
  *   Server events are broadcast, so consumers filter what they care about.
  * - clients → server uses a plain HTTP POST (/.internal/devices/log). Each report
  *   carries the tab (id, url, title, visibility), recent qualified activities
@@ -119,6 +120,7 @@ export const jsenvPluginDevices = () => {
   // Assigned when the server-event channel is set up; broadcast helpers.
   let sendDevicesList = () => {};
   let sendDeviceLog = () => {};
+  let sendDeviceActivity = () => {};
   let sendDeviceHere = () => {};
 
   const now = () => Date.now();
@@ -222,6 +224,7 @@ export const jsenvPluginDevices = () => {
       device.activities.shift();
     }
     device.lastActivity = activity;
+    return activity;
   };
 
   const serializeTab = (tab) => ({
@@ -311,7 +314,8 @@ export const jsenvPluginDevices = () => {
 
     const activities = Array.isArray(body.activities) ? body.activities : [];
     for (const rawActivity of activities) {
-      recordActivity(device, rawActivity);
+      const activity = recordActivity(device, rawActivity);
+      sendDeviceActivity({ deviceId, ...activity });
     }
 
     const logs = Array.isArray(body.logs) ? body.logs : [];
@@ -376,6 +380,10 @@ export const jsenvPluginDevices = () => {
       },
       device_log: (serverEventInfo) => {
         sendDeviceLog = (payload) => serverEventInfo.sendServerEvent(payload);
+      },
+      device_activity: (serverEventInfo) => {
+        sendDeviceActivity = (payload) =>
+          serverEventInfo.sendServerEvent(payload);
       },
       device_here: (serverEventInfo) => {
         sendDeviceHere = (payload) => serverEventInfo.sendServerEvent(payload);
