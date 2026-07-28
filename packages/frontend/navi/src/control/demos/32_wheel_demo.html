@@ -202,7 +202,7 @@
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
+      import { Fragment, render } from "preact";
       import { signal } from "@preact/signals";
       import { useEffect, useRef, useState } from "preact/hooks";
       import {
@@ -657,9 +657,55 @@
         </WheelGroup>
       );
 
+      // Extracted so its `duration` state is colocated: committing the picker
+      // re-renders ONLY this example, not the sibling size/day wheels. (Left
+      // inline it re-rendered the whole PracticalExamplesDemo subtree, which is
+      // why "Définir" felt ~600ms slower here than in the standalone demo.)
+      const DurationPickerExample = () => {
+        const [duration, setDuration] = useState({});
+        return (
+          <Fragment>
+            <Heading id="practical-duration">
+              Duration picker (hours + minutes)
+            </Heading>
+            <p>
+              A wheel belongs inside a deliberately-opened surface (see the
+              warning up top) — a <code>Picker</code> popup is exactly that.
+              Here a duration Picker opens two looping wheels — hours (1–5) and
+              minutes (every 15). <code>WheelGroup</code> is itself a control
+              group, so the picker aggregates the named <code>hours</code> /{" "}
+              <code>minutes</code> wheels into one value with no extra wrapper.
+              In popover mode you spin the wheels live and click outside to
+              validate; the picker's <code>action</code> fires on close only if
+              the value changed.
+            </p>
+            <div className="row">
+              <NaviDebug debugAll>
+                <Picker
+                  type="controlgroup"
+                  ui={<DurationWheelUI />}
+                  placeholder="Choisir une durée"
+                  popupWidthFitContent
+                  // animation
+                  scrollCapture="dialog"
+                  action={(v) => {
+                    setDuration(v);
+                  }}
+                >
+                  <DurationPickerContent />
+                </Picker>
+              </NaviDebug>
+              <span className="col-label">
+                {pad2(duration.hours ?? durationHoursSignal.value)}:
+                {pad2(duration.minutes ?? durationMinutesSignal.value)}
+              </span>
+            </div>
+          </Fragment>
+        );
+      };
+
       const PracticalExamplesDemo = () => {
         const [size, setSize] = useState("M");
-        const [duration, setDuration] = useState({});
         const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -724,41 +770,7 @@
               </Wheel>
             </div>
 
-            <Heading id="practical-duration">
-              Duration picker (hours + minutes)
-            </Heading>
-            <p>
-              A wheel belongs inside a deliberately-opened surface (see the
-              warning up top) — a <code>Picker</code> popup is exactly that.
-              Here a duration Picker opens two looping wheels — hours (1–5) and
-              minutes (every 15). <code>WheelGroup</code> is itself a control
-              group, so the picker aggregates the named <code>hours</code> /{" "}
-              <code>minutes</code> wheels into one value with no extra wrapper.
-              In popover mode you spin the wheels live and click outside to
-              validate; the picker's <code>action</code> fires on close only if
-              the value changed.
-            </p>
-            <div className="row">
-              <NaviDebug debugAll>
-                <Picker
-                  type="controlgroup"
-                  ui={<DurationWheelUI />}
-                  placeholder="Choisir une durée"
-                  popupWidthFitContent
-                  // animation
-                  scrollCapture="dialog"
-                  action={(v) => {
-                    setDuration(v);
-                  }}
-                >
-                  <DurationPickerContent />
-                </Picker>
-              </NaviDebug>
-              <span className="col-label">
-                {pad2(duration.hours ?? durationHoursSignal.value)}:
-                {pad2(duration.minutes ?? durationMinutesSignal.value)}
-              </span>
-            </div>
+            <DurationPickerExample />
 
             <Heading id="practical-duration-inline">
               Duration wheels (outside a picker)
