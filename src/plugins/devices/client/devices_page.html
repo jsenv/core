@@ -63,13 +63,6 @@
       .dot.off {
         background: #9ca3af;
       }
-      .ua {
-        max-width: 340px;
-        color: #374151;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-      }
       a.track {
         color: #2563eb;
         font-weight: 600;
@@ -129,12 +122,23 @@
           /[&<>"]/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
         );
+      const RUNTIME_LABELS = {
+        ios_safari: "iOS Safari",
+        chrome: "Chrome",
+        edge: "Edge",
+        opera: "Opera",
+        samsung: "Samsung Internet",
+        firefox: "Firefox",
+        safari: "Safari",
+        node: "Node",
+      };
       const named = ({ name, version } = {}) => {
         if (!name || name === "unknown") {
           return '<span class="muted">unknown</span>';
         }
+        const label = RUNTIME_LABELS[name] || name;
         const v = version && version !== "unknown" ? ` ${version}` : "";
-        return escapeHtml(`${name}${v}`);
+        return escapeHtml(`${label}${v}`);
       };
 
       let lastDevices = [];

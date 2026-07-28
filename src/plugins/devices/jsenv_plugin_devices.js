@@ -36,6 +36,13 @@
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { getRuntimeFromRequest } from "../../dev/dev_server_plugins/runtime_from_request.js";
 
+// Normalize the dev server's { runtimeName, runtimeVersion } to the { name,
+// version } shape the pages use for both browser and OS.
+const runtimeFromRequest = (request) => {
+  const { runtimeName, runtimeVersion } = getRuntimeFromRequest(request);
+  return { name: runtimeName, version: runtimeVersion };
+};
+
 const devicesClientFileUrl = new URL(
   "./client/devices_client.js",
   import.meta.url,
@@ -79,7 +86,8 @@ const osFromUserAgent = (userAgent) => {
   }
   if (/Windows NT/.test(userAgent)) {
     const winMatch = userAgent.match(/Windows NT (\d+\.\d+)/);
-    const version = winMatch && winMatch[1] === "10.0" ? "10/11" : winMatch?.[1];
+    const version =
+      winMatch && winMatch[1] === "10.0" ? "10/11" : winMatch?.[1];
     return { name: "Windows", version: version || "" };
   }
   const macMatch = userAgent.match(/Mac OS X (\d+)[._](\d+)(?:[._](\d+))?/);
@@ -115,7 +123,7 @@ export const jsenvPluginDevices = () => {
       device = {
         id,
         userAgent,
-        runtime: getRuntimeFromRequest(request),
+        runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
         firstSeen: now(),
         lastActivity: now(),
@@ -125,7 +133,7 @@ export const jsenvPluginDevices = () => {
       devices.set(id, device);
     } else if (userAgent && userAgent !== device.userAgent) {
       device.userAgent = userAgent;
-      device.runtime = getRuntimeFromRequest(request);
+      device.runtime = runtimeFromRequest(request);
       device.os = osFromUserAgent(userAgent);
     }
     return device;

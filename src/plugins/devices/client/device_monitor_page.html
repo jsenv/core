@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Device tracker</title>
+    <title>Device monitor</title>
     <style>
       html,
       body {
@@ -112,7 +112,7 @@
   </head>
   <body>
     <header>
-      <h1>Device <span id="devid"></span></h1>
+      <h1>Monitor <span id="devinfo"></span></h1>
       <span class="status" id="status"
         ><span class="dot"></span>connecting…</span
       >
@@ -125,11 +125,39 @@
     <script type="module">
       const params = new URLSearchParams(location.search);
       const deviceId = params.get("id") || "";
-      document.getElementById("devid").textContent = deviceId.slice(0, 8);
       const logsEl = document.getElementById("logs");
       const statusEl = document.getElementById("status");
+      const devinfoEl = document.getElementById("devinfo");
+      devinfoEl.textContent = deviceId.slice(0, 8);
       const entries = [];
       let empty = true;
+
+      const RUNTIME_LABELS = {
+        ios_safari: "iOS Safari",
+        chrome: "Chrome",
+        edge: "Edge",
+        opera: "Opera",
+        samsung: "Samsung Internet",
+        firefox: "Firefox",
+        safari: "Safari",
+        node: "Node",
+      };
+      // "Chrome 149 · iOS 17.2" from the device's parsed runtime/os.
+      const describeDevice = (device) => {
+        const part = ({ name, version } = {}, labels) => {
+          if (!name || name === "unknown") {
+            return "";
+          }
+          const label = labels ? labels[name] || name : name;
+          const v = version && version !== "unknown" ? ` ${version}` : "";
+          return `${label}${v}`;
+        };
+        return (
+          [part(device.runtime, RUNTIME_LABELS), part(device.os)]
+            .filter(Boolean)
+            .join(" · ") || deviceId.slice(0, 8)
+        );
+      };
 
       const pad = (n) => String(n).padStart(2, "0");
       const fmtTime = (ts) => {
@@ -186,44 +214,35 @@
         statusEl.innerHTML = `<span class="dot"></span>${label}`;
       };
 
-      // Backlog first (a tracker opened late still sees recent history)…
-      fetch(`/.internal/device.json?id=${encodeURIComponent(deviceId)}`)
-        .then((r) => r.json())
-        .then((device) => {
+      // Backlog first (a monitor opened late still sees recent history), and
+      // fill the header with the device's parsed browser/OS.
+      (async () => {
+        try {
+          const device = await (
+            await fetch(
+              `/.internal/device.json?id=${encodeURIComponent(deviceId)}`,
+            )
+          ).json();
+          devinfoEl.textContent = describeDevice(device);
           for (const entry of device.logs || []) {
             addEntry(entry);
           }
-        })
-        .catch(() => {});
+        } catch {
+          // dev server unreachable — the live channel still delivers new logs.
+        }
+      })();
 
       // …then live. This page is cooked through the dev server, so it gets the
-      // jsenv server-events client injected (window.__server_events__) — the
-      // same channel autoreload rides. Every device's logs are broadcast there,
-      // so keep only the ones for the device we're tracking.
-      const whenServerEvents = (callback) => {
-        const ready = () =>
-          window.__server_events__ &&
-          typeof window.__server_events__.listenEvents === "function";
-        if (ready()) {
-          callback(window.__server_events__);
-          return;
-        }
-        const id = setInterval(() => {
-          if (ready()) {
-            clearInterval(id);
-            callback(window.__server_events__);
+      // jsenv server-events client injected (window.__server_events__, ready
+      // before this script — the same channel autoreload rides). Every device's
+      // logs are broadcast there, so keep only the ones we're monitoring.
+      setStatus(true, "monitoring");
+      window.__server_events__.listenEvents({
+        device_log: (event) => {
+          if (event.data.deviceId === deviceId) {
+            addEntry(event.data);
           }
-        }, 100);
-      };
-      whenServerEvents((serverEvents) => {
-        setStatus(true, "tracking");
-        serverEvents.listenEvents({
-          device_log: (event) => {
-            if (event.data.deviceId === deviceId) {
-              addEntry(event.data);
-            }
-          },
-        });
+        },
       });
     </script>
   </body>

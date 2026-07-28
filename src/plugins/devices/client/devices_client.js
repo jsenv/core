@@ -2,7 +2,7 @@
  * Injected into every dev-server page. Gives this browser a stable "device id",
  * forwards its console.* output to the dev server over a plain HTTP POST, and
  * shows a toast when another device appears (or resumes) — inviting the user to
- * open that device's live-log tracker.
+ * open that device's live-log monitor.
  *
  * It does NOT open a websocket: server → browser messages ride the existing
  * jsenv server-events channel (window.__server_events__), and browser → server
@@ -181,7 +181,9 @@ const describeDevice = (device) => {
       : "";
   const osLabel =
     os.name && os.name !== "unknown" ? `${os.name}${version(os.version)}` : "";
-  return [browserLabel, osLabel].filter(Boolean).join(" · ") || "unknown device";
+  return (
+    [browserLabel, osLabel].filter(Boolean).join(" · ") || "unknown device"
+  );
 };
 
 const showDeviceToast = ({ device, reason }) => {
