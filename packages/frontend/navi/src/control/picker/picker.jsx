@@ -508,7 +508,7 @@ const PickerInput = (props) => {
   // picker still looks interactive (it is — just not keyboard-typeable).
   const readOnlyForced = readOnly
     ? false
-    : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
+    : isOpeningKeyboardOnMobile(props.type);
 
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
 
@@ -538,15 +538,19 @@ const PickerInput = (props) => {
 // Input types that open the software keyboard on mobile.
 // When the picker's underlying input has one of these types, we force readOnly
 // so tapping the picker doesn't open the keyboard (the picker manages its own UI).
-const MOBILE_KEYBOARD_TYPES = new Set([
-  "text",
-  "email",
-  "url",
-  "search",
-  "password",
-  "tel",
-  "number",
-  "navi_js",
+const isOpeningKeyboardOnMobile = (type) => {
+  if (NON_MOBILE_KEYBOARD_TYPES.has(type)) {
+    return false;
+  }
+  return true; // default to text
+};
+const NON_MOBILE_KEYBOARD_TYPES = new Set([
+  "date",
+  "month",
+  "week",
+  "time",
+  "datetime-local",
+  "color",
 ]);
 
 const PICKER_BUTTON_PSEUDO_CLASSES = [
