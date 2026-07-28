@@ -1,3 +1,16 @@
+const css = /* css */ `
+  @media (min-resolution: 2dppx) {
+    .navi_arrow_turning_down_right path {
+      stroke-width: 1.1;
+    }
+  }
+  @media (min-resolution: 3dppx) {
+    .navi_arrow_turning_down_right path {
+      stroke-width: 1.1;
+    }
+  }
+`;
+
 export const LinkBlankTargetSvg = () => {
   return (
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -5,6 +18,38 @@ export const LinkBlankTargetSvg = () => {
         d="M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11"
         stroke="currentColor"
         fill="none"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
+export const ArrowTurningDownRightSvg = () => {
+  import.meta.css = css;
+
+  return (
+    <svg viewBox="0.25 0.35 9.7 11.6" className="navi_arrow_turning_down_right">
+      <path
+        d="M1 1H2.9A2.2 2.2 0 0 1 5.1 3.2V11.3M0.9 7.2 5.1 11.3 9.3 7.2"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
+export const ArrowTurnRightDownSvg = () => {
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M4 4H11A4 4 0 0 1 15 8V20M10 15 15 20 20 15"
+        fill="none"
+        stroke="currentColor"
         stroke-width="2"
         stroke-linecap="round"
         stroke-linejoin="round"

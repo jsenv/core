@@ -76,10 +76,7 @@
           <Input
             type="search"
             placeholder="Search games…"
-            value={searchSignal}
-            action={(v) => {
-              searchSignal.value = v;
-            }}
+            signal={searchSignal}
             expandX
             navi-list="game_list"
           />

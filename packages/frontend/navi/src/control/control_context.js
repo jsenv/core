@@ -54,6 +54,9 @@ export const CONTROL_PROP_SET = new Set([
   "actionAfterChange",
   "actionOnMouseDown",
   "actionDebounce",
+  // A signal bound two-way to the control: its value seeds the control's state and
+  // is written back on every uiAction. Precludes value/checked (see createControlInfo).
+  "signal",
   "defaultValue",
   "defaultChecked",
   "readOnly", // will depend wether readOnly is supported

@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wheel Demo</title>
+    <style>
+      body {
+        max-width: 820px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 30px;
+        color: #333;
+        font-size: 2rem;
+        text-align: center;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      /* Subsections read as headings (not tiny labels): larger, darker, spaced. */
+      .demo-section h3 {
+        position: relative;
+        margin: 28px 0 10px;
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 1.08rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 0.9rem;
+        line-height: 1.5;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+      }
+      .states > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+      }
+      .value-display {
+        min-height: 24px;
+        margin-top: 12px;
+        padding: 8px 10px;
+        font-size: 0.85rem;
+        font-family: monospace;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+      }
+      kbd {
+        padding: 1px 5px;
+        font-size: 0.8em;
+        font-family: monospace;
+        background: #eee;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+      }
+      .col-label {
+        color: #888;
+        font-size: 0.8rem;
+      }
+      /* Debug: reveal each glyph's text bounding box so vertical alignment
+         between the wheel numbers and the separators is obvious. Toggled by the
+         "Show text boxes" checkbox (adds .show-text-boxes on the section). The
+         span is inline, so its background hugs the text line box, not the row. */
+      .show-text-boxes .navi_wheel_item .dbg-text {
+        background: rgba(232, 89, 12, 0.35); /* numbers */
+      }
+      .show-text-boxes .navi_wheel_group_separator .dbg-text {
+        background: rgba(34, 139, 230, 0.4); /* separators */
+      }
+      .box-toggle {
+        display: inline-flex;
+        margin-bottom: 16px;
+        align-items: center;
+        gap: 6px;
+        color: #555;
+        font-size: 0.85rem;
+      }
+      .disclaimer {
+        margin: 0 0 4px;
+        padding: 12px 14px;
+        color: #7a4a00;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .toc {
+        line-height: 1.9;
+      }
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
+      }
+      .toc ul a {
+        color: #555;
+        font-size: 0.9rem;
+      }
+      /* A plain HTML/CSS scroll-snap list, sized + faded like the Wheel, to
+         compare the browser's native snapping/momentum against our
+         transform-based one. Same progressive fade mask, so only the scroll
+         behaviour differs visually. */
+      .native-wheel {
+        width: 3.5ch;
+        height: 96px; /* 3 rows × 32px, matching the Wheel defaults */
+        color: #111;
+        font-weight: 600;
+        font-size: 13.33px;
+        text-align: center;
+        -webkit-mask-image: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(0, 0, 0, 0.4) 34%,
+          #000 45%,
+          #000 55%,
+          rgba(0, 0, 0, 0.4) 66%,
+          transparent 100%
+        );
+        mask-image: linear-gradient(
+          to bottom,
+          transparent 0%,
+          rgba(0, 0, 0, 0.4) 34%,
+          #000 45%,
+          #000 55%,
+          rgba(0, 0, 0, 0.4) 66%,
+          transparent 100%
+        );
+        overflow-y: auto;
+        scroll-behavior: smooth;
+        scroll-snap-type: y mandatory;
+        scrollbar-width: none;
+      }
+      .native-wheel::-webkit-scrollbar {
+        display: none;
+      }
+      .native-wheel-item {
+        display: flex;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        font-variant-numeric: tabular-nums;
+        scroll-snap-align: center;
+      }
+      .native-wheel-pad {
+        height: 32px; /* (3 − 1) / 2 rows, so first/last can reach the center */
+      }
+      .scroll-buttons {
+        display: flex;
+        margin-top: 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .scroll-buttons button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .scroll-buttons button:hover {
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Wheel Demo</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { signal } from "@preact/signals";
+      import { useEffect, useRef, useState } from "preact/hooks";
+      import {
+        NaviDebug,
+        Time,
+        Wheel,
+        WheelGroup,
+        Picker,
+        usePickerMode,
+        Form,
+        Button,
+        Box,
+        Link,
+        Unit,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      const range = (n) => Array.from({ length: n }, (_, i) => i);
+      const pad2 = (n) => String(n).padStart(2, "0");
+
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
+      const Heading = ({ level = 3, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+      // Local YYYY-MM-DD (NOT toISOString, which is UTC and can shift the day).
+      const toLocalISODate = (date) =>
+        `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
+      // ── Table of contents ──────────────────────────────────────────────────
+
+      const TableOfContents = () => {
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="wheel">
+              Wheel
+            </Heading>
+            <p>
+              A scroll picker: pick a value by scrolling, dragging, clicking a
+              neighbour, or with <kbd>↑</kbd> <kbd>↓</kbd> (<kbd>←</kbd>{" "}
+              <kbd>→</kbd> when horizontal). The centered value is the
+              selection.
+            </p>
+            <div className="disclaimer">
+              ⚠️{" "}
+              <strong>Don't place a Wheel on a normally-scrolling page.</strong>{" "}
+              It captures wheel/drag scrolling with no visible scrollbar, so a
+              user can scroll it by accident and be unable to tell why the page
+              stopped scrolling — confusing at best, and they may change the
+              value without realising. Use it inside a <strong>Dialog</strong>{" "}
+              (or another deliberately-opened surface) where trapping the scroll
+              is expected.
+            </div>
+            <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
+              <li>
+                <Link href="#states">States</Link>
+              </li>
+              <li>
+                <Link href="#scroll">Scroll behavior</Link>
+                <ul>
+                  <li>
+                    <Link href="#scroll-small">Small list (4 values)</Link>
+                  </li>
+                  <li>
+                    <Link href="#scroll-long">Long list (100 values)</Link>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <Link href="#separator">Separator alignment</Link>
+              </li>
+              <li>
+                <Link href="#actions">uiAction / action / form</Link>
+              </li>
+              <li>
+                <Link href="#practical">Practical examples</Link>
+                <ul>
+                  <li>
+                    <Link href="#practical-size">Size picker</Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-day">Day picker</Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-duration">Duration picker</Link>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <Link href="#customization">Customization</Link>
+                <ul>
+                  <li>
+                    <Link href="#cust-visiblecount">visibleCount</Link>
+                  </li>
+                  <li>
+                    <Link href="#cust-horizontal">horizontal</Link>
+                  </li>
+                  <li>
+                    <Link href="#cust-padding">Item padding</Link>
+                  </li>
+                  <li>
+                    <Link href="#cust-glass">glass</Link>
+                  </li>
+                  <li>
+                    <Link href="#cust-frame">frameBorder</Link>
+                  </li>
+                </ul>
+              </li>
+            </ol>
+          </div>
+        );
+      };
+
+      // ── States ─────────────────────────────────────────────────────────────
+
+      const HOURS = range(24);
+      const StateWheel = (props) => (
+        <Wheel type="integer" defaultValue={9} {...props}>
+          {HOURS.map((h) => (
+            <Wheel.Item key={h} value={h}>
+              {pad2(h)}
+            </Wheel.Item>
+          ))}
+        </Wheel>
+      );
+
+      const StatesDemo = () => {
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="states">
+              States
+            </Heading>
+            <p>The same wheel in its different states.</p>
+            <div className="states">
+              <div>
+                <Heading id="states-focus">focus-visible</Heading>
+                <StateWheel basePseudoState={{ ":focus-visible": true }} />
+              </div>
+              <div>
+                <Heading id="states-loading">loading</Heading>
+                <StateWheel loading />
+              </div>
+              <div>
+                <Heading id="states-readonly">readonly</Heading>
+                <StateWheel readOnly />
+              </div>
+              <div>
+                <Heading id="states-disabled">disabled</Heading>
+                <StateWheel disabled />
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Scroll behavior (snapping, momentum, loop) ─────────────────────────
+
+      // Side-by-side harness: our transform-based Wheel vs a plain HTML/CSS
+      // scroll-snap list, driven by the same buttons, so the snapping/momentum
+      // feel can be compared against the browser's own scroller.
+      const ITEM_PX = 32; // matches the Wheel + native row height
+      const ScrollPair = ({ values, repeatNative, glideSpeed }) => {
+        const startIndex = Math.floor(values.length / 2);
+        const [v, setV] = useState(values[startIndex]);
+        const wheelRef = useRef(null);
+        const nativeRef = useRef(null);
+        // The Wheel loops; the native list can't. For a short list, repeat the
+        // values so the native side has a comparable scroll extent to fling.
+        const copies = repeatNative ? 3 : 1;
+        const nativeValues = range(values.length * copies).map(
+          (i) => values[i % values.length],
+        );
+        const nativeStart = (repeatNative ? values.length : 0) + startIndex;
+        useEffect(() => {
+          if (nativeRef.current) {
+            nativeRef.current.scrollTop = nativeStart * ITEM_PX;
+          }
+        }, []);
+        // Drive both the same way: a custom navi_scroll event for the Wheel (no
+        // real scroll), scrollBy for the native list.
+        const drive = (detail) => {
+          wheelRef.current?.dispatchEvent(
+            new CustomEvent("navi_scroll", { detail }),
+          );
+          const top = (detail.delta || 0) + (detail.items || 0) * ITEM_PX;
+          nativeRef.current?.scrollBy({ top, behavior: detail.behavior });
+        };
+        return (
+          <div>
+            <div className="row" style={{ gap: 48, alignItems: "flex-start" }}>
+              <div>
+                <Wheel
+                  ref={wheelRef}
+                  type="integer"
+                  value={v}
+                  action={setV}
+                  glideSpeed={glideSpeed}
+                >
+                  {values.map((value) => (
+                    <Wheel.Item key={value} value={value}>
+                      {pad2(value)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+                <div className="value-display">value: {pad2(v)}</div>
+                <span className="col-label">Wheel (ours, looping)</span>
+              </div>
+              <div>
+                <div className="native-wheel" ref={nativeRef}>
+                  <div className="native-wheel-pad" />
+                  {nativeValues.map((value, i) => (
+                    <div className="native-wheel-item" key={i}>
+                      {pad2(value)}
+                    </div>
+                  ))}
+                  <div className="native-wheel-pad" />
+                </div>
+                <span className="col-label">
+                  native scroll-snap{repeatNative ? " (×3)" : ""}
+                </span>
+              </div>
+            </div>
+            <div className="scroll-buttons">
+              <button onClick={() => drive({ items: -1, behavior: "smooth" })}>
+                ▲ item
+              </button>
+              <button onClick={() => drive({ items: 1, behavior: "smooth" })}>
+                ▼ item
+              </button>
+              <button onClick={() => drive({ delta: -12, behavior: "smooth" })}>
+                ▲ 12px
+              </button>
+              <button onClick={() => drive({ delta: 12, behavior: "smooth" })}>
+                ▼ 12px
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // Glide speed presets (px/ms) for the Wheel. "slow" makes a single row take
+      // ~0.8s so it's easy to see the transition — and to feel how rapid arrow /
+      // click input behaves when it outpaces one transition.
+      const GLIDE_SPEEDS = { slow: 0.04, normal: 0.16, fast: 0.5 };
+      const ScrollBehaviorDemo = () => {
+        const [speedName, setSpeedName] = useState("normal");
+        const glideSpeed = GLIDE_SPEEDS[speedName];
+        return (
+          <NaviDebug debugAll>
+            <div className="demo-section">
+              <Heading level={2} id="scroll">
+                Scroll behavior — snapping, momentum, loop
+              </Heading>
+              <p>
+                Scroll, drag or fling either column, or use the buttons (which
+                drive <em>both</em>). Left is our transform-based Wheel
+                (looping); right is a plain HTML/CSS <code>scroll-snap</code>{" "}
+                list — compare how each animates the snap. The <kbd>px</kbd>{" "}
+                buttons nudge by less than a row to show the snap-back.
+              </p>
+              <div
+                className="scroll-buttons"
+                style={{ marginTop: 0, marginBottom: 8 }}
+              >
+                <span
+                  style={{
+                    alignSelf: "center",
+                    color: "#555",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  Wheel glide speed:
+                </span>
+                {["slow", "normal", "fast"].map((name) => (
+                  <button
+                    key={name}
+                    onClick={() => setSpeedName(name)}
+                    style={
+                      speedName === name
+                        ? {
+                            background: "#4a90d9",
+                            color: "#fff",
+                            borderColor: "#4a90d9",
+                          }
+                        : undefined
+                    }
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+              <p style={{ marginTop: 0 }}>
+                Try <strong>slow</strong>, then tap <kbd>▼ item</kbd> (or hold{" "}
+                <kbd>↓</kbd> on a focused wheel) faster than the glide finishes:
+                the glide speeds up to stay tied to your input rate instead of
+                stretching into one long, detached slide.
+              </p>
+
+              <Heading id="scroll-small">Small list (4 values)</Heading>
+              <p>Few values — easiest to eyeball the wrap and each snap.</p>
+              <ScrollPair
+                values={[0, 15, 30, 45]}
+                repeatNative
+                glideSpeed={glideSpeed}
+              />
+
+              <Heading id="scroll-long">Long list (100 values)</Heading>
+              <p>
+                Many values — stress-tests momentum and the loop runway against
+                a tall native scroller.
+              </p>
+              <ScrollPair values={range(100)} glideSpeed={glideSpeed} />
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      // ── Practical examples ─────────────────────────────────────────────────
+
+      // Duration picker: two wheels (hours 1–5, minutes every 15) live inside a
+      // Picker popup. Each wheel's value feeds a signal so the trigger UI can
+      // show the current duration; the picker also aggregates the named children
+      // into one { hours, minutes } value (its action/uiAction).
+      const DURATION_HOURS = [1, 2, 3, 4, 5];
+      const DURATION_MINUTES = [0, 15, 30, 45];
+      const durationHoursSignal = signal(DURATION_HOURS[0]);
+      const durationMinutesSignal = signal(DURATION_MINUTES[0]);
+      const DurationWheelUI = () => {
+        return (
+          <Time type="time">
+            {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+          </Time>
+        );
+      };
+
+      // The hours/minutes wheels, shared by both picker surfaces. `big` scales
+      // them up for the dialog (taller rows, more room per item). Breathing room
+      // around hours/minutes is set PER ITEM (paddingX), so the padded area
+      // stays scrollable — no group spacing.
+      const DurationWheelsGroup = ({ big }) => (
+        <WheelGroup>
+          <Wheel
+            name="hours"
+            type="integer"
+            signal={durationHoursSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_HOURS.map((h) => (
+              <Wheel.Item key={h} value={h} paddingX={big ? "s" : "s"}>
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          <WheelGroup.Separator size={big ? "xxl" : undefined}>
+            <Unit unit="hour" format="short" size="inherit" />
+          </WheelGroup.Separator>
+          <Wheel
+            name="minutes"
+            type="integer"
+            signal={durationMinutesSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_MINUTES.map((m) => (
+              <Wheel.Item key={m} value={m} paddingX={big ? "s" : "s"}>
+                {pad2(m)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        </WheelGroup>
+      );
+
+      // Popover and dialog are two different UIs (usePickerMode() is only
+      // available to a Picker's children). Popover: compact, spin live and click
+      // outside to commit. Dialog: a deliberate modal surface — bigger wheels,
+      // more padding, and explicit Annuler / Define actions (commit via a
+      // button, like the picker in 09_input_duration_demo.html). The dialog case
+      // is a full early return so the two surfaces stay clearly separated.
+      const DurationPickerContent = () => {
+        const mode = usePickerMode();
+
+        if (mode === "dialog") {
+          return (
+            <Box flex="y" spacing="l" padding="xl" alignX="center">
+              <DurationWheelsGroup big />
+              <Box flex="x" spacing="s" alignX="end" expandX>
+                <Button command="--navi-cancel" variant="discrete">
+                  Annuler
+                </Button>
+                <Button command="--navi-define" variant="discrete">
+                  Définir
+                </Button>
+              </Box>
+            </Box>
+          );
+        }
+
+        return (
+          <Box padding="s">
+            <DurationWheelsGroup />
+          </Box>
+        );
+      };
+
+      // Same wheels, standalone (outside a Picker) — the intended way to use a
+      // duration wheel directly on a deliberately-opened surface.
+      const DurationWheels = () => (
+        <WheelGroup padding="s">
+          <Wheel name="hours" type="integer" signal={durationHoursSignal}>
+            {DURATION_HOURS.map((h) => (
+              <Wheel.Item key={h} value={h} paddingX="s">
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          <WheelGroup.Separator>
+            <Wheel.Colon />
+          </WheelGroup.Separator>
+          <Wheel name="minutes" type="integer" signal={durationMinutesSignal}>
+            {DURATION_MINUTES.map((m) => (
+              <Wheel.Item key={m} value={m} paddingX="s">
+                {pad2(m)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        </WheelGroup>
+      );
+
+      const PracticalExamplesDemo = () => {
+        const [size, setSize] = useState("M");
+        const [duration, setDuration] = useState({});
+        const SIZES = ["XXS", "XS", "S", "M", "L", "XL", "XXL"];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = range(6).map((offset) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() + offset);
+          return toLocalISODate(date);
+        });
+        // Default to tomorrow so there's a neighbour above (today) and below.
+        const [day, setDay] = useState(days[1]);
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="practical">
+              Practical examples
+            </Heading>
+
+            <Heading id="practical-size">Size picker (no loop)</Heading>
+            <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
+            <div className="row">
+              <Wheel
+                bounded
+                value={size}
+                visibleCount={5}
+                action={(v) => {
+                  setSize(v);
+                }}
+              >
+                {SIZES.map((s) => (
+                  <Wheel.Item key={s} value={s}>
+                    {s}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+
+            <Heading id="practical-day">
+              Day picker — today … +5 days (no loop)
+            </Heading>
+            <p>
+              Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>:
+              “Today”, “Tomorrow”, then weekday + date.
+            </p>
+            <div className="row">
+              <Wheel
+                bounded
+                type="day"
+                value={day}
+                action={(v) => {
+                  setDay(v);
+                }}
+                itemHeight={40}
+                minWidth="25ch"
+                border="1px dotted grey"
+              >
+                {days.map((iso) => (
+                  <Wheel.Item key={iso} value={iso}>
+                    <Time type="date" dayLabel>
+                      {iso}
+                    </Time>
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+
+            <Heading id="practical-duration">
+              Duration picker (hours + minutes)
+            </Heading>
+            <p>
+              A wheel belongs inside a deliberately-opened surface (see the
+              warning up top) — a <code>Picker</code> popup is exactly that.
+              Here a duration Picker opens two looping wheels — hours (1–5) and
+              minutes (every 15). <code>WheelGroup</code> is itself a control
+              group, so the picker aggregates the named <code>hours</code> /{" "}
+              <code>minutes</code> wheels into one value with no extra wrapper.
+              In popover mode you spin the wheels live and click outside to
+              validate; the picker's <code>action</code> fires on close only if
+              the value changed.
+            </p>
+            <div className="row">
+              <NaviDebug debugAll>
+                <Picker
+                  type="controlgroup"
+                  ui={<DurationWheelUI />}
+                  placeholder="Choisir une durée"
+                  popupWidthFitContent
+                  animation
+                  scrollCapture="dialog"
+                  action={(v) => {
+                    setDuration(v);
+                  }}
+                >
+                  <DurationPickerContent />
+                </Picker>
+              </NaviDebug>
+              <span className="col-label">
+                {pad2(duration.hours ?? durationHoursSignal.value)}:
+                {pad2(duration.minutes ?? durationMinutesSignal.value)}
+              </span>
+            </div>
+
+            <Heading id="practical-duration-inline">
+              Duration wheels (outside a picker)
+            </Heading>
+            <p>
+              The same two wheels used directly (no picker). This is how you'd
+              put a duration wheel on any deliberately-opened surface. Breathing
+              room around hours/minutes is <code>paddingX</code> on each{" "}
+              <code>Wheel.Item</code>, so the padded gap stays scrollable.
+            </p>
+            <div className="row">
+              <DurationWheels />
+            </div>
+          </div>
+        );
+      };
+
+      // ── Separator alignment ────────────────────────────────────────────────
+
+      const AlignmentSquare = () => (
+        <span
+          style={{
+            display: "block",
+            width: 14,
+            height: 14,
+            background: "#e8590c",
+            borderRadius: 2,
+          }}
+        />
+      );
+
+      // Inline wrapper whose background (when boxes are shown) hugs the text so
+      // the number/separator line boxes can be compared vertically.
+      const Boxed = ({ children }) => (
+        <span className="dbg-text">{children}</span>
+      );
+
+      // Small self-contained wheels reused across the separator cases. Named so
+      // the WheelGroup (a control group) can include them in its value without
+      // warning; the caller can override the name.
+      const HourWheel = (props) => {
+        const [v, setV] = useState(9);
+        return (
+          <Wheel name="hour" type="integer" value={v} action={setV} {...props}>
+            {range(24).map((h) => (
+              <Wheel.Item key={h} value={h} {...props?.itemProps}>
+                <Boxed>{pad2(h)}</Boxed>
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+      // Alignment doesn't depend on the value count, so the separator cases use
+      // light 4-value columns (a real HH:MM:SS would use 60-value minute/second
+      // wheels — heavier DOM, not needed to show alignment).
+      const QuarterWheel = (props) => {
+        const [v, setV] = useState(30);
+        return (
+          <Wheel
+            name="quarter"
+            type="integer"
+            value={v}
+            action={setV}
+            {...props}
+          >
+            {[0, 15, 30, 45].map((x) => (
+              <Wheel.Item key={x} value={x} {...props?.itemProps}>
+                <Boxed>{pad2(x)}</Boxed>
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        );
+      };
+
+      const SeparatorAlignmentDemo = () => {
+        const [showBoxes, setShowBoxes] = useState(true);
+        return (
+          <div
+            className={
+              showBoxes ? "demo-section show-text-boxes" : "demo-section"
+            }
+          >
+            <Heading level={2} id="separator">
+              Separator alignment
+            </Heading>
+            <p>
+              A separator's content sits in a one-row box that mirrors a wheel
+              item — same full-row line-height — so its glyph lands on the
+              numbers' line whatever it is (a square, a word, ":", "ZZ"). The
+              wheel numbers live in a transformed track; matching the
+              line-height is what keeps the static separator from rendering ~1px
+              off them.
+            </p>
+            <p>
+              <code>Wheel.Colon</code> draws the ":" as an SVG whose dots are
+              symmetric about the row's middle, so it centers optically against
+              the numbers — use it for every ":" separator. A <em>font</em> ":"
+              shares the line but sits on the baseline, so its dots hug the
+              lower half of the digits and read as sunk. Compare the two below
+              (colon first, font ":" second).
+            </p>
+            <label className="box-toggle">
+              <input
+                type="checkbox"
+                checked={showBoxes}
+                onChange={(e) => {
+                  setShowBoxes(e.target.checked);
+                }}
+              />
+              Show text boxes (orange = numbers, blue = separators)
+            </label>
+            <div className="states">
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator>
+                    <AlignmentSquare />
+                  </WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">square</span>
+              </div>
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator>
+                    <Wheel.Colon />
+                  </WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">Wheel.Colon (SVG, centered)</span>
+              </div>
+              <div>
+                <WheelGroup>
+                  <HourWheel />
+                  <WheelGroup.Separator>
+                    <Boxed>:</Boxed>
+                  </WheelGroup.Separator>
+                  <QuarterWheel />
+                </WheelGroup>
+                <span className="col-label">font ":" (baseline, sunk)</span>
+              </div>
+            </div>
+
+            <Heading id="sep-1sep2col">1 separator, 2 columns</Heading>
+            <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>
+                  <Wheel.Colon />
+                </WheelGroup.Separator>
+                <QuarterWheel />
+              </WheelGroup>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
+                <QuarterWheel />
+              </WheelGroup>
+            </div>
+
+            <Heading id="sep-words">
+              Word separators (hours + minutes), incl. trailing
+            </Heading>
+            <WheelGroup>
+              <HourWheel />
+              <WheelGroup.Separator>
+                <Boxed>hours</Boxed>
+              </WheelGroup.Separator>
+              <QuarterWheel />
+              <WheelGroup.Separator>
+                <Boxed>minutes</Boxed>
+              </WheelGroup.Separator>
+            </WheelGroup>
+
+            <Heading id="sep-3col2sep">3 columns, 2 separators</Heading>
+            <p style={{ marginBottom: 8 }}>
+              A tall glyph like <code>ZZ</code> (right) makes any misalignment
+              obvious that ":" (left) can hide.
+            </p>
+            <div className="row" style={{ gap: 40, alignItems: "flex-start" }}>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>
+                  <Wheel.Colon />
+                </WheelGroup.Separator>
+                <QuarterWheel />
+                <WheelGroup.Separator>
+                  <Wheel.Colon />
+                </WheelGroup.Separator>
+                <QuarterWheel />
+              </WheelGroup>
+              <WheelGroup>
+                <HourWheel />
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
+                <QuarterWheel />
+                <WheelGroup.Separator>
+                  <Boxed>ZZ</Boxed>
+                </WheelGroup.Separator>
+                <QuarterWheel />
+              </WheelGroup>
+            </div>
+          </div>
+        );
+      };
+
+      // ── Actions (uiAction / action / form) ─────────────────────────────────
+
+      const ActionsDemo = () => {
+        const [hour, setHour] = useState(9);
+        const [log, pushLog, clearLog] = useCallLog();
+        const [submitted, setSubmitted] = useState(null);
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="actions">
+              uiAction / action / form
+            </Heading>
+            <p>
+              <code>uiAction</code> fires live — each time an item passes the
+              center, even mid-scroll; <code>action</code> runs once the wheel
+              settles on a value. Inside a <code>Form</code> the value submits
+              under the wheel's <code>name</code>.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Wheel
+                type="integer"
+                value={hour}
+                uiAction={(v) => {
+                  pushLog("uiAction", v);
+                }}
+                action={(v) => {
+                  setHour(v);
+                  pushLog("action", v);
+                }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <CallLog entries={log} onClear={clearLog} />
+            </div>
+            <Heading id="actions-form">Inside a form</Heading>
+            <Form
+              flex="y"
+              alignX="start"
+              spacing="m"
+              action={({ hour: submittedHour }) => {
+                setSubmitted(submittedHour);
+              }}
+            >
+              <Wheel type="integer" name="hour" defaultValue={9}>
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <div className="value-display">
+              {submitted !== null ? `submitted: ${submitted}` : ""}
+            </div>
+          </div>
+        );
+      };
+
+      // ── Customization ──────────────────────────────────────────────────────
+
+      const CustomizationDemo = () => {
+        const [a, setA] = useState(9);
+        const [b, setB] = useState(9);
+        const [vc, setVc] = useState(9);
+        const [hz, setHz] = useState(9);
+        const [hzH, setHzH] = useState(9);
+        const [hzM, setHzM] = useState(30);
+        const [g, setG] = useState(9);
+        const [gf, setGf] = useState(9);
+        const [gh, setGh] = useState(9);
+        const [gm, setGm] = useState(30);
+        const HOURS24 = range(24);
+        const QUARTERS = [0, 15, 30, 45];
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="customization">
+              Customization
+            </Heading>
+            <p>
+              Wheel is a <code>Box</code>, so style props work directly. The
+              text colour is <code>--wheel-color</code>.
+            </p>
+            <div style={{ marginBottom: 24 }}>
+              <Heading id="cust-border">border="1px solid grey"</Heading>
+              <Wheel
+                type="integer"
+                value={a}
+                action={setA}
+                border="1px solid grey"
+                padding="0 6px"
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Heading id="cust-color">accent color (--wheel-color)</Heading>
+              <Wheel
+                type="integer"
+                value={b}
+                action={setB}
+                style={{ "--wheel-color": "#d6336c" }}
+              >
+                {range(24).map((h) => (
+                  <Wheel.Item key={h} value={h}>
+                    {pad2(h)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Heading id="cust-size">size</Heading>
+              <div className="row">
+                {[
+                  { label: 'size="xxs"', size: "xxs" },
+                  { label: "default", size: undefined },
+                  { label: 'size="l"', size: "l" },
+                  { label: 'size="xxl"', size: "xxl" },
+                ].map(({ label, size }) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span className="col-label">{label}</span>
+                    <Wheel type="integer" defaultValue={9} size={size}>
+                      {range(24).map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                  </div>
+                ))}
+              </div>
+              <div className="row" style={{ marginTop: 16 }}>
+                <WheelGroup>
+                  <Wheel type="integer" defaultValue={9} size="xl">
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <WheelGroup.Separator size="xl">
+                    <Wheel.Colon />
+                  </WheelGroup.Separator>
+                  <Wheel type="integer" defaultValue={30} size="xl">
+                    {range(60).map((m) => (
+                      <Wheel.Item key={m} value={m}>
+                        {pad2(m)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </WheelGroup>
+              </div>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Heading id="cust-visiblecount">
+                visibleCount (rows shown around the center)
+              </Heading>
+              <p>
+                An odd count; the center row is the selection. More rows show
+                more context above/below.
+              </p>
+              <div className="states">
+                {[3, 5, 7].map((count) => (
+                  <div key={count}>
+                    <Wheel
+                      type="integer"
+                      value={vc}
+                      action={setVc}
+                      visibleCount={count}
+                    >
+                      {HOURS24.map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <span className="col-label">visibleCount={count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Heading id="cust-horizontal">
+                horizontal (scrolls left/right)
+              </Heading>
+              <p>
+                With <code>horizontal</code> the wheel lays out left-to-right
+                and arrow keys become <kbd>←</kbd> <kbd>→</kbd>. A{" "}
+                <code>WheelGroup horizontal</code> stacks such wheels with
+                separators between the rows.
+              </p>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 24 }}
+              >
+                <div>
+                  <div className="col-label" style={{ marginBottom: 6 }}>
+                    single wheel
+                  </div>
+                  <Wheel
+                    type="integer"
+                    horizontal
+                    value={hz}
+                    action={setHz}
+                    itemWidth="4ch"
+                    visibleCount={5}
+                  >
+                    {HOURS24.map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </div>
+                <div>
+                  <div className="col-label" style={{ marginBottom: 6 }}>
+                    WheelGroup horizontal
+                  </div>
+                  <WheelGroup horizontal spacing="6px">
+                    <Wheel
+                      name="hours"
+                      type="integer"
+                      horizontal
+                      value={hzH}
+                      action={setHzH}
+                      itemWidth="4ch"
+                      visibleCount={5}
+                    >
+                      {HOURS24.map((v) => (
+                        <Wheel.Item key={v} value={v}>
+                          {pad2(v)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator>
+                      <Boxed>hours</Boxed>
+                    </WheelGroup.Separator>
+                    <Wheel
+                      name="minutes"
+                      type="integer"
+                      horizontal
+                      value={hzM}
+                      action={setHzM}
+                      itemWidth="4ch"
+                      visibleCount={5}
+                    >
+                      {QUARTERS.map((v) => (
+                        <Wheel.Item key={v} value={v}>
+                          {pad2(v)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator>
+                      <Boxed>minutes</Boxed>
+                    </WheelGroup.Separator>
+                  </WheelGroup>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Heading id="cust-padding">Item padding (spacing)</Heading>
+              <p>
+                No padding by default — a wheel shows its true content size, so
+                nothing is imposed. Add breathing room by padding each{" "}
+                <code>Wheel.Item</code> (it's a <code>Box</code>:{" "}
+                <code>paddingX</code> on a vertical wheel, <code>paddingY</code>{" "}
+                on a horizontal one), which keeps the padded area scrollable; or
+                set it once for all wheels with the{" "}
+                <code>--navi-wheel-item-padding-cross-default</code> CSS var.{" "}
+                <code>WheelGroup spacing</code> exists too but pads the viewport
+                (a non-scrollable dead zone), so avoid it.
+              </p>
+              <div className="states">
+                <div>
+                  <WheelGroup>
+                    <HourWheel />
+                    <WheelGroup.Separator>
+                      <Wheel.Colon />
+                    </WheelGroup.Separator>
+                    <QuarterWheel />
+                  </WheelGroup>
+                  <span className="col-label">none (default)</span>
+                </div>
+                <div>
+                  <WheelGroup>
+                    <HourWheel itemProps={{ paddingX: "0.75ch" }} />
+                    <WheelGroup.Separator>
+                      <Wheel.Colon />
+                    </WheelGroup.Separator>
+                    <QuarterWheel itemProps={{ paddingX: "0.75ch" }} />
+                  </WheelGroup>
+                  <span className="col-label">
+                    Wheel.Item paddingX="0.75ch"
+                  </span>
+                </div>
+                <div>
+                  <WheelGroup horizontal>
+                    <HourWheel
+                      horizontal
+                      itemWidth="3ch"
+                      itemProps={{ paddingY: "0.4ch" }}
+                    />
+                    <WheelGroup.Separator>
+                      <Unit unit="hour" format="short" size="inherit" />
+                    </WheelGroup.Separator>
+                    <QuarterWheel
+                      horizontal
+                      itemWidth="3ch"
+                      itemProps={{ paddingY: "0.4ch" }}
+                    />
+                  </WheelGroup>
+                  <span className="col-label">
+                    horizontal, Wheel.Item paddingY
+                  </span>
+                </div>
+                <div>
+                  <div
+                    style={{ "--navi-wheel-item-padding-cross-default": "1ch" }}
+                  >
+                    <WheelGroup>
+                      <HourWheel />
+                      <WheelGroup.Separator>
+                        <Wheel.Colon />
+                      </WheelGroup.Separator>
+                      <QuarterWheel />
+                    </WheelGroup>
+                  </div>
+                  <span className="col-label">via CSS var (1ch)</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <Heading id="cust-glass">glass (frost the neighbours)</Heading>
+              <p>
+                Every wheel fades its neighbours out toward the edges — that
+                progressive fade <em>is</em> the selection emphasis, so a
+                half-scrolled row is half-faded. <code>glass</code> additionally
+                frosts (blurs) the faded rows (tune with{" "}
+                <code>--wheel-glass-blur</code>).
+              </p>
+              <div className="states">
+                <div>
+                  <Wheel type="integer" value={g} action={setG} glass>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">glass</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={g}
+                    action={setG}
+                    glass
+                    style={{ "--wheel-glass-blur": "4px" }}
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">stronger blur</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <Heading id="cust-frame">
+                frameBorder (line the window edges)
+              </Heading>
+              <p>
+                <code>frameBorder</code> draws a faint line along the top and
+                bottom of the center window. It's independent of{" "}
+                <code>glass</code> — use it alone or together. Tune the colour
+                with <code>--wheel-frame-color</code>.
+              </p>
+              <div className="states">
+                <div>
+                  <Wheel type="integer" value={gf} action={setGf} frameBorder>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">frameBorder</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={gf}
+                    action={setGf}
+                    glass
+                    frameBorder
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">glass + frameBorder</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <Heading id="cust-group-glass">
+                on a WheelGroup (one prop for all wheels)
+              </Heading>
+              <p>
+                Set <code>glass</code> (or <code>frameBorder</code>) once on a{" "}
+                <code>WheelGroup</code> and every wheel inside inherits it.
+              </p>
+              <div className="states">
+                <div>
+                  <WheelGroup glass spacing="0.5ch">
+                    <Wheel
+                      name="hours"
+                      type="integer"
+                      value={gh}
+                      action={setGh}
+                    >
+                      {range(24).map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                    <WheelGroup.Separator>
+                      <Wheel.Colon />
+                    </WheelGroup.Separator>
+                    <Wheel
+                      name="minutes"
+                      type="integer"
+                      value={gm}
+                      action={setGm}
+                    >
+                      {[0, 15, 30, 45].map((m) => (
+                        <Wheel.Item key={m} value={m}>
+                          {pad2(m)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                  </WheelGroup>
+                  <span className="col-label">glass on WheelGroup</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <NaviDebug>
+          <TableOfContents />
+          <StatesDemo />
+          <ScrollBehaviorDemo />
+          <SeparatorAlignmentDemo />
+          <ActionsDemo />
+          <PracticalExamplesDemo />
+          <CustomizationDemo />
+        </NaviDebug>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

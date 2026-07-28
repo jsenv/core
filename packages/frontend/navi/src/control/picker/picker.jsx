@@ -322,6 +322,11 @@ const PickerButton = (props) => {
     placeholder,
     ui,
     maxLines = 1,
+    // By default the popover is at least as wide as the trigger (min-width:
+    // --anchor-width). Set true when the CONTENT should dictate the popover width
+    // (e.g. a Wheel) instead of being stretched to the trigger — see
+    // picker_custom.jsx.
+    popupWidthFitContent,
   } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
@@ -350,6 +355,7 @@ const PickerButton = (props) => {
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
       navi-ui-custom={ui === "default" ? undefined : ""}
+      data-popup-width-fit-content={popupWidthFitContent ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -358,6 +364,7 @@ const PickerButton = (props) => {
       iconSize={undefined}
       ui={undefined}
       maxLines={undefined}
+      popupWidthFitContent={undefined}
       dayLabel={undefined}
       // This wrapper will receive keyboard event bubbling from the picker popup content
       // we re-dispatch on the input (to get escape to close for instance)
@@ -501,7 +508,7 @@ const PickerInput = (props) => {
   // picker still looks interactive (it is — just not keyboard-typeable).
   const readOnlyForced = readOnly
     ? false
-    : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
+    : isOpeningKeyboardOnMobile(props.type);
 
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
 
@@ -511,6 +518,11 @@ const PickerInput = (props) => {
       {...props}
       readOnly={readOnlyForced ? true : readOnly}
       data-readonly-forced={readOnlyForced ? "" : undefined}
+      // A forced-readonly picker trigger is button-like — it can't be typed
+      // into, so it shouldn't get the browser's eager text-input focus ring on
+      // mouse. Gate the ring on keyboard use instead (see pseudo_styles.js). An
+      // editable picker (readOnlyForced false) keeps native input focus-visible.
+      data-prevent-eager-focus-visible=""
       ui={undefined}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
@@ -531,14 +543,19 @@ const PickerInput = (props) => {
 // Input types that open the software keyboard on mobile.
 // When the picker's underlying input has one of these types, we force readOnly
 // so tapping the picker doesn't open the keyboard (the picker manages its own UI).
-const MOBILE_KEYBOARD_TYPES = new Set([
-  "text",
-  "email",
-  "url",
-  "search",
-  "password",
-  "tel",
-  "number",
+const isOpeningKeyboardOnMobile = (type) => {
+  if (NON_MOBILE_KEYBOARD_TYPES.has(type)) {
+    return false;
+  }
+  return true; // default to text
+};
+const NON_MOBILE_KEYBOARD_TYPES = new Set([
+  "date",
+  "month",
+  "week",
+  "time",
+  "datetime-local",
+  "color",
 ]);
 
 const PICKER_BUTTON_PSEUDO_CLASSES = [

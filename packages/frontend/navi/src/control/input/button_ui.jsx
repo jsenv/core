@@ -98,6 +98,7 @@ const css = /* css */ `
     --x-button-color: var(--button-color);
     --x-button-cursor: var(--button-cursor);
 
+    position: relative;
     box-sizing: border-box;
     aspect-ratio: inherit;
     padding: 0;
@@ -107,8 +108,6 @@ const css = /* css */ `
     border-radius: var(--button-border-radius);
     outline: none;
     cursor: var(--x-button-cursor);
-    -webkit-tap-highlight-color: transparent;
-    position: relative;
     touch-action: manipulation;
     user-select: none;
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);

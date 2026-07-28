@@ -51,7 +51,22 @@ export const performTabNavigation = (
     if (hasNegativeTabIndex(element)) {
       return false;
     }
-    return elementIsFocusable(element, { excludeAriaHidden });
+    if (!elementIsFocusable(element, { excludeAriaHidden })) {
+      return false;
+    }
+    // Native radio-group semantics: within a named radio group only ONE radio
+    // is a Tab stop — the checked one, or the first focusable one when none is
+    // checked. The rest are reachable with arrow keys, not Tab. Without this,
+    // tabbing into a group would land on its first radio instead of its checked
+    // value (e.g. tabbing between two wheels of a WheelGroup).
+    if (
+      element.matches?.('input[type="radio"]') &&
+      element.name &&
+      !radioIsGroupTabStop(element)
+    ) {
+      return false;
+    }
+    return true;
   };
 
   // A focus group "owns" the activeElement when activeElement is inside it.
@@ -200,6 +215,43 @@ export const performTabNavigation = (
     }
     return false;
   }
+};
+
+// Whether a radio is the single Tab stop of its native radio group (checked, or
+// the first enabled radio when none is checked). Mirrors how the browser puts
+// only one radio of a group in the Tab order.
+const radioIsGroupTabStop = (radio) => {
+  const scope = radio.form || radio.getRootNode();
+  if (!scope || !scope.querySelectorAll) {
+    return true;
+  }
+  const sameName = scope.querySelectorAll(
+    `input[type="radio"][name="${CSS.escape(radio.name)}"]`,
+  );
+  const radioForm = radio.form || null;
+  let checked = null;
+  let firstEnabled = null;
+  let groupSize = 0;
+  for (const candidate of sameName) {
+    // Radios only form one group when they share the same form owner.
+    if ((candidate.form || null) !== radioForm) {
+      continue;
+    }
+    groupSize++;
+    if (candidate.disabled) {
+      continue;
+    }
+    if (!firstEnabled) {
+      firstEnabled = candidate;
+    }
+    if (candidate.checked && !checked) {
+      checked = candidate;
+    }
+  }
+  if (groupSize <= 1) {
+    return true;
+  }
+  return radio === (checked || firstEnabled);
 };
 
 export const isTabEvent = (event) => event.key === "Tab" || event.keyCode === 9;

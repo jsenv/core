@@ -294,7 +294,11 @@
                 <Caption>Lien ancre avec icône personnalisée</Caption>
                 <Link
                   href="#section1"
-                  icon={<span style={{ color: "purple" }}>⚓</span>}
+                  endIcon={
+                    <span style={{ display: "inline-block", color: "purple" }}>
+                      ⚓
+                    </span>
+                  }
                 >
                   Anchor Link (Custom Icon)
                 </Link>
@@ -499,8 +503,16 @@
                   <Link
                     href="/very/long/internal/path/that/should/also/be/truncated/properly"
                     maxLines={1}
-                    startIcon={<UserSvg />}
-                    endIcon={<StarSvg />}
+                    startIcon={
+                      <Icon>
+                        <UserSvg />
+                      </Icon>
+                    }
+                    endIcon={
+                      <Icon>
+                        <StarSvg />
+                      </Icon>
+                    }
                   >
                     This is a very long link text that should be truncated with
                     ellipsis when it doesn't fit in the container

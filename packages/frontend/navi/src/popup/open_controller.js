@@ -3,9 +3,8 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import {
-  getFocusedBeforeTransfer,
+  prepareFocusTransfer,
   markAutofocusRestoreOnClose,
-  transferFocus,
 } from "../utils/focus/focus_transfer.js";
 import { useStableCallback } from "../utils/use_stable_callback.js";
 
@@ -155,8 +154,12 @@ export const createOpenController = (
       });
       chainEvent(requestOpenEvent, e);
       controller.opened = true;
-      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
-      // by mutating it — openHandler reads it right after, synchronously.
+      // we prepare focus transfer before actually opening the popover/dialog
+      // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
+      const focusTransfer = prepareFocusTransfer(
+        requestOpenEvent,
+        debugInteraction,
+      );
       controller.transferFocusOnOpen = (el) => {
         // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
         // e.detail.eventChain (built by chainEvent above) to recover the
@@ -167,16 +170,8 @@ export const createOpenController = (
         // back to `document.activeElement`, which is often `document.body`
         // once mousedown.preventDefault() has kept focus from landing
         // anywhere yet.
-        const focusedBeforeOpen = getFocusedBeforeTransfer(requestOpenEvent);
-        debugInteraction(
-          requestOpenEvent,
-          `focused element before open`,
-          focusedBeforeOpen,
-        );
-        // Picker's openController.open() reads this back synchronously right
-        // after openEffect() returns (see picker_custom.jsx useOpenController).
-        requestOpenEvent.detail.focusedBeforeOpen = focusedBeforeOpen;
-        transferFocus(el, debugInteraction, e, focusedBeforeOpen);
+
+        focusTransfer.transferFocus(e, el);
         return (closeEvent) => {
           markAutofocusRestoreOnClose(el);
           const focusoutEvent = findEvent(closeEvent, "focusout");
@@ -194,12 +189,7 @@ export const createOpenController = (
               );
               mousedownEvent.preventDefault();
             }
-            debugInteraction(
-              closeEvent,
-              `restore focus to previously focused element`,
-              focusedBeforeOpen,
-            );
-            focusedBeforeOpen.focus({ preventScroll: true });
+            focusTransfer.restoreFocus();
           }
         };
       };

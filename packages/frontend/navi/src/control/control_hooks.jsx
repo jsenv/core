@@ -30,6 +30,7 @@ import {
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
+import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
 import {
   dispatchRequestAction,
@@ -48,7 +49,6 @@ import {
 } from "@jsenv/navi/src/navi_debug.jsx";
 import { compareTwoJsValues } from "@jsenv/navi/src/utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { isSignal } from "@jsenv/navi/src/utils/is_signal.js";
 import { onNaviCommand, triggerNaviCommand } from "./commands.js";
 import {
   ActionContext,
@@ -791,41 +791,63 @@ const createControlInfo = (props, { controlType }) => {
   let hasStateProp;
   let value;
   const typeProp = props.type || "text";
+  // A bound signal: its value seeds the state, and onUIAction writes the state
+  // back into it (see ui_state_controller.js). It replaces the value/checked prop
+  // — reading it here makes the control re-render (and re-sync) when it changes.
+  const signal = Object.hasOwn(props, "signal") ? props.signal : undefined;
+  // For a checkbox/radio the signal holds the boolean checked state, not the value.
+  let signalHoldsChecked = false;
 
   if (controlType === "input") {
     if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
       defaultStatePropName = "defaultChecked";
-      hasStateProp = Object.hasOwn(props, "checked");
       value = props.value || "on";
-      if (hasStateProp) {
-        let checked = props.checked;
-        if (isSignal(checked)) {
-          checked = checked.value;
+      signalHoldsChecked = true;
+      if (Object.hasOwn(props, "checked")) {
+        if (signal) {
+          warnSignalCollision(props, controlType, "checked");
         }
-        if (checked) {
-          stateInitial = value;
-        } else {
-          stateInitial = undefined;
-        }
+        hasStateProp = true;
+        stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
+        // resolveInputProps may seed defaultChecked from a bound signal's
+        // default: the control stays uncontrolled and only write-syncs the
+        // signal (onUIAction).
+        hasStateProp = false;
         stateInitial = value;
+      } else if (signal) {
+        // A bound signal with no resolved default: its live value seeds state.
+        hasStateProp = true;
+        stateInitial = signal.value ? value : undefined;
       } else {
+        hasStateProp = false;
         stateInitial = undefined;
       }
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      hasStateProp = Object.hasOwn(props, "value");
-      if (hasStateProp) {
-        value = props.value;
-        if (isSignal(value)) {
-          value = value.value;
+      if (Object.hasOwn(props, "value")) {
+        if (signal) {
+          warnSignalCollision(props, controlType, "value");
         }
+        hasStateProp = true;
+        value = props.value;
         stateInitial = value;
       } else if (Object.hasOwn(props, "defaultValue")) {
+        // resolveInputProps seeds defaultValue from a bound signal's default,
+        // so an input+signal is uncontrolled-with-default; the signal only
+        // receives write-backs (onUIAction).
+        hasStateProp = false;
         stateInitial = props.defaultValue;
+      } else if (signal) {
+        // A plain bound signal with no default (e.g. Wheel): its live value
+        // seeds and controls the state.
+        hasStateProp = true;
+        value = signal.value;
+        stateInitial = value;
       } else {
+        hasStateProp = false;
         stateInitial = undefined;
       }
 
@@ -846,16 +868,20 @@ const createControlInfo = (props, { controlType }) => {
   } else if (controlType === "picker") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    hasStateProp = Object.hasOwn(props, "value");
-    if (hasStateProp) {
-      let value = props.value;
-      if (isSignal(value)) {
-        value = value.value;
+    if (Object.hasOwn(props, "value")) {
+      if (signal) {
+        warnSignalCollision(props, controlType, "value");
       }
-      stateInitial = value;
+      hasStateProp = true;
+      stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
+      hasStateProp = false;
       stateInitial = props.defaultValue;
+    } else if (signal) {
+      hasStateProp = true;
+      stateInitial = signal.value;
     } else {
+      hasStateProp = false;
       stateInitial = undefined;
     }
 
@@ -871,10 +897,29 @@ const createControlInfo = (props, { controlType }) => {
     stateInitial,
     state: stateInitial,
     value,
+    signal,
+    signalHoldsChecked,
 
     readOnlySupported,
     disabledSupported,
   };
+};
+// A control is bound to EITHER a signal (two-way) or a value/checked prop, never
+// both — the two would fight over the state. Warn (dev only) when both are given.
+// Only the controlled prop (value/checked) collides with signal — the default
+// prop (defaultValue/defaultChecked) is legitimately seeded from the signal by
+// resolveInputProps, so it must not warn here.
+const warnSignalCollision = (props, controlType, stateProp) => {
+  if (!import.meta.dev) {
+    return;
+  }
+  if (Object.hasOwn(props, stateProp)) {
+    console.warn(
+      `[navi] "${controlType}" got both "signal" and "${stateProp}". ` +
+        `"signal" is the source of truth; "${stateProp}" is ignored. ` +
+        `Pass only "signal".`,
+    );
+  }
 };
 // color, radio, image, file etc do not support readonly
 const INPUT_TYPE_SUPPORTING_READONLY_SET = new Set([
@@ -899,6 +944,7 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
   const formContext = useContext(FormContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const controlled =
+    props.signal || // a bound signal is written back on uiAction → interactive
     props.uiAction ||
     props.action ||
     formContext ||
@@ -1304,7 +1350,7 @@ const useInteractiveProps = (
           findFocusDelegateTarget(e.currentTarget) ||
           findControlProxyTarget(e.currentTarget);
         if (focusProxyTarget) {
-          const focusVisible = e.currentTarget.matches(":focus-visible");
+          const focusVisible = isMatchingFocusVisible(e.currentTarget);
           debugFocus(
             e,
             `focus event: redirecting to ${getElementSignature(focusProxyTarget)}.focus({ focusVisible: ${focusVisible} })`,

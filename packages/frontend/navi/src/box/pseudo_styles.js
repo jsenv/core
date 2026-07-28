@@ -275,6 +275,35 @@ definePseudoClass(":active", {
   },
   test: (el) => el.matches(":active"),
 });
+
+// The current input modality: true after a keyboard navigation key (arrow keys,
+// Escape, Enter, Ctrl, Alt, Shift, Space — Space ignored on editable fields),
+// false after a pointer interaction. Updated by the listeners in the
+// focus_classes block below. At module scope so isMatchingFocusVisible (used
+// here and in control_hooks.jsx) can read it.
+let keyboardNavigationUsed = false;
+
+// Whether `el` should be treated as :focus-visible. Normally the native
+// :focus-visible match — but a control marked data-prevent-eager-focus-visible
+// (a button-like trigger whose native :focus-visible matches too eagerly: a
+// typed-into <input> on mouse focus, or a <div>/spinbutton focused
+// programmatically by a mouse-driven picker open) only counts while the current
+// modality is keyboard. So a purely mouse interaction never reveals its ring,
+// like a plain <button>. Use this instead of a bare el.matches(":focus-visible")
+// wherever focus-visible is evaluated.
+export const isMatchingFocusVisible = (el) => {
+  if (!el.matches(":focus-visible")) {
+    return false;
+  }
+  if (
+    el.hasAttribute("data-prevent-eager-focus-visible") &&
+    !keyboardNavigationUsed
+  ) {
+    return false;
+  }
+  return true;
+};
+
 focus_classes: {
   // We implement :focus and :focus-visible with enriched semantics:
   // an element is considered focused not only when it natively has focus, but also
@@ -313,8 +342,8 @@ focus_classes: {
   // This flag is used to gate focus-visible inheritance via aria-controls:
   // on mobile (or when the user hasn't used keyboard nav yet) an input that
   // controls a radio should not cause the radio to show a focus ring.
-  let keyboardNavigationUsed = false;
-  const NAVIGATION_KEYS = new Set([
+  // (Declared at module scope — see keyboardNavigationUsed above.)
+  const NAVIGATION_KEY_SET = new Set([
     "ArrowUp",
     "ArrowDown",
     "ArrowLeft",
@@ -325,6 +354,7 @@ focus_classes: {
     "Alt",
     "Shift",
     " ",
+    "Tab",
   ]);
   const isEditableTarget = (target) => {
     if (!target) {
@@ -346,6 +376,9 @@ focus_classes: {
         type === "tel" ||
         type === "number"
       ) {
+        if (target.readOnly) {
+          return false;
+        }
         return true;
       }
     }
@@ -357,7 +390,7 @@ focus_classes: {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (!NAVIGATION_KEYS.has(e.key)) {
+      if (!NAVIGATION_KEY_SET.has(e.key)) {
         return;
       }
       if (e.key === " " && isEditableTarget(e.target)) {
@@ -375,6 +408,29 @@ focus_classes: {
     { capture: true },
   );
 
+  // A keystroke flips keyboardNavigationUsed, which can turn :focus-visible on —
+  // but only for the element that holds focus, directly or through aria-controls
+  // / a proxy. Pressing a key cannot reveal a focus ring on an unfocused element.
+  // So a single shared handler re-checks just that focus chain (the active
+  // element, what it controls, and its proxy — the last two via
+  // requestPseudoStateCheck / notifyAriaControlled). This runs in the bubble
+  // phase, after the capture-phase listener above has updated the flag.
+  //
+  // The alternative — each registered :focus-visible element adding its own
+  // document keydown listener that re-tests itself — makes one keypress cost
+  // O(number-of-boxes) full-document [aria-controls] / proxy queries, since every
+  // unfocused element falls through matches(":focus-visible") into hasIndirectFocus.
+  const recheckFocusChainOnKey = (e) => {
+    const active = document.activeElement;
+    if (!active || active === document.body) {
+      return;
+    }
+    requestPseudoStateCheck(active, { event: e });
+    notifyAriaControlled(active, e);
+  };
+  document.addEventListener("keydown", recheckFocusChainOnKey);
+  document.addEventListener("keyup", recheckFocusChainOnKey);
+
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
@@ -382,7 +438,14 @@ focus_classes: {
     if (requireFocusVisible && !keyboardNavigationUsed) {
       return false;
     }
-    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    // A controller/proxy counts as focused for inheritance via the same rule
+    // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
+    // the focus-visible variant (so a marked, mouse-focused controller doesn't
+    // propagate an eager ring).
+    const isFocusedTarget = (target) =>
+      requireFocusVisible
+        ? isMatchingFocusVisible(target)
+        : target.matches(":focus");
     const isControlledBy = (target) => {
       const id = target.id;
       if (!id) {
@@ -395,7 +458,7 @@ focus_classes: {
         if (target.contains(controller)) {
           continue;
         }
-        if (controller.matches(pseudoClass)) {
+        if (isFocusedTarget(controller)) {
           return true;
         }
       }
@@ -406,7 +469,7 @@ focus_classes: {
     }
     const proxyTarget = findControlProxyTarget(el);
     if (proxyTarget) {
-      if (proxyTarget.matches(pseudoClass)) {
+      if (isFocusedTarget(proxyTarget)) {
         return true;
       }
       if (isControlledBy(proxyTarget)) {
@@ -483,18 +546,14 @@ focus_classes: {
   });
   definePseudoClass(":focus-visible", {
     attribute: "data-focus-visible",
+    // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
+    // handler re-checks the focused element (the only one a keystroke can turn
+    // focus-visible) so a keypress stays O(1), not O(number-of-boxes).
     setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        cleanup();
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
+      return setupFocus(el, callback);
     },
     test: (el) => {
-      if (el.matches(":focus-visible")) {
+      if (isMatchingFocusVisible(el)) {
         return true;
       }
       if (hasIndirectFocus(el, { requireFocusVisible: true })) {

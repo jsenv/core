@@ -184,6 +184,8 @@ const computeTopOffset = ({ anchorEl, childEl, textAnchor }) => {
     return 0;
   } else if (textAnchor === "line-bottom") {
     desiredChildTopY = anchorRect.bottom - childH;
+  } else {
+    return 0; // unknown textAnchor, no correction
   }
 
   return desiredChildTopY - childNaturalTop;

@@ -8,16 +8,15 @@ import {
 } from "../../control/selection/selection.jsx";
 import { EmailSvg } from "../../graphic/icons/email_svg.jsx";
 import {
-  LinkAnchorSvg,
   LinkBlankTargetSvg,
   LinkGithubSvg,
   LinkSmsSvg,
+  ArrowTurnRightDownSvg,
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Icon } from "../../text/icon.jsx";
 import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
-import { TitleLevelContext } from "../../text/title.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
@@ -105,22 +104,10 @@ const css = /* css */ `
 
     position: relative;
     aspect-ratio: inherit;
-    padding-top: max(
-      var(--x-link-padding-top),
-      var(--link-loading-outline-size)
-    );
-    padding-right: max(
-      var(--x-link-padding-right),
-      var(--link-loading-outline-size)
-    );
-    padding-bottom: max(
-      var(--x-link-padding-bottom),
-      var(--link-loading-outline-size)
-    );
-    padding-left: max(
-      var(--x-link-padding-left),
-      var(--link-loading-outline-size)
-    );
+    padding-top: var(--x-link-padding-top);
+    padding-right: var(--x-link-padding-right);
+    padding-bottom: var(--link-loading-outline-size);
+    padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
@@ -179,6 +166,10 @@ const css = /* css */ `
       }
     }
 
+    [data-icon-text] {
+      display: inline-block; /* Allow to skip the underlining */
+    }
+
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;
@@ -217,6 +208,7 @@ const css = /* css */ `
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
         /* as anchor link will still scroll to the section even if it's the current page */
         --x-link-cursor: pointer;
+        --x-link-color: var(--link-color-current); /* override visited */
       }
       &[data-current-effect-bold] {
         font-weight: bold;
@@ -257,15 +249,18 @@ const css = /* css */ `
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
-      position: absolute !important;
-      top: 0;
-      left: -1em;
+      --anchor-spacing: 0px; /* outline width + 1px */
+
       display: inline-flex;
-      width: 1em;
-      height: 1em;
+      width: round(1em, 1px);
+      height: round(1em, 1px);
+      /* height: 1lh; */
+      margin-right: var(--anchor-spacing);
+      margin-left: round(calc(-1 * calc(1em + var(--anchor-spacing))), 1px);
       align-items: center;
       justify-content: center;
       font-size: 1em;
+      text-decoration: none;
       opacity: 0;
       /* The anchor link is displayed only on :hover */
       /* So we "need" a visual indicator when it's shown by focus */
@@ -279,11 +274,19 @@ const css = /* css */ `
       &[data-focus-visible] {
         opacity: 1;
       }
+    }
 
-      .navi_icon {
-        font-size: 0.7em;
-        vertical-align: top;
-      }
+    .navi_icon > svg {
+      /* icon.jsx forces backface-visibility: hidden, which composites the
+           SVG onto its own GPU layer. On focus the generic z-index:1 rule adds
+           a stacking context that lands that layer on a sub-pixel origin, so it
+           rasterizes blurry. Not compositing lets it paint with its parent,
+           pixel-snapped and crisp — and it can still sit above via z-index. */
+      backface-visibility: visible;
+    }
+
+    .anchor_icon {å
+      margin-left: -0.1em;
     }
 
     &[data-appearance="text"] {
@@ -329,12 +332,6 @@ const css = /* css */ `
 
   *:hover > .navi_link[data-reveal-on-interaction] {
     opacity: 1;
-  }
-  .navi_text .navi_link[data-reveal-on-interaction] {
-    top: 0.1em;
-  }
-  .navi_title .navi_link[data-reveal-on-interaction] {
-    top: 0.25em;
   }
 `;
 
@@ -406,6 +403,77 @@ Object.assign(PSEUDO_CLASSES, {
   },
 });
 
+/**
+ * An anchor (`<a>`) rendered as a navi control: it carries the full control
+ * facade (name/value, pseudo-state, disabled/readOnly/loading, selection when
+ * inside a `SelectionContext`) on top of the native link behavior, plus
+ * navi-specific styling hooks and href-derived state.
+ *
+ * Href-derived behavior (all computed from `href`, recomputed on navigation):
+ * - internal vs external target (`data-href-internal`/`data-href-external`),
+ *   with `target`/`rel` auto-defaulted (`_self` internal, `_blank` +
+ *   `noopener noreferrer` external) unless explicitly set.
+ * - "current page" detection (`data-href-current`, `aria-current="page"`).
+ * - anchor links (`href` starting with `#`) get `data-href-anchor`.
+ * - an automatic end icon for `tel:`/`sms:`/`mailto:`/`github.com`, external
+ *   (blank-target) links, and anchor links — each overridable/suppressible.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - Destination. Also the default `value`, and
+ *   (when `hrefFallback`) the default visible text.
+ * @param {import("../route.js").Route} [props.route] - Renders via `route`
+ *   instead of a raw `href`: the URL is built from the route (see
+ *   `routeParams`) and "current" is derived from whether the route matches.
+ * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
+ * @param {string} [props.target] - Native anchor target; defaults from
+ *   internal/external detection when omitted.
+ * @param {string} [props.rel] - Native anchor rel; defaults to
+ *   `"noopener noreferrer"` for external links when omitted.
+ * @param {boolean} [props.anchor] - Marks this as an in-page anchor link:
+ *   sets `data-anchor`, derives `id` from `href` (the part after `#`) when no
+ *   `id` is given, drops the visited color, keeps a pointer cursor even when
+ *   current, and defaults `hrefFallback` to `false` (no auto text). With no
+ *   children it shows the anchor icon; give it children (e.g. `"#"`) to render
+ *   those instead.
+ * @param {string} [props.value] - Value emitted by the control facade
+ *   (`navi_value`); defaults to `href`.
+ * @param {boolean} [props.current] - Forces the "current" state on (otherwise
+ *   derived from the href/route).
+ * @param {"text"|"icon"|"tab"} [props.appearance] - Visual variant
+ *   (`data-appearance`); `"text"`/`"icon"` drop the link color/underline,
+ *   `"tab"` renders a tab-like affordance.
+ * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
+ *   bar drawn on the given edge (or bottom when `true`) while current.
+ * @param {boolean} [props.currentEffectBold] - Bold the text while current
+ *   (reserving the bold width so layout doesn't shift).
+ * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
+ *   current (used with `appearance="tab"`).
+ * @param {boolean|import("preact").ComponentChild} [props.startIcon] - Icon
+ *   placed before the text.
+ * @param {boolean|import("preact").ComponentChild} [props.endIcon] - Icon
+ *   placed after the text; when omitted, an icon may be auto-chosen from the
+ *   href (see above).
+ * @param {boolean|import("preact").ComponentChild} [props.blankTargetIcon] -
+ *   Override/suppress the auto external-link icon.
+ * @param {boolean|import("preact").ComponentChild} [props.anchorIcon] -
+ *   Controls the auto anchor icon shown for a childless anchor link:
+ *   `true`/`undefined` uses the default chain SVG, `false` suppresses it, any
+ *   other node replaces it. To render a plain `#` instead, prefer writing it as
+ *   the link's children (`<Link anchor href="#x">#</Link>`).
+ * @param {boolean} [props.revealOnInteraction] - Hide the link until its
+ *   container is hovered/focused (`data-reveal-on-interaction`), floating it
+ *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
+ * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
+ *   no children are given; defaults to `true` unless `anchor`.
+ * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
+ *   click (navigation suppressed; `onClick` still runs).
+ * @param {(event: MouseEvent) => void} [props.onClick]
+ * @param {import("preact").ComponentChildren} [props.children] - Link content;
+ *   falls back to the route's relative URL / `href` per the rules above.
+ * @param {string} [props.name] - Control facade name (links may be nameless).
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.readOnly]
+ */
 export const Link = (props) => {
   import.meta.css = css;
 
@@ -432,7 +500,6 @@ const LinkWithRoute = ({ route, routeParams, current, children, ...rest }) => {
 };
 
 const LinkPlain = (props) => {
-  const titleLevel = useContext(TitleLevelContext);
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -452,7 +519,7 @@ const LinkPlain = (props) => {
     anchorIcon,
     startIcon,
     endIcon,
-    revealOnInteraction = Boolean(titleLevel),
+    revealOnInteraction = false,
     hrefFallback = !anchor,
 
     children,
@@ -502,39 +569,69 @@ const LinkPlain = (props) => {
   if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerEndIcon = <PhoneSvg />;
+      innerEndIcon = (
+        <Icon>
+          <PhoneSvg />
+        </Icon>
+      );
     } else if (href?.startsWith("sms:")) {
-      innerEndIcon = <LinkSmsSvg />;
+      innerEndIcon = (
+        <Icon>
+          <LinkSmsSvg />
+        </Icon>
+      );
     } else if (href?.startsWith("mailto:")) {
-      innerEndIcon = <EmailSvg />;
+      innerEndIcon = (
+        <Icon>
+          <EmailSvg />
+        </Icon>
+      );
     } else if (href?.includes("github.com")) {
-      innerEndIcon = <LinkGithubSvg />;
-    } else {
-      // Fall back to default icon logic
-      const innerBlankTargetIcon =
-        blankTargetIcon === undefined
-          ? innerTarget === "_blank"
-          : blankTargetIcon;
-      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
-      if (innerBlankTargetIcon) {
-        innerEndIcon =
-          innerBlankTargetIcon === true ? (
-            <LinkBlankTargetSvg />
-          ) : (
-            innerBlankTargetIcon
-          );
-      } else if (innerAnchorIcon) {
-        innerEndIcon =
-          innerAnchorIcon === true ? <LinkAnchorSvg /> : anchorIcon;
+      innerEndIcon = (
+        <Icon>
+          <LinkGithubSvg />{" "}
+        </Icon>
+      );
+    }
+    // Fall back to default icon logic
+    else if (innerTarget === "_blank") {
+      if (blankTargetIcon === undefined) {
+        innerEndIcon = (
+          <Icon>
+            <LinkBlankTargetSvg />{" "}
+          </Icon>
+        );
+      } else {
+        innerEndIcon = blankTargetIcon;
       }
+    } else if (isAnchor) {
+      if (anchorIcon === undefined) {
+        if (anchor) {
+          if (children) {
+            // keep innerEndIcon unset, we got children
+          } else {
+            innerEndIcon = <Icon>#</Icon>;
+          }
+        } else {
+          innerEndIcon = (
+            <Icon className="anchor_icon" textAnchor="char-bottom" size="xs">
+              <ArrowTurnRightDownSvg />
+            </Icon>
+          );
+        }
+      } else {
+        innerEndIcon = anchorIcon;
+      }
+    } else {
+      innerEndIcon = anchorIcon;
     }
   } else {
     innerEndIcon = endIcon;
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
-  const startIconEl = startIcon && <Icon>{startIcon}</Icon>;
-  const endIconEl = innerEndIcon && <Icon>{innerEndIcon}</Icon>;
+  const startIconEl = startIcon;
+  const endIconEl = innerEndIcon;
 
   const currentIndicatorPosition =
     currentIndicator === true ? "bottom" : currentIndicator;
@@ -556,6 +653,7 @@ const LinkPlain = (props) => {
       {...controlHostProps}
       preventDefault={undefined}
       anchor={undefined}
+      revealOnInteraction={undefined}
       onClick={(e) => {
         onClick?.(e);
         if (preventDefault) {

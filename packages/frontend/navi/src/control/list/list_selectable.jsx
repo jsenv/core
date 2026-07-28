@@ -322,6 +322,8 @@ const ListSelectable = (props) => {
       selectedIndicator={undefined}
       selectable={undefined}
       multiple={undefined}
+      focusGroupDirection={undefined}
+      focusGroupWrap={undefined}
       // Track focus inside the list: whichever item gets focus becomes current.
       onFocusIn={(e) => {
         const realInput = e.target.closest("[navi-selectable-real-input]");

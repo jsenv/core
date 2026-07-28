@@ -122,6 +122,7 @@ export { Input } from "./src/control/input/input.jsx";
 export { InputDuration } from "./src/control/input/input_duration.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
+export { usePickerMode } from "./src/control/picker/picker_context.jsx";
 export {
   getNowHours,
   getNowHoursRoundedToStep,
@@ -134,6 +135,7 @@ export { List, ListItem, ListItemGroup } from "./src/control/list/list.jsx";
 export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
+export { Wheel, WheelGroup, WheelItem } from "./src/control/wheel/wheel.jsx";
 // --- Table start---
 export {
   filterTableSelection,

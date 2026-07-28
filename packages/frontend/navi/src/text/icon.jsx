@@ -45,6 +45,10 @@ const css = /* css */ `
     &[data-interactive] {
       cursor: pointer;
     }
+    &[data-icon-text] {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
   }
 
   .navi_icon > svg,
@@ -70,6 +74,60 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * Renders an icon — an inline SVG/emoji/text glyph that inherits the
+ * surrounding text's `currentColor` and (by default) its font size, so it sits
+ * on the text baseline like a character.
+ *
+ * Content comes from either `href` (references an external/sprite symbol via
+ * `<use>`) or `children` (an inline `<svg>` element, or a string for a
+ * text/emoji icon). All extra props are spread onto the underlying `Box`/`Text`
+ * (sizing, spacing, color, className, data-attributes, …).
+ *
+ * Render mode is chosen automatically:
+ * - `children` is a **string** → a text icon (`<Text data-icon-text>`).
+ * - **sized** (an explicit `width`/`height`, or `flex`/`grid`) → a block icon
+ *   (`<Box square>`), laid out as its own box rather than inline.
+ * - otherwise → an **inline char-like** icon that flows on the text baseline
+ *   (`data-icon-char`), aligned via `textAnchor`.
+ *
+ * Accessibility: an icon is treated as decorative (`aria-hidden`) by default
+ * whenever it has no explicit size and no `onClick`; give it an explicit
+ * `decorative={false}` (or make it interactive) when it conveys meaning.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - URL/id of an external SVG symbol, rendered via
+ *   `<svg><use href></svg>`. Mutually exclusive with meaningful `children`.
+ * @param {import("preact").ComponentChildren} [props.children] - Inline icon
+ *   content: an `<svg>` element, or a string (renders as a text/emoji icon).
+ * @param {boolean} [props.decorative] - Marks the icon `aria-hidden`. Defaults
+ *   to `true` for an unsized, non-interactive icon; pass `false` for a
+ *   meaning-bearing icon that needs to be exposed to assistive tech.
+ * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
+ *   interactive (`data-interactive`, pointer cursor) and non-decorative.
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
+ *   - Vertical alignment within the surrounding text line for the inline
+ *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
+ *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
+ *   centers on the line box, `"char-bottom"` sits on the baseline. See
+ *   `text_anchor.jsx`.
+ * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
+ *   Describes the surrounding line context (font size / vertical-align),
+ *   forwarded to `TextAnchor` so it recomputes the vertical correction when
+ *   that context changes.
+ * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
+ *   Any explicit size switches the icon to block (sized) mode.
+ * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
+ * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
+ *   dimension it fixes the other too.
+ * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
+ * @param {string|number} [props.aspectRatio] - Fixes the second dimension from
+ *   the one explicit dimension.
+ * @param {"x"|"y"|boolean} [props.flex] - Forces block/flex layout; auto-set to
+ *   `"x"` when the icon is sized.
+ * @param {boolean} [props.grid] - Forces block/grid layout.
+ * @param {string} [props.className] - Merged with the base `"navi_icon"` class.
+ */
 export const Icon = ({
   href,
   children,

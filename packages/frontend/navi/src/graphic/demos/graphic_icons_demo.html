@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graphic Icons Demo</title>
+    <style>
+      body {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+        color: #1a1a1a;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+      h1 {
+        margin-bottom: 6px;
+        font-size: 1.8rem;
+        text-align: center;
+      }
+      .intro {
+        margin: 0 0 24px;
+        color: #666;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+      .toolbar {
+        display: flex;
+        margin-bottom: 24px;
+        padding: 12px;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #fff;
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+      }
+      .toolbar label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #444;
+        font-size: 0.85rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        display: flex;
+        padding: 16px;
+        flex-direction: column;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid #e2e2e2;
+        border-radius: 8px;
+      }
+      .card-name {
+        color: #333;
+        font-size: 0.82rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        word-break: break-all;
+      }
+      .sizes {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 14px;
+      }
+      .size-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+      /* A subtle checkerboard so the icon's real bounds/margins are visible. */
+      .size-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-image:
+          linear-gradient(45deg, #eee 25%, transparent 25%),
+          linear-gradient(-45deg, #eee 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #eee 75%),
+          linear-gradient(-45deg, transparent 75%, #eee 75%);
+        background-position:
+          0 0,
+          0 4px,
+          4px -4px,
+          -4px 0;
+        background-size: 8px 8px;
+        background-color: #fafafa;
+        border: 1px solid #e6e6e6;
+        border-radius: 4px;
+      }
+      .size-label {
+        color: #999;
+        font-size: 0.7rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Graphic Icons</h1>
+    <p class="intro">
+      Every SVG in <code>graphic/icons</code> rendered through
+      <code>&lt;Icon&gt;</code> at multiple sizes. Icons inherit
+      <code>currentColor</code>, so the color picker recolors them all.
+    </p>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Icon } from "@jsenv/navi";
+
+      import { CheckSvg } from "../icons/check_svg.jsx";
+      import {
+        ChevronDownSvg,
+        ChevronUpSvg,
+      } from "../icons/chevron_updown_svg.jsx";
+      import { CloseSvg } from "../icons/close_svg.jsx";
+      import { ConstructionSvg } from "../icons/construction_svg.jsx";
+      import { DownloadSvg } from "../icons/download_svg.jsx";
+      import { EmailSvg } from "../icons/email_svg.jsx";
+      import { ExclamationSvg } from "../icons/exclamation_svg.jsx";
+      import { EyeClosedSvg } from "../icons/eye_closed_svg.jsx";
+      import { EyeSvg } from "../icons/eye_svg.jsx";
+      import { HeartSvg } from "../icons/heart_svg.jsx";
+      import { HomeSvg } from "../icons/home_svg.jsx";
+      import {
+        SuccessSvg,
+        ErrorSvg,
+        InfoSvg,
+        WarningSvg,
+      } from "../icons/level_svg.jsx";
+      import {
+        LinkBlankTargetSvg,
+        ArrowTurningDownRightSvg,
+        LinkAnchorSvg,
+        LinkSmsSvg,
+        LinkGithubSvg,
+        LinkCurrentSvg,
+        ArrowTurnRightDownSvg,
+      } from "../icons/link_svgs.jsx";
+      import { PhoneSvg } from "../icons/phone_svg.jsx";
+      import { SearchSvg, SearchSvg2 } from "../icons/search_svg.jsx";
+      import { SettingsSvg } from "../icons/settings_svg.jsx";
+      import { StarSvg } from "../icons/star_svg.jsx";
+      import { UserSvg } from "../icons/user_svg.jsx";
+
+      // Every exported *Svg component from graphic/icons, in one flat list.
+      const ICONS = [
+        ["CheckSvg", CheckSvg],
+        ["ChevronDownSvg", ChevronDownSvg],
+        ["ChevronUpSvg", ChevronUpSvg],
+        ["CloseSvg", CloseSvg],
+        ["ConstructionSvg", ConstructionSvg],
+        ["DownloadSvg", DownloadSvg],
+        ["EmailSvg", EmailSvg],
+        ["ExclamationSvg", ExclamationSvg],
+        ["EyeSvg", EyeSvg],
+        ["EyeClosedSvg", EyeClosedSvg],
+        ["HeartSvg", HeartSvg],
+        ["HomeSvg", HomeSvg],
+        ["SuccessSvg", SuccessSvg],
+        ["ErrorSvg", ErrorSvg],
+        ["InfoSvg", InfoSvg],
+        ["WarningSvg", WarningSvg],
+        ["LinkAnchorSvg", LinkAnchorSvg],
+        ["LinkBlankTargetSvg", LinkBlankTargetSvg],
+        ["LinkCurrentSvg", LinkCurrentSvg],
+        ["LinkGithubSvg", LinkGithubSvg],
+        ["LinkSmsSvg", LinkSmsSvg],
+        ["ArrowTurningDownRightSvg", ArrowTurningDownRightSvg],
+        ["ArrowTurnRightDownSvg", ArrowTurnRightDownSvg],
+        ["PhoneSvg", PhoneSvg],
+        ["SearchSvg", SearchSvg],
+        ["SearchSvg2", SearchSvg2],
+        ["SettingsSvg", SettingsSvg],
+        ["StarSvg", StarSvg],
+        ["UserSvg", UserSvg],
+      ];
+
+      const SIZES = [16, 24, 32, 48, 64];
+
+      const IconCard = ({ name, glyph, color }) => {
+        const Glyph = glyph;
+        return (
+          <div className="card">
+            <span className="card-name">{name}</span>
+            <div className="sizes" style={{ color }}>
+              {SIZES.map((size) => (
+                <div className="size-cell" key={size}>
+                  <span
+                    className="size-box"
+                    style={{ width: `${size}px`, height: `${size}px` }}
+                  >
+                    <Icon width={size} height={size}>
+                      <Glyph />
+                    </Icon>
+                  </span>
+                  <span className="size-label">{size}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const Demo = () => {
+        const [color, setColor] = useState("#1a1a1a");
+        return (
+          <>
+            <div className="toolbar">
+              <label>
+                Color
+                <input
+                  type="color"
+                  value={color}
+                  onInput={(e) => setColor(e.target.value)}
+                />
+              </label>
+              <span className="size-label">{ICONS.length} icons</span>
+            </div>
+            <div className="grid">
+              {ICONS.map(([name, glyph]) => (
+                <IconCard key={name} name={name} glyph={glyph} color={color} />
+              ))}
+            </div>
+          </>
+        );
+      };
+
+      render(<Demo />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

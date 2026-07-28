@@ -304,6 +304,12 @@ const shouldInjectSpacingBetween = (left, right) => {
   if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
     return false;
   }
+  // A reveal-on-interaction Link (e.g. the "#" anchor before a title) is
+  // absolutely positioned and takes no room in the flow, so a separator after
+  // it would leave a stray gap at the start of the line.
+  if (leftIsNode && left.props?.revealOnInteraction) {
+    return false;
+  }
   if (typeof left === "string" && /\s$/.test(left)) {
     return false;
   }
