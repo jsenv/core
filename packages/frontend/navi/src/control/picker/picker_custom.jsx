@@ -31,9 +31,19 @@ const css = /* css */ `
        the nested list). */
 
     /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
-       popover shrinks to its content. Inherits down to the popover. */
+       popup shrinks to its content. Inherits down to the popover. */
     &[data-popup-width-fit-content] {
       --picker-popover-min-width: 0px;
+
+      /* The popover var above only reaches the popover — the dialog reads
+         --anchor-width directly for its own min-width floor (dialog.jsx). A
+         modal dialog isn't visually attached to the trigger, so with
+         fit-content we drop that floor here too, letting the content size the
+         dialog like the popover. (More specific than dialog.jsx's own
+         .navi_dialog rule; both are unlayered, so this wins.) */
+      &[aria-haspopup="dialog"] .navi_dialog {
+        min-width: min(var(--dialog-min-width, 0px), var(--x-dialog-max-width));
+      }
     }
 
     /* popover */
