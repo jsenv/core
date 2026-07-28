@@ -207,11 +207,71 @@ const setup = () => {
   };
 
   const pushLog = (entry) => {
-    pendingLogs.push({ ...entry, ts: Date.now() });
+    pendingLogs.push({ ...entry, ts: entry.ts ?? Date.now() });
     if (pendingLogs.length > 500) {
       pendingLogs.shift(); // cap the buffer if the server is unreachable
     }
     scheduleFlush();
+  };
+
+  // Formatting a console call (%c parsing + serializing object args) is
+  // expensive, and verbose debug logging fires it hundreds of times inside a
+  // single interaction — enough to dominate the main thread and delay paint.
+  // So capture the raw args cheaply on the hot path and format them only when
+  // the browser is idle (chunked to respect the idle deadline). Serialization
+  // is kept in full; it just no longer blocks the interaction.
+  const rawConsoleQueue = [];
+  let consoleProcessScheduled = false;
+  // requestIdleCallback is missing on Safari/iOS (our main mobile target), so
+  // fall back to setTimeout there; either way each run is time-boxed below.
+  const scheduleIdle =
+    typeof requestIdleCallback === "function"
+      ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
+      : (fn) => setTimeout(fn, 0);
+  const formatOne = (captured) => {
+    pushLog({
+      level: captured.level,
+      ts: captured.ts,
+      ...formatConsole(captured.args),
+    });
+  };
+  const processConsoleQueue = (deadline) => {
+    consoleProcessScheduled = false;
+    const start = performance.now();
+    while (rawConsoleQueue.length) {
+      // Yield within ~8ms (setTimeout fallback) or when idle time runs out (rIC),
+      // so a burst of logs never becomes a long task itself.
+      const outOfTime = deadline
+        ? !deadline.didTimeout && deadline.timeRemaining() <= 1
+        : performance.now() - start > 8;
+      if (outOfTime) {
+        break;
+      }
+      formatOne(rawConsoleQueue.shift());
+    }
+    if (rawConsoleQueue.length) {
+      scheduleConsoleProcess();
+    }
+  };
+  const scheduleConsoleProcess = () => {
+    if (consoleProcessScheduled) {
+      return;
+    }
+    consoleProcessScheduled = true;
+    scheduleIdle(processConsoleQueue);
+  };
+  // Format everything now (page unloading — losing logs is worse than the cost).
+  const drainConsoleQueue = () => {
+    while (rawConsoleQueue.length) {
+      formatOne(rawConsoleQueue.shift());
+    }
+  };
+  const captureConsole = (level, args) => {
+    rawConsoleQueue.push({ level, args, ts: Date.now() });
+    if (rawConsoleQueue.length > 2000) {
+      rawConsoleQueue.shift(); // bound memory if idle never runs
+    }
+    scheduleConsoleProcess();
   };
   const recordActivity = (type, detail = "") => {
     pendingActivities.push({ type, detail, ts: Date.now(), tabId });
@@ -230,7 +290,7 @@ const setup = () => {
     }
     console[level] = (...args) => {
       original.apply(console, args);
-      pushLog({ level, ...formatConsole(args) });
+      captureConsole(level, args);
     };
   }
   window.addEventListener("error", (event) => {
@@ -330,6 +390,9 @@ const setup = () => {
   const heartbeatId = setInterval(() => post(), HEARTBEAT_MS);
   window.addEventListener("pagehide", () => {
     clearInterval(heartbeatId);
+    // Format whatever was captured but not yet processed, so the final beacon
+    // doesn't drop logs.
+    drainConsoleQueue();
     post({ beacon: true, closing: true });
   });
 

@@ -169,10 +169,16 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
   // (cheap here, cost lands after). Handy for the wheel-in-dialog "Définir feels
   // frozen on mobile" case.
   const start = performance.now();
+  // TEMP: count the full-document attribute scans in pseudo_styles/control_proxy
+  // during the command, to confirm they're what makes commit slow on a big page.
+  const ariaScans0 = window.__naviAriaControlsScans || 0;
+  const proxyScans0 = window.__naviProxyScans || 0;
   const result = implementation();
   debugCommand(
     event,
-    `"${command}" implementation ran in ${Math.round(performance.now() - start)}ms`,
+    `"${command}" implementation ran in ${Math.round(performance.now() - start)}ms ` +
+      `(aria-controls scans: ${(window.__naviAriaControlsScans || 0) - ariaScans0}, ` +
+      `proxy scans: ${(window.__naviProxyScans || 0) - proxyScans0})`,
   );
   return result;
 };

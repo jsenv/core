@@ -54,6 +54,9 @@ export const findControlProxy = (el) => {
   if (!el.id) {
     return null;
   }
+  // TEMP: count full-document [navi-control-proxy-for] scans (fires on every
+  // pseudo-state check + state change). Remove after profiling.
+  window.__naviProxyScans = (window.__naviProxyScans || 0) + 1;
   return document.querySelector(
     `[navi-control-proxy-for="${CSS.escape(el.id)}"]`,
   );

@@ -451,6 +451,10 @@ focus_classes: {
       if (!id) {
         return false;
       }
+      // TEMP: count full-document [aria-controls] scans to confirm they scale
+      // with page size and fire a lot during a commit. Remove after profiling.
+      window.__naviAriaControlsScans =
+        (window.__naviAriaControlsScans || 0) + 1;
       const controllers = document.querySelectorAll(`[aria-controls~="${id}"]`);
       for (const controller of controllers) {
         // If the controller is inside the element it controls, focus is already
