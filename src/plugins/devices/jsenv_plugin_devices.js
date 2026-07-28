@@ -21,10 +21,16 @@
  * Pages:
  * - /.internal/devices     → dashboard listing every device seen
  * - /.internal/device?id=… → live console-log tracker for one device
+ *
+ * Both pages are served THROUGH the graph (via redirectReference to a real HTML
+ * file) rather than as a raw route response, so they get cooked like any app
+ * page — which is what injects window.__server_events__ into them. They consume
+ * the server events directly, no bespoke socket. See the "dev-server" skill next
+ * to @jsenv/core for how internal pages get script injection.
  */
 
-import { readFileSync } from "node:fs";
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
+import { asUrlWithoutSearch } from "@jsenv/urls";
 
 const devicesClientFileUrl = new URL(
   "./client/devices_client.js",
@@ -33,11 +39,11 @@ const devicesClientFileUrl = new URL(
 const devicesPageFileUrl = new URL(
   "./client/devices_page.html",
   import.meta.url,
-);
+).href;
 const deviceTrackerPageFileUrl = new URL(
   "./client/device_tracker_page.html",
   import.meta.url,
-);
+).href;
 
 // Keep at most this many log entries per device, and drop entries older than
 // LOG_TTL_MS — the buffer only exists so a tracker opened a bit late can still
@@ -178,21 +184,36 @@ export const jsenvPluginDevices = () => {
     };
   };
 
-  const htmlResponse = (fileUrl) => {
-    const html = readFileSync(fileUrl);
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/html",
-        "content-length": html.byteLength,
-      },
-      body: html,
-    };
+  // Map our two page URLs onto their real HTML files. Returning a graph URL
+  // here (instead of serving the file from a raw route) makes the dev server
+  // cook the page, which is what gets window.__server_events__ injected into it.
+  const redirectToPage = (reference) => {
+    if (reference.isInline || !reference.url.startsWith("file:")) {
+      return null;
+    }
+    const { pathname, search } = new URL(reference.url);
+    if (pathname.endsWith("/.internal/devices")) {
+      return devicesPageFileUrl;
+    }
+    if (pathname.endsWith("/.internal/device")) {
+      // carry ?id=… so the tracker page knows which device to watch
+      return `${deviceTrackerPageFileUrl}${search}`;
+    }
+    return null;
+  };
+
+  const isOwnPage = (url) => {
+    const withoutSearch = asUrlWithoutSearch(url);
+    return (
+      withoutSearch === devicesPageFileUrl ||
+      withoutSearch === deviceTrackerPageFileUrl
+    );
   };
 
   return {
     name: "jsenv:devices",
     appliesDuring: "dev",
+    redirectReference: redirectToPage,
     serverEvents: {
       devices_list: (serverEventInfo) => {
         sendDevicesList = () => serverEventInfo.sendServerEvent(snapshot());
@@ -206,8 +227,9 @@ export const jsenvPluginDevices = () => {
     },
     transformUrlContent: {
       html: (urlInfo) => {
-        // Don't instrument our own dashboard/tracker pages.
-        if (urlInfo.url.includes("/.internal/device")) {
+        // Our own dashboard/tracker pages should not report their own logs or
+        // toast themselves — they only consume the server events.
+        if (isOwnPage(urlInfo.url)) {
           return null;
         }
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
@@ -248,18 +270,6 @@ export const jsenvPluginDevices = () => {
           const device = id && devices.get(id);
           return jsonResponse(device ? deviceDetail(device) : { id, logs: [] });
         },
-      },
-      {
-        endpoint: "GET /.internal/devices",
-        description: "Dashboard listing connected devices.",
-        declarationSource: import.meta.url,
-        fetch: () => htmlResponse(devicesPageFileUrl),
-      },
-      {
-        endpoint: "GET /.internal/device",
-        description: "Live console-log tracker for one device (?id=…).",
-        declarationSource: import.meta.url,
-        fetch: () => htmlResponse(deviceTrackerPageFileUrl),
       },
     ],
   };

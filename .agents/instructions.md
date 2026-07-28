@@ -27,6 +27,16 @@
 - **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
 - **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
 
+## Running jsenv source — always use `--conditions=dev:jsenv`
+
+**Any** `node` process that imports a `@jsenv/*` package from this repo (a test, a scratch script, `startDevServer`, `startServer`, a build) MUST be launched with `--conditions=dev:jsenv`:
+
+```sh
+node --conditions=dev:jsenv <file>
+```
+
+These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
+
 ## Project Overview
 
 **@jsenv/core** is a comprehensive JavaScript development toolkit that prioritizes web standards and simplicity. Organized as a monorepo with packages in `packages/`:
@@ -71,8 +81,8 @@
   - Bad: `// No more positionX/positionY props — anchorArea covers this now.`
   - Good: nothing, or if the constraint is non-obvious, state it as a fact about the current API: `// anchorArea covers both axes in one prop.`
   - This applies even when the comment is otherwise useful/accurate — rewrite it to drop the comparison rather than skip explaining a genuinely non-obvious constraint.
-- **Don't comment what the code already says**: if a comment just narrates control flow or restates what a well-named variable/function already makes obvious ("Sync the DOM open and return how to sync it back closed" above a function that visibly does exactly that), delete it. Only comment the *why* behind a non-obvious choice — a constraint, a workaround, a rejected simpler alternative, a subtle invariant. If you can delete a comment and lose nothing a fresh reader needs, delete it.
-- **Long documentation doesn't belong inline next to implementation**: a prop's accepted-values grammar, a parameter's semantics, "how to use this component" — that's JSDoc (`@param` on the exported function/component, per the JSDoc section below) or a short module-level comment near the top of the file, not a multi-paragraph comment sitting next to the line of code that happens to use it. Inline comments justify *that specific line*; they are not the place to teach the whole feature.
+- **Don't comment what the code already says**: if a comment just narrates control flow or restates what a well-named variable/function already makes obvious ("Sync the DOM open and return how to sync it back closed" above a function that visibly does exactly that), delete it. Only comment the _why_ behind a non-obvious choice — a constraint, a workaround, a rejected simpler alternative, a subtle invariant. If you can delete a comment and lose nothing a fresh reader needs, delete it.
+- **Long documentation doesn't belong inline next to implementation**: a prop's accepted-values grammar, a parameter's semantics, "how to use this component" — that's JSDoc (`@param` on the exported function/component, per the JSDoc section below) or a short module-level comment near the top of the file, not a multi-paragraph comment sitting next to the line of code that happens to use it. Inline comments justify _that specific line_; they are not the place to teach the whole feature.
 - **Keep inline comments short**: a sentence or two justifying the non-obvious choice at that line. If an inline comment runs past ~4-5 lines, either it belongs in a JSDoc/module-level comment instead (see above), or it needs to be cut down to its one essential point — don't preserve every nuance "just in case", trim to what a reader actually needs to not get confused at that line.
 
 #### JSDoc
@@ -87,21 +97,21 @@
 A file's own top-of-file comment has exactly two jobs:
 
 1. **Orient a first-time reader**: give whoever just opened this file (a newcomer, the author back after a few days away, an AI with no memory of the conversation that wrote it) a quick overall picture of what the file does and how it's organized.
-2. **Justify surprising technical choices**: explain *why* a non-obvious decision was made, and warn about approaches that were tried and specifically must not be reintroduced.
+2. **Justify surprising technical choices**: explain _why_ a non-obvious decision was made, and warn about approaches that were tried and specifically must not be reintroduced.
 
-Nothing else belongs there. Other sources already cover everything else — the top-level comment must not restate what they say: the code itself (well-named functions/variables), inline comments (the *why* at one specific line), JSDoc (a prop's accepted values/semantics), external docs, demo files. If a paragraph in a top-level comment is really documenting a prop's grammar or "how to use this component," move it to JSDoc instead — don't duplicate it in both places. Before adding a paragraph to a top-level comment, ask: is this orientation, or a warning about a rejected approach? If neither, it belongs somewhere else (or nowhere).
+Nothing else belongs there. Other sources already cover everything else — the top-level comment must not restate what they say: the code itself (well-named functions/variables), inline comments (the _why_ at one specific line), JSDoc (a prop's accepted values/semantics), external docs, demo files. If a paragraph in a top-level comment is really documenting a prop's grammar or "how to use this component," move it to JSDoc instead — don't duplicate it in both places. Before adding a paragraph to a top-level comment, ask: is this orientation, or a warning about a rejected approach? If neither, it belongs somewhere else (or nowhere).
 
 ### CSS
 
 - CSS-in-JS using `import.meta.css` for component styles
 - CSS variables for theming and customization
 - `light-dark()` for automatic theme switching
-- **Transitions/animations play on change, never on first paint**: a transition or animation must fire when something *changes* (interaction, state update, value change) — not when the component first mounts, the page loads, or an already-open element re-renders. A user should never see an element animate into its initial state just because the page appeared. Techniques, roughly in order of preference:
-  - **`@starting-style`** (standards-first): declare the "from" state in a `@starting-style` block so the browser interpolates from it *only* on the element's first render / first time it's displayed. Pair with `transition-behavior: allow-discrete` when animating `display`/`overlay` (e.g. popovers/dialogs entering). No JS, no flags — prefer this when the from-state is a fixed style.
-  - **The reflow trick** (when `@starting-style` can't express the from-state — e.g. it depends on a real layout box that only exists once shown, as with a positioned popover): set `transition-property: none`, apply the initial ("closed") state, force a layout read (`el.getBoundingClientRect()` / `el.offsetHeight`) so that closed frame is genuinely rendered, then flip to the target state and restore `transition-property`. See `packages/frontend/navi/src/popup/popover.jsx` (search `transitionProperty = "none"` and the `getBoundingClientRect()` reflow) — it also explains in its top comment *why* `@starting-style` doesn't work there.
+- **Transitions/animations play on change, never on first paint**: a transition or animation must fire when something _changes_ (interaction, state update, value change) — not when the component first mounts, the page loads, or an already-open element re-renders. A user should never see an element animate into its initial state just because the page appeared. Techniques, roughly in order of preference:
+  - **`@starting-style`** (standards-first): declare the "from" state in a `@starting-style` block so the browser interpolates from it _only_ on the element's first render / first time it's displayed. Pair with `transition-behavior: allow-discrete` when animating `display`/`overlay` (e.g. popovers/dialogs entering). No JS, no flags — prefer this when the from-state is a fixed style.
+  - **The reflow trick** (when `@starting-style` can't express the from-state — e.g. it depends on a real layout box that only exists once shown, as with a positioned popover): set `transition-property: none`, apply the initial ("closed") state, force a layout read (`el.getBoundingClientRect()` / `el.offsetHeight`) so that closed frame is genuinely rendered, then flip to the target state and restore `transition-property`. See `packages/frontend/navi/src/popup/popover.jsx` (search `transitionProperty = "none"` and the `getBoundingClientRect()` reflow) — it also explains in its top comment _why_ `@starting-style` doesn't work there.
   - **Gate on actually-displayed, not merely mounted**: only arm the entrance transition when the element becomes displayed, so it doesn't replay when something already open just re-renders. `useDisplayedLayoutEffect` runs an effect once the element is really on screen; popover.jsx suppresses transitions until it has measured/positioned the element, then arms them.
   - **Simplest of all — no transition at all**: if the emphasis can be positional/compositional (e.g. a fixed overlay the content moves under) rather than a per-element state flip, there's nothing to animate on mount by construction. Prefer this when it fits.
-  This applies to color/opacity/transform transitions and keyframe animations alike.
+    This applies to color/opacity/transform transitions and keyframe animations alike.
 
 ## @jsenv/navi Specifics
 

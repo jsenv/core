@@ -196,40 +196,35 @@
         })
         .catch(() => {});
 
-      // …then live over the jsenv server-events channel (the same websocket
-      // autoreload uses). Every device's logs are broadcast here, so keep only
-      // the ones for the device we're tracking.
-      let reconnectDelay = 500;
-      const connect = () => {
-        const proto = location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(
-          `${proto}://${location.host}/.internal/events.websocket`,
-        );
-        let pingId;
-        ws.addEventListener("open", () => {
-          reconnectDelay = 500;
-          setStatus(true, "tracking");
-          pingId = setInterval(() => ws.send('{"type":"ping"}'), 30000);
-        });
-        ws.addEventListener("message", (e) => {
-          let event;
-          try {
-            event = JSON.parse(e.data);
-          } catch {
-            return;
+      // …then live. This page is cooked through the dev server, so it gets the
+      // jsenv server-events client injected (window.__server_events__) — the
+      // same channel autoreload rides. Every device's logs are broadcast there,
+      // so keep only the ones for the device we're tracking.
+      const whenServerEvents = (callback) => {
+        const ready = () =>
+          window.__server_events__ &&
+          typeof window.__server_events__.listenEvents === "function";
+        if (ready()) {
+          callback(window.__server_events__);
+          return;
+        }
+        const id = setInterval(() => {
+          if (ready()) {
+            clearInterval(id);
+            callback(window.__server_events__);
           }
-          if (event.type === "device_log" && event.data.deviceId === deviceId) {
-            addEntry(event.data);
-          }
-        });
-        ws.addEventListener("close", () => {
-          clearInterval(pingId);
-          setStatus(false, "disconnected — retrying");
-          setTimeout(connect, reconnectDelay);
-          reconnectDelay = reconnectDelay < 10000 ? reconnectDelay * 2 : 10000;
-        });
+        }, 100);
       };
-      connect();
+      whenServerEvents((serverEvents) => {
+        setStatus(true, "tracking");
+        serverEvents.listenEvents({
+          device_log: (event) => {
+            if (event.data.deviceId === deviceId) {
+              addEntry(event.data);
+            }
+          },
+        });
+      });
     </script>
   </body>
 </html>

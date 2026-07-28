@@ -151,43 +151,35 @@
           .join("");
       };
 
-      // Initial snapshot, then live updates over the jsenv server-events channel
-      // (the same websocket autoreload uses). The server pushes the full list on
-      // every change — no polling.
+      // This page is cooked through the dev server, so it gets the jsenv
+      // server-events client injected (window.__server_events__) — the same
+      // channel autoreload rides. The server pushes the full list on every
+      // change; no polling. Initial snapshot via the JSON route.
       fetch("/.internal/devices.json")
         .then((r) => r.json())
         .then(render)
         .catch(() => {});
 
-      const proto = location.protocol === "https:" ? "wss" : "ws";
-      let reconnectDelay = 500;
-      const connect = () => {
-        const ws = new WebSocket(
-          `${proto}://${location.host}/.internal/events.websocket`,
-        );
-        let pingId;
-        ws.addEventListener("open", () => {
-          reconnectDelay = 500;
-          pingId = setInterval(() => ws.send('{"type":"ping"}'), 30000);
-        });
-        ws.addEventListener("message", (e) => {
-          let event;
-          try {
-            event = JSON.parse(e.data);
-          } catch {
-            return;
+      const whenServerEvents = (callback) => {
+        const ready = () =>
+          window.__server_events__ &&
+          typeof window.__server_events__.listenEvents === "function";
+        if (ready()) {
+          callback(window.__server_events__);
+          return;
+        }
+        const id = setInterval(() => {
+          if (ready()) {
+            clearInterval(id);
+            callback(window.__server_events__);
           }
-          if (event.type === "devices_list") {
-            render(event.data);
-          }
-        });
-        ws.addEventListener("close", () => {
-          clearInterval(pingId);
-          setTimeout(connect, reconnectDelay);
-          reconnectDelay = reconnectDelay < 10000 ? reconnectDelay * 2 : 10000;
-        });
+        }, 100);
       };
-      connect();
+      whenServerEvents((serverEvents) => {
+        serverEvents.listenEvents({
+          devices_list: (event) => render(event.data),
+        });
+      });
 
       // Refresh the relative "ago" labels between server pushes.
       setInterval(() => render(lastDevices), 5000);

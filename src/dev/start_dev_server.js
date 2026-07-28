@@ -27,26 +27,41 @@ import { devServerPluginServeSourceFiles } from "./dev_server_plugins/dev_server
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
 
 /**
- * Starts the development server.
+ * Starts the jsenv development server: serves files from a source directory,
+ * transforming (cooking) them on the fly through a plugin pipeline, with live
+ * reload. Built on top of `@jsenv/server`.
  *
- * @param {Object} [params={}] - Configuration params for the dev server.
- * @param {number} [params.port=3456] - Port number the server should listen on.
- * @param {string} [params.hostname="localhost"] - Hostname to bind the server to.
- * @param {boolean} [params.https=false] - Whether to use HTTPS.
+ * See the "dev-server" skill (.agents/skills/dev-server) for the plugin system,
+ * server events, and how internal pages get script injection.
  *
- * @returns {Promise<Object>} A promise that resolves to the server instance.
- * @throws {Error} Will throw an error if the server fails to start or is called with unexpected params.
+ * @param {Object} [params={}]
+ * @param {string|URL} params.sourceDirectoryUrl - Root directory to serve (required; must exist).
+ * @param {string} [params.sourceMainFilePath="./index.html"] - File served for "/".
+ * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
+ * @param {string} [params.hostname] - Hostname to bind to.
+ * @param {boolean} [params.acceptAnyIp=true] - Also accept connections on the machine's IPs.
+ * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
+ * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
+ * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
+ * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
+ * @param {boolean|object} [params.clientAutoreload=true] - Live reload; also gates the server-events channel.
+ * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
+ * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
+ * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
+ * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
+ * @param {string} [params.sourcemaps="inline"] - Sourcemap mode.
+ * @param {AbortSignal} [params.signal] - Abort to stop the server.
+ * @param {boolean} [params.handleSIGINT=true] - Stop on SIGINT.
+ * @param {boolean} [params.keepProcessAlive=true] - Keep the process alive while running.
+ *
+ * @returns {Promise<{origin: string, sourceDirectoryUrl: URL, stop: () => Promise<void>, kitchenCache: object}>}
+ * @throws {TypeError} On unknown params.
  *
  * @example
- * // Start a basic dev server
- * const server = await startDevServer();
- * console.log(`Server started at ${server.origin}`);
- *
- * @example
- * // Start a server with custom params
  * const server = await startDevServer({
- *   port: 8080,
+ *   sourceDirectoryUrl: new URL("./src/", import.meta.url),
  * });
+ * console.log(`Server started at ${server.origin}`);
  */
 export const startDevServer = async ({
   sourceDirectoryUrl,
