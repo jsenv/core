@@ -460,7 +460,7 @@
         const [speedName, setSpeedName] = useState("normal");
         const glideSpeed = GLIDE_SPEEDS[speedName];
         return (
-          <NaviDebug debugAll>
+          <NaviDebug>
             <div className="demo-section">
               <Heading level={2} id="scroll">
                 Scroll behavior — snapping, momentum, loop
@@ -597,10 +597,28 @@
             <Box flex="y" spacing="l" padding="xl" alignX="center">
               <DurationWheelsGroup big />
               <Box flex="x" spacing="s" alignX="end" expandX>
-                <Button command="--navi-cancel" variant="discrete">
+                {/* TEMP: native pointer/click probes to see whether a tap on
+                    these buttons during the wheel's settle actually produces a
+                    click (and thus a command). Remove once the mobile
+                    settle-vs-tap bug is understood. */}
+                <Button
+                  command="--navi-cancel"
+                  variant="discrete"
+                  onPointerDown={() =>
+                    console.debug("[TEMP] Annuler pointerdown")
+                  }
+                  onClick={() => console.debug("[TEMP] Annuler click")}
+                >
                   Annuler
                 </Button>
-                <Button command="--navi-define" variant="discrete">
+                <Button
+                  command="--navi-define"
+                  variant="discrete"
+                  onPointerDown={() =>
+                    console.debug("[TEMP] Définir pointerdown")
+                  }
+                  onClick={() => console.debug("[TEMP] Définir click")}
+                >
                   Définir
                 </Button>
               </Box>

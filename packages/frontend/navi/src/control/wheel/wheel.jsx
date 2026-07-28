@@ -60,6 +60,7 @@ import { getUIStateControllerById } from "../controller_registry.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
+import { useDebugScroll } from "../../navi_debug.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 
@@ -575,6 +576,7 @@ const useWheelInteractions = ({
   wheelSettle,
   glideTo,
   stepTarget,
+  debug,
 }) => {
   useLayoutEffect(() => {
     const el = ref.current;
@@ -822,7 +824,8 @@ const useWheelInteractions = ({
         // A real drag begins: stop the glide and re-anchor to here so the wheel
         // doesn't jump (startPos = the just-frozen position, startClient = now).
         drag.moved = true;
-        cancelAnim();
+        const caught = cancelAnim();
+        debug(e, caught ? "catch: grabbed a moving wheel" : "drag: start");
         drag.startPos = posRef.current;
         drag.startClient = client;
       }
@@ -1092,6 +1095,12 @@ function WheelUI(props) {
     delete controlRootProps[key];
   }
 
+  // Wheel-motion lifecycle logging, under the navi "[scroll]" debug category
+  // (enable via <NaviDebug debugScroll> / debugAll). Logs drag/catch/settle/
+  // commit so the wheel's animation phases are readable — e.g. to see the
+  // momentum window that follows a fling.
+  const debugScroll = useDebugScroll();
+
   // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
   // value and item list here; a plain closure would freeze the mount render's
   // values (empty item list, initial value) and later clear or mis-map the
@@ -1359,16 +1368,22 @@ function WheelUI(props) {
     }
   };
 
+  // Returns whether it actually interrupted a motion in flight — lets the caller
+  // tell a fresh gesture from one that "caught" a spinning/gliding wheel.
   const cancelAnim = () => {
+    let interrupted = false;
     if (momentumRef.current !== null) {
       cancelAnimationFrame(momentumRef.current);
       momentumRef.current = null;
+      interrupted = true;
     }
     if (glideRef.current !== null) {
       cancelAnimationFrame(glideRef.current);
       glideRef.current = null;
       targetPosRef.current = null;
+      interrupted = true;
     }
+    return interrupted;
   };
 
   // After motion stops: fold a looped position back to the centered value's
@@ -1391,6 +1406,7 @@ function WheelUI(props) {
     }
     const settleEvent = new CustomEvent("navi_wheel_settle");
     centeredIndexRef.current = index;
+    debugScroll(`settle: committed → ${trackedItemsRef.current[index].value}`);
     requestSelectValue(trackedItemsRef.current[index].value, settleEvent);
     // The value is now stable → commit the action. The wheel runs actionEvent
     // "custom" (see the facade above) so setUIState during the motion only fired
@@ -1444,6 +1460,7 @@ function WheelUI(props) {
     }
     targetPosRef.current = target;
     if (glideRef.current === null) {
+      debugScroll("glide: start");
       glideRef.current = requestAnimationFrame(() =>
         glideStep(vp, performance.now()),
       );
@@ -1459,6 +1476,7 @@ function WheelUI(props) {
   // overshoots only a handful of rows (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
+    debugScroll(`settle: momentum start (v=${velocity}px/ms)`);
     // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
     // so a hard swipe carries across the list instead of being clipped to a few
     // rows. The mouse wheel never reaches here (it uses wheelSettle/glide).
@@ -1650,6 +1668,7 @@ function WheelUI(props) {
     wheelSettle,
     glideTo,
     stepTarget,
+    debug: debugScroll,
   });
 
   useWheelKeyboard({
