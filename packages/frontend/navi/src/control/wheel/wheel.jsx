@@ -514,6 +514,7 @@ const WheelGroupContext = createContext(null);
  * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
  * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
  * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
+ * @param {number|string} [props.size] - Font size of the wheel (number = px). Scales the digits and, since the row size is em-based, the row height too — a simple way to make the whole wheel bigger. An explicit itemHeight/itemWidth still overrides the row size.
  * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
@@ -532,6 +533,7 @@ const WHEEL_OWN_PROP_KEYS = [
   "visibleCount",
   "itemHeight",
   "itemWidth",
+  "size",
   "bounded",
   "horizontal",
   "glass",
@@ -547,6 +549,7 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
+    size,
     bounded,
     horizontal,
     glass,
@@ -732,6 +735,12 @@ function WheelUI(props) {
 
   const styleWithVars = {
     "--wheel-visible-count": visibleCount,
+    // `size` sets the container font-size, which drives the digit size AND the
+    // row height (--wheel-item-height is em-based), so the whole wheel scales
+    // together. An explicit itemHeight still wins for the row height below.
+    ...(size === undefined
+      ? {}
+      : { fontSize: typeof size === "number" ? `${size}px` : size }),
     ...(itemHeight === undefined
       ? {}
       : {
