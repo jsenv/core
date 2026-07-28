@@ -1,33 +1,39 @@
 /*
  * Devices plugin (dev only)
  * -------------------------
- * Tracks every browser "device" that connects to the dev server and lets you
- * watch a device's console logs from another device (e.g. read a phone's logs
- * from the desktop).
+ * Lets you read one browser's console logs from another browser — e.g. watch a
+ * phone's logs from the desktop.
  *
- * - Every page gets a small client (client/devices_client.js) that assigns a
- *   stable device id, opens a WebSocket to /.internal/devices.websocket, and
- *   forwards its console.* calls over it. It also shows an in-page toast when
- *   another device connects (or resumes after inactivity), inviting the user to
- *   open that device's tracker page.
- * - The server keeps an in-memory registry of devices seen since it started,
- *   plus a short-lived, size-capped ring buffer of each device's logs so a
- *   tracker opened slightly late still sees the recent history.
- * - /.internal/devices        → dashboard listing devices
- * - /.internal/device?id=…    → per-device live log tracker
- * - /.internal/devices.json   → registry snapshot (dashboard polls it)
- * - /.internal/devices.websocket?role=device|tracker → the live channel
+ * Transport reuses what the dev server already has instead of opening a second
+ * websocket:
+ * - server → clients uses the jsenv "server events" channel (the same websocket
+ *   the autoreload feature rides on). This plugin declares three server events:
+ *     - "devices_list"  the whole registry (the dashboard renders it)
+ *     - "device_log"    a single log line (a tracker appends it)
+ *     - "device_here"   a device just appeared/resumed (every page can toast it)
+ *   Server events are broadcast, so consumers filter what they care about.
+ * - clients → server uses a plain HTTP POST (/.internal/devices/log). A browser
+ *   reports its console output and a periodic heartbeat there; no extra socket.
+ *
+ * A device is considered "online" when it has reported activity within
+ * INACTIVITY_MS — there is no dedicated connection to track.
+ *
+ * Pages:
+ * - /.internal/devices     → dashboard listing every device seen
+ * - /.internal/device?id=… → live console-log tracker for one device
  */
 
 import { readFileSync } from "node:fs";
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
-import { WebSocketResponse } from "@jsenv/server";
 
 const devicesClientFileUrl = new URL(
   "./client/devices_client.js",
   import.meta.url,
 ).href;
-const devicesPageFileUrl = new URL("./client/devices_page.html", import.meta.url);
+const devicesPageFileUrl = new URL(
+  "./client/devices_page.html",
+  import.meta.url,
+);
 const deviceTrackerPageFileUrl = new URL(
   "./client/device_tracker_page.html",
   import.meta.url,
@@ -38,19 +44,21 @@ const deviceTrackerPageFileUrl = new URL(
 // show recent history; it is not a persistent store.
 const LOG_MAX_PER_DEVICE = 1000;
 const LOG_TTL_MS = 60 * 60 * 1000; // 1h
-// A device that goes quiet for longer than this, then logs/interacts again, is
-// reported as "resumed" (the other devices get a fresh toast).
+// A device silent for longer than this, then active again, is reported as
+// "resumed" (the other pages get a fresh toast). It also defines "online".
 const INACTIVITY_MS = 60 * 1000;
 
 export const jsenvPluginDevices = () => {
   // id -> device record
   const devices = new Map();
-  // trackers watching a device's live logs: { socket, targetId }
-  const trackers = new Set();
-  // dashboard pages watching the whole device list (pushed, never polled).
-  const dashboards = new Set();
+
+  // Assigned when the server-event channel is set up; broadcast helpers.
+  let sendDevicesList = () => {};
+  let sendDeviceLog = () => {};
+  let sendDeviceHere = () => {};
 
   const now = () => Date.now();
+  const isOnline = (device) => now() - device.lastActivity < INACTIVITY_MS;
 
   const getOrCreateDevice = (id, userAgent) => {
     let device = devices.get(id);
@@ -60,9 +68,7 @@ export const jsenvPluginDevices = () => {
         userAgent,
         firstSeen: now(),
         lastActivity: now(),
-        connected: false,
-        everConnected: false,
-        sockets: new Set(),
+        everSeen: false,
         logs: [],
       };
       devices.set(id, device);
@@ -87,164 +93,109 @@ export const jsenvPluginDevices = () => {
     userAgent: device.userAgent,
     firstSeen: device.firstSeen,
     lastActivity: device.lastActivity,
-    connected: device.connected,
+    online: isOnline(device),
     logCount: device.logs.length,
   });
 
-  const sendTo = (socket, event) => {
-    if (socket.readyState === 1) {
-      socket.send(JSON.stringify(event));
-    }
-  };
+  const snapshot = () => [...devices.values()].map(serializeDevice);
 
-  // Notify every device EXCEPT the one the event is about (you don't toast a
-  // device about itself).
-  const notifyOtherDevices = (exceptId, event) => {
-    for (const device of devices.values()) {
-      if (device.id === exceptId) {
-        continue;
-      }
-      for (const socket of device.sockets) {
-        sendTo(socket, event);
-      }
-    }
-  };
-
-  const forwardLogToTrackers = (deviceId, logEvent) => {
-    for (const tracker of trackers) {
-      if (tracker.targetId === deviceId) {
-        sendTo(tracker.socket, logEvent);
-      }
-    }
-  };
-
-  // Push the whole device list to every dashboard — no client polling. Called
-  // immediately on structural changes (a device connects/disconnects/appears);
-  // an activity/log-count refresh is throttled so a chatty device doesn't spam.
-  const pushDashboards = () => {
-    const snapshot = [...devices.values()].map(serializeDevice);
-    for (const socket of dashboards) {
-      sendTo(socket, { type: "devices", devices: snapshot });
-    }
-  };
-  let dashboardThrottleTimer = null;
-  const pushDashboardsThrottled = () => {
-    if (dashboardThrottleTimer || dashboards.size === 0) {
+  // Broadcasting the full list on every log line would be wasteful, so a
+  // log-driven refresh (logCount/lastActivity) is throttled; structural changes
+  // (a device appears/resumes) push immediately.
+  let listThrottleTimer = null;
+  const pushListThrottled = () => {
+    if (listThrottleTimer) {
       return;
     }
-    dashboardThrottleTimer = setTimeout(() => {
-      dashboardThrottleTimer = null;
-      pushDashboards();
+    listThrottleTimer = setTimeout(() => {
+      listThrottleTimer = null;
+      sendDevicesList();
     }, 1000);
   };
 
-  const handleDashboardSocket = (socket) => {
-    dashboards.add(socket);
-    sendTo(socket, {
-      type: "devices",
-      devices: [...devices.values()].map(serializeDevice),
-    });
-    return () => {
-      dashboards.delete(socket);
-    };
-  };
-
-  const handleDeviceSocket = (socket, request) => {
-    const deviceId = request.searchParams.get("deviceId");
-    if (!deviceId) {
-      socket.close();
-      return undefined;
+  const ingest = async (request) => {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return { status: 400 };
     }
-    const userAgent = request.headers["user-agent"] || "";
+    const deviceId = body.deviceId;
+    if (!deviceId || typeof deviceId !== "string") {
+      return { status: 400 };
+    }
+    const userAgent = body.userAgent || request.headers["user-agent"] || "";
     const device = getOrCreateDevice(deviceId, userAgent);
 
-    const firstEver = !device.everConnected;
-    const wasDisconnected = !device.connected;
-    device.everConnected = true;
-    device.connected = true;
-    device.sockets.add(socket);
+    const firstEver = !device.everSeen;
+    const wasOnline = !firstEver && isOnline(device);
+    device.everSeen = true;
     device.lastActivity = now();
 
     if (firstEver) {
-      notifyOtherDevices(deviceId, {
-        type: "device_here",
-        reason: "new",
-        device: serializeDevice(device),
-      });
-    } else if (wasDisconnected) {
-      notifyOtherDevices(deviceId, {
-        type: "device_here",
-        reason: "reconnected",
-        device: serializeDevice(device),
-      });
+      sendDeviceHere({ reason: "new", device: serializeDevice(device) });
+      sendDevicesList();
+    } else if (!wasOnline) {
+      // A report after a long quiet spell means the device was picked back up.
+      sendDeviceHere({ reason: "resumed", device: serializeDevice(device) });
+      sendDevicesList();
     }
-    pushDashboards();
 
-    socket.on("message", (raw) => {
-      let message;
-      try {
-        message = JSON.parse(String(raw));
-      } catch {
-        return;
-      }
-      const previousActivity = device.lastActivity;
-      device.lastActivity = now();
-      // A message after a long quiet spell means the user picked the device back
-      // up — let the other devices know so they can re-open its tracker.
-      if (device.lastActivity - previousActivity > INACTIVITY_MS) {
-        notifyOtherDevices(deviceId, {
-          type: "device_here",
-          reason: "resumed",
-          device: serializeDevice(device),
-        });
-        pushDashboards();
-      }
-      if (message.type === "log") {
-        const entry = {
-          level: message.level || "log",
-          text: message.text || "",
-          ts: message.ts || now(),
-        };
-        device.logs.push(entry);
-        pruneLogs(device);
-        forwardLogToTrackers(deviceId, { type: "log", ...entry });
-      }
-      pushDashboardsThrottled();
-    });
+    const entries = Array.isArray(body.entries) ? body.entries : [];
+    for (const rawEntry of entries) {
+      const entry = {
+        level: rawEntry.level || "log",
+        text: typeof rawEntry.text === "string" ? rawEntry.text : "",
+        ts: rawEntry.ts || now(),
+      };
+      device.logs.push(entry);
+      sendDeviceLog({ deviceId, ...entry });
+    }
+    if (entries.length) {
+      pruneLogs(device);
+    }
+    pushListThrottled();
+    return { status: 204 };
+  };
 
-    return () => {
-      device.sockets.delete(socket);
-      if (device.sockets.size === 0) {
-        device.connected = false;
-      }
-      pushDashboards();
+  const jsonResponse = (data) => {
+    const json = JSON.stringify(data);
+    return {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(json),
+      },
+      body: json,
     };
   };
 
-  const handleTrackerSocket = (socket, request) => {
-    const targetId = request.searchParams.get("target");
-    const tracker = { socket, targetId };
-    trackers.add(tracker);
-    // Replay the recent buffer so a tracker opened after the fact isn't empty.
-    const device = devices.get(targetId);
-    if (device) {
-      for (const entry of device.logs) {
-        sendTo(socket, { type: "log", ...entry });
-      }
-    }
-    return () => {
-      trackers.delete(tracker);
+  const htmlResponse = (fileUrl) => {
+    const html = readFileSync(fileUrl);
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/html",
+        "content-length": html.byteLength,
+      },
+      body: html,
     };
   };
-
-  const htmlResponse = (fileUrl) =>
-    new Response(readFileSync(fileUrl), {
-      headers: { "content-type": "text/html" },
-    });
 
   return {
     name: "jsenv:devices",
     appliesDuring: "dev",
+    serverEvents: {
+      devices_list: (serverEventInfo) => {
+        sendDevicesList = () => serverEventInfo.sendServerEvent(snapshot());
+      },
+      device_log: (serverEventInfo) => {
+        sendDeviceLog = (payload) => serverEventInfo.sendServerEvent(payload);
+      },
+      device_here: (serverEventInfo) => {
+        sendDeviceHere = (payload) => serverEventInfo.sendServerEvent(payload);
+      },
+    },
     transformUrlContent: {
       html: (urlInfo) => {
         // Don't instrument our own dashboard/tracker pages.
@@ -265,33 +216,30 @@ export const jsenvPluginDevices = () => {
     },
     serverRoutes: [
       {
-        endpoint: "GET /.internal/devices.websocket",
+        endpoint: "POST /.internal/devices/log",
         description:
-          "Live channel: browser devices report their console logs here; trackers stream a device's logs from here.",
+          "A browser reports its console output and activity heartbeat here.",
         declarationSource: import.meta.url,
-        fetch: (request) => {
-          const role = request.searchParams.get("role") || "device";
-          if (role === "tracker") {
-            return new WebSocketResponse((socket) =>
-              handleTrackerSocket(socket, request),
-            );
-          }
-          if (role === "dashboard") {
-            return new WebSocketResponse((socket) =>
-              handleDashboardSocket(socket),
-            );
-          }
-          return new WebSocketResponse((socket) =>
-            handleDeviceSocket(socket, request),
-          );
-        },
+        fetch: (request) => ingest(request),
       },
       {
         endpoint: "GET /.internal/devices.json",
         description: "Snapshot of every device seen since the server started.",
+        availableMediaTypes: ["application/json"],
         declarationSource: import.meta.url,
-        fetch: () =>
-          Response.json([...devices.values()].map(serializeDevice)),
+        fetch: () => jsonResponse(snapshot()),
+      },
+      {
+        endpoint: "GET /.internal/device/logs.json",
+        description:
+          "Buffered console logs of one device (?id=…), for a tracker opened late.",
+        availableMediaTypes: ["application/json"],
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          const id = request.searchParams.get("id");
+          const device = id && devices.get(id);
+          return jsonResponse(device ? device.logs : []);
+        },
       },
       {
         endpoint: "GET /.internal/devices",

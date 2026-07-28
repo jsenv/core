@@ -8,13 +8,13 @@
       body {
         margin: 0;
         padding: 24px;
+        color: #111827;
         font:
           14px/1.5 -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
           Roboto,
           sans-serif;
-        color: #111827;
         background: #f3f4f6;
       }
       h1 {
@@ -27,11 +27,11 @@
       }
       table {
         width: 100%;
-        border-collapse: collapse;
         background: #fff;
         border-radius: 8px;
-        overflow: hidden;
+        border-collapse: collapse;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
       }
       th,
       td {
@@ -40,10 +40,10 @@
         border-bottom: 1px solid #eef2f7;
       }
       th {
+        color: #6b7280;
         font-size: 0.78rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        color: #6b7280;
         background: #f9fafb;
       }
       tr:last-child td {
@@ -53,9 +53,9 @@
         display: inline-block;
         width: 8px;
         height: 8px;
-        border-radius: 50%;
         margin-right: 6px;
         vertical-align: middle;
+        border-radius: 50%;
       }
       .dot.on {
         background: #22c55e;
@@ -65,10 +65,10 @@
       }
       .ua {
         max-width: 340px;
-        overflow: hidden;
+        color: #374151;
         text-overflow: ellipsis;
         white-space: nowrap;
-        color: #374151;
+        overflow: hidden;
       }
       a.track {
         color: #2563eb;
@@ -80,8 +80,8 @@
       }
       .empty {
         padding: 30px;
-        text-align: center;
         color: #9ca3af;
+        text-align: center;
       }
       .muted {
         color: #9ca3af;
@@ -126,11 +126,12 @@
       const escapeHtml = (str) =>
         String(str).replace(
           /[&<>"]/g,
-          (c) =>
-            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
         );
 
+      let lastDevices = [];
       const render = (devices) => {
+        lastDevices = devices;
         if (!devices.length) {
           rows.innerHTML = `<tr><td class="empty" colspan="5">No device has connected yet.</td></tr>`;
           return;
@@ -140,7 +141,7 @@
           .map(
             (d) => `
           <tr>
-            <td><span class="dot ${d.connected ? "on" : "off"}"></span>${d.connected ? "connected" : "offline"}</td>
+            <td><span class="dot ${d.online ? "on" : "off"}"></span>${d.online ? "online" : "offline"}</td>
             <td class="ua" title="${escapeHtml(d.userAgent)}">${escapeHtml(d.userAgent) || '<span class="muted">unknown</span>'}</td>
             <td>${ago(d.lastActivity)}</td>
             <td>${d.logCount}</td>
@@ -150,17 +151,24 @@
           .join("");
       };
 
-      // Live via WebSocket — the server pushes the full list whenever it
-      // changes (device connects/disconnects/appears/resumes). No polling.
+      // Initial snapshot, then live updates over the jsenv server-events channel
+      // (the same websocket autoreload uses). The server pushes the full list on
+      // every change — no polling.
+      fetch("/.internal/devices.json")
+        .then((r) => r.json())
+        .then(render)
+        .catch(() => {});
+
+      const proto = location.protocol === "https:" ? "wss" : "ws";
       let reconnectDelay = 500;
-      let lastDevices = [];
       const connect = () => {
-        const proto = location.protocol === "https:" ? "wss" : "ws";
         const ws = new WebSocket(
-          `${proto}://${location.host}/.internal/devices.websocket?role=dashboard`,
+          `${proto}://${location.host}/.internal/events.websocket`,
         );
+        let pingId;
         ws.addEventListener("open", () => {
           reconnectDelay = 500;
+          pingId = setInterval(() => ws.send('{"type":"ping"}'), 30000);
         });
         ws.addEventListener("message", (e) => {
           let event;
@@ -169,17 +177,18 @@
           } catch {
             return;
           }
-          if (event.type === "devices") {
-            lastDevices = event.devices;
-            render(event.devices);
+          if (event.type === "devices_list") {
+            render(event.data);
           }
         });
         ws.addEventListener("close", () => {
+          clearInterval(pingId);
           setTimeout(connect, reconnectDelay);
-          reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+          reconnectDelay = reconnectDelay < 10000 ? reconnectDelay * 2 : 10000;
         });
       };
       connect();
+
       // Refresh the relative "ago" labels between server pushes.
       setInterval(() => render(lastDevices), 5000);
     </script>

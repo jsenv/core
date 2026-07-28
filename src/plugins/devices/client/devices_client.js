@@ -1,13 +1,21 @@
 /*
  * Injected into every dev-server page. Gives this browser a stable "device id",
- * opens a WebSocket to the dev server, forwards its console.* output over it,
- * and shows a toast when another device connects (or resumes) — inviting the
- * user to open that device's live-log tracker.
+ * forwards its console.* output to the dev server over a plain HTTP POST, and
+ * shows a toast when another device appears (or resumes) — inviting the user to
+ * open that device's live-log tracker.
+ *
+ * It does NOT open a websocket: server → browser messages ride the existing
+ * jsenv server-events channel (window.__server_events__), and browser → server
+ * messages are batched POSTs to /.internal/devices/log.
  */
 
 const DEVICE_ID_STORAGE_KEY = "jsenv_device_id";
-// Don't spam the server with an "activity" message on every pointer/key event.
-const ACTIVITY_THROTTLE_MS = 5000;
+const LOG_ENDPOINT = "/.internal/devices/log";
+// Flush buffered logs at most this often (a chatty page shouldn't POST per line).
+const FLUSH_INTERVAL_MS = 1000;
+// Heartbeat so the server keeps seeing this device as "online" while the page is
+// open, and notices when it is picked back up after a quiet spell.
+const HEARTBEAT_MS = 15000;
 
 const getDeviceId = () => {
   try {
@@ -16,7 +24,7 @@ const getDeviceId = () => {
       id =
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
-          : String(Math.random()).slice(2) + Date.now().toString(36);
+          : `${String(Math.random()).slice(2)}${Date.now().toString(36)}`;
       localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
     }
     return id;
@@ -27,22 +35,6 @@ const getDeviceId = () => {
 };
 
 // Best-effort, non-throwing stringify of console arguments.
-const formatArg = (arg) => {
-  if (typeof arg === "string") {
-    return arg;
-  }
-  if (arg instanceof Error) {
-    return arg.stack || `${arg.name}: ${arg.message}`;
-  }
-  if (arg === undefined) {
-    return "undefined";
-  }
-  try {
-    return JSON.stringify(arg, jsonReplacer());
-  } catch {
-    return String(arg);
-  }
-};
 const jsonReplacer = () => {
   const seen = new WeakSet();
   return (key, value) => {
@@ -61,72 +53,96 @@ const jsonReplacer = () => {
     return value;
   };
 };
+const formatArg = (arg) => {
+  if (typeof arg === "string") {
+    return arg;
+  }
+  if (arg instanceof Error) {
+    return arg.stack || `${arg.name}: ${arg.message}`;
+  }
+  if (arg === undefined) {
+    return "undefined";
+  }
+  try {
+    return JSON.stringify(arg, jsonReplacer());
+  } catch {
+    return String(arg);
+  }
+};
 const formatArgs = (args) => args.map(formatArg).join(" ");
+
+// Wait until the jsenv server-events client is ready, then hand it over.
+const whenServerEvents = (callback) => {
+  const ready = () => {
+    const serverEvents = window.__server_events__;
+    return serverEvents && typeof serverEvents.listenEvents === "function"
+      ? serverEvents
+      : null;
+  };
+  const serverEvents = ready();
+  if (serverEvents) {
+    callback(serverEvents);
+    return;
+  }
+  const intervalId = setInterval(() => {
+    const serverEvents = ready();
+    if (serverEvents) {
+      clearInterval(intervalId);
+      callback(serverEvents);
+    }
+  }, 100);
+};
 
 const setup = () => {
   const deviceId = getDeviceId();
-  const wsUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/.internal/devices.websocket?role=device&deviceId=${encodeURIComponent(deviceId)}`;
+  const userAgent = navigator.userAgent;
 
-  let socket = null;
-  // Buffer logs produced before/while the socket is (re)connecting.
-  const pending = [];
-  const flush = () => {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
+  // Buffer log entries and POST them in batches.
+  let pending = [];
+  const post = (entries, { beacon = false } = {}) => {
+    const payload = JSON.stringify({ deviceId, userAgent, entries });
+    if (beacon && navigator.sendBeacon) {
+      navigator.sendBeacon(
+        LOG_ENDPOINT,
+        new Blob([payload], { type: "application/json" }),
+      );
       return;
     }
-    while (pending.length) {
-      socket.send(JSON.stringify(pending.shift()));
-    }
-  };
-  const send = (message) => {
-    pending.push(message);
-    if (pending.length > 500) {
-      pending.shift(); // cap the offline buffer
-    }
-    flush();
-  };
-
-  let reconnectDelay = 500;
-  const connect = () => {
-    try {
-      socket = new WebSocket(wsUrl);
-    } catch {
-      scheduleReconnect();
-      return;
-    }
-    socket.addEventListener("open", () => {
-      reconnectDelay = 500;
-      flush();
+    fetch(LOG_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {
+      // dev server gone or offline — dropping logs is acceptable.
     });
-    socket.addEventListener("message", (e) => {
-      let event;
-      try {
-        event = JSON.parse(e.data);
-      } catch {
+  };
+
+  let flushScheduled = false;
+  const scheduleFlush = () => {
+    if (flushScheduled) {
+      return;
+    }
+    flushScheduled = true;
+    setTimeout(() => {
+      flushScheduled = false;
+      if (!pending.length) {
         return;
       }
-      if (event.type === "device_here") {
-        showDeviceToast(event);
-      }
-    });
-    socket.addEventListener("close", scheduleReconnect);
-    socket.addEventListener("error", () => {
-      try {
-        socket.close();
-      } catch {
-        // already closing
-      }
-    });
+      const entries = pending;
+      pending = [];
+      post(entries);
+    }, FLUSH_INTERVAL_MS);
   };
-  let reconnectTimeout;
-  const scheduleReconnect = () => {
-    clearTimeout(reconnectTimeout);
-    reconnectTimeout = setTimeout(connect, reconnectDelay);
-    reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+  const record = (level, text) => {
+    pending.push({ level, text, ts: Date.now() });
+    if (pending.length > 500) {
+      pending.shift(); // cap the buffer if the server is unreachable
+    }
+    scheduleFlush();
   };
-  connect();
 
-  // Forward console.* — keeping the original behavior intact.
+  // Forward console.* while keeping the original behavior intact.
   const LEVELS = ["log", "info", "warn", "error", "debug"];
   for (const level of LEVELS) {
     const original = console[level];
@@ -135,59 +151,48 @@ const setup = () => {
     }
     console[level] = (...args) => {
       original.apply(console, args);
-      send({ type: "log", level, text: formatArgs(args), ts: Date.now() });
+      record(level, formatArgs(args));
     };
   }
-  // Also capture uncaught errors and unhandled rejections.
-  window.addEventListener("error", (e) => {
-    send({
-      type: "log",
-      level: "error",
-      text: e.message + (e.filename ? ` (${e.filename}:${e.lineno})` : ""),
-      ts: Date.now(),
-    });
+  window.addEventListener("error", (event) => {
+    const location = event.filename
+      ? ` (${event.filename}:${event.lineno})`
+      : "";
+    record("error", `${event.message}${location}`);
   });
-  window.addEventListener("unhandledrejection", (e) => {
-    send({
-      type: "log",
-      level: "error",
-      text: `Unhandled rejection: ${formatArg(e.reason)}`,
-      ts: Date.now(),
-    });
+  window.addEventListener("unhandledrejection", (event) => {
+    record("error", `Unhandled rejection: ${formatArg(event.reason)}`);
   });
 
-  // Report genuine user activity (throttled) so the server can tell when a
-  // device is picked back up after a quiet spell.
-  let lastActivitySent = 0;
-  const reportActivity = () => {
-    const now = Date.now();
-    if (now - lastActivitySent < ACTIVITY_THROTTLE_MS) {
-      return;
-    }
-    lastActivitySent = now;
-    send({ type: "activity", ts: now });
-  };
-  for (const type of ["pointerdown", "keydown"]) {
-    window.addEventListener(type, reportActivity, { passive: true });
-  }
-
+  // Heartbeat keeps the device "online" and lets the server detect a resume.
+  post([]);
+  const heartbeatId = setInterval(() => post([]), HEARTBEAT_MS);
   window.addEventListener("pagehide", () => {
-    try {
-      socket?.close();
-    } catch {
-      // ignore
+    clearInterval(heartbeatId);
+    if (pending.length) {
+      const entries = pending;
+      pending = [];
+      post(entries, { beacon: true });
     }
+  });
+
+  // Toast when another device appears — reusing the server-events channel.
+  whenServerEvents((serverEvents) => {
+    serverEvents.listenEvents({
+      device_here: (event) => {
+        const { device, reason } = event.data;
+        if (device.id === deviceId) {
+          return; // don't toast a device about itself
+        }
+        showDeviceToast({ device, reason });
+      },
+    });
   });
 };
 
-const showDeviceToast = (event) => {
-  const { device, reason } = event;
+const showDeviceToast = ({ device, reason }) => {
   const label =
-    reason === "new"
-      ? "A new device connected"
-      : reason === "reconnected"
-        ? "A device reconnected"
-        : "A device resumed";
+    reason === "new" ? "A new device connected" : "A device resumed";
   const el = document.createElement("div");
   el.setAttribute("data-jsenv-device-toast", "");
   el.style.cssText = [
