@@ -552,7 +552,7 @@
       // around hours/minutes is set PER ITEM (paddingX), so the padded area
       // stays scrollable — no group spacing.
       const DurationWheelsGroup = ({ big }) => (
-        <WheelGroup padding={big ? "l" : "s"}>
+        <WheelGroup size="xl">
           <Wheel
             name="hours"
             type="integer"
@@ -608,7 +608,11 @@
           );
         }
 
-        return <DurationWheelsGroup />;
+        return (
+          <Box padding="s">
+            <DurationWheelsGroup />
+          </Box>
+        );
       };
 
       // Same wheels, standalone (outside a Picker) — the intended way to use a
