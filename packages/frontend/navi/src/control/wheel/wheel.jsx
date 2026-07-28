@@ -796,8 +796,13 @@ const useWheelInteractions = ({
           try {
             vp.setPointerCapture(e.pointerId);
             drag.captured = true;
+            debug(
+              e,
+              `pointer down: capture set (id=${e.pointerId}, ${e.pointerType})`,
+            );
           } catch {
             // pointer already gone (e.g. released same tick) — nothing to capture.
+            debug(e, `pointer down: capture FAILED (id=${e.pointerId})`);
           }
         },
       });
@@ -845,6 +850,7 @@ const useWheelInteractions = ({
     };
     const endDrag = (e) => {
       const wasDrag = drag.moved;
+      const pointerId = drag.pointerId;
       let velocity = drag.velocity;
       // If the pointer sat still for a moment before release, don't fling: a stale
       // velocity from an earlier fast move would send the wheel gliding after the
@@ -855,11 +861,15 @@ const useWheelInteractions = ({
       }
       if (drag.captured) {
         try {
-          vp.releasePointerCapture(drag.pointerId);
+          vp.releasePointerCapture(pointerId);
         } catch {
           // capture already lost (e.g. the pointer is gone) — nothing to release.
         }
       }
+      debug(
+        e,
+        `${e.type}: ${wasDrag ? "drag end" : "tap"}, capture released (id=${pointerId})`,
+      );
       drag = null;
       if (!wasDrag) {
         // A tap: step by the click's row-distance from the center window, NOT by
@@ -886,6 +896,9 @@ const useWheelInteractions = ({
     };
     const onPointerUp = (e) => {
       if (!drag || e.pointerId !== drag.pointerId) {
+        // e.g. the lostpointercapture that follows our own releasePointerCapture,
+        // or a stray pointercancel — logged so the capture teardown is visible.
+        debug(e, `${e.type}: no active drag (id=${e.pointerId})`);
         return;
       }
       endDrag(e);

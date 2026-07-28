@@ -130,10 +130,30 @@
             <Box flex="y" spacing="l" padding="xl" alignX="center">
               <DurationWheelsGroup big />
               <Box flex="x" spacing="s" alignX="end" expandX>
-                <Button command="--navi-cancel" variant="discrete">
+                {/* Native pointer/click probes: the wheel logs can't show the
+                    button tap, so these reveal whether a tap after a drag-fling
+                    actually produces pointerdown → pointerup → click (or where
+                    it gets dropped). */}
+                <Button
+                  command="--navi-cancel"
+                  variant="discrete"
+                  onPointerDown={() =>
+                    console.debug("[probe] Annuler pointerdown")
+                  }
+                  onPointerUp={() => console.debug("[probe] Annuler pointerup")}
+                  onClick={() => console.debug("[probe] Annuler click")}
+                >
                   Annuler
                 </Button>
-                <Button command="--navi-define" variant="discrete">
+                <Button
+                  command="--navi-define"
+                  variant="discrete"
+                  onPointerDown={() =>
+                    console.debug("[probe] Définir pointerdown")
+                  }
+                  onPointerUp={() => console.debug("[probe] Définir pointerup")}
+                  onClick={() => console.debug("[probe] Définir click")}
+                >
                   Définir
                 </Button>
               </Box>
