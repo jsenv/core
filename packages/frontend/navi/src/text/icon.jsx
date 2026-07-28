@@ -45,6 +45,10 @@ const css = /* css */ `
     &[data-interactive] {
       cursor: pointer;
     }
+    &[data-icon-text] {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
   }
 
   .navi_icon > svg,

@@ -11,7 +11,7 @@ import {
   LinkBlankTargetSvg,
   LinkGithubSvg,
   LinkSmsSvg,
-  ArrowTurningDownRightSvg,
+  ArrowTurnRightDownSvg,
 } from "../../graphic/icons/link_svgs.jsx";
 import { PhoneSvg } from "../../graphic/icons/phone_svg.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
@@ -283,6 +283,10 @@ const css = /* css */ `
            rasterizes blurry. Not compositing lets it paint with its parent,
            pixel-snapped and crisp — and it can still sit above via z-index. */
       backface-visibility: visible;
+    }
+
+    .anchor_icon {å
+      margin-left: -0.1em;
     }
 
     &[data-appearance="text"] {
@@ -610,8 +614,8 @@ const LinkPlain = (props) => {
           }
         } else {
           innerEndIcon = (
-            <Icon size="xs" textAnchor="char-top">
-              <ArrowTurningDownRightSvg />
+            <Icon className="anchor_icon" textAnchor="char-bottom" size="xs">
+              <ArrowTurnRightDownSvg />
             </Icon>
           );
         }

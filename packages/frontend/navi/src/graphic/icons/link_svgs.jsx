@@ -1,12 +1,12 @@
 const css = /* css */ `
   @media (min-resolution: 2dppx) {
-    .navi_arrow_turning_down_right {
+    .navi_arrow_turning_down_right path {
       stroke-width: 1.1;
     }
   }
   @media (min-resolution: 3dppx) {
-    .navi_arrow_turning_down_right {
-      stroke-width: 0.9;
+    .navi_arrow_turning_down_right path {
+      stroke-width: 1.1;
     }
   }
 `;
@@ -30,15 +30,25 @@ export const ArrowTurningDownRightSvg = () => {
   import.meta.css = css;
 
   return (
-    <svg viewBox="0.25 0.35 9.7 11.6">
+    <svg viewBox="0.25 0.35 9.7 11.6" className="navi_arrow_turning_down_right">
       <path
-        className="navi_arrow_turning_down_right"
         d="M1 1H2.9A2.2 2.2 0 0 1 5.1 3.2V11.3M0.9 7.2 5.1 11.3 9.3 7.2"
         fill="none"
         stroke="currentColor"
         stroke-width="1.3"
         stroke-linecap="round"
         stroke-linejoin="round"
+      />
+    </svg>
+  );
+};
+
+export const ArrowTurnRightDownSvg = () => {
+  return (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M4 3C3.44772 3 3 3.44771 3 4C3 4.55229 3.44772 5 4 5H11C11.7956 5 12.5587 5.31607 13.1213 5.87868C13.6839 6.44129 14 7.20435 14 8V17.5858L10.7071 14.2929C10.3166 13.9024 9.68342 13.9024 9.29289 14.2929C8.90237 14.6834 8.90237 15.3166 9.29289 15.7071L14.2929 20.7071C14.6834 21.0976 15.3166 21.0976 15.7071 20.7071L20.7071 15.7071C21.0976 15.3166 21.0976 14.6834 20.7071 14.2929C20.3166 13.9024 19.6834 13.9024 19.2929 14.2929L16 17.5858V8C16 6.67392 15.4732 5.40215 14.5355 4.46447C13.5979 3.52678 12.3261 3 11 3H4Z"
+        fill="currentColor"
       />
     </svg>
   );
