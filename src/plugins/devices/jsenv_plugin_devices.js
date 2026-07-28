@@ -99,6 +99,14 @@ export const jsenvPluginDevices = () => {
 
   const snapshot = () => [...devices.values()].map(serializeDevice);
 
+  // A single device's full record. Today that is its info plus buffered logs,
+  // but the shape is meant to grow (interactions, screen sharing, …) — which is
+  // why the route is device-scoped rather than named after logs.
+  const deviceDetail = (device) => ({
+    ...serializeDevice(device),
+    logs: device.logs,
+  });
+
   // Broadcasting the full list on every log line would be wasteful, so a
   // log-driven refresh (logCount/lastActivity) is throttled; structural changes
   // (a device appears/resumes) push immediately.
@@ -230,15 +238,15 @@ export const jsenvPluginDevices = () => {
         fetch: () => jsonResponse(snapshot()),
       },
       {
-        endpoint: "GET /.internal/device/logs.json",
+        endpoint: "GET /.internal/device.json",
         description:
-          "Buffered console logs of one device (?id=…), for a tracker opened late.",
+          "One device's record — info plus buffered logs (?id=…), so a tracker opened late still has recent history.",
         availableMediaTypes: ["application/json"],
         declarationSource: import.meta.url,
         fetch: (request) => {
           const id = request.searchParams.get("id");
           const device = id && devices.get(id);
-          return jsonResponse(device ? device.logs : []);
+          return jsonResponse(device ? deviceDetail(device) : { id, logs: [] });
         },
       },
       {

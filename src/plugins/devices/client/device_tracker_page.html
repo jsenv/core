@@ -187,10 +187,10 @@
       };
 
       // Backlog first (a tracker opened late still sees recent history)…
-      fetch(`/.internal/device/logs.json?id=${encodeURIComponent(deviceId)}`)
+      fetch(`/.internal/device.json?id=${encodeURIComponent(deviceId)}`)
         .then((r) => r.json())
-        .then((logs) => {
-          for (const entry of logs) {
+        .then((device) => {
+          for (const entry of device.logs || []) {
             addEntry(entry);
           }
         })
