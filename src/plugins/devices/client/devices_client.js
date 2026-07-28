@@ -1,36 +1,61 @@
 /*
- * Injected into every dev-server page. Gives this browser a stable "device id",
- * forwards its console.* output to the dev server over a plain HTTP POST, and
- * shows a toast when another device appears (or resumes) — inviting the user to
- * open that device's live-log monitor.
+ * Injected into every dev-server page. Gives this browser a stable "device id"
+ * (and this browsing context a "tab id"), reports what the tab is doing to the
+ * dev server, and shows a toast when another device appears (or resumes) —
+ * inviting the user to open that device's live-log monitor.
  *
  * It does NOT open a websocket: server → browser messages ride the existing
  * jsenv server-events channel (window.__server_events__), and browser → server
- * messages are batched POSTs to /.internal/devices/log.
+ * messages are batched POSTs to /.internal/devices/log carrying:
+ * - the tab (id, url, title, visibility)
+ * - recent qualified activities (click, keydown, mousemove, scroll, request,
+ *   navigation, visibility)
+ * - buffered console logs
  */
 
 const DEVICE_ID_STORAGE_KEY = "jsenv_device_id";
+const TAB_ID_STORAGE_KEY = "jsenv_tab_id";
 const LOG_ENDPOINT = "/.internal/devices/log";
-// Flush buffered logs at most this often (a chatty page shouldn't POST per line).
+// Flush buffered logs/activities at most this often (a chatty page shouldn't
+// POST per line).
 const FLUSH_INTERVAL_MS = 1000;
 // Heartbeat so the server keeps seeing this device as "online" while the page is
 // open, and notices when it is picked back up after a quiet spell.
 const HEARTBEAT_MS = 15000;
+// Continuous activities (mousemove, scroll) only need to refresh "what the tab
+// is doing" occasionally, not on every event.
+const CONTINUOUS_THROTTLE_MS = 2000;
+
+const randomId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${String(Math.random()).slice(2)}${Date.now().toString(36)}`;
 
 const getDeviceId = () => {
   try {
     let id = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
     if (!id) {
-      id =
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${String(Math.random()).slice(2)}${Date.now().toString(36)}`;
+      id = randomId();
       localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
     }
     return id;
   } catch {
     // storage may be unavailable (private mode, sandbox) — a per-load id is fine.
     return `anon-${Date.now().toString(36)}`;
+  }
+};
+
+// sessionStorage is per-tab and survives a reload, so it's a good tab identity.
+const getTabId = () => {
+  try {
+    let id = sessionStorage.getItem(TAB_ID_STORAGE_KEY);
+    if (!id) {
+      id = randomId();
+      sessionStorage.setItem(TAB_ID_STORAGE_KEY, id);
+    }
+    return id;
+  } catch {
+    return `tab-${Date.now().toString(36)}`;
   }
 };
 
@@ -73,13 +98,34 @@ const formatArgs = (args) => args.map(formatArg).join(" ");
 
 const setup = () => {
   const deviceId = getDeviceId();
+  const tabId = getTabId();
+  // Use the unwrapped fetch for our own reports so they don't count as activity.
+  const nativeFetch = window.fetch.bind(window);
 
-  // Buffer log entries and POST them in batches. The server reads the browser
-  // and OS from the request's own user-agent/sec-ch-ua headers, so the body
-  // only carries the id and the log entries.
-  let pending = [];
-  const post = async (entries, { beacon = false } = {}) => {
-    const payload = JSON.stringify({ deviceId, entries });
+  const tabInfo = ({ closing = false } = {}) => ({
+    id: tabId,
+    url: location.href,
+    title: document.title,
+    visible: document.visibilityState === "visible",
+    closing,
+  });
+
+  // Buffer logs and activities; POST them (with the current tab) in batches. The
+  // server reads the browser and OS from the request's own headers, so the body
+  // only carries the id, tab, activities and log entries.
+  let pendingLogs = [];
+  let pendingActivities = [];
+  const post = async ({ beacon = false, closing = false } = {}) => {
+    const logs = pendingLogs;
+    const activities = pendingActivities;
+    pendingLogs = [];
+    pendingActivities = [];
+    const payload = JSON.stringify({
+      deviceId,
+      tab: tabInfo({ closing }),
+      activities,
+      logs,
+    });
     if (beacon && navigator.sendBeacon) {
       navigator.sendBeacon(
         LOG_ENDPOINT,
@@ -88,14 +134,14 @@ const setup = () => {
       return;
     }
     try {
-      await fetch(LOG_ENDPOINT, {
+      await nativeFetch(LOG_ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: payload,
         keepalive: true,
       });
     } catch {
-      // dev server gone or offline — dropping logs is acceptable.
+      // dev server gone or offline — dropping the report is acceptable.
     }
   };
 
@@ -107,18 +153,24 @@ const setup = () => {
     flushScheduled = true;
     setTimeout(() => {
       flushScheduled = false;
-      if (!pending.length) {
+      if (!pendingLogs.length && !pendingActivities.length) {
         return;
       }
-      const entries = pending;
-      pending = [];
-      post(entries);
+      post();
     }, FLUSH_INTERVAL_MS);
   };
-  const record = (level, text) => {
-    pending.push({ level, text, ts: Date.now() });
-    if (pending.length > 500) {
-      pending.shift(); // cap the buffer if the server is unreachable
+
+  const recordLog = (level, text) => {
+    pendingLogs.push({ level, text, ts: Date.now() });
+    if (pendingLogs.length > 500) {
+      pendingLogs.shift(); // cap the buffer if the server is unreachable
+    }
+    scheduleFlush();
+  };
+  const recordActivity = (type, detail = "") => {
+    pendingActivities.push({ type, detail, ts: Date.now(), tabId });
+    if (pendingActivities.length > 50) {
+      pendingActivities.shift();
     }
     scheduleFlush();
   };
@@ -132,29 +184,99 @@ const setup = () => {
     }
     console[level] = (...args) => {
       original.apply(console, args);
-      record(level, formatArgs(args));
+      recordLog(level, formatArgs(args));
     };
   }
   window.addEventListener("error", (event) => {
     const location = event.filename
       ? ` (${event.filename}:${event.lineno})`
       : "";
-    record("error", `${event.message}${location}`);
+    recordLog("error", `${event.message}${location}`);
   });
   window.addEventListener("unhandledrejection", (event) => {
-    record("error", `Unhandled rejection: ${formatArg(event.reason)}`);
+    recordLog("error", `Unhandled rejection: ${formatArg(event.reason)}`);
   });
 
-  // Heartbeat keeps the device "online" and lets the server detect a resume.
-  post([]);
-  const heartbeatId = setInterval(() => post([]), HEARTBEAT_MS);
+  // Qualified activity so the dashboard can say what the tab was last doing.
+  window.addEventListener("click", () => recordActivity("click"), {
+    passive: true,
+  });
+  window.addEventListener("keydown", () => recordActivity("keydown"), {
+    passive: true,
+  });
+  let lastMove = 0;
+  let lastScroll = 0;
+  window.addEventListener(
+    "mousemove",
+    () => {
+      const t = Date.now();
+      if (t - lastMove < CONTINUOUS_THROTTLE_MS) {
+        return;
+      }
+      lastMove = t;
+      recordActivity("mousemove");
+    },
+    { passive: true },
+  );
+  window.addEventListener(
+    "scroll",
+    () => {
+      const t = Date.now();
+      if (t - lastScroll < CONTINUOUS_THROTTLE_MS) {
+        return;
+      }
+      lastScroll = t;
+      recordActivity("scroll");
+    },
+    { passive: true },
+  );
+  document.addEventListener("visibilitychange", () => {
+    recordActivity("visibility", document.visibilityState);
+    // push promptly so the dashboard's "active tab" tracks focus changes
+    post();
+  });
+
+  // Report outgoing HTTP requests (skipping our own internal traffic).
+  const isInternal = (url) => String(url).includes("/.internal/");
+  window.fetch = (input, init) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof Request
+          ? input.url
+          : String(input);
+    if (!isInternal(url)) {
+      const method =
+        (init && init.method) ||
+        (input instanceof Request ? input.method : "GET");
+      recordActivity("request", `${method} ${url}`);
+    }
+    return nativeFetch(input, init);
+  };
+  // SPA navigations (history API + back/forward).
+  const reportNavigation = () => recordActivity("navigation", location.href);
+  const patchHistory = (method) => {
+    const original = history[method];
+    if (typeof original !== "function") {
+      return;
+    }
+    history[method] = (...args) => {
+      const result = original.apply(history, args);
+      reportNavigation();
+      return result;
+    };
+  };
+  patchHistory("pushState");
+  patchHistory("replaceState");
+  window.addEventListener("popstate", reportNavigation);
+
+  // Heartbeat keeps the device "online", refreshes tab info, and lets the server
+  // detect a resume.
+  post();
+  const heartbeatId = setInterval(() => post(), HEARTBEAT_MS);
   window.addEventListener("pagehide", () => {
     clearInterval(heartbeatId);
-    if (pending.length) {
-      const entries = pending;
-      pending = [];
-      post(entries, { beacon: true });
-    }
+    post({ beacon: true, closing: true });
   });
 
   // Toast when another device appears — reusing the server-events channel.

@@ -37,6 +37,7 @@
       td {
         padding: 10px 14px;
         text-align: left;
+        vertical-align: top;
         border-bottom: 1px solid #eef2f7;
       }
       th {
@@ -67,6 +68,7 @@
         color: #2563eb;
         font-weight: 600;
         text-decoration: none;
+        white-space: nowrap;
       }
       a.track:hover {
         text-decoration: underline;
@@ -78,6 +80,94 @@
       }
       .muted {
         color: #9ca3af;
+      }
+      .url {
+        display: inline-block;
+        max-width: 260px;
+        color: #374151;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: bottom;
+        overflow: hidden;
+      }
+      .tag {
+        display: inline-block;
+        padding: 1px 7px;
+        color: #4338ca;
+        font-weight: 600;
+        font-size: 0.72rem;
+        background: #eef2ff;
+        border-radius: 999px;
+      }
+      .tag.on {
+        color: #047857;
+        background: #d1fae5;
+      }
+      .btn {
+        padding: 1px 8px;
+        color: #374151;
+        font: inherit;
+        font-size: 0.75rem;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #e5e7eb;
+      }
+      dialog {
+        width: min(90vw, 640px);
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.4);
+      }
+      .dlg-head {
+        display: flex;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #eef2f7;
+      }
+      .dlg-head .spacer {
+        flex: 1;
+      }
+      .dlg-body {
+        max-height: 60vh;
+        padding: 14px 16px;
+        overflow: auto;
+      }
+      .dlg-body pre {
+        margin: 0;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      ul.list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      ul.list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      ul.list li:last-child {
+        border-bottom: none;
+      }
+      .url2 {
+        color: #374151;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        word-break: break-all;
+      }
+      .ttl {
+        font-weight: 600;
       }
     </style>
   </head>
@@ -93,20 +183,33 @@
           <th>Status</th>
           <th>Browser</th>
           <th>OS</th>
+          <th>Tab</th>
           <th>Last activity</th>
           <th>Logs</th>
+          <th>UA</th>
           <th></th>
         </tr>
       </thead>
       <tbody id="rows">
         <tr>
-          <td class="empty" colspan="6">Loading…</td>
+          <td class="empty" colspan="8">Loading…</td>
         </tr>
       </tbody>
     </table>
 
+    <dialog id="dlg">
+      <div class="dlg-head">
+        <strong id="dlg-title"></strong>
+        <span class="spacer"></span>
+        <button class="btn" id="dlg-copy">Copy</button>
+        <button class="btn" id="dlg-close">Close</button>
+      </div>
+      <div class="dlg-body" id="dlg-body"></div>
+    </dialog>
+
     <script type="module">
       const rows = document.getElementById("rows");
+      const ONLINE_MS = 60000;
 
       const ago = (ts) => {
         const s = Math.round((Date.now() - ts) / 1000);
@@ -122,6 +225,14 @@
           /[&<>"]/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
         );
+      const shortUrl = (url) => {
+        try {
+          const u = new URL(url);
+          return `${u.pathname}${u.search}${u.hash}` || "/";
+        } catch {
+          return url;
+        }
+      };
       const RUNTIME_LABELS = {
         ios_safari: "iOS Safari",
         chrome: "Chrome",
@@ -140,29 +251,148 @@
         const v = version && version !== "unknown" ? ` ${version}` : "";
         return escapeHtml(`${label}${v}`);
       };
+      const isOnline = (device) => Date.now() - device.lastSeen < ONLINE_MS;
+
+      const tabCell = (d) => {
+        if (!d.activeTab) {
+          return '<span class="muted">—</span>';
+        }
+        const url = d.activeTab.url || "";
+        const more =
+          d.tabCount > 1
+            ? ` <button class="btn" data-action="tabs" data-id="${escapeHtml(d.id)}">+${d.tabCount - 1}</button>`
+            : "";
+        return `<span class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl(url))}</span>${more}`;
+      };
+      const activityCell = (d) => {
+        const a = d.lastActivity;
+        if (!a) {
+          return '<span class="muted">—</span>';
+        }
+        const detail = a.detail
+          ? ` <span class="url" title="${escapeHtml(a.detail)}">${escapeHtml(a.detail)}</span>`
+          : "";
+        return `<span class="tag">${escapeHtml(a.type)}</span>${detail} <span class="muted">${ago(a.ts)}</span> <button class="btn" data-action="activity" data-id="${escapeHtml(d.id)}">recent</button>`;
+      };
 
       let lastDevices = [];
       const render = (devices) => {
         lastDevices = devices;
         if (!devices.length) {
-          rows.innerHTML = `<tr><td class="empty" colspan="6">No device has connected yet.</td></tr>`;
+          rows.innerHTML = `<tr><td class="empty" colspan="8">No device has connected yet.</td></tr>`;
           return;
         }
-        devices.sort((a, b) => b.lastActivity - a.lastActivity);
+        devices.sort((a, b) => b.lastSeen - a.lastSeen);
         rows.innerHTML = devices
-          .map(
-            (d) => `
+          .map((d) => {
+            const online = isOnline(d);
+            return `
           <tr>
-            <td><span class="dot ${d.online ? "on" : "off"}"></span>${d.online ? "online" : "offline"}</td>
-            <td title="${escapeHtml(d.userAgent)}">${named(d.runtime)}</td>
+            <td><span class="dot ${online ? "on" : "off"}"></span>${online ? "online" : "offline"}</td>
+            <td>${named(d.runtime)}</td>
             <td>${named(d.os)}</td>
-            <td>${ago(d.lastActivity)}</td>
+            <td>${tabCell(d)}</td>
+            <td>${activityCell(d)}</td>
             <td>${d.logCount}</td>
+            <td><button class="btn" data-action="ua" data-id="${escapeHtml(d.id)}">show</button></td>
             <td><a class="track" href="/.internal/device?id=${encodeURIComponent(d.id)}">monitor →</a></td>
-          </tr>`,
-          )
+          </tr>`;
+          })
           .join("");
       };
+
+      // Dialogs (user agent / all tabs / recent activity).
+      const dlg = document.getElementById("dlg");
+      const dlgTitle = document.getElementById("dlg-title");
+      const dlgBody = document.getElementById("dlg-body");
+      const dlgCopy = document.getElementById("dlg-copy");
+      document.getElementById("dlg-close").onclick = () => dlg.close();
+      const openDialog = (title, html, copyText) => {
+        dlgTitle.textContent = title;
+        dlgBody.innerHTML = html;
+        if (copyText === undefined) {
+          dlgCopy.style.display = "none";
+        } else {
+          dlgCopy.style.display = "";
+          dlgCopy.textContent = "Copy";
+          dlgCopy.onclick = async () => {
+            try {
+              await navigator.clipboard.writeText(copyText);
+              dlgCopy.textContent = "Copied!";
+              setTimeout(() => {
+                dlgCopy.textContent = "Copy";
+              }, 1200);
+            } catch {
+              // clipboard blocked — ignore
+            }
+          };
+        }
+        dlg.showModal();
+      };
+
+      const fetchDevice = async (id) => {
+        try {
+          return await (
+            await fetch(`/.internal/device.json?id=${encodeURIComponent(id)}`)
+          ).json();
+        } catch {
+          return null;
+        }
+      };
+      const tabsHtml = (tabs) => {
+        if (!tabs.length) {
+          return '<p class="muted">No tab.</p>';
+        }
+        return `<ul class="list">${tabs
+          .slice()
+          .sort((a, b) => b.visible - a.visible || b.lastSeen - a.lastSeen)
+          .map(
+            (t) => `<li>
+              <div>${t.visible ? '<span class="tag on">active</span> ' : ""}<span class="ttl">${escapeHtml(t.title) || '<span class="muted">(no title)</span>'}</span> <span class="muted">${ago(t.lastSeen)}</span></div>
+              <div class="url2">${escapeHtml(t.url)}</div>
+            </li>`,
+          )
+          .join("")}</ul>`;
+      };
+      const activitiesHtml = (activities) => {
+        if (!activities.length) {
+          return '<p class="muted">No activity yet.</p>';
+        }
+        return `<ul class="list">${activities
+          .slice()
+          .reverse()
+          .map(
+            (a) => `<li>
+              <div><span class="tag">${escapeHtml(a.type)}</span> <span class="muted">${ago(a.ts)}</span></div>
+              ${a.detail ? `<div class="url2">${escapeHtml(a.detail)}</div>` : ""}
+            </li>`,
+          )
+          .join("")}</ul>`;
+      };
+
+      rows.addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) {
+          return;
+        }
+        const id = button.getAttribute("data-id");
+        const action = button.getAttribute("data-action");
+        if (action === "ua") {
+          const device = lastDevices.find((d) => d.id === id);
+          const ua = (device && device.userAgent) || "";
+          openDialog("User agent", `<pre>${escapeHtml(ua)}</pre>`, ua);
+          return;
+        }
+        const detail = await fetchDevice(id);
+        if (!detail) {
+          return;
+        }
+        if (action === "tabs") {
+          openDialog(`Tabs (${detail.tabs.length})`, tabsHtml(detail.tabs));
+        } else if (action === "activity") {
+          openDialog("Recent activity", activitiesHtml(detail.activities));
+        }
+      });
 
       // This page is cooked through the dev server, so it gets both the jsenv
       // server-events client (window.__server_events__, injected first — the
@@ -181,7 +411,7 @@
         devices_list: (event) => render(event.data),
       });
 
-      // Refresh the relative "ago" labels between server pushes.
+      // Refresh relative times and online state between server pushes.
       setInterval(() => render(lastDevices), 5000);
     </script>
   </body>

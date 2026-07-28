@@ -12,11 +12,14 @@
  *     - "device_log"    a single log line (a monitor appends it)
  *     - "device_here"   a device just appeared/resumed (every page can toast it)
  *   Server events are broadcast, so consumers filter what they care about.
- * - clients → server uses a plain HTTP POST (/.internal/devices/log). A browser
- *   reports its console output and a periodic heartbeat there; no extra socket.
+ * - clients → server uses a plain HTTP POST (/.internal/devices/log). Each report
+ *   carries the tab (id, url, title, visibility), recent qualified activities
+ *   (click, request, navigation, …) and buffered console logs; a periodic
+ *   heartbeat keeps it fresh. No extra socket.
  *
- * A device is considered "online" when it has reported activity within
- * INACTIVITY_MS — there is no dedicated connection to track.
+ * A device aggregates its open tabs and a short activity history. It is "online"
+ * when any report arrived within INACTIVITY_MS — there is no dedicated
+ * connection to track.
  *
  * The client is injected into EVERY cooked page, including our own dashboard and
  * monitor pages — so opening one of those counts as a connected device, and any
@@ -61,9 +64,14 @@ const deviceMonitorPageFileUrl = new URL(
 // show recent history; it is not a persistent store.
 const LOG_MAX_PER_DEVICE = 1000;
 const LOG_TTL_MS = 60 * 60 * 1000; // 1h
-// A device silent for longer than this, then active again, is reported as
-// "resumed" (the other pages get a fresh toast). It also defines "online".
+// Recent qualified activities kept per device (click, mousemove, request, …),
+// so a page can show "what the device was last doing" and a short history.
+const ACTIVITY_MAX_PER_DEVICE = 50;
+// A device silent (no report at all) for longer than this, then reporting
+// again, is treated as "resumed" and defines "online".
 const INACTIVITY_MS = 60 * 1000;
+// A tab not heard from for this long is considered closed and dropped.
+const TAB_TTL_MS = 2 * 60 * 1000;
 
 // The dev server already parses browser + version from a request (sec-ch-ua or
 // user-agent) via getRuntimeFromRequest; it does not cover the OS, so this fills
@@ -114,7 +122,8 @@ export const jsenvPluginDevices = () => {
   let sendDeviceHere = () => {};
 
   const now = () => Date.now();
-  const isOnline = (device) => now() - device.lastActivity < INACTIVITY_MS;
+  // "online" = we heard from the device (any report) recently.
+  const isOnline = (device) => now() - device.lastSeen < INACTIVITY_MS;
 
   const getOrCreateDevice = (id, request) => {
     const userAgent = request.headers["user-agent"] || "";
@@ -126,9 +135,14 @@ export const jsenvPluginDevices = () => {
         runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
         firstSeen: now(),
-        lastActivity: now(),
+        lastSeen: now(),
         everSeen: false,
         logs: [],
+        activities: [],
+        // most recent qualified activity { type, detail, ts, tabId } or null
+        lastActivity: null,
+        // tabId -> { id, url, title, visible, lastSeen }
+        tabs: new Map(),
       };
       devices.set(id, device);
     } else if (userAgent && userAgent !== device.userAgent) {
@@ -149,26 +163,105 @@ export const jsenvPluginDevices = () => {
     }
   };
 
-  const serializeDevice = (device) => ({
-    id: device.id,
-    userAgent: device.userAgent,
-    // parsed { name, version } so pages can show a friendly browser/OS instead
-    // of the raw user-agent string.
-    runtime: device.runtime,
-    os: device.os,
-    firstSeen: device.firstSeen,
-    lastActivity: device.lastActivity,
-    online: isOnline(device),
-    logCount: device.logs.length,
+  const updateTab = (device, tab) => {
+    if (!tab || typeof tab.id !== "string") {
+      return;
+    }
+    if (tab.closing) {
+      device.tabs.delete(tab.id);
+      return;
+    }
+    device.tabs.set(tab.id, {
+      id: tab.id,
+      url: typeof tab.url === "string" ? tab.url : "",
+      title: typeof tab.title === "string" ? tab.title : "",
+      visible: Boolean(tab.visible),
+      lastSeen: now(),
+    });
+  };
+
+  const pruneTabs = (device) => {
+    const cutoff = now() - TAB_TTL_MS;
+    for (const [id, tab] of device.tabs) {
+      if (tab.lastSeen < cutoff) {
+        device.tabs.delete(id);
+      }
+    }
+  };
+
+  // The tab to show as "current": a visible one wins, otherwise the most
+  // recently seen. No Math.max — a single scan keeping the best.
+  const activeTabOf = (device) => {
+    let best = null;
+    for (const tab of device.tabs.values()) {
+      if (!best) {
+        best = tab;
+        continue;
+      }
+      if (tab.visible && !best.visible) {
+        best = tab;
+        continue;
+      }
+      if (tab.visible === best.visible && tab.lastSeen > best.lastSeen) {
+        best = tab;
+      }
+    }
+    return best;
+  };
+
+  const recordActivity = (device, rawActivity) => {
+    const activity = {
+      type:
+        typeof rawActivity.type === "string" ? rawActivity.type : "activity",
+      detail: typeof rawActivity.detail === "string" ? rawActivity.detail : "",
+      ts: rawActivity.ts || now(),
+      tabId: typeof rawActivity.tabId === "string" ? rawActivity.tabId : "",
+    };
+    device.activities.push(activity);
+    while (device.activities.length > ACTIVITY_MAX_PER_DEVICE) {
+      device.activities.shift();
+    }
+    device.lastActivity = activity;
+  };
+
+  const serializeTab = (tab) => ({
+    id: tab.id,
+    url: tab.url,
+    title: tab.title,
+    visible: tab.visible,
+    lastSeen: tab.lastSeen,
   });
+
+  // Summary sent in the (broadcast) list — kept lean: the active tab and a tab
+  // count rather than every tab, the last activity rather than the whole
+  // history. Pages fetch the full record for their dialogs.
+  const serializeDevice = (device) => {
+    const activeTab = activeTabOf(device);
+    return {
+      id: device.id,
+      userAgent: device.userAgent,
+      // parsed { name, version } so pages can show a friendly browser/OS
+      runtime: device.runtime,
+      os: device.os,
+      firstSeen: device.firstSeen,
+      lastSeen: device.lastSeen,
+      online: isOnline(device),
+      logCount: device.logs.length,
+      tabCount: device.tabs.size,
+      activeTab: activeTab ? serializeTab(activeTab) : null,
+      lastActivity: device.lastActivity,
+    };
+  };
 
   const snapshot = () => [...devices.values()].map(serializeDevice);
 
-  // A single device's full record. Today that is its info plus buffered logs,
-  // but the shape is meant to grow (interactions, screen sharing, …) — which is
-  // why the route is device-scoped rather than named after logs.
+  // A single device's full record: the summary plus everything a dialog needs
+  // (all tabs, recent activities, buffered logs). Device-scoped rather than
+  // named after logs because the shape is meant to grow.
   const deviceDetail = (device) => ({
     ...serializeDevice(device),
+    tabs: [...device.tabs.values()].map(serializeTab),
+    activities: device.activities.slice(),
     logs: device.logs,
   });
 
@@ -202,7 +295,10 @@ export const jsenvPluginDevices = () => {
     const firstEver = !device.everSeen;
     const wasOnline = !firstEver && isOnline(device);
     device.everSeen = true;
-    device.lastActivity = now();
+    device.lastSeen = now();
+
+    updateTab(device, body.tab);
+    pruneTabs(device);
 
     if (firstEver) {
       sendDeviceHere({ reason: "new", device: serializeDevice(device) });
@@ -213,17 +309,22 @@ export const jsenvPluginDevices = () => {
       sendDevicesList();
     }
 
-    const entries = Array.isArray(body.entries) ? body.entries : [];
-    for (const rawEntry of entries) {
+    const activities = Array.isArray(body.activities) ? body.activities : [];
+    for (const rawActivity of activities) {
+      recordActivity(device, rawActivity);
+    }
+
+    const logs = Array.isArray(body.logs) ? body.logs : [];
+    for (const rawLog of logs) {
       const entry = {
-        level: rawEntry.level || "log",
-        text: typeof rawEntry.text === "string" ? rawEntry.text : "",
-        ts: rawEntry.ts || now(),
+        level: rawLog.level || "log",
+        text: typeof rawLog.text === "string" ? rawLog.text : "",
+        ts: rawLog.ts || now(),
       };
       device.logs.push(entry);
       sendDeviceLog({ deviceId, ...entry });
     }
-    if (entries.length) {
+    if (logs.length) {
       pruneLogs(device);
     }
     pushListThrottled();
