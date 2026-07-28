@@ -616,6 +616,7 @@ const PickerContentInsidePopup = (props) => {
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
+    animation,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -655,6 +656,7 @@ const PickerContentInsidePopup = (props) => {
       <Popup
         {...popupProps}
         mode={mode}
+        animation={animation}
         positionArea={
           isPopover
             ? popoverMode === "nearby"
