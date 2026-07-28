@@ -1067,21 +1067,41 @@
               </Wheel>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <Heading id="cust-bigger">bigger rows, 5 visible</Heading>
-              <Wheel
-                type="integer"
-                value={c}
-                action={setC}
-                visibleCount={5}
-                itemHeight={44}
-                style={{ fontSize: "1.5rem" }}
-              >
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
+              <Heading id="cust-size">size</Heading>
+              <p>
+                <code>size</code> sets the font-size — a token like{" "}
+                <code>"xl"</code>, a number (px), or a CSS length. The row size
+                is em-based, so it follows automatically: no{" "}
+                <code>itemHeight</code> (or <code>visibleCount</code>) needed to
+                make the wheel bigger. Put <code>size</code> on a{" "}
+                <code>WheelGroup.Separator</code> to scale it to match.
+              </p>
+              <div className="row">
+                <Wheel type="integer" value={c} action={setC} size="xl">
+                  {range(24).map((h) => (
+                    <Wheel.Item key={h} value={h}>
+                      {pad2(h)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+                <WheelGroup>
+                  <Wheel type="integer" defaultValue={9} size="xl">
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <WheelGroup.Separator size="xl">:</WheelGroup.Separator>
+                  <Wheel type="integer" defaultValue={30} size="xl">
+                    {range(60).map((m) => (
+                      <Wheel.Item key={m} value={m}>
+                        {pad2(m)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                </WheelGroup>
+              </div>
             </div>
             <div style={{ marginBottom: 24 }}>
               <Heading id="cust-visiblecount">
