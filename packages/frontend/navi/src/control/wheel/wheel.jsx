@@ -1599,6 +1599,7 @@ function WheelUI(props) {
         />
       </div>
       <div className="navi_wheel_viewport">
+        <div className="navi_wheel_pane" data-side="start" />
         {/* Wheel.Item children register their {value,label,itemProps} here and
             render nothing (see WheelItem). The visible rows are the recycled
             window below, filled from that tracked list. */}
@@ -1616,7 +1617,6 @@ function WheelUI(props) {
             onBaseCommit={commitRenderedBase}
           />
         </ul>
-        <div className="navi_wheel_pane" data-side="start" />
         <div className="navi_wheel_pane" data-side="end" />
       </div>
       {/* Outside the viewport: the viewport's fade mask + glass panes must not
