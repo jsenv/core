@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Picker Wheel Demo</title>
+  </head>
+  <body>
+    <h1>Wheel Demo</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        NaviDebug,
+        Time,
+        Wheel,
+        WheelGroup,
+        Picker,
+        usePickerMode,
+        Form,
+        Button,
+        Box,
+        Link,
+        Unit,
+      } from "@jsenv/navi";
+
+      const App = () => {
+        const [duration, setDuration] = useState({});
+
+        return (
+          <NaviDebug debugAll>
+            <Picker
+              type="controlgroup"
+              ui={<DurationWheelUI />}
+              placeholder="Choisir une durée"
+              popupWidthFitContent
+              // animation
+              scrollCapture="dialog"
+              action={(v) => {
+                setDuration(v);
+              }}
+            >
+              <DurationPickerContent />
+            </Picker>
+
+            <span className="col-label">
+              {pad2(duration.hours ?? durationHoursSignal.value)}:
+              {pad2(duration.minutes ?? durationMinutesSignal.value)}
+            </span>
+          </NaviDebug>
+        );
+      };
+
+      const DURATION_HOURS = [1, 2, 3, 4, 5];
+      const DURATION_MINUTES = [0, 15, 30, 45];
+      const durationHoursSignal = signal(DURATION_HOURS[0]);
+      const durationMinutesSignal = signal(DURATION_MINUTES[0]);
+      const DurationWheelUI = () => {
+        return (
+          <Time type="time">
+            {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+          </Time>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

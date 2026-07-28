@@ -164,7 +164,17 @@ export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     `targeting`,
     commandTarget,
   );
-  return implementation();
+  // Time the command's synchronous work: it splits a slow commit (the value
+  // cascade/validation runs inside implementation) from a slow close/repaint
+  // (cheap here, cost lands after). Handy for the wheel-in-dialog "Définir feels
+  // frozen on mobile" case.
+  const start = performance.now();
+  const result = implementation();
+  debugCommand(
+    event,
+    `"${command}" implementation ran in ${Math.round(performance.now() - start)}ms`,
+  );
+  return result;
 };
 
 const NAVI_COMMANDS = {};
