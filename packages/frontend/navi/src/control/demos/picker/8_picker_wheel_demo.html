@@ -39,6 +39,11 @@
         border: 1px solid #e0e0e0;
         border-radius: 4px;
       }
+      /* Try: tell iOS these are plain tap targets so it fires click immediately
+         instead of holding it after the wheel gesture. */
+      .navi_button {
+        touch-action: manipulation;
+      }
     </style>
   </head>
   <body>
@@ -148,10 +153,22 @@
                 <Button
                   command="--navi-define"
                   variant="discrete"
+                  onTouchStart={() =>
+                    console.debug("[probe] Définir touchstart")
+                  }
+                  onTouchEnd={(e) =>
+                    console.debug(
+                      `[probe] Définir touchend defaultPrevented=${e.defaultPrevented}`,
+                    )
+                  }
                   onPointerDown={() =>
                     console.debug("[probe] Définir pointerdown")
                   }
-                  onPointerUp={() => console.debug("[probe] Définir pointerup")}
+                  onPointerUp={(e) =>
+                    console.debug(
+                      `[probe] Définir pointerup defaultPrevented=${e.defaultPrevented}`,
+                    )
+                  }
                   onClick={() => console.debug("[probe] Définir click")}
                 >
                   Définir
