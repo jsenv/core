@@ -173,6 +173,20 @@
                 >
                   Définir
                 </Button>
+                {/* DISCRIMINATOR: a plain native button (no navi Button, no
+                    command). If tapping THIS <500ms after a wheel drag also
+                    yields no "[probe] PLAIN click", the click suppression is
+                    global (iOS after a moved touch), not navi's Button path. */}
+                <button
+                  type="button"
+                  onPointerDown={() =>
+                    console.debug("[probe] PLAIN pointerdown")
+                  }
+                  onPointerUp={() => console.debug("[probe] PLAIN pointerup")}
+                  onClick={() => console.debug("[probe] PLAIN click")}
+                >
+                  Plain
+                </button>
               </Box>
             </Box>
           );

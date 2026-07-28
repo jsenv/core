@@ -1472,7 +1472,13 @@ function WheelUI(props) {
   // press a dialog button right after a fling and nothing happens). Committing
   // on the press settles the DOM up front, before the tap completes.
   const commitIfAnimating = () => {
-    if (momentumRef.current === null && glideRef.current === null) {
+    const animating = momentumRef.current !== null || glideRef.current !== null;
+    // Logs on every press outside the wheel — tells us whether a tap on a dialog
+    // button lands while the wheel is still coasting (animating=true) or after it
+    // already settled (animating=false), which decides where the dropped click
+    // comes from.
+    debugScroll(`external press while wheel animating=${animating}`);
+    if (!animating) {
       return;
     }
     const vp = getViewport();
