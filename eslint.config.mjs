@@ -1,4 +1,5 @@
 import { eslintConfigRelax } from "@jsenv/eslint-config-relax";
+import globals from "globals";
 
 export default [
   ...eslintConfigRelax({
@@ -25,6 +26,12 @@ export default [
     // Favor dev:jsenv package exports condition
     importResolutionDevConditions: ["dev:jsenv"],
   }),
+  {
+    // Client scripts of the devices plugin run in the browser. Placed after the
+    // relax config so its browser globals win over the default node env.
+    files: ["src/plugins/devices/client/**/*.js"],
+    languageOptions: { globals: globals.browser },
+  },
   {
     rules: {
       "no-debugger": ["off"],

@@ -22,7 +22,7 @@ const getDeviceId = () => {
     return id;
   } catch {
     // storage may be unavailable (private mode, sandbox) — a per-load id is fine.
-    return "anon-" + Date.now().toString(36);
+    return `anon-${Date.now().toString(36)}`;
   }
 };
 
@@ -151,7 +151,7 @@ const setup = () => {
     send({
       type: "log",
       level: "error",
-      text: "Unhandled rejection: " + formatArg(e.reason),
+      text: `Unhandled rejection: ${formatArg(e.reason)}`,
       ts: Date.now(),
     });
   });

@@ -47,6 +47,8 @@ export const jsenvPluginDevices = () => {
   const devices = new Map();
   // trackers watching a device's live logs: { socket, targetId }
   const trackers = new Set();
+  // dashboard pages watching the whole device list (pushed, never polled).
+  const dashboards = new Set();
 
   const now = () => Date.now();
 
@@ -116,6 +118,37 @@ export const jsenvPluginDevices = () => {
     }
   };
 
+  // Push the whole device list to every dashboard — no client polling. Called
+  // immediately on structural changes (a device connects/disconnects/appears);
+  // an activity/log-count refresh is throttled so a chatty device doesn't spam.
+  const pushDashboards = () => {
+    const snapshot = [...devices.values()].map(serializeDevice);
+    for (const socket of dashboards) {
+      sendTo(socket, { type: "devices", devices: snapshot });
+    }
+  };
+  let dashboardThrottleTimer = null;
+  const pushDashboardsThrottled = () => {
+    if (dashboardThrottleTimer || dashboards.size === 0) {
+      return;
+    }
+    dashboardThrottleTimer = setTimeout(() => {
+      dashboardThrottleTimer = null;
+      pushDashboards();
+    }, 1000);
+  };
+
+  const handleDashboardSocket = (socket) => {
+    dashboards.add(socket);
+    sendTo(socket, {
+      type: "devices",
+      devices: [...devices.values()].map(serializeDevice),
+    });
+    return () => {
+      dashboards.delete(socket);
+    };
+  };
+
   const handleDeviceSocket = (socket, request) => {
     const deviceId = request.searchParams.get("deviceId");
     if (!deviceId) {
@@ -145,6 +178,7 @@ export const jsenvPluginDevices = () => {
         device: serializeDevice(device),
       });
     }
+    pushDashboards();
 
     socket.on("message", (raw) => {
       let message;
@@ -163,6 +197,7 @@ export const jsenvPluginDevices = () => {
           reason: "resumed",
           device: serializeDevice(device),
         });
+        pushDashboards();
       }
       if (message.type === "log") {
         const entry = {
@@ -174,6 +209,7 @@ export const jsenvPluginDevices = () => {
         pruneLogs(device);
         forwardLogToTrackers(deviceId, { type: "log", ...entry });
       }
+      pushDashboardsThrottled();
     });
 
     return () => {
@@ -181,6 +217,7 @@ export const jsenvPluginDevices = () => {
       if (device.sockets.size === 0) {
         device.connected = false;
       }
+      pushDashboards();
     };
   };
 
@@ -237,6 +274,11 @@ export const jsenvPluginDevices = () => {
           if (role === "tracker") {
             return new WebSocketResponse((socket) =>
               handleTrackerSocket(socket, request),
+            );
+          }
+          if (role === "dashboard") {
+            return new WebSocketResponse((socket) =>
+              handleDashboardSocket(socket),
             );
           }
           return new WebSocketResponse((socket) =>

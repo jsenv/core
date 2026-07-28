@@ -150,16 +150,38 @@
           .join("");
       };
 
-      const poll = async () => {
-        try {
-          const res = await fetch("/.internal/devices.json");
-          render(await res.json());
-        } catch {
-          // server gone or restarting — keep the last render
-        }
+      // Live via WebSocket — the server pushes the full list whenever it
+      // changes (device connects/disconnects/appears/resumes). No polling.
+      let reconnectDelay = 500;
+      let lastDevices = [];
+      const connect = () => {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(
+          `${proto}://${location.host}/.internal/devices.websocket?role=dashboard`,
+        );
+        ws.addEventListener("open", () => {
+          reconnectDelay = 500;
+        });
+        ws.addEventListener("message", (e) => {
+          let event;
+          try {
+            event = JSON.parse(e.data);
+          } catch {
+            return;
+          }
+          if (event.type === "devices") {
+            lastDevices = event.devices;
+            render(event.devices);
+          }
+        });
+        ws.addEventListener("close", () => {
+          setTimeout(connect, reconnectDelay);
+          reconnectDelay = Math.min(reconnectDelay * 2, 10000);
+        });
       };
-      poll();
-      setInterval(poll, 2000);
+      connect();
+      // Refresh the relative "ago" labels between server pushes.
+      setInterval(() => render(lastDevices), 5000);
     </script>
   </body>
 </html>
