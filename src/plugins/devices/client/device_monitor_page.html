@@ -285,10 +285,26 @@
         );
       };
 
+      // Filled from device.json; drives the copied header so a pasted log always
+      // says WHERE it came from (browser, OS, full user-agent) — e.g. so it's
+      // obvious it's Android Chrome and not iOS.
+      let deviceInfo = null;
+      const copyHeader = (label) => {
+        const info = deviceInfo || {};
+        const ua = info.userAgent || navigator.userAgent || "unknown";
+        return `${[
+          `# jsenv device monitor — ${label}`,
+          `# device: ${describeDevice(info)}`,
+          `# user-agent: ${ua}`,
+          `# device id: ${deviceId}`,
+          `# copied: ${new Date().toISOString()}`,
+        ].join("\n")}\n\n`;
+      };
+
       // A stream = one collapsible panel with its own entries, rendering + a
       // clipboard/clear pair. Logs render colored console segments; activity
       // renders "type: detail". Both keep a plain-text form for Copy.
-      const createStream = (bodyId, countId, { render, toText }) => {
+      const createStream = (bodyId, countId, { render, toText, label }) => {
         const bodyEl = document.getElementById(bodyId);
         const countEl = document.getElementById(countId);
         const entries = [];
@@ -315,7 +331,8 @@
         };
         const copy = async (button) => {
           try {
-            await navigator.clipboard.writeText(entries.map(toText).join("\n"));
+            const text = copyHeader(label) + entries.map(toText).join("\n");
+            await navigator.clipboard.writeText(text);
             const prev = button.textContent;
             button.textContent = "Copied!";
             setTimeout(() => {
@@ -374,10 +391,12 @@
       };
 
       const logs = createStream("logs", "logs-count", {
+        label: "Logs",
         render: renderLog,
         toText: (e) => `${fmtTime(e.ts)} [${e.level}] ${e.text}`,
       });
       const activity = createStream("activities", "activity-count", {
+        label: "Activity",
         render: renderActivity,
         toText: (a) =>
           `${fmtTime(a.ts)} ${a.type}${a.detail ? `: ${a.detail}` : ""}`,
@@ -425,6 +444,7 @@
               `/.internal/device.json?id=${encodeURIComponent(deviceId)}`,
             )
           ).json();
+          deviceInfo = device;
           devinfoEl.textContent = describeDevice(device);
           for (const entry of device.logs || []) {
             logs.add(entry);
