@@ -247,23 +247,28 @@ const setup = () => {
   });
 
   // Qualified activity so the dashboard can say what the tab was last doing.
-  window.addEventListener("click", () => recordActivity("click"), {
-    passive: true,
-  });
-  window.addEventListener("keydown", () => recordActivity("keydown"), {
-    passive: true,
-  });
+  // The detail is kept short enough to read inline (e.g. "mousemove: 40/120").
+  window.addEventListener(
+    "click",
+    (event) => recordActivity("click", `${event.clientX}/${event.clientY}`),
+    { passive: true },
+  );
+  window.addEventListener(
+    "keydown",
+    (event) => recordActivity("keydown", event.key),
+    { passive: true },
+  );
   let lastMove = 0;
   let lastScroll = 0;
   window.addEventListener(
     "mousemove",
-    () => {
+    (event) => {
       const t = Date.now();
       if (t - lastMove < CONTINUOUS_THROTTLE_MS) {
         return;
       }
       lastMove = t;
-      recordActivity("mousemove");
+      recordActivity("mousemove", `${event.clientX}/${event.clientY}`);
     },
     { passive: true },
   );
@@ -275,7 +280,7 @@ const setup = () => {
         return;
       }
       lastScroll = t;
-      recordActivity("scroll");
+      recordActivity("scroll", `${window.scrollX}/${window.scrollY}`);
     },
     { passive: true },
   );

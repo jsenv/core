@@ -21,8 +21,15 @@
         margin: 0 0 4px;
         font-size: 1.4rem;
       }
+      h2 {
+        margin: 26px 0 8px;
+        color: #6b7280;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
       p.intro {
-        margin: 0 0 20px;
+        margin: 0 0 8px;
         color: #6b7280;
       }
       table {
@@ -37,7 +44,7 @@
       td {
         padding: 10px 14px;
         text-align: left;
-        vertical-align: top;
+        vertical-align: middle;
         border-bottom: 1px solid #eef2f7;
       }
       th {
@@ -64,17 +71,8 @@
       .dot.off {
         background: #9ca3af;
       }
-      a.track {
-        color: #2563eb;
-        font-weight: 600;
-        text-decoration: none;
-        white-space: nowrap;
-      }
-      a.track:hover {
-        text-decoration: underline;
-      }
       .empty {
-        padding: 30px;
+        padding: 22px;
         color: #9ca3af;
         text-align: center;
       }
@@ -83,11 +81,11 @@
       }
       .url {
         display: inline-block;
-        max-width: 260px;
+        max-width: 240px;
         color: #374151;
         text-overflow: ellipsis;
         white-space: nowrap;
-        vertical-align: bottom;
+        vertical-align: middle;
         overflow: hidden;
       }
       .tag {
@@ -103,18 +101,43 @@
         color: #047857;
         background: #d1fae5;
       }
+      .tag.ellip {
+        max-width: 320px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        overflow: hidden;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
       .btn {
-        padding: 1px 8px;
+        padding: 2px 9px;
         color: #374151;
         font: inherit;
         font-size: 0.75rem;
         background: #f3f4f6;
         border: 1px solid #d1d5db;
-        border-radius: 999px;
+        border-radius: 6px;
         cursor: pointer;
       }
       .btn:hover {
         background: #e5e7eb;
+      }
+      .monitor {
+        margin-left: 4px;
+        padding: 2px 4px;
+        color: #2563eb;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .monitor:hover {
+        text-decoration: underline;
       }
       dialog {
         width: min(90vw, 640px);
@@ -174,27 +197,21 @@
   <body>
     <h1>Devices</h1>
     <p class="intro">
-      Every browser that has connected to this dev server since it started. Open
-      a device's monitor to watch its console logs live.
+      Every browser that has connected to this dev server since it started. The
+      columns are a résumé; use the actions to dig in or monitor a device's
+      logs.
     </p>
+
+    <h2>This browser</h2>
     <table>
-      <thead>
-        <tr>
-          <th>Status</th>
-          <th>Browser</th>
-          <th>OS</th>
-          <th>Tab</th>
-          <th>Last activity</th>
-          <th>Logs</th>
-          <th>UA</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="rows">
-        <tr>
-          <td class="empty" colspan="8">Loading…</td>
-        </tr>
-      </tbody>
+      <thead id="head"></thead>
+      <tbody id="self-rows"></tbody>
+    </table>
+
+    <h2>Other devices</h2>
+    <table>
+      <thead id="head2"></thead>
+      <tbody id="other-rows"></tbody>
     </table>
 
     <dialog id="dlg">
@@ -208,8 +225,24 @@
     </dialog>
 
     <script type="module">
-      const rows = document.getElementById("rows");
+      const selfRows = document.getElementById("self-rows");
+      const otherRows = document.getElementById("other-rows");
       const ONLINE_MS = 60000;
+      // The devices client (injected into this page too) stores our own id.
+      let selfId = null;
+      try {
+        selfId = localStorage.getItem("jsenv_device_id");
+      } catch {
+        // storage blocked — we just won't single ourselves out
+      }
+
+      const headHtml = `<tr>
+        <th>Status</th><th>OS</th><th>Browser</th><th>Active tab</th>
+        <th>Last activity</th><th>Logs</th><th></th>
+      </tr>`;
+      document.getElementById("head").innerHTML = headHtml;
+      document.getElementById("head2").innerHTML = headHtml;
+      const COLSPAN = 7;
 
       const ago = (ts) => {
         const s = Math.round((Date.now() - ts) / 1000);
@@ -258,50 +291,55 @@
           return '<span class="muted">—</span>';
         }
         const url = d.activeTab.url || "";
-        const more =
-          d.tabCount > 1
-            ? ` <button class="btn" data-action="tabs" data-id="${escapeHtml(d.id)}">+${d.tabCount - 1}</button>`
-            : "";
-        return `<span class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl(url))}</span>${more}`;
+        return `<span class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl(url))}</span>`;
       };
       const activityCell = (d) => {
         const a = d.lastActivity;
         if (!a) {
           return '<span class="muted">—</span>';
         }
-        const detail = a.detail
-          ? ` <span class="url" title="${escapeHtml(a.detail)}">${escapeHtml(a.detail)}</span>`
-          : "";
-        return `<span class="tag">${escapeHtml(a.type)}</span>${detail} <span class="muted">${ago(a.ts)}</span> <button class="btn" data-action="activity" data-id="${escapeHtml(d.id)}">recent</button>`;
+        const label = a.detail ? `${a.type}: ${a.detail}` : a.type;
+        return `<span class="tag ellip" title="${escapeHtml(label)}">${escapeHtml(label)}</span> <span class="muted">${ago(a.ts)}</span>`;
+      };
+      const actionsCell = (d) => {
+        const id = escapeHtml(d.id);
+        return `<div class="actions">
+          <button class="btn" data-action="tabs" data-id="${id}">Tabs</button>
+          <button class="btn" data-action="activity" data-id="${id}">Activity</button>
+          <button class="btn" data-action="ua" data-id="${id}">User agent</button>
+          <a class="monitor" href="/.internal/device?id=${encodeURIComponent(d.id)}">Monitor →</a>
+        </div>`;
+      };
+      const rowHtml = (d) => {
+        const online = isOnline(d);
+        return `<tr>
+          <td><span class="dot ${online ? "on" : "off"}"></span>${online ? "online" : "offline"}</td>
+          <td>${named(d.os)}</td>
+          <td>${named(d.runtime)}</td>
+          <td>${tabCell(d)}</td>
+          <td>${activityCell(d)}</td>
+          <td>${d.logCount}</td>
+          <td>${actionsCell(d)}</td>
+        </tr>`;
       };
 
       let lastDevices = [];
       const render = (devices) => {
         lastDevices = devices;
-        if (!devices.length) {
-          rows.innerHTML = `<tr><td class="empty" colspan="8">No device has connected yet.</td></tr>`;
-          return;
-        }
-        devices.sort((a, b) => b.lastSeen - a.lastSeen);
-        rows.innerHTML = devices
-          .map((d) => {
-            const online = isOnline(d);
-            return `
-          <tr>
-            <td><span class="dot ${online ? "on" : "off"}"></span>${online ? "online" : "offline"}</td>
-            <td>${named(d.runtime)}</td>
-            <td>${named(d.os)}</td>
-            <td>${tabCell(d)}</td>
-            <td>${activityCell(d)}</td>
-            <td>${d.logCount}</td>
-            <td><button class="btn" data-action="ua" data-id="${escapeHtml(d.id)}">show</button></td>
-            <td><a class="track" href="/.internal/device?id=${encodeURIComponent(d.id)}">monitor →</a></td>
-          </tr>`;
-          })
-          .join("");
+        const self = selfId ? devices.find((d) => d.id === selfId) : null;
+        // Others ordered by when they first connected, so rows don't reshuffle.
+        const others = devices
+          .filter((d) => d !== self)
+          .sort((a, b) => a.firstSeen - b.firstSeen);
+        selfRows.innerHTML = self
+          ? rowHtml(self)
+          : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
+        otherRows.innerHTML = others.length
+          ? others.map(rowHtml).join("")
+          : `<tr><td class="empty" colspan="${COLSPAN}">No other device has connected.</td></tr>`;
       };
 
-      // Dialogs (user agent / all tabs / recent activity).
+      // Dialogs (all tabs / recent activity / user agent).
       const dlg = document.getElementById("dlg");
       const dlgTitle = document.getElementById("dlg-title");
       const dlgBody = document.getElementById("dlg-body");
@@ -370,7 +408,7 @@
           .join("")}</ul>`;
       };
 
-      rows.addEventListener("click", async (event) => {
+      document.addEventListener("click", async (event) => {
         const button = event.target.closest("button[data-action]");
         if (!button) {
           return;
