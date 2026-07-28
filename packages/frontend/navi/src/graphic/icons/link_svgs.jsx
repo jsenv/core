@@ -1,3 +1,16 @@
+const css = /* css */ `
+  @media (min-resolution: 2dppx) {
+    .navi_arrow_turning_down_right {
+      stroke-width: 1.1;
+    }
+  }
+  @media (min-resolution: 3dppx) {
+    .navi_arrow_turning_down_right {
+      stroke-width: 0.9;
+    }
+  }
+`;
+
 export const LinkBlankTargetSvg = () => {
   return (
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -14,9 +27,12 @@ export const LinkBlankTargetSvg = () => {
 };
 
 export const ArrowTurningDownRightSvg = () => {
+  import.meta.css = css;
+
   return (
     <svg viewBox="0.25 0.35 9.7 11.6">
       <path
+        className="navi_arrow_turning_down_right"
         d="M1 1H2.9A2.2 2.2 0 0 1 5.1 3.2V11.3M0.9 7.2 5.1 11.3 9.3 7.2"
         fill="none"
         stroke="currentColor"
