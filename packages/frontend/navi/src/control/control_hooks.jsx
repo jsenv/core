@@ -30,6 +30,7 @@ import {
 import { useActionBoundToOneParam } from "@jsenv/navi/src/action/use_action.js";
 import { useActionStatus } from "@jsenv/navi/src/action/use_action_status.js";
 import { useExecuteAction } from "@jsenv/navi/src/action/use_execute_action.js";
+import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 import { useComposeElementRef } from "@jsenv/navi/src/box/ref_composition/use_element_ref.js";
 import {
   dispatchRequestAction,
@@ -1349,7 +1350,7 @@ const useInteractiveProps = (
           findFocusDelegateTarget(e.currentTarget) ||
           findControlProxyTarget(e.currentTarget);
         if (focusProxyTarget) {
-          const focusVisible = e.currentTarget.matches(":focus-visible");
+          const focusVisible = isMatchingFocusVisible(e.currentTarget);
           debugFocus(
             e,
             `focus event: redirecting to ${getElementSignature(focusProxyTarget)}.focus({ focusVisible: ${focusVisible} })`,

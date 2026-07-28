@@ -275,6 +275,35 @@ definePseudoClass(":active", {
   },
   test: (el) => el.matches(":active"),
 });
+
+// The current input modality: true after a keyboard navigation key (arrow keys,
+// Escape, Enter, Ctrl, Alt, Shift, Space — Space ignored on editable fields),
+// false after a pointer interaction. Updated by the listeners in the
+// focus_classes block below. At module scope so isMatchingFocusVisible (used
+// here and in control_hooks.jsx) can read it.
+let keyboardNavigationUsed = false;
+
+// Whether `el` should be treated as :focus-visible. Normally the native
+// :focus-visible match — but a control marked data-prevent-eager-focus-visible
+// (a button-like trigger whose native :focus-visible matches too eagerly: a
+// typed-into <input> on mouse focus, or a <div>/spinbutton focused
+// programmatically by a mouse-driven picker open) only counts while the current
+// modality is keyboard. So a purely mouse interaction never reveals its ring,
+// like a plain <button>. Use this instead of a bare el.matches(":focus-visible")
+// wherever focus-visible is evaluated.
+export const isMatchingFocusVisible = (el) => {
+  if (!el.matches(":focus-visible")) {
+    return false;
+  }
+  if (
+    el.hasAttribute("data-prevent-eager-focus-visible") &&
+    !keyboardNavigationUsed
+  ) {
+    return false;
+  }
+  return true;
+};
+
 focus_classes: {
   // We implement :focus and :focus-visible with enriched semantics:
   // an element is considered focused not only when it natively has focus, but also
@@ -313,7 +342,7 @@ focus_classes: {
   // This flag is used to gate focus-visible inheritance via aria-controls:
   // on mobile (or when the user hasn't used keyboard nav yet) an input that
   // controls a radio should not cause the radio to show a focus ring.
-  let keyboardNavigationUsed = false;
+  // (Declared at module scope — see keyboardNavigationUsed above.)
   const NAVIGATION_KEYS = new Set([
     "ArrowUp",
     "ArrowDown",
@@ -405,7 +434,14 @@ focus_classes: {
     if (requireFocusVisible && !keyboardNavigationUsed) {
       return false;
     }
-    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    // A controller/proxy counts as focused for inheritance via the same rule
+    // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
+    // the focus-visible variant (so a marked, mouse-focused controller doesn't
+    // propagate an eager ring).
+    const isFocusedTarget = (target) =>
+      requireFocusVisible
+        ? isMatchingFocusVisible(target)
+        : target.matches(":focus");
     const isControlledBy = (target) => {
       const id = target.id;
       if (!id) {
@@ -418,7 +454,7 @@ focus_classes: {
         if (target.contains(controller)) {
           continue;
         }
-        if (controller.matches(pseudoClass)) {
+        if (isFocusedTarget(controller)) {
           return true;
         }
       }
@@ -429,7 +465,7 @@ focus_classes: {
     }
     const proxyTarget = findControlProxyTarget(el);
     if (proxyTarget) {
-      if (proxyTarget.matches(pseudoClass)) {
+      if (isFocusedTarget(proxyTarget)) {
         return true;
       }
       if (isControlledBy(proxyTarget)) {
@@ -513,7 +549,7 @@ focus_classes: {
       return setupFocus(el, callback);
     },
     test: (el) => {
-      if (el.matches(":focus-visible")) {
+      if (isMatchingFocusVisible(el)) {
         return true;
       }
       if (hasIndirectFocus(el, { requireFocusVisible: true })) {
