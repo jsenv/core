@@ -557,25 +557,25 @@
             name="hours"
             type="integer"
             signal={durationHoursSignal}
-            size={big ? "xl" : undefined}
+            size={big ? "xxl" : undefined}
           >
             {DURATION_HOURS.map((h) => (
-              <Wheel.Item key={h} value={h} paddingX={big ? "m" : "s"}>
+              <Wheel.Item key={h} value={h} paddingX={big ? "s" : "s"}>
                 {pad2(h)}
               </Wheel.Item>
             ))}
           </Wheel>
-          <WheelGroup.Separator>
+          <WheelGroup.Separator size={big ? "xxl" : undefined}>
             <Unit unit="hour" format="short" size="inherit" />
           </WheelGroup.Separator>
           <Wheel
             name="minutes"
             type="integer"
             signal={durationMinutesSignal}
-            size={big ? "xl" : undefined}
+            size={big ? "xxl" : undefined}
           >
             {DURATION_MINUTES.map((m) => (
-              <Wheel.Item key={m} value={m} paddingX={big ? "m" : "s"}>
+              <Wheel.Item key={m} value={m} paddingX={big ? "s" : "s"}>
                 {pad2(m)}
               </Wheel.Item>
             ))}
@@ -594,14 +594,14 @@
 
         if (mode === "dialog") {
           return (
-            <Box flex="y" spacing="l" padding="l" alignX="center">
+            <Box flex="y" spacing="l" padding="xl" alignX="center">
               <DurationWheelsGroup big />
               <Box flex="x" spacing="s" alignX="end" expandX>
                 <Button command="--navi-cancel" variant="discrete">
                   Annuler
                 </Button>
                 <Button command="--navi-define" variant="discrete">
-                  Define
+                  Définir
                 </Button>
               </Box>
             </Box>
@@ -727,6 +727,7 @@
                   ui={<DurationWheelUI />}
                   placeholder="Choisir une durée"
                   popupWidthFitContent
+                  scrollCapture="dialog"
                   action={(v) => {
                     setDuration(v);
                   }}

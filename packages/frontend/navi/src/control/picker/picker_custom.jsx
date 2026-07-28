@@ -649,7 +649,13 @@ const PickerContentInsidePopup = (props) => {
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
         marginWithContainer={isPopover ? marginWithContainer : undefined}
-        scrollCapture={scrollCapture}
+        scrollCapture={
+          scrollCapture === "dialog"
+            ? !isPopover
+            : scrollCapture === "popover"
+              ? isPopover
+              : scrollCapture
+        }
         pointerInteractionOutsideEffect={
           pointerLock ? "capture" : pointerInteractionOutsideEffect
         }

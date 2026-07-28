@@ -64,7 +64,7 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
 
 const css = /* css */ `
   .navi_wheel_container {
-    --wheel-item-height: round(2.4em, 1px);
+    --wheel-item-height: round(2.2em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#111, #eee);
@@ -395,7 +395,7 @@ const css = /* css */ `
        landing it on the middle (selected) row and sharing the numbers' baseline
        (right for words / letters like "ZZ"). A sibling of the wheels, so it does
        NOT inherit their --wheel-item-height — re-expose it here. */
-    --wheel-item-height: round(2.4em, 1px);
+    --wheel-item-height: round(2.2em, 1px);
 
     display: flex;
     align-items: center;
@@ -534,7 +534,6 @@ const WHEEL_OWN_PROP_KEYS = [
   "visibleCount",
   "itemHeight",
   "itemWidth",
-  "size",
   "bounded",
   "horizontal",
   "glass",
@@ -980,7 +979,6 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
-    size,
     bounded,
     horizontal,
     glass,
@@ -1627,12 +1625,11 @@ function WheelUI(props) {
   return (
     <Box
       ref={ref}
+      // `size` flows through here (it isn't in WHEEL_OWN_PROP_KEYS): the Box
+      // resolves it to font-size — a size token ("xl"), a number (px), or a CSS
+      // length. Because the row height is em-based (--wheel-item-height), the
+      // whole wheel scales with it. An explicit itemHeight/itemWidth still wins.
       {...controlRootProps}
-      // `size` sets the container font-size (Box resolves size tokens like "xl"
-      // via the shared typo scale, plus numbers/CSS lengths). Because the row
-      // height is em-based (--wheel-item-height), the whole wheel scales with it.
-      // An explicit itemHeight/itemWidth still overrides the row size.
-      size={size}
       baseClassName="navi_wheel_container"
       // A spinbutton: one focusable element, arrows adjust the value. Disabled is
       // not focusable (no tabindex), but the wheel is deliberately NOT inert:
