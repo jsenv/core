@@ -27,6 +27,16 @@ export default [
     importResolutionDevConditions: ["dev:jsenv"],
   }),
   {
+    // The devices plugin client (its .js and the inline scripts of its .html
+    // pages) runs in the browser. Placed after the relax config so its browser
+    // globals win over the default node env applied to src/**.
+    files: [
+      "src/plugins/devices/client/**/*.js",
+      "src/plugins/devices/client/**/*.html",
+    ],
+    languageOptions: { globals: globals.browser },
+  },
+  {
     rules: {
       "no-debugger": ["off"],
       "jsenv/no-unknown-params": process.env.CI
