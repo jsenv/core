@@ -980,6 +980,7 @@ function WheelUI(props) {
     visibleCount = 3,
     itemHeight,
     itemWidth,
+    size,
     bounded,
     horizontal,
     glass,
@@ -1627,6 +1628,11 @@ function WheelUI(props) {
     <Box
       ref={ref}
       {...controlRootProps}
+      // `size` sets the container font-size (Box resolves size tokens like "xl"
+      // via the shared typo scale, plus numbers/CSS lengths). Because the row
+      // height is em-based (--wheel-item-height), the whole wheel scales with it.
+      // An explicit itemHeight/itemWidth still overrides the row size.
+      size={size}
       baseClassName="navi_wheel_container"
       // A spinbutton: one focusable element, arrows adjust the value. Disabled is
       // not focusable (no tabindex), but the wheel is deliberately NOT inert:

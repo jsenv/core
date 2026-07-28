@@ -1015,7 +1015,6 @@
       const CustomizationDemo = () => {
         const [a, setA] = useState(9);
         const [b, setB] = useState(9);
-        const [c, setC] = useState(9);
         const [vc, setVc] = useState(9);
         const [hz, setHz] = useState(9);
         const [hzH, setHzH] = useState(9);
@@ -1068,22 +1067,34 @@
             </div>
             <div style={{ marginBottom: 24 }}>
               <Heading id="cust-size">size</Heading>
-              <p>
-                <code>size</code> sets the font-size — a token like{" "}
-                <code>"xl"</code>, a number (px), or a CSS length. The row size
-                is em-based, so it follows automatically: no{" "}
-                <code>itemHeight</code> (or <code>visibleCount</code>) needed to
-                make the wheel bigger. Put <code>size</code> on a{" "}
-                <code>WheelGroup.Separator</code> to scale it to match.
-              </p>
               <div className="row">
-                <Wheel type="integer" value={c} action={setC} size="xl">
-                  {range(24).map((h) => (
-                    <Wheel.Item key={h} value={h}>
-                      {pad2(h)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
+                {[
+                  { label: 'size="xxs"', size: "xxs" },
+                  { label: "default", size: undefined },
+                  { label: 'size="l"', size: "l" },
+                  { label: 'size="xxl"', size: "xxl" },
+                ].map(({ label, size }) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span className="col-label">{label}</span>
+                    <Wheel type="integer" defaultValue={9} size={size}>
+                      {range(24).map((h) => (
+                        <Wheel.Item key={h} value={h}>
+                          {pad2(h)}
+                        </Wheel.Item>
+                      ))}
+                    </Wheel>
+                  </div>
+                ))}
+              </div>
+              <div className="row" style={{ marginTop: 16 }}>
                 <WheelGroup>
                   <Wheel type="integer" defaultValue={9} size="xl">
                     {range(24).map((h) => (
@@ -1092,7 +1103,9 @@
                       </Wheel.Item>
                     ))}
                   </Wheel>
-                  <WheelGroup.Separator size="xl">:</WheelGroup.Separator>
+                  <WheelGroup.Separator size="xl">
+                    <Wheel.Colon />
+                  </WheelGroup.Separator>
                   <Wheel type="integer" defaultValue={30} size="xl">
                     {range(60).map((m) => (
                       <Wheel.Item key={m} value={m}>
