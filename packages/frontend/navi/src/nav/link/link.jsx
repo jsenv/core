@@ -565,49 +565,73 @@ const LinkPlain = (props) => {
   if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerEndIcon = <PhoneSvg />;
+      innerEndIcon = (
+        <Icon>
+          <PhoneSvg />
+        </Icon>
+      );
     } else if (href?.startsWith("sms:")) {
-      innerEndIcon = <LinkSmsSvg />;
+      innerEndIcon = (
+        <Icon>
+          <LinkSmsSvg />
+        </Icon>
+      );
     } else if (href?.startsWith("mailto:")) {
-      innerEndIcon = <EmailSvg />;
+      innerEndIcon = (
+        <Icon>
+          <EmailSvg />
+        </Icon>
+      );
     } else if (href?.includes("github.com")) {
-      innerEndIcon = <LinkGithubSvg />;
-    } else {
-      // Fall back to default icon logic
-      const innerBlankTargetIcon =
-        blankTargetIcon === undefined
-          ? innerTarget === "_blank"
-          : blankTargetIcon;
-      if (innerBlankTargetIcon) {
-        innerEndIcon =
-          innerBlankTargetIcon === true ? (
-            <LinkBlankTargetSvg />
-          ) : (
-            innerBlankTargetIcon
-          );
-      } else if (anchorIcon === undefined) {
+      innerEndIcon = (
+        <Icon>
+          <LinkGithubSvg />{" "}
+        </Icon>
+      );
+    }
+    // Fall back to default icon logic
+    else if (innerTarget === "_blank") {
+      if (blankTargetIcon === undefined) {
+        innerEndIcon = (
+          <Icon>
+            <LinkBlankTargetSvg />{" "}
+          </Icon>
+        );
+      } else {
+        innerEndIcon = blankTargetIcon;
+      }
+    } else if (isAnchor) {
+      if (anchorIcon === undefined) {
         if (anchor) {
-          if (!children) {
-            innerEndIcon = <ArrowTurningDownRightSvg />;
+          if (children) {
+            // keep innerEndIcon unset, we got children
+          } else {
+            innerEndIcon = (
+              <Icon size="xs" textAnchor="char-top">
+                <ArrowTurningDownRightSvg />
+              </Icon>
+            );
           }
-        } else if (isAnchor) {
-          innerEndIcon = <ArrowTurningDownRightSvg />;
+        } else {
+          innerEndIcon = (
+            <Icon size="xs" textAnchor="char-top">
+              <ArrowTurningDownRightSvg />
+            </Icon>
+          );
         }
       } else {
         innerEndIcon = anchorIcon;
       }
+    } else {
+      innerEndIcon = anchorIcon;
     }
   } else {
     innerEndIcon = endIcon;
   }
 
   const innerChildren = children || (hrefFallback ? href : children);
-  const startIconEl = startIcon && <Icon>{startIcon}</Icon>;
-  const endIconEl = innerEndIcon && (
-    <Icon size="xs" textAnchor="char-top">
-      {innerEndIcon}
-    </Icon>
-  );
+  const startIconEl = startIcon;
+  const endIconEl = innerEndIcon;
 
   const currentIndicatorPosition =
     currentIndicator === true ? "bottom" : currentIndicator;
