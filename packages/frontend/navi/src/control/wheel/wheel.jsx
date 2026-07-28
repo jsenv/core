@@ -75,6 +75,7 @@ const css = /* css */ `
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
     border-radius: var(--navi-control-border-radius);
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
     /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
        the neighbours are just hints, so the ring belongs on the selected value,
@@ -1568,6 +1569,9 @@ function WheelUI(props) {
         tabindex={-1}
         aria-hidden="true"
         className="navi_wheel_input"
+        // Ensure cannot show keyboard on mobile when focused
+        readOnly
+        data-readonly-forced=""
         // eslint-disable-next-line react/no-children-prop
         children={undefined}
       />

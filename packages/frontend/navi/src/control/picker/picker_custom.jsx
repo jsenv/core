@@ -30,9 +30,9 @@ const css = /* css */ `
        picker-specific bits below (anchor-width min-width, the anchor clone,
        the nested list). */
 
-    /* popoverWidthFitContent (picker.jsx): drop the trigger-width floor so the
+    /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
        popover shrinks to its content. Inherits down to the popover. */
-    &[data-popover-width-fit-content] {
+    &[data-popup-width-fit-content] {
       --picker-popover-min-width: 0px;
     }
 
@@ -46,7 +46,7 @@ const css = /* css */ `
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
 
-        /* At least as wide as the trigger — unless popoverWidthFitContent, then
+        /* At least as wide as the trigger — unless popupWidthFitContent, then
            let the content (e.g. a Wheel) size the popover (see picker.jsx). */
         min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */

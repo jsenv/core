@@ -326,7 +326,7 @@ const PickerButton = (props) => {
     // --anchor-width). Set true when the CONTENT should dictate the popover width
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
-    popoverWidthFitContent = false,
+    popupWidthFitContent,
   } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
@@ -355,7 +355,7 @@ const PickerButton = (props) => {
       navi-picker=""
       navi-single-line={isSingleLine ? "" : undefined}
       navi-ui-custom={ui === "default" ? undefined : ""}
-      data-popover-width-fit-content={popoverWidthFitContent ? "" : undefined}
+      data-popup-width-fit-content={popupWidthFitContent ? "" : undefined}
       {...pickerRemainingProps}
       basePseudoState={basePseudoState}
       styleCSSVars={PickerStyleCSSVars}
@@ -364,7 +364,7 @@ const PickerButton = (props) => {
       iconSize={undefined}
       ui={undefined}
       maxLines={undefined}
-      popoverWidthFitContent={undefined}
+      popupWidthFitContent={undefined}
       dayLabel={undefined}
       // This wrapper will receive keyboard event bubbling from the picker popup content
       // we re-dispatch on the input (to get escape to close for instance)
