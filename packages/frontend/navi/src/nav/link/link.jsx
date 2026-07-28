@@ -603,7 +603,11 @@ const LinkPlain = (props) => {
 
   const innerChildren = children || (hrefFallback ? href : children);
   const startIconEl = startIcon && <Icon>{startIcon}</Icon>;
-  const endIconEl = innerEndIcon && <Icon size="xxs">{innerEndIcon}</Icon>;
+  const endIconEl = innerEndIcon && (
+    <Icon size="xs" textAnchor="char-top">
+      {innerEndIcon}
+    </Icon>
+  );
 
   const currentIndicatorPosition =
     currentIndicator === true ? "bottom" : currentIndicator;
