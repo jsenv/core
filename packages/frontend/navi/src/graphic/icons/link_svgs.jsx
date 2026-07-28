@@ -17,7 +17,7 @@ export const ArrowTurningDownRightSvg = () => {
   return (
     <svg viewBox="0 0 16 16">
       <path
-        d="M5 4H8Q9.5 4 9.5 5.5V12M7 9.5 9.5 12 12 9.5"
+        d="M6 4H7.5Q9 4 9 5.5V12M7 9.5 9 12 11 9.5"
         fill="none"
         stroke="currentColor"
         stroke-width="1.2"
