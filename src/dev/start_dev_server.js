@@ -197,7 +197,14 @@ export const startDevServer = async ({
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
-    jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
+    // The client-monitoring dashboard is a dev-time convenience; a test-plan run
+    // doesn't use it and shouldn't pay for the reporter being injected into
+    // every page.
+    ...(EXECUTED_BY_TEST_PLAN
+      ? []
+      : [
+          jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
+        ]),
     ...plugins,
     ...getCorePlugins({
       packageDirectory,
