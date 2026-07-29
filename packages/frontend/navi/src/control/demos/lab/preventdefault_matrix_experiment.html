@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>preventDefault matrix — tap-after-drag</title>
+    <style>
+      body {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 16px;
+        color: #222;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      .note {
+        margin: 0 0 16px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .row {
+        display: flex;
+        padding: 10px 0;
+        align-items: stretch;
+        gap: 12px;
+        border-top: 1px solid #eee;
+      }
+      .meta {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+      .meta .label {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .meta .desc {
+        color: #666;
+        font-size: 0.75rem;
+        font-family: monospace;
+        word-break: break-word;
+      }
+      .surface {
+        width: 52px;
+        height: 96px;
+        flex: none;
+        color: #374151;
+        font-size: 11px;
+        text-align: center;
+        line-height: 1.5;
+        background: #9ca3af;
+        border-radius: 6px;
+        touch-action: none;
+        user-select: none;
+        overflow: hidden;
+      }
+      .target {
+        width: 84px;
+        flex: none;
+        color: #1d4ed8;
+        font-size: 0.85rem;
+        background: #eff6ff;
+        border: 1px solid #2563eb;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .target.ok {
+        color: #15803d;
+        background: #dcfce7;
+        border-color: #16a34a;
+      }
+      .target.bad {
+        color: #b91c1c;
+        background: #fee2e2;
+        border-color: #dc2626;
+      }
+      #log {
+        height: 200px;
+        margin-top: 14px;
+        padding: 10px 12px;
+        color: #d6e2ff;
+        font-size: 11px;
+        font-family: monospace;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        background: #0b1020;
+        border-radius: 6px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>preventDefault matrix — tap-after-drag</h1>
+    <p class="note">
+      Every row is the exact baseline (pointer-driven drag,
+      <code>touch-action: none</code>, <code>overflow: hidden</code>). The
+      <strong>only</strong> difference is which event(s) get
+      <code>preventDefault()</code>. Touch listeners are attached
+      <code>{ passive: false }</code> so the call takes effect; pointer events
+      still drive the drag either way. For each row: drag the grey surface, then
+      within ~300ms tap its button. Green = <code>click</code> fired, red =
+      suppressed. This isolates the minimal <code>preventDefault</code> needed.
+    </p>
+
+    <div id="rows"></div>
+    <pre id="log"></pre>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const stamp = () => {
+        const d = new Date();
+        const p = (n, w = 2) => String(n).padStart(w, "0");
+        return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+      };
+      const log = (msg) => {
+        console.debug(`[pd] ${msg}`);
+        logEl.textContent += `${stamp()}  ${msg}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+
+      let lastReleaseAt = null;
+
+      // Each config lists which events call preventDefault(). Everything else is
+      // identical to the (red) baseline, so any row that goes green tells us
+      // that exactly this set of preventDefault calls is enough.
+      const TESTS = [
+        { label: "none (control)", pd: [] },
+        { label: "pointerdown", pd: ["pointerdown"] },
+        { label: "pointermove", pd: ["pointermove"] },
+        {
+          label: "pointerdown + pointermove",
+          pd: ["pointerdown", "pointermove"],
+        },
+        { label: "touchstart", pd: ["touchstart"] },
+        { label: "touchmove", pd: ["touchmove"] },
+        { label: "touchstart + touchmove", pd: ["touchstart", "touchmove"] },
+        {
+          label: "all four",
+          pd: ["pointerdown", "pointermove", "touchstart", "touchmove"],
+        },
+      ];
+
+      const rowsEl = document.getElementById("rows");
+
+      const buildSurface = (cfg) => {
+        const pd = new Set(cfg.pd);
+        const surface = document.createElement("div");
+        surface.className = "surface";
+        const inner = document.createElement("div");
+        for (let i = 0; i < 8; i++) {
+          inner.appendChild(document.createTextNode("▤"));
+          inner.appendChild(document.createElement("br"));
+        }
+        surface.appendChild(inner);
+
+        // Pointer events drive the drag (matching the real wheel).
+        const drag = { start: null, base: 0, offset: 0 };
+        surface.addEventListener("pointerdown", (e) => {
+          if (pd.has("pointerdown")) {
+            e.preventDefault();
+          }
+          drag.start = e.clientY;
+          drag.base = drag.offset;
+          log(`[${cfg.label}] pointerdown`);
+        });
+        surface.addEventListener("pointermove", (e) => {
+          if (pd.has("pointermove")) {
+            e.preventDefault();
+          }
+          if (drag.start === null) {
+            return;
+          }
+          drag.offset = drag.base + (e.clientY - drag.start);
+          inner.style.transform = `translateY(${drag.offset}px)`;
+        });
+        surface.addEventListener("pointerup", () => {
+          lastReleaseAt = new Date().getTime();
+          drag.start = null;
+          log(`[${cfg.label}] pointerup`);
+        });
+
+        // Touch listeners exist only to call preventDefault() — non-passive so
+        // the call is honored. They do NOT drive the drag.
+        surface.addEventListener(
+          "touchstart",
+          (e) => {
+            if (pd.has("touchstart")) {
+              e.preventDefault();
+            }
+          },
+          { passive: false },
+        );
+        surface.addEventListener(
+          "touchmove",
+          (e) => {
+            if (pd.has("touchmove")) {
+              e.preventDefault();
+            }
+          },
+          { passive: false },
+        );
+
+        return surface;
+      };
+
+      for (const cfg of TESTS) {
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const surface = buildSurface(cfg);
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = cfg.label;
+        const desc = document.createElement("div");
+        desc.className = "desc";
+        desc.textContent =
+          cfg.pd.length === 0
+            ? "no preventDefault"
+            : `preventDefault on: ${cfg.pd.join(" + ")}`;
+        meta.appendChild(label);
+        meta.appendChild(desc);
+
+        const target = document.createElement("button");
+        target.type = "button";
+        target.className = "target";
+        target.textContent = "Tap me";
+        // eslint-disable-next-line no-loop-func
+        target.addEventListener("pointerdown", () => {
+          const gap =
+            lastReleaseAt === null
+              ? "?"
+              : `${new Date().getTime() - lastReleaseAt}ms after release`;
+          log(`[${cfg.label}] TARGET pointerdown (${gap})`);
+        });
+        target.addEventListener("click", () => {
+          target.classList.remove("bad");
+          target.classList.add("ok");
+          target.textContent = "click ✅";
+          log(`[${cfg.label}] TARGET click ✅`);
+        });
+        target.addEventListener("pointerup", () => {
+          const el = target;
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              if (!el.classList.contains("ok")) {
+                el.classList.add("bad");
+                el.textContent = "no click ❌";
+                log(`[${cfg.label}] TARGET no click ❌`);
+              }
+            }),
+          );
+        });
+
+        row.appendChild(surface);
+        row.appendChild(meta);
+        row.appendChild(target);
+        rowsEl.appendChild(row);
+      }
+    </script>
+  </body>
+</html>
