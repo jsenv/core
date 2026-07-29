@@ -197,10 +197,12 @@ export const startDevServer = async ({
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
-    // The client-monitoring dashboard is a dev-time convenience; a test-plan run
-    // doesn't use it and shouldn't pay for the reporter being injected into
-    // every page.
-    ...(EXECUTED_BY_TEST_PLAN
+    // The client-monitoring dashboard is a dev-time convenience. Skip it for a
+    // test-plan run (doesn't use it, shouldn't pay for the per-page injection),
+    // and when packageBundle is on: its reporter is a jsenv-core file, so
+    // workspace bundling redirects that reference to @jsenv/core's main and
+    // pulls node-only core code (e.g. node:url) into the browser graph.
+    ...(EXECUTED_BY_TEST_PLAN || packageBundle
       ? []
       : [
           jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
