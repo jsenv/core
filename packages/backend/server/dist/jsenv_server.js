@@ -2907,6 +2907,30 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
  * But we don't really need a class so we are just returning a regular object under the hood
  */
 
+/**
+ * Return this from a route `fetch` to accept a websocket upgrade on that
+ * endpoint.
+ *
+ * @param {(websocket: import("ws").WebSocket) => void | (() => void)} webSocketHandler
+ *   Called with the raw `ws` socket once the upgrade completes. Use
+ *   `websocket.on("message", …)` / `websocket.send(…)`. If it returns a
+ *   function, that function runs as cleanup when the socket closes.
+ * @param {object} [init]
+ * @param {number} [init.status=101]
+ * @param {string} [init.statusText]
+ * @param {object} [init.headers]
+ *
+ * @example
+ * {
+ *   endpoint: "GET /chat.websocket",
+ *   fetch: () => new WebSocketResponse((websocket) => {
+ *     websocket.on("message", (data) => websocket.send(data));
+ *     return () => {
+ *       // socket closed
+ *     };
+ *   }),
+ * }
+ */
 class WebSocketResponse {
   constructor(
     webSocketHandler,
@@ -2986,7 +3010,7 @@ const getWebSocketHandler = (responseProperties) => {
  * // Use in server route
  * {
  *   endpoint: "GET /events",
- *   response: (request) => serverEvents.fetch(request)
+ *   fetch: (request) => serverEvents.fetch(request)
  * }
  */
 class ServerEvents {
@@ -3044,7 +3068,7 @@ class ServerEvents {
  * // Use in server route
  * {
  *   endpoint: "GET /events",
- *   response: (request) => events.fetch(request)
+ *   fetch: (request) => events.fetch(request)
  * }
  */
 class LazyServerEvents {

@@ -35,46 +35,88 @@ const debugScrollDefault = eventGroupLogger.createCategory(
   "#2980b9",
 );
 
+// The hooks below expose one concern's logger to components inside <NaviDebug>.
+// Each returns the logger function enabled for that concern, or a no-op when the
+// concern is off — so call sites can `const debug = useDebugX()` unconditionally.
+// The logger is called as `debug(message, …)` or, to group a side effect under
+// the native event that caused it, `debug(event, message, …)`.
+
+/** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
 export const useDebugCommand = () => {
   const debug = useContext(DebugCommandContext);
   return debug || debugNoop;
 };
+/** Logger for gated interactions (click/scroll/select/…), or a no-op. */
 export const useDebugInteraction = () => {
   const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
+/** Logger for focus moves and focus-visible decisions, or a no-op. */
 export const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
   return debug || debugNoop;
 };
+/** Logger for virtual scroll / wheel motion (drag, momentum, glide), or a no-op. */
 export const useDebugScroll = () => {
   const debug = useContext(DebugScrollContext);
   return debug || debugNoop;
 };
+/** Logger for popover/dialog open/close/positioning, or a no-op. */
 export const useDebugPopup = () => {
   const debug = useContext(DebugPopupContext);
   return debug || debugNoop;
 };
+/** Logger for the action lifecycle (request → run → end), or a no-op. */
 export const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
+/** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
 export const useDebugUIState = () => {
   const debug = useContext(DebugUIStateContext);
   return debug || debugNoop;
 };
 
 /**
- * NaviDebug — enables debug logging for navi UI interactions within its subtree.
+ * Turns on navi's color-coded console logging for everything rendered inside it.
+ * Navi has many moving parts (interactions, focus, scroll, popups, commands,
+ * actions, ui-state); each concern logs to its own console group so you can
+ * watch what navi is doing and why. Components read a concern via its hook
+ * (`useDebugScroll`, `useDebugInteraction`, …).
  *
- * Props:
- *   debugInteraction — log focus moves and virtual scroll updates (enables debugFocus + debugScroll)
- *   debugPopup       — log popover open/close/positioning decisions
- *   debugAction      — log action lifecycle events
+ * Every prop accepts one of:
+ * - `true` — log with the built-in color-coded logger (grouped by initiator event)
+ * - a function — log with your own callback instead
+ * - `false` / omitted — disabled (the concern's hook returns a no-op)
  *
- * Pass a boolean `true` to use `console.debug`, or pass a custom function.
+ * `debugAll` is the default for every other prop, so `<NaviDebug debugAll>`
+ * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
+ * `debugScroll` and `debugPopup` unless those are set explicitly, since they
+ * describe the same interaction.
+ *
+ * @param {object} props
+ * @param {boolean|Function} [props.debugAll] - Default for every concern below.
+ * @param {boolean|Function} [props.debugCommand] - navi command dispatch (`--navi-*`).
+ * @param {boolean|Function} [props.debugInteraction] - Gated interactions; also implies focus/scroll/popup.
+ * @param {boolean|Function} [props.debugFocus] - Focus moves and focus-visible decisions.
+ * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion.
+ * @param {boolean|Function} [props.debugPopup] - Popover/dialog open/close/positioning.
+ * @param {boolean|Function} [props.debugAction] - Action lifecycle.
+ * @param {boolean|Function} [props.debugUIState] - UI-state transitions and validation.
+ * @param {import("preact").ComponentChildren} props.children
+ *
+ * @example
+ * // Log everything under this subtree
+ * <NaviDebug debugAll>
+ *   <Picker>…</Picker>
+ * </NaviDebug>
+ *
+ * @example
+ * // Only wheel/scroll motion, via a custom sink
+ * <NaviDebug debugScroll={(...args) => myLogger.log(...args)}>
+ *   <Wheel>…</Wheel>
+ * </NaviDebug>
  */
-
 export const NaviDebug = ({
   debugAll,
   debugCommand = debugAll,

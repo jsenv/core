@@ -5550,7 +5550,22 @@ const performTabNavigation = (
     if (hasNegativeTabIndex(element)) {
       return false;
     }
-    return elementIsFocusable(element, { excludeAriaHidden });
+    if (!elementIsFocusable(element, { excludeAriaHidden })) {
+      return false;
+    }
+    // Native radio-group semantics: within a named radio group only ONE radio
+    // is a Tab stop — the checked one, or the first focusable one when none is
+    // checked. The rest are reachable with arrow keys, not Tab. Without this,
+    // tabbing into a group would land on its first radio instead of its checked
+    // value (e.g. tabbing between two wheels of a WheelGroup).
+    if (
+      element.matches?.('input[type="radio"]') &&
+      element.name &&
+      !radioIsGroupTabStop(element)
+    ) {
+      return false;
+    }
+    return true;
   };
 
   // A focus group "owns" the activeElement when activeElement is inside it.
@@ -5699,6 +5714,43 @@ const performTabNavigation = (
     }
     return false;
   }
+};
+
+// Whether a radio is the single Tab stop of its native radio group (checked, or
+// the first enabled radio when none is checked). Mirrors how the browser puts
+// only one radio of a group in the Tab order.
+const radioIsGroupTabStop = (radio) => {
+  const scope = radio.form || radio.getRootNode();
+  if (!scope || !scope.querySelectorAll) {
+    return true;
+  }
+  const sameName = scope.querySelectorAll(
+    `input[type="radio"][name="${CSS.escape(radio.name)}"]`,
+  );
+  const radioForm = radio.form || null;
+  let checked = null;
+  let firstEnabled = null;
+  let groupSize = 0;
+  for (const candidate of sameName) {
+    // Radios only form one group when they share the same form owner.
+    if ((candidate.form || null) !== radioForm) {
+      continue;
+    }
+    groupSize++;
+    if (candidate.disabled) {
+      continue;
+    }
+    if (!firstEnabled) {
+      firstEnabled = candidate;
+    }
+    if (candidate.checked && !checked) {
+      checked = candidate;
+    }
+  }
+  if (groupSize <= 1) {
+    return true;
+  }
+  return radio === (checked || firstEnabled);
 };
 
 const isTabEvent$1 = (event) => event.key === "Tab" || event.keyCode === 9;
@@ -7176,49 +7228,61 @@ const getPaddingSizes = (element) => {
  */
 const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
-  const lockScroll = (el) => {
+
+  // Collect every element to lock first (preceding scrollable siblings + all
+  // ancestor scroll containers).
+  const elementsToLock = [];
+  let previous = element.previousSibling;
+  while (previous) {
+    if (previous.nodeType === 1 && isScrollable(previous)) {
+      elementsToLock.push(previous);
+    }
+    previous = previous.previousSibling;
+  }
+  for (const selfOrAncestorScroll of getSelfAndAncestorScrolls(element)) {
+    elementsToLock.push(selfOrAncestorScroll.scrollContainer);
+  }
+
+  // Phase 1 — MEASURE. Batch every layout/style read (scrollTop, scrollbar
+  // size, padding) before any style write, so the layout that showModal
+  // invalidated is recomputed once rather than thrashing between each write and
+  // the next read. (measureScrollbar still forces its own reflow per element via
+  // its probe node — that one is inherent.)
+  const plans = elementsToLock.map((el) => {
     const savedScrollTop = el.scrollTop;
     const savedScrollLeft = el.scrollLeft;
     const scrollbarGutter = getStyle(el, "scrollbar-gutter");
-    const hasScrollbarGutterStrategy =
-      scrollbarGutter && scrollbarGutter !== "auto";
-    if (hasScrollbarGutterStrategy) {
-      // The element manages its own gutter — just hide overflow, no padding needed.
-      const removeScrollLockStyles = setStyles(el, { overflow: "hidden" });
-      cleanupCallbackSet.add(() => {
-        removeScrollLockStyles();
-        el.scrollTop = savedScrollTop;
-        el.scrollLeft = savedScrollLeft;
-      });
-      return;
+    if (scrollbarGutter && scrollbarGutter !== "auto") {
+      // The element manages its own gutter — just hide overflow, no padding.
+      return {
+        el,
+        savedScrollTop,
+        savedScrollLeft,
+        styles: { overflow: "hidden" },
+      };
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
     const { right, bottom } = getPaddingSizes(el);
-    const removeScrollLockStyles = setStyles(el, {
-      "padding-right": `${right + scrollbarWidth}px`,
-      "padding-bottom": `${bottom + scrollbarHeight}px`,
-      "overflow": "hidden",
-    });
+    return {
+      el,
+      savedScrollTop,
+      savedScrollLeft,
+      styles: {
+        "padding-right": `${right + scrollbarWidth}px`,
+        "padding-bottom": `${bottom + scrollbarHeight}px`,
+        "overflow": "hidden",
+      },
+    };
+  });
+
+  // Phase 2 — MUTATE. All style writes together.
+  for (const { el, savedScrollTop, savedScrollLeft, styles } of plans) {
+    const removeScrollLockStyles = setStyles(el, styles);
     cleanupCallbackSet.add(() => {
       removeScrollLockStyles();
       el.scrollTop = savedScrollTop;
       el.scrollLeft = savedScrollLeft;
     });
-  };
-  let previous = element.previousSibling;
-  while (previous) {
-    if (previous.nodeType === 1) {
-      if (isScrollable(previous)) {
-        lockScroll(previous);
-      }
-    }
-    previous = previous.previousSibling;
-  }
-
-  const selfAndAncestorScrolls = getSelfAndAncestorScrolls(element);
-  for (const selfOrAncestorScroll of selfAndAncestorScrolls) {
-    const elementToScrollLock = selfOrAncestorScroll.scrollContainer;
-    lockScroll(elementToScrollLock);
   }
 
   return () => {

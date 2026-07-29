@@ -60,6 +60,7 @@ import { getUIStateControllerById } from "../controller_registry.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
+import { useDebugScroll } from "../../navi_debug.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 
@@ -420,14 +421,18 @@ const css = /* css */ `
   }
 `;
 
-// Fling physics (px per ms). Velocity is capped so even a violent fling travels
-// only a handful of rows (a picker isn't a free-scrolling list — overshooting
-// dozens of values feels wrong). Each frame the velocity is multiplied by
-// WHEEL_DECAY^(dt/16); lower stops sooner. Below the snap threshold the settle
-// loop switches from momentum to a spring that eases into the nearest row
-// center; the spring factor is how far toward that center it moves per frame.
+// Fling physics (px per ms). WHEEL_MAX_VELOCITY caps the MOUSE-WHEEL settle
+// projection (kept small — a notch shouldn't fling far). A touch/pointer drag
+// fling goes through settle() instead and gets its own, much larger cap
+// (WHEEL_FLING_MAX_VELOCITY) so a hard swipe carries across the list like a
+// native scroller — a fast finger easily reaches 5-10 px/ms and shouldn't be
+// clipped to a few rows. Each frame the velocity is multiplied by
+// WHEEL_DECAY^(dt/16); closer to 1 coasts further. Below the snap threshold the
+// settle loop switches from momentum to a spring that eases into the nearest
+// row center; the spring factor is how far toward that center it moves per frame.
 const WHEEL_MAX_VELOCITY = 1;
-const WHEEL_DECAY = 0.88;
+const WHEEL_FLING_MAX_VELOCITY = 10;
+const WHEEL_DECAY = 0.95;
 const WHEEL_SNAP_VELOCITY = 0.3;
 const WHEEL_SPRING_FACTOR = 0.2;
 
@@ -571,6 +576,8 @@ const useWheelInteractions = ({
   wheelSettle,
   glideTo,
   stepTarget,
+  commitIfAnimating,
+  debug,
 }) => {
   useLayoutEffect(() => {
     const el = ref.current;
@@ -787,11 +794,30 @@ const useWheelInteractions = ({
           // pointerup then lands outside and is never caught — leaving `drag` set
           // so the wheel keeps scrolling after release. Capture routes every
           // move/up back here regardless of where the pointer goes.
-          try {
-            vp.setPointerCapture(e.pointerId);
-            drag.captured = true;
-          } catch {
-            // pointer already gone (e.g. released same tick) — nothing to capture.
+          //
+          // BUT only take EXPLICIT capture for mouse/pen. A touch pointer is
+          // already implicitly captured to its pointerdown target (its move/up
+          // keep targeting the viewport), so setPointerCapture would be
+          // redundant. (The "tap a dialog button right after a fling does
+          // nothing" bug is a separate browser-level tap suppression, handled by
+          // preventing touchmove during the drag — see onTouchMove below.)
+          if (e.pointerType === "touch") {
+            debug(
+              e,
+              `pointer down: touch, implicit capture (id=${e.pointerId})`,
+            );
+          } else {
+            try {
+              vp.setPointerCapture(e.pointerId);
+              drag.captured = true;
+              debug(
+                e,
+                `pointer down: capture set (id=${e.pointerId}, ${e.pointerType})`,
+              );
+            } catch {
+              // pointer already gone (e.g. released same tick) — nothing to capture.
+              debug(e, `pointer down: capture FAILED (id=${e.pointerId})`);
+            }
           }
         },
       });
@@ -818,7 +844,8 @@ const useWheelInteractions = ({
         // A real drag begins: stop the glide and re-anchor to here so the wheel
         // doesn't jump (startPos = the just-frozen position, startClient = now).
         drag.moved = true;
-        cancelAnim();
+        const caught = cancelAnim();
+        debug(e, caught ? "catch: grabbed a moving wheel" : "drag: start");
         drag.startPos = posRef.current;
         drag.startClient = client;
       }
@@ -838,6 +865,7 @@ const useWheelInteractions = ({
     };
     const endDrag = (e) => {
       const wasDrag = drag.moved;
+      const pointerId = drag.pointerId;
       let velocity = drag.velocity;
       // If the pointer sat still for a moment before release, don't fling: a stale
       // velocity from an earlier fast move would send the wheel gliding after the
@@ -846,13 +874,18 @@ const useWheelInteractions = ({
       if (performance.now() - drag.lastTime > 60) {
         velocity = 0;
       }
-      if (drag.captured) {
+      const wasCaptured = drag.captured;
+      if (wasCaptured) {
         try {
-          vp.releasePointerCapture(drag.pointerId);
+          vp.releasePointerCapture(pointerId);
         } catch {
           // capture already lost (e.g. the pointer is gone) — nothing to release.
         }
       }
+      debug(
+        e,
+        `${e.type}: ${wasDrag ? "drag end" : "tap"}${wasCaptured ? `, capture released` : ``} (id=${pointerId})`,
+      );
       drag = null;
       if (!wasDrag) {
         // A tap: step by the click's row-distance from the center window, NOT by
@@ -879,16 +912,49 @@ const useWheelInteractions = ({
     };
     const onPointerUp = (e) => {
       if (!drag || e.pointerId !== drag.pointerId) {
+        // e.g. the lostpointercapture that follows our own releasePointerCapture,
+        // or a stray pointercancel — logged so the capture teardown is visible.
+        debug(e, `${e.type}: no active drag (id=${e.pointerId})`);
         return;
       }
       endDrag(e);
     };
+
+    // On Android Chrome a pointer-driven drag on a touch-action:none surface
+    // leaves the browser in a state that swallows the NEXT quick tap's
+    // synthesized `click` (a browser-level tap suppression, independent of navi).
+    // Calling preventDefault on the touchmoves that make up the drag tells the
+    // browser the touch is fully consumed, so a tap on e.g. a dialog's Confirm
+    // button right after a fling still fires its click. Only while a drag is
+    // active, and on touchmove (not touchstart) — the drag IS the move, and
+    // preventing touchstart has wider side effects. Requires a non-passive
+    // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
+    const onTouchMove = (e) => {
+      if (drag) {
+        e.preventDefault();
+      }
+    };
+
+    // A press ANYWHERE outside the wheel while it's coasting settles it now, so
+    // that press (a tap on a dialog button, a click-outside) lands on a stable
+    // surface instead of one a late momentum re-render would move. Capture phase
+    // so it runs before the target's own handlers.
+    const onDocumentPointerDown = (e) => {
+      if (el.contains(e.target)) {
+        return; // presses inside the wheel are handled by onPointerDown above
+      }
+      commitIfAnimating();
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown, {
+      capture: true,
+    });
 
     vp.addEventListener("wheel", onWheel, { passive: false });
     vp.addEventListener("pointerdown", onPointerDown);
     vp.addEventListener("pointermove", onPointerMove);
     vp.addEventListener("pointerup", onPointerUp);
     vp.addEventListener("pointercancel", onPointerUp);
+    vp.addEventListener("touchmove", onTouchMove, { passive: false });
     // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
     // ends the gesture too — otherwise the drag would stay latched.
     vp.addEventListener("lostpointercapture", onPointerUp);
@@ -897,11 +963,15 @@ const useWheelInteractions = ({
       clearTimeout(settleTimer);
       stopClaimingGesture();
       cancelAnim();
+      document.removeEventListener("pointerdown", onDocumentPointerDown, {
+        capture: true,
+      });
       vp.removeEventListener("wheel", onWheel);
       vp.removeEventListener("pointerdown", onPointerDown);
       vp.removeEventListener("pointermove", onPointerMove);
       vp.removeEventListener("pointerup", onPointerUp);
       vp.removeEventListener("pointercancel", onPointerUp);
+      vp.removeEventListener("touchmove", onTouchMove);
       vp.removeEventListener("lostpointercapture", onPointerUp);
       el.removeEventListener("navi_scroll", onNaviScroll);
     };
@@ -1087,6 +1157,12 @@ function WheelUI(props) {
   for (const key of WHEEL_OWN_PROP_KEYS) {
     delete controlRootProps[key];
   }
+
+  // Wheel-motion lifecycle logging, under the navi "[scroll]" debug category
+  // (enable via <NaviDebug debugScroll> / debugAll). Logs drag/catch/settle/
+  // commit so the wheel's animation phases are readable — e.g. to see the
+  // momentum window that follows a fling.
+  const debugScroll = useDebugScroll();
 
   // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
   // value and item list here; a plain closure would freeze the mount render's
@@ -1355,16 +1431,22 @@ function WheelUI(props) {
     }
   };
 
+  // Returns whether it actually interrupted a motion in flight — lets the caller
+  // tell a fresh gesture from one that "caught" a spinning/gliding wheel.
   const cancelAnim = () => {
+    let interrupted = false;
     if (momentumRef.current !== null) {
       cancelAnimationFrame(momentumRef.current);
       momentumRef.current = null;
+      interrupted = true;
     }
     if (glideRef.current !== null) {
       cancelAnimationFrame(glideRef.current);
       glideRef.current = null;
       targetPosRef.current = null;
+      interrupted = true;
     }
+    return interrupted;
   };
 
   // After motion stops: fold a looped position back to the centered value's
@@ -1387,6 +1469,7 @@ function WheelUI(props) {
     }
     const settleEvent = new CustomEvent("navi_wheel_settle");
     centeredIndexRef.current = index;
+    debugScroll(`settle: committed → ${trackedItemsRef.current[index].value}`);
     requestSelectValue(trackedItemsRef.current[index].value, settleEvent);
     // The value is now stable → commit the action. The wheel runs actionEvent
     // "custom" (see the facade above) so setUIState during the motion only fired
@@ -1395,6 +1478,31 @@ function WheelUI(props) {
     if (input) {
       dispatchRequestAction(input, { event: settleEvent });
     }
+  };
+
+  // If the wheel is still coasting (momentum or glide), stop and commit NOW.
+  // Used when the user presses somewhere else: the coast keeps re-rendering the
+  // surface for up to a second, and on touch the tap's `click` is dispatched a
+  // beat after `pointerup` — long enough for one of those re-renders to move the
+  // element under the pending click, so the browser drops it (visible on mobile:
+  // press a dialog button right after a fling and nothing happens). Committing
+  // on the press settles the DOM up front, before the tap completes.
+  const commitIfAnimating = () => {
+    const animating = momentumRef.current !== null || glideRef.current !== null;
+    // Logs on every press outside the wheel — tells us whether a tap on a dialog
+    // button lands while the wheel is still coasting (animating=true) or after it
+    // already settled (animating=false), which decides where the dropped click
+    // comes from.
+    debugScroll(`external press while wheel animating=${animating}`);
+    if (!animating) {
+      return;
+    }
+    const vp = getViewport();
+    if (!vp) {
+      return;
+    }
+    cancelAnim();
+    commitSelection(vp);
   };
 
   // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
@@ -1440,6 +1548,7 @@ function WheelUI(props) {
     }
     targetPosRef.current = target;
     if (glideRef.current === null) {
+      debugScroll("glide: start");
       glideRef.current = requestAnimationFrame(() =>
         glideStep(vp, performance.now()),
       );
@@ -1455,7 +1564,15 @@ function WheelUI(props) {
   // overshoots only a handful of rows (a picker isn't a free-scrolling list).
   const settle = (vp, velocity) => {
     cancelAnim();
-    let v = clampNumber(velocity, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
+    debugScroll(`settle: momentum start (v=${velocity}px/ms)`);
+    // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
+    // so a hard swipe carries across the list instead of being clipped to a few
+    // rows. The mouse wheel never reaches here (it uses wheelSettle/glide).
+    let v = clampNumber(
+      velocity,
+      -WHEEL_FLING_MAX_VELOCITY,
+      WHEEL_FLING_MAX_VELOCITY,
+    );
     let last = performance.now();
     let snapping = Math.abs(v) < WHEEL_SNAP_VELOCITY;
     const step = (now) => {
@@ -1639,6 +1756,8 @@ function WheelUI(props) {
     wheelSettle,
     glideTo,
     stepTarget,
+    commitIfAnimating,
+    debug: debugScroll,
   });
 
   useWheelKeyboard({

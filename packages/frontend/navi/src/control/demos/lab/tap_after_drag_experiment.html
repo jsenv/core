@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tap-after-drag suppression experiment</title>
+    <style>
+      body {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #222;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: 1.4rem;
+      }
+      .note {
+        margin: 0 0 20px;
+        padding: 12px 14px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .stage {
+        display: flex;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .surface {
+        width: 64px;
+        height: 160px;
+        flex: none;
+        color: #374151;
+        font-size: 12px;
+        text-align: center;
+        line-height: 1.6;
+        background: #9ca3af;
+        border-radius: 6px;
+        touch-action: none;
+        user-select: none;
+        overflow: hidden;
+      }
+      .target {
+        padding: 16px 20px;
+        color: #1d4ed8;
+        font-size: 1rem;
+        background: #eff6ff;
+        border: 1px solid #2563eb;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #log {
+        height: 240px;
+        margin-top: 20px;
+        padding: 10px 12px;
+        color: #d6e2ff;
+        font-size: 12px;
+        font-family: monospace;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        background: #0b1020;
+        border-radius: 6px;
+        overflow: auto;
+      }
+      #clear {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tap-after-drag suppression</h1>
+    <p class="note">
+      No navi, no framework — just a bare
+      <code>touch-action: none</code>, <code>overflow: hidden</code> surface
+      with pointer listeners that translate an inner block.
+      <br />
+      <strong>To reproduce:</strong> drag the grey surface up/down, then within
+      ~500ms tap the blue <strong>Tap me</strong> button. Watch for
+      <code>TARGET click</code>. If it is missing, the browser suppressed the
+      click after the drag — proving the behavior is native, not navi.
+    </p>
+
+    <div class="stage">
+      <div class="surface" id="surface">
+        <div id="inner">
+          ▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤
+        </div>
+      </div>
+      <button type="button" class="target" id="target">Tap me</button>
+    </div>
+
+    <pre id="log"></pre>
+    <button type="button" id="clear">clear log</button>
+
+    <script>
+      const logEl = document.getElementById("log");
+      const stamp = () => {
+        const d = new Date();
+        const p = (n, w = 2) => String(n).padStart(w, "0");
+        return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
+      };
+      const log = (msg) => {
+        const line = `${stamp()}  ${msg}`;
+        // console.debug so the device monitor page captures it too.
+        console.debug(`[experiment] ${msg}`);
+        logEl.textContent += `${line}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      };
+      document.getElementById("clear").addEventListener("click", () => {
+        logEl.textContent = "";
+      });
+
+      const surface = document.getElementById("surface");
+      const inner = document.getElementById("inner");
+      const drag = { start: null, base: 0, offset: 0 };
+      surface.addEventListener("pointerdown", (e) => {
+        log(`SURFACE pointerdown (id=${e.pointerId})`);
+        drag.start = e.clientY;
+        drag.base = drag.offset;
+      });
+      surface.addEventListener("pointermove", (e) => {
+        if (drag.start === null) {
+          return;
+        }
+        drag.offset = drag.base + (e.clientY - drag.start);
+        inner.style.transform = `translateY(${drag.offset}px)`;
+      });
+      surface.addEventListener("pointerup", (e) => {
+        log(`SURFACE pointerup (id=${e.pointerId})`);
+        drag.start = null;
+      });
+
+      const target = document.getElementById("target");
+      target.addEventListener("pointerdown", () => log("TARGET pointerdown"));
+      target.addEventListener("pointerup", () => log("TARGET pointerup"));
+      target.addEventListener("click", () => log("TARGET click ✅"));
+
+      // Is the browser natively scrolling/flinging during the surface drag? A
+      // native fling arms Chromium's TapSuppressionController, which eats the
+      // next tap's click for ~500ms. If none of these fire during a repro, it
+      // is not a fling and the suppression comes from elsewhere.
+      const sig = (el) =>
+        !el || el === document
+          ? "document"
+          : el === document.scrollingElement
+            ? "scrollingElement"
+            : `${el.tagName || el.nodeName}#${el.id || ""}`;
+      for (const type of ["scroll", "touchcancel", "gesturestart"]) {
+        document.addEventListener(
+          type,
+          (e) => {
+            if (e.target === logEl) {
+              // The log panel scrolls itself each time we append a line; logging
+              // that would append again and scroll again — an infinite loop.
+              return;
+            }
+            log(`native ${type} on ${sig(e.target)}`);
+          },
+          { capture: true },
+        );
+      }
+    </script>
+  </body>
+</html>

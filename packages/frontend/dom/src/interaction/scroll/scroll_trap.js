@@ -29,49 +29,61 @@ import { measureScrollbar } from "./scrollbar_size.js";
  */
 export const trapScrollInside = (element) => {
   const cleanupCallbackSet = new Set();
-  const lockScroll = (el) => {
+
+  // Collect every element to lock first (preceding scrollable siblings + all
+  // ancestor scroll containers).
+  const elementsToLock = [];
+  let previous = element.previousSibling;
+  while (previous) {
+    if (previous.nodeType === 1 && isScrollable(previous)) {
+      elementsToLock.push(previous);
+    }
+    previous = previous.previousSibling;
+  }
+  for (const selfOrAncestorScroll of getSelfAndAncestorScrolls(element)) {
+    elementsToLock.push(selfOrAncestorScroll.scrollContainer);
+  }
+
+  // Phase 1 — MEASURE. Batch every layout/style read (scrollTop, scrollbar
+  // size, padding) before any style write, so the layout that showModal
+  // invalidated is recomputed once rather than thrashing between each write and
+  // the next read. (measureScrollbar still forces its own reflow per element via
+  // its probe node — that one is inherent.)
+  const plans = elementsToLock.map((el) => {
     const savedScrollTop = el.scrollTop;
     const savedScrollLeft = el.scrollLeft;
     const scrollbarGutter = getStyle(el, "scrollbar-gutter");
-    const hasScrollbarGutterStrategy =
-      scrollbarGutter && scrollbarGutter !== "auto";
-    if (hasScrollbarGutterStrategy) {
-      // The element manages its own gutter — just hide overflow, no padding needed.
-      const removeScrollLockStyles = setStyles(el, { overflow: "hidden" });
-      cleanupCallbackSet.add(() => {
-        removeScrollLockStyles();
-        el.scrollTop = savedScrollTop;
-        el.scrollLeft = savedScrollLeft;
-      });
-      return;
+    if (scrollbarGutter && scrollbarGutter !== "auto") {
+      // The element manages its own gutter — just hide overflow, no padding.
+      return {
+        el,
+        savedScrollTop,
+        savedScrollLeft,
+        styles: { overflow: "hidden" },
+      };
     }
     const [scrollbarWidth, scrollbarHeight] = measureScrollbar(el);
     const { right, bottom } = getPaddingSizes(el);
-    const removeScrollLockStyles = setStyles(el, {
-      "padding-right": `${right + scrollbarWidth}px`,
-      "padding-bottom": `${bottom + scrollbarHeight}px`,
-      "overflow": "hidden",
-    });
+    return {
+      el,
+      savedScrollTop,
+      savedScrollLeft,
+      styles: {
+        "padding-right": `${right + scrollbarWidth}px`,
+        "padding-bottom": `${bottom + scrollbarHeight}px`,
+        "overflow": "hidden",
+      },
+    };
+  });
+
+  // Phase 2 — MUTATE. All style writes together.
+  for (const { el, savedScrollTop, savedScrollLeft, styles } of plans) {
+    const removeScrollLockStyles = setStyles(el, styles);
     cleanupCallbackSet.add(() => {
       removeScrollLockStyles();
       el.scrollTop = savedScrollTop;
       el.scrollLeft = savedScrollLeft;
     });
-  };
-  let previous = element.previousSibling;
-  while (previous) {
-    if (previous.nodeType === 1) {
-      if (isScrollable(previous)) {
-        lockScroll(previous);
-      }
-    }
-    previous = previous.previousSibling;
-  }
-
-  const selfAndAncestorScrolls = getSelfAndAncestorScrolls(element);
-  for (const selfOrAncestorScroll of selfAndAncestorScrolls) {
-    const elementToScrollLock = selfOrAncestorScroll.scrollContainer;
-    lockScroll(elementToScrollLock);
   }
 
   return () => {

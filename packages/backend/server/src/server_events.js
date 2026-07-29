@@ -49,7 +49,7 @@ import { WebSocketResponse } from "./web_socket_response.js";
  * // Use in server route
  * {
  *   endpoint: "GET /events",
- *   response: (request) => serverEvents.fetch(request)
+ *   fetch: (request) => serverEvents.fetch(request)
  * }
  */
 export class ServerEvents {
@@ -107,7 +107,7 @@ export class ServerEvents {
  * // Use in server route
  * {
  *   endpoint: "GET /events",
- *   response: (request) => events.fetch(request)
+ *   fetch: (request) => events.fetch(request)
  * }
  */
 export class LazyServerEvents {

@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Server clients inspector</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        color: #111827;
+        font:
+          14px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: #f3f4f6;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 26px 0 8px;
+        color: #6b7280;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      p.intro {
+        margin: 0 0 8px;
+        color: #6b7280;
+      }
+      table {
+        width: 100%;
+        background: #fff;
+        border-radius: 8px;
+        border-collapse: collapse;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 10px 14px;
+        text-align: left;
+        vertical-align: middle;
+        border-bottom: 1px solid #eef2f7;
+      }
+      th {
+        color: #6b7280;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        background: #f9fafb;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .empty {
+        padding: 22px;
+        color: #9ca3af;
+        text-align: center;
+      }
+      .muted {
+        color: #9ca3af;
+      }
+      .when {
+        color: #374151;
+        white-space: nowrap;
+      }
+      .url {
+        display: inline-block;
+        max-width: 240px;
+        color: #374151;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        overflow: hidden;
+      }
+      .tag {
+        display: inline-block;
+        padding: 1px 7px;
+        color: #4338ca;
+        font-weight: 600;
+        font-size: 0.72rem;
+        background: #eef2ff;
+        border-radius: 999px;
+      }
+      .tag.on {
+        color: #047857;
+        background: #d1fae5;
+      }
+      .tag.ellip {
+        max-width: 320px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        vertical-align: middle;
+        overflow: hidden;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+      .btn {
+        padding: 2px 9px;
+        color: #374151;
+        font: inherit;
+        font-size: 0.75rem;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: #e5e7eb;
+      }
+      .btn.primary {
+        color: #fff;
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+      .btn.primary:hover {
+        background: #1d4ed8;
+      }
+      .picker-filter {
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        font: inherit;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+      .pagepick {
+        width: 100%;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        text-align: left;
+        word-break: break-all;
+      }
+      .monitor {
+        margin-left: 4px;
+        padding: 2px 4px;
+        color: #2563eb;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+      .monitor:hover {
+        text-decoration: underline;
+      }
+      dialog {
+        width: min(90vw, 640px);
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.4);
+      }
+      .dlg-head {
+        display: flex;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid #eef2f7;
+      }
+      .dlg-head .spacer {
+        flex: 1;
+      }
+      .dlg-body {
+        max-height: 60vh;
+        padding: 14px 16px;
+        overflow: auto;
+      }
+      .dlg-body pre {
+        margin: 0;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      ul.list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      ul.list li {
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+      ul.list li:last-child {
+        border-bottom: none;
+      }
+      .url2 {
+        color: #374151;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        word-break: break-all;
+      }
+      .ttl {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Server clients inspector</h1>
+    <p class="intro">
+      Every browser that has connected to this dev server since it started. The
+      columns are a résumé; use the actions to dig in or monitor a client's
+      logs.
+    </p>
+
+    <h2>This browser</h2>
+    <table>
+      <thead id="head"></thead>
+      <tbody id="self-rows"></tbody>
+    </table>
+
+    <h2>Other clients</h2>
+    <table>
+      <thead id="head2"></thead>
+      <tbody id="other-rows"></tbody>
+    </table>
+
+    <dialog id="dlg">
+      <div class="dlg-head">
+        <strong id="dlg-title"></strong>
+        <span class="spacer"></span>
+        <button class="btn" id="dlg-copy">Copy</button>
+        <button class="btn" id="dlg-close">Close</button>
+      </div>
+      <div class="dlg-body" id="dlg-body"></div>
+    </dialog>
+
+    <script type="module">
+      const selfRows = document.getElementById("self-rows");
+      const otherRows = document.getElementById("other-rows");
+      // The monitoring script (injected into this page too) stores our own id.
+      let selfId = null;
+      try {
+        selfId = localStorage.getItem("jsenv_client_id");
+      } catch {
+        // storage blocked — we just won't single ourselves out
+      }
+
+      const headHtml = `<tr>
+        <th>First seen</th><th>OS</th><th>Browser</th><th>Active tab</th>
+        <th>Last activity</th><th>Logs</th><th></th>
+      </tr>`;
+      document.getElementById("head").innerHTML = headHtml;
+      document.getElementById("head2").innerHTML = headHtml;
+      const COLSPAN = 7;
+
+      const ago = (ts) => {
+        const s = Math.round((Date.now() - ts) / 1000);
+        if (s < 5) return "just now";
+        if (s < 60) return `${s}s ago`;
+        const m = Math.round(s / 60);
+        if (m < 60) return `${m}m ago`;
+        const h = Math.round(m / 60);
+        return `${h}h ago`;
+      };
+      const pad2 = (n) => String(n).padStart(2, "0");
+      // Absolute date+time, kept for the "first seen" tooltip.
+      const fmtDate = (ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      };
+      // Human relative time for "first seen" ("5 minutes ago", "yesterday"),
+      // rendered with the largest unit that fits. Re-rendered every few seconds
+      // (see the interval below) so it stays fresh.
+      const relativeTimeFormat = new Intl.RelativeTimeFormat(undefined, {
+        numeric: "auto",
+      });
+      const RELATIVE_UNITS = [
+        ["year", 31536000],
+        ["month", 2592000],
+        ["week", 604800],
+        ["day", 86400],
+        ["hour", 3600],
+        ["minute", 60],
+      ];
+      const relativeTime = (ts) => {
+        const deltaSeconds = Math.round((ts - Date.now()) / 1000); // <0 = past
+        const abs = deltaSeconds < 0 ? -deltaSeconds : deltaSeconds;
+        for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
+          if (abs >= secondsInUnit) {
+            return relativeTimeFormat.format(
+              Math.round(deltaSeconds / secondsInUnit),
+              unit,
+            );
+          }
+        }
+        return relativeTimeFormat.format(deltaSeconds, "second");
+      };
+      const escapeHtml = (str) =>
+        String(str).replace(
+          /[&<>"]/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+        );
+      // Trim noisy sub-pixel precision for display (e.g. scroll "0/432.333" →
+      // "0/432"); the full value stays in the stored/reported data.
+      const roundNumbers = (text) =>
+        String(text).replace(/-?\d+\.\d+/g, (n) => String(Math.round(n)));
+      const shortUrl = (url) => {
+        try {
+          const u = new URL(url);
+          return `${u.pathname}${u.search}${u.hash}` || "/";
+        } catch {
+          return url;
+        }
+      };
+      // Last path segment of a URL ("…/8_picker_wheel_demo.html" → the filename),
+      // for compact activity labels. Non-URLs pass through unchanged.
+      const fileName = (url) => {
+        try {
+          const segments = new URL(url).pathname.split("/").filter(Boolean);
+          return segments.length ? segments[segments.length - 1] : "/";
+        } catch {
+          return url;
+        }
+      };
+      // The compact form of an activity detail for the "Last activity" column:
+      // URL-valued details collapse to their filename, a request keeps its
+      // method, coordinates lose sub-pixel noise. The full detail stays in the
+      // tooltip and the activity dialog / monitor.
+      const compactDetail = (type, detail) => {
+        if (!detail) {
+          return "";
+        }
+        if (type === "load" || type === "navigation") {
+          return fileName(detail);
+        }
+        if (type === "request") {
+          const spaceIndex = detail.indexOf(" ");
+          return spaceIndex === -1
+            ? fileName(detail)
+            : `${detail.slice(0, spaceIndex)} ${fileName(detail.slice(spaceIndex + 1))}`;
+        }
+        return roundNumbers(detail);
+      };
+      const RUNTIME_LABELS = {
+        ios_safari: "iOS Safari",
+        chrome: "Chrome",
+        edge: "Edge",
+        opera: "Opera",
+        samsung: "Samsung Internet",
+        firefox: "Firefox",
+        safari: "Safari",
+        node: "Node",
+      };
+      const named = ({ name, version } = {}) => {
+        if (!name || name === "unknown") {
+          return '<span class="muted">unknown</span>';
+        }
+        const label = RUNTIME_LABELS[name] || name;
+        const v = version && version !== "unknown" ? ` ${version}` : "";
+        return escapeHtml(`${label}${v}`);
+      };
+
+      const firstSeenCell = (d) =>
+        `<span class="when" title="${escapeHtml(fmtDate(d.firstSeen))}">${escapeHtml(relativeTime(d.firstSeen))}</span>`;
+      const tabCell = (d) => {
+        if (!d.activeTab) {
+          return '<span class="muted">—</span>';
+        }
+        const url = d.activeTab.url || "";
+        return `<span class="url" title="${escapeHtml(url)}">${escapeHtml(shortUrl(url))}</span>`;
+      };
+      const activityCell = (d) => {
+        const a = d.lastActivity;
+        if (!a) {
+          return '<span class="muted">—</span>';
+        }
+        const compact = a.detail
+          ? `${a.type}: ${compactDetail(a.type, a.detail)}`
+          : a.type;
+        const full = a.detail ? `${a.type}: ${a.detail}` : a.type;
+        return `<span class="tag ellip" title="${escapeHtml(full)}">${escapeHtml(compact)}</span> <span class="muted">${ago(a.ts)}</span>`;
+      };
+      const actionsCell = (d) => {
+        const id = escapeHtml(d.id);
+        return `<div class="actions">
+          <button class="btn primary" data-action="navigate" data-id="${id}">Navigate…</button>
+          <button class="btn" data-action="reload" data-id="${id}">Reload</button>
+          <button class="btn" data-action="tabs" data-id="${id}">Tabs</button>
+          <button class="btn" data-action="activity" data-id="${id}">Activity</button>
+          <button class="btn" data-action="ua" data-id="${id}">User agent</button>
+          <a class="monitor" href="/.internal/client?id=${encodeURIComponent(d.id)}">Monitor →</a>
+        </div>`;
+      };
+      const rowHtml = (d) => {
+        return `<tr>
+          <td>${firstSeenCell(d)}</td>
+          <td>${named(d.os)}</td>
+          <td>${named(d.runtime)}</td>
+          <td>${tabCell(d)}</td>
+          <td>${activityCell(d)}</td>
+          <td>${d.logCount}</td>
+          <td>${actionsCell(d)}</td>
+        </tr>`;
+      };
+
+      let lastClients = [];
+      const render = (clients) => {
+        lastClients = clients;
+        const self = selfId ? clients.find((d) => d.id === selfId) : null;
+        // Others ordered by when they first connected, so rows don't reshuffle.
+        const others = clients
+          .filter((d) => d !== self)
+          .sort((a, b) => a.firstSeen - b.firstSeen);
+        selfRows.innerHTML = self
+          ? rowHtml(self)
+          : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
+        otherRows.innerHTML = others.length
+          ? others.map(rowHtml).join("")
+          : `<tr><td class="empty" colspan="${COLSPAN}">No other client has connected.</td></tr>`;
+      };
+
+      // Dialogs (all tabs / recent activity / user agent).
+      const dlg = document.getElementById("dlg");
+      const dlgTitle = document.getElementById("dlg-title");
+      const dlgBody = document.getElementById("dlg-body");
+      const dlgCopy = document.getElementById("dlg-copy");
+      document.getElementById("dlg-close").onclick = () => dlg.close();
+      const openDialog = (title, html, copyText) => {
+        dlgTitle.textContent = title;
+        dlgBody.innerHTML = html;
+        if (copyText === undefined) {
+          dlgCopy.style.display = "none";
+        } else {
+          dlgCopy.style.display = "";
+          dlgCopy.textContent = "Copy";
+          dlgCopy.onclick = async () => {
+            try {
+              await window.navigator.clipboard.writeText(copyText);
+              dlgCopy.textContent = "Copied!";
+              setTimeout(() => {
+                dlgCopy.textContent = "Copy";
+              }, 1200);
+            } catch {
+              // clipboard blocked — ignore
+            }
+          };
+        }
+        dlg.showModal();
+      };
+
+      const fetchClient = async (id) => {
+        try {
+          return await (
+            await fetch(`/.internal/client.json?id=${encodeURIComponent(id)}`)
+          ).json();
+        } catch {
+          return null;
+        }
+      };
+      const tabsHtml = (tabs) => {
+        if (!tabs.length) {
+          return '<p class="muted">No tab.</p>';
+        }
+        return `<ul class="list">${tabs
+          .slice()
+          .sort((a, b) => b.visible - a.visible || b.lastSeen - a.lastSeen)
+          .map(
+            (t) => `<li>
+              <div>${t.visible ? '<span class="tag on">active</span> ' : ""}<span class="ttl">${escapeHtml(t.title) || '<span class="muted">(no title)</span>'}</span> <span class="muted">${ago(t.lastSeen)}</span></div>
+              <div class="url2">${escapeHtml(t.url)}</div>
+            </li>`,
+          )
+          .join("")}</ul>`;
+      };
+      const activitiesHtml = (activities) => {
+        if (!activities.length) {
+          return '<p class="muted">No activity yet.</p>';
+        }
+        return `<ul class="list">${activities
+          .slice()
+          .reverse()
+          .map(
+            (a) => `<li>
+              <div><span class="tag">${escapeHtml(a.type)}</span> <span class="muted">${ago(a.ts)}</span></div>
+              ${a.detail ? `<div class="url2">${escapeHtml(roundNumbers(a.detail))}</div>` : ""}
+            </li>`,
+          )
+          .join("")}</ul>`;
+      };
+
+      // Pilot a client: POST a command; the server broadcasts it and the
+      // matching reporter runs it (navigate/reload) on the targeted tab.
+      const sendCommand = async (payload) => {
+        try {
+          await fetch("/.internal/clients/command", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } catch {
+          // dev server gone — ignore
+        }
+      };
+      // The .html pages available to navigate to (fetched once, lazily).
+      let navigablePages = null;
+      const loadPages = async () => {
+        if (navigablePages) {
+          return navigablePages;
+        }
+        try {
+          navigablePages = await (
+            await fetch("/.internal/clients/pages.json")
+          ).json();
+        } catch {
+          navigablePages = [];
+        }
+        return navigablePages;
+      };
+      const shortLabel = (d) => {
+        const parts = [d.os && d.os.name, d.runtime && d.runtime.name].filter(
+          Boolean,
+        );
+        return parts.length ? parts.join(" ") : d.id.slice(0, 8);
+      };
+      // A searchable list of pages; picking one navigates the client's active
+      // tab there (tabId from activeTab so only that tab moves).
+      const openNavigateDialog = async (client) => {
+        dlgTitle.textContent = `Navigate ${shortLabel(client)} to…`;
+        dlgCopy.style.display = "none";
+        dlgBody.innerHTML = `
+          <input class="picker-filter" id="page-filter" type="search" placeholder="Filter pages…" />
+          <ul class="list" id="page-list"></ul>`;
+        dlg.showModal();
+        const pages = await loadPages();
+        const listEl = document.getElementById("page-list");
+        const filterEl = document.getElementById("page-filter");
+        const renderPages = (query) => {
+          const needle = query.trim().toLowerCase();
+          const matches = needle
+            ? pages.filter((p) => p.toLowerCase().includes(needle))
+            : pages;
+          listEl.innerHTML = matches.length
+            ? matches
+                .slice(0, 300)
+                .map(
+                  (p) =>
+                    `<li><button class="btn pagepick" data-url="${escapeHtml(p)}">${escapeHtml(p)}</button></li>`,
+                )
+                .join("")
+            : '<li class="muted">No page matches.</li>';
+        };
+        renderPages("");
+        filterEl.oninput = () => renderPages(filterEl.value);
+        filterEl.focus();
+        listEl.onclick = (event) => {
+          const button = event.target.closest("button.pagepick");
+          if (!button) {
+            return;
+          }
+          sendCommand({
+            clientId: client.id,
+            tabId: client.activeTab ? client.activeTab.id : null,
+            type: "navigate",
+            url: button.getAttribute("data-url"),
+          });
+          dlg.close();
+        };
+      };
+
+      document.addEventListener("click", async (event) => {
+        const button = event.target.closest("button[data-action]");
+        if (!button) {
+          return;
+        }
+        const id = button.getAttribute("data-id");
+        const action = button.getAttribute("data-action");
+        if (action === "ua") {
+          const client = lastClients.find((d) => d.id === id);
+          const ua = (client && client.userAgent) || "";
+          openDialog("User agent", `<pre>${escapeHtml(ua)}</pre>`, ua);
+          return;
+        }
+        if (action === "navigate") {
+          const client = lastClients.find((d) => d.id === id);
+          if (client) {
+            openNavigateDialog(client);
+          }
+          return;
+        }
+        if (action === "reload") {
+          const client = lastClients.find((d) => d.id === id);
+          sendCommand({
+            clientId: id,
+            tabId: client && client.activeTab ? client.activeTab.id : null,
+            type: "reload",
+          });
+          return;
+        }
+        const detail = await fetchClient(id);
+        if (!detail) {
+          return;
+        }
+        if (action === "tabs") {
+          openDialog(`Tabs (${detail.tabs.length})`, tabsHtml(detail.tabs));
+        } else if (action === "activity") {
+          openDialog("Recent activity", activitiesHtml(detail.activities));
+        }
+      });
+
+      // This page is cooked through the dev server, so it gets both the jsenv
+      // server-events client (window.__server_events__, injected first — the
+      // same channel autoreload rides) and the monitoring script (so opening
+      // this page counts as a connected client). The server pushes the full
+      // list on every change; no polling. Initial snapshot via the JSON route.
+      (async () => {
+        try {
+          render(await (await fetch("/.internal/clients.json")).json());
+        } catch {
+          // dev server unreachable — the live channel will fill the list in.
+        }
+      })();
+
+      window.__server_events__.listenEvents({
+        clients_list: (event) => render(event.data),
+      });
+
+      // Refresh relative "last activity" times between server pushes.
+      setInterval(() => render(lastClients), 5000);
+    </script>
+  </body>
+</html>

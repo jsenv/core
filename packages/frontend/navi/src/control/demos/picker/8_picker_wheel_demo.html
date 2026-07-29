@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Picker Wheel Demo</title>
+    <style>
+      body {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #222;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      .repro {
+        margin: 0 0 20px;
+        padding: 12px 14px;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        background: #fff4e0;
+        border: 1px solid #f0c46a;
+        border-left: 4px solid #e8940c;
+        border-radius: 4px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .value {
+        padding: 6px 10px;
+        font-family: monospace;
+        background: #f4f4f5;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+      }
+      /* Try: tell iOS these are plain tap targets so it fires click immediately
+         instead of holding it after the wheel gesture. */
+      .navi_button {
+        touch-action: manipulation;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Picker + Wheel — performance repro</h1>
+    <p class="repro">
+      Standalone, minimal reproduction of the slow commit.
+      <code>mode="dialog"</code>
+      forces the dialog surface (Annuler / Définir) on desktop too — the default
+      is popover on desktop, dialog on mobile.
+      <br />
+      <strong>To reproduce:</strong> open the picker, scroll the minutes wheel a
+      lot, wait for the glide to finish, then click <strong>Définir</strong>.
+      The dialog takes a long time to close. With
+      <code>NaviDebug debugAll</code> on, the console shows
+      <code>[command] "--navi-define" implementation ran in Xms</code> — X is
+      the synchronous cost.
+    </p>
+
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import { signal } from "@preact/signals";
+      import {
+        NaviDebug,
+        Time,
+        Wheel,
+        WheelGroup,
+        Picker,
+        usePickerMode,
+        Button,
+        Box,
+        Unit,
+      } from "@jsenv/navi";
+
+      const pad2 = (n) => String(n).padStart(2, "0");
+
+      const DURATION_HOURS = [1, 2, 3, 4, 5];
+      const DURATION_MINUTES = [0, 15, 30, 45];
+      const durationHoursSignal = signal(DURATION_HOURS[0]);
+      const durationMinutesSignal = signal(DURATION_MINUTES[0]);
+
+      // The picker trigger display.
+      const DurationWheelUI = () => (
+        <Time type="time">
+          {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+        </Time>
+      );
+
+      // The hours/minutes wheels. `big` scales them up for the dialog surface.
+      const DurationWheelsGroup = ({ big }) => (
+        <WheelGroup>
+          <Wheel
+            name="hours"
+            type="integer"
+            signal={durationHoursSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_HOURS.map((h) => (
+              <Wheel.Item key={h} value={h} paddingX="s">
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          <WheelGroup.Separator size={big ? "xxl" : undefined}>
+            <Unit unit="hour" format="short" size="inherit" />
+          </WheelGroup.Separator>
+          <Wheel
+            name="minutes"
+            type="integer"
+            signal={durationMinutesSignal}
+            size={big ? "xxl" : undefined}
+          >
+            {DURATION_MINUTES.map((m) => (
+              <Wheel.Item key={m} value={m} paddingX="s">
+                {pad2(m)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+        </WheelGroup>
+      );
+
+      // DIAGNOSTIC: a bare grey rectangle that mimics ONLY the wheel's browser-
+      // facing traits — overflow:hidden + touch-action:none + trivial pointer
+      // listeners that translate an inner block (a drag). No momentum, no
+      // capture, no preventDefault, no navi. If dragging THIS and then quickly
+      // tapping a button also eats the click, the suppression is a plain browser
+      // behavior of "touch-action:none surface + drag", not navi's wheel.
+      const GreyDragSurface = () => {
+        const innerRef = useRef();
+        const drag = useRef({ start: null, base: 0, offset: 0 });
+        return (
+          <div
+            style={{
+              width: "56px",
+              height: "150px",
+              background: "#9ca3af",
+              color: "#374151",
+              overflow: "hidden",
+              touchAction: "none",
+              borderRadius: "6px",
+              textAlign: "center",
+              fontSize: "12px",
+              userSelect: "none",
+            }}
+            onPointerDown={(e) => {
+              console.debug("[probe] GREY pointerdown");
+              drag.current.start = e.clientY;
+              drag.current.base = drag.current.offset;
+            }}
+            onPointerMove={(e) => {
+              const d = drag.current;
+              if (d.start === null) {
+                return;
+              }
+              d.offset = d.base + (e.clientY - d.start);
+              innerRef.current.style.transform = `translateY(${d.offset}px)`;
+            }}
+            onPointerUp={() => {
+              console.debug("[probe] GREY pointerup");
+              drag.current.start = null;
+            }}
+          >
+            <div ref={innerRef}>
+              ▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤<br />▤
+            </div>
+          </div>
+        );
+      };
+
+      // Dialog surface: bigger wheels + explicit Annuler / Définir actions.
+      const DurationPickerContent = () => {
+        const mode = usePickerMode();
+        if (mode === "dialog") {
+          return (
+            <Box flex="y" spacing="l" padding="xl" alignX="center">
+              <Box flex="x" spacing="m" alignY="center">
+                <DurationWheelsGroup big />
+                <GreyDragSurface />
+              </Box>
+              <Box flex="x" spacing="s" alignX="end" expandX>
+                {/* Native pointer/click probes: the wheel logs can't show the
+                    button tap, so these reveal whether a tap after a drag-fling
+                    actually produces pointerdown → pointerup → click (or where
+                    it gets dropped). */}
+                <Button
+                  command="--navi-cancel"
+                  variant="discrete"
+                  onPointerDown={() =>
+                    console.debug("[probe] Annuler pointerdown")
+                  }
+                  onPointerUp={() => console.debug("[probe] Annuler pointerup")}
+                  onClick={() => console.debug("[probe] Annuler click")}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  command="--navi-define"
+                  variant="discrete"
+                  onTouchStart={() =>
+                    console.debug("[probe] Définir touchstart")
+                  }
+                  onTouchEnd={(e) =>
+                    console.debug(
+                      `[probe] Définir touchend defaultPrevented=${e.defaultPrevented}`,
+                    )
+                  }
+                  onPointerDown={() =>
+                    console.debug("[probe] Définir pointerdown")
+                  }
+                  onPointerUp={(e) =>
+                    console.debug(
+                      `[probe] Définir pointerup defaultPrevented=${e.defaultPrevented}`,
+                    )
+                  }
+                  onClick={() => console.debug("[probe] Définir click")}
+                >
+                  Définir
+                </Button>
+                {/* DISCRIMINATOR: a plain native button (no navi Button, no
+                    command). If tapping THIS <500ms after a wheel drag also
+                    yields no "[probe] PLAIN click", the click suppression is
+                    global (iOS after a moved touch), not navi's Button path. */}
+                <button
+                  type="button"
+                  onPointerDown={() =>
+                    console.debug("[probe] PLAIN pointerdown")
+                  }
+                  onPointerUp={() => console.debug("[probe] PLAIN pointerup")}
+                  onClick={() => console.debug("[probe] PLAIN click")}
+                >
+                  Plain
+                </button>
+              </Box>
+            </Box>
+          );
+        }
+        return (
+          <Box padding="s">
+            <DurationWheelsGroup />
+          </Box>
+        );
+      };
+
+      const App = () => {
+        const [duration, setDuration] = useState({});
+        return (
+          <NaviDebug debugAll>
+            <div class="row">
+              <Picker
+                type="controlgroup"
+                mode="dialog"
+                ui={<DurationWheelUI />}
+                placeholder="Choisir une durée"
+                popupWidthFitContent
+                scrollCapture="dialog"
+                action={(v) => setDuration(v)}
+              >
+                <DurationPickerContent />
+              </Picker>
+              <span class="value">
+                {pad2(duration.hours ?? durationHoursSignal.value)}:
+                {pad2(duration.minutes ?? durationMinutesSignal.value)}
+              </span>
+            </div>
+          </NaviDebug>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+
+      // DIAGNOSTIC: is Chromium natively scrolling/flinging something during the
+      // wheel drag? A native scroll → a fling → its TapSuppressionController
+      // eats the next tap's click for ~500ms, which would explain the bug. If
+      // NONE of these fire during a repro, it is NOT a fling and we look
+      // elsewhere. Remove once understood.
+      const sig = (el) =>
+        !el || el === document
+          ? "document"
+          : el === document.scrollingElement
+            ? "scrollingElement"
+            : `${el.tagName || el.nodeName}.${(el.className || "").toString().split(" ")[0]}`;
+      document.addEventListener(
+        "scroll",
+        (e) => console.debug(`[probe] native scroll on ${sig(e.target)}`),
+        { capture: true },
+      );
+      for (const type of ["touchcancel", "gesturestart"]) {
+        document.addEventListener(
+          type,
+          (e) => console.debug(`[probe] ${type} on ${sig(e.target)}`),
+          { capture: true },
+        );
+      }
+    </script>
+  </body>
+</html>

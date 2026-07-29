@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Server client monitor</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        color: #e5e7eb;
+        font:
+          13px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: #0b1020;
+      }
+      header {
+        display: flex;
+        padding: 12px 16px;
+        align-items: center;
+        gap: 12px;
+        background: #111827;
+        border-bottom: 1px solid #1f2937;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1rem;
+      }
+      .back {
+        display: inline-flex;
+        width: 26px;
+        height: 26px;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        font-size: 1.1rem;
+        text-decoration: none;
+        border-radius: 6px;
+      }
+      .back:hover {
+        color: #e5e7eb;
+        background: #1f2937;
+      }
+      .status {
+        color: #9ca3af;
+        font-size: 0.8rem;
+      }
+      .status .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-right: 5px;
+        vertical-align: middle;
+        background: #9ca3af;
+        border-radius: 50%;
+      }
+      .status.on .dot {
+        background: #22c55e;
+      }
+      .spacer {
+        flex: 1;
+      }
+      button {
+        padding: 4px 10px;
+        color: #e5e7eb;
+        font-size: 0.78rem;
+        background: #374151;
+        border: 1px solid #4b5563;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #4b5563;
+      }
+      /* Each stream is a card floating on the page background so logs and
+         activity read as two distinct things. They share the remaining height;
+         each grows when open, shrinks to just its header when collapsed — so you
+         can monitor one, both, or none. */
+      .panels {
+        display: flex;
+        min-height: 0;
+        padding: 12px;
+        flex: 1;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .panel {
+        display: flex;
+        min-height: 0;
+        flex: 0 0 auto;
+        flex-direction: column;
+        background: #111a2e;
+        border: 1px solid #1f2937;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .panel[data-open] {
+        flex: 1;
+      }
+      .panel-head {
+        display: flex;
+        padding: 8px 12px;
+        align-items: center;
+        gap: 8px;
+        border-left: 3px solid transparent;
+        cursor: pointer;
+        user-select: none;
+      }
+      .panel-head:hover {
+        background: rgba(255, 255, 255, 0.03);
+      }
+      /* Distinct accent per stream so they don't blur together. */
+      #logs-panel .panel-head {
+        background: rgba(167, 139, 250, 0.08);
+        border-left-color: #a78bfa;
+      }
+      #logs-panel .panel-title {
+        color: #c4b5fd;
+      }
+      #activity-panel .panel-head {
+        background: rgba(52, 211, 153, 0.08);
+        border-left-color: #34d399;
+      }
+      #activity-panel .panel-title {
+        color: #6ee7b7;
+      }
+      .chevron::before {
+        display: inline-block;
+        color: #6b7280;
+        transition: transform 0.1s;
+        content: "▸";
+      }
+      .panel[data-open] .chevron::before {
+        transform: rotate(90deg);
+      }
+      .panel-title {
+        font-weight: 600;
+      }
+      .count {
+        color: #6b7280;
+        font-size: 0.78rem;
+      }
+      .panel-body {
+        margin: 0;
+        padding: 8px 12px;
+        flex: 1;
+        font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        overflow: auto;
+      }
+      .panel:not([data-open]) .panel-body {
+        display: none;
+      }
+      .entry {
+        padding: 2px 4px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      }
+      .entry .time {
+        margin-right: 8px;
+        color: #6b7280;
+      }
+      .entry .lvl {
+        display: inline-block;
+        min-width: 42px;
+        margin-right: 8px;
+        font-weight: 600;
+      }
+      .lvl-error {
+        color: #f87171;
+      }
+      .lvl-warn {
+        color: #fbbf24;
+      }
+      .lvl-info {
+        color: #60a5fa;
+      }
+      .lvl-debug {
+        color: #a78bfa;
+      }
+      .lvl-log {
+        color: #9ca3af;
+      }
+      .act-type {
+        display: inline-block;
+        min-width: 84px;
+        margin-right: 8px;
+        color: #93c5fd;
+        font-weight: 600;
+      }
+      .empty {
+        padding: 20px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="back" id="back" title="Back to clients">←</a>
+      <h1>Monitor <span id="clientinfo"></span></h1>
+      <span class="status" id="status"
+        ><span class="dot"></span>connecting…</span
+      >
+    </header>
+
+    <div class="panels">
+      <section class="panel" id="logs-panel" data-open>
+        <div class="panel-head">
+          <span class="chevron"></span>
+          <span class="panel-title">Logs</span>
+          <span class="count" id="logs-count"></span>
+          <span class="spacer"></span>
+          <button data-copy="logs">Copy</button>
+          <button data-clear="logs">Clear</button>
+        </div>
+        <div class="panel-body" id="logs">
+          <div class="empty">Waiting for logs…</div>
+        </div>
+      </section>
+
+      <section class="panel" id="activity-panel">
+        <div class="panel-head">
+          <span class="chevron"></span>
+          <span class="panel-title">Activity</span>
+          <span class="count" id="activity-count"></span>
+          <span class="spacer"></span>
+          <button data-copy="activity">Copy</button>
+          <button data-clear="activity">Clear</button>
+        </div>
+        <div class="panel-body" id="activities">
+          <div class="empty">Waiting for activity…</div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module">
+      const params = new URLSearchParams(window.location.search);
+      const clientId = params.get("id") || "";
+      const statusEl = document.getElementById("status");
+      const clientinfoEl = document.getElementById("clientinfo");
+      clientinfoEl.textContent = clientId.slice(0, 8);
+      // Set at runtime so the dev server doesn't rewrite the static href to the
+      // internal graph URL of the dashboard page.
+      document.getElementById("back").href = "/.internal/clients";
+
+      const pad = (n) => String(n).padStart(2, "0");
+      const fmtTime = (ts) => {
+        const d = new Date(ts);
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      };
+      // Trim noisy sub-pixel precision for display (e.g. scroll "0/432.333" →
+      // "0/432"); the full value stays in the stored/reported data.
+      const roundNumbers = (text) =>
+        String(text).replace(/-?\d+\.\d+/g, (n) => String(Math.round(n)));
+
+      const RUNTIME_LABELS = {
+        ios_safari: "iOS Safari",
+        chrome: "Chrome",
+        edge: "Edge",
+        opera: "Opera",
+        samsung: "Samsung Internet",
+        firefox: "Firefox",
+        safari: "Safari",
+        node: "Node",
+      };
+      // "Chrome 149 · iOS 17.2" from the client's parsed runtime/os.
+      const describeClient = (client) => {
+        const part = ({ name, version } = {}, labels) => {
+          if (!name || name === "unknown") {
+            return "";
+          }
+          const label = labels ? labels[name] || name : name;
+          const v = version && version !== "unknown" ? ` ${version}` : "";
+          return `${label}${v}`;
+        };
+        return (
+          [part(client.runtime, RUNTIME_LABELS), part(client.os)]
+            .filter(Boolean)
+            .join(" · ") || clientId.slice(0, 8)
+        );
+      };
+
+      // Filled from client.json; drives the copied header so a pasted log always
+      // says WHERE it came from (browser, OS, full user-agent) — e.g. so it's
+      // obvious it's Android Chrome and not iOS.
+      let clientInfo = null;
+      const copyHeader = (label) => {
+        const info = clientInfo || {};
+        const ua = info.userAgent || window.navigator.userAgent || "unknown";
+        return `${[
+          `# jsenv client monitor — ${label}`,
+          `# client: ${describeClient(info)}`,
+          `# user-agent: ${ua}`,
+          `# client id: ${clientId}`,
+          `# copied: ${new Date().toISOString()}`,
+        ].join("\n")}\n\n`;
+      };
+
+      // A stream = one collapsible panel with its own entries, rendering + a
+      // clipboard/clear pair. Logs render colored console segments; activity
+      // renders "type: detail". Both keep a plain-text form for Copy.
+      const createStream = (bodyId, countId, { render, toText, label }) => {
+        const bodyEl = document.getElementById(bodyId);
+        const countEl = document.getElementById(countId);
+        const entries = [];
+        let empty = true;
+        const add = (entry) => {
+          entries.push(entry);
+          countEl.textContent = `(${entries.length})`;
+          if (empty) {
+            bodyEl.innerHTML = "";
+            empty = false;
+          }
+          const atBottom =
+            bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 40;
+          bodyEl.appendChild(render(entry));
+          if (atBottom) {
+            bodyEl.scrollTop = bodyEl.scrollHeight;
+          }
+        };
+        const clear = () => {
+          entries.length = 0;
+          countEl.textContent = "";
+          bodyEl.innerHTML = `<div class="empty">Cleared.</div>`;
+          empty = true;
+        };
+        const copy = async (button) => {
+          try {
+            const text = copyHeader(label) + entries.map(toText).join("\n");
+            await window.navigator.clipboard.writeText(text);
+            const prev = button.textContent;
+            button.textContent = "Copied!";
+            setTimeout(() => {
+              button.textContent = prev;
+            }, 1200);
+          } catch {
+            // clipboard blocked — ignore
+          }
+        };
+        return { add, clear, copy };
+      };
+
+      // The %c styling comes from the reported page; applying it via cssText
+      // (not innerHTML) can't inject markup, but drop the obvious escape hatches.
+      const sanitizeCss = (css) =>
+        String(css)
+          .replace(/url\(/gi, "")
+          .replace(/expression/gi, "")
+          .replace(/[<>]/g, "");
+
+      const renderLog = (entry) => {
+        const row = document.createElement("div");
+        row.className = "entry";
+        const time = document.createElement("span");
+        time.className = "time";
+        time.textContent = fmtTime(entry.ts);
+        const lvl = document.createElement("span");
+        lvl.className = `lvl lvl-${entry.level}`;
+        lvl.textContent = entry.level;
+        row.append(time, lvl);
+        if (entry.segments && entry.segments.length) {
+          for (const segment of entry.segments) {
+            const span = document.createElement("span");
+            span.textContent = segment.text;
+            if (segment.css) {
+              span.style.cssText = sanitizeCss(segment.css);
+            }
+            row.appendChild(span);
+          }
+        } else {
+          row.appendChild(document.createTextNode(entry.text));
+        }
+        return row;
+      };
+      const renderActivity = (a) => {
+        const row = document.createElement("div");
+        row.className = "entry";
+        const time = document.createElement("span");
+        time.className = "time";
+        time.textContent = fmtTime(a.ts);
+        const type = document.createElement("span");
+        type.className = "act-type";
+        type.textContent = a.type;
+        row.append(
+          time,
+          type,
+          document.createTextNode(roundNumbers(a.detail || "")),
+        );
+        return row;
+      };
+
+      const logs = createStream("logs", "logs-count", {
+        label: "Logs",
+        render: renderLog,
+        toText: (e) => `${fmtTime(e.ts)} [${e.level}] ${e.text}`,
+      });
+      const activity = createStream("activities", "activity-count", {
+        label: "Activity",
+        render: renderActivity,
+        toText: (a) =>
+          `${fmtTime(a.ts)} ${a.type}${a.detail ? `: ${roundNumbers(a.detail)}` : ""}`,
+      });
+
+      // Collapse/expand: click a panel header (but not its buttons).
+      for (const head of document.querySelectorAll(".panel-head")) {
+        head.addEventListener("click", (event) => {
+          if (event.target.closest("button")) {
+            return;
+          }
+          const panel = head.closest(".panel");
+          if (panel.hasAttribute("data-open")) {
+            panel.removeAttribute("data-open");
+          } else {
+            panel.setAttribute("data-open", "");
+            const body = panel.querySelector(".panel-body");
+            body.scrollTop = body.scrollHeight;
+          }
+        });
+      }
+      const streamByName = { logs, activity };
+      for (const button of document.querySelectorAll("button[data-copy]")) {
+        button.addEventListener("click", () =>
+          streamByName[button.getAttribute("data-copy")].copy(button),
+        );
+      }
+      for (const button of document.querySelectorAll("button[data-clear]")) {
+        button.addEventListener("click", () =>
+          streamByName[button.getAttribute("data-clear")].clear(),
+        );
+      }
+
+      const setStatus = (on, label) => {
+        statusEl.className = on ? "status on" : "status";
+        statusEl.innerHTML = `<span class="dot"></span>${label}`;
+      };
+
+      // Backlog first (a monitor opened late still sees recent history), and
+      // fill the header with the client's parsed browser/OS.
+      (async () => {
+        try {
+          const client = await (
+            await fetch(
+              `/.internal/client.json?id=${encodeURIComponent(clientId)}`,
+            )
+          ).json();
+          clientInfo = client;
+          clientinfoEl.textContent = describeClient(client);
+          for (const entry of client.logs || []) {
+            logs.add(entry);
+          }
+          for (const entry of client.activities || []) {
+            activity.add(entry);
+          }
+        } catch {
+          // dev server unreachable — the live channel still delivers updates.
+        }
+      })();
+
+      // …then live. This page is cooked through the dev server, so it gets the
+      // jsenv server-events client injected (window.__server_events__, ready
+      // before this script — the same channel autoreload rides). Everything is
+      // broadcast there, so keep only what belongs to the client we monitor.
+      setStatus(true, "monitoring");
+      window.__server_events__.listenEvents({
+        client_log: (event) => {
+          if (event.data.clientId === clientId) {
+            logs.add(event.data);
+          }
+        },
+        client_activity: (event) => {
+          if (event.data.clientId === clientId) {
+            activity.add(event.data);
+          }
+        },
+      });
+    </script>
+  </body>
+</html>
