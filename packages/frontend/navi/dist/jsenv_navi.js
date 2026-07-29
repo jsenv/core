@@ -7,7 +7,7 @@ import { isValidElement, createContext, h, toChildArray, render, Fragment, clone
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, resolveOklchLightness, contrastColor, activeElementSignal, initFocusGroup, elementIsFocusable, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, activeElementSignal, initFocusGroup, elementIsFocusable, resolveOklchLightness, contrastColor, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -76,7 +76,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$R = /* css */`
+installImportMetaCssBuild(import.meta);const css$S = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -101,7 +101,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -237,100 +237,51 @@ const isPlainObject$1 = obj => {
   return Object.getPrototypeOf(obj) === proto || Object.getPrototypeOf(obj) === null;
 };
 
-/**
- * Deep equality comparison for JavaScript values with cycle detection and identity optimization.
+/*
+ * Deep structural equality for arbitrary JS values — what `===` can't do but this
+ * codebase constantly needs: memoization cache keys ({ id: 1 } equal to { id: 1 }),
+ * effect/memo dependency checks, signal/store change detection, and action
+ * parameter deduplication.
  *
- * This function performs a comprehensive deep comparison between two JavaScript values,
- * handling all primitive types, objects, arrays, and edge cases that standard equality
- * operators miss.
+ * Beyond recursive object/array comparison it covers the edge cases `===` gets
+ * "wrong" for equality purposes: NaN equals NaN, Date compared by time value,
+ * cycles don't loop (a seen-set guards circular refs), and same-type is required
+ * before descending. Cheap paths run first: reference equality, then the identity
+ * short-circuit below, then array length before element-by-element.
  *
- * Key features:
- * - **Deep comparison**: Recursively compares nested objects and arrays
- * - **Cycle detection**: Prevents infinite loops with circular references
- * - **Identity optimization**: Uses SYMBOL_IDENTITY for fast comparison of objects with same identity
- * - **Edge case handling**: Properly handles NaN, null, undefined, 0, false comparisons
- * - **Type safety**: Ensures both values have same type before deep comparison
+ * SYMBOL_IDENTITY. Two *different* object instances can be declared "conceptually
+ * the same" by sharing a SYMBOL_IDENTITY value; the comparison then treats them as
+ * equal with no deep walk. This is what lets a spread copy ({ ...params, extra })
+ * still count as the same params as the original, and lets objects reconstructed
+ * across a serialization boundary be recognized as one entity — the cases where a
+ * content comparison would be too slow, or too strict to see them as equal. Use
+ * Symbol.for() so the marker is the same symbol across modules/contexts:
  *
- * Performance optimizations:
- * - Early exit for reference equality (a === b)
- * - Identity symbol check for objects (avoids deep comparison when possible)
- * - Efficient array length check before element-by-element comparison
- *
- * **SYMBOL_IDENTITY explained**:
- * This symbol allows recognizing objects as "conceptually the same" even when they are
- * different object instances. When two objects share the same SYMBOL_IDENTITY value,
- * they are considered equal without performing deep comparison.
- *
- * This is particularly useful for:
- * - Copied objects that should be treated as the same entity
- * - Objects reconstructed from serialization that represent the same data
- * - Parameters passed through spread operator: `{ ...originalParams, newProp: value }`
- * - Memoization scenarios where object content identity matters more than reference identity
- *
- * Use cases:
- * - Memoization cache key comparison ({ id: 1 } should equal { id: 1 })
- * - React/Preact dependency comparison for effects and memos
- * - State change detection in signals and stores
- * - Action parameter comparison for avoiding duplicate requests
- * - Object recognition across serialization/deserialization boundaries
- *
- * Examples:
- * ```js
- * // Standard deep comparison
- * compareTwoJsValues({ id: 1 }, { id: 1 }) // true (slow - deep comparison)
- *
- * // NaN edge case handling
- * compareTwoJsValues(NaN, NaN) // true (unlike === which gives false)
- *
- * // Identity optimization - objects are different instances but same identity
- * const originalParams = { userId: 123, filters: ['active'] };
- * const copiedParams = { ...originalParams, newFlag: true };
- *
- * // Without SYMBOL_IDENTITY: slow deep comparison every time
- * compareTwoJsValues(originalParams, copiedParams) // false (different content)
- *
- * // With SYMBOL_IDENTITY: fast path recognition
- * const sharedIdentity = Symbol('params-identity');
- * originalParams[SYMBOL_IDENTITY] = sharedIdentity;
- * copiedParams[SYMBOL_IDENTITY] = sharedIdentity;
- *
- * compareTwoJsValues(originalParams, copiedParams) // true (fast - identity match)
- * // ↑ This returns true immediately without comparing all properties
- *
- * // Real-world scenario: action memoization
- * const params1 = { userId: 123 };
- * const action1 = createAction(params1);
- *
- * const params2 = { ...params1, extra: 'data' }; // Different object reference
- * params2[SYMBOL_IDENTITY] = params1[SYMBOL_IDENTITY]; // Same conceptual identity
- *
- * const action2 = createAction(params2);
- * // action1 === action2 because params are recognized as conceptually identical
- * ```
- *
- * @param {any} a - First value to compare
- * @param {any} b - Second value to compare
- * @param {Object} [options={}] - Comparison options
- * @param {Function} [options.keyComparator] - Custom comparator function for object properties and array elements
- * @param {boolean} [options.ignoreArrayOrder=false] - If true, arrays are considered equal regardless of element order
- * @returns {boolean} true if values are deeply equal, false otherwise
+ *   const id = Symbol.for("params");
+ *   a[SYMBOL_IDENTITY] = id;
+ *   b[SYMBOL_IDENTITY] = id;
+ *   compareTwoJsValues(a, b); // true immediately, no property walk
  */
 
-/**
- * Symbol used to mark objects with a conceptual identity that transcends reference equality.
- *
- * When two different object instances share the same SYMBOL_IDENTITY value, they are
- * considered equal by compareTwoJsValues without performing expensive deep comparison.
- *
- * This enables recognition of "the same logical object" even when:
- * - The object has been copied via spread operator: `{ ...obj, newProp }`
- * - The object has been reconstructed from serialization
- * - The object is a different instance but represents the same conceptual entity
- *
- * Use Symbol.for() to ensure the same symbol across different modules/contexts.
- */
+// Marks objects with a conceptual identity that transcends reference equality —
+// see the file comment. Symbol.for keeps it one shared symbol across modules.
 const SYMBOL_IDENTITY = Symbol.for("navi_object_identity");
 
+/**
+ * Deeply compares two values for structural equality.
+ *
+ * @param {any} rootA - First value.
+ * @param {any} rootB - Second value.
+ * @param {object} [options]
+ * @param {(a: any, b: any, keyOrIndex: any, recurse: (a: any, b: any) => boolean) => boolean} [options.keyComparator]
+ *   Custom comparator for object properties / array elements. Receives the internal
+ *   `compare` as its last argument so it can defer to the default behavior.
+ * @param {boolean} [options.ignoreArrayOrder=false] - Compare arrays as multisets:
+ *   equal when they contain the same elements regardless of order.
+ * @param {Iterable<string>} [options.lightKeySet] - Object keys to compare first —
+ *   cheaper or likelier-to-differ ones — to short-circuit before the remaining keys.
+ * @returns {boolean} true if the values are deeply equal.
+ */
 const compareTwoJsValues = (
   rootA,
   rootB,
@@ -2511,46 +2462,89 @@ const debugPopupDefault = eventGroupLogger.createCategory("[popup]", "#27ae60");
 const debugUIStateDefault = eventGroupLogger.createCategory("[uistate]", "#7f8c8d");
 const debugFocusDefault = eventGroupLogger.createCategory("[focus]", "#2980b9");
 const debugScrollDefault = eventGroupLogger.createCategory("[scroll]", "#2980b9");
+
+// The hooks below expose one concern's logger to components inside <NaviDebug>.
+// Each returns the logger function enabled for that concern, or a no-op when the
+// concern is off — so call sites can `const debug = useDebugX()` unconditionally.
+// The logger is called as `debug(message, …)` or, to group a side effect under
+// the native event that caused it, `debug(event, message, …)`.
+
+/** Logger for navi command dispatch (`--navi-*`), or a no-op when disabled. */
 const useDebugCommand = () => {
   const debug = useContext(DebugCommandContext);
   return debug || debugNoop;
 };
+/** Logger for gated interactions (click/scroll/select/…), or a no-op. */
 const useDebugInteraction = () => {
   const debug = useContext(DebugInteractionContext);
   return debug || debugNoop;
 };
+/** Logger for focus moves and focus-visible decisions, or a no-op. */
 const useDebugFocus = () => {
   const debug = useContext(DebugFocusContext);
   return debug || debugNoop;
 };
+/** Logger for virtual scroll / wheel motion (drag, momentum, glide), or a no-op. */
 const useDebugScroll = () => {
   const debug = useContext(DebugScrollContext);
   return debug || debugNoop;
 };
+/** Logger for popover/dialog open/close/positioning, or a no-op. */
 const useDebugPopup = () => {
   const debug = useContext(DebugPopupContext);
   return debug || debugNoop;
 };
+/** Logger for the action lifecycle (request → run → end), or a no-op. */
 const useDebugAction = () => {
   const debug = useContext(DebugActionContext);
   return debug || debugNoop;
 };
+/** Logger for UI-state transitions, validation and synthetic events, or a no-op. */
 const useDebugUIState = () => {
   const debug = useContext(DebugUIStateContext);
   return debug || debugNoop;
 };
 
 /**
- * NaviDebug — enables debug logging for navi UI interactions within its subtree.
+ * Turns on navi's color-coded console logging for everything rendered inside it.
+ * Navi has many moving parts (interactions, focus, scroll, popups, commands,
+ * actions, ui-state); each concern logs to its own console group so you can
+ * watch what navi is doing and why. Components read a concern via its hook
+ * (`useDebugScroll`, `useDebugInteraction`, …).
  *
- * Props:
- *   debugInteraction — log focus moves and virtual scroll updates (enables debugFocus + debugScroll)
- *   debugPopup       — log popover open/close/positioning decisions
- *   debugAction      — log action lifecycle events
+ * Every prop accepts one of:
+ * - `true` — log with the built-in color-coded logger (grouped by initiator event)
+ * - a function — log with your own callback instead
+ * - `false` / omitted — disabled (the concern's hook returns a no-op)
  *
- * Pass a boolean `true` to use `console.debug`, or pass a custom function.
+ * `debugAll` is the default for every other prop, so `<NaviDebug debugAll>`
+ * turns everything on. Passing `debugInteraction` also enables `debugFocus`,
+ * `debugScroll` and `debugPopup` unless those are set explicitly, since they
+ * describe the same interaction.
+ *
+ * @param {object} props
+ * @param {boolean|Function} [props.debugAll] - Default for every concern below.
+ * @param {boolean|Function} [props.debugCommand] - navi command dispatch (`--navi-*`).
+ * @param {boolean|Function} [props.debugInteraction] - Gated interactions; also implies focus/scroll/popup.
+ * @param {boolean|Function} [props.debugFocus] - Focus moves and focus-visible decisions.
+ * @param {boolean|Function} [props.debugScroll] - Virtual scroll / wheel motion.
+ * @param {boolean|Function} [props.debugPopup] - Popover/dialog open/close/positioning.
+ * @param {boolean|Function} [props.debugAction] - Action lifecycle.
+ * @param {boolean|Function} [props.debugUIState] - UI-state transitions and validation.
+ * @param {import("ignore:preact").ComponentChildren} props.children
+ *
+ * @example
+ * // Log everything under this subtree
+ * <NaviDebug debugAll>
+ *   <Picker>…</Picker>
+ * </NaviDebug>
+ *
+ * @example
+ * // Only wheel/scroll motion, via a custom sink
+ * <NaviDebug debugScroll={(...args) => myLogger.log(...args)}>
+ *   <Wheel>…</Wheel>
+ * </NaviDebug>
  */
-
 const NaviDebug = ({
   debugAll,
   debugCommand = debugAll,
@@ -6826,6 +6820,8 @@ const VISUAL_PROPS = {
   accentColor: PASS_THROUGH,
   scrollbarWidth: PASS_THROUGH,
   scrollbarGutter: PASS_THROUGH,
+  scrollMarginBlock: PASS_THROUGH,
+  scrollMargin: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
   align: applyOnTwoProps("alignX", "alignY"),
@@ -7972,6 +7968,35 @@ definePseudoClass(":active", {
   },
   test: (el) => el.matches(":active"),
 });
+
+// The current input modality: true after a keyboard navigation key (arrow keys,
+// Escape, Enter, Ctrl, Alt, Shift, Space — Space ignored on editable fields),
+// false after a pointer interaction. Updated by the listeners in the
+// focus_classes block below. At module scope so isMatchingFocusVisible (used
+// here and in control_hooks.jsx) can read it.
+let keyboardNavigationUsed = false;
+
+// Whether `el` should be treated as :focus-visible. Normally the native
+// :focus-visible match — but a control marked data-prevent-eager-focus-visible
+// (a button-like trigger whose native :focus-visible matches too eagerly: a
+// typed-into <input> on mouse focus, or a <div>/spinbutton focused
+// programmatically by a mouse-driven picker open) only counts while the current
+// modality is keyboard. So a purely mouse interaction never reveals its ring,
+// like a plain <button>. Use this instead of a bare el.matches(":focus-visible")
+// wherever focus-visible is evaluated.
+const isMatchingFocusVisible = (el) => {
+  if (!el.matches(":focus-visible")) {
+    return false;
+  }
+  if (
+    el.hasAttribute("data-prevent-eager-focus-visible") &&
+    !keyboardNavigationUsed
+  ) {
+    return false;
+  }
+  return true;
+};
+
 {
   // We implement :focus and :focus-visible with enriched semantics:
   // an element is considered focused not only when it natively has focus, but also
@@ -8010,8 +8035,8 @@ definePseudoClass(":active", {
   // This flag is used to gate focus-visible inheritance via aria-controls:
   // on mobile (or when the user hasn't used keyboard nav yet) an input that
   // controls a radio should not cause the radio to show a focus ring.
-  let keyboardNavigationUsed = false;
-  const NAVIGATION_KEYS = new Set([
+  // (Declared at module scope — see keyboardNavigationUsed above.)
+  const NAVIGATION_KEY_SET = new Set([
     "ArrowUp",
     "ArrowDown",
     "ArrowLeft",
@@ -8022,6 +8047,7 @@ definePseudoClass(":active", {
     "Alt",
     "Shift",
     " ",
+    "Tab",
   ]);
   const isEditableTarget = (target) => {
     if (!target) {
@@ -8043,6 +8069,9 @@ definePseudoClass(":active", {
         type === "tel" ||
         type === "number"
       ) {
+        if (target.readOnly) {
+          return false;
+        }
         return true;
       }
     }
@@ -8054,7 +8083,7 @@ definePseudoClass(":active", {
   document.addEventListener(
     "keydown",
     (e) => {
-      if (!NAVIGATION_KEYS.has(e.key)) {
+      if (!NAVIGATION_KEY_SET.has(e.key)) {
         return;
       }
       if (e.key === " " && isEditableTarget(e.target)) {
@@ -8072,6 +8101,29 @@ definePseudoClass(":active", {
     { capture: true },
   );
 
+  // A keystroke flips keyboardNavigationUsed, which can turn :focus-visible on —
+  // but only for the element that holds focus, directly or through aria-controls
+  // / a proxy. Pressing a key cannot reveal a focus ring on an unfocused element.
+  // So a single shared handler re-checks just that focus chain (the active
+  // element, what it controls, and its proxy — the last two via
+  // requestPseudoStateCheck / notifyAriaControlled). This runs in the bubble
+  // phase, after the capture-phase listener above has updated the flag.
+  //
+  // The alternative — each registered :focus-visible element adding its own
+  // document keydown listener that re-tests itself — makes one keypress cost
+  // O(number-of-boxes) full-document [aria-controls] / proxy queries, since every
+  // unfocused element falls through matches(":focus-visible") into hasIndirectFocus.
+  const recheckFocusChainOnKey = (e) => {
+    const active = document.activeElement;
+    if (!active || active === document.body) {
+      return;
+    }
+    requestPseudoStateCheck(active, { event: e });
+    notifyAriaControlled(active, e);
+  };
+  document.addEventListener("keydown", recheckFocusChainOnKey);
+  document.addEventListener("keyup", recheckFocusChainOnKey);
+
   // Returns true when el holds focus indirectly — either because a controlling
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
@@ -8079,7 +8131,14 @@ definePseudoClass(":active", {
     if (requireFocusVisible && !keyboardNavigationUsed) {
       return false;
     }
-    const pseudoClass = requireFocusVisible ? ":focus-visible" : ":focus";
+    // A controller/proxy counts as focused for inheritance via the same rule
+    // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
+    // the focus-visible variant (so a marked, mouse-focused controller doesn't
+    // propagate an eager ring).
+    const isFocusedTarget = (target) =>
+      requireFocusVisible
+        ? isMatchingFocusVisible(target)
+        : target.matches(":focus");
     const isControlledBy = (target) => {
       const id = target.id;
       if (!id) {
@@ -8092,7 +8151,7 @@ definePseudoClass(":active", {
         if (target.contains(controller)) {
           continue;
         }
-        if (controller.matches(pseudoClass)) {
+        if (isFocusedTarget(controller)) {
           return true;
         }
       }
@@ -8103,7 +8162,7 @@ definePseudoClass(":active", {
     }
     const proxyTarget = findControlProxyTarget(el);
     if (proxyTarget) {
-      if (proxyTarget.matches(pseudoClass)) {
+      if (isFocusedTarget(proxyTarget)) {
         return true;
       }
       if (isControlledBy(proxyTarget)) {
@@ -8180,18 +8239,14 @@ definePseudoClass(":active", {
   });
   definePseudoClass(":focus-visible", {
     attribute: "data-focus-visible",
+    // No per-element keydown/keyup listener: the shared recheckFocusChainOnKey
+    // handler re-checks the focused element (the only one a keystroke can turn
+    // focus-visible) so a keypress stays O(1), not O(number-of-boxes).
     setup: (el, callback) => {
-      const cleanup = setupFocus(el, callback);
-      document.addEventListener("keydown", callback);
-      document.addEventListener("keyup", callback);
-      return () => {
-        cleanup();
-        document.removeEventListener("keydown", callback);
-        document.removeEventListener("keyup", callback);
-      };
+      return setupFocus(el, callback);
     },
     test: (el) => {
-      if (el.matches(":focus-visible")) {
+      if (isMatchingFocusVisible(el)) {
         return true;
       }
       if (hasIndirectFocus(el, { requireFocusVisible: true })) {
@@ -15990,7 +16045,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$Q = /* css */`
+const css$R = /* css */`
   @layer navi {
     .navi_callout {
       --callout-success-color: #4caf50;
@@ -16025,6 +16080,7 @@ const css$Q = /* css */`
     margin: 0;
     padding: 0; /* User agent reset */
     color: revert; /* Do no inherit element color, callout is inside the element it should use document color though */
+    font-weight: initial; /* Callout fells disconnected from the element, font weight should be predictible and stable */
     font-size: initial; /* Callout fells disconnected from the element, font size should be predictible and stable */
     background: transparent;
     border: none;
@@ -16199,7 +16255,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$R, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -16472,23 +16528,26 @@ const openCallout = (message, {
         document.removeEventListener("keydown", handleSpaceOutside, true);
       });
     };
-    if (closeOnClickOutside && openingEvent && findEvent(openingEvent, "mousedown")) {
-      debug(openingEvent, "deferring click-outside listener registration to avoid immediate close");
-      // The callout was opened during a mousedown — wait for the corresponding
-      // mouseup before registering the click-outside listener, otherwise the
-      // upcoming click event from the same gesture would immediately close it.
-      const onMouseUp = () => {
+    // A callout opened during a press (mousedown or pointerdown) must wait for the
+    // matching release before listening for click-outside, otherwise the same
+    // gesture's trailing click would immediately close it. Covers pointerdown too
+    // (e.g. a readonly control popping its callout from a pointerdown handler).
+    const openingDownEvent = findEvent(openingEvent, "mousedown") || findEvent(openingEvent, "pointerdown");
+    if (closeOnClickOutside && openingEvent && openingDownEvent) {
+      const upType = openingDownEvent.type === "pointerdown" ? "pointerup" : "mouseup";
+      debug(openingEvent, `deferring click-outside listener registration until ${upType} to avoid immediate close`);
+      const onUp = () => {
         setTimeout(() => {
-          debug(openingEvent, "registering click-outside listener after mouseup");
+          debug(openingEvent, `registering click-outside listener after ${upType}`);
           registerClickOutsideListener();
         });
       };
-      document.addEventListener("mouseup", onMouseUp, {
+      document.addEventListener(upType, onUp, {
         once: true,
         capture: true
       });
       addTeardown(() => {
-        document.removeEventListener("mouseup", onMouseUp, true);
+        document.removeEventListener(upType, onUp, true);
       });
     } else {
       registerClickOutsideListener();
@@ -21944,7 +22003,17 @@ const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     `targeting`,
     commandTarget,
   );
-  return implementation();
+  // Time the command's synchronous work: it splits a slow commit (the value
+  // cascade/validation runs inside implementation) from a slow close/repaint
+  // (cheap here, cost lands after). Handy for the wheel-in-dialog "Définir feels
+  // frozen on mobile" case.
+  const start = performance.now();
+  const result = implementation();
+  debugCommand(
+    event,
+    `"${command}" implementation ran in ${Math.round(performance.now() - start)}ms`,
+  );
+  return result;
 };
 
 const NAVI_COMMANDS = {};
@@ -22319,6 +22388,9 @@ const CONTROL_PROP_SET = new Set([
   "actionAfterChange",
   "actionOnMouseDown",
   "actionDebounce",
+  // A signal bound two-way to the control: its value seeds the control's state and
+  // is written back on every uiAction. Precludes value/checked (see createControlInfo).
+  "signal",
   "defaultValue",
   "defaultChecked",
   "readOnly", // will depend wether readOnly is supported
@@ -22814,6 +22886,16 @@ const useUIStateController = (
           }
           // Trigger uiAction/command side effects without changing UI state.
           const currentUIState = controller.uiState;
+          // Write the new state back into a bound signal (the two-way `signal`
+          // prop). Setting it re-renders and re-syncs via state_prop_change, but
+          // with the same value → guarded as a no-op, so no loop. For a
+          // checkbox/radio the signal holds the boolean checked state.
+          const boundSignal = s.controlInfo?.signal;
+          if (boundSignal) {
+            boundSignal.value = s.controlInfo.signalHoldsChecked
+              ? currentUIState !== undefined
+              : currentUIState;
+          }
           s.uiActionInternal?.(currentUIState, e);
           if (s.uiAction) {
             debugUIState(`calling uiAction for ${controlType}`, currentUIState);
@@ -24747,40 +24829,56 @@ const createControlInfo = (props, {
   let hasStateProp;
   let value;
   const typeProp = props.type || "text";
+  // A bound signal: its value seeds the state, and onUIAction writes the state
+  // back into it (see ui_state_controller.js). It replaces the value/checked prop
+  // — reading it here makes the control re-render (and re-sync) when it changes.
+  const signal = Object.hasOwn(props, "signal") ? props.signal : undefined;
+  // For a checkbox/radio the signal holds the boolean checked state, not the value.
+  let signalHoldsChecked = false;
   if (controlType === "input") {
     if (typeProp === "checkbox" || typeProp === "radio") {
       statePropName = "checked";
       defaultStatePropName = "defaultChecked";
-      hasStateProp = Object.hasOwn(props, "checked");
       value = props.value || "on";
-      if (hasStateProp) {
-        let checked = props.checked;
-        if (isSignal(checked)) {
-          checked = checked.value;
-        }
-        if (checked) {
-          stateInitial = value;
-        } else {
-          stateInitial = undefined;
-        }
+      signalHoldsChecked = true;
+      if (Object.hasOwn(props, "checked")) {
+        hasStateProp = true;
+        stateInitial = props.checked ? value : undefined;
       } else if (props.defaultChecked) {
+        // resolveInputProps may seed defaultChecked from a bound signal's
+        // default: the control stays uncontrolled and only write-syncs the
+        // signal (onUIAction).
+        hasStateProp = false;
         stateInitial = value;
+      } else if (signal) {
+        // A bound signal with no resolved default: its live value seeds state.
+        hasStateProp = true;
+        stateInitial = signal.value ? value : undefined;
       } else {
+        hasStateProp = false;
         stateInitial = undefined;
       }
     } else {
       statePropName = "value";
       defaultStatePropName = "defaultValue";
-      hasStateProp = Object.hasOwn(props, "value");
-      if (hasStateProp) {
+      if (Object.hasOwn(props, "value")) {
+        hasStateProp = true;
         value = props.value;
-        if (isSignal(value)) {
-          value = value.value;
-        }
         stateInitial = value;
       } else if (Object.hasOwn(props, "defaultValue")) {
+        // resolveInputProps seeds defaultValue from a bound signal's default,
+        // so an input+signal is uncontrolled-with-default; the signal only
+        // receives write-backs (onUIAction).
+        hasStateProp = false;
         stateInitial = props.defaultValue;
+      } else if (signal) {
+        // A plain bound signal with no default (e.g. Wheel): its live value
+        // seeds and controls the state.
+        hasStateProp = true;
+        value = signal.value;
+        stateInitial = value;
       } else {
+        hasStateProp = false;
         stateInitial = undefined;
       }
       readOnlySupported = INPUT_TYPE_SUPPORTING_READONLY_SET.has(typeProp);
@@ -24798,16 +24896,17 @@ const createControlInfo = (props, {
   } else if (controlType === "picker") {
     statePropName = "value";
     defaultStatePropName = "defaultValue";
-    hasStateProp = Object.hasOwn(props, "value");
-    if (hasStateProp) {
-      let value = props.value;
-      if (isSignal(value)) {
-        value = value.value;
-      }
-      stateInitial = value;
+    if (Object.hasOwn(props, "value")) {
+      hasStateProp = true;
+      stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
+      hasStateProp = false;
       stateInitial = props.defaultValue;
+    } else if (signal) {
+      hasStateProp = true;
+      stateInitial = signal.value;
     } else {
+      hasStateProp = false;
       stateInitial = undefined;
     }
     disabledSupported = true;
@@ -24821,6 +24920,8 @@ const createControlInfo = (props, {
     stateInitial,
     state: stateInitial,
     value,
+    signal,
+    signalHoldsChecked,
     readOnlySupported,
     disabledSupported
   };
@@ -24834,7 +24935,9 @@ const useReadOnlyUncontrolled = (props, controlInfo) => {
   const isProxy = Boolean(props["navi-control-proxy-for"]);
   const formContext = useContext(FormContext);
   const parentUIStateController = useContext(ParentUIStateControllerContext);
-  const controlled = props.uiAction || props.action || formContext || parentUIStateController || isProxy || props.command;
+  const controlled = props.signal ||
+  // a bound signal is written back on uiAction → interactive
+  props.uiAction || props.action || formContext || parentUIStateController || isProxy || props.command;
   if (controlled) {
     return false;
   }
@@ -25213,7 +25316,7 @@ const useInteractiveProps = (props, {
         // Transfer programmatic focus to the delegate target (navi-focus-delegate or navi-control-proxy-for)
         const focusProxyTarget = findFocusDelegateTarget(e.currentTarget) || findControlProxyTarget(e.currentTarget);
         if (focusProxyTarget) {
-          const focusVisible = e.currentTarget.matches(":focus-visible");
+          const focusVisible = isMatchingFocusVisible(e.currentTarget);
           debugFocus(e, `focus event: redirecting to ${getElementSignature(focusProxyTarget)}.focus({ focusVisible: ${focusVisible} })`);
           focusProxyTarget.focus({
             focusVisible
@@ -26834,7 +26937,7 @@ const EmailSvg = () => {
   });
 };
 
-const LinkBlankTargetSvg = () => {
+installImportMetaCssBuild(import.meta);const LinkBlankTargetSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 24 24",
     xmlns: "http://www.w3.org/2000/svg",
@@ -26842,6 +26945,20 @@ const LinkBlankTargetSvg = () => {
       d: "M10.0002 5H8.2002C7.08009 5 6.51962 5 6.0918 5.21799C5.71547 5.40973 5.40973 5.71547 5.21799 6.0918C5 6.51962 5 7.08009 5 8.2002V15.8002C5 16.9203 5 17.4801 5.21799 17.9079C5.40973 18.2842 5.71547 18.5905 6.0918 18.7822C6.5192 19 7.07899 19 8.19691 19H15.8031C16.921 19 17.48 19 17.9074 18.7822C18.2837 18.5905 18.5905 18.2839 18.7822 17.9076C19 17.4802 19 16.921 19 15.8031V14M20 9V4M20 4H15M20 4L13 11",
       stroke: "currentColor",
       fill: "none",
+      "stroke-width": "2",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round"
+    })
+  });
+};
+const ArrowTurnRightDownSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      d: "M4 4H11A4 4 0 0 1 15 8V20M10 15 15 20 20 15",
+      fill: "none",
+      stroke: "currentColor",
       "stroke-width": "2",
       "stroke-linecap": "round",
       "stroke-linejoin": "round"
@@ -27017,7 +27134,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$P = /* css */`
+installImportMetaCssBuild(import.meta);const css$Q = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -27047,7 +27164,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -27240,7 +27357,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$O = /* css */`
+installImportMetaCssBuild(import.meta);const css$P = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     top: var(--loading-rectangle-top, 0);
@@ -27258,7 +27375,7 @@ installImportMetaCssBuild(import.meta);const css$O = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$O, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -27483,7 +27600,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$N = /* css */`
+const css$O = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -27782,6 +27899,12 @@ const shouldInjectSpacingBetween = (left, right) => {
   if (rightIsNode && isMarkedAsOutsideTextFlow(right)) {
     return false;
   }
+  // A reveal-on-interaction Link (e.g. the "#" anchor before a title) is
+  // absolutely positioned and takes no room in the flow, so a separator after
+  // it would leave a stray gap at the start of the line.
+  if (leftIsNode && left.props?.revealOnInteraction) {
+    return false;
+  }
   if (typeof left === "string" && /\s$/.test(left)) {
     return false;
   }
@@ -27945,7 +28068,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$N, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -28089,7 +28212,7 @@ const TextWithSelectRange = ({
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$M = /* css */`
+const css$N = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -28124,7 +28247,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -28232,12 +28355,14 @@ const computeTopOffset = ({
     return 0;
   } else if (textAnchor === "line-bottom") {
     desiredChildTopY = anchorRect.bottom - childH;
+  } else {
+    return 0; // unknown textAnchor, no correction
   }
   return desiredChildTopY - childNaturalTop;
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`
+installImportMetaCssBuild(import.meta);const css$M = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -28277,6 +28402,10 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
     &[data-interactive] {
       cursor: pointer;
     }
+    &[data-icon-text] {
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
   }
 
   .navi_icon > svg,
@@ -28301,6 +28430,61 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
     height: 100%;
   }
 `;
+
+/**
+ * Renders an icon — an inline SVG/emoji/text glyph that inherits the
+ * surrounding text's `currentColor` and (by default) its font size, so it sits
+ * on the text baseline like a character.
+ *
+ * Content comes from either `href` (references an external/sprite symbol via
+ * `<use>`) or `children` (an inline `<svg>` element, or a string for a
+ * text/emoji icon). All extra props are spread onto the underlying `Box`/`Text`
+ * (sizing, spacing, color, className, data-attributes, …).
+ *
+ * Render mode is chosen automatically:
+ * - `children` is a **string** → a text icon (`<Text data-icon-text>`).
+ * - **sized** (an explicit `width`/`height`, or `flex`/`grid`) → a block icon
+ *   (`<Box square>`), laid out as its own box rather than inline.
+ * - otherwise → an **inline char-like** icon that flows on the text baseline
+ *   (`data-icon-char`), aligned via `textAnchor`.
+ *
+ * Accessibility: an icon is treated as decorative (`aria-hidden`) by default
+ * whenever it has no explicit size and no `onClick`; give it an explicit
+ * `decorative={false}` (or make it interactive) when it conveys meaning.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - URL/id of an external SVG symbol, rendered via
+ *   `<svg><use href></svg>`. Mutually exclusive with meaningful `children`.
+ * @param {import("ignore:preact").ComponentChildren} [props.children] - Inline icon
+ *   content: an `<svg>` element, or a string (renders as a text/emoji icon).
+ * @param {boolean} [props.decorative] - Marks the icon `aria-hidden`. Defaults
+ *   to `true` for an unsized, non-interactive icon; pass `false` for a
+ *   meaning-bearing icon that needs to be exposed to assistive tech.
+ * @param {(event: MouseEvent) => void} [props.onClick] - Makes the icon
+ *   interactive (`data-interactive`, pointer cursor) and non-decorative.
+ * @param {"line-top"|"char-top"|"center"|"char-bottom"|"line-bottom"} [props.textAnchor="center"]
+ *   - Vertical alignment within the surrounding text line for the inline
+ *   char-like mode, forwarded to `TextAnchor`: `"line-top"`/`"line-bottom"`
+ *   align to the line box edges, `"char-top"` to the ink ascent, `"center"`
+ *   centers on the line box, `"char-bottom"` sits on the baseline. See
+ *   `text_anchor.jsx`.
+ * @param {{ size?: number, verticalAlign?: string }} [props.lineLayout] -
+ *   Describes the surrounding line context (font size / vertical-align),
+ *   forwarded to `TextAnchor` so it recomputes the vertical correction when
+ *   that context changes.
+ * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
+ *   Any explicit size switches the icon to block (sized) mode.
+ * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
+ * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
+ *   dimension it fixes the other too.
+ * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
+ * @param {string|number} [props.aspectRatio] - Fixes the second dimension from
+ *   the one explicit dimension.
+ * @param {"x"|"y"|boolean} [props.flex] - Forces block/flex layout; auto-set to
+ *   `"x"` when the icon is sized.
+ * @param {boolean} [props.grid] - Forces block/grid layout.
+ * @param {string} [props.className] - Merged with the base `"navi_icon"` class.
+ */
 const Icon = ({
   href,
   children,
@@ -28310,7 +28494,7 @@ const Icon = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$L, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -28391,962 +28575,6 @@ const Icon = ({
   });
 };
 
-const NextResolverContext = createContext(null);
-const useNextResolver = () => useContext(NextResolverContext);
-
-/**
- * Creates a renderComponent function that passes props through a chain of resolvers.
- * Each resolver is a Preact component rendered in sequence (hooks are allowed).
- * To pass through to the next resolver, call useNextResolver() and render the
- * returned Next component with the desired props.
- * To terminate the chain early (e.g. render a specialized component), render
- * directly without calling Next.
- *
- * The last entry in the array is the final/target component — it receives null
- * from useNextResolver() indicating it is terminal.
- *
- * Usage:
- *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
- *   // Then inside a component render:
- *   renderButton(props)
- *
- * NextResolverContext exposes a stable Next component so resolvers can continue
- * the chain via useNextResolver().
- * ResolverIndexContext tracks which resolver is next so that when a resolver
- * re-renders and calls Next, the chain resumes from the correct position.
- */
-const createComponentResolver = resolvers => {
-  const ResolverIndexContext = createContext(0);
-  const ChainRunner = props => {
-    const index = useContext(ResolverIndexContext);
-    if (index >= resolvers.length) {
-      return null;
-    }
-    const Resolver = resolvers[index];
-    const isLast = index === resolvers.length - 1;
-    return jsx(ResolverIndexContext.Provider, {
-      value: index + 1,
-      children: isLast ? jsx(NextResolverContext.Provider, {
-        value: null,
-        children: jsx(Resolver, {
-          ...props
-        })
-      }) : jsx(Resolver, {
-        ...props
-      })
-    });
-  };
-
-  // Stable component defined once per createComponentResolver call.
-  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
-  // is inherited from the parent tree. When a resolver calls <Next>, the chain
-  // resumes from index+1 (already set by the Provider wrapping that resolver).
-  const NextComponent = props => jsx(ChainRunner, {
-    ...props
-  });
-  const renderComponent = props => {
-    return jsx(NextResolverContext.Provider, {
-      value: NextComponent,
-      children: jsx(ResolverIndexContext.Provider, {
-        value: 0,
-        children: jsx(ChainRunner, {
-          ...props
-        })
-      })
-    });
-  };
-  return renderComponent;
-};
-
-const ButtonRouteResolver = props => {
-  const Next = useNextResolver();
-  if (props.route) {
-    return jsx(ButtonWithRoute, {
-      ...props
-    });
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonWithRoute = props => {
-  const Next = useNextResolver();
-  const {
-    route,
-    routeParams,
-    children,
-    ...rest
-  } = props;
-  const url = route.buildUrl(routeParams);
-  const {
-    matching
-  } = useRouteStatus(route);
-  const paramsAreMatching = route.matchesParams(routeParams);
-  const linkMatching = matching && paramsAreMatching;
-  return jsx(Next, {
-    href: url,
-    "data-href-current": linkMatching ? "" : undefined,
-    ...rest,
-    children: children || route.buildRelativeUrl(routeParams)
-  });
-};
-
-const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
-const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
-const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
-const LIGHT_LUMINANCE_THRESHOLD = 0.5;
-const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
-const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
-
-/**
- * Sets data attributes on an element based on the OKLCH lightness and contrast
- * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
- * (0–1, perceptually uniform scale).
- *
- * Three boolean attributes are managed independently:
- *
- * ## `data-accent-light` (set when OKLCH L > 0.5)
- *   The accent color is perceptually light (orange, green, pink, yellow…).
- *   Use to adjust color-mix direction so hover/active effects darken toward
- *   black instead of lightening toward white.
- *
- * ## `data-accent-very-light` (set when OKLCH L > 0.92)
- *   The accent color is near-white or white. Use to show a grey background on
- *   unchecked state so the component boundary remains visible against white
- *   page backgrounds.
- *
- * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
- *   The best contrasting foreground color against the accent is dark (black).
- *   Use to render checkmarks, icons, or text in a dark color instead of white.
- *
- * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
- * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
- * @param {object} [options]
- * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
- *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
- * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
- */
-const useAccentColorAttributes = (
-  ref,
-  accentColor,
-  { elementSelector, colorProperty = "backgroundColor" } = {},
-) => {
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return undefined;
-    }
-    let elementToCheck = el;
-    elementSelector =
-      elementSelector || el.getAttribute("data-visual-selector");
-    if (elementSelector) {
-      elementToCheck = el.querySelector(elementSelector);
-      if (!elementToCheck) {
-        return undefined;
-      }
-    }
-    const updateAttributes = () => {
-      const computedStyle = getComputedStyle(elementToCheck);
-      const color = computedStyle[colorProperty];
-      if (!color) {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-        return;
-      }
-      const luminance = resolveOklchLightness(color, el);
-      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      }
-      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
-        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      }
-      const bestContrast = contrastColor(
-        color,
-        el,
-        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
-      );
-      if (bestContrast === "black") {
-        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
-      } else {
-        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-      }
-    };
-    updateAttributes();
-    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
-    return () => {
-      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
-      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
-      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
-    };
-  }, [ref, accentColor, elementSelector, colorProperty]);
-};
-
-installImportMetaCssBuild(import.meta);const css$K = /* css */`
-  @layer navi {
-    .navi_button {
-      --button-border-radius: var(--navi-control-border-radius);
-      --button-border-width: var(--navi-control-border-width);
-      --button-cta-background-color: var(--navi-accent-color);
-      /* Focus outline */
-      --button-outline-width: var(--navi-focus-outline-width);
-      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
-      --button-outline-color: var(--navi-focus-outline-color);
-      /* Focus outline end */
-      --button-padding-x-default: var(--navi-button-padding-x-default);
-      --button-padding-y-default: var(--navi-button-padding-y-default);
-      --button-loader-color: var(--navi-loader-color);
-      --button-border-color: var(--navi-control-border-color);
-      --button-background-color: var(
-        --button-background,
-        light-dark(#f3f4f6, #2d3748)
-      );
-      --button-color: currentColor;
-      --button-cursor: pointer;
-      --button-font-size: var(--navi-control-font-size);
-      --button-font-family: var(--navi-control-font-family);
-
-      /* Hover */
-      --button-border-color-hover: color-mix(
-        in srgb,
-        var(--button-border-color) 70%,
-        black
-      );
-      --button-background-color-hover: color-mix(
-        in srgb,
-        var(--button-background-color) 95%,
-        black
-      );
-      --button-color-hover: var(--button-color);
-      /* Pressed */
-      --button-border-color-pressed: color-mix(
-        in srgb,
-        var(--button-border-color) 90%,
-        black
-      );
-      /* Readonly */
-      --button-border-color-readonly: color-mix(
-        in srgb,
-        var(--button-border-color) 30%,
-        white
-      );
-      --button-background-color-readonly: var(--button-background-color);
-      --button-color-readonly: color-mix(
-        in srgb,
-        var(--button-color) 30%,
-        transparent
-      );
-      /* Disabled */
-      --button-border-color-disabled: var(--button-border-color-readonly);
-      --button-background-color-disabled: var(
-        --button-background-color-readonly
-      );
-      --button-color-disabled: var(--button-color-readonly);
-
-      /* Here to be easy to override */
-      display: inline-block; /* So box css can override when wanting to put button inline flex */
-      font-size: var(--button-font-size);
-      font-family: var(--button-font-family);
-    }
-  }
-
-  a.navi_button {
-    text-align: center;
-    text-decoration: none;
-  }
-
-  .navi_button {
-    --x-button-outline-offset: var(--button-outline-offset);
-    --x-button-border-color: var(--button-border-color);
-    --x-button-background: var(--button-background);
-    --x-button-background-color: var(--button-background-color);
-    --x-button-color: var(--button-color);
-    --x-button-cursor: var(--button-cursor);
-
-    box-sizing: border-box;
-    aspect-ratio: inherit;
-    padding: 0;
-    color: var(--x-button-color);
-    background: none;
-    border: none;
-    border-radius: var(--button-border-radius);
-    outline: none;
-    cursor: var(--x-button-cursor);
-    -webkit-tap-highlight-color: transparent;
-    position: relative;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
-
-    .navi_button_content {
-      position: relative;
-      display: inherit;
-      box-sizing: border-box;
-      aspect-ratio: inherit;
-      width: 100%;
-      height: 100%;
-      padding-top: var(
-        --button-padding-top,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-right: var(
-        --button-padding-right,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      padding-bottom: var(
-        --button-padding-bottom,
-        var(
-          --button-padding-y,
-          var(--button-padding, var(--button-padding-y-default))
-        )
-      );
-      padding-left: var(
-        --button-padding-left,
-        var(
-          --button-padding-x,
-          var(--button-padding, var(--button-padding-x-default))
-        )
-      );
-      align-items: inherit;
-      justify-content: inherit;
-      color: inherit;
-      vertical-align: inherit;
-      background: var(--x-button-background);
-      background-color: var(
-        --x-button-background-color,
-        var(--x-button-background)
-      );
-      border-width: var(--button-border-width);
-      border-style: solid;
-      border-color: var(--x-button-border-color);
-      border-radius: inherit;
-      outline-width: var(--button-outline-width);
-      outline-color: var(--button-outline-color);
-      outline-offset: var(--button-outline-offset);
-      transition-property: transform;
-      transition-duration: 0.15s;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-
-      .navi_button_shadow {
-        position: absolute;
-        inset: calc(-1 * var(--x-button-outer-width));
-        border-radius: inherit;
-        pointer-events: none;
-      }
-
-      & > img {
-        border-radius: inherit;
-      }
-    }
-
-    /* Hover */
-    &[data-hover] {
-      --x-button-border-color: var(--button-border-color-hover);
-      --x-button-background-color: var(--button-background-color-hover);
-      --x-button-color: var(--button-color-hover);
-    }
-    /* Pressed */
-    &[data-pressed] {
-      --x-button-outline-color: var(--button-border-color-pressed);
-    }
-    &[data-pressed] {
-      .navi_button_content {
-        transform: scale(0.9);
-      }
-    }
-    &[data-pressed] {
-      .navi_button_shadow {
-        box-shadow:
-          inset 0 3px 6px rgba(0, 0, 0, 0.2),
-          inset 0 1px 2px rgba(0, 0, 0, 0.3),
-          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
-          inset 2px 0 4px rgba(0, 0, 0, 0.1),
-          inset -2px 0 4px rgba(0, 0, 0, 0.1);
-      }
-    }
-    /* Readonly */
-    &[data-readonly] {
-      --x-button-border-color: var(--button-border-color-readonly);
-      --x-button-background-color: var(--button-background-color-readonly);
-      --x-button-color: var(--button-color-readonly);
-      --x-button-cursor: default;
-    }
-    /* Focus */
-    &[data-focus-visible] {
-      --x-button-border-color: transparent;
-
-      .navi_button_content {
-        outline-style: solid;
-      }
-    }
-    /* Disabled */
-    &[data-disabled] {
-      --x-button-border-color: var(--button-border-color-disabled);
-      --x-button-background-color: var(--button-background-color-disabled);
-      --x-button-color: var(--button-color-disabled);
-      --x-button-cursor: default;
-
-      /* Remove pressed effects */
-      .navi_button_content {
-        transform: none;
-
-        .navi_button_shadow {
-          box-shadow: none;
-        }
-      }
-    }
-    /* Callout (info, warning, error) */
-    &[data-callout] {
-      --x-button-border-color: var(--callout-color);
-    }
-
-    /* discrete: background on hover */
-    &[data-variant="discrete"] {
-      --button-border-width: 0;
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-
-      &[data-hover] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-        --x-button-background-color: transparent;
-      }
-    }
-    /* discrete-border: border on hover */
-    &[data-variant="discrete-border"] {
-      --x-button-background-color: transparent;
-      --x-button-border-color: transparent;
-
-      &[data-hover] {
-        --x-button-border-color: var(--button-border-color-hover);
-      }
-      &[data-readonly] {
-        --x-button-border-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-border-color: transparent;
-      }
-    }
-    /* border variant: no background, border only */
-    &[data-variant="border"] {
-      --x-button-background-color: transparent;
-
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          currentColor 8%,
-          transparent
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: transparent;
-      }
-      &[data-disabled] {
-        --x-button-background-color: transparent;
-      }
-    }
-    &[data-icon] {
-      --button-padding: 0;
-      display: inline-flex;
-    }
-    /* cta: call-to-action — special background, border matches background */
-    &[data-cta] {
-      --x-button-background-color: var(--button-cta-background-color);
-      --x-button-border-color: var(--button-cta-background-color);
-      --x-button-color: white;
-
-      &[data-hover] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 85%,
-          white
-        );
-      }
-      &[data-readonly] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 50%,
-          white
-        );
-      }
-      &[data-disabled] {
-        --x-button-background-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-border-color: color-mix(
-          in srgb,
-          var(--button-cta-background-color) 40%,
-          white
-        );
-        --x-button-color: color-mix(in srgb, white 60%, transparent);
-      }
-    }
-  }
-`;
-const ButtonUI = props => {
-  import.meta.css = [css$K, "@jsenv/navi/src/control/input/button_ui.jsx"];
-  const {
-    ref,
-    // href/link
-    href,
-    target,
-    rel,
-    // visual
-    variant,
-    icon,
-    cta,
-    spacing
-  } = props;
-  const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
-    controlType: "button",
-    allowNameless: true
-  });
-  const {
-    basePseudoState,
-    children
-  } = buttonControlHostProps;
-  const loading = basePseudoState[":-navi-loading"];
-  const isLink = href !== undefined;
-  let as = "button";
-  let innerTarget;
-  let innerRel;
-  if (isLink) {
-    as = "a";
-    const {
-      isSameSite
-    } = getHrefTargetInfo(href);
-    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
-    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
-  }
-  const visualSelector = ".navi_button_content";
-  useAccentColorAttributes(ref, null, {
-    elementSelector: visualSelector
-  });
-  return jsxs(Box, {
-    inline: true,
-    block: true,
-    ...buttonControlRootProps,
-    ...buttonControlHostProps,
-    // eslint-disable-next-line react/no-children-prop
-    children: undefined
-    // All button are forced to type="button" as a way to avoid form submission which
-    // should always go through --navi-send command instead
-    // without having to call preventDefault() on button clicks
-    ,
-
-    type: "button",
-    spacing: undefined,
-    cta: undefined,
-    ref: ref,
-    as: as,
-    href: href,
-    target: innerTarget,
-    rel: innerRel
-    // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
-    // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
-    ,
-
-    onnavi_get_value: e => {
-      e.detail.respondWith(props.value);
-    },
-    onContextMenu: e => {
-      if (as === "a") {
-        // For link we keep context menu to allow "open in new tab" and other browser features
-        return;
-      }
-      if (e.pointerType !== "touch") {
-        // right click is allowed
-        return;
-      }
-      // Suppress the native context menu triggered by long-press on touch devices.
-      // Buttons have no meaningful context menu (no text to copy/paste/search),
-      // and the long-press visual state would get stuck if we let the menu open.
-      // Note: e.button === -1 is equivalent — it means no physical button triggered
-      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
-      e.preventDefault();
-    },
-    "data-variant": variant,
-    "data-icon": icon ? "" : undefined,
-    "data-cta": cta ? "" : undefined,
-    "data-callout-arrow-x": "center"
-    // style management
-    ,
-
-    baseClassName: "navi_button",
-    styleCSSVars: ButtonStyleCSSVars,
-    pseudoClasses: ButtonPseudoClasses,
-    pseudoElements: ButtonPseudoElements,
-    visualSelector: visualSelector,
-    hasChildUsingForwardedProps: true,
-    children: [jsx(LoadingOutline, {
-      loading: loading,
-      inset: -1,
-      color: "var(--button-loader-color)"
-    }), jsx(ControlChildrenWrapper, {
-      ...controlChildrenWrapperProps,
-      children: jsx(ButtonContent, {
-        spacing: spacing,
-        children: children
-      })
-    })]
-  });
-};
-const ButtonContent = ({
-  spacing,
-  children
-}) => {
-  const boxForwardedProps = useContext(BoxForwardedPropsContext);
-  return jsxs(Text, {
-    ...boxForwardedProps,
-    display: "inherit",
-    spacing: spacing,
-    className: "navi_button_content",
-    children: [children, jsx(ButtonShadow, {})]
-  });
-};
-const ButtonStyleCSSVars = {
-  "outlineWidth": "--button-outline-width",
-  "borderWidth": "--button-border-width",
-  "borderRadius": "--button-border-radius",
-  "border": "--button-border",
-  "paddingX": "--button-padding-x",
-  "paddingY": "--button-padding-y",
-  "paddingTop": "--button-padding-top",
-  "paddingRight": "--button-padding-right",
-  "paddingBottom": "--button-padding-bottom",
-  "paddingLeft": "--button-padding-left",
-  "borderColor": "--button-border-color",
-  "background": "--button-background",
-  "backgroundColor": "--button-background-color",
-  "color": "--button-color",
-  ":hover": {
-    backgroundColor: "--button-background-color-hover",
-    borderColor: "--button-border-color-hover",
-    color: "--button-color-hover"
-  },
-  ":-navi-pressed": {
-    borderColor: "--button-border-color-pressed"
-  },
-  ":read-only": {
-    backgroundColor: "--button-background-color-readonly",
-    borderColor: "--button-border-color-readonly",
-    color: "--button-color-readonly"
-  },
-  ":disabled": {
-    backgroundColor: "--button-background-color-disabled",
-    borderColor: "--button-border-color-disabled",
-    color: "--button-color-disabled"
-  }
-};
-const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
-const ButtonPseudoElements = ["::-navi-loader"];
-const ButtonShadow = () => {
-  return jsx("span", {
-    className: "navi_button_shadow"
-  });
-};
-markAsOutsideTextFlow(ButtonShadow);
-
-const ButtonFirstResolver = props => {
-  const Next = useNextResolver();
-  const defaultRef = useRef(null);
-  props.ref = props.ref || defaultRef;
-  return jsx(Next, {
-    ...props
-  });
-};
-const ButtonCommandPropResolver = props => {
-  const Next = useNextResolver();
-  if (props.type === "submit") {
-    props.type = "button";
-    props.command = props.command || "--navi-send";
-  }
-  const command = props.command;
-
-  // Called fresh on every render (not a module-level object computed once
-  // at import time) — naviI18n(...) must be re-evaluated per call so a
-  // Button using a command's built-in default label actually follows
-  // setPreferredLanguage()/a "languagechange" event instead of staying
-  // stuck with whatever language was active the first time this module was
-  // imported.
-  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
-  if (getCommandDefaultProps) {
-    const commandDefaultProps = getCommandDefaultProps();
-    for (const key of Object.keys(commandDefaultProps)) {
-      if (props[key] === undefined) {
-        props[key] = commandDefaultProps[key];
-      }
-    }
-  }
-  return jsx(Next, {
-    ...props
-  });
-};
-const COMMAND_DEFAULT_PROPS_FACTORIES = {
-  "--navi-clear": () => ({
-    children: naviI18n("button.clear")
-  }),
-  "--navi-reset": () => ({
-    children: naviI18n("button.reset")
-  }),
-  "--navi-define": () => ({
-    children: naviI18n("button.define")
-  }),
-  "--navi-send": () => ({
-    children: naviI18n("button.send"),
-    cta: true
-  }),
-  "--navi-cancel": () => ({
-    children: naviI18n("button.cancel")
-  }),
-  "--navi-close": () => ({
-    children: naviI18n("button.close")
-  }),
-  "--navi-open": () => ({
-    children: naviI18n("button.open")
-  })
-};
-const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
-
-const CloseSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: jsx("path", {
-      "fill-rule": "evenodd",
-      "clip-rule": "evenodd",
-      d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
-      fill: "currentColor"
-    })
-  });
-};
-
-const SuccessSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
-    })
-  });
-};
-const ErrorSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
-    })
-  });
-};
-const InfoSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
-    })
-  });
-};
-const WarningSvg = () => {
-  return jsx("svg", {
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-    })
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$J = /* css */`
-  @layer navi {
-    .navi_message_box {
-      --background-color-info: var(--navi-info-color-light);
-      --color-info: var(--navi-info-color);
-      --background-color-success: var(--navi-success-color-light);
-      --color-success: var(--navi-success-color);
-      --background-color-warning: var(--navi-warning-color-light);
-      --color-warning: var(--navi-warning-color);
-      --background-color-error: var(--navi-error-color-light);
-      --color-error: var(--navi-error-color);
-    }
-  }
-
-  .navi_message_box {
-    --x-message-background-color: var(--background-color-info);
-    --x-message-color: var(--color-info);
-    /* color: var(--x-color); */
-    background-color: var(--x-message-background-color);
-
-    > .navi_icon {
-      flex-shrink: 0;
-    }
-  }
-
-  .navi_message_box[data-status-info] {
-    --x-message-background-color: var(--background-color-info);
-    --x-message-color: var(--color-info);
-  }
-  .navi_message_box[data-status-success] {
-    --x-message-background-color: var(--background-color-success);
-    --x-message-color: var(--color-success);
-  }
-  .navi_message_box[data-status-warning] {
-    --x-message-background-color: var(--background-color-warning);
-    --x-message-color: var(--color-warning);
-  }
-  .navi_message_box[data-status-error] {
-    --x-message-background-color: var(--background-color-error);
-    --x-message-color: var(--color-error);
-  }
-
-  .navi_message_box[data-left-stripe] {
-    border-left: 6px solid var(--x-message-color);
-    border-top-left-radius: 6px;
-    border-bottom-left-radius: 6px;
-  }
-`;
-const MessageBox = ({
-  status = "info",
-  padding = "sm",
-  icon,
-  leftStripe,
-  children,
-  onClose,
-  ...rest
-}) => {
-  import.meta.css = [css$J, "@jsenv/navi/src/text/message_box.jsx"];
-  const [hasTitleChild, setHasTitleChild] = useState(false);
-  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
-  if (icon === true) {
-    icon = status === "info" ? jsx(InfoSvg, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
-  } else if (typeof icon === "function") {
-    const Comp = icon;
-    icon = jsx(Comp, {});
-  }
-  return jsx(Box, {
-    as: "div",
-    role: status === "info" ? "status" : "alert",
-    "data-left-stripe": innerLeftStripe ? "" : undefined,
-    inline: true,
-    column: true,
-    alignY: "center",
-    spacing: "s",
-    ...rest,
-    className: withPropsClassName("navi_message_box", rest.className),
-    padding: padding,
-    pseudoClasses: MessageBoxPseudoClasses,
-    basePseudoState: {
-      ":-navi-status-info": status === "info",
-      ":-navi-status-success": status === "success",
-      ":-navi-status-warning": status === "warning",
-      ":-navi-status-error": status === "error"
-    },
-    children: jsx(MessageBoxStatusContext.Provider, {
-      value: status,
-      children: jsxs(MessageBoxReportTitleChildContext.Provider, {
-        value: setHasTitleChild,
-        children: [icon && jsx(Icon, {
-          color: "var(--x-message-color)",
-          height: "1.5em",
-          maxHeight: "auto",
-          selfAlignY: "start",
-          aspectRatio: "auto",
-          children: icon
-        }), jsx(Text, {
-          children: children
-        }), onClose && jsx(Button, {
-          action: onClose,
-          icon: true,
-          border: "none",
-          alignX: "center",
-          alignY: "center",
-          style: {
-            ":hover": {
-              backgroundColor: "rgba(0, 0, 0, 0.1)"
-            }
-          },
-          children: jsx(Icon, {
-            children: jsx(CloseSvg, {})
-          })
-        })]
-      })
-    })
-  });
-};
-const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
-const MessageBoxStatusContext = createContext();
-const MessageBoxReportTitleChildContext = createContext();
-
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
-  .navi_message_box {
-    .navi_title {
-      margin-top: 0;
-      margin-bottom: var(--navi-s);
-      color: var(--x-message-color);
-    }
-  }
-`;
-const Title = props => {
-  import.meta.css = [css$I, "@jsenv/navi/src/text/title.jsx"];
-  const messageBoxStatus = useContext(MessageBoxStatusContext);
-  const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
-  const titleLevel = parseInt(innerAs.slice(1));
-  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
-  reportTitleToMessageBox?.(true);
-  return jsx(TitleLevelContext.Provider, {
-    value: titleLevel,
-    children: jsx(Text, {
-      bold: true,
-      className: withPropsClassName("navi_title"),
-      as: messageBoxStatus ? "h4" : "h1",
-      ...props,
-      pseudoClasses: TitlePseudoClasses,
-      children: props.children
-    })
-  });
-};
-const TitleLevelContext = createContext();
-const useTitleLevel = () => {
-  return useContext(TitleLevelContext);
-};
-const TitlePseudoClasses = [":hover"];
-
 /**
  * Hook that reactively checks if a URL is visited.
  * Re-renders when the visited URL set changes.
@@ -29401,7 +28629,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$L = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -29473,22 +28701,10 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
 
     position: relative;
     aspect-ratio: inherit;
-    padding-top: max(
-      var(--x-link-padding-top),
-      var(--link-loading-outline-size)
-    );
-    padding-right: max(
-      var(--x-link-padding-right),
-      var(--link-loading-outline-size)
-    );
-    padding-bottom: max(
-      var(--x-link-padding-bottom),
-      var(--link-loading-outline-size)
-    );
-    padding-left: max(
-      var(--x-link-padding-left),
-      var(--link-loading-outline-size)
-    );
+    padding-top: var(--x-link-padding-top);
+    padding-right: var(--x-link-padding-right);
+    padding-bottom: var(--link-loading-outline-size);
+    padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
     background: var(--x-link-background);
@@ -29547,6 +28763,10 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
       }
     }
 
+    [data-icon-text] {
+      display: inline-block; /* Allow to skip the underlining */
+    }
+
     /* Interactive */
     &[data-interactive] {
       cursor: pointer;
@@ -29585,6 +28805,7 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
         /* For anchor links, we want to keep the pointer cursor to indicate interactivity */
         /* as anchor link will still scroll to the section even if it's the current page */
         --x-link-cursor: pointer;
+        --x-link-color: var(--link-color-current); /* override visited */
       }
       &[data-current-effect-bold] {
         font-weight: bold;
@@ -29625,15 +28846,18 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
     }
     /* Reveal on interaction */
     &[data-reveal-on-interaction] {
-      position: absolute !important;
-      top: 0;
-      left: -1em;
+      --anchor-spacing: 0px; /* outline width + 1px */
+
       display: inline-flex;
-      width: 1em;
-      height: 1em;
+      width: round(1em, 1px);
+      height: round(1em, 1px);
+      /* height: 1lh; */
+      margin-right: var(--anchor-spacing);
+      margin-left: round(calc(-1 * calc(1em + var(--anchor-spacing))), 1px);
       align-items: center;
       justify-content: center;
       font-size: 1em;
+      text-decoration: none;
       opacity: 0;
       /* The anchor link is displayed only on :hover */
       /* So we "need" a visual indicator when it's shown by focus */
@@ -29647,11 +28871,19 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
       &[data-focus-visible] {
         opacity: 1;
       }
+    }
 
-      .navi_icon {
-        font-size: 0.7em;
-        vertical-align: top;
-      }
+    .navi_icon > svg {
+      /* icon.jsx forces backface-visibility: hidden, which composites the
+           SVG onto its own GPU layer. On focus the generic z-index:1 rule adds
+           a stacking context that lands that layer on a sub-pixel origin, so it
+           rasterizes blurry. Not compositing lets it paint with its parent,
+           pixel-snapped and crisp — and it can still sit above via z-index. */
+      backface-visibility: visible;
+    }
+
+    .anchor_icon {å
+      margin-left: -0.1em;
     }
 
     &[data-appearance="text"] {
@@ -29697,12 +28929,6 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
 
   *:hover > .navi_link[data-reveal-on-interaction] {
     opacity: 1;
-  }
-  .navi_text .navi_link[data-reveal-on-interaction] {
-    top: 0.1em;
-  }
-  .navi_title .navi_link[data-reveal-on-interaction] {
-    top: 0.25em;
   }
 `;
 const LinkStyleCSSVars = {
@@ -29756,8 +28982,80 @@ Object.assign(PSEUDO_CLASSES, {
     attribute: "data-href-current"
   }
 });
+
+/**
+ * An anchor (`<a>`) rendered as a navi control: it carries the full control
+ * facade (name/value, pseudo-state, disabled/readOnly/loading, selection when
+ * inside a `SelectionContext`) on top of the native link behavior, plus
+ * navi-specific styling hooks and href-derived state.
+ *
+ * Href-derived behavior (all computed from `href`, recomputed on navigation):
+ * - internal vs external target (`data-href-internal`/`data-href-external`),
+ *   with `target`/`rel` auto-defaulted (`_self` internal, `_blank` +
+ *   `noopener noreferrer` external) unless explicitly set.
+ * - "current page" detection (`data-href-current`, `aria-current="page"`).
+ * - anchor links (`href` starting with `#`) get `data-href-anchor`.
+ * - an automatic end icon for `tel:`/`sms:`/`mailto:`/`github.com`, external
+ *   (blank-target) links, and anchor links — each overridable/suppressible.
+ *
+ * @param {object} props
+ * @param {string} [props.href] - Destination. Also the default `value`, and
+ *   (when `hrefFallback`) the default visible text.
+ * @param {import("../route.js").Route} [props.route] - Renders via `route`
+ *   instead of a raw `href`: the URL is built from the route (see
+ *   `routeParams`) and "current" is derived from whether the route matches.
+ * @param {object} [props.routeParams] - Params passed to `route.buildUrl`.
+ * @param {string} [props.target] - Native anchor target; defaults from
+ *   internal/external detection when omitted.
+ * @param {string} [props.rel] - Native anchor rel; defaults to
+ *   `"noopener noreferrer"` for external links when omitted.
+ * @param {boolean} [props.anchor] - Marks this as an in-page anchor link:
+ *   sets `data-anchor`, derives `id` from `href` (the part after `#`) when no
+ *   `id` is given, drops the visited color, keeps a pointer cursor even when
+ *   current, and defaults `hrefFallback` to `false` (no auto text). With no
+ *   children it shows the anchor icon; give it children (e.g. `"#"`) to render
+ *   those instead.
+ * @param {string} [props.value] - Value emitted by the control facade
+ *   (`navi_value`); defaults to `href`.
+ * @param {boolean} [props.current] - Forces the "current" state on (otherwise
+ *   derived from the href/route).
+ * @param {"text"|"icon"|"tab"} [props.appearance] - Visual variant
+ *   (`data-appearance`); `"text"`/`"icon"` drop the link color/underline,
+ *   `"tab"` renders a tab-like affordance.
+ * @param {boolean|"top"|"bottom"|"left"|"right"} [props.currentIndicator] - A
+ *   bar drawn on the given edge (or bottom when `true`) while current.
+ * @param {boolean} [props.currentEffectBold] - Bold the text while current
+ *   (reserving the bold width so layout doesn't shift).
+ * @param {boolean} [props.currentEffectShadow] - Inset-shadow effect while
+ *   current (used with `appearance="tab"`).
+ * @param {boolean|import("ignore:preact").ComponentChild} [props.startIcon] - Icon
+ *   placed before the text.
+ * @param {boolean|import("ignore:preact").ComponentChild} [props.endIcon] - Icon
+ *   placed after the text; when omitted, an icon may be auto-chosen from the
+ *   href (see above).
+ * @param {boolean|import("ignore:preact").ComponentChild} [props.blankTargetIcon] -
+ *   Override/suppress the auto external-link icon.
+ * @param {boolean|import("ignore:preact").ComponentChild} [props.anchorIcon] -
+ *   Controls the auto anchor icon shown for a childless anchor link:
+ *   `true`/`undefined` uses the default chain SVG, `false` suppresses it, any
+ *   other node replaces it. To render a plain `#` instead, prefer writing it as
+ *   the link's children (`<Link anchor href="#x">#</Link>`).
+ * @param {boolean} [props.revealOnInteraction] - Hide the link until its
+ *   container is hovered/focused (`data-reveal-on-interaction`), floating it
+ *   out of flow — the "#" anchor-on-hover pattern (e.g. inside a `Title`).
+ * @param {boolean} [props.hrefFallback] - Use `href` as the visible text when
+ *   no children are given; defaults to `true` unless `anchor`.
+ * @param {boolean} [props.preventDefault] - Call `event.preventDefault()` on
+ *   click (navigation suppressed; `onClick` still runs).
+ * @param {(event: MouseEvent) => void} [props.onClick]
+ * @param {import("ignore:preact").ComponentChildren} [props.children] - Link content;
+ *   falls back to the route's relative URL / `href` per the rules above.
+ * @param {string} [props.name] - Control facade name (links may be nameless).
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.readOnly]
+ */
 const Link = props => {
-  import.meta.css = [css$H, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -29789,7 +29087,6 @@ const LinkWithRoute = ({
   });
 };
 const LinkPlain = props => {
-  const titleLevel = useContext(TitleLevelContext);
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -29808,7 +29105,7 @@ const LinkPlain = props => {
     anchorIcon,
     startIcon,
     endIcon,
-    revealOnInteraction = Boolean(titleLevel),
+    revealOnInteraction = false,
     hrefFallback = !anchor,
     children
   } = props;
@@ -29862,33 +29159,59 @@ const LinkPlain = props => {
   if (endIcon === undefined) {
     // Check for special protocol or domain-specific icons first
     if (href?.startsWith("tel:")) {
-      innerEndIcon = jsx(PhoneSvg, {});
+      innerEndIcon = jsx(Icon, {
+        children: jsx(PhoneSvg, {})
+      });
     } else if (href?.startsWith("sms:")) {
-      innerEndIcon = jsx(LinkSmsSvg, {});
+      innerEndIcon = jsx(Icon, {
+        children: jsx(LinkSmsSvg, {})
+      });
     } else if (href?.startsWith("mailto:")) {
-      innerEndIcon = jsx(EmailSvg, {});
+      innerEndIcon = jsx(Icon, {
+        children: jsx(EmailSvg, {})
+      });
     } else if (href?.includes("github.com")) {
-      innerEndIcon = jsx(LinkGithubSvg, {});
-    } else {
-      // Fall back to default icon logic
-      const innerBlankTargetIcon = blankTargetIcon === undefined ? innerTarget === "_blank" : blankTargetIcon;
-      const innerAnchorIcon = anchorIcon === undefined ? isAnchor : anchorIcon;
-      if (innerBlankTargetIcon) {
-        innerEndIcon = innerBlankTargetIcon === true ? jsx(LinkBlankTargetSvg, {}) : innerBlankTargetIcon;
-      } else if (innerAnchorIcon) {
-        innerEndIcon = innerAnchorIcon === true ? jsx(LinkAnchorSvg, {}) : anchorIcon;
+      innerEndIcon = jsxs(Icon, {
+        children: [jsx(LinkGithubSvg, {}), " "]
+      });
+    }
+    // Fall back to default icon logic
+    else if (innerTarget === "_blank") {
+      if (blankTargetIcon === undefined) {
+        innerEndIcon = jsxs(Icon, {
+          children: [jsx(LinkBlankTargetSvg, {}), " "]
+        });
+      } else {
+        innerEndIcon = blankTargetIcon;
       }
+    } else if (isAnchor) {
+      if (anchorIcon === undefined) {
+        if (anchor) {
+          if (children) ; else {
+            innerEndIcon = jsx(Icon, {
+              children: "#"
+            });
+          }
+        } else {
+          innerEndIcon = jsx(Icon, {
+            className: "anchor_icon",
+            textAnchor: "char-bottom",
+            size: "xs",
+            children: jsx(ArrowTurnRightDownSvg, {})
+          });
+        }
+      } else {
+        innerEndIcon = anchorIcon;
+      }
+    } else {
+      innerEndIcon = anchorIcon;
     }
   } else {
     innerEndIcon = endIcon;
   }
   const innerChildren = children || (hrefFallback ? href : children);
-  const startIconEl = startIcon && jsx(Icon, {
-    children: startIcon
-  });
-  const endIconEl = innerEndIcon && jsx(Icon, {
-    children: innerEndIcon
-  });
+  const startIconEl = startIcon;
+  const endIconEl = innerEndIcon;
   const currentIndicatorPosition = currentIndicator === true ? "bottom" : currentIndicator;
   const currentIndicatorEl = currentIndicatorPosition === "left" || currentIndicatorPosition === "right" || currentIndicatorPosition === "top" || currentIndicatorPosition === "bottom" ? jsx(LinkCurrentIndicator, {}) : null;
   const {
@@ -29902,6 +29225,7 @@ const LinkPlain = props => {
     ...controlHostProps,
     preventDefault: undefined,
     anchor: undefined,
+    revealOnInteraction: undefined,
     onClick: e => {
       onClick?.(e);
       if (preventDefault) {
@@ -29959,7 +29283,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$G = /* css */`
+const css$K = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -30095,7 +29419,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$G, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -30729,7 +30053,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$F = /* css */`
+const css$J = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -30814,7 +30138,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -30868,7 +30192,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$E = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -30914,7 +30238,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -31163,7 +30487,103 @@ const ControlGroup = props => {
 };
 const CONTROL_GROUP_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+const LIGHT_ACCENT_ATTRIBUTE = "data-accent-light";
+const VERY_LIGHT_ACCENT_ATTRIBUTE = "data-accent-very-light";
+const DARK_CONTRAST_ATTRIBUTE = "data-accent-needs-dark-fg";
+const LIGHT_LUMINANCE_THRESHOLD = 0.5;
+const VERY_LIGHT_LUMINANCE_THRESHOLD = 0.92;
+const DARK_CONTRAST_LIGHTNESS_THRESHOLD = 0.65;
+
+/**
+ * Sets data attributes on an element based on the OKLCH lightness and contrast
+ * of a CSS color (typically an accent/brand color). All thresholds use OKLCH L
+ * (0–1, perceptually uniform scale).
+ *
+ * Three boolean attributes are managed independently:
+ *
+ * ## `data-accent-light` (set when OKLCH L > 0.5)
+ *   The accent color is perceptually light (orange, green, pink, yellow…).
+ *   Use to adjust color-mix direction so hover/active effects darken toward
+ *   black instead of lightening toward white.
+ *
+ * ## `data-accent-very-light` (set when OKLCH L > 0.92)
+ *   The accent color is near-white or white. Use to show a grey background on
+ *   unchecked state so the component boundary remains visible against white
+ *   page backgrounds.
+ *
+ * ## `data-accent-needs-dark-fg` (set when OKLCH L > 0.65)
+ *   The best contrasting foreground color against the accent is dark (black).
+ *   Use to render checkmarks, icons, or text in a dark color instead of white.
+ *
+ * @param {import("preact").RefObject} ref - Ref to the root element that receives the attributes.
+ * @param {string} accentColor - The accent color value. When it changes, attributes are recomputed.
+ * @param {object} [options]
+ * @param {string} [options.elementSelector] - CSS selector to find the element whose computed color is read.
+ *   Defaults to the root element itself. Useful when the color is applied to a probe/child element.
+ * @param {string} [options.colorProperty="backgroundColor"] - Computed style property to read (e.g. "color", "borderColor").
+ */
+const useAccentColorAttributes = (
+  ref,
+  accentColor,
+  { elementSelector, colorProperty = "backgroundColor" } = {},
+) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return undefined;
+    }
+    let elementToCheck = el;
+    elementSelector =
+      elementSelector || el.getAttribute("data-visual-selector");
+    if (elementSelector) {
+      elementToCheck = el.querySelector(elementSelector);
+      if (!elementToCheck) {
+        return undefined;
+      }
+    }
+    const updateAttributes = () => {
+      const computedStyle = getComputedStyle(elementToCheck);
+      const color = computedStyle[colorProperty];
+      if (!color) {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+        return;
+      }
+      const luminance = resolveOklchLightness(color, el);
+      if (luminance !== null && luminance > LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      }
+      if (luminance !== null && luminance > VERY_LIGHT_LUMINANCE_THRESHOLD) {
+        el.setAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      }
+      const bestContrast = contrastColor(
+        color,
+        el,
+        DARK_CONTRAST_LIGHTNESS_THRESHOLD,
+      );
+      if (bestContrast === "black") {
+        el.setAttribute(DARK_CONTRAST_ATTRIBUTE, "");
+      } else {
+        el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+      }
+    };
+    updateAttributes();
+    el.addEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+    return () => {
+      el.removeEventListener(NAVI_PSEUDO_STATE_CUSTOM_EVENT, updateAttributes);
+      el.removeAttribute(LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(VERY_LIGHT_ACCENT_ATTRIBUTE);
+      el.removeAttribute(DARK_CONTRAST_ATTRIBUTE);
+    };
+  }, [ref, accentColor, elementSelector, colorProperty]);
+};
+
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 0; /* Useful to reserve space for outline */
@@ -31241,7 +30661,7 @@ installImportMetaCssBuild(import.meta);const css$D = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -31283,7 +30703,7 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-control-border-radius);
@@ -31610,7 +31030,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -31732,7 +31152,7 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   @layer navi {
     .navi_label {
       &[data-control-connected] {
@@ -31803,7 +31223,7 @@ installImportMetaCssBuild(import.meta);const css$B = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -31838,7 +31258,7 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -31867,7 +31287,7 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
@@ -31991,7 +31411,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$A = /* css */`
+installImportMetaCssBuild(import.meta);const css$E = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -32354,7 +31774,7 @@ const InputRadioHeadless = props => {
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -32500,7 +31920,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$D = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -32755,7 +32175,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -32869,6 +32289,73 @@ const RangeStyleCSSVars = {
 const RangePseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const RangePseudoElements = ["::-navi-loader"];
 
+const NextResolverContext = createContext(null);
+const useNextResolver = () => useContext(NextResolverContext);
+
+/**
+ * Creates a renderComponent function that passes props through a chain of resolvers.
+ * Each resolver is a Preact component rendered in sequence (hooks are allowed).
+ * To pass through to the next resolver, call useNextResolver() and render the
+ * returned Next component with the desired props.
+ * To terminate the chain early (e.g. render a specialized component), render
+ * directly without calling Next.
+ *
+ * The last entry in the array is the final/target component — it receives null
+ * from useNextResolver() indicating it is terminal.
+ *
+ * Usage:
+ *   const renderButton = createComponentResolver([ResolverA, ResolverB, ButtonTarget]);
+ *   // Then inside a component render:
+ *   renderButton(props)
+ *
+ * NextResolverContext exposes a stable Next component so resolvers can continue
+ * the chain via useNextResolver().
+ * ResolverIndexContext tracks which resolver is next so that when a resolver
+ * re-renders and calls Next, the chain resumes from the correct position.
+ */
+const createComponentResolver = resolvers => {
+  const ResolverIndexContext = createContext(0);
+  const ChainRunner = props => {
+    const index = useContext(ResolverIndexContext);
+    if (index >= resolvers.length) {
+      return null;
+    }
+    const Resolver = resolvers[index];
+    const isLast = index === resolvers.length - 1;
+    return jsx(ResolverIndexContext.Provider, {
+      value: index + 1,
+      children: isLast ? jsx(NextResolverContext.Provider, {
+        value: null,
+        children: jsx(Resolver, {
+          ...props
+        })
+      }) : jsx(Resolver, {
+        ...props
+      })
+    });
+  };
+
+  // Stable component defined once per createComponentResolver call.
+  // Renders ChainRunner directly — no new providers — so ResolverIndexContext
+  // is inherited from the parent tree. When a resolver calls <Next>, the chain
+  // resumes from index+1 (already set by the Provider wrapping that resolver).
+  const NextComponent = props => jsx(ChainRunner, {
+    ...props
+  });
+  const renderComponent = props => {
+    return jsx(NextResolverContext.Provider, {
+      value: NextComponent,
+      children: jsx(ResolverIndexContext.Provider, {
+        value: 0,
+        children: jsx(ChainRunner, {
+          ...props
+        })
+      })
+    });
+  };
+  return renderComponent;
+};
+
 const InputModeResolver = props => {
   const Next = useNextResolver();
   if (props.inputMode === "numeric" || props.inputMode === "decimal") {
@@ -32966,6 +32453,20 @@ const performArrowUpDown = e => {
   });
 };
 
+const CloseSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 24 24",
+    fill: "none",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: jsx("path", {
+      "fill-rule": "evenodd",
+      "clip-rule": "evenodd",
+      d: "M5.29289 5.29289C5.68342 4.90237 6.31658 4.90237 6.70711 5.29289L12 10.5858L17.2929 5.29289C17.6834 4.90237 18.3166 4.90237 18.7071 5.29289C19.0976 5.68342 19.0976 6.31658 18.7071 6.70711L13.4142 12L18.7071 17.2929C19.0976 17.6834 19.0976 18.3166 18.7071 18.7071C18.3166 19.0976 17.6834 19.0976 17.2929 18.7071L12 13.4142L6.70711 18.7071C6.31658 19.0976 5.68342 19.0976 5.29289 18.7071C4.90237 18.3166 4.90237 17.6834 5.29289 17.2929L10.5858 12L5.29289 6.70711C4.90237 6.31658 4.90237 5.68342 5.29289 5.29289Z",
+      fill: "currentColor"
+    })
+  });
+};
+
 const SearchSvg = () => jsx("svg", {
   viewBox: "0 0 24 24",
   xmlns: "http://www.w3.org/2000/svg",
@@ -32974,6 +32475,593 @@ const SearchSvg = () => jsx("svg", {
     fill: "currentColor"
   })
 });
+
+const ButtonRouteResolver = props => {
+  const Next = useNextResolver();
+  if (props.route) {
+    return jsx(ButtonWithRoute, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonWithRoute = props => {
+  const Next = useNextResolver();
+  const {
+    route,
+    routeParams,
+    children,
+    ...rest
+  } = props;
+  const url = route.buildUrl(routeParams);
+  const {
+    matching
+  } = useRouteStatus(route);
+  const paramsAreMatching = route.matchesParams(routeParams);
+  const linkMatching = matching && paramsAreMatching;
+  return jsx(Next, {
+    href: url,
+    "data-href-current": linkMatching ? "" : undefined,
+    ...rest,
+    children: children || route.buildRelativeUrl(routeParams)
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
+  @layer navi {
+    .navi_button {
+      --button-border-radius: var(--navi-control-border-radius);
+      --button-border-width: var(--navi-control-border-width);
+      --button-cta-background-color: var(--navi-accent-color);
+      /* Focus outline */
+      --button-outline-width: var(--navi-focus-outline-width);
+      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
+      --button-outline-color: var(--navi-focus-outline-color);
+      /* Focus outline end */
+      --button-padding-x-default: var(--navi-button-padding-x-default);
+      --button-padding-y-default: var(--navi-button-padding-y-default);
+      --button-loader-color: var(--navi-loader-color);
+      --button-border-color: var(--navi-control-border-color);
+      --button-background-color: var(
+        --button-background,
+        light-dark(#f3f4f6, #2d3748)
+      );
+      --button-color: currentColor;
+      --button-cursor: pointer;
+      --button-font-size: var(--navi-control-font-size);
+      --button-font-family: var(--navi-control-font-family);
+
+      /* Hover */
+      --button-border-color-hover: color-mix(
+        in srgb,
+        var(--button-border-color) 70%,
+        black
+      );
+      --button-background-color-hover: color-mix(
+        in srgb,
+        var(--button-background-color) 95%,
+        black
+      );
+      --button-color-hover: var(--button-color);
+      /* Pressed */
+      --button-border-color-pressed: color-mix(
+        in srgb,
+        var(--button-border-color) 90%,
+        black
+      );
+      /* Readonly */
+      --button-border-color-readonly: color-mix(
+        in srgb,
+        var(--button-border-color) 30%,
+        white
+      );
+      --button-background-color-readonly: var(--button-background-color);
+      --button-color-readonly: color-mix(
+        in srgb,
+        var(--button-color) 30%,
+        transparent
+      );
+      /* Disabled */
+      --button-border-color-disabled: var(--button-border-color-readonly);
+      --button-background-color-disabled: var(
+        --button-background-color-readonly
+      );
+      --button-color-disabled: var(--button-color-readonly);
+
+      /* Here to be easy to override */
+      display: inline-block; /* So box css can override when wanting to put button inline flex */
+      font-size: var(--button-font-size);
+      font-family: var(--button-font-family);
+    }
+  }
+
+  a.navi_button {
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .navi_button {
+    --x-button-outline-offset: var(--button-outline-offset);
+    --x-button-border-color: var(--button-border-color);
+    --x-button-background: var(--button-background);
+    --x-button-background-color: var(--button-background-color);
+    --x-button-color: var(--button-color);
+    --x-button-cursor: var(--button-cursor);
+
+    position: relative;
+    box-sizing: border-box;
+    aspect-ratio: inherit;
+    padding: 0;
+    color: var(--x-button-color);
+    background: none;
+    border: none;
+    border-radius: var(--button-border-radius);
+    outline: none;
+    cursor: var(--x-button-cursor);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+
+    .navi_button_content {
+      position: relative;
+      display: inherit;
+      box-sizing: border-box;
+      aspect-ratio: inherit;
+      width: 100%;
+      height: 100%;
+      padding-top: var(
+        --button-padding-top,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-right: var(
+        --button-padding-right,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      padding-bottom: var(
+        --button-padding-bottom,
+        var(
+          --button-padding-y,
+          var(--button-padding, var(--button-padding-y-default))
+        )
+      );
+      padding-left: var(
+        --button-padding-left,
+        var(
+          --button-padding-x,
+          var(--button-padding, var(--button-padding-x-default))
+        )
+      );
+      align-items: inherit;
+      justify-content: inherit;
+      color: inherit;
+      vertical-align: inherit;
+      background: var(--x-button-background);
+      background-color: var(
+        --x-button-background-color,
+        var(--x-button-background)
+      );
+      border-width: var(--button-border-width);
+      border-style: solid;
+      border-color: var(--x-button-border-color);
+      border-radius: inherit;
+      outline-width: var(--button-outline-width);
+      outline-color: var(--button-outline-color);
+      outline-offset: var(--button-outline-offset);
+      transition-property: transform;
+      transition-duration: 0.15s;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+
+      .navi_button_shadow {
+        position: absolute;
+        inset: calc(-1 * var(--x-button-outer-width));
+        border-radius: inherit;
+        pointer-events: none;
+      }
+
+      & > img {
+        border-radius: inherit;
+      }
+    }
+
+    /* Hover */
+    &[data-hover] {
+      --x-button-border-color: var(--button-border-color-hover);
+      --x-button-background-color: var(--button-background-color-hover);
+      --x-button-color: var(--button-color-hover);
+    }
+    /* Pressed */
+    &[data-pressed] {
+      --x-button-outline-color: var(--button-border-color-pressed);
+    }
+    &[data-pressed] {
+      .navi_button_content {
+        transform: scale(0.9);
+      }
+    }
+    &[data-pressed] {
+      .navi_button_shadow {
+        box-shadow:
+          inset 0 3px 6px rgba(0, 0, 0, 0.2),
+          inset 0 1px 2px rgba(0, 0, 0, 0.3),
+          inset 0 0 0 1px rgba(0, 0, 0, 0.1),
+          inset 2px 0 4px rgba(0, 0, 0, 0.1),
+          inset -2px 0 4px rgba(0, 0, 0, 0.1);
+      }
+    }
+    /* Readonly */
+    &[data-readonly] {
+      --x-button-border-color: var(--button-border-color-readonly);
+      --x-button-background-color: var(--button-background-color-readonly);
+      --x-button-color: var(--button-color-readonly);
+      --x-button-cursor: default;
+    }
+    /* Focus */
+    &[data-focus-visible] {
+      --x-button-border-color: transparent;
+
+      .navi_button_content {
+        outline-style: solid;
+      }
+    }
+    /* Disabled */
+    &[data-disabled] {
+      --x-button-border-color: var(--button-border-color-disabled);
+      --x-button-background-color: var(--button-background-color-disabled);
+      --x-button-color: var(--button-color-disabled);
+      --x-button-cursor: default;
+
+      /* Remove pressed effects */
+      .navi_button_content {
+        transform: none;
+
+        .navi_button_shadow {
+          box-shadow: none;
+        }
+      }
+    }
+    /* Callout (info, warning, error) */
+    &[data-callout] {
+      --x-button-border-color: var(--callout-color);
+    }
+
+    /* discrete: background on hover */
+    &[data-variant="discrete"] {
+      --button-border-width: 0;
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+        --x-button-background-color: transparent;
+      }
+    }
+    /* discrete-border: border on hover */
+    &[data-variant="discrete-border"] {
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-border-color: var(--button-border-color-hover);
+      }
+      &[data-readonly] {
+        --x-button-border-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-border-color: transparent;
+      }
+    }
+    /* border variant: no background, border only */
+    &[data-variant="border"] {
+      --x-button-background-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          currentColor 8%,
+          transparent
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: transparent;
+      }
+      &[data-disabled] {
+        --x-button-background-color: transparent;
+      }
+    }
+    &[data-icon] {
+      --button-padding: 0;
+      display: inline-flex;
+    }
+    /* cta: call-to-action — special background, border matches background */
+    &[data-cta] {
+      --x-button-background-color: var(--button-cta-background-color);
+      --x-button-border-color: var(--button-cta-background-color);
+      --x-button-color: white;
+
+      &[data-hover] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 85%,
+          white
+        );
+      }
+      &[data-readonly] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 50%,
+          white
+        );
+      }
+      &[data-disabled] {
+        --x-button-background-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-border-color: color-mix(
+          in srgb,
+          var(--button-cta-background-color) 40%,
+          white
+        );
+        --x-button-color: color-mix(in srgb, white 60%, transparent);
+      }
+    }
+  }
+`;
+const ButtonUI = props => {
+  import.meta.css = [css$C, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  const {
+    ref,
+    // href/link
+    href,
+    target,
+    rel,
+    // visual
+    variant,
+    icon,
+    cta,
+    spacing
+  } = props;
+  const [buttonControlRootProps, buttonControlHostProps, controlChildrenWrapperProps] = useControlProps(props, {
+    controlType: "button",
+    allowNameless: true
+  });
+  const {
+    basePseudoState,
+    children
+  } = buttonControlHostProps;
+  const loading = basePseudoState[":-navi-loading"];
+  const isLink = href !== undefined;
+  let as = "button";
+  let innerTarget;
+  let innerRel;
+  if (isLink) {
+    as = "a";
+    const {
+      isSameSite
+    } = getHrefTargetInfo(href);
+    innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
+    innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+  }
+  const visualSelector = ".navi_button_content";
+  useAccentColorAttributes(ref, null, {
+    elementSelector: visualSelector
+  });
+  return jsxs(Box, {
+    inline: true,
+    block: true,
+    ...buttonControlRootProps,
+    ...buttonControlHostProps,
+    // eslint-disable-next-line react/no-children-prop
+    children: undefined
+    // All button are forced to type="button" as a way to avoid form submission which
+    // should always go through --navi-send command instead
+    // without having to call preventDefault() on button clicks
+    ,
+
+    type: "button",
+    spacing: undefined,
+    cta: undefined,
+    ref: ref,
+    as: as,
+    href: href,
+    target: innerTarget,
+    rel: innerRel
+    // Respond with the JS prop value directly so callers (e.g. resolveCommandValue)
+    // get the original type instead of the DOM-coerced string (e.g. "[object Object]").
+    ,
+
+    onnavi_get_value: e => {
+      e.detail.respondWith(props.value);
+    },
+    onContextMenu: e => {
+      if (as === "a") {
+        // For link we keep context menu to allow "open in new tab" and other browser features
+        return;
+      }
+      if (e.pointerType !== "touch") {
+        // right click is allowed
+        return;
+      }
+      // Suppress the native context menu triggered by long-press on touch devices.
+      // Buttons have no meaningful context menu (no text to copy/paste/search),
+      // and the long-press visual state would get stuck if we let the menu open.
+      // Note: e.button === -1 is equivalent — it means no physical button triggered
+      // the event, i.e. it was synthesized from a long-press gesture (right-click gives e.button === 2).
+      e.preventDefault();
+    },
+    "data-variant": variant,
+    "data-icon": icon ? "" : undefined,
+    "data-cta": cta ? "" : undefined,
+    "data-callout-arrow-x": "center"
+    // style management
+    ,
+
+    baseClassName: "navi_button",
+    styleCSSVars: ButtonStyleCSSVars,
+    pseudoClasses: ButtonPseudoClasses,
+    pseudoElements: ButtonPseudoElements,
+    visualSelector: visualSelector,
+    hasChildUsingForwardedProps: true,
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      inset: -1,
+      color: "var(--button-loader-color)"
+    }), jsx(ControlChildrenWrapper, {
+      ...controlChildrenWrapperProps,
+      children: jsx(ButtonContent, {
+        spacing: spacing,
+        children: children
+      })
+    })]
+  });
+};
+const ButtonContent = ({
+  spacing,
+  children
+}) => {
+  const boxForwardedProps = useContext(BoxForwardedPropsContext);
+  return jsxs(Text, {
+    ...boxForwardedProps,
+    display: "inherit",
+    spacing: spacing,
+    className: "navi_button_content",
+    children: [children, jsx(ButtonShadow, {})]
+  });
+};
+const ButtonStyleCSSVars = {
+  "outlineWidth": "--button-outline-width",
+  "borderWidth": "--button-border-width",
+  "borderRadius": "--button-border-radius",
+  "border": "--button-border",
+  "paddingX": "--button-padding-x",
+  "paddingY": "--button-padding-y",
+  "paddingTop": "--button-padding-top",
+  "paddingRight": "--button-padding-right",
+  "paddingBottom": "--button-padding-bottom",
+  "paddingLeft": "--button-padding-left",
+  "borderColor": "--button-border-color",
+  "background": "--button-background",
+  "backgroundColor": "--button-background-color",
+  "color": "--button-color",
+  ":hover": {
+    backgroundColor: "--button-background-color-hover",
+    borderColor: "--button-border-color-hover",
+    color: "--button-color-hover"
+  },
+  ":-navi-pressed": {
+    borderColor: "--button-border-color-pressed"
+  },
+  ":read-only": {
+    backgroundColor: "--button-background-color-readonly",
+    borderColor: "--button-border-color-readonly",
+    color: "--button-color-readonly"
+  },
+  ":disabled": {
+    backgroundColor: "--button-background-color-disabled",
+    borderColor: "--button-border-color-disabled",
+    color: "--button-color-disabled"
+  }
+};
+const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoElements = ["::-navi-loader"];
+const ButtonShadow = () => {
+  return jsx("span", {
+    className: "navi_button_shadow"
+  });
+};
+markAsOutsideTextFlow(ButtonShadow);
+
+const ButtonFirstResolver = props => {
+  const Next = useNextResolver();
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  return jsx(Next, {
+    ...props
+  });
+};
+const ButtonCommandPropResolver = props => {
+  const Next = useNextResolver();
+  if (props.type === "submit") {
+    props.type = "button";
+    props.command = props.command || "--navi-send";
+  }
+  const command = props.command;
+
+  // Called fresh on every render (not a module-level object computed once
+  // at import time) — naviI18n(...) must be re-evaluated per call so a
+  // Button using a command's built-in default label actually follows
+  // setPreferredLanguage()/a "languagechange" event instead of staying
+  // stuck with whatever language was active the first time this module was
+  // imported.
+  const getCommandDefaultProps = COMMAND_DEFAULT_PROPS_FACTORIES[command];
+  if (getCommandDefaultProps) {
+    const commandDefaultProps = getCommandDefaultProps();
+    for (const key of Object.keys(commandDefaultProps)) {
+      if (props[key] === undefined) {
+        props[key] = commandDefaultProps[key];
+      }
+    }
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const COMMAND_DEFAULT_PROPS_FACTORIES = {
+  "--navi-clear": () => ({
+    children: naviI18n("button.clear")
+  }),
+  "--navi-reset": () => ({
+    children: naviI18n("button.reset")
+  }),
+  "--navi-define": () => ({
+    children: naviI18n("button.define")
+  }),
+  "--navi-send": () => ({
+    children: naviI18n("button.send"),
+    cta: true
+  }),
+  "--navi-cancel": () => ({
+    children: naviI18n("button.cancel")
+  }),
+  "--navi-close": () => ({
+    children: naviI18n("button.close")
+  }),
+  "--navi-open": () => ({
+    children: naviI18n("button.open")
+  })
+};
+const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver, ButtonCommandPropResolver, ButtonUI]);
 
 const InputTypeResolver = props => {
   const Next = useNextResolver();
@@ -33512,7 +33600,7 @@ installImportMetaCssBuild(import.meta);/**
  *   The maxLength constraint remains active for form validation at submit.
  *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
  */
-const css$y = /* css */`
+const css$B = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: var(--navi-control-border-radius);
@@ -33799,7 +33887,7 @@ const useInputTextualProps = props => {
   });
 };
 const InputTextualUI = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/input/input_textual.jsx"];
   const {
     ui,
     discrete,
@@ -34050,23 +34138,6 @@ const getNowHoursRoundedToStep = (stepMinutes, offsetMinutes = 0) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-// Wires a default `uiAction` that writes user interactions back into
-// `props.signal`, and still calls whatever `uiAction` was explicitly passed.
-// Mutates `props.uiAction`. Guarded by a marker so the recursive
-// normalization below doesn't wrap an already-wrapped uiAction again.
-const wireUIActionToSignal = (props, signal, toSignalValue = (v) => v) => {
-  const existingUIAction = props.uiAction;
-  if (existingUIAction && existingUIAction.autoUpdateSignalWrapper) {
-    return;
-  }
-  const uiAction = (value, event) => {
-    signal.value = toSignalValue(value);
-    existingUIAction?.(value, event);
-  };
-  uiAction.autoUpdateSignalWrapper = true;
-  props.uiAction = uiAction;
-};
-
 // Maps validity type names → navi input type names.
 // Numeric signal types must not fall through to the native type="number"
 // (which adds spinner buttons and has poor UX) — they map to navi_number instead.
@@ -34134,16 +34205,16 @@ const NAVI_TYPE_DEFAULTS = {
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
 const resolveInputProps = (props) => {
-  // `signal` is the only prop carrying a signal — `value`/`checked` are plain
-  // props like any other. Consumed and cleared up front so it never leaks
-  // onto the DOM element.
+  // `signal` carries a bound state signal. It is left on `props` on purpose:
+  // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
+  // `onUIAction` (ui_state_controller.js) writes user interactions back into
+  // it. Here we only derive input defaults (type/min/max, defaultValue/
+  // defaultChecked) from the signal's `options`, so the control ends up
+  // uncontrolled-with-default while still write-syncing the signal.
   const signal = props.signal;
   if (signal) {
-    props.signal = undefined;
-
     const signalOptions = signal.options;
     if (signalOptions) {
-      const signalOptions = signal.options;
       for (const key of ["min", "max", "step"]) {
         if (props[key] === undefined && signalOptions[key] !== undefined) {
           props[key] = signalOptions[key];
@@ -34181,7 +34252,6 @@ const resolveInputProps = (props) => {
             Array.isArray(defaultVal) && defaultVal.includes(checkboxValue);
         }
       }
-      wireUIActionToSignal(props, signal, (v) => Boolean(v));
       return;
     }
 
@@ -34196,7 +34266,6 @@ const resolveInputProps = (props) => {
         }
       }
     }
-    wireUIActionToSignal(props, signal);
   }
 
   const currentType = props.type;
@@ -34455,7 +34524,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$x = /* css */`
+const css$A = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -34504,7 +34573,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -34772,7 +34841,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$z = /* css */`
   .navi_group {
     --group-border-width: 1px;
 
@@ -34868,7 +34937,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$w, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
@@ -34879,7 +34948,7 @@ const Group = ({
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$v = /* css */`
+const css$y = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -34899,7 +34968,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$v, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -35238,7 +35307,7 @@ const isTextInputElement = (el) => {
   );
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   .navi_input_duration {
     --duration-separator-spacing: 4px;
     --loader-color: var(--navi-loader-color);
@@ -35305,7 +35374,7 @@ installImportMetaCssBuild(import.meta);const css$u = /* css */`
  *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
  */
 const InputDuration = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/control/input/input_duration.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   props.max = props.max || "23h59";
@@ -35807,7 +35876,7 @@ const InputDurationPart = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$t = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   .navi_radio_group {
     border-style: solid;
 
@@ -35827,7 +35896,7 @@ const RadioGroup = props => {
   return radioGroup;
 };
 const RadioGroupInterface = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/control/input/radio_group.jsx"];
   const {
     ref
   } = props;
@@ -35878,6 +35947,20 @@ const renderSafe = (value) => {
 
 const PickerContext = createContext();
 
+// The resolved popup mode of the surrounding Picker: "popover" or "dialog"
+// (frozen for the lifetime of an opening — see usePopupMode). Provided around the
+// picker's popup content so that content can render differently per mode.
+const PickerModeContext = createContext(undefined);
+
+/**
+ * Read the mode ("popover" | "dialog") of the Picker whose popup this is rendered
+ * inside. Only meaningful for a Picker's popup content (its children); returns
+ * undefined anywhere else.
+ *
+ * @returns {"popover" | "dialog" | undefined}
+ */
+const usePickerMode = () => useContext(PickerModeContext);
+
 /**
  * Mirrors what browsers do when navigating to a page:
  * 1. Focus the first element with [navi-autofocus] (but not [navi-autofocus="fallback"]) inside the container
@@ -35896,6 +35979,100 @@ const markAutofocusRestoreOnClose = (containerEl) => {
   } else {
     containerEl.removeAttribute("navi-autofocus-restore");
   }
+};
+
+const prepareFocusTransfer = (prepareEvent, debugFocus) => {
+  const focusedElement = getFocusedBeforeTransfer(prepareEvent);
+  const focusVisible = isMatchingFocusVisible(focusedElement);
+
+  debugFocus(
+    prepareEvent,
+    `prepare focus transfer from`,
+    focusedElement,
+    focusVisible ? " matching :focus-visible" : "not matching :focus-visible",
+  );
+
+  return {
+    focusedElement,
+    focusVisible,
+
+    transferFocus: (transferEvent, containerEl) => {
+      let target;
+      let reason;
+      if (containerEl.hasAttribute("navi-autofocus-restore")) {
+        containerEl.removeAttribute("navi-autofocus-restore");
+        const naviAutoFocusFallback = containerEl.querySelector(
+          "[navi-autofocus='fallback']",
+        );
+        if (naviAutoFocusFallback) {
+          reason = "navi-autofocus fallback (restore)";
+          target = naviAutoFocusFallback;
+        }
+      }
+      if (!target) {
+        const naviAutoFocus = containerEl.querySelector(
+          "[navi-autofocus]:not([navi-autofocus='fallback'])",
+        );
+        if (naviAutoFocus) {
+          reason = "navi-autofocus";
+          target = naviAutoFocus;
+        }
+      }
+      if (!target) {
+        const focusable = findFocusable(containerEl, {
+          exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+        });
+        if (focusable) {
+          reason = "first focusable element";
+          target = focusable;
+        }
+      }
+      if (!target) {
+        // querySelector only searches descendants — but the container itself may
+        // carry [navi-autofocus="fallback"] (a focusable popup root with nothing
+        // else to focus). It's fine to focus the container in that case.
+        const naviAutoFocusFallback = containerEl.matches(
+          `[navi-autofocus="fallback"]`,
+        )
+          ? containerEl
+          : containerEl.querySelector(`[navi-autofocus="fallback"]`);
+        if (naviAutoFocusFallback) {
+          reason = "navi-autofocus fallback";
+          target = naviAutoFocusFallback;
+        }
+      }
+      if (!target) {
+        if (focusedElement) {
+          reason = "focused element before open (fallback)";
+          target = focusedElement;
+        }
+      }
+      if (!target) {
+        return;
+      }
+      debugFocus(
+        transferEvent,
+        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${focusVisible} }) (reason: ${reason})`,
+      );
+      target.focus({
+        preventScroll: true,
+        focusVisible,
+      });
+      if (target.hasAttribute("navi-autofocus-select")) {
+        target.select();
+        target.scrollLeft = 0;
+      }
+    },
+
+    restoreFocus: (restoreEvent) => {
+      debugFocus(
+        restoreEvent,
+        `restore focus to previously focused element`,
+        focusedElement,
+      );
+      focusedElement.focus({ preventScroll: true });
+    },
+  };
 };
 
 // Get the active element before we transfer focus in the popover/dialog
@@ -35917,66 +36094,6 @@ const getFocusedBeforeTransfer = (e) => {
     }
   }
   return document.activeElement;
-};
-
-const transferFocus = (containerEl, debugFocus, e, fallback) => {
-  let target;
-  let reason;
-  if (containerEl.hasAttribute("navi-autofocus-restore")) {
-    containerEl.removeAttribute("navi-autofocus-restore");
-    const naviAutoFocusFallback = containerEl.querySelector(
-      "[navi-autofocus='fallback']",
-    );
-    if (naviAutoFocusFallback) {
-      reason = "navi-autofocus fallback (restore)";
-      target = naviAutoFocusFallback;
-    }
-  }
-  if (!target) {
-    const naviAutoFocus = containerEl.querySelector(
-      "[navi-autofocus]:not([navi-autofocus='fallback'])",
-    );
-    if (naviAutoFocus) {
-      reason = "navi-autofocus";
-      target = naviAutoFocus;
-    }
-  }
-  if (!target) {
-    const focusable = findFocusable(containerEl, {
-      exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
-    });
-    if (focusable) {
-      reason = "first focusable element";
-      target = focusable;
-    }
-  }
-  if (!target) {
-    const naviAutoFocusFallback = containerEl.querySelector(
-      "[navi-autofocus='fallback']",
-    );
-    if (naviAutoFocusFallback) {
-      reason = "navi-autofocus fallback";
-      target = naviAutoFocusFallback;
-    }
-  }
-  if (!target) {
-    if (fallback) {
-      reason = "focused element before open (fallback)";
-      target = fallback;
-    }
-  }
-  if (!target) {
-    return;
-  }
-  debugFocus(
-    e,
-    `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true }) (reason: ${reason})`,
-  );
-  target.focus({ preventScroll: true });
-  if (target.hasAttribute("navi-autofocus-select")) {
-    target.select();
-    target.scrollLeft = 0;
-  }
 };
 
 /**
@@ -36125,8 +36242,12 @@ const createOpenController = (
       });
       chainEvent(requestOpenEvent, e);
       controller.opened = true;
-      // openEffect may populate requestOpenEvent.detail (e.g. focusedBeforeOpen)
-      // by mutating it — openHandler reads it right after, synchronously.
+      // we prepare focus transfer before actually opening the popover/dialog
+      // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
+      const focusTransfer = prepareFocusTransfer(
+        requestOpenEvent,
+        debugInteraction,
+      );
       controller.transferFocusOnOpen = (el) => {
         // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
         // e.detail.eventChain (built by chainEvent above) to recover the
@@ -36137,16 +36258,8 @@ const createOpenController = (
         // back to `document.activeElement`, which is often `document.body`
         // once mousedown.preventDefault() has kept focus from landing
         // anywhere yet.
-        const focusedBeforeOpen = getFocusedBeforeTransfer(requestOpenEvent);
-        debugInteraction(
-          requestOpenEvent,
-          `focused element before open`,
-          focusedBeforeOpen,
-        );
-        // Picker's openController.open() reads this back synchronously right
-        // after openEffect() returns (see picker_custom.jsx useOpenController).
-        requestOpenEvent.detail.focusedBeforeOpen = focusedBeforeOpen;
-        transferFocus(el, debugInteraction, e, focusedBeforeOpen);
+
+        focusTransfer.transferFocus(e, el);
         return (closeEvent) => {
           markAutofocusRestoreOnClose(el);
           const focusoutEvent = findEvent(closeEvent, "focusout");
@@ -36164,12 +36277,7 @@ const createOpenController = (
               );
               mousedownEvent.preventDefault();
             }
-            debugInteraction(
-              closeEvent,
-              `restore focus to previously focused element`,
-              focusedBeforeOpen,
-            );
-            focusedBeforeOpen.focus({ preventScroll: true });
+            focusTransfer.restoreFocus();
           }
         };
       };
@@ -36813,7 +36921,7 @@ installImportMetaCssBuild(import.meta);/**
  * overflow growth from a translate/scale entrance transition before it
  * reaches the real container.
  */
-const css$s = /* css */`
+const css$v = /* css */`
   @layer navi {
     .navi_dialog {
       /* min gap between dialog edges and viewport */
@@ -37009,7 +37117,8 @@ const css$s = /* css */`
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"] {
+    &[data-pointer-interaction-outside="close"],
+    &[data-pointer-interaction-outside="cancel"] {
       background: var(--navi-backdrop-close-background);
     }
     &[data-pointer-interaction-outside="capture"] {
@@ -37058,7 +37167,7 @@ const css$s = /* css */`
  *   `inset(top)`) for the overlapping variant.
  * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
  *   between the dialog and the edges of its container.
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
  *   not) — a dialog is always modal one way or another, so there's always
@@ -37106,7 +37215,7 @@ const css$s = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/popup/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -37473,7 +37582,7 @@ const useDialogProps = props => {
     // this is a plain document-level listener rather than anything
     // dialogEl/its native ::backdrop dispatches on their own) — active for
     // the dialog's entire open lifetime, not just mid-transition.
-    if (isModal && pointerInteractionOutsideEffect === "close") {
+    if (isModal && (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel")) {
       const onDocumentMouseDown = mouseDownEvent => {
         if (mouseDownEvent.button !== 0) {
           return;
@@ -37498,7 +37607,7 @@ const useDialogProps = props => {
           return;
         }
         openController.requestClose(mouseDownEvent, {
-          isCancel: true
+          isCancel: pointerInteractionOutsideEffect === "cancel"
         });
       };
       document.addEventListener("mousedown", onDocumentMouseDown, {
@@ -37655,9 +37764,9 @@ const useDialogProps = props => {
       if (mouseDownEvent.button !== 0) {
         return;
       }
-      if (pointerInteractionOutsideEffect === "close") {
+      if (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel") {
         openController.requestClose(mouseDownEvent, {
-          isCancel: true
+          isCancel: pointerInteractionOutsideEffect === "cancel"
         });
       }
       // "capture"/"none" both just absorb the click without closing — see
@@ -37721,7 +37830,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$r = /* css */`
+const css$u = /* css */`
   @layer navi {
     .navi_popover {
       --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
@@ -37922,7 +38031,8 @@ const css$r = /* css */`
     }
 
     /* Makes pointerInteractionOutsideEffect have a visible impact on backdrop */
-    &[data-pointer-interaction-outside="close"] {
+    &[data-pointer-interaction-outside="close"],
+    &[data-pointer-interaction-outside="cancel"] {
       background: var(--navi-backdrop-close-background);
     }
     &[data-pointer-interaction-outside="capture"] {
@@ -37987,7 +38097,7 @@ const css$r = /* css */`
  *   between the popover and the edges of its container.
  * @param {string|number} [props.marginWithAnchor=0] - Extra spacing kept
  *   between the popover and the edges of its anchor.
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="none"]
  *   - `"none"` (default): no backdrop at all, outside clicks pass straight
  *   through. `"close"` closes the popover on an outside click. `"capture"`
  *   absorbs the click (dims the backdrop) without closing. Note this
@@ -38043,7 +38153,7 @@ const css$r = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$r, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/popup/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -38159,6 +38269,10 @@ const usePopoverProps = props => {
     // "center" default.
     positionAreaWhenAnchorIsInvalid,
     marginWithContainer = 0,
+    // "close"  → pointer press outside closes (a plain close = commit)
+    // "cancel" → pointer press outside closes AS A CANCEL (revert)
+    // "capture"→ absorb the press, stay open
+    // "none"   → no backdrop
     pointerInteractionOutsideEffect = "none",
     scrollCapture,
     focusCapture,
@@ -38773,9 +38887,10 @@ const usePopoverProps = props => {
         mouseDownEvent.preventDefault();
         return;
       }
-      if (pointerInteractionOutsideEffect === "close") {
+      // "close" commits (plain close), "cancel" reverts. Both dismiss.
+      if (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel") {
         openController.requestClose(mouseDownEvent, {
-          isCancel: true
+          isCancel: pointerInteractionOutsideEffect === "cancel"
         });
         return;
       }
@@ -38906,7 +39021,7 @@ installImportMetaCssBuild(import.meta);/**
  * pass through untouched via `...rest` to whichever of Popover/Dialog
  * actually renders.
  */
-const css$q = /* css */`
+const css$t = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -38967,7 +39082,7 @@ const css$q = /* css */`
  *   `Popover` have different own defaults (`"center"` vs. `"bottom"`),
  *   deliberately not homogenized here (each reads best for its own typical
  *   use case).
- * @param {"close"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
+ * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - Forwarded to whichever component renders, defaulted here to `"close"`
  *   specifically to override `Popover`'s own different default (`"none"`)
  *   — without this, the exact same `<Popup>` usage would behave
@@ -39011,7 +39126,7 @@ const css$q = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$q, "@jsenv/navi/src/popup/popup.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/popup/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -39106,7 +39221,7 @@ const resolvePopupMode = (modeProp, maxWidth) => {
   return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -39126,7 +39241,9 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
 
-        min-width: var(--anchor-width, 0px);
+        /* At least as wide as the trigger — unless popupWidthFitContent, then
+           let the content (e.g. a Wheel) size the popover (see picker.jsx). */
+        min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */
 
         /* The anchor placeholder is a non-interactive visual clone of the
@@ -39229,10 +39346,31 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
         overscroll-behavior: none;
       }
     }
+
+    /* popupWidthFitContent (picker.jsx): drop the trigger-width floor so the
+       popup shrinks to its content. Inherits down to the popover. */
+    &[data-popup-width-fit-content] {
+      --picker-popover-min-width: 0px;
+
+      /* The popover var above only reaches the popover — the dialog reads
+         --anchor-width directly for its own min-width floor (dialog.jsx). A
+         modal dialog isn't visually attached to the trigger, so with
+         fit-content we drop that floor here too, letting the content size the
+         dialog like the popover. (More specific than dialog.jsx's own
+         .navi_dialog rule; both are unlayered, so this wins.) */
+      &[aria-haspopup="dialog"] {
+        .navi_dialog {
+          min-width: min(
+            var(--dialog-min-width, 0px),
+            var(--x-dialog-max-width)
+          );
+        }
+      }
+    }
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -39667,9 +39805,14 @@ const PickerContentInsidePopup = props => {
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
     closeOnFocusOut = false,
+    // Clicking outside the popup closes it and COMMITS by default (fires the
+    // action if the value changed) — Escape still cancels. Pass "cancel" to make
+    // clicking outside revert instead, or "capture" to keep it open.
+    pointerInteractionOutsideEffect = "close",
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
+    animation,
     ...rest
   } = props;
   const isPopover = mode === "popover";
@@ -39706,11 +39849,12 @@ const PickerContentInsidePopup = props => {
     children: jsxs(Popup, {
       ...popupProps,
       mode: mode,
+      animation: animation,
       positionArea: isPopover ? popoverMode === "nearby" ? "bottom-start" : "inset(top-left)" : undefined,
       marginWithAnchor: isPopover ? popoverSpacing : undefined,
       marginWithContainer: isPopover ? marginWithContainer : undefined,
-      scrollCapture: scrollCapture,
-      pointerInteractionOutsideEffect: pointerLock ? "capture" : "close",
+      scrollCapture: scrollCapture === "dialog" ? !isPopover : scrollCapture === "popover" ? isPopover : scrollCapture,
+      pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
       focusCapture: isPopover ? focusCapture : undefined,
       expandX: !isPopover ? expandX : undefined,
       expandY: !isPopover ? expandY : undefined,
@@ -39725,7 +39869,10 @@ const PickerContentInsidePopup = props => {
           });
         },
         children: props.trigger
-      }) : null, children]
+      }) : null, jsx(PickerModeContext.Provider, {
+        value: mode,
+        children: children
+      })]
     })
   });
 };
@@ -40365,7 +40512,7 @@ const toDate = (value, parseString) => {
   return null;
 };
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -40405,7 +40552,7 @@ const Separator = ({
   vertical,
   ...props
 }) => {
-  import.meta.css = [css$o, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -40831,7 +40978,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -41023,7 +41170,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$n, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -41124,7 +41271,9 @@ const ListSelectable = props => {
     defaultValue: undefined,
     selectedIndicator: undefined,
     selectable: undefined,
-    multiple: undefined
+    multiple: undefined,
+    focusGroupDirection: undefined,
+    focusGroupWrap: undefined
     // Track focus inside the list: whichever item gets focus becomes current.
     ,
 
@@ -41549,7 +41698,7 @@ const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$m = /* css */`
+const css$p = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -41921,7 +42070,7 @@ const css$m = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$m, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -43161,7 +43310,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$o = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -43240,7 +43389,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$l, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -43287,7 +43436,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$k = /* css */`
+installImportMetaCssBuild(import.meta);const css$n = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -43312,7 +43461,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$k, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$n, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -43387,7 +43536,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$j = /* css */`
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -43418,7 +43567,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$j, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$m, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -43862,7 +44011,7 @@ const FileSvg = () => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$i = /* css */`
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -44126,7 +44275,7 @@ installImportMetaCssBuild(import.meta);const css$i = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$i, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$l, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -44137,7 +44286,12 @@ const PickerButton = props => {
     iconSize = "inherit",
     placeholder,
     ui,
-    maxLines = 1
+    maxLines = 1,
+    // By default the popover is at least as wide as the trigger (min-width:
+    // --anchor-width). Set true when the CONTENT should dictate the popover width
+    // (e.g. a Wheel) instead of being stretched to the trigger — see
+    // picker_custom.jsx.
+    popupWidthFitContent
   } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
@@ -44163,6 +44317,7 @@ const PickerButton = props => {
     "navi-picker": "",
     "navi-single-line": isSingleLine ? "" : undefined,
     "navi-ui-custom": ui === "default" ? undefined : "",
+    "data-popup-width-fit-content": popupWidthFitContent ? "" : undefined,
     ...pickerRemainingProps,
     basePseudoState: basePseudoState,
     styleCSSVars: PickerStyleCSSVars,
@@ -44171,6 +44326,7 @@ const PickerButton = props => {
     iconSize: undefined,
     ui: undefined,
     maxLines: undefined,
+    popupWidthFitContent: undefined,
     dayLabel: undefined
     // This wrapper will receive keyboard event bubbling from the picker popup content
     // we re-dispatch on the input (to get escape to close for instance)
@@ -44304,13 +44460,20 @@ const PickerInput = props => {
   // After type resolution: force readOnly when the input type would open the
   // mobile keyboard. We also suppress the visual ":read-only" state so the
   // picker still looks interactive (it is — just not keyboard-typeable).
-  const readOnlyForced = readOnly ? false : MOBILE_KEYBOARD_TYPES.has(props.type || "text");
+  const readOnlyForced = readOnly ? false : isOpeningKeyboardOnMobile(props.type);
   const autoSelectReadOnlyProps = useAutoSelectReadOnly(props);
   return jsx(Box, {
     as: "input",
     ...props,
     readOnly: readOnlyForced ? true : readOnly,
-    "data-readonly-forced": readOnlyForced ? "" : undefined,
+    "data-readonly-forced": readOnlyForced ? "" : undefined
+    // A forced-readonly picker trigger is button-like — it can't be typed
+    // into, so it shouldn't get the browser's eager text-input focus ring on
+    // mouse. Gate the ring on keyboard use instead (see pseudo_styles.js). An
+    // editable picker (readOnlyForced false) keeps native input focus-visible.
+    ,
+
+    "data-prevent-eager-focus-visible": "",
     ui: undefined,
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,
@@ -44330,7 +44493,13 @@ const PickerInput = props => {
 // Input types that open the software keyboard on mobile.
 // When the picker's underlying input has one of these types, we force readOnly
 // so tapping the picker doesn't open the keyboard (the picker manages its own UI).
-const MOBILE_KEYBOARD_TYPES = new Set(["text", "email", "url", "search", "password", "tel", "number"]);
+const isOpeningKeyboardOnMobile = type => {
+  if (NON_MOBILE_KEYBOARD_TYPES.has(type)) {
+    return false;
+  }
+  return true; // default to text
+};
+const NON_MOBILE_KEYBOARD_TYPES = new Set(["date", "month", "week", "time", "datetime-local", "color"]);
 const PICKER_BUTTON_PSEUDO_CLASSES = [":hover", ":focus", ":focus-visible", ":focus-within", ":read-only", ":disabled", ":-navi-loading", ":-navi-expanded", ":-navi-has-value"];
 const PickerInputPseudoClasses = [":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading", ":-navi-has-value", ":-navi-expanded"];
 const PickerStyleCSSVars = {
@@ -44833,6 +45002,2046 @@ const buildMatchInfo = (searchText, items, matchFn) => {
   return { scoreEntries, nonMatched, matchInfoMap };
 };
 
+installImportMetaCssBuild(import.meta);/*
+ * Wheel — a single-value control rendered as an iOS-style scroll picker. A short
+ * viewport shows the selected value in the middle with the neighbouring values
+ * faded above/below (or left/right when `horizontal`). The selected value is
+ * whichever item is closest to the center; the user changes it by scrolling,
+ * dragging, clicking a neighbour, or with the arrow keys.
+ *
+ * A SPINBUTTON, NOT A RADIO GROUP. The whole wheel is one focusable element
+ * (role=spinbutton, the container) whose value lives in an invisible input for
+ * the form. Wheel.Item children only register their {value, label, itemProps}
+ * with the wheel and render nothing; they carry no focusable input. The main-axis
+ * arrows step the value by one row (a focus-free value change — no DOM focus moves
+ * between rows, which is what makes keyboard nav cheap); the value updates
+ * immediately while the selection glides to center.
+ *
+ * VIRTUALIZED. The DOM is NOT the source of truth — the ordered tracked-item list
+ * is. Only visibleCount + 2 <li> slots are rendered (WheelWindow) and recycled: as
+ * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
+ * re-render on demand — only when the wheel crosses a row (the window base index
+ * changes) — never per frame; the per-frame motion is a single imperative
+ * transform on the track (--wheel-offset, see applyOffset). All geometry is
+ * computed from the value index and a measured uniform row size, not read off the
+ * DOM.
+ *
+ * FRAMEWORK REUSE. value/defaultValue, action/uiAction, validation, states and
+ * the readonly/disabled/busy callouts all come from the single-value control
+ * facade (useControlFacadeProps → hidden input + facade container; see
+ * picker.jsx). Wheel adds the scroll-picker rendering and these scroll behaviours:
+ *   - scroll settles        → select the centered item
+ *   - arrow key             → step + glide the new value to center
+ *   - external value change  → scroll the selected item to center
+ *
+ * LOOP. A wheel wraps endlessly by default (`bounded` opts out, giving fixed
+ * ends). Looping needs no extra rows: the window's slots wrap their value index
+ * modulo the item count (wrapIndex), so the row after the last value shows the
+ * first, seamlessly, in both directions. The position (pos) is folded back to the
+ * canonical index * itemSize only when the wheel comes to rest (commitSelection),
+ * never mid-glide — the transform stays bounded regardless because it is written
+ * relative to the base the window currently shows (renderedBaseRef).
+ *
+ * ORIENTATION. Everything above is axis-agnostic: helpers read the main axis via
+ * accessors (top/height vs left/width) chosen from `horizontal`, and the CSS has
+ * a [data-horizontal] variant.
+ */
+const css$k = /* css */`
+  .navi_wheel_container {
+    --wheel-item-height: round(2.2em, 1px);
+    --wheel-item-width: 3.5ch;
+    --wheel-visible-count: 3;
+    --wheel-color: light-dark(#111, #eee);
+
+    position: relative; /* for the loading outline */
+    display: inline-flex;
+    color: var(--wheel-color);
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    border-radius: var(--navi-control-border-radius);
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+
+    /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
+       the neighbours are just hints, so the ring belongs on the selected value,
+       not the whole column. The spinbutton container is the focusable element, so
+       suppress its own UA outline in favour of the ring. [data-focus-visible] lets
+       a caller force the ring. */
+    &:focus {
+      outline: none;
+    }
+    &:focus-visible .navi_wheel_focus_ring,
+    &[data-focus-visible] .navi_wheel_focus_ring {
+      outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
+      outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
+    }
+
+    /* Readonly & disabled dim the neighbour text identically; disabled dims the
+       centered value further so the state reads on the value itself. */
+    &[data-readonly] {
+      --wheel-color: light-dark(#666, #999);
+    }
+    &[data-disabled] {
+      --wheel-color: light-dark(#666, #999);
+
+      .navi_wheel_item[data-wheel-current] {
+        color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
+      }
+    }
+    &[data-readonly],
+    &[data-disabled] {
+      /* Rows can't take a click, so the wheel-level readonly callout is the only
+         one — no per-row callouts fire. */
+      .navi_wheel_item {
+        pointer-events: none;
+      }
+    }
+  }
+
+  /* Holds the value for the form. Invisible and inert: it keeps a box (for the
+     callout to anchor to) but never takes focus, pointer, or paint. */
+  .navi_wheel_input {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    opacity: 0;
+    appearance: none;
+    pointer-events: none;
+  }
+
+  .navi_wheel_viewport {
+    position: relative;
+    /* Default before the first pointer move; updateCursor refines it to plain in
+       the center window. The rows inherit this. */
+    cursor: pointer;
+    touch-action: none;
+    /* No native scroll: the list track is positioned by transform (see
+       renderPos). Overflow clips the off-center rows; touch-action:none routes
+       drags to our pointer handlers instead of the browser's scroll. */
+    overflow: hidden;
+  }
+  .navi_wheel_list {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
+       whole pixel) each frame and CSS decides how to apply it. translate3d keeps
+       the track on its own composited layer for smooth momentum/glide. */
+    transform: translate3d(0, var(--wheel-offset, 0px), 0);
+    /* NO will-change: transform. translate3d already composites the track;
+       will-change additionally pins it to its own layer, which the glass panes'
+       backdrop-filter then samples with a bright fringe (halo) around each glyph. */
+  }
+
+  /* type is informative metadata; a couple of types get a rendering hint.
+     "integer" wants figures to line up column-to-column across rows. */
+  .navi_wheel_container[data-wheel-type="integer"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .navi_wheel_item {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    /* Every row is identical: same colour, same weight. What makes the center
+       stand out is the veil over the neighbours (see "Center window"), not any
+       per-row style — so a row emphasises smoothly as it scrolls into place. */
+    color: var(--wheel-color);
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    /* Cursor is set on the viewport by pointer position (see updateCursor) and
+       inherited here, so it stays fixed to the center window rather than flipping
+       as rows scroll under the pointer. */
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Rendering virtualization: only the rows within each wheel's own viewport
+       are painted; the rest (clipped by the viewport's overflow) are skipped.
+       The box is still laid out (fixed main-axis size below), so offsets, snap
+       and the wrap math are unaffected — this cuts paint/compositing cost so a
+       wheel with many values (or a page full of wheels) scrolls smoothly. */
+    content-visibility: auto;
+  }
+
+  /* Orientation-specific sizing/layout. The emphasis fade: opacity peaks on the
+     center row and falls off progressively toward the edges (like a physical
+     wheel curving away). Because it is a function of position, a row emphasises
+     smoothly as it scrolls into the middle — no per-row style flip — and a
+     half-scrolled row is half-faded. The center number keeps a small fully-opaque
+     plateau so it stays crisp. */
+  .navi_wheel_container {
+    --wheel-fade: linear-gradient(
+      var(--wheel-fade-direction),
+      transparent 0%,
+      rgba(0, 0, 0, 0.4) 34%,
+      #000 45%,
+      #000 55%,
+      rgba(0, 0, 0, 0.4) 66%,
+      transparent 100%
+    );
+
+    /* Two invisible panes cover the rows on each side of the center window, used
+       only for optional effects (the fade already dims): [data-glass] frosts
+       (blurs) them; [data-frame-border] lines the edge facing the window. The
+       .navi_wheel_focus_ring outlines the window itself. Pane geometry, the ring
+       geometry, and the frame edges are all orientation-specific, so they live in
+       the branches below and reuse them. */
+    .navi_wheel_pane {
+      position: absolute;
+      z-index: 1;
+      border: 0 solid
+        var(
+          --wheel-frame-color,
+          light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.18))
+        );
+      pointer-events: none;
+    }
+    .navi_wheel_focus_ring {
+      position: absolute;
+      z-index: 2;
+      border-radius: 3px;
+      pointer-events: none;
+    }
+    /* The loading outline (rendered as a container child, outside the viewport)
+       tracks the center window like the focus ring, above the glass/fade so it
+       is never dimmed. Geometry lives in the orientation branches. */
+    .navi_wheel_outline_wrapper {
+      position: absolute;
+      z-index: 3;
+      border-radius: inherit;
+      pointer-events: none;
+    }
+
+    &[data-glass] .navi_wheel_pane {
+      /* A faint frost tint under the blur flattens the halo a bare
+         backdrop-filter leaves around dark glyphs; saturate revives the colours
+         the blur washes out, for a truer glass look. Tune via --wheel-glass-*. */
+      background: light-dark(
+        rgba(255, 255, 255, var(--wheel-glass-tint, 0.3)),
+        rgba(0, 0, 0, var(--wheel-glass-tint, 0.3))
+      );
+      backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
+        saturate(var(--wheel-glass-saturate, 160%));
+      -webkit-backdrop-filter: blur(var(--wheel-glass-blur, 1.5px))
+        saturate(var(--wheel-glass-saturate, 160%));
+    }
+
+    &:not([data-horizontal]) {
+      --wheel-fade-direction: to bottom;
+      width: fit-content;
+
+      .navi_wheel_viewport {
+        width: 100%;
+        height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
+        -webkit-mask-image: var(--wheel-fade);
+        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_list {
+        flex-direction: column;
+      }
+      .navi_wheel_item {
+        /* Fixed main-axis size (height); the cross axis follows the content.
+           box-sizing so per-item padding (below) doesn't grow the fixed row. */
+        box-sizing: border-box;
+        height: var(--wheel-item-height);
+        padding-block: var(--navi-wheel-item-padding-main-default, 0px);
+        /* No breathing room by default — the wheel shows its true content size.
+           Spacing is the caller's choice, set PER ITEM (each Wheel.Item is a Box:
+           paddingX here, since horizontal is the cross axis of a vertical wheel) so
+           the padded area stays scrollable. Global defaults are the axis-named CSS
+           vars — cross = perpendicular to scroll (the gap), main = along scroll. */
+        padding-inline: var(--navi-wheel-item-padding-cross-default, 0px);
+        /* A full-row line-height so the glyph's line box fills the (even) row
+           height and centers on a WHOLE pixel. A "normal" line box is ~15px (odd):
+           centered in a 32px row it lands on a .5 sub-pixel, and .5 rounds one way
+           for this transformed track and the other for the static separators — a
+           1px vertical misalignment. Matching var(--wheel-item-height) here and on
+           the separators removes the .5. Vertical only: a horizontal wheel has no
+           row height to fill, and forcing it would blow up the separator height. */
+        line-height: var(--wheel-item-height);
+      }
+      .navi_wheel_pane {
+        right: 0;
+        left: 0;
+        height: calc((100% - var(--wheel-item-height)) / 2);
+        &[data-side="start"] {
+          top: 0;
+        }
+        &[data-side="end"] {
+          bottom: 0;
+        }
+      }
+      .navi_wheel_focus_ring,
+      .navi_wheel_outline_wrapper {
+        top: calc((100% - var(--wheel-item-height)) / 2);
+        right: 0;
+        bottom: calc((100% - var(--wheel-item-height)) / 2);
+        left: 0;
+        height: auto;
+      }
+      &[data-frame-border] .navi_wheel_pane {
+        &[data-side="start"] {
+          border-bottom-width: 1px;
+        }
+        &[data-side="end"] {
+          border-top-width: 1px;
+        }
+      }
+    }
+
+    &[data-horizontal] {
+      --wheel-fade-direction: to right;
+      height: fit-content;
+
+      .navi_wheel_viewport {
+        width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
+        height: 100%;
+        -webkit-mask-image: var(--wheel-fade);
+        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_list {
+        flex-direction: row;
+        /* Horizontal wheels scroll along X (see --wheel-offset on the base rule). */
+        transform: translate3d(var(--wheel-offset, 0px), 0, 0);
+      }
+      .navi_wheel_item {
+        /* Fixed main-axis size (width); the cross axis (vertical here) follows the
+           content. Same axis-named global defaults as the vertical branch, mapped
+           to this orientation: cross = block (vertical), main = inline. 0 by
+           default; opt in per item (paddingY here — see the vertical note). */
+        box-sizing: border-box;
+        width: var(--wheel-item-width);
+        padding-block: var(--navi-wheel-item-padding-cross-default, 0px);
+        padding-inline: var(--navi-wheel-item-padding-main-default, 0px);
+      }
+      .navi_wheel_pane {
+        top: 0;
+        bottom: 0;
+        width: calc((100% - var(--wheel-item-width)) / 2);
+        &[data-side="start"] {
+          left: 0;
+        }
+        &[data-side="end"] {
+          right: 0;
+        }
+      }
+      .navi_wheel_focus_ring,
+      .navi_wheel_outline_wrapper {
+        top: 0;
+        right: calc((100% - var(--wheel-item-width)) / 2);
+        bottom: 0;
+        left: calc((100% - var(--wheel-item-width)) / 2);
+        width: auto;
+      }
+      &[data-frame-border] .navi_wheel_pane {
+        &[data-side="start"] {
+          border-right-width: 1px;
+        }
+        &[data-side="end"] {
+          border-left-width: 1px;
+        }
+      }
+    }
+  }
+
+  /* ── WheelGroup ─────────────────────────────────────────────────────────────
+     Several wheels with separators (e.g. ":") between them. The separator column
+     keeps its natural content width (small for ":", wide for a word like "hours")
+     and is not scrollable. Spacing around a wheel is that wheel's own item padding
+     (set per Wheel.Item, see .navi_wheel_item) so it stays scrollable — a group
+     with no padding shows the wheels at their true content width. */
+  .navi_wheel_group {
+    display: inline-flex;
+    align-items: center;
+
+    &:not([data-horizontal]) {
+      /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
+         whole pixel and lands on the numbers' line (see the note there). Without
+         it the separator sits ~1px off the transformed numbers. Vertical only: on
+         a horizontal group it has no row height to fill and would over-tall the
+         separator. */
+      .navi_wheel_group_separator {
+        line-height: var(--wheel-item-height);
+      }
+    }
+    &[data-horizontal] {
+      flex-direction: column;
+      align-items: center;
+    }
+  }
+  .navi_wheel_group_separator {
+    /* Stretch to the group height (= the wheels' height) and center the content,
+       landing it on the middle (selected) row and sharing the numbers' baseline
+       (right for words / letters like "ZZ"). A sibling of the wheels, so it does
+       NOT inherit their --wheel-item-height — re-expose it here. */
+    --wheel-item-height: round(2.2em, 1px);
+
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    justify-content: center;
+    color: var(--wheel-color, light-dark(#111, #eee));
+    font-weight: 600;
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
+    white-space: nowrap;
+
+    user-select: none;
+  }
+  /* SVG ":" (Wheel.Colon). Height ≈ the digits' cap height so the two dots
+     span a similar range; centered in the row (flex) → dots on the numbers'
+     optical center. Width follows the viewBox aspect. */
+  .navi_wheel_colon {
+    display: block;
+    width: auto;
+    height: round(1em, 1px);
+  }
+`;
+
+// Fling physics (px per ms). WHEEL_MAX_VELOCITY caps the MOUSE-WHEEL settle
+// projection (kept small — a notch shouldn't fling far). A touch/pointer drag
+// fling goes through settle() instead and gets its own, much larger cap
+// (WHEEL_FLING_MAX_VELOCITY) so a hard swipe carries across the list like a
+// native scroller — a fast finger easily reaches 5-10 px/ms and shouldn't be
+// clipped to a few rows. Each frame the velocity is multiplied by
+// WHEEL_DECAY^(dt/16); closer to 1 coasts further. Below the snap threshold the
+// settle loop switches from momentum to a spring that eases into the nearest
+// row center; the spring factor is how far toward that center it moves per frame.
+const WHEEL_MAX_VELOCITY = 1;
+const WHEEL_FLING_MAX_VELOCITY = 10;
+const WHEEL_DECAY = 0.95;
+const WHEEL_SNAP_VELOCITY = 0.3;
+const WHEEL_SPRING_FACTOR = 0.2;
+
+// Mouse-wheel settle. Rather than waiting out a long idle and then springing to
+// whichever row is nearest (which snaps BACKWARD when you overshot, and reads as a
+// late correction), we snap almost immediately to the row the scroll was HEADING
+// for — the current position biased by the last scroll velocity. WHEEL_SETTLE_DELAY
+// is just long enough to tell one gesture from the next; WHEEL_MOMENTUM_MS is how
+// far (in ms of travel) the velocity projects, so a faster flick lands a row ahead.
+const WHEEL_SETTLE_DELAY = 50; // ms of idle that ends the wheel gesture
+const WHEEL_MOMENTUM_MS = 55; // velocity projection horizon (px = velocity × this)
+// A mouse-wheel gesture is a burst of wheel events spaced only a few ms apart.
+// Once this wheel has claimed a gesture, keep swallowing that gesture's remaining
+// events even if the pointer drifts off onto the page — otherwise the document
+// scrolls under the leftover events, which feels broken. This is the max gap (ms)
+// between events still counted as the same gesture; kept short so that once the
+// browser stops sending events (gesture over) the page is free again almost
+// immediately — a fresh gesture on the page scrolls normally.
+const WHEEL_GESTURE_MAX_GAP = 50;
+
+// Default glide speed (px/ms). Feeds the spring stiffness that chases the target
+// on arrow keys / clicks (see glideSpringFactor); the demo can override it.
+const WHEEL_GLIDE_SPEED = 0.16; // ≈ one row (32px) in ~200ms at rest
+
+// aria-valuemin / aria-valuemax bounds when every item value is a number, else
+// null. Assistive tech reads it as the spinbutton's range. No Math.min/Math.max:
+// a plain scan is easier to follow.
+const getNumericRange = items => {
+  if (items.length === 0) {
+    return null;
+  }
+  let min = items[0].value;
+  let max = items[0].value;
+  for (const item of items) {
+    const {
+      value
+    } = item;
+    if (typeof value !== "number") {
+      return null;
+    }
+    if (value < min) {
+      min = value;
+    }
+    if (value > max) {
+      max = value;
+    }
+  }
+  return {
+    min,
+    max
+  };
+};
+
+// Wheel.Item registers its {value, label} here so WheelUI knows the full ordered
+// list of items regardless of how children are wrapped (providers, fragments…).
+// indexRef gives each item its position: WheelUI resets it to 0 every render and
+// each item reads-and-increments it as it renders, in document order.
+const WheelItemTrackerContext = createContext(null);
+
+// Lets a WheelGroup push shared presentation (glass, orientation) down to every
+// Wheel inside it without threading the prop through each one.
+const WheelGroupContext = createContext(null);
+
+/**
+ * Wheel — a scroll picker (see the file header). It is a single value control
+ * (role=spinbutton), NOT a radio list: one focusable element, arrows change the
+ * value, the value lives in one hidden input for the form. The visible rows are
+ * presentational.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: any,
+ *   defaultValue?: any,
+ *   action?: (value: any) => void,
+ *   uiAction?: (value: any) => void,
+ *   visibleCount?: number,
+ *   itemHeight?: number | string,
+ *   itemWidth?: number | string,
+ *   bounded?: boolean,
+ *   horizontal?: boolean,
+ *   glideSpeed?: number,
+ *   type?: string,
+ *   name?: string,
+ *   required?: boolean,
+ *   readOnly?: boolean,
+ *   disabled?: boolean,
+ *   loading?: boolean,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [props.visibleCount=3] - Odd number of rows visible in the viewport (the center one is the selection).
+ * @param {number|string} [props.itemHeight] - Main-axis size of a row when vertical (number = px). Defaults to the CSS var (2.4em).
+ * @param {number|string} [props.itemWidth] - Main-axis size of a cell when horizontal (number = px). Defaults to the CSS var (3.5ch).
+ * @param {number|string} [props.size] - Font size of the wheel: a size token ("s", "m", "l", "xl", …), a number (px), or a CSS length. Scales the digits and, since the row size is em-based, the row height too — a simple way to make the whole wheel bigger. An explicit itemHeight/itemWidth still overrides the row size.
+ * @param {boolean} [props.bounded] - Give the wheel fixed ends instead of wrapping: it stops at the first/last value. By default the wheel loops endlessly (past the last value the first reappears, and vice-versa).
+ * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
+ * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
+ * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
+ * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
+ * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
+ */
+const Wheel = props => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  return jsx(WheelUI, {
+    ...props
+  });
+};
+
+// Wheel-only props: consumed here, must not leak onto the container DOM element.
+const WHEEL_OWN_PROP_KEYS = ["visibleCount", "itemHeight", "itemWidth", "bounded", "horizontal", "glass", "frameBorder", "glideSpeed", "type"];
+
+// Pointer drag, mouse-wheel, programmatic `navi_scroll`, and the document-level
+// gesture guard: all the ways raw input drives the virtual position. Bound once
+// to the viewport/container (re-bound only when orientation/loop/interactive
+// change). A pure consumer of the animation core (setPos/settle/glideTo/… and the
+// interaction gate) — it produces nothing the rest of the wheel needs back.
+//
+// Input: wheel + pointer drag drive the virtual position; a short idle after
+// wheel, or the end of a drag's momentum, snaps to the nearest value. When the
+// wheel is readonly/disabled/busy the interaction gate (attemptInteraction)
+// shows the matching callout instead of moving, and traps the page scroll.
+const useWheelInteractions = ({
+  ref,
+  isHorizontal,
+  isLoop,
+  interactive,
+  posRef,
+  trackedItemsRef,
+  clampNumber,
+  attemptInteraction,
+  cancelAnim,
+  setPos,
+  snapPosToRow,
+  getItemSize,
+  viewportMain,
+  settle,
+  wheelSettle,
+  glideTo,
+  stepTarget,
+  commitIfAnimating,
+  debug
+}) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const vp = el.querySelector(".navi_wheel_viewport");
+    let settleTimer = null;
+    // Last wheel event's scroll velocity (px/ms, signed) and timestamp, so the
+    // settle can snap to the row the scroll was heading for (see wheelSettle).
+    let wheelVelocity = 0;
+    let lastWheelTime = 0;
+    // Set on the first event of a gesture to force the settle onto the adjacent row
+    // (native-like: the slightest scroll still snaps to the next item); null once
+    // the gesture continues, so momentum projection takes over.
+    let wheelForcedTarget = null;
+
+    // Non-wheel settle (drag momentum, programmatic jump): spring to the nearest row.
+    const scheduleSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => settle(vp, 0), 90);
+    };
+    // Wheel settle: fire soon after the last wheel event and land on the projected
+    // row (velocity-biased), not after a long idle then a spring to nearest.
+    const scheduleWheelSettle = () => {
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => wheelSettle(vp, wheelVelocity, wheelForcedTarget), WHEEL_SETTLE_DELAY);
+    };
+
+    // Once this wheel has claimed a wheel gesture, keep swallowing the rest of that
+    // gesture's events even if the pointer drifts off onto the page — otherwise the
+    // document scrolls under the leftover events, which feels broken (especially when
+    // the wheel was readonly and only showed a callout). A document-level capture
+    // listener preventDefaults wheel events that are NOT on our scroll surface (the
+    // viewport `vp`); it self-removes once a gesture-length gap passes, so a
+    // genuinely new gesture on the page scrolls normally. The check is `vp`, not
+    // `el`: an event inside the container but outside the viewport (padding, the
+    // overlays) isn't handled by our onWheel, so it too must be prevented or it
+    // would scroll an ancestor.
+    let gestureGuardTimer = null;
+    const onDocumentWheel = documentWheelEvent => {
+      if (vp.contains(documentWheelEvent.target)) {
+        return; // on the scroll surface → its own onWheel handles it
+      }
+      documentWheelEvent.preventDefault();
+      keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
+    };
+    const stopClaimingGesture = () => {
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = null;
+      document.removeEventListener("wheel", onDocumentWheel, {
+        capture: true
+      });
+    };
+    const keepClaimingGesture = () => {
+      if (!gestureGuardTimer) {
+        document.addEventListener("wheel", onDocumentWheel, {
+          capture: true,
+          passive: false
+        });
+      }
+      clearTimeout(gestureGuardTimer);
+      gestureGuardTimer = setTimeout(stopClaimingGesture, WHEEL_GESTURE_MAX_GAP);
+    };
+    const onWheel = e => {
+      const raw = isHorizontal ? e.deltaX || e.deltaY : e.deltaY;
+      if (!raw) {
+        return;
+      }
+      // Normalise to pixels: line-mode → one row, page-mode → a viewport.
+      let delta = raw;
+      if (e.deltaMode === 1) {
+        delta = raw * getItemSize(vp);
+      } else if (e.deltaMode === 2) {
+        delta = raw * viewportMain(vp);
+      }
+      // Cap one wheel step to a single row so a chunky mouse notch (often ~100px)
+      // advances one value like a native picker, instead of jumping three. A
+      // trackpad's small deltas stay under the cap and scroll smoothly.
+      const itemSize = getItemSize(vp);
+      if (delta > itemSize) {
+        delta = itemSize;
+      } else if (delta < -itemSize) {
+        delta = -itemSize;
+      }
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
+          // Always trap the scroll (like overscroll-behavior: contain): the page
+          // never scrolls from within a wheel, even at a bounded end. setPos clamps
+          // a non-looping wheel, so an overscroll past the end is simply a no-op.
+          e.preventDefault();
+          cancelAnim();
+          // Track the scroll velocity (px/ms, capped) so the settle lands on the row
+          // the scroll was heading for. Clamp dt so a first event / long pause after
+          // one doesn't blow the estimate up.
+          const now = performance.now();
+          const gap = now - lastWheelTime;
+          const dt = clampNumber(gap, 8, 120);
+          lastWheelTime = now;
+          wheelVelocity = clampNumber(delta / dt, -WHEEL_MAX_VELOCITY, WHEEL_MAX_VELOCITY);
+          // First event of a fresh gesture: advance one item whatever the delta, so
+          // even the lightest scroll snaps to the next (like native scroll-snap on a
+          // section). Force the settle onto the adjacent row in the scroll direction.
+          if (gap > WHEEL_GESTURE_MAX_GAP && itemSize > 0) {
+            let target = snapPosToRow(vp, posRef.current) + (delta < 0 ? -itemSize : itemSize);
+            if (!isLoop) {
+              const count = trackedItemsRef.current.length;
+              target = clampNumber(target, 0, (count - 1) * itemSize);
+            }
+            wheelForcedTarget = target;
+          } else {
+            wheelForcedTarget = null;
+          }
+          setPos(vp, posRef.current + delta, {
+            live: true
+          });
+          scheduleWheelSettle();
+          keepClaimingGesture();
+        },
+        prevented: () => {
+          // Blocked (readonly/disabled/busy): the gate showed the callout; trap
+          // the scroll so the page doesn't move under the control the user is
+          // trying to use, now and for the rest of this gesture even off-element.
+          e.preventDefault();
+          keepClaimingGesture();
+        }
+      });
+    };
+
+    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
+    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
+    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
+    // scroller to drive here, so this is the seam external code (e.g. a demo
+    // comparing this wheel against a native scroll-snap list) uses to move it.
+    const onNaviScroll = e => {
+      if (!e.detail) {
+        return;
+      }
+      let delta = e.detail.delta || 0;
+      if (e.detail.items) {
+        delta += e.detail.items * getItemSize(vp);
+      }
+      if (!delta) {
+        return;
+      }
+      attemptInteraction({
+        event: e,
+        name: "scroll",
+        allowed: () => {
+          cancelAnim();
+          if (e.detail.behavior === "smooth") {
+            // Glide to the nearest row after the nudge (a sub-row nudge springs
+            // back); a whole-row/items delta already lands on a row.
+            glideTo(vp, snapPosToRow(vp, posRef.current + delta));
+          } else {
+            setPos(vp, posRef.current + delta, {
+              live: true
+            });
+            scheduleSettle();
+          }
+        }
+      });
+    };
+
+    // Cursor by POSITION, not by which row is under the pointer: the center
+    // window (already-selected value) is a plain cursor, everywhere else is a
+    // pointer (click to select). Set on the viewport — the rows inherit it — so a
+    // fixed mouse doesn't flicker between default/pointer as rows scroll under it.
+    const updateCursor = e => {
+      if (!interactive) {
+        vp.style.cursor = "default";
+        return;
+      }
+      const rect = vp.getBoundingClientRect();
+      const along = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top;
+      const size = isHorizontal ? rect.width : rect.height;
+      const half = getItemSize(vp) / 2;
+      const mid = size / 2;
+      const inCenter = along >= mid - half && along <= mid + half;
+      vp.style.cursor = inCenter ? "default" : "pointer";
+    };
+    let drag = null;
+    const onPointerDown = e => {
+      if (e.pointerType === "mouse" && e.button !== 0) {
+        return;
+      }
+      attemptInteraction({
+        event: e,
+        name: "select",
+        allowed: () => {
+          // Do NOT cancel the glide here: a click that isn't a drag should let the
+          // in-flight glide keep running and just nudge its target (smooth, like
+          // arrows). The glide is only cancelled once a real drag starts (below).
+          const client = isHorizontal ? e.clientX : e.clientY;
+          drag = {
+            pointerId: e.pointerId,
+            startClient: client,
+            startPos: posRef.current,
+            lastClient: client,
+            lastTime: performance.now(),
+            velocity: 0,
+            moved: false,
+            captured: false
+          };
+          // Capture on pointerDOWN, not on first move: a fast drag can leave the
+          // viewport before the first pointermove fires, and without capture the
+          // pointerup then lands outside and is never caught — leaving `drag` set
+          // so the wheel keeps scrolling after release. Capture routes every
+          // move/up back here regardless of where the pointer goes.
+          //
+          // BUT only take EXPLICIT capture for mouse/pen. A touch pointer is
+          // already implicitly captured to its pointerdown target (its move/up
+          // keep targeting the viewport), so setPointerCapture would be
+          // redundant. (The "tap a dialog button right after a fling does
+          // nothing" bug is a separate browser-level tap suppression, handled by
+          // preventing touchmove during the drag — see onTouchMove below.)
+          if (e.pointerType === "touch") {
+            debug(e, `pointer down: touch, implicit capture (id=${e.pointerId})`);
+          } else {
+            try {
+              vp.setPointerCapture(e.pointerId);
+              drag.captured = true;
+              debug(e, `pointer down: capture set (id=${e.pointerId}, ${e.pointerType})`);
+            } catch {
+              // pointer already gone (e.g. released same tick) — nothing to capture.
+              debug(e, `pointer down: capture FAILED (id=${e.pointerId})`);
+            }
+          }
+        }
+      });
+    };
+    const onPointerMove = e => {
+      if (!drag) {
+        updateCursor(e); // hovering (no button): keep the position cursor fresh
+        return;
+      }
+      if (e.pointerId !== drag.pointerId) {
+        return;
+      }
+      // Safety net for a missed pointerup: if the mouse button is no longer held
+      // while we still think we're dragging, the release was lost (it can land
+      // outside a capture, or be swallowed). End the drag now instead of letting
+      // the wheel keep following the released pointer. Only for mouse — touch/pen
+      // report buttons=0 during a normal move, so we rely on pointerup/cancel there.
+      if (e.pointerType === "mouse" && e.buttons === 0) {
+        endDrag(e);
+        return;
+      }
+      const client = isHorizontal ? e.clientX : e.clientY;
+      if (!drag.moved && Math.abs(client - drag.startClient) > 3) {
+        // A real drag begins: stop the glide and re-anchor to here so the wheel
+        // doesn't jump (startPos = the just-frozen position, startClient = now).
+        drag.moved = true;
+        const caught = cancelAnim();
+        debug(e, caught ? "catch: grabbed a moving wheel" : "drag: start");
+        drag.startPos = posRef.current;
+        drag.startClient = client;
+      }
+      if (!drag.moved) {
+        return;
+      }
+      const total = client - drag.startClient;
+      const now = performance.now();
+      const dt = now - drag.lastTime;
+      if (dt > 0) {
+        drag.velocity = (client - drag.lastClient) / dt;
+      }
+      drag.lastClient = client;
+      drag.lastTime = now;
+      // Finger down → content down → position decreases.
+      setPos(vp, drag.startPos - total, {
+        live: true
+      });
+    };
+    const endDrag = e => {
+      const wasDrag = drag.moved;
+      const pointerId = drag.pointerId;
+      let velocity = drag.velocity;
+      // If the pointer sat still for a moment before release, don't fling: a stale
+      // velocity from an earlier fast move would send the wheel gliding after the
+      // user had already stopped. (No pointermove fires while still, so the last
+      // computed velocity lingers.)
+      if (performance.now() - drag.lastTime > 60) {
+        velocity = 0;
+      }
+      const wasCaptured = drag.captured;
+      if (wasCaptured) {
+        try {
+          vp.releasePointerCapture(pointerId);
+        } catch {
+          // capture already lost (e.g. the pointer is gone) — nothing to release.
+        }
+      }
+      debug(e, `${e.type}: ${wasDrag ? "drag end" : "tap"}${wasCaptured ? `, capture released` : ``} (id=${pointerId})`);
+      drag = null;
+      if (!wasDrag) {
+        // A tap: step by the click's row-distance from the center window, NOT by
+        // the item under the pointer. The pointer sits over a static zone while
+        // rows scroll beneath it, so a fast series of clicks in the "one below"
+        // zone each add +1 to the target and accumulate — the glide catches up.
+        const rect = vp.getBoundingClientRect();
+        const along = isHorizontal ? e.clientX - rect.left : e.clientY - rect.top;
+        const size = isHorizontal ? rect.width : rect.height;
+        const offset = Math.round((along - size / 2) / getItemSize(vp));
+        if (offset !== 0) {
+          stepTarget(vp, offset, e);
+        } else {
+          // Clicked the center zone: no step, but the pointerdown cancelled any
+          // in-flight glide (freezing the position), so snap cleanly to the row.
+          settle(vp, 0);
+        }
+        return;
+      }
+      // Position moves opposite to the finger.
+      settle(vp, -velocity);
+    };
+    const onPointerUp = e => {
+      if (!drag || e.pointerId !== drag.pointerId) {
+        // e.g. the lostpointercapture that follows our own releasePointerCapture,
+        // or a stray pointercancel — logged so the capture teardown is visible.
+        debug(e, `${e.type}: no active drag (id=${e.pointerId})`);
+        return;
+      }
+      endDrag(e);
+    };
+
+    // On Android Chrome a pointer-driven drag on a touch-action:none surface
+    // leaves the browser in a state that swallows the NEXT quick tap's
+    // synthesized `click` (a browser-level tap suppression, independent of navi).
+    // Calling preventDefault on the touchmoves that make up the drag tells the
+    // browser the touch is fully consumed, so a tap on e.g. a dialog's Confirm
+    // button right after a fling still fires its click. Only while a drag is
+    // active, and on touchmove (not touchstart) — the drag IS the move, and
+    // preventing touchstart has wider side effects. Requires a non-passive
+    // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
+    const onTouchMove = e => {
+      if (drag) {
+        e.preventDefault();
+      }
+    };
+
+    // A press ANYWHERE outside the wheel while it's coasting settles it now, so
+    // that press (a tap on a dialog button, a click-outside) lands on a stable
+    // surface instead of one a late momentum re-render would move. Capture phase
+    // so it runs before the target's own handlers.
+    const onDocumentPointerDown = e => {
+      if (el.contains(e.target)) {
+        return; // presses inside the wheel are handled by onPointerDown above
+      }
+      commitIfAnimating();
+    };
+    document.addEventListener("pointerdown", onDocumentPointerDown, {
+      capture: true
+    });
+    vp.addEventListener("wheel", onWheel, {
+      passive: false
+    });
+    vp.addEventListener("pointerdown", onPointerDown);
+    vp.addEventListener("pointermove", onPointerMove);
+    vp.addEventListener("pointerup", onPointerUp);
+    vp.addEventListener("pointercancel", onPointerUp);
+    vp.addEventListener("touchmove", onTouchMove, {
+      passive: false
+    });
+    // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
+    // ends the gesture too — otherwise the drag would stay latched.
+    vp.addEventListener("lostpointercapture", onPointerUp);
+    el.addEventListener("navi_scroll", onNaviScroll);
+    return () => {
+      clearTimeout(settleTimer);
+      stopClaimingGesture();
+      cancelAnim();
+      document.removeEventListener("pointerdown", onDocumentPointerDown, {
+        capture: true
+      });
+      vp.removeEventListener("wheel", onWheel);
+      vp.removeEventListener("pointerdown", onPointerDown);
+      vp.removeEventListener("pointermove", onPointerMove);
+      vp.removeEventListener("pointerup", onPointerUp);
+      vp.removeEventListener("pointercancel", onPointerUp);
+      vp.removeEventListener("touchmove", onTouchMove);
+      vp.removeEventListener("lostpointercapture", onPointerUp);
+      el.removeEventListener("navi_scroll", onNaviScroll);
+    };
+  }, [isLoop, isHorizontal, interactive]);
+};
+
+// Keyboard: the spinbutton container is the single focusable element. The
+// main-axis arrows step the value by one row (a fast, focus-free value change,
+// unlike a radio group that moves DOM focus per step); the value updates
+// immediately (for AT) while the row glides to center. Home/End jump to the ends.
+// Keys the wheel doesn't step on (Enter, Escape, …) are forwarded to the facade
+// input handler so the wheel submits/cancels like any control. Cross-axis arrows
+// are left for the WheelGroup to move focus between wheels.
+const useWheelKeyboard = ({
+  ref,
+  isHorizontal,
+  isLoop,
+  interactive,
+  trackedItemsRef,
+  hostKeyDownRef,
+  attemptInteraction,
+  glideToIndex,
+  stepTarget
+}) => {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const vp = el.querySelector(".navi_wheel_viewport");
+    const prevKey = isHorizontal ? "ArrowLeft" : "ArrowUp";
+    const nextKey = isHorizontal ? "ArrowRight" : "ArrowDown";
+    const stepKeys = new Set([prevKey, nextKey, "Home", "End"]);
+    const onKeyDown = e => {
+      if (!stepKeys.has(e.key)) {
+        // Keys the wheel doesn't step on (Enter, Escape, …) go to the facade
+        // input handler so the wheel behaves like any other control: Enter
+        // submits the enclosing form or sends the enclosing picker, Escape
+        // closes it. See hostKeyDownRef above.
+        hostKeyDownRef.current?.(e);
+        return;
+      }
+      // Swallow the key in both branches (so arrows never scroll the page); a
+      // blocked wheel (readonly is focusable, so arrows can reach it) pops the
+      // matching callout instead of stepping.
+      attemptInteraction({
+        event: e,
+        name: "step",
+        allowed: () => {
+          e.preventDefault();
+          if (e.key === "Home" || e.key === "End") {
+            const count = trackedItemsRef.current.length;
+            if (!count) {
+              return;
+            }
+            glideToIndex(vp, e.key === "Home" ? 0 : count - 1, e);
+          } else {
+            // Steps from the TARGET, so a second press mid-glide accumulates (the
+            // spring accelerates toward the farther target).
+            stepTarget(vp, e.key === nextKey ? 1 : -1, e);
+          }
+        },
+        prevented: () => {
+          e.preventDefault();
+        }
+      });
+    };
+    el.addEventListener("keydown", onKeyDown);
+    return () => {
+      el.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isHorizontal, interactive, isLoop]);
+};
+function WheelUI(props) {
+  import.meta.css = [css$k, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  const {
+    ref,
+    visibleCount = 3,
+    itemHeight,
+    itemWidth,
+    bounded,
+    horizontal,
+    glass,
+    frameBorder,
+    glideSpeed = WHEEL_GLIDE_SPEED,
+    type,
+    style
+  } = props;
+  const group = useContext(WheelGroupContext);
+  const isHorizontal = Boolean(horizontal ?? group?.horizontal);
+  // A wheel turns by default; `bounded` gives it fixed ends (no wrap).
+  const isLoop = !bounded;
+  // Glass: frost the neighbouring rows so the center reads as a clear "window"
+  // (like the iOS picker). frameBorder lines the window edges (independent).
+  // Both inherited from a WheelGroup so a whole group is styled with one prop.
+  const showGlass = Boolean(glass ?? group?.glass);
+  const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
+
+  // Collect every Wheel.Item's {value, label, itemProps} in order, robustly
+  // (children may be wrapped). This ordered list is the source of truth for the
+  // whole wheel — the rendered rows are a small recycled window over it.
+  const tracker = useItemTracker();
+  const indexRef = useRef(0);
+  indexRef.current = 0;
+  const trackerContextRef = useRef(null);
+  if (!trackerContextRef.current) {
+    trackerContextRef.current = {
+      tracker,
+      indexRef
+    };
+  }
+  const trackedItems = tracker.itemsSignal.value;
+  const trackedItemsRef = useRef(trackedItems);
+  trackedItemsRef.current = trackedItems;
+  const itemCount = trackedItems.length;
+
+  // Virtualization: render only visibleCount + 2 rows (one buffer each side to
+  // cover the partial rows a scroll reveals + a re-render's one-frame lag) and
+  // recycle them, filling each from trackedItems. `centerRowSignal` holds the row
+  // currently at the center (round(pos / itemSize)); it changes only when the
+  // wheel crosses a row (not every frame), so the window re-renders on demand, not
+  // per frame. WheelWindow derives its top slot (base) from that row and its own
+  // windowSize — so a windowSize change (items still registering) recomputes base
+  // instead of leaving the top rows unrendered. The per-frame transform is
+  // imperative (--wheel-offset); renderedBaseRef mirrors the base the DOM shows so
+  // the transform stays consistent with it.
+  // visibleCount + 2, but never more rows than there are values.
+  let windowSize = visibleCount + 2;
+  if (windowSize > itemCount) {
+    windowSize = itemCount;
+  }
+  const centerRowSignal = useSignal(0);
+  const renderedBaseRef = useRef(0);
+  // Which window slot currently carries data-wheel-current (the center row).
+  const markedSlotRef = useRef(-1);
+  // Row size in px, measured once from a rendered slot (rows are uniform).
+  const itemSizeRef = useRef(0);
+
+  // A single value control backed by a hidden input (facade pattern, like
+  // Picker): `ref` is the visible spinbutton container; `inputRef` the hidden
+  // <input> holding the value for the form.
+  //
+  // type="navi_js" is what keeps the value TYPED end to end. Wheel.Item values
+  // are arbitrary JS (numbers, ISO strings, day objects…); a plain text input
+  // would let readControlValue read them back as DOM strings — the framework
+  // re-syncs uiState from the input after every change, so `9` would come back as
+  // "9" and action/aria would see a string. navi_js makes readControlValue return
+  // the controller's real JS value instead (same mechanism Picker uses for its
+  // complex values). The wheel's own `type` prop ("integer", "day"…) is a
+  // rendering hint kept on the container (data-wheel-type), never on the input.
+  const inputRef = useRef(null);
+  const [controlRootProps, controlHostProps, {
+    facadeController
+  }] = useControlFacadeProps({
+    ...props,
+    ref: inputRef,
+    type: "navi_js",
+    // uiAction fires live (every center-crossing, via setPos live reports);
+    // the committed action must fire only when the wheel stabilizes. "custom"
+    // stops setUIState from auto-firing the action on every value change, so
+    // the live reports are uiAction-only; commitSelection then dispatches the
+    // action explicitly on settle. A caller can still override actionEvent.
+    actionEvent: props.actionEvent ?? "custom"
+  }, {
+    controlType: "input"
+  });
+  const uiStateController = getUIStateControllerById(controlHostProps.id);
+  const {
+    basePseudoState,
+    children
+  } = controlHostProps;
+  // The facade's own keydown handler (Enter → submit form / send picker, Escape
+  // → close, …) is wired to the hidden input, which is never focused (focus is
+  // on the spinbutton container). Held in a ref so the container's keydown
+  // effect can forward the keys it doesn't handle to it — mirroring how
+  // picker.jsx re-dispatches bubbling keydowns to its input. Recreated each
+  // render, so a stable ref (not a dependency) keeps the effect from re-binding.
+  const hostKeyDownRef = useRef();
+  hostKeyDownRef.current = controlHostProps.onKeyDown;
+  const loading = basePseudoState[":-navi-loading"];
+  const readOnly = basePseudoState[":read-only"];
+  const disabled = basePseudoState[":disabled"];
+  // Scroll/arrows/clicks must not change a readonly, disabled or loading (busy)
+  // wheel — the controlled value stays authoritative and any scroll springs back
+  // to it. Interaction attempts still go through the gate (attemptInteraction) so
+  // the matching readonly/disabled/busy callout is shown.
+  const interactive = !readOnly && !disabled && !loading;
+  // The typed selected value (see the navi_js note above): what the rest of the
+  // file compares (compareTwoJsValues) and exposes (action/uiAction, aria).
+  const currentValue = uiStateController.uiState;
+  for (const key of WHEEL_OWN_PROP_KEYS) {
+    delete controlRootProps[key];
+  }
+
+  // Wheel-motion lifecycle logging, under the navi "[scroll]" debug category
+  // (enable via <NaviDebug debugScroll> / debugAll). Logs drag/catch/settle/
+  // commit so the wheel's animation phases are readable — e.g. to see the
+  // momentum window that follows a fling.
+  const debugScroll = useDebugScroll();
+
+  // Long-lived event effects (keydown, pointer/wheel) are bound once but read the
+  // value and item list here; a plain closure would freeze the mount render's
+  // values (empty item list, initial value) and later clear or mis-map the
+  // selection. Refs keep the mapping helpers reading fresh data.
+  const currentValueRef = useRef(currentValue);
+  currentValueRef.current = currentValue;
+
+  // Ask the framework to change the value; the controlled value / action flow
+  // then updates uiState, which syncCenterToSelection reacts to. Callers reach
+  // this only when interactive (the gate blocks readonly/disabled/busy upstream).
+  const requestSelectValue = (newValue, event) => {
+    if (compareTwoJsValues(newValue, currentValueRef.current)) {
+      return;
+    }
+    dispatchRequestSetUIState(inputRef.current, newValue, {
+      event
+    });
+  };
+
+  // Gate a user gesture (scroll, drag, tap, arrow) through the framework's
+  // interactivity check. When the wheel is readonly/disabled/busy the gate pops
+  // the matching callout and runs `prevented`; otherwise it runs `allowed`. One
+  // path covers all three blocked states. Params are forwarded to
+  // dispatchRequestInteraction verbatim — { event, name, allowed, prevented }.
+  //
+  // Do NOT preventDefault the event before calling this: the gate refuses an
+  // already-defaultPrevented event, so it would read every gesture as blocked.
+  // preventDefault inside `allowed`/`prevented` once we know what to do with it.
+  const attemptInteraction = params => {
+    dispatchRequestInteraction(inputRef.current, params);
+  };
+
+  // Map a value to its index in the tracked list (the selection is one value,
+  // located in the ordered data — not a DOM row). -1 when absent.
+  const getIndexForValue = value => {
+    return trackedItemsRef.current.findIndex(it => compareTwoJsValues(it.value, value));
+  };
+
+  // What the spinbutton announces. currentValue is already the typed item value.
+  // aria-valuenow carries it whether numeric or a short string (e.g. "M"); a
+  // richer label ("Monday, July 28") goes on aria-valuetext. When every item is
+  // numeric, aria-valuemin/valuemax bound the range for assistive tech.
+  const selectedTracked = trackedItems.find(it => compareTwoJsValues(it.value, currentValue));
+  const ariaValueNow = typeof currentValue === "number" || typeof currentValue === "string" ? currentValue : undefined;
+  let ariaValueText;
+  if (selectedTracked && typeof selectedTracked.label === "string") {
+    ariaValueText = selectedTracked.label;
+  } else {
+    ariaValueText = undefined;
+  }
+  const numericRange = getNumericRange(trackedItems);
+
+  // The value index we are heading to (the glide/selection target). Guards the
+  // effects so an external value change (or the initial mount) scrolls into place,
+  // while our own scroll-driven selection does not scroll a second time. Holds the
+  // TARGET so rapid inputs step from it and accumulate. null = nothing pending.
+  const centeredIndexRef = useRef(null);
+  // The wheel does NOT use native scroll. `posRef` is our own virtual scroll
+  // position (px, main axis); the list track is translated by -pos. This is the
+  // single source of truth, wrapped modulo the real-list extent in loop mode, so
+  // there is no physical scroll edge to get stuck at.
+  const posRef = useRef(0);
+  // momentumRef: the fling/settle rAF (velocity decay → snap).
+  const momentumRef = useRef(null);
+  // The discrete glide is a spring toward targetPosRef: arrow keys and clicks set
+  // the target (accumulating — each press/click moves it another row), and one
+  // rAF loop (glideRef) chases it. The chase LAGS the target on purpose, so N fast
+  // inputs land N rows away and the animation catches up; a farther target springs
+  // faster, so a second press mid-glide reads as accelerating, not restarting.
+  const targetPosRef = useRef(null);
+  const glideRef = useRef(null);
+  // The glide loop is bound once (mount effect) but the speed can change live
+  // (e.g. a demo control) — read it through a ref so it uses the latest.
+  const glideSpeedRef = useRef(glideSpeed);
+  glideSpeedRef.current = glideSpeed;
+  const styleWithVars = {
+    "--wheel-visible-count": visibleCount,
+    ...(itemHeight === undefined ? {} : {
+      "--wheel-item-height": typeof itemHeight === "number" ? `${itemHeight}px` : itemHeight
+    }),
+    ...(itemWidth === undefined ? {} : {
+      "--wheel-item-width": typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth
+    }),
+    ...style
+  };
+
+  // Main-axis size of the viewport, from the orientation.
+  const viewportMain = vp => isHorizontal ? vp.clientWidth : vp.clientHeight;
+
+  // Row size (px). Rows are uniform, so one measurement (cached) drives all the
+  // geometry — positions are then computed from value indices, not read off the
+  // DOM. Measured from a rendered window slot; refreshed while still 0.
+  const getItemSize = vp => {
+    if (itemSizeRef.current > 0) {
+      return itemSizeRef.current;
+    }
+    const slot = vp.querySelector(".navi_wheel_item");
+    const size = slot ? isHorizontal ? slot.offsetWidth : slot.offsetHeight : 0;
+    if (size > 0) {
+      itemSizeRef.current = size;
+    }
+    return size;
+  };
+  const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
+  const getTrack = vp => vp.querySelector(".navi_wheel_list");
+  const clampNumber = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+  // An index wrapped into [0, count) when looping, else clamped.
+  const wrapIndex = index => {
+    const count = trackedItemsRef.current.length;
+    if (count === 0) {
+      return 0;
+    }
+    return isLoop ? (index % count + count) % count : clampNumber(index, 0, count - 1);
+  };
+
+  // Push the current position onto the track and re-render the recycled window ON
+  // DEMAND. Every frame the transform (--wheel-offset) is updated imperatively
+  // (cheap); the window's slot VALUES re-render only when the top value index
+  // changes (i.e. we cross a row), via baseIndexSignal. renderedBaseRef mirrors
+  // the base the DOM currently shows, so the imperative transform stays consistent
+  // with it even when a re-render lags a frame — the buffer row absorbs the gap.
+  // The transform that positions the track so the value at pos/itemSize sits in
+  // the center window, given the base value the DOM currently shows
+  // (renderedBaseRef). Snap to a whole pixel (a transformed row's text renders 1px
+  // off a static element at a half-pixel; the separators share this line-height to
+  // match the grid).
+  const applyOffset = vp => {
+    const track = getTrack(vp);
+    const size = getItemSize(vp);
+    if (!track || size === 0) {
+      return;
+    }
+    const t = viewportMain(vp) / 2 - size / 2 - posRef.current + renderedBaseRef.current * size;
+    track.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
+    // Mark the row currently in the center window (its value is the selection).
+    // The slot recycles, so the marked node changes as we scroll — move the
+    // attribute only when the center slot index actually changes. Only [disabled]
+    // styling reads it; the fade/focus-ring center is geometric (CSS).
+    const centerSlot = Math.round(posRef.current / size) - renderedBaseRef.current;
+    if (centerSlot !== markedSlotRef.current) {
+      const slots = track.children;
+      const previous = slots[markedSlotRef.current];
+      if (previous) {
+        previous.removeAttribute("data-wheel-current");
+      }
+      const current = slots[centerSlot];
+      if (current) {
+        current.setAttribute("data-wheel-current", "");
+      }
+      markedSlotRef.current = centerSlot;
+    }
+  };
+  const renderPos = vp => {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (size === 0 || count === 0) {
+      return;
+    }
+    // Publish the center row; WheelWindow turns it into the top slot (base). The
+    // signal only fires on a row change, so the window re-renders on demand.
+    const row = Math.round(posRef.current / size);
+    if (row !== centerRowSignal.peek()) {
+      centerRowSignal.value = row;
+    }
+    applyOffset(vp);
+  };
+  // The window subcomponent calls this once it has committed a new base to the
+  // DOM: sync renderedBaseRef then re-apply the offset so the imperative transform
+  // matches the freshly rendered rows within the same frame (no jump).
+  const commitRenderedBase = base => {
+    renderedBaseRef.current = base;
+    const vp = getViewport();
+    if (vp) {
+      applyOffset(vp);
+    }
+  };
+
+  // The value index at the center for the current position.
+  const centeredIndex = vp => {
+    const size = getItemSize(vp);
+    return size === 0 ? 0 : wrapIndex(Math.round(posRef.current / size));
+  };
+
+  // The canonical position that centers value `index` (index * itemSize). For a
+  // loop, glideTargetFor picks the copy nearest the current pos so a wrap goes the
+  // short way round instead of unwinding the whole list.
+  const centerPosFor = (vp, index) => index * getItemSize(vp);
+  const glideTargetFor = (vp, index) => {
+    const canonical = centerPosFor(vp, index);
+    const span = trackedItemsRef.current.length * getItemSize(vp);
+    if (!isLoop || span === 0) {
+      return canonical;
+    }
+    return canonical + Math.round((posRef.current - canonical) / span) * span;
+  };
+
+  // Nearest whole-row position to `pos` (rows are spaced by itemSize).
+  const snapPosToRow = (vp, pos) => {
+    const size = getItemSize(vp);
+    return size === 0 ? pos : Math.round(pos / size) * size;
+  };
+
+  // Bounded: clamp so the first/last value can't be scrolled past center. A loop
+  // never clamps — its position is free and folds back to a canonical value on
+  // settle (commitSelection) so it can't drift unbounded.
+  const clampPos = vp => {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (count === 0 || size === 0) {
+      return;
+    }
+    posRef.current = clampNumber(posRef.current, 0, (count - 1) * size);
+  };
+
+  // `live` (user scrubs: drag, momentum, wheel scroll) reports the value as each
+  // item crosses the center, so uiAction tracks the wheel in real time — like
+  // every other control. The committed action still fires only once it settles
+  // (commitSelection). A programmatic move (centerOnIndex on an external value
+  // sync) omits it, so scrolling the wheel into place doesn't echo the value
+  // back out.
+  const setPos = (vp, pos, {
+    live = false
+  } = {}) => {
+    posRef.current = pos;
+    if (!isLoop) {
+      clampPos(vp);
+    }
+    renderPos(vp);
+    if (live && interactive) {
+      const index = centeredIndex(vp);
+      if (index !== centeredIndexRef.current) {
+        const item = trackedItemsRef.current[index];
+        if (item) {
+          // Keep centeredIndexRef in step so the every-render
+          // syncCenterToSelection doesn't read this as an external change and
+          // fight the in-progress motion.
+          centeredIndexRef.current = index;
+          requestSelectValue(item.value, new CustomEvent("navi_wheel_scrub"));
+        }
+      }
+    }
+  };
+
+  // Returns whether it actually interrupted a motion in flight — lets the caller
+  // tell a fresh gesture from one that "caught" a spinning/gliding wheel.
+  const cancelAnim = () => {
+    let interrupted = false;
+    if (momentumRef.current !== null) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = null;
+      interrupted = true;
+    }
+    if (glideRef.current !== null) {
+      cancelAnimationFrame(glideRef.current);
+      glideRef.current = null;
+      targetPosRef.current = null;
+      interrupted = true;
+    }
+    return interrupted;
+  };
+
+  // After motion stops: fold a looped position back to the centered value's
+  // canonical spot (index*itemSize) so it can't drift unbounded, then select it.
+  // The fold happens here at rest, atomically with the settle re-render, so the
+  // window/transform stay consistent (no mid-glide fold).
+  const commitSelection = vp => {
+    const size = getItemSize(vp);
+    const count = trackedItemsRef.current.length;
+    if (size === 0 || count === 0) {
+      return;
+    }
+    const index = centeredIndex(vp);
+    if (isLoop) {
+      posRef.current = index * size;
+      renderPos(vp);
+    }
+    if (!interactive) {
+      return;
+    }
+    const settleEvent = new CustomEvent("navi_wheel_settle");
+    centeredIndexRef.current = index;
+    debugScroll(`settle: committed → ${trackedItemsRef.current[index].value}`);
+    requestSelectValue(trackedItemsRef.current[index].value, settleEvent);
+    // The value is now stable → commit the action. The wheel runs actionEvent
+    // "custom" (see the facade above) so setUIState during the motion only fired
+    // uiAction; here we fire the action explicitly, once, on the settled value.
+    const input = inputRef.current;
+    if (input) {
+      dispatchRequestAction(input, {
+        event: settleEvent
+      });
+    }
+  };
+
+  // If the wheel is still coasting (momentum or glide), stop and commit NOW.
+  // Used when the user presses somewhere else: the coast keeps re-rendering the
+  // surface for up to a second, and on touch the tap's `click` is dispatched a
+  // beat after `pointerup` — long enough for one of those re-renders to move the
+  // element under the pending click, so the browser drops it (visible on mobile:
+  // press a dialog button right after a fling and nothing happens). Committing
+  // on the press settles the DOM up front, before the tap completes.
+  const commitIfAnimating = () => {
+    const animating = momentumRef.current !== null || glideRef.current !== null;
+    // Logs on every press outside the wheel — tells us whether a tap on a dialog
+    // button lands while the wheel is still coasting (animating=true) or after it
+    // already settled (animating=false), which decides where the dropped click
+    // comes from.
+    debugScroll(`external press while wheel animating=${animating}`);
+    if (!animating) {
+      return;
+    }
+    const vp = getViewport();
+    if (!vp) {
+      return;
+    }
+    cancelAnim();
+    commitSelection(vp);
+  };
+
+  // Glide toward `target` with a spring: one rAF loop chases targetPosRef, moving
+  // a fraction of the remaining distance each frame (so it eases out into place)
+  // and continuing from wherever it is when the target moves (so a second input
+  // mid-glide accelerates toward the farther target instead of restarting). The
+  // position runs free (the window recycles values as it goes); it commits and
+  // folds back to a canonical spot on arrival.
+  const glideStep = (vp, prevTime) => {
+    const now = performance.now();
+    const dt = clampNumber(now - prevTime, 0, 32);
+    const target = targetPosRef.current;
+    if (target === null) {
+      glideRef.current = null;
+      return;
+    }
+    const dist = target - posRef.current;
+    // < ~half a pixel from target → snap, commit, done.
+    if (Math.abs(dist) < 0.4) {
+      posRef.current = target;
+      targetPosRef.current = null;
+      glideRef.current = null;
+      renderPos(vp);
+      commitSelection(vp);
+      return;
+    }
+    // Frame-rate-independent spring. Stiffness scales with glideSpeed so the demo
+    // control still slows it down; a farther target moves faster (distance × factor).
+    const factor = 1 - Math.pow(1 - glideSpringFactor(), dt / 16);
+    posRef.current += dist * factor;
+    renderPos(vp);
+    glideRef.current = requestAnimationFrame(() => glideStep(vp, now));
+  };
+  // Spring stiffness (fraction of remaining distance per ~frame). Scales with the
+  // glide speed so slower = gentler chase; clamped so it never crawls or snaps.
+  const glideSpringFactor = () => clampNumber(glideSpeedRef.current * 1.4, 0.06, 0.45);
+  const glideTo = (vp, target) => {
+    // A discrete glide overrides any fling momentum.
+    if (momentumRef.current !== null) {
+      cancelAnimationFrame(momentumRef.current);
+      momentumRef.current = null;
+    }
+    targetPosRef.current = target;
+    if (glideRef.current === null) {
+      debugScroll("glide: start");
+      glideRef.current = requestAnimationFrame(() => glideStep(vp, performance.now()));
+    }
+    // else: the loop is already running and will chase the updated target — no
+    // restart, so rapid inputs read as one accelerating motion, not a stutter.
+  };
+
+  // Settle after user input (fling or idle): a single continuous motion that
+  // decays the initial velocity, then — once slow — springs into the nearest row
+  // center. Momentum and snap are the same loop, so it eases into place instead
+  // of momentum-then-abrupt-jump. Velocity is capped so even a violent fling
+  // overshoots only a handful of rows (a picker isn't a free-scrolling list).
+  const settle = (vp, velocity) => {
+    cancelAnim();
+    debugScroll(`settle: momentum start (v=${velocity}px/ms)`);
+    // A drag fling: allow the full swipe velocity (see WHEEL_FLING_MAX_VELOCITY)
+    // so a hard swipe carries across the list instead of being clipped to a few
+    // rows. The mouse wheel never reaches here (it uses wheelSettle/glide).
+    let v = clampNumber(velocity, -WHEEL_FLING_MAX_VELOCITY, WHEEL_FLING_MAX_VELOCITY);
+    let last = performance.now();
+    let snapping = Math.abs(v) < WHEEL_SNAP_VELOCITY;
+    const step = now => {
+      const dt = clampNumber(now - last, 0, 32);
+      last = now;
+      if (!snapping) {
+        v *= Math.pow(WHEEL_DECAY, dt / 16);
+        setPos(vp, posRef.current + v * dt, {
+          live: true
+        });
+        if (Math.abs(v) < WHEEL_SNAP_VELOCITY) {
+          snapping = true;
+        }
+        momentumRef.current = requestAnimationFrame(step);
+        return;
+      }
+      const snapTo = snapPosToRow(vp, posRef.current);
+      const dist = snapTo - posRef.current;
+      if (Math.abs(dist) < 0.4) {
+        setPos(vp, snapTo, {
+          live: true
+        });
+        momentumRef.current = null;
+        commitSelection(vp);
+        return;
+      }
+      setPos(vp, posRef.current + dist * WHEEL_SPRING_FACTOR, {
+        live: true
+      });
+      momentumRef.current = requestAnimationFrame(step);
+    };
+    momentumRef.current = requestAnimationFrame(step);
+  };
+
+  // Wheel gesture end: land on the row the scroll was heading for. The position
+  // is biased by the last scroll velocity before snapping, so a flick that stopped
+  // just short of the next row still lands ON it (never snaps backward), and the
+  // glide there decelerates as the motion dies — no separate spring-to-nearest, no
+  // long idle wait. velocity is px/ms, signed with the scroll direction.
+  // `forcedTarget` (px) overrides the projection — used by the first event of a
+  // gesture to always advance one item, however small the delta (see onWheel).
+  const wheelSettle = (vp, velocity, forcedTarget) => {
+    cancelAnim();
+    const size = getItemSize(vp);
+    if (size === 0) {
+      return;
+    }
+    let target = forcedTarget !== null && forcedTarget !== undefined ? forcedTarget : snapPosToRow(vp, posRef.current + velocity * WHEEL_MOMENTUM_MS);
+    // Bounded: never glide past the first/last row. glideStep sets pos directly
+    // (no setPos clamp), so a high leftover velocity — e.g. flicking hard to the
+    // end then whipping the mouse off the wheel before it decays — would otherwise
+    // project a target beyond the end and leave the wheel overscrolled there.
+    if (!isLoop) {
+      const count = trackedItemsRef.current.length;
+      target = clampNumber(target, 0, (count - 1) * size);
+    }
+    glideTo(vp, target);
+  };
+
+  // Center value `index` (external value / initial / keyboard / click). Smooth
+  // glides to the nearest copy (glideTargetFor) so a wrap goes the short way.
+  const centerOnIndex = (vp, index, behavior) => {
+    const target = glideTargetFor(vp, index);
+    if (behavior === "smooth") {
+      glideTo(vp, target);
+    } else {
+      setPos(vp, target);
+    }
+  };
+
+  // Select value `index`: update the value immediately (so N inputs land N rows
+  // away right now) and glide there (the animation lags and catches up).
+  // centeredIndexRef holds the TARGET so the next input steps from it — rapid
+  // inputs accumulate.
+  const glideToIndex = (vp, index, event) => {
+    centeredIndexRef.current = index;
+    requestSelectValue(trackedItemsRef.current[index].value, event);
+    centerOnIndex(vp, index, "smooth");
+  };
+  // Index we are heading to (the target, not the mid-glide visual center).
+  const currentTargetIndex = vp => {
+    let index = centeredIndexRef.current;
+    if (index === null) {
+      index = getIndexForValue(currentValueRef.current);
+    }
+    if (index < 0 || index === null) {
+      index = centeredIndex(vp);
+    }
+    if (index < 0) {
+      index = 0;
+    }
+    return index;
+  };
+  // Move the target by `offset` rows (arrow key = ±1, click = its distance from
+  // the center window). Relative to the current target so it accumulates.
+  const stepTarget = (vp, offset, event) => {
+    if (trackedItemsRef.current.length === 0) {
+      return;
+    }
+    const index = currentTargetIndex(vp);
+    glideToIndex(vp, wrapIndex(index + offset), event);
+  };
+
+  // Sync the center with the current value — used on first display and whenever
+  // the controlled value changes from outside.
+  const syncCenterToSelection = (viewportEl, behavior) => {
+    // A glide or momentum in flight (tap, arrow, fling) is already taking the
+    // wheel to the right row. This runs on every controlled-value re-render, which
+    // lags a frame behind our own centeredIndexRef — so on rapid taps its guard
+    // below would miss and it would snap instantly mid-glide, leaving the wheel
+    // stuck off-center. Let the motion finish: commitSelection settles the value
+    // and the next render is a no-op. A genuine external change made during motion
+    // is honoured once it settles (centeredIndexRef then differs from selection).
+    if (glideRef.current !== null || momentumRef.current !== null) {
+      return;
+    }
+    if (trackedItemsRef.current.length === 0) {
+      return;
+    }
+    let selectedIndex = getIndexForValue(currentValueRef.current);
+    if (selectedIndex < 0) {
+      selectedIndex = 0;
+    }
+    if (selectedIndex === centeredIndexRef.current) {
+      return;
+    }
+    centeredIndexRef.current = selectedIndex;
+    centerOnIndex(viewportEl, selectedIndex, behavior);
+  };
+  // The deferred re-center below fires a frame later, by which point the items
+  // have registered and the value has resolved; a closure would still hold the
+  // mount render's empty item list and re-center on the first row. A ref always
+  // points at the current render's syncCenterToSelection.
+  const syncCenterToSelectionRef = useRef(null);
+  syncCenterToSelectionRef.current = syncCenterToSelection;
+
+  // Initial centering — deferred until the wheel is on screen (offsets need real
+  // layout, e.g. not inside a closed popover/dialog).
+  useDisplayedLayoutEffect(ref, el => {
+    const vp = el.querySelector(".navi_wheel_viewport");
+    syncCenterToSelectionRef.current(vp, "auto");
+    // Re-center once more after a frame: the first pass can run before the flex
+    // rows get their final offsets (or before the items have registered), which
+    // would leave the selected value off the center window until the first
+    // interaction. Recompute from stable layout so it sits in the window from
+    // the start.
+    const rafId = requestAnimationFrame(() => {
+      centeredIndexRef.current = null;
+      syncCenterToSelectionRef.current(vp, "auto");
+    });
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  // React to controlled value changes coming from outside.
+  useLayoutEffect(() => {
+    const viewportEl = getViewport();
+    if (!viewportEl || viewportEl.offsetParent === null) {
+      return;
+    }
+    syncCenterToSelection(viewportEl, "auto");
+  });
+  useWheelInteractions({
+    ref,
+    isHorizontal,
+    isLoop,
+    interactive,
+    posRef,
+    trackedItemsRef,
+    clampNumber,
+    attemptInteraction,
+    cancelAnim,
+    setPos,
+    snapPosToRow,
+    getItemSize,
+    viewportMain,
+    settle,
+    wheelSettle,
+    glideTo,
+    stepTarget,
+    commitIfAnimating,
+    debug: debugScroll
+  });
+  useWheelKeyboard({
+    ref,
+    isHorizontal,
+    isLoop,
+    interactive,
+    trackedItemsRef,
+    hostKeyDownRef,
+    attemptInteraction,
+    glideToIndex,
+    stepTarget
+  });
+  return jsxs(Box, {
+    ref: ref
+    // `size` flows through here (it isn't in WHEEL_OWN_PROP_KEYS): the Box
+    // resolves it to font-size — a size token ("xl"), a number (px), or a CSS
+    // length. Because the row height is em-based (--wheel-item-height), the
+    // whole wheel scales with it. An explicit itemHeight/itemWidth still wins.
+    ,
+
+    ...controlRootProps,
+    baseClassName: "navi_wheel_container"
+    // A spinbutton: one focusable element, arrows adjust the value. Disabled is
+    // not focusable (no tabindex), but the wheel is deliberately NOT inert:
+    // scroll/click still reach the interaction gate so the "disabled" callout
+    // can be shown (inert would swallow the events silently).
+    ,
+
+    role: "spinbutton",
+    tabindex: disabled ? undefined : 0,
+    "aria-valuenow": ariaValueNow,
+    "aria-valuetext": ariaValueText,
+    "aria-valuemin": numericRange ? numericRange.min : undefined,
+    "aria-valuemax": numericRange ? numericRange.max : undefined,
+    "aria-disabled": disabled ? "true" : undefined,
+    "data-horizontal": isHorizontal ? "" : undefined,
+    "data-glass": showGlass ? "" : undefined,
+    "data-frame-border": showFrameBorder ? "" : undefined,
+    "data-wheel-type": type || undefined,
+    pseudoClasses: WHEEL_PSEUDO_CLASSES,
+    basePseudoState: basePseudoState,
+    style: styleWithVars,
+    children: [jsx(Box, {
+      as: "input",
+      ...controlHostProps,
+      tabindex: -1,
+      "aria-hidden": "true",
+      className: "navi_wheel_input"
+      // Ensure cannot show keyboard on mobile when focused
+      ,
+
+      readOnly: true,
+      "data-readonly-forced": ""
+      // eslint-disable-next-line react/no-children-prop
+      ,
+
+      children: undefined
+    }), jsx("div", {
+      className: "navi_wheel_outline_wrapper",
+      children: jsx(LoadingOutline, {
+        loading: loading,
+        color: "var(--navi-loader-color)",
+        inset: -1
+      })
+    }), jsxs("div", {
+      className: "navi_wheel_viewport",
+      children: [jsx("div", {
+        className: "navi_wheel_pane",
+        "data-side": "start"
+      }), jsx(WheelItemTrackerContext.Provider, {
+        value: trackerContextRef.current,
+        children: jsx(ControlFacadeChildrenWrapper, {
+          facadeController: facadeController,
+          children: children
+        })
+      }), jsx("ul", {
+        className: "navi_wheel_list",
+        children: jsx(WheelWindow, {
+          centerRowSignal: centerRowSignal,
+          windowSize: windowSize,
+          trackedItems: trackedItems,
+          isLoop: isLoop,
+          onBaseCommit: commitRenderedBase
+        })
+      }), jsx("div", {
+        className: "navi_wheel_pane",
+        "data-side": "end"
+      })]
+    }), jsx("div", {
+      className: "navi_wheel_focus_ring"
+    })]
+  });
+}
+const WHEEL_PSEUDO_CLASSES = [":focus-within", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+
+// The recycled window: a fixed set of `windowSize` <li> slots (one per visible
+// row + 2 buffer), keyed by slot position so each DOM node is reused and only its
+// content re-renders. `base` (the top slot's value index) is derived here from the
+// center row + windowSize — computing it here, not upstream, means a windowSize
+// change (items still registering) recomputes base correctly. Each slot shows
+// trackedItems[base + slot] (wrapped when looping). It reads centerRowSignal, so
+// it re-renders ONLY when the wheel crosses a row, not every frame — the per-frame
+// motion is the imperative transform in applyOffset. On each new base it calls
+// onBaseCommit so the transform re-syncs to the freshly rendered rows same-frame.
+const WheelWindow = ({
+  centerRowSignal,
+  windowSize,
+  trackedItems,
+  isLoop,
+  onBaseCommit
+}) => {
+  const count = trackedItems.length;
+  let base = centerRowSignal.value - Math.floor(windowSize / 2);
+  // Non-loop: keep the window inside the value range so every slot maps to a real
+  // value; the transform then leaves the blank runway above the first / below the
+  // last value on its own (no rows are drawn there).
+  if (!isLoop && count > 0) {
+    base = base < 0 ? 0 : base > count - windowSize ? count - windowSize : base;
+  }
+  useLayoutEffect(() => {
+    onBaseCommit(base);
+  });
+  const slots = [];
+  for (let slot = 0; slot < windowSize; slot++) {
+    let index = base + slot;
+    if (isLoop) {
+      index = (index % count + count) % count;
+    }
+    const item = trackedItems[index];
+    slots.push(jsx(Box, {
+      as: "li",
+      ...item.itemProps,
+      baseClassName: "navi_wheel_item",
+      children: item.label
+    }, slot));
+  }
+  return slots;
+};
+
+/**
+ * Wheel.Item — a value in a Wheel. Must be used inside <Wheel>.
+ *
+ * Registration only: it records its {value, label, itemProps} with the wheel and
+ * renders NOTHING. The wheel is virtualized — it renders a small recycled window
+ * of rows and fills each from this tracked data — so the value list is the source
+ * of truth, not a per-item DOM node. Selection lives on the wheel's value.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value: any,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ */
+const WheelItem = ({
+  value,
+  id,
+  children,
+  ...rest
+}) => {
+  const idDefault = useId();
+  const resolvedId = id || idDefault;
+  // Wheel.Item must live inside a Wheel, so the context is always present.
+  const trackerContext = useContext(WheelItemTrackerContext);
+  const index = trackerContext.indexRef.current++;
+  trackerContext.tracker.useTrackItem({
+    id: resolvedId,
+    index,
+    value,
+    label: children,
+    itemProps: rest
+  });
+  return null;
+};
+Wheel.Item = WheelItem;
+
+/**
+ * WheelGroup — lays out several Wheels side by side with separators between
+ * them (e.g. a "HH : MM : SS" time picker, or "9 hours 30 minutes").
+ *
+ * Put <Wheel> and <WheelGroup.Separator> as direct children. Separators take
+ * their natural content width. No spacing by default; to add breathing room, pad
+ * each Wheel.Item (it's a Box: paddingX="0.5ch") so the gap stays scrollable.
+ * `spacing` is just the Box flex gap between children (a layout gap, not padding).
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   horizontal?: boolean,
+ *   children?: import("ignore:preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
+ * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
+ * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
+ */
+const WheelGroup = props => {
+  import.meta.css = [css$k, "@jsenv/navi/src/control/wheel/wheel.jsx"];
+  // WheelGroup IS a control group: it aggregates its named wheels ("hours",
+  // "minutes"…) into one object value, so it can sit directly inside a Form or a
+  // Picker with no extra <ControlGroup> wrapper. The wheel-specific presentation
+  // props are consumed here; the rest flow into the group hook.
+  // `spacing` is NOT consumed here — it flows through to the underlying Box as a
+  // plain flex gap between the wheels/separators (not a wheel concept).
+  const {
+    horizontal,
+    glass,
+    frameBorder,
+    style
+  } = props;
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const groupRef = props.ref;
+
+  // controlType "control_group" (not a bespoke "wheel_group") so a Picker with
+  // type="controlgroup" recognises this as its aggregating child (it only syncs
+  // with a control_group — see useUIFacadeStateController). Named wheels aggregate
+  // into { hours, minutes, … }; a nameless wheel warns (name it or it won't be in
+  // the value), same as any control group.
+  const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
+    allowCapture: true,
+    wantRequesterButtonState: true,
+    controlType: "control_group",
+    stateType: "object",
+    cascadeValidationToChildren: true
+  });
+  const {
+    children
+  } = controlgroupProps;
+  const groupStyle = {
+    ...style
+  };
+
+  // Cross-axis arrows move focus between wheels (the main axis stays within a
+  // wheel, changing its value). A row of wheels → Left/Right hop columns; a
+  // horizontal group stacks wheels → Up/Down hop rows. Focusing the next wheel's
+  // spinbutton lets you go straight from hours to minutes.
+  useLayoutEffect(() => {
+    const el = groupRef.current;
+    const prevKey = horizontal ? "ArrowUp" : "ArrowLeft";
+    const nextKey = horizontal ? "ArrowDown" : "ArrowRight";
+    const onKeyDown = e => {
+      if (e.key !== prevKey && e.key !== nextKey) {
+        return;
+      }
+      const active = document.activeElement;
+      if (!active || !el.contains(active)) {
+        return;
+      }
+      const currentWheel = active.closest(".navi_wheel_container");
+      if (!currentWheel) {
+        return;
+      }
+      const wheels = [...el.querySelectorAll(".navi_wheel_container")];
+      const targetIndex = wheels.indexOf(currentWheel) + (e.key === nextKey ? 1 : -1);
+      if (targetIndex < 0 || targetIndex >= wheels.length) {
+        return;
+      }
+      const targetWheel = wheels[targetIndex];
+      e.preventDefault();
+      e.stopPropagation();
+      targetWheel.focus();
+    };
+    el.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      el.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [horizontal]);
+
+  // A Box (not a plain div) so style props like border/padding work directly.
+  return jsx(Box, {
+    ...controlgroupRootProps,
+    ...controlgroupProps,
+    // The wheel-specific props are consumed here; blank them AFTER the spreads
+    // (the group hook, not knowing them, would otherwise pass them through onto
+    // the DOM as unknown attributes) — cleaner than mutating the props object.
+    spacing: undefined,
+    horizontal: undefined,
+    glass: undefined,
+    frameBorder: undefined,
+    baseClassName: "navi_wheel_group",
+    "data-horizontal": horizontal ? "" : undefined,
+    style: groupStyle,
+    pseudoClasses: WHEEL_GROUP_PSEUDO_CLASSES,
+    children: jsx(WheelGroupContext.Provider, {
+      value: {
+        glass,
+        frameBorder,
+        horizontal
+      },
+      children: jsx(ControlgroupChildrenWrapper, {
+        ...childrenWrapperProps,
+        // Don't propagate the group name to children (an anonymous wheel would
+        // otherwise inherit it) — each wheel is named individually.
+        name: undefined,
+        children: children
+      })
+    })
+  });
+};
+const WHEEL_GROUP_PSEUDO_CLASSES = [":focus-within", ":read-only", ":disabled", ":-navi-loading"];
+/**
+ * WheelGroup.Separator — content shown between wheels (":", a word, an icon…).
+ * Its content sits in a one-row box that mirrors a wheel item — same full-row
+ * line-height — so the glyph lands on the numbers' line (see .navi_wheel_item).
+ *
+ * @param {object} props
+ */
+const WheelGroupSeparator = ({
+  children,
+  ...rest
+}) => {
+  return jsx(Box, {
+    as: "span",
+    ...rest,
+    className: "navi_wheel_group_separator",
+    "aria-hidden": "true",
+    children: children
+  });
+};
+WheelGroup.Separator = WheelGroupSeparator;
+
+/**
+ * Wheel.Colon — a ":" drawn as an SVG (not a separator; wrap it in a
+ * WheelGroup.Separator to place it between wheels). A font colon sits on the
+ * baseline (its dots hug the lower half of the digits, looking sunk); this one is
+ * two dots symmetric about the SVG's middle, so — centered in the separator's row
+ * like the numbers are in theirs — it lands on the numbers' optical center.
+ */
+const WheelColon = props => {
+  return jsxs("svg", {
+    ...props,
+    className: "navi_wheel_colon",
+    viewBox: "0 0 8 24",
+    children: [jsx("circle", {
+      cx: "4",
+      cy: "8",
+      r: "2",
+      fill: "currentColor"
+    }), jsx("circle", {
+      cx: "4",
+      cy: "16",
+      r: "2",
+      fill: "currentColor"
+    })]
+  });
+};
+Wheel.Colon = WheelColon;
+
 const TableSelectionContext = createContext();
 const useTableSelectionContextValue = (
   selection,
@@ -45099,7 +47308,7 @@ const Z_INDEX_DROP_PREVIEW = Z_INDEX_STICKY_CORNER + 1;
 
 const Z_INDEX_TABLE_UI = Z_INDEX_STICKY_CORNER + 1;
 
-installImportMetaCssBuild(import.meta);const css$h = /* css */`
+installImportMetaCssBuild(import.meta);const css$j = /* css */`
   .navi_table_drag_clone_container {
     position: absolute;
     top: var(--table-visual-top);
@@ -45254,7 +47463,7 @@ const useTableDragContextValue = ({
   }, [grabTarget, canChangeColumnOrder]);
 };
 const TableDragCloneContainer = forwardRef((props, ref) => {
-  import.meta.css = [css$h, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
+  import.meta.css = [css$j, "@jsenv/navi/src/control/table/drag/table_drag.jsx"];
   const {
     tableId
   } = props;
@@ -45552,7 +47761,7 @@ installImportMetaCssBuild(import.meta);const ROW_MIN_HEIGHT = 30;
 const ROW_MAX_HEIGHT = 100;
 const COLUMN_MIN_WIDTH = 50;
 const COLUMN_MAX_WIDTH = 500;
-const css$g = /* css */`
+const css$i = /* css */`
   @layer navi {
     .navi_table {
       --table-resizer-handle-color: #063b7c;
@@ -45712,7 +47921,7 @@ const css$g = /* css */`
 
 // Column resize components
 const TableColumnResizer = props => {
-  import.meta.css = [css$g, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
+  import.meta.css = [css$i, "@jsenv/navi/src/control/table/resize/table_resize.jsx"];
   const defaultRef = useRef();
   const ref = props.ref || defaultRef;
   return jsxs("div", {
@@ -46179,7 +48388,7 @@ const findPreviousTableRow = currentRow => {
   return currentIndex > 0 ? allRows[currentIndex - 1] : null;
 };
 
-installImportMetaCssBuild(import.meta);const css$f = /* css */`
+installImportMetaCssBuild(import.meta);const css$h = /* css */`
   @layer navi {
     .navi_table {
       --selection-border-color: var(--navi-selection-border-color, #0078d4);
@@ -46281,7 +48490,7 @@ const useTableSelectionController = ({
   onSelectionChange,
   selectionColor
 }) => {
-  import.meta.css = [css$f, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
+  import.meta.css = [css$h, "@jsenv/navi/src/control/table/selection/table_selection.jsx"];
   const selectionController = useSelectionController({
     elementRef: tableRef,
     layout: "grid",
@@ -46752,7 +48961,7 @@ const useTableStickyContextValue = ({
 };
 
 installImportMetaCssBuild(import.meta);// TODO: sticky left/top frontier should likely use "followPosition"
-const css$e = /* css */`
+const css$g = /* css */`
   @layer navi {
     .navi_table {
       --sticky-frontier-color: #c0c0c0;
@@ -46995,7 +49204,7 @@ const css$e = /* css */`
 const TableStickyFrontier = ({
   tableRef
 }) => {
-  import.meta.css = [css$e, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
+  import.meta.css = [css$g, "@jsenv/navi/src/control/table/sticky/table_sticky.jsx"];
   const stickyLeftFrontierGhostRef = useRef();
   const stickyLeftFrontierPreviewRef = useRef();
   const stickyTopFrontierGhostRef = useRef();
@@ -47224,7 +49433,7 @@ const initMoveStickyFrontierViaPointer = (pointerdownEvent, {
  *   inset 0 -1px 0 0 color;   // Bottom border
  */
 
-const css$d = /* css */ `
+const css$f = /* css */ `
   .navi_table_root {
     position: relative;
     max-width: var(--table-max-width, none);
@@ -47427,7 +49636,7 @@ const css$d = /* css */ `
   }
 `;
 
-installImportMetaCssBuild(import.meta);const css$c = /* css */`
+installImportMetaCssBuild(import.meta);const css$e = /* css */`
   .navi_table_ui {
     position: fixed;
     inset: 0;
@@ -47438,7 +49647,7 @@ installImportMetaCssBuild(import.meta);const css$c = /* css */`
   }
 `;
 const TableUI = forwardRef((props, ref) => {
-  import.meta.css = [css$c, "@jsenv/navi/src/control/table/table_ui.jsx"];
+  import.meta.css = [css$e, "@jsenv/navi/src/control/table/table_ui.jsx"];
   const {
     tableRef,
     tableId,
@@ -47544,7 +49753,7 @@ const RowIndexContext = createContext();
 const TableSectionContext = createContext();
 const useIsInTableHead = () => useContext(TableSectionContext) === "head";
 const Table = props => {
-  import.meta.css = [css$d, "@jsenv/navi/src/control/table/table.jsx"];
+  import.meta.css = [css$f, "@jsenv/navi/src/control/table/table.jsx"];
   const tableDefaultRef = useRef();
   const tableDefaultId = `table-${useId()}`;
   const {
@@ -48365,7 +50574,7 @@ const normalizeKey = (key) => {
   return key;
 };
 
-installImportMetaCssBuild(import.meta);const css$b = /* css */`
+installImportMetaCssBuild(import.meta);const css$d = /* css */`
   .navi_shortcut_container[data-visually-hidden] {
     /* Visually hidden container - doesn't affect layout */
     position: absolute;
@@ -48403,7 +50612,7 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
 const ActiveKeyboardShortcuts = ({
   visible
 }) => {
-  import.meta.css = [css$b, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
+  import.meta.css = [css$d, "@jsenv/navi/src/keyboard/active_keyboard_shortcuts.jsx"];
   const activeShortcuts = activeShortcutsSignal.value;
   return jsx("div", {
     className: "navi_shortcut_container",
@@ -48442,7 +50651,7 @@ const KeyboardShortcutAriaElement = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$a = /* css */`
+installImportMetaCssBuild(import.meta);const css$c = /* css */`
   @layer navi {
     .navi_clipboard_container {
       --height: 1.5em;
@@ -48474,7 +50683,7 @@ const ButtonCopyToClipboard = ({
   children,
   ...props
 }) => {
-  import.meta.css = [css$a, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
+  import.meta.css = [css$c, "@jsenv/navi/src/control/input/button_copy_to_clipboard.jsx"];
   const [copied, setCopied] = useState(false);
   const renderedRef = useRef();
   useEffect(() => {
@@ -48620,7 +50829,7 @@ const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+installImportMetaCssBuild(import.meta);const css$b = /* css */`
   @layer navi {
   }
   .navi_text.navi_badge_count {
@@ -48734,7 +50943,7 @@ const BadgeCount = ({
   lineLayout,
   ...props
 }) => {
-  import.meta.css = [css$9, "@jsenv/navi/src/text/badge_count.jsx"];
+  import.meta.css = [css$b, "@jsenv/navi/src/text/badge_count.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -48871,7 +51080,7 @@ const BadgeCountCircle = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$8 = /* css */`
+installImportMetaCssBuild(import.meta);const css$a = /* css */`
   @layer navi {
     .navi_caption {
       --color: #6b7280;
@@ -48892,7 +51101,7 @@ const Caption = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css$8, "@jsenv/navi/src/text/caption.jsx"];
+  import.meta.css = [css$a, "@jsenv/navi/src/text/caption.jsx"];
   return jsx(Text, {
     as: "small",
     size: "0.8em" // We use em to be relative to the parent (we want to be smaller than the surrounding text)
@@ -49249,7 +51458,164 @@ const Interpolate = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$7 = /* css */`
+const SuccessSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm1.5 0a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm10.28-1.72-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018l1.47 1.47 3.97-3.97a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042Z"
+    })
+  });
+};
+const ErrorSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const InfoSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"
+    })
+  });
+};
+const WarningSvg = () => {
+  return jsx("svg", {
+    viewBox: "0 0 16 16",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+    })
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$9 = /* css */`
+  @layer navi {
+    .navi_message_box {
+      --background-color-info: var(--navi-info-color-light);
+      --color-info: var(--navi-info-color);
+      --background-color-success: var(--navi-success-color-light);
+      --color-success: var(--navi-success-color);
+      --background-color-warning: var(--navi-warning-color-light);
+      --color-warning: var(--navi-warning-color);
+      --background-color-error: var(--navi-error-color-light);
+      --color-error: var(--navi-error-color);
+    }
+  }
+
+  .navi_message_box {
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
+    /* color: var(--x-color); */
+    background-color: var(--x-message-background-color);
+
+    > .navi_icon {
+      flex-shrink: 0;
+    }
+  }
+
+  .navi_message_box[data-status-info] {
+    --x-message-background-color: var(--background-color-info);
+    --x-message-color: var(--color-info);
+  }
+  .navi_message_box[data-status-success] {
+    --x-message-background-color: var(--background-color-success);
+    --x-message-color: var(--color-success);
+  }
+  .navi_message_box[data-status-warning] {
+    --x-message-background-color: var(--background-color-warning);
+    --x-message-color: var(--color-warning);
+  }
+  .navi_message_box[data-status-error] {
+    --x-message-background-color: var(--background-color-error);
+    --x-message-color: var(--color-error);
+  }
+
+  .navi_message_box[data-left-stripe] {
+    border-left: 6px solid var(--x-message-color);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+`;
+const MessageBox = ({
+  status = "info",
+  padding = "sm",
+  icon,
+  leftStripe,
+  children,
+  onClose,
+  ...rest
+}) => {
+  import.meta.css = [css$9, "@jsenv/navi/src/text/message_box.jsx"];
+  const [hasTitleChild, setHasTitleChild] = useState(false);
+  const innerLeftStripe = leftStripe === undefined ? hasTitleChild : leftStripe;
+  if (icon === true) {
+    icon = status === "info" ? jsx(InfoSvg, {}) : status === "success" ? jsx(SuccessSvg, {}) : status === "warning" ? jsx(WarningSvg, {}) : status === "error" ? jsx(ErrorSvg, {}) : null;
+  } else if (typeof icon === "function") {
+    const Comp = icon;
+    icon = jsx(Comp, {});
+  }
+  return jsx(Box, {
+    as: "div",
+    role: status === "info" ? "status" : "alert",
+    "data-left-stripe": innerLeftStripe ? "" : undefined,
+    inline: true,
+    column: true,
+    alignY: "center",
+    spacing: "s",
+    ...rest,
+    className: withPropsClassName("navi_message_box", rest.className),
+    padding: padding,
+    pseudoClasses: MessageBoxPseudoClasses,
+    basePseudoState: {
+      ":-navi-status-info": status === "info",
+      ":-navi-status-success": status === "success",
+      ":-navi-status-warning": status === "warning",
+      ":-navi-status-error": status === "error"
+    },
+    children: jsx(MessageBoxStatusContext.Provider, {
+      value: status,
+      children: jsxs(MessageBoxReportTitleChildContext.Provider, {
+        value: setHasTitleChild,
+        children: [icon && jsx(Icon, {
+          color: "var(--x-message-color)",
+          height: "1.5em",
+          maxHeight: "auto",
+          selfAlignY: "start",
+          aspectRatio: "auto",
+          children: icon
+        }), jsx(Text, {
+          children: children
+        }), onClose && jsx(Button, {
+          action: onClose,
+          icon: true,
+          border: "none",
+          alignX: "center",
+          alignY: "center",
+          style: {
+            ":hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.1)"
+            }
+          },
+          children: jsx(Icon, {
+            children: jsx(CloseSvg, {})
+          })
+        })]
+      })
+    })
+  });
+};
+const MessageBoxPseudoClasses = [":-navi-status-info", ":-navi-status-success", ":-navi-status-warning", ":-navi-status-error"];
+const MessageBoxStatusContext = createContext();
+const MessageBoxReportTitleChildContext = createContext();
+
+installImportMetaCssBuild(import.meta);const css$8 = /* css */`
   @layer navi {
   }
 
@@ -49340,7 +51706,7 @@ const Quantity = ({
   bold = true,
   ...props
 }) => {
-  import.meta.css = [css$7, "@jsenv/navi/src/text/quantity.jsx"];
+  import.meta.css = [css$8, "@jsenv/navi/src/text/quantity.jsx"];
   const value = parseQuantityValue(children);
   const valueRounded = integer && typeof value === "number" ? Math.round(value) : value;
   const valueFormatted = typeof valueRounded === "number" ? formatNumber(valueRounded, {
@@ -49398,7 +51764,7 @@ const parseQuantityValue = children => {
   return Number.isNaN(parsed) ? children : parsed;
 };
 
-installImportMetaCssBuild(import.meta);const css$6 = /* css */`
+installImportMetaCssBuild(import.meta);const css$7 = /* css */`
   @layer navi {
     .navi_meter {
       --loader-color: var(--navi-loader-color);
@@ -49536,7 +51902,7 @@ const Meter = ({
   style,
   ...rest
 }) => {
-  import.meta.css = [css$6, "@jsenv/navi/src/text/meter.jsx"];
+  import.meta.css = [css$7, "@jsenv/navi/src/text/meter.jsx"];
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
   value = Number(value);
@@ -49661,7 +52027,7 @@ const Paragraph = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+installImportMetaCssBuild(import.meta);const css$6 = /* css */`
   .navi_text_box {
     min-width: 0;
     align-items: flex-start;
@@ -49703,7 +52069,7 @@ const TextBox = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$5, "@jsenv/navi/src/text/text_box.jsx"];
+  import.meta.css = [css$6, "@jsenv/navi/src/text/text_box.jsx"];
   const boxRef = useRef(null);
   const contentRef = useRef(null);
   useLayoutEffect(() => {
@@ -49748,6 +52114,40 @@ const adjustWidth = (boxEl, contentEl) => {
   }
   contentEl.style.width = `${Math.ceil(optimalWidth)}px`;
 };
+
+installImportMetaCssBuild(import.meta);const css$5 = /* css */`
+  .navi_message_box {
+    .navi_title {
+      margin-top: 0;
+      margin-bottom: var(--navi-s);
+      color: var(--x-message-color);
+    }
+  }
+`;
+const Title = props => {
+  import.meta.css = [css$5, "@jsenv/navi/src/text/title.jsx"];
+  const messageBoxStatus = useContext(MessageBoxStatusContext);
+  const innerAs = props.as || (messageBoxStatus ? "h4" : "h1");
+  const titleLevel = parseInt(innerAs.slice(1));
+  const reportTitleToMessageBox = useContext(MessageBoxReportTitleChildContext);
+  reportTitleToMessageBox?.(true);
+  return jsx(TitleLevelContext.Provider, {
+    value: titleLevel,
+    children: jsx(Text, {
+      bold: true,
+      className: withPropsClassName("navi_title"),
+      as: messageBoxStatus ? "h4" : "h1",
+      ...props,
+      pseudoClasses: TitlePseudoClasses,
+      children: props.children
+    })
+  });
+};
+const TitleLevelContext = createContext();
+const useTitleLevel = () => {
+  return useContext(TitleLevelContext);
+};
+const TitlePseudoClasses = [":hover"];
 
 installImportMetaCssBuild(import.meta);const css$4 = /* css */`
   @keyframes navi_image_shimmer {
@@ -50468,7 +52868,8 @@ const ConstructionSvg = () => {
   return jsx("svg", {
     viewBox: "0 0 15 15",
     children: jsx("path", {
-      d: "M13.5,12h-1.8L8.2,1.5C8,0.8,7,0.8,6.8,1.5L3.3,12H1.5C1.2,12,1,12.2,1,12.5v1C1,13.8,1.2,14,1.5,14h12 c0.3,0,0.5-0.2,0.5-0.5v-1C14,12.2,13.8,12,13.5,12z M7,4H8l0.7,2H6.4L7,4z M5.7,8h3.6l0.7,2H5L5.7,8z"
+      d: "M13.5,12h-1.8L8.2,1.5C8,0.8,7,0.8,6.8,1.5L3.3,12H1.5C1.2,12,1,12.2,1,12.5v1C1,13.8,1.2,14,1.5,14h12 c0.3,0,0.5-0.2,0.5-0.5v-1C14,12.2,13.8,12,13.5,12z M7,4H8l0.7,2H6.4L7,4z M5.7,8h3.6l0.7,2H5L5.7,8z",
+      fill: "currentColor"
     })
   });
 };
@@ -50559,5 +52960,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePickerMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
