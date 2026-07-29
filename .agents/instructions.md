@@ -71,6 +71,7 @@ These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to thei
 - Put helper functions at the bottom of the file
 - Put constants / simple variables above the function that uses them (for exported functions: top of file after imports; for helpers: just above them)
 - Never use `Math.max` / `Math.min` — prefer explicit branching, it's easier to follow
+- **Explicit browser globals**: reach ambiguous browser globals through `window.` — `window.crypto`, `window.navigator`, `window.location`, `window.history`, `window.open`, `window.close`, `window.scroll`, `window.status`, `window.name`, `window.length`, etc. Never the bare form. Enforced by eslint (`explicitGlobals` in `@jsenv/eslint-config-relax` turns these off), and the point is to keep a global read visually distinct from a local binding of the same name — `window.open(...)` vs a local `open` variable, `window.name` vs a local `name`. Non-ambiguous browser APIs (`document`, `localStorage`, `fetch`, `setTimeout`, `console`, …) stay bare.
 - To add debug logs: use `console.debug` with plain sentences, not objects (easier to copy-paste)
 - **Optional Chaining**: Only use `?.` when the value can genuinely be undefined. If you control the data structure and know values exist, access them directly
 - **Always use `{}` block bodies**: Never single-expression `if` without braces. Always `if (x) { return y; }` not `if (x) return y;` — makes it easy to add `console.log` or `debugger` without restructuring

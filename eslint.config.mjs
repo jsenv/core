@@ -1,5 +1,4 @@
 import { eslintConfigRelax } from "@jsenv/eslint-config-relax";
-import globals from "globals";
 
 export default [
   ...eslintConfigRelax({
@@ -26,17 +25,6 @@ export default [
     // Favor dev:jsenv package exports condition
     importResolutionDevConditions: ["dev:jsenv"],
   }),
-  {
-    // The client-monitoring plugin's browser code (the injected reporter .js and
-    // the inline scripts of its .html pages) runs in the browser. Placed after
-    // the relax config so its browser globals win over the default node env
-    // applied to src/**.
-    files: [
-      "src/plugins/client_monitoring/client/**/*.js",
-      "src/plugins/client_monitoring/client/**/*.html",
-    ],
-    languageOptions: { globals: globals.browser },
-  },
   {
     rules: {
       "no-debugger": ["off"],

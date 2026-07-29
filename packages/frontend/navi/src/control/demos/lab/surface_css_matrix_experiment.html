@@ -325,6 +325,7 @@
         target.type = "button";
         target.className = "target";
         target.textContent = "Tap me";
+        // eslint-disable-next-line no-loop-func
         target.addEventListener("pointerdown", () => {
           const gap =
             lastReleaseAt === null

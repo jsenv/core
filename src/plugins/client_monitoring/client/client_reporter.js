@@ -27,8 +27,8 @@ const HEARTBEAT_MS = 15000;
 const CONTINUOUS_THROTTLE_MS = 2000;
 
 const randomId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
+  typeof window.crypto !== "undefined" && window.crypto.randomUUID
+    ? window.crypto.randomUUID()
     : `${String(Math.random()).slice(2)}${Date.now().toString(36)}`;
 
 const getClientId = () => {
@@ -150,7 +150,7 @@ const setup = () => {
 
   const tabInfo = ({ closing = false } = {}) => ({
     id: tabId,
-    url: location.href,
+    url: window.location.href,
     title: document.title,
     visible: document.visibilityState === "visible",
     closing,
@@ -172,8 +172,8 @@ const setup = () => {
       activities,
       logs,
     });
-    if (beacon && navigator.sendBeacon) {
-      navigator.sendBeacon(
+    if (beacon && window.navigator.sendBeacon) {
+      window.navigator.sendBeacon(
         REPORT_ENDPOINT,
         new Blob([payload], { type: "application/json" }),
       );
@@ -374,14 +374,15 @@ const setup = () => {
     return nativeFetch(input, init);
   };
   // SPA navigations (history API + back/forward).
-  const reportNavigation = () => recordActivity("navigation", location.href);
+  const reportNavigation = () =>
+    recordActivity("navigation", window.location.href);
   const patchHistory = (method) => {
-    const original = history[method];
+    const original = window.history[method];
     if (typeof original !== "function") {
       return;
     }
-    history[method] = (...args) => {
-      const result = original.apply(history, args);
+    window.history[method] = (...args) => {
+      const result = original.apply(window.history, args);
       reportNavigation();
       return result;
     };

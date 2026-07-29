@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Clients</title>
+    <title>Server clients inspector</title>
     <style>
       body {
         margin: 0;
@@ -185,7 +185,7 @@
     </style>
   </head>
   <body>
-    <h1>Clients</h1>
+    <h1>Server clients inspector</h1>
     <p class="intro">
       Every browser that has connected to this dev server since it started. The
       columns are a résumé; use the actions to dig in or monitor a client's
@@ -350,7 +350,7 @@
           dlgCopy.textContent = "Copy";
           dlgCopy.onclick = async () => {
             try {
-              await navigator.clipboard.writeText(copyText);
+              await window.navigator.clipboard.writeText(copyText);
               dlgCopy.textContent = "Copied!";
               setTimeout(() => {
                 dlgCopy.textContent = "Copy";
