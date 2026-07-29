@@ -9158,6 +9158,16 @@ const jsenvPluginWorkspaceBundle = ({ packageDirectory }) => {
         // root package, we don't want to bundle
         return null;
       }
+      if (reference.type !== "js_import") {
+        // Only consolidate ES imports of a workspace package into its single
+        // bundle. Other reference kinds are their own entry points — most
+        // importantly an HTML <script src> pointing at a package file (jsenv
+        // injects its own client scripts that way: server events, the client
+        // monitoring reporter, custom-elements-redefine…). Redirecting those to
+        // the package main would run the wrong module, and for @jsenv/core the
+        // main is node-only code (node:url) that cannot be served to a browser.
+        return null;
+      }
       // we make sure we target the bundle version of the package
       // otherwise we might execute some parts of the package code multiple times.
       // so we need to redirect the potential reference to non entry point to the package main entry point

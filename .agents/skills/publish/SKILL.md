@@ -72,16 +72,16 @@ If tests changed snapshots, review the diff (`git diff` on the snapshot/side-eff
 
 Spotting expected-vs-regression in these snapshots is usually straightforward; do it rather than skipping it.
 
-### 5. Commit, push, publish
+### 5. Hand off — the user commits, pushes, and publishes
+
+**Stop here.** Do NOT commit, push, or publish (see `.agents/instructions.md`: the user always commits, never the agent). Leave the version bumps + synced files in the working tree and tell the user what's ready. The user then runs, in order:
 
 ```sh
 git add -A
 git commit -m "prepare release"   # the repo's conventional message
-git push
-npm run monorepo:publish
+git push                          # push before publishing, so npm matches the remote
+npm run monorepo:publish          # publishes every package whose version is ahead of npm
 ```
-
-Commit and **push before publishing** so the tagged versions on npm match what's on the remote. `monorepo:publish` then publishes every package whose version is ahead of npm and prints a per-package result.
 
 ## The cascade (important)
 

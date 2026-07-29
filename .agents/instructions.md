@@ -18,6 +18,7 @@
 
 ## Constraints
 
+- **Never commit — the user always commits**: do NOT run `git commit` (or `git push`), ever, even to "prepare a release" or save work in progress. Make the file edits and leave them in the working tree; the user reviews and commits every change themselves. This holds even when a workflow (e.g. the publish skill) lists a commit step — stop before it and hand off. Likewise never publish (`npm run monorepo:publish`) unless explicitly asked in the moment.
 - **Never write tests on your initiative**
 - **Never write documentation on your initiative**
 - **Never verify on your own initiative**: don't run regression checks against unrelated demos/features, and don't open a demo file you just wrote/edited in Playwright or a browser to confirm it works. The user drives verification and will explicitly ask (e.g. "test this in the browser", "run the demo") when they want it. This applies even when a skill (e.g. demo-files) says to prefer checking behavior over reading code — that guidance only kicks in once the user has asked for verification.
