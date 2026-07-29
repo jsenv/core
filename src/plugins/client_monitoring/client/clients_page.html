@@ -315,6 +315,35 @@
           return url;
         }
       };
+      // Last path segment of a URL ("…/8_picker_wheel_demo.html" → the filename),
+      // for compact activity labels. Non-URLs pass through unchanged.
+      const fileName = (url) => {
+        try {
+          const segments = new URL(url).pathname.split("/").filter(Boolean);
+          return segments.length ? segments[segments.length - 1] : "/";
+        } catch {
+          return url;
+        }
+      };
+      // The compact form of an activity detail for the "Last activity" column:
+      // URL-valued details collapse to their filename, a request keeps its
+      // method, coordinates lose sub-pixel noise. The full detail stays in the
+      // tooltip and the activity dialog / monitor.
+      const compactDetail = (type, detail) => {
+        if (!detail) {
+          return "";
+        }
+        if (type === "load" || type === "navigation") {
+          return fileName(detail);
+        }
+        if (type === "request") {
+          const spaceIndex = detail.indexOf(" ");
+          return spaceIndex === -1
+            ? fileName(detail)
+            : `${detail.slice(0, spaceIndex)} ${fileName(detail.slice(spaceIndex + 1))}`;
+        }
+        return roundNumbers(detail);
+      };
       const RUNTIME_LABELS = {
         ios_safari: "iOS Safari",
         chrome: "Chrome",
@@ -348,9 +377,11 @@
         if (!a) {
           return '<span class="muted">—</span>';
         }
-        const detail = a.detail ? roundNumbers(a.detail) : "";
-        const label = detail ? `${a.type}: ${detail}` : a.type;
-        return `<span class="tag ellip" title="${escapeHtml(label)}">${escapeHtml(label)}</span> <span class="muted">${ago(a.ts)}</span>`;
+        const compact = a.detail
+          ? `${a.type}: ${compactDetail(a.type, a.detail)}`
+          : a.type;
+        const full = a.detail ? `${a.type}: ${a.detail}` : a.type;
+        return `<span class="tag ellip" title="${escapeHtml(full)}">${escapeHtml(compact)}</span> <span class="muted">${ago(a.ts)}</span>`;
       };
       const actionsCell = (d) => {
         const id = escapeHtml(d.id);
