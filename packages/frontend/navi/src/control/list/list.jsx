@@ -544,12 +544,25 @@ const ListUI = (props) => {
   const noMatchCount = tracker.noMatchCountSignal.value;
   const itemCount = tracker.countSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const searching = Boolean(searchText);
   const fallbackDisabled = fallback !== undefined && !fallback;
   const searchFallbackDisabled =
     searchFallback !== undefined && !searchFallback;
+  // No item is visible when the list is empty (filtering may happen outside the
+  // list, dropping itemCount to 0) or when a search removed them all — only the
+  // "remove" mode empties the view; "muted"/"below"/… keep items on screen.
+  const noVisibleItems =
+    itemCount === 0 || (allNoMatch && searchNoMatchMode === "remove");
+  // Which fallback message actually renders (mirrors SearchFallback / Fallback
+  // below): during a search an empty/no-match result is a "no match" state (the
+  // search fallback), otherwise an empty list is the "empty" state.
+  const searchFallbackShown =
+    (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
+  const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+  // Hide the whole list — border included — when there is genuinely nothing to
+  // show: no visible items AND no fallback message.
   const nothingToDisplay =
-    (allNoMatch && searchFallbackDisabled && searchNoMatchMode === "remove") ||
-    (itemCount === 0 && fallbackDisabled);
+    noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
 
   return (
     <Box
@@ -588,6 +601,7 @@ const ListUI = (props) => {
         role={role}
         fallback={fallback}
         searchFallback={searchFallback}
+        searching={searching}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX || expand}
@@ -650,6 +664,7 @@ const ListContent = ({
   role,
   fallback,
   searchFallback,
+  searching,
   searchNoMatchMode,
   separator,
   expandX,
@@ -669,6 +684,7 @@ const ListContent = ({
         role={role}
         fallback={fallback}
         searchFallback={searchFallback}
+        searching={searching}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX}
@@ -1215,6 +1231,7 @@ const UnorderedList = ({
   virtualItemSizeSignal,
   fallback,
   searchFallback,
+  searching,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -1237,8 +1254,12 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      <SearchFallback searchFallback={searchFallback} tracker={tracker} />
-      <Fallback fallback={fallback} tracker={tracker} />
+      <SearchFallback
+        searchFallback={searchFallback}
+        searching={searching}
+        tracker={tracker}
+      />
+      <Fallback fallback={fallback} searching={searching} tracker={tracker} />
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
@@ -1259,13 +1280,14 @@ const UnorderedList = ({
   );
 };
 
-// Show when all matchable items (those with a match prop) are non-matching.
-// The match prop on List.Item signals participation in a matching system
-// (search, filter, etc.). searchFallback appears when every such item has match=false.
-const SearchFallback = ({ tracker, searchFallback }) => {
+// The "no match" message. Shown when a search left nothing to display: either
+// every matchable item has match=false (in-list filtering), or the list is empty
+// during an active search (filtering done outside the list, so itemCount is 0).
+const SearchFallback = ({ tracker, searchFallback, searching }) => {
   const itemCount = tracker.countSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
-  const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
+  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const showMatchFallback = allNoMatch || (searching && itemCount === 0);
 
   if (searchFallback === undefined) {
     searchFallback = naviI18n("list.no_match");
@@ -1288,13 +1310,18 @@ const SearchFallback = ({ tracker, searchFallback }) => {
     </ListItem>
   );
 };
-const Fallback = ({ tracker, fallback }) => {
+// The "empty list" message. Not shown during a search — an empty search result
+// is a "no match" state (SearchFallback), not an empty-list state.
+const Fallback = ({ tracker, fallback, searching }) => {
   const itemCount = tracker.countSignal.value;
-  const showFallback = itemCount === 0;
+  const showFallback = itemCount === 0 && !searching;
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
   }
-
+  if (!fallback) {
+    // explicitely disabled by user (<List fallback={false|null|''}>)
+    return null;
+  }
   if (!showFallback) {
     return null;
   }
