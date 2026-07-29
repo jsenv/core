@@ -1,5 +1,6 @@
 import { createLogger } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
+import { isBuiltin } from "node:module";
 import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js";
 
 export const commonJsToJsModuleRaw = async ({
@@ -91,6 +92,16 @@ export const commonJsToJsModuleRaw = async ({
         resolveId: (specifier) => {
           if (specifier.startsWith("node:")) {
             return { id: specifier, external: true };
+          }
+          // Keep node builtins external when targeting node. A bare builtin
+          // (e.g. `require("util")` inside ws) must NOT be resolved into a
+          // userland package of the same name (a `util` polyfill hoisted into
+          // node_modules) — Node resolves the builtin, and that polyfill lacks
+          // Node-only APIs like util.types, so bundling it breaks at runtime.
+          // When converting builtins to browser equivalents this must stay off,
+          // so the polyfill plugin can do its job.
+          if (!convertBuiltinsToBrowser && isBuiltin(specifier)) {
+            return { id: `node:${specifier}`, external: true };
           }
           return null;
         },

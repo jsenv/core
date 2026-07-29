@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.11.18",
+  "version": "2.11.19",
   "type": "module",
   "repository": {
     "type": "git",
