@@ -197,7 +197,7 @@ export const startDevServer = async ({
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
-    jsenvPluginClientMonitoring(),
+    jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
     ...plugins,
     ...getCorePlugins({
       packageDirectory,

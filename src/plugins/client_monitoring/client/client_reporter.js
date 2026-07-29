@@ -8,8 +8,8 @@
  * jsenv server-events channel (window.__server_events__), and browser → server
  * messages are batched POSTs to /.internal/clients/report carrying:
  * - the tab (id, url, title, visibility)
- * - recent qualified activities (click, keydown, mousemove, scroll, request,
- *   navigation, document_becomes_visible/hidden)
+ * - recent qualified activities (load, hot_reload, click, keydown, mousemove,
+ *   scroll, request, navigation, document_becomes_visible/hidden)
  * - buffered console logs
  */
 
@@ -391,6 +391,12 @@ const setup = () => {
   patchHistory("replaceState");
   window.addEventListener("popstate", reportNavigation);
 
+  // Record the page load itself as an activity: after a reload the tab goes
+  // hidden (pagehide on the old page) then loads again here, and without this the
+  // dashboard would only ever show the "hidden" side of a reload. Sent with the
+  // first heartbeat below.
+  recordActivity("load", window.location.href);
+
   // Heartbeat keeps the client "online", refreshes tab info, and lets the server
   // detect a resume.
   post();
@@ -403,8 +409,9 @@ const setup = () => {
     post({ beacon: true, closing: true });
   });
 
-  // Toast when another client appears — reusing the server-events channel.
-  // window.__server_events__ is injected before this script, so it's ready.
+  // Toast when another client appears, and obey pilot commands aimed at us —
+  // both reuse the server-events channel. window.__server_events__ is injected
+  // before this script, so it's ready.
   window.__server_events__.listenEvents({
     client_here: (event) => {
       const { client, reason } = event.data;
@@ -412,6 +419,31 @@ const setup = () => {
         return; // don't toast a client about itself
       }
       showClientToast({ client, reason });
+    },
+    client_command: (event) => {
+      const { clientId: targetId, tabId: targetTabId, type, url } = event.data;
+      if (targetId !== clientId) {
+        return; // aimed at another client
+      }
+      if (targetTabId && targetTabId !== tabId) {
+        return; // aimed at a specific tab of this client, not this one
+      }
+      if (type === "navigate" && url) {
+        window.location.href = url;
+      } else if (type === "reload") {
+        window.location.reload();
+      }
+    },
+    // jsenv autoreload broadcasts "reload" for hot updates and full reloads. A
+    // full reload navigates away before this flushes and surfaces as "load" on
+    // the next page; a hot update stays on the page, so this is what records it.
+    reload: (event) => {
+      const data = event.data || {};
+      const reason =
+        (typeof data.reason === "string" && data.reason) ||
+        (typeof data.cause === "string" && data.cause) ||
+        "";
+      recordActivity("hot_reload", reason);
     },
   });
 };

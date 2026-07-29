@@ -117,6 +117,29 @@
       .btn:hover {
         background: #e5e7eb;
       }
+      .btn.primary {
+        color: #fff;
+        background: #2563eb;
+        border-color: #2563eb;
+      }
+      .btn.primary:hover {
+        background: #1d4ed8;
+      }
+      .picker-filter {
+        box-sizing: border-box;
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 8px 10px;
+        font: inherit;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+      }
+      .pagepick {
+        width: 100%;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        text-align: left;
+        word-break: break-all;
+      }
       .monitor {
         margin-left: 4px;
         padding: 2px 4px;
@@ -280,6 +303,10 @@
           /[&<>"]/g,
           (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
         );
+      // Trim noisy sub-pixel precision for display (e.g. scroll "0/432.333" →
+      // "0/432"); the full value stays in the stored/reported data.
+      const roundNumbers = (text) =>
+        String(text).replace(/-?\d+\.\d+/g, (n) => String(Math.round(n)));
       const shortUrl = (url) => {
         try {
           const u = new URL(url);
@@ -321,12 +348,15 @@
         if (!a) {
           return '<span class="muted">—</span>';
         }
-        const label = a.detail ? `${a.type}: ${a.detail}` : a.type;
+        const detail = a.detail ? roundNumbers(a.detail) : "";
+        const label = detail ? `${a.type}: ${detail}` : a.type;
         return `<span class="tag ellip" title="${escapeHtml(label)}">${escapeHtml(label)}</span> <span class="muted">${ago(a.ts)}</span>`;
       };
       const actionsCell = (d) => {
         const id = escapeHtml(d.id);
         return `<div class="actions">
+          <button class="btn primary" data-action="navigate" data-id="${id}">Navigate…</button>
+          <button class="btn" data-action="reload" data-id="${id}">Reload</button>
           <button class="btn" data-action="tabs" data-id="${id}">Tabs</button>
           <button class="btn" data-action="activity" data-id="${id}">Activity</button>
           <button class="btn" data-action="ua" data-id="${id}">User agent</button>
@@ -424,10 +454,89 @@
           .map(
             (a) => `<li>
               <div><span class="tag">${escapeHtml(a.type)}</span> <span class="muted">${ago(a.ts)}</span></div>
-              ${a.detail ? `<div class="url2">${escapeHtml(a.detail)}</div>` : ""}
+              ${a.detail ? `<div class="url2">${escapeHtml(roundNumbers(a.detail))}</div>` : ""}
             </li>`,
           )
           .join("")}</ul>`;
+      };
+
+      // Pilot a client: POST a command; the server broadcasts it and the
+      // matching reporter runs it (navigate/reload) on the targeted tab.
+      const sendCommand = async (payload) => {
+        try {
+          await fetch("/.internal/clients/command", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } catch {
+          // dev server gone — ignore
+        }
+      };
+      // The .html pages available to navigate to (fetched once, lazily).
+      let navigablePages = null;
+      const loadPages = async () => {
+        if (navigablePages) {
+          return navigablePages;
+        }
+        try {
+          navigablePages = await (
+            await fetch("/.internal/clients/pages.json")
+          ).json();
+        } catch {
+          navigablePages = [];
+        }
+        return navigablePages;
+      };
+      const shortLabel = (d) => {
+        const parts = [d.os && d.os.name, d.runtime && d.runtime.name].filter(
+          Boolean,
+        );
+        return parts.length ? parts.join(" ") : d.id.slice(0, 8);
+      };
+      // A searchable list of pages; picking one navigates the client's active
+      // tab there (tabId from activeTab so only that tab moves).
+      const openNavigateDialog = async (client) => {
+        dlgTitle.textContent = `Navigate ${shortLabel(client)} to…`;
+        dlgCopy.style.display = "none";
+        dlgBody.innerHTML = `
+          <input class="picker-filter" id="page-filter" type="search" placeholder="Filter pages…" />
+          <ul class="list" id="page-list"></ul>`;
+        dlg.showModal();
+        const pages = await loadPages();
+        const listEl = document.getElementById("page-list");
+        const filterEl = document.getElementById("page-filter");
+        const renderPages = (query) => {
+          const needle = query.trim().toLowerCase();
+          const matches = needle
+            ? pages.filter((p) => p.toLowerCase().includes(needle))
+            : pages;
+          listEl.innerHTML = matches.length
+            ? matches
+                .slice(0, 300)
+                .map(
+                  (p) =>
+                    `<li><button class="btn pagepick" data-url="${escapeHtml(p)}">${escapeHtml(p)}</button></li>`,
+                )
+                .join("")
+            : '<li class="muted">No page matches.</li>';
+        };
+        renderPages("");
+        filterEl.oninput = () => renderPages(filterEl.value);
+        filterEl.focus();
+        listEl.onclick = (event) => {
+          const button = event.target.closest("button.pagepick");
+          if (!button) {
+            return;
+          }
+          sendCommand({
+            clientId: client.id,
+            tabId: client.activeTab ? client.activeTab.id : null,
+            type: "navigate",
+            url: button.getAttribute("data-url"),
+          });
+          dlg.close();
+        };
       };
 
       document.addEventListener("click", async (event) => {
@@ -441,6 +550,22 @@
           const client = lastClients.find((d) => d.id === id);
           const ua = (client && client.userAgent) || "";
           openDialog("User agent", `<pre>${escapeHtml(ua)}</pre>`, ua);
+          return;
+        }
+        if (action === "navigate") {
+          const client = lastClients.find((d) => d.id === id);
+          if (client) {
+            openNavigateDialog(client);
+          }
+          return;
+        }
+        if (action === "reload") {
+          const client = lastClients.find((d) => d.id === id);
+          sendCommand({
+            clientId: id,
+            tabId: client && client.activeTab ? client.activeTab.id : null,
+            type: "reload",
+          });
           return;
         }
         const detail = await fetchClient(id);

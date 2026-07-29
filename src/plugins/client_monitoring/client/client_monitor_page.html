@@ -257,6 +257,10 @@
         const d = new Date(ts);
         return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
       };
+      // Trim noisy sub-pixel precision for display (e.g. scroll "0/432.333" →
+      // "0/432"); the full value stays in the stored/reported data.
+      const roundNumbers = (text) =>
+        String(text).replace(/-?\d+\.\d+/g, (n) => String(Math.round(n)));
 
       const RUNTIME_LABELS = {
         ios_safari: "iOS Safari",
@@ -386,7 +390,11 @@
         const type = document.createElement("span");
         type.className = "act-type";
         type.textContent = a.type;
-        row.append(time, type, document.createTextNode(a.detail || ""));
+        row.append(
+          time,
+          type,
+          document.createTextNode(roundNumbers(a.detail || "")),
+        );
         return row;
       };
 
@@ -399,7 +407,7 @@
         label: "Activity",
         render: renderActivity,
         toText: (a) =>
-          `${fmtTime(a.ts)} ${a.type}${a.detail ? `: ${a.detail}` : ""}`,
+          `${fmtTime(a.ts)} ${a.type}${a.detail ? `: ${roundNumbers(a.detail)}` : ""}`,
       });
 
       // Collapse/expand: click a panel header (but not its buttons).
