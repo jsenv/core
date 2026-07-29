@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "17.3.1",
+  "version": "17.4.0",
   "type": "module",
   "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "repository": {
