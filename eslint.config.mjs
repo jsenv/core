@@ -27,12 +27,13 @@ export default [
     importResolutionDevConditions: ["dev:jsenv"],
   }),
   {
-    // The devices plugin client (its .js and the inline scripts of its .html
-    // pages) runs in the browser. Placed after the relax config so its browser
-    // globals win over the default node env applied to src/**.
+    // The client-monitoring plugin's browser code (the injected reporter .js and
+    // the inline scripts of its .html pages) runs in the browser. Placed after
+    // the relax config so its browser globals win over the default node env
+    // applied to src/**.
     files: [
-      "src/plugins/devices/client/**/*.js",
-      "src/plugins/devices/client/**/*.html",
+      "src/plugins/client_monitoring/client/**/*.js",
+      "src/plugins/client_monitoring/client/**/*.html",
     ],
     languageOptions: { globals: globals.browser },
   },

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Device monitor</title>
+    <title>Client monitor</title>
     <style>
       html,
       body {
@@ -205,8 +205,8 @@
   </head>
   <body>
     <header>
-      <a class="back" id="back" title="Back to devices">←</a>
-      <h1>Monitor <span id="devinfo"></span></h1>
+      <a class="back" id="back" title="Back to clients">←</a>
+      <h1>Monitor <span id="clientinfo"></span></h1>
       <span class="status" id="status"
         ><span class="dot"></span>connecting…</span
       >
@@ -244,13 +244,13 @@
 
     <script type="module">
       const params = new URLSearchParams(location.search);
-      const deviceId = params.get("id") || "";
+      const clientId = params.get("id") || "";
       const statusEl = document.getElementById("status");
-      const devinfoEl = document.getElementById("devinfo");
-      devinfoEl.textContent = deviceId.slice(0, 8);
+      const clientinfoEl = document.getElementById("clientinfo");
+      clientinfoEl.textContent = clientId.slice(0, 8);
       // Set at runtime so the dev server doesn't rewrite the static href to the
       // internal graph URL of the dashboard page.
-      document.getElementById("back").href = "/.internal/devices";
+      document.getElementById("back").href = "/.internal/clients";
 
       const pad = (n) => String(n).padStart(2, "0");
       const fmtTime = (ts) => {
@@ -268,8 +268,8 @@
         safari: "Safari",
         node: "Node",
       };
-      // "Chrome 149 · iOS 17.2" from the device's parsed runtime/os.
-      const describeDevice = (device) => {
+      // "Chrome 149 · iOS 17.2" from the client's parsed runtime/os.
+      const describeClient = (client) => {
         const part = ({ name, version } = {}, labels) => {
           if (!name || name === "unknown") {
             return "";
@@ -279,24 +279,24 @@
           return `${label}${v}`;
         };
         return (
-          [part(device.runtime, RUNTIME_LABELS), part(device.os)]
+          [part(client.runtime, RUNTIME_LABELS), part(client.os)]
             .filter(Boolean)
-            .join(" · ") || deviceId.slice(0, 8)
+            .join(" · ") || clientId.slice(0, 8)
         );
       };
 
-      // Filled from device.json; drives the copied header so a pasted log always
+      // Filled from client.json; drives the copied header so a pasted log always
       // says WHERE it came from (browser, OS, full user-agent) — e.g. so it's
       // obvious it's Android Chrome and not iOS.
-      let deviceInfo = null;
+      let clientInfo = null;
       const copyHeader = (label) => {
-        const info = deviceInfo || {};
+        const info = clientInfo || {};
         const ua = info.userAgent || navigator.userAgent || "unknown";
         return `${[
-          `# jsenv device monitor — ${label}`,
-          `# device: ${describeDevice(info)}`,
+          `# jsenv client monitor — ${label}`,
+          `# client: ${describeClient(info)}`,
           `# user-agent: ${ua}`,
-          `# device id: ${deviceId}`,
+          `# client id: ${clientId}`,
           `# copied: ${new Date().toISOString()}`,
         ].join("\n")}\n\n`;
       };
@@ -436,20 +436,20 @@
       };
 
       // Backlog first (a monitor opened late still sees recent history), and
-      // fill the header with the device's parsed browser/OS.
+      // fill the header with the client's parsed browser/OS.
       (async () => {
         try {
-          const device = await (
+          const client = await (
             await fetch(
-              `/.internal/device.json?id=${encodeURIComponent(deviceId)}`,
+              `/.internal/client.json?id=${encodeURIComponent(clientId)}`,
             )
           ).json();
-          deviceInfo = device;
-          devinfoEl.textContent = describeDevice(device);
-          for (const entry of device.logs || []) {
+          clientInfo = client;
+          clientinfoEl.textContent = describeClient(client);
+          for (const entry of client.logs || []) {
             logs.add(entry);
           }
-          for (const entry of device.activities || []) {
+          for (const entry of client.activities || []) {
             activity.add(entry);
           }
         } catch {
@@ -460,16 +460,16 @@
       // …then live. This page is cooked through the dev server, so it gets the
       // jsenv server-events client injected (window.__server_events__, ready
       // before this script — the same channel autoreload rides). Everything is
-      // broadcast there, so keep only what belongs to the device we monitor.
+      // broadcast there, so keep only what belongs to the client we monitor.
       setStatus(true, "monitoring");
       window.__server_events__.listenEvents({
-        device_log: (event) => {
-          if (event.data.deviceId === deviceId) {
+        client_log: (event) => {
+          if (event.data.clientId === clientId) {
             logs.add(event.data);
           }
         },
-        device_activity: (event) => {
-          if (event.data.deviceId === deviceId) {
+        client_activity: (event) => {
+          if (event.data.clientId === clientId) {
             activity.add(event.data);
           }
         },

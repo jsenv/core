@@ -17,7 +17,7 @@ For a throwaway check, import from `./src/main.js` and run from the repo root (s
 
 Defined in [src/dev/start_dev_server.js](../../../src/dev/start_dev_server.js). Serves `sourceDirectoryUrl`, cooking each file through the plugin pipeline. Key options: `sourceDirectoryUrl` (required), `port`, `plugins`, `serverPlugins`, `clientAutoreload`, `ribbon`, `supervisor`, `directoryListing`. Returns `{ origin, sourceDirectoryUrl, stop, kitchenCache }` (note: `origin`, not `port`).
 
-It always registers `jsenvPluginServerEvents` and `jsenvPluginDevices` first, then user `plugins`, then core plugins. Plugin collection happens in [src/plugins/jsenv_plugins_controller.js](../../../src/plugins/jsenv_plugins_controller.js).
+It always registers `jsenvPluginServerEvents` and `jsenvPluginClientMonitoring` first, then user `plugins`, then core plugins. Plugin collection happens in [src/plugins/jsenv_plugins_controller.js](../../../src/plugins/jsenv_plugins_controller.js).
 
 ## Plugin shape
 
@@ -59,7 +59,7 @@ Injected into every cooked HTML page by `jsenvPluginServerEvents.transformUrlCon
 Injection (`window.__server_events__`, ribbon, supervisor) only happens for HTML **cooked as a graph URL**. Two ways to serve internal HTML, with opposite behavior:
 
 - **Raw `serverRoutes.fetch` returning `readFileSync(html)`** → returned verbatim, NOT cooked → **no injection**. Fine for JSON/websocket/opaque responses, not for pages that need the injected clients.
-- **Redirect a reference to a real HTML file URL** → the file enters the graph, gets cooked by the catch-all `GET *`, runs all `transformUrlContent.html` hooks → **gets injection**. This is what the directory listing does ([jsenv_plugin_directory_listing.js](../../../src/plugins/protocol_file/jsenv_plugin_directory_listing.js)) and what the devices plugin does ([src/plugins/devices/jsenv_plugin_devices.js](../../../src/plugins/devices/jsenv_plugin_devices.js)).
+- **Redirect a reference to a real HTML file URL** → the file enters the graph, gets cooked by the catch-all `GET *`, runs all `transformUrlContent.html` hooks → **gets injection**. This is what the directory listing does ([jsenv_plugin_directory_listing.js](../../../src/plugins/protocol_file/jsenv_plugin_directory_listing.js)) and what the client-monitoring plugin does ([src/plugins/client_monitoring/jsenv_plugin_client_monitoring.js](../../../src/plugins/client_monitoring/jsenv_plugin_client_monitoring.js)).
 
 Pattern (from the devices plugin):
 

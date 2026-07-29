@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Devices</title>
+    <title>Clients</title>
     <style>
       body {
         margin: 0;
@@ -57,20 +57,6 @@
       tr:last-child td {
         border-bottom: none;
       }
-      .dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        margin-right: 6px;
-        vertical-align: middle;
-        border-radius: 50%;
-      }
-      .dot.on {
-        background: #22c55e;
-      }
-      .dot.off {
-        background: #9ca3af;
-      }
       .empty {
         padding: 22px;
         color: #9ca3af;
@@ -78,6 +64,10 @@
       }
       .muted {
         color: #9ca3af;
+      }
+      .when {
+        color: #374151;
+        white-space: nowrap;
       }
       .url {
         display: inline-block;
@@ -195,10 +185,10 @@
     </style>
   </head>
   <body>
-    <h1>Devices</h1>
+    <h1>Clients</h1>
     <p class="intro">
       Every browser that has connected to this dev server since it started. The
-      columns are a résumé; use the actions to dig in or monitor a device's
+      columns are a résumé; use the actions to dig in or monitor a client's
       logs.
     </p>
 
@@ -208,7 +198,7 @@
       <tbody id="self-rows"></tbody>
     </table>
 
-    <h2>Other devices</h2>
+    <h2>Other clients</h2>
     <table>
       <thead id="head2"></thead>
       <tbody id="other-rows"></tbody>
@@ -227,17 +217,16 @@
     <script type="module">
       const selfRows = document.getElementById("self-rows");
       const otherRows = document.getElementById("other-rows");
-      const ONLINE_MS = 60000;
-      // The devices client (injected into this page too) stores our own id.
+      // The monitoring script (injected into this page too) stores our own id.
       let selfId = null;
       try {
-        selfId = localStorage.getItem("jsenv_device_id");
+        selfId = localStorage.getItem("jsenv_client_id");
       } catch {
         // storage blocked — we just won't single ourselves out
       }
 
       const headHtml = `<tr>
-        <th>Status</th><th>OS</th><th>Browser</th><th>Active tab</th>
+        <th>First seen</th><th>OS</th><th>Browser</th><th>Active tab</th>
         <th>Last activity</th><th>Logs</th><th></th>
       </tr>`;
       document.getElementById("head").innerHTML = headHtml;
@@ -252,6 +241,12 @@
         if (m < 60) return `${m}m ago`;
         const h = Math.round(m / 60);
         return `${h}h ago`;
+      };
+      const pad2 = (n) => String(n).padStart(2, "0");
+      // Absolute date+time for "first seen" so it never shifts as time passes.
+      const fmtDate = (ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
       };
       const escapeHtml = (str) =>
         String(str).replace(
@@ -284,8 +279,9 @@
         const v = version && version !== "unknown" ? ` ${version}` : "";
         return escapeHtml(`${label}${v}`);
       };
-      const isOnline = (device) => Date.now() - device.lastSeen < ONLINE_MS;
 
+      const firstSeenCell = (d) =>
+        `<span class="when" title="${escapeHtml(new Date(d.firstSeen).toString())}">${fmtDate(d.firstSeen)}</span>`;
       const tabCell = (d) => {
         if (!d.activeTab) {
           return '<span class="muted">—</span>';
@@ -307,13 +303,12 @@
           <button class="btn" data-action="tabs" data-id="${id}">Tabs</button>
           <button class="btn" data-action="activity" data-id="${id}">Activity</button>
           <button class="btn" data-action="ua" data-id="${id}">User agent</button>
-          <a class="monitor" href="/.internal/device?id=${encodeURIComponent(d.id)}">Monitor →</a>
+          <a class="monitor" href="/.internal/client?id=${encodeURIComponent(d.id)}">Monitor →</a>
         </div>`;
       };
       const rowHtml = (d) => {
-        const online = isOnline(d);
         return `<tr>
-          <td><span class="dot ${online ? "on" : "off"}"></span>${online ? "online" : "offline"}</td>
+          <td>${firstSeenCell(d)}</td>
           <td>${named(d.os)}</td>
           <td>${named(d.runtime)}</td>
           <td>${tabCell(d)}</td>
@@ -323,12 +318,12 @@
         </tr>`;
       };
 
-      let lastDevices = [];
-      const render = (devices) => {
-        lastDevices = devices;
-        const self = selfId ? devices.find((d) => d.id === selfId) : null;
+      let lastClients = [];
+      const render = (clients) => {
+        lastClients = clients;
+        const self = selfId ? clients.find((d) => d.id === selfId) : null;
         // Others ordered by when they first connected, so rows don't reshuffle.
-        const others = devices
+        const others = clients
           .filter((d) => d !== self)
           .sort((a, b) => a.firstSeen - b.firstSeen);
         selfRows.innerHTML = self
@@ -336,7 +331,7 @@
           : `<tr><td class="empty" colspan="${COLSPAN}">This browser isn't registered yet — it will appear shortly.</td></tr>`;
         otherRows.innerHTML = others.length
           ? others.map(rowHtml).join("")
-          : `<tr><td class="empty" colspan="${COLSPAN}">No other device has connected.</td></tr>`;
+          : `<tr><td class="empty" colspan="${COLSPAN}">No other client has connected.</td></tr>`;
       };
 
       // Dialogs (all tabs / recent activity / user agent).
@@ -368,10 +363,10 @@
         dlg.showModal();
       };
 
-      const fetchDevice = async (id) => {
+      const fetchClient = async (id) => {
         try {
           return await (
-            await fetch(`/.internal/device.json?id=${encodeURIComponent(id)}`)
+            await fetch(`/.internal/client.json?id=${encodeURIComponent(id)}`)
           ).json();
         } catch {
           return null;
@@ -416,12 +411,12 @@
         const id = button.getAttribute("data-id");
         const action = button.getAttribute("data-action");
         if (action === "ua") {
-          const device = lastDevices.find((d) => d.id === id);
-          const ua = (device && device.userAgent) || "";
+          const client = lastClients.find((d) => d.id === id);
+          const ua = (client && client.userAgent) || "";
           openDialog("User agent", `<pre>${escapeHtml(ua)}</pre>`, ua);
           return;
         }
-        const detail = await fetchDevice(id);
+        const detail = await fetchClient(id);
         if (!detail) {
           return;
         }
@@ -434,23 +429,23 @@
 
       // This page is cooked through the dev server, so it gets both the jsenv
       // server-events client (window.__server_events__, injected first — the
-      // same channel autoreload rides) and the devices client (so opening this
-      // page counts as a connected device). The server pushes the full list on
-      // every change; no polling. Initial snapshot via the JSON route.
+      // same channel autoreload rides) and the monitoring script (so opening
+      // this page counts as a connected client). The server pushes the full
+      // list on every change; no polling. Initial snapshot via the JSON route.
       (async () => {
         try {
-          render(await (await fetch("/.internal/devices.json")).json());
+          render(await (await fetch("/.internal/clients.json")).json());
         } catch {
           // dev server unreachable — the live channel will fill the list in.
         }
       })();
 
       window.__server_events__.listenEvents({
-        devices_list: (event) => render(event.data),
+        clients_list: (event) => render(event.data),
       });
 
-      // Refresh relative times and online state between server pushes.
-      setInterval(() => render(lastDevices), 5000);
+      // Refresh relative "last activity" times between server pushes.
+      setInterval(() => render(lastClients), 5000);
     </script>
   </body>
 </html>

@@ -1,34 +1,36 @@
 /*
- * Devices plugin (dev only)
- * -------------------------
- * Lets you read one browser's console logs from another browser — e.g. watch a
- * phone's logs from the desktop.
+ * Client monitoring plugin (dev only)
+ * -----------------------------------
+ * Lets you watch one client from another — e.g. read a phone's console logs and
+ * activity from the desktop. A "client" here is a browser/navigator context that
+ * cooked one of our pages and reports back; we can only see clients that execute
+ * our injected script, not arbitrary HTTP clients of the dev server.
  *
  * Transport reuses what the dev server already has instead of opening a second
  * websocket:
  * - server → clients uses the jsenv "server events" channel (the same websocket
- *   the autoreload feature rides on). This plugin declares three server events:
- *     - "devices_list"    the whole registry (the dashboard renders it)
- *     - "device_log"      a single log line (a monitor appends it)
- *     - "device_activity" a single qualified activity (a monitor appends it)
- *     - "device_here"     a device just appeared/resumed (every page can toast it)
+ *   the autoreload feature rides on). This plugin declares four server events:
+ *     - "clients_list"    the whole registry (the dashboard renders it)
+ *     - "client_log"      a single log line (a monitor appends it)
+ *     - "client_activity" a single qualified activity (a monitor appends it)
+ *     - "client_here"     a client just appeared/resumed (every page can toast it)
  *   Server events are broadcast, so consumers filter what they care about.
- * - clients → server uses a plain HTTP POST (/.internal/devices/log). Each report
- *   carries the tab (id, url, title, visibility), recent qualified activities
- *   (click, request, navigation, …) and buffered console logs; a periodic
- *   heartbeat keeps it fresh. No extra socket.
+ * - clients → server uses a plain HTTP POST (/.internal/clients/report). Each
+ *   report carries the tab (id, url, title, visibility), recent qualified
+ *   activities (click, request, navigation, …) and buffered console logs; a
+ *   periodic heartbeat keeps it fresh. No extra socket.
  *
- * A device aggregates its open tabs and a short activity history. It is "online"
+ * A client aggregates its open tabs and a short activity history. It is "online"
  * when any report arrived within INACTIVITY_MS — there is no dedicated
  * connection to track.
  *
- * The client is injected into EVERY cooked page, including our own dashboard and
- * monitor pages — so opening one of those counts as a connected device, and any
- * open page gets toasted when another device appears.
+ * The monitoring script is injected into EVERY cooked page, including our own
+ * dashboard and monitor pages — so opening one of those counts as a connected
+ * client, and any open page gets toasted when another client appears.
  *
  * Pages:
- * - /.internal/devices     → dashboard listing every device seen
- * - /.internal/device?id=… → live console-log monitor for one device
+ * - /.internal/clients     → dashboard listing every client seen
+ * - /.internal/client?id=… → live console-log monitor for one client
  *
  * Both pages are served THROUGH the graph (via redirectReference to a real HTML
  * file) rather than as a raw route response, so they get cooked like any app
@@ -47,28 +49,28 @@ const runtimeFromRequest = (request) => {
   return { name: runtimeName, version: runtimeVersion };
 };
 
-const devicesClientFileUrl = new URL(
-  "./client/devices_client.js",
+const clientReporterFileUrl = new URL(
+  "./client/client_reporter.js",
   import.meta.url,
 ).href;
-const devicesPageFileUrl = new URL(
-  "./client/devices_page.html",
+const clientsPageFileUrl = new URL(
+  "./client/clients_page.html",
   import.meta.url,
 ).href;
-const deviceMonitorPageFileUrl = new URL(
-  "./client/device_monitor_page.html",
+const clientMonitorPageFileUrl = new URL(
+  "./client/client_monitor_page.html",
   import.meta.url,
 ).href;
 
-// Keep at most this many log entries per device, and drop entries older than
+// Keep at most this many log entries per client, and drop entries older than
 // LOG_TTL_MS — the buffer only exists so a monitor opened a bit late can still
 // show recent history; it is not a persistent store.
-const LOG_MAX_PER_DEVICE = 1000;
+const LOG_MAX_PER_CLIENT = 1000;
 const LOG_TTL_MS = 60 * 60 * 1000; // 1h
-// Recent qualified activities kept per device (click, mousemove, request, …),
-// so a page can show "what the device was last doing" and a short history.
-const ACTIVITY_MAX_PER_DEVICE = 50;
-// A device silent (no report at all) for longer than this, then reporting
+// Recent qualified activities kept per client (click, mousemove, request, …),
+// so a page can show "what the client was last doing" and a short history.
+const ACTIVITY_MAX_PER_CLIENT = 50;
+// A client silent (no report at all) for longer than this, then reporting
 // again, is treated as "resumed" and defines "online".
 const INACTIVITY_MS = 60 * 1000;
 // A tab not heard from for this long is considered closed and dropped.
@@ -113,25 +115,25 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
-export const jsenvPluginDevices = () => {
-  // id -> device record
-  const devices = new Map();
+export const jsenvPluginClientMonitoring = () => {
+  // id -> client record
+  const clients = new Map();
 
   // Assigned when the server-event channel is set up; broadcast helpers.
-  let sendDevicesList = () => {};
-  let sendDeviceLog = () => {};
-  let sendDeviceActivity = () => {};
-  let sendDeviceHere = () => {};
+  let sendClientsList = () => {};
+  let sendClientLog = () => {};
+  let sendClientActivity = () => {};
+  let sendClientHere = () => {};
 
   const now = () => Date.now();
-  // "online" = we heard from the device (any report) recently.
-  const isOnline = (device) => now() - device.lastSeen < INACTIVITY_MS;
+  // "online" = we heard from the client (any report) recently.
+  const isOnline = (client) => now() - client.lastSeen < INACTIVITY_MS;
 
-  const getOrCreateDevice = (id, request) => {
+  const getOrCreateClient = (id, request) => {
     const userAgent = request.headers["user-agent"] || "";
-    let device = devices.get(id);
-    if (!device) {
-      device = {
+    let client = clients.get(id);
+    if (!client) {
+      client = {
         id,
         userAgent,
         runtime: runtimeFromRequest(request),
@@ -146,34 +148,34 @@ export const jsenvPluginDevices = () => {
         // tabId -> { id, url, title, visible, lastSeen }
         tabs: new Map(),
       };
-      devices.set(id, device);
-    } else if (userAgent && userAgent !== device.userAgent) {
-      device.userAgent = userAgent;
-      device.runtime = runtimeFromRequest(request);
-      device.os = osFromUserAgent(userAgent);
+      clients.set(id, client);
+    } else if (userAgent && userAgent !== client.userAgent) {
+      client.userAgent = userAgent;
+      client.runtime = runtimeFromRequest(request);
+      client.os = osFromUserAgent(userAgent);
     }
-    return device;
+    return client;
   };
 
-  const pruneLogs = (device) => {
+  const pruneLogs = (client) => {
     const cutoff = now() - LOG_TTL_MS;
-    while (device.logs.length && device.logs[0].ts < cutoff) {
-      device.logs.shift();
+    while (client.logs.length && client.logs[0].ts < cutoff) {
+      client.logs.shift();
     }
-    while (device.logs.length > LOG_MAX_PER_DEVICE) {
-      device.logs.shift();
+    while (client.logs.length > LOG_MAX_PER_CLIENT) {
+      client.logs.shift();
     }
   };
 
-  const updateTab = (device, tab) => {
+  const updateTab = (client, tab) => {
     if (!tab || typeof tab.id !== "string") {
       return;
     }
     if (tab.closing) {
-      device.tabs.delete(tab.id);
+      client.tabs.delete(tab.id);
       return;
     }
-    device.tabs.set(tab.id, {
+    client.tabs.set(tab.id, {
       id: tab.id,
       url: typeof tab.url === "string" ? tab.url : "",
       title: typeof tab.title === "string" ? tab.title : "",
@@ -182,20 +184,20 @@ export const jsenvPluginDevices = () => {
     });
   };
 
-  const pruneTabs = (device) => {
+  const pruneTabs = (client) => {
     const cutoff = now() - TAB_TTL_MS;
-    for (const [id, tab] of device.tabs) {
+    for (const [id, tab] of client.tabs) {
       if (tab.lastSeen < cutoff) {
-        device.tabs.delete(id);
+        client.tabs.delete(id);
       }
     }
   };
 
   // The tab to show as "current": a visible one wins, otherwise the most
   // recently seen. No Math.max — a single scan keeping the best.
-  const activeTabOf = (device) => {
+  const activeTabOf = (client) => {
     let best = null;
-    for (const tab of device.tabs.values()) {
+    for (const tab of client.tabs.values()) {
       if (!best) {
         best = tab;
         continue;
@@ -211,7 +213,7 @@ export const jsenvPluginDevices = () => {
     return best;
   };
 
-  const recordActivity = (device, rawActivity) => {
+  const recordActivity = (client, rawActivity) => {
     const activity = {
       type:
         typeof rawActivity.type === "string" ? rawActivity.type : "activity",
@@ -219,11 +221,11 @@ export const jsenvPluginDevices = () => {
       ts: rawActivity.ts || now(),
       tabId: typeof rawActivity.tabId === "string" ? rawActivity.tabId : "",
     };
-    device.activities.push(activity);
-    while (device.activities.length > ACTIVITY_MAX_PER_DEVICE) {
-      device.activities.shift();
+    client.activities.push(activity);
+    while (client.activities.length > ACTIVITY_MAX_PER_CLIENT) {
+      client.activities.shift();
     }
-    device.lastActivity = activity;
+    client.lastActivity = activity;
     return activity;
   };
 
@@ -238,39 +240,39 @@ export const jsenvPluginDevices = () => {
   // Summary sent in the (broadcast) list — kept lean: the active tab and a tab
   // count rather than every tab, the last activity rather than the whole
   // history. Pages fetch the full record for their dialogs.
-  const serializeDevice = (device) => {
-    const activeTab = activeTabOf(device);
+  const serializeClient = (client) => {
+    const activeTab = activeTabOf(client);
     return {
-      id: device.id,
-      userAgent: device.userAgent,
+      id: client.id,
+      userAgent: client.userAgent,
       // parsed { name, version } so pages can show a friendly browser/OS
-      runtime: device.runtime,
-      os: device.os,
-      firstSeen: device.firstSeen,
-      lastSeen: device.lastSeen,
-      online: isOnline(device),
-      logCount: device.logs.length,
-      tabCount: device.tabs.size,
+      runtime: client.runtime,
+      os: client.os,
+      firstSeen: client.firstSeen,
+      lastSeen: client.lastSeen,
+      online: isOnline(client),
+      logCount: client.logs.length,
+      tabCount: client.tabs.size,
       activeTab: activeTab ? serializeTab(activeTab) : null,
-      lastActivity: device.lastActivity,
+      lastActivity: client.lastActivity,
     };
   };
 
-  const snapshot = () => [...devices.values()].map(serializeDevice);
+  const snapshot = () => [...clients.values()].map(serializeClient);
 
-  // A single device's full record: the summary plus everything a dialog needs
-  // (all tabs, recent activities, buffered logs). Device-scoped rather than
+  // A single client's full record: the summary plus everything a dialog needs
+  // (all tabs, recent activities, buffered logs). Client-scoped rather than
   // named after logs because the shape is meant to grow.
-  const deviceDetail = (device) => ({
-    ...serializeDevice(device),
-    tabs: [...device.tabs.values()].map(serializeTab),
-    activities: device.activities.slice(),
-    logs: device.logs,
+  const clientDetail = (client) => ({
+    ...serializeClient(client),
+    tabs: [...client.tabs.values()].map(serializeTab),
+    activities: client.activities.slice(),
+    logs: client.logs,
   });
 
   // Broadcasting the full list on every log line would be wasteful, so a
   // log-driven refresh (logCount/lastActivity) is throttled; structural changes
-  // (a device appears/resumes) push immediately.
+  // (a client appears/resumes) push immediately.
   let listThrottleTimer = null;
   const pushListThrottled = () => {
     if (listThrottleTimer) {
@@ -278,7 +280,7 @@ export const jsenvPluginDevices = () => {
     }
     listThrottleTimer = setTimeout(() => {
       listThrottleTimer = null;
-      sendDevicesList();
+      sendClientsList();
     }, 1000);
   };
 
@@ -289,33 +291,33 @@ export const jsenvPluginDevices = () => {
     } catch {
       return { status: 400 };
     }
-    const deviceId = body.deviceId;
-    if (!deviceId || typeof deviceId !== "string") {
+    const clientId = body.clientId;
+    if (!clientId || typeof clientId !== "string") {
       return { status: 400 };
     }
-    const device = getOrCreateDevice(deviceId, request);
+    const client = getOrCreateClient(clientId, request);
 
-    const firstEver = !device.everSeen;
-    const wasOnline = !firstEver && isOnline(device);
-    device.everSeen = true;
-    device.lastSeen = now();
+    const firstEver = !client.everSeen;
+    const wasOnline = !firstEver && isOnline(client);
+    client.everSeen = true;
+    client.lastSeen = now();
 
-    updateTab(device, body.tab);
-    pruneTabs(device);
+    updateTab(client, body.tab);
+    pruneTabs(client);
 
     if (firstEver) {
-      sendDeviceHere({ reason: "new", device: serializeDevice(device) });
-      sendDevicesList();
+      sendClientHere({ reason: "new", client: serializeClient(client) });
+      sendClientsList();
     } else if (!wasOnline) {
-      // A report after a long quiet spell means the device was picked back up.
-      sendDeviceHere({ reason: "resumed", device: serializeDevice(device) });
-      sendDevicesList();
+      // A report after a long quiet spell means the client was picked back up.
+      sendClientHere({ reason: "resumed", client: serializeClient(client) });
+      sendClientsList();
     }
 
     const activities = Array.isArray(body.activities) ? body.activities : [];
     for (const rawActivity of activities) {
-      const activity = recordActivity(device, rawActivity);
-      sendDeviceActivity({ deviceId, ...activity });
+      const activity = recordActivity(client, rawActivity);
+      sendClientActivity({ clientId, ...activity });
     }
 
     const logs = Array.isArray(body.logs) ? body.logs : [];
@@ -330,11 +332,11 @@ export const jsenvPluginDevices = () => {
       if (Array.isArray(rawLog.segments)) {
         entry.segments = rawLog.segments;
       }
-      device.logs.push(entry);
-      sendDeviceLog({ deviceId, ...entry });
+      client.logs.push(entry);
+      sendClientLog({ clientId, ...entry });
     }
     if (logs.length) {
-      pruneLogs(device);
+      pruneLogs(client);
     }
     pushListThrottled();
     return { status: 204 };
@@ -360,77 +362,77 @@ export const jsenvPluginDevices = () => {
       return null;
     }
     const { pathname, search } = new URL(reference.url);
-    if (pathname.endsWith("/.internal/devices")) {
-      return devicesPageFileUrl;
+    if (pathname.endsWith("/.internal/clients")) {
+      return clientsPageFileUrl;
     }
-    if (pathname.endsWith("/.internal/device")) {
-      // carry ?id=… so the monitor page knows which device to watch
-      return `${deviceMonitorPageFileUrl}${search}`;
+    if (pathname.endsWith("/.internal/client")) {
+      // carry ?id=… so the monitor page knows which client to watch
+      return `${clientMonitorPageFileUrl}${search}`;
     }
     return null;
   };
 
   return {
-    name: "jsenv:devices",
+    name: "jsenv:client_monitoring",
     appliesDuring: "dev",
     redirectReference: redirectToPage,
     serverEvents: {
-      devices_list: (serverEventInfo) => {
-        sendDevicesList = () => serverEventInfo.sendServerEvent(snapshot());
+      clients_list: (serverEventInfo) => {
+        sendClientsList = () => serverEventInfo.sendServerEvent(snapshot());
       },
-      device_log: (serverEventInfo) => {
-        sendDeviceLog = (payload) => serverEventInfo.sendServerEvent(payload);
+      client_log: (serverEventInfo) => {
+        sendClientLog = (payload) => serverEventInfo.sendServerEvent(payload);
       },
-      device_activity: (serverEventInfo) => {
-        sendDeviceActivity = (payload) =>
+      client_activity: (serverEventInfo) => {
+        sendClientActivity = (payload) =>
           serverEventInfo.sendServerEvent(payload);
       },
-      device_here: (serverEventInfo) => {
-        sendDeviceHere = (payload) => serverEventInfo.sendServerEvent(payload);
+      client_here: (serverEventInfo) => {
+        sendClientHere = (payload) => serverEventInfo.sendServerEvent(payload);
       },
     },
     transformUrlContent: {
       html: (urlInfo) => {
         // Injected into every page, including our own dashboard/monitor pages,
-        // so opening one registers that browser as a device and any open page
-        // gets toasted when another device appears.
+        // so opening one registers that browser as a client and any open page
+        // gets toasted when another client appears.
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         injectJsenvScript(htmlAst, {
-          src: devicesClientFileUrl,
+          src: clientReporterFileUrl,
           initCall: {
-            callee: "window.__devices__.setup",
+            callee: "window.__client_monitoring__.setup",
             params: {},
           },
-          pluginName: "jsenv:devices",
+          pluginName: "jsenv:client_monitoring",
         });
         return stringifyHtmlAst(htmlAst);
       },
     },
     serverRoutes: [
       {
-        endpoint: "POST /.internal/devices/log",
+        endpoint: "POST /.internal/clients/report",
         description:
           "A browser reports its console output and activity heartbeat here.",
         declarationSource: import.meta.url,
         fetch: (request) => ingest(request),
       },
       {
-        endpoint: "GET /.internal/devices.json",
-        description: "Snapshot of every device seen since the server started.",
+        endpoint: "GET /.internal/clients.json",
+        description: "Snapshot of every client seen since the server started.",
         availableMediaTypes: ["application/json"],
         declarationSource: import.meta.url,
         fetch: () => jsonResponse(snapshot()),
       },
       {
-        endpoint: "GET /.internal/device.json",
+        endpoint: "GET /.internal/client.json",
         description:
-          "One device's record — info plus buffered logs (?id=…), so a monitor opened late still has recent history.",
+          "One client's record — info plus buffered logs (?id=…), so a monitor opened late still has recent history.",
         availableMediaTypes: ["application/json"],
         declarationSource: import.meta.url,
         fetch: (request) => {
           const id = request.searchParams.get("id");
-          const device = id && devices.get(id);
-          return jsonResponse(device ? deviceDetail(device) : { id, logs: [] });
+          const client = id && clients.get(id);
+          return jsonResponse(client ? clientDetail(client) : { id, logs: [] });
         },
       },
     ],

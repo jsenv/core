@@ -1,25 +1,25 @@
 /*
- * Injected into every dev-server page. Gives this browser a stable "device id"
+ * Injected into every dev-server page. Gives this browser a stable "client id"
  * (and this browsing context a "tab id"), reports what the tab is doing to the
- * dev server, and shows a toast when another device appears (or resumes) —
- * inviting the user to open that device's live-log monitor.
+ * dev server, and shows a toast when another client appears (or resumes) —
+ * inviting the user to open that client's live-log monitor.
  *
  * It does NOT open a websocket: server → browser messages ride the existing
  * jsenv server-events channel (window.__server_events__), and browser → server
- * messages are batched POSTs to /.internal/devices/log carrying:
+ * messages are batched POSTs to /.internal/clients/report carrying:
  * - the tab (id, url, title, visibility)
  * - recent qualified activities (click, keydown, mousemove, scroll, request,
- *   navigation, visibility)
+ *   navigation, document_becomes_visible/hidden)
  * - buffered console logs
  */
 
-const DEVICE_ID_STORAGE_KEY = "jsenv_device_id";
+const CLIENT_ID_STORAGE_KEY = "jsenv_client_id";
 const TAB_ID_STORAGE_KEY = "jsenv_tab_id";
-const LOG_ENDPOINT = "/.internal/devices/log";
+const REPORT_ENDPOINT = "/.internal/clients/report";
 // Flush buffered logs/activities at most this often (a chatty page shouldn't
 // POST per line).
 const FLUSH_INTERVAL_MS = 1000;
-// Heartbeat so the server keeps seeing this device as "online" while the page is
+// Heartbeat so the server keeps seeing this client as "online" while the page is
 // open, and notices when it is picked back up after a quiet spell.
 const HEARTBEAT_MS = 15000;
 // Continuous activities (mousemove, scroll) only need to refresh "what the tab
@@ -31,12 +31,12 @@ const randomId = () =>
     ? crypto.randomUUID()
     : `${String(Math.random()).slice(2)}${Date.now().toString(36)}`;
 
-const getDeviceId = () => {
+const getClientId = () => {
   try {
-    let id = localStorage.getItem(DEVICE_ID_STORAGE_KEY);
+    let id = localStorage.getItem(CLIENT_ID_STORAGE_KEY);
     if (!id) {
       id = randomId();
-      localStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
+      localStorage.setItem(CLIENT_ID_STORAGE_KEY, id);
     }
     return id;
   } catch {
@@ -143,7 +143,7 @@ const formatConsole = (args) => {
 };
 
 const setup = () => {
-  const deviceId = getDeviceId();
+  const clientId = getClientId();
   const tabId = getTabId();
   // Use the unwrapped fetch for our own reports so they don't count as activity.
   const nativeFetch = window.fetch.bind(window);
@@ -167,20 +167,20 @@ const setup = () => {
     pendingLogs = [];
     pendingActivities = [];
     const payload = JSON.stringify({
-      deviceId,
+      clientId,
       tab: tabInfo({ closing }),
       activities,
       logs,
     });
     if (beacon && navigator.sendBeacon) {
       navigator.sendBeacon(
-        LOG_ENDPOINT,
+        REPORT_ENDPOINT,
         new Blob([payload], { type: "application/json" }),
       );
       return;
     }
     try {
-      await nativeFetch(LOG_ENDPOINT, {
+      await nativeFetch(REPORT_ENDPOINT, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: payload,
@@ -345,7 +345,13 @@ const setup = () => {
     { passive: true },
   );
   document.addEventListener("visibilitychange", () => {
-    recordActivity("visibility", document.visibilityState);
+    // Spell out the direction so the activity reads meaningfully on its own,
+    // rather than a bare "visibility" whose value you have to interpret.
+    recordActivity(
+      document.visibilityState === "visible"
+        ? "document_becomes_visible"
+        : "document_becomes_hidden",
+    );
     // push promptly so the dashboard's "active tab" tracks focus changes
     post();
   });
@@ -384,7 +390,7 @@ const setup = () => {
   patchHistory("replaceState");
   window.addEventListener("popstate", reportNavigation);
 
-  // Heartbeat keeps the device "online", refreshes tab info, and lets the server
+  // Heartbeat keeps the client "online", refreshes tab info, and lets the server
   // detect a resume.
   post();
   const heartbeatId = setInterval(() => post(), HEARTBEAT_MS);
@@ -396,24 +402,24 @@ const setup = () => {
     post({ beacon: true, closing: true });
   });
 
-  // Toast when another device appears — reusing the server-events channel.
+  // Toast when another client appears — reusing the server-events channel.
   // window.__server_events__ is injected before this script, so it's ready.
   window.__server_events__.listenEvents({
-    device_here: (event) => {
-      const { device, reason } = event.data;
-      if (device.id === deviceId) {
-        return; // don't toast a device about itself
+    client_here: (event) => {
+      const { client, reason } = event.data;
+      if (client.id === clientId) {
+        return; // don't toast a client about itself
       }
-      showDeviceToast({ device, reason });
+      showClientToast({ client, reason });
     },
   });
 };
 
 // "Chrome 149 · iOS 17.2" from the parsed runtime/os, falling back gracefully.
-const describeDevice = (device) => {
+const describeClient = (client) => {
   const version = (v) => (v && v !== "unknown" ? ` ${v.split(".")[0]}` : "");
-  const runtime = device.runtime || {};
-  const os = device.os || {};
+  const runtime = client.runtime || {};
+  const os = client.os || {};
   const browserLabel =
     runtime.name && runtime.name !== "unknown"
       ? `${runtime.name}${version(runtime.version)}`
@@ -421,15 +427,15 @@ const describeDevice = (device) => {
   const osLabel =
     os.name && os.name !== "unknown" ? `${os.name}${version(os.version)}` : "";
   return (
-    [browserLabel, osLabel].filter(Boolean).join(" · ") || "unknown device"
+    [browserLabel, osLabel].filter(Boolean).join(" · ") || "unknown client"
   );
 };
 
-const showDeviceToast = ({ device, reason }) => {
+const showClientToast = ({ client, reason }) => {
   const label =
-    reason === "new" ? "A new device connected" : "A device resumed";
+    reason === "new" ? "A new client connected" : "A client resumed";
   const el = document.createElement("div");
-  el.setAttribute("data-jsenv-device-toast", "");
+  el.setAttribute("data-jsenv-client-toast", "");
   el.style.cssText = [
     "position:fixed",
     "z-index:2147483647",
@@ -443,9 +449,9 @@ const showDeviceToast = ({ device, reason }) => {
     "border-radius:8px",
     "box-shadow:0 6px 20px rgba(0,0,0,0.35)",
   ].join(";");
-  el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${label}</div><div style="opacity:.8;margin-bottom:8px">${describeDevice(device)}</div>`;
+  el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${label}</div><div style="opacity:.8;margin-bottom:8px">${describeClient(client)}</div>`;
   const link = document.createElement("a");
-  link.href = `/.internal/device?id=${encodeURIComponent(device.id)}`;
+  link.href = `/.internal/client?id=${encodeURIComponent(client.id)}`;
   link.target = "_blank";
   link.textContent = "Monitor →";
   link.style.cssText = "color:#93c5fd;text-decoration:none;font-weight:600";
@@ -460,4 +466,4 @@ const showDeviceToast = ({ device, reason }) => {
   setTimeout(() => el.remove(), 12000);
 };
 
-window.__devices__ = { setup };
+window.__client_monitoring__ = { setup };

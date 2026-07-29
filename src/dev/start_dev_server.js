@@ -16,7 +16,7 @@ import { createEventEmitter } from "../helpers/event_emitter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
-import { jsenvPluginDevices } from "../plugins/devices/jsenv_plugin_devices.js";
+import { jsenvPluginClientMonitoring } from "../plugins/client_monitoring/jsenv_plugin_client_monitoring.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { devServerPluginChromeDevToolsJson } from "./dev_server_plugins/dev_server_plugin_chrome_devtools_json.js";
@@ -197,7 +197,7 @@ export const startDevServer = async ({
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
-    jsenvPluginDevices(),
+    jsenvPluginClientMonitoring(),
     ...plugins,
     ...getCorePlugins({
       packageDirectory,
