@@ -243,10 +243,37 @@
         return `${h}h ago`;
       };
       const pad2 = (n) => String(n).padStart(2, "0");
-      // Absolute date+time for "first seen" so it never shifts as time passes.
+      // Absolute date+time, kept for the "first seen" tooltip.
       const fmtDate = (ts) => {
         const d = new Date(ts);
         return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+      };
+      // Human relative time for "first seen" ("5 minutes ago", "yesterday"),
+      // rendered with the largest unit that fits. Re-rendered every few seconds
+      // (see the interval below) so it stays fresh.
+      const relativeTimeFormat = new Intl.RelativeTimeFormat(undefined, {
+        numeric: "auto",
+      });
+      const RELATIVE_UNITS = [
+        ["year", 31536000],
+        ["month", 2592000],
+        ["week", 604800],
+        ["day", 86400],
+        ["hour", 3600],
+        ["minute", 60],
+      ];
+      const relativeTime = (ts) => {
+        const deltaSeconds = Math.round((ts - Date.now()) / 1000); // <0 = past
+        const abs = deltaSeconds < 0 ? -deltaSeconds : deltaSeconds;
+        for (const [unit, secondsInUnit] of RELATIVE_UNITS) {
+          if (abs >= secondsInUnit) {
+            return relativeTimeFormat.format(
+              Math.round(deltaSeconds / secondsInUnit),
+              unit,
+            );
+          }
+        }
+        return relativeTimeFormat.format(deltaSeconds, "second");
       };
       const escapeHtml = (str) =>
         String(str).replace(
@@ -281,7 +308,7 @@
       };
 
       const firstSeenCell = (d) =>
-        `<span class="when" title="${escapeHtml(new Date(d.firstSeen).toString())}">${fmtDate(d.firstSeen)}</span>`;
+        `<span class="when" title="${escapeHtml(fmtDate(d.firstSeen))}">${escapeHtml(relativeTime(d.firstSeen))}</span>`;
       const tabCell = (d) => {
         if (!d.activeTab) {
           return '<span class="muted">—</span>';

@@ -409,6 +409,28 @@ export const jsenvPluginClientMonitoring = () => {
       },
     },
     serverRoutes: [
+      // The two pages are actually served THROUGH the graph (see
+      // redirectReference above) so they get window.__server_events__ injected.
+      // These entries exist only to make the pages discoverable in the route
+      // inspector (/.internal/route_inspector): their fetch returns null, which
+      // makes the router fall through to the dev server's catch-all "GET *",
+      // which does the real cooking + injection.
+      {
+        endpoint: "GET /.internal/clients",
+        description:
+          "Dashboard of every browser (client) connected to this dev server since it started.",
+        availableMediaTypes: ["text/html"],
+        declarationSource: import.meta.url,
+        fetch: () => null,
+      },
+      {
+        endpoint: "GET /.internal/client",
+        description:
+          "Live monitor (console logs + activity) for one client — pass ?id=<clientId>.",
+        availableMediaTypes: ["text/html"],
+        declarationSource: import.meta.url,
+        fetch: () => null,
+      },
       {
         endpoint: "POST /.internal/clients/report",
         description:

@@ -795,13 +795,12 @@ const useWheelInteractions = ({
           // so the wheel keeps scrolling after release. Capture routes every
           // move/up back here regardless of where the pointer goes.
           //
-          // BUT only take EXPLICIT capture for mouse/pen. Touch pointers are
-          // already implicitly captured to the pointerdown target (move/up keep
-          // targeting the viewport), so explicit capture is redundant — and on
-          // iOS Safari calling setPointerCapture for a touch makes it drop the
-          // synthesized click of the NEXT tap (the capture/release leaves the
-          // touch subsystem thinking a gesture is still in progress). That's the
-          // "tap a dialog button right after a fling and nothing happens" bug.
+          // BUT only take EXPLICIT capture for mouse/pen. A touch pointer is
+          // already implicitly captured to its pointerdown target (its move/up
+          // keep targeting the viewport), so setPointerCapture would be
+          // redundant. (The "tap a dialog button right after a fling does
+          // nothing" bug is a separate browser-level tap suppression, handled by
+          // preventing touchmove during the drag — see onTouchMove below.)
           if (e.pointerType === "touch") {
             debug(
               e,
@@ -921,6 +920,21 @@ const useWheelInteractions = ({
       endDrag(e);
     };
 
+    // On Android Chrome a pointer-driven drag on a touch-action:none surface
+    // leaves the browser in a state that swallows the NEXT quick tap's
+    // synthesized `click` (a browser-level tap suppression, independent of navi).
+    // Calling preventDefault on the touchmoves that make up the drag tells the
+    // browser the touch is fully consumed, so a tap on e.g. a dialog's Confirm
+    // button right after a fling still fires its click. Only while a drag is
+    // active, and on touchmove (not touchstart) — the drag IS the move, and
+    // preventing touchstart has wider side effects. Requires a non-passive
+    // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
+    const onTouchMove = (e) => {
+      if (drag) {
+        e.preventDefault();
+      }
+    };
+
     // A press ANYWHERE outside the wheel while it's coasting settles it now, so
     // that press (a tap on a dialog button, a click-outside) lands on a stable
     // surface instead of one a late momentum re-render would move. Capture phase
@@ -940,6 +954,7 @@ const useWheelInteractions = ({
     vp.addEventListener("pointermove", onPointerMove);
     vp.addEventListener("pointerup", onPointerUp);
     vp.addEventListener("pointercancel", onPointerUp);
+    vp.addEventListener("touchmove", onTouchMove, { passive: false });
     // Losing capture (Esc, the browser stealing the pointer, a torn-down node)
     // ends the gesture too — otherwise the drag would stay latched.
     vp.addEventListener("lostpointercapture", onPointerUp);
@@ -956,6 +971,7 @@ const useWheelInteractions = ({
       vp.removeEventListener("pointermove", onPointerMove);
       vp.removeEventListener("pointerup", onPointerUp);
       vp.removeEventListener("pointercancel", onPointerUp);
+      vp.removeEventListener("touchmove", onTouchMove);
       vp.removeEventListener("lostpointercapture", onPointerUp);
       el.removeEventListener("navi_scroll", onNaviScroll);
     };

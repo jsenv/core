@@ -71,7 +71,7 @@ In [`ui/events/gesture_detection/gesture_provider.cc`](https://chromium.googleso
 once a scroll is recognized during a touch sequence, that sequence's
 `GestureTap` (which becomes the synthesized `click`) is suppressed. **But this
 flag resets on the next `DOWN`**, so it cannot reach across from the surface drag
-to a *separate* tap on another element.
+to a _separate_ tap on another element.
 
 ### 2. `TapSuppressionController` — the tap that stops a fling
 
@@ -101,32 +101,63 @@ looks like a variant of this rule leaking across the very short gap between the
 drag's release and the next tap. `touch-action: none` — which per spec should
 cause a normal `click` on release — does **not** prevent it.
 
-## Workarounds
+## What the matrix found
 
-The matrix experiment is what pins the exact trait to neutralize; until then, the
-candidate fixes, in order of preference:
+Running [`surface_css_matrix_experiment.html`](../src/control/demos/lab/surface_css_matrix_experiment.html)
+and [`preventdefault_matrix_experiment.html`](../src/control/demos/lab/preventdefault_matrix_experiment.html)
+on a real device (Chrome 150, Android 10) pinned it precisely:
 
-1. **Don't depend on the synthesized `click` for touch.** Treat a clean
-   `pointerup` (`pointerType === "touch"`, no movement since `pointerdown`) as
-   the activation, instead of waiting for `click`. This is the robust fix but
-   must be scoped carefully — it was explicitly rejected as a blanket change for
-   the wheel commit, so it belongs on the _target_ activation path, not the wheel.
-2. **Insert a settle delay** so the tap lands outside the ~180ms window — only
-   viable if the mechanism is genuinely time-boxed (the matrix ms-gap column
-   confirms this).
-3. **Stop the surface from looking like a drag to the browser** — if the matrix
-   shows that _movement_ (the `transform` during `pointermove`) is the trigger
-   rather than `touch-action`, moving the content a different way (or not at all
-   on the final frame) may avoid arming the suppressor.
+- **`touch-action` makes no difference.** `none`, `auto`, `manipulation`, `pan-y`
+  all suppress the click — confirming the spec expectation ("`touch-action:none`
+  should still fire a `click` on release") does **not** hold on Android Chrome.
+- **Only `preventDefault()` fixes it — and only on the _touch_ events.**
+  `preventDefault()` on `pointerdown`/`pointermove` does nothing (pointer events
+  don't stop Chrome's touch→gesture pipeline). On `touchstart` **or** `touchmove`
+  it works: either one alone is enough to keep the following tap's `click` alive.
+- A genuine native scroll (the browser owning the gesture) also leaves the next
+  tap's click intact — but that path doesn't apply to a JS-driven wheel.
+
+So the mechanism is: an un-`preventDefault`ed touch drag feeds Chrome's gesture
+recognizer, which arms the tap suppression; consuming the touch stream with
+`preventDefault()` stops it.
+
+## The fix
+
+`preventDefault()` on **`touchmove`**, only while a drag is active. `touchmove`
+rather than `touchstart` because:
+
+- the drag _is_ the move — that is the event whose default we actually want to
+  own; and
+- preventing `touchstart` has wider side effects (it also suppresses the
+  surface's own focus / synthesized events), so it's the more sensitive one to
+  touch.
+
+The listener must be **non-passive** (`{ passive: false }`) for `preventDefault()`
+to take effect. It is gated on an active drag so ordinary taps are untouched:
+
+```js
+const onTouchMove = (e) => {
+  if (drag) {
+    e.preventDefault();
+  }
+};
+vp.addEventListener("touchmove", onTouchMove, { passive: false });
+```
+
+This landed in the wheel — see `onTouchMove` in
+[wheel.jsx](../src/control/wheel/wheel.jsx). Note this replaces the earlier,
+disproven theory that the dropped click came from `setPointerCapture` on touch or
+from a momentum re-render moving the element: neither was the cause, and neither
+"fix" worked on the device.
 
 ## Summary
 
-| Mechanism                         | Scope                          | Window | Fires in our repro?               |
-| --------------------------------- | ------------------------------ | ------ | --------------------------------- |
-| `ignore_single_tap_`              | within one touch sequence      | n/a    | No — resets on the next `DOWN`    |
-| `TapSuppressionController`        | the tap that stops a fling     | 180ms  | No — no scroll/fling occurs       |
-| Android "click = clean-tap-only"  | touch → click compat synthesis | short  | Most likely — but spec says `touch-action:none` should exempt it |
+| Mechanism                        | Scope                          | Window | Fires in our repro?                           |
+| -------------------------------- | ------------------------------ | ------ | --------------------------------------------- |
+| `ignore_single_tap_`             | within one touch sequence      | n/a    | No — resets on the next `DOWN`                |
+| `TapSuppressionController`       | the tap that stops a fling     | 180ms  | No — no scroll/fling occurs                   |
+| Android "click = clean-tap-only" | touch → click compat synthesis | short  | **Yes** — the un-prevented touch drag arms it |
 
-The confirmed fact: **a bare `touch-action: none` draggable surface suppresses
-the next quick tap's `click` on Chrome Android**, with no navi involved. The
-matrix experiment isolates which trait arms it, which then selects the fix.
+The confirmed fix: on a JS-driven touch drag over a `touch-action: none` surface,
+`preventDefault()` the `touchmove` (non-passive, while dragging). Either
+`touchstart` or `touchmove` works; `touchmove` is chosen as the least invasive.
