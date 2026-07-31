@@ -69,26 +69,32 @@ export const createOpenController = (
   // open() ignores the request — no need to know *which* element triggers
   // it. A bubble-phase listener (runs after everything else, once the click
   // reaches document) clears the flag if nothing consumed it, meaning this
-  // click never resulted in an open() call. A microtask is a last-resort
-  // safety net in case the click never reaches document at all (e.g. some
-  // ancestor called stopPropagation()).
+  // click never resulted in an open() call. A timeout is a last-resort safety
+  // net in case the click never reaches document at all (e.g. some ancestor
+  // called stopPropagation()) — a *task*, never a microtask: a microtask
+  // checkpoint runs between two listeners of the same trusted event dispatch,
+  // so it would clear the flag before the bubble-phase handler this is meant
+  // to block ever runs, which is precisely the case it exists for.
   const armSuppressNextOpenRequest = () => {
     disarmSuppressNextOpenRequest?.();
+    let safetyTimeout = null;
     const onCaptureClick = () => {
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });
       suppressNextOpenRequest = true;
       document.addEventListener("click", onBubbleClick);
-      queueMicrotask(() => {
+      safetyTimeout = setTimeout(() => {
         suppressNextOpenRequest = false;
       });
     };
     const onBubbleClick = () => {
       document.removeEventListener("click", onBubbleClick);
+      clearTimeout(safetyTimeout);
       suppressNextOpenRequest = false;
     };
     disarmSuppressNextOpenRequest = () => {
+      clearTimeout(safetyTimeout);
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });
