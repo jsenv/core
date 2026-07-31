@@ -376,19 +376,14 @@ const css = /* css */ `
     display: block;
     width: 100%;
     height: 1em;
-    background: light-dark(
-      linear-gradient(
-        90deg,
-        rgba(0, 0, 0, 0.06) 25%,
-        rgba(0, 0, 0, 0.12) 37%,
-        rgba(0, 0, 0, 0.06) 63%
-      ),
-      linear-gradient(
-        90deg,
-        rgba(255, 255, 255, 0.06) 25%,
-        rgba(255, 255, 255, 0.12) 37%,
-        rgba(255, 255, 255, 0.06) 63%
-      )
+    /* Neutral translucent gray reads on both light and dark backgrounds — note
+       light-dark() only accepts <color>, not a gradient, so it can't be used
+       here. */
+    background: linear-gradient(
+      90deg,
+      rgba(128, 128, 128, 0.12) 25%,
+      rgba(128, 128, 128, 0.26) 37%,
+      rgba(128, 128, 128, 0.12) 63%
     );
     background-size: 400% 100%;
     border-radius: 4px;
@@ -664,6 +659,7 @@ const ListUI = (props) => {
       navi-zero-match={allNoMatch ? "" : undefined}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       navi-loading={loading ? "" : undefined}
+      data-diag={`searching=${searching} itemCount=${itemCount} noMatch=${noMatchCount} allNoMatch=${allNoMatch} sfShown=${searchFallbackShown}`}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -1555,12 +1551,20 @@ const ListItemSkeleton = (props) => {
   );
 };
 const ListItemUI = (props) => {
-  if (props.id === undefined) {
+  // A stable id/index only matters when the item's identity must survive
+  // reordering — i.e. it is selectable (selected/pointed state) or participates
+  // in a matching system (search reorders items). A purely presentational,
+  // static list doesn't need either, so don't nag about them there.
+  const identityMatters =
+    props.selectable ||
+    Boolean(props.matchInfo) ||
+    props.value !== undefined;
+  if (identityMatters && props.id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
     );
   }
-  if (props.index === undefined) {
+  if (identityMatters && props.index === undefined) {
     console.warn(
       "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
     );
