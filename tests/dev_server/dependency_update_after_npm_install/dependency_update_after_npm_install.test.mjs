@@ -1,13 +1,17 @@
 /*
- * What happens when "npm install" brings a new version of a dependency while
- * the dev server is running: the package directory is replaced on the
- * filesystem (node_modules is not watched by the dev server), then the browser
- * is reloaded.
+ * Ensures that when "npm install" brings a new version of a dependency while
+ * the dev server is running, reloading the browser uses that new version.
  *
- * - "main.html" imports the package from an external js module
- * - "inline.html" imports the package from an inline js module; an inline js
- *   module is cached using the etag of the html file containing it, which stays
- *   identical when only the resolution of one of its imports changes
+ * node_modules is not watched, so nothing reloads the browser on its own; it is
+ * the request following the reload that must see the new package version and
+ * serve the files behind it, instead of the ones cached under the previous
+ * version.
+ *
+ * Both ways of importing the package are covered because they are cached
+ * differently: "main.html" imports it from an external js module, "inline.html"
+ * from an inline js module (an inline js module is served under the etag of the
+ * html containing it, and that html is untouched when only the resolution of
+ * one of its imports changes).
  *
  * Each html uses its own package so that one scenario cannot warm up the
  * browser cache for the other.
