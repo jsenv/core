@@ -4,7 +4,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { createContext } from "preact";
+import { cloneElement, createContext } from "preact";
 import {
   useContext,
   useId,
@@ -18,6 +18,7 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
@@ -366,6 +367,53 @@ const css = /* css */ `
       user-select: none;
     }
   }
+  /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
+     A skeleton row is a shimmering bar; the loader row centers a spinner. */
+  .navi_list_item_skeleton {
+    pointer-events: none;
+  }
+  .navi_list_item_skeleton_bar {
+    display: block;
+    width: 100%;
+    height: 1em;
+    background: light-dark(
+      linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.06) 25%,
+        rgba(0, 0, 0, 0.12) 37%,
+        rgba(0, 0, 0, 0.06) 63%
+      ),
+      linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.06) 25%,
+        rgba(255, 255, 255, 0.12) 37%,
+        rgba(255, 255, 255, 0.06) 63%
+      )
+    );
+    background-size: 400% 100%;
+    border-radius: 4px;
+    animation: navi_list_skeleton_shimmer 1.4s ease infinite;
+  }
+  @keyframes navi_list_skeleton_shimmer {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .navi_list_item_skeleton_bar {
+      animation: none;
+    }
+  }
+  .navi_list_loader {
+    display: flex;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+    color: light-dark(#888, #aaa);
+  }
   [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
@@ -457,6 +505,10 @@ const ListUI = (props) => {
     columns,
     searchText,
     searchNoMatchMode = "remove",
+    loading,
+    loadingIndicator = "skeleton",
+    loadingSkeletonCount = 3,
+    skeletonTemplate,
     horizontal,
     spacing,
     ...rest
@@ -560,9 +612,42 @@ const ListUI = (props) => {
     (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
   const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
   // Hide the whole list — border included — when there is genuinely nothing to
-  // show: no visible items AND no fallback message.
+  // show: no visible items AND no fallback message. Never while loading (the
+  // skeleton rows / loader ARE the content to display).
   const nothingToDisplay =
-    noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
+    !loading && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
+
+  // While loading, the real children are replaced by placeholder content: a set
+  // of skeleton rows (default) whose count is loadingSkeletonCount and whose
+  // look is skeletonTemplate (defaulting to a generic <List.Item skeleton />),
+  // or a single centered loader when loadingIndicator="loader".
+  let content = children;
+  if (loading) {
+    if (loadingIndicator === "loader") {
+      content = (
+        <ListItem
+          role="presentation"
+          aria-hidden="true"
+          baseClassName="navi_list_item navi_list_loader"
+        >
+          <LoadingIndicator />
+        </ListItem>
+      );
+    } else {
+      const template = skeletonTemplate ?? <ListItem skeleton />;
+      const skeletons = [];
+      let skeletonIndex = 0;
+      while (skeletonIndex < loadingSkeletonCount) {
+        skeletons.push(
+          cloneElement(template, {
+            key: `navi-list-skeleton-${skeletonIndex}`,
+          }),
+        );
+        skeletonIndex++;
+      }
+      content = skeletons;
+    }
+  }
 
   return (
     <Box
@@ -578,6 +663,7 @@ const ListUI = (props) => {
       expand={expand}
       navi-zero-match={allNoMatch ? "" : undefined}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
+      navi-loading={loading ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -602,6 +688,7 @@ const ListUI = (props) => {
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
+        loading={loading}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX || expand}
@@ -613,7 +700,7 @@ const ListUI = (props) => {
         virtualItemSizeSignal={virtualItemSizeSignal}
         pendingScrollRef={pendingScrollRef}
       >
-        {children}
+        {content}
       </ListContent>
     </Box>
   );
@@ -643,6 +730,10 @@ const ListFirstResolver = (props) => {
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
+ *   loading?: boolean,
+ *   loadingIndicator?: "skeleton" | "loader",
+ *   loadingSkeletonCount?: number,
+ *   skeletonTemplate?: import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
@@ -665,6 +756,7 @@ const ListContent = ({
   fallback,
   searchFallback,
   searching,
+  loading,
   searchNoMatchMode,
   separator,
   expandX,
@@ -685,6 +777,7 @@ const ListContent = ({
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
+        loading={loading}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX}
@@ -1232,6 +1325,7 @@ const UnorderedList = ({
   fallback,
   searchFallback,
   searching,
+  loading,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -1254,12 +1348,18 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      <SearchFallback
-        searchFallback={searchFallback}
-        searching={searching}
-        tracker={tracker}
-      />
-      <Fallback fallback={fallback} searching={searching} tracker={tracker} />
+      {/* No empty/no-match message while loading — the skeleton rows / loader
+          are the content, even though no items are tracked yet. */}
+      {!loading && (
+        <SearchFallback
+          searchFallback={searchFallback}
+          searching={searching}
+          tracker={tracker}
+        />
+      )}
+      {!loading && (
+        <Fallback fallback={fallback} searching={searching} tracker={tracker} />
+      )}
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
@@ -1422,6 +1522,37 @@ const ListItemPresentation = (props) => {
   const columnsOverrideProps = useListItemColumnsOverrideProps(props.style);
 
   return <Box as="li" {...props} {...columnsOverrideProps} />;
+};
+// A <List.Item skeleton> — a non-interactive placeholder row shown while a list
+// is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
+// and renders a shimmering bar; Box layout props (padding, spacing…) pass
+// through so a skeletonTemplate can match the real items' metrics.
+const ListItemSkeletonResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.skeleton) {
+    return <ListItemSkeleton {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListItemSkeleton = (props) => {
+  // skeleton (the marker) and children are intentionally dropped: the row is a
+  // fixed placeholder bar, not the item's real content.
+  // eslint-disable-next-line no-unused-vars
+  const { skeleton, children, ...rest } = props;
+  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+
+  return (
+    <Box
+      as="li"
+      role="presentation"
+      aria-hidden="true"
+      {...rest}
+      {...columnsOverrideProps}
+      baseClassName="navi_list_item navi_list_item_skeleton"
+    >
+      <span className="navi_list_item_skeleton_bar" />
+    </Box>
+  );
 };
 const ListItemUI = (props) => {
   if (props.id === undefined) {
@@ -1618,6 +1749,10 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
+ *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
+ *               instead of a real item. Used as the List `skeletonTemplate`
+ *               while `loading`; Box layout props (padding…) pass through so the
+ *               placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item
  *               is selected. Can be any type (string, number, object…).
  *   selected  — controlled selected state. Pass `selected === value` (single) or
@@ -1646,6 +1781,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  */
 export const ListItem = createComponentResolver([
   ListItemFirstResolver,
+  ListItemSkeletonResolver,
   ListItemSelectableResolver,
   ListItemHeaderOrFooterResolver,
   ListItemPresentationResolver,
