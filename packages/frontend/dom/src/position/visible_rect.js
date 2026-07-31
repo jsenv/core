@@ -127,7 +127,7 @@ export const visibleRectEffect = (
     resizeWatchingPaused = false;
     publishResizeWatchingPausedChange(false);
   };
-  const check = (event) => {
+  const check = (event, { force = false } = {}) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }
@@ -308,6 +308,18 @@ export const visibleRectEffect = (
       });
     };
 
+    // An observeSize() delivery reports a size change in some *other*
+    // element — this one's own rect and the viewport are both typically
+    // untouched by it, so the dedup below would skip every single one,
+    // defeating the whole point of observeSize (a popover reconsidering its
+    // placement once its own content shrinks/grows, a callout re-measuring
+    // against its message body).
+    if (force) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify("observed element size changed");
+      return;
+    }
     const visibleRectChanged =
       !lastVisibleRect ||
       lastVisibleRect.left !== visibleRect.left ||
@@ -719,6 +731,7 @@ export const visibleRectEffect = (
           new CustomEvent("observed_element_size_change", {
             detail: { width, height },
           }),
+          { force: true },
         );
       });
     });
