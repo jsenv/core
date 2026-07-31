@@ -69,14 +69,16 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        // querySelector only searches descendants — but the container itself may
-        // carry [navi-autofocus="fallback"] (a focusable popup root with nothing
-        // else to focus). It's fine to focus the container in that case.
-        const naviAutoFocusFallback = containerEl.matches(
-          `[navi-autofocus="fallback"]`,
-        )
-          ? containerEl
-          : containerEl.querySelector(`[navi-autofocus="fallback"]`);
+        // A [navi-autofocus="fallback"] INSIDE the container (e.g. a search
+        // input) wins over the container itself. The container is only the
+        // fallback-of-the-fallback: a focusable popup root gets focus solely
+        // when nothing inside it already carries the fallback. (matches() covers
+        // the container-only case since querySelector searches descendants only.)
+        const naviAutoFocusFallback =
+          containerEl.querySelector(`[navi-autofocus="fallback"]`) ||
+          (containerEl.matches(`[navi-autofocus="fallback"]`)
+            ? containerEl
+            : null);
         if (naviAutoFocusFallback) {
           reason = "navi-autofocus fallback";
           target = naviAutoFocusFallback;
