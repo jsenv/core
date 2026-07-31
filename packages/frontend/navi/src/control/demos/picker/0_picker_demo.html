@@ -1221,7 +1221,8 @@
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
               <Label>
-                Selected value is <code>{articleId}</code> — its title loads too
+                Value is <code>{articleId}</code> — the trigger shows the title
+                it has to load
               </Label>
               <Picker
                 name="loading_value"
@@ -1236,7 +1237,6 @@
                 pointerInteractionOutsideEffect="none"
                 uiAction={(value) => {
                   setArticleId(value);
-                  load();
                 }}
               >
                 <ArticleList
