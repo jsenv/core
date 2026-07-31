@@ -1567,6 +1567,11 @@
                 minWidth="240"
                 pointerInteractionOutsideEffect="none"
                 uiAction={(value) => {
+                  // While loading the list has no items, so the facade syncs an
+                  // empty selection up — that is not the user picking anything.
+                  if (!value) {
+                    return;
+                  }
                   setArticleId(value);
                   load();
                 }}
