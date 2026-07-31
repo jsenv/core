@@ -382,7 +382,7 @@ const css = /* css */ `
       user-select: none;
     }
   }
-  /* Loading placeholders (see List's loading / loadingFallback / skeletonTemplate).
+  /* Loading placeholders (see List's loading / loadingFallback / loadingSkeletonTemplate).
      A skeleton row reuses <Text loading> for the shimmer bar; the loader row
      centers a spinner; a custom loadingFallback is only given a row to live in,
      its own markup does the layout. */
@@ -513,7 +513,7 @@ const ListUI = (props) => {
     loading,
     loadingFallback = "skeleton",
     loadingSkeletonCount = 3,
-    skeletonTemplate,
+    loadingSkeletonTemplate,
     error,
     horizontal,
     spacing,
@@ -645,7 +645,7 @@ const ListUI = (props) => {
     );
   } else if (loading && loadingFallback) {
     if (loadingFallback === "skeleton") {
-      const template = skeletonTemplate ?? <ListItem skeleton />;
+      const template = loadingSkeletonTemplate ?? <ListItem skeleton />;
       const skeletons = [];
       let skeletonIndex = 0;
       while (skeletonIndex < loadingSkeletonCount) {
@@ -767,7 +767,7 @@ const ListFirstResolver = (props) => {
  *   loading?: boolean,
  *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
  *   loadingSkeletonCount?: number,
- *   skeletonTemplate?: import("preact").ComponentChildren,
+ *   loadingSkeletonTemplate?: import("preact").ComponentChildren,
  *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
@@ -782,7 +782,7 @@ const ListFirstResolver = (props) => {
  * }>}
  * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
  *   What to display in place of the items while `loading`: `"skeleton"` renders
- *   `loadingSkeletonCount` placeholder rows (look: `skeletonTemplate`),
+ *   `loadingSkeletonCount` placeholder rows (look: `loadingSkeletonTemplate`),
  *   `"loader"` a single centered spinner, and anything else is rendered as-is
  *   in a row of its own. A falsy value displays nothing.
  */
@@ -1571,7 +1571,7 @@ const ListItemPresentation = (props) => {
 // A <List.Item skeleton> — a non-interactive placeholder row shown while a list
 // is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
 // and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
-// pass through so a skeletonTemplate can match the real items' metrics; and when
+// pass through so a loadingSkeletonTemplate can match the real items' metrics; and when
 // children are provided they render as-is, so a template can reproduce a
 // multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
 const ListItemSkeletonResolver = (props) => {
@@ -1811,7 +1811,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
  *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
- *               instead of a real item. Used as the List `skeletonTemplate`
+ *               instead of a real item. Used as the List `loadingSkeletonTemplate`
  *               while `loading`; Box layout props (padding…) pass through so the
  *               placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item

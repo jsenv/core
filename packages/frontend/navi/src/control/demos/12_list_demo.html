@@ -1643,7 +1643,9 @@
             <List
               loading={loading}
               loadingSkeletonCount={SOME_FRUITS.length}
-              skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
+              loadingSkeletonTemplate={
+                <ListItem skeleton paddingX="m" paddingY="m" />
+              }
               expandX
             >
               {renderFruitItems(SOME_FRUITS, undefined, { paddingY: "m" })}
@@ -1660,7 +1662,7 @@
             <List
               loading={loading}
               loadingSkeletonCount={PEOPLE.length}
-              skeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
               expandX
             >
               {PEOPLE.map((person, i) => (
@@ -1726,7 +1728,7 @@
               Default skeleton
             </Heading>
             <p>
-              No <code>skeletonTemplate</code> — each row is a full-width{" "}
+              No <code>loadingSkeletonTemplate</code> — each row is a full-width{" "}
               <code>&lt;Text loading&gt;</code> bar.
             </p>
             <DefaultSkeletonExample />
@@ -1735,10 +1737,10 @@
               Custom padding
             </Heading>
             <p>
-              Pass a <code>skeletonTemplate</code> so the placeholder matches
-              the real rows' padding, and a <code>loadingSkeletonCount</code>{" "}
-              equal to the expected item count so the list keeps the same height
-              across the swap.
+              Pass a <code>loadingSkeletonTemplate</code> so the placeholder
+              matches the real rows' padding, and a{" "}
+              <code>loadingSkeletonCount</code> equal to the expected item count
+              so the list keeps the same height across the swap.
             </p>
             <CustomPaddingExample />
 
@@ -1747,7 +1749,7 @@
             </Heading>
             <p>
               When items have their own arrangement, the{" "}
-              <code>skeletonTemplate</code> reproduces it with one{" "}
+              <code>loadingSkeletonTemplate</code> reproduces it with one{" "}
               <code>&lt;Text loading&gt;</code> per line, each sized to mimic
               the real content — a short title bar over a wide address bar;{" "}
               <code>loadingSkeletonCount</code> matches the known length. Press{" "}
