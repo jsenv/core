@@ -409,6 +409,26 @@ const css = /* css */ `
     justify-content: center;
     color: light-dark(#888, #aaa);
   }
+  /* Error state (List error prop): an inline callout describing why the list
+     failed to load, shown in place of the items. */
+  .navi_list_error {
+    display: flex;
+    margin: 8px;
+    padding: 10px 12px;
+    align-items: flex-start;
+    gap: 8px;
+    color: light-dark(#b91c1c, #fca5a5);
+    font-size: 0.9em;
+    line-height: 1.4;
+    background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
+    border-radius: 6px;
+  }
+  .navi_list_error_icon {
+    flex: none;
+    font-size: 1em;
+    line-height: 1.4;
+  }
   [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
@@ -504,6 +524,7 @@ const ListUI = (props) => {
     loadingIndicator = "skeleton",
     loadingSkeletonCount = 3,
     skeletonTemplate,
+    error,
     horizontal,
     spacing,
     ...rest
@@ -607,17 +628,33 @@ const ListUI = (props) => {
     (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
   const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
   // Hide the whole list — border included — when there is genuinely nothing to
-  // show: no visible items AND no fallback message. Never while loading (the
-  // skeleton rows / loader ARE the content to display).
+  // show: no visible items AND no fallback message. Never while loading or in
+  // error (the placeholder / error message ARE the content to display).
   const nothingToDisplay =
-    !loading && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
+    !loading &&
+    !error &&
+    noVisibleItems &&
+    !searchFallbackShown &&
+    !emptyFallbackShown;
 
-  // While loading, the real children are replaced by placeholder content: a set
-  // of skeleton rows (default) whose count is loadingSkeletonCount and whose
-  // look is skeletonTemplate (defaulting to a generic <List.Item skeleton />),
-  // or a single centered loader when loadingIndicator="loader".
+  // Placeholder content replaces the real children: an error message when the
+  // load failed (takes precedence), otherwise — while loading — skeleton rows
+  // (default, count loadingSkeletonCount, look skeletonTemplate) or a single
+  // centered loader when loadingIndicator="loader".
   let content = children;
-  if (loading) {
+  if (error) {
+    content = (
+      <ListItem
+        role="presentation"
+        baseClassName="navi_list_item navi_list_error"
+      >
+        <span className="navi_list_error_icon" aria-hidden="true">
+          ⚠
+        </span>
+        <span>{error === true ? "Something went wrong." : error}</span>
+      </ListItem>
+    );
+  } else if (loading) {
     if (loadingIndicator === "loader") {
       content = (
         <ListItem
@@ -659,7 +696,7 @@ const ListUI = (props) => {
       navi-zero-match={allNoMatch ? "" : undefined}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       navi-loading={loading ? "" : undefined}
-      data-diag={`searching=${searching} itemCount=${itemCount} noMatch=${noMatchCount} allNoMatch=${allNoMatch} sfShown=${searchFallbackShown}`}
+      navi-error={error ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -684,7 +721,7 @@ const ListUI = (props) => {
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
-        loading={loading}
+        suppressFallback={loading || Boolean(error)}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX || expand}
@@ -730,6 +767,7 @@ const ListFirstResolver = (props) => {
  *   loadingIndicator?: "skeleton" | "loader",
  *   loadingSkeletonCount?: number,
  *   skeletonTemplate?: import("preact").ComponentChildren,
+ *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
@@ -752,7 +790,7 @@ const ListContent = ({
   fallback,
   searchFallback,
   searching,
-  loading,
+  suppressFallback,
   searchNoMatchMode,
   separator,
   expandX,
@@ -773,7 +811,7 @@ const ListContent = ({
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
-        loading={loading}
+        suppressFallback={suppressFallback}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX}
@@ -1321,7 +1359,7 @@ const UnorderedList = ({
   fallback,
   searchFallback,
   searching,
-  loading,
+  suppressFallback,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -1344,16 +1382,16 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      {/* No empty/no-match message while loading — the skeleton rows / loader
-          are the content, even though no items are tracked yet. */}
-      {!loading && (
+      {/* No empty/no-match message while loading or in error — the placeholder /
+          error message is the content, even though no items are tracked yet. */}
+      {!suppressFallback && (
         <SearchFallback
           searchFallback={searchFallback}
           searching={searching}
           tracker={tracker}
         />
       )}
-      {!loading && (
+      {!suppressFallback && (
         <Fallback fallback={fallback} searching={searching} tracker={tracker} />
       )}
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
@@ -1556,9 +1594,7 @@ const ListItemUI = (props) => {
   // in a matching system (search reorders items). A purely presentational,
   // static list doesn't need either, so don't nag about them there.
   const identityMatters =
-    props.selectable ||
-    Boolean(props.matchInfo) ||
-    props.value !== undefined;
+    props.selectable || Boolean(props.matchInfo) || props.value !== undefined;
   if (identityMatters && props.id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
@@ -1579,6 +1615,13 @@ const ListItemUI = (props) => {
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
   // matchRanges }), so there is exactly one way to wire it up.
   const matchInfo = props.matchInfo;
+  // Expose match on the tracked item: the tracker counts non-matching items via
+  // `item.match === false` (drives noMatchCount → allNoMatch → the searchFallback
+  // / hide-when-empty behavior). Without this a matchInfo-based search would
+  // filter items out but never register them as "no match".
+  if (matchInfo) {
+    props.match = matchInfo.match;
+  }
   // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
   if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {

@@ -1353,137 +1353,125 @@
 
       const SOME_FRUITS = FRUITS.slice(0, 6);
 
+      const LOADING_STATES = ["skeleton", "loader", "loaded", "error"];
+
       const LoadingDemo = () => {
-        const [loading, setLoading] = useState(true);
+        const [state, setState] = useState("skeleton");
         return (
           <div id="loading" className="demo-section">
             <h2>Loading state</h2>
             <p>
-              A loading list shows placeholder content instead of its items. By
-              default it renders <code>loadingSkeletonCount</code> (3) skeleton
-              rows; set <code>loadingIndicator="loader"</code> for a single
-              spinner, or pass a <code>skeletonTemplate</code> to control the
-              skeleton row (e.g. its padding).
+              A list can show placeholder content in place of its items. Toggle
+              the state: <code>skeleton</code> renders{" "}
+              <code>loadingSkeletonCount</code> (3) shimmering rows,{" "}
+              <code>loader</code> a single spinner (
+              <code>loadingIndicator="loader"</code>), <code>loaded</code> the
+              real items, and <code>error</code> an inline callout (the{" "}
+              <code>error</code> prop, for when the load fails).
             </p>
-            <label
-              style={{
-                display: "inline-flex",
-                gap: "6px",
-                marginBottom: "12px",
-              }}
+            <div style={{ display: "flex", gap: "14px", marginBottom: "12px" }}>
+              {LOADING_STATES.map((s) => (
+                <label key={s} style={{ display: "inline-flex", gap: "4px" }}>
+                  <input
+                    type="radio"
+                    name="loading-state"
+                    checked={state === s}
+                    onChange={() => setState(s)}
+                  />
+                  {s}
+                </label>
+              ))}
+            </div>
+            <List
+              loading={state === "skeleton" || state === "loader"}
+              loadingIndicator={state === "loader" ? "loader" : "skeleton"}
+              error={
+                state === "error"
+                  ? "Failed to load fruits. Please try again."
+                  : undefined
+              }
+              expandX
+              maxHeight="240"
             >
-              <input
-                type="checkbox"
-                checked={loading}
-                onChange={(e) => setLoading(e.target.checked)}
-              />
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
+            <p style={{ marginTop: "20px" }}>
+              A custom <code>skeletonTemplate</code> controls the placeholder
+              row — here more padding and a higher{" "}
+              <code>loadingSkeletonCount</code>:
+            </p>
+            <List
               loading
-            </label>
-            <Box flex="x" spacing="l" style={{ flexWrap: "wrap" }}>
-              <div>
-                <h3>Default (3 skeleton rows)</h3>
-                <List loading={loading} expandX maxHeight="200">
-                  {renderFruitItems(SOME_FRUITS)}
-                </List>
-              </div>
-              <div>
-                <h3>loadingSkeletonCount={6}</h3>
-                <List
-                  loading={loading}
-                  loadingSkeletonCount={6}
-                  expandX
-                  maxHeight="200"
-                >
-                  {renderFruitItems(SOME_FRUITS)}
-                </List>
-              </div>
-              <div>
-                <h3>loadingIndicator="loader"</h3>
-                <List
-                  loading={loading}
-                  loadingIndicator="loader"
-                  expandX
-                  maxHeight="200"
-                >
-                  {renderFruitItems(SOME_FRUITS)}
-                </List>
-              </div>
-              <div>
-                <h3>skeletonTemplate (custom padding)</h3>
-                <List
-                  loading={loading}
-                  loadingSkeletonCount={4}
-                  skeletonTemplate={
-                    <ListItem skeleton paddingX="m" paddingY="m" />
-                  }
-                  expandX
-                  maxHeight="200"
-                >
-                  {renderFruitItems(SOME_FRUITS)}
-                </List>
-              </div>
-            </Box>
+              loadingSkeletonCount={5}
+              skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
+              expandX
+              maxHeight="240"
+            >
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
           </div>
         );
       };
 
       // ── Search states — few / none, with & without searchFallback ──────────────
 
-      const SearchStatesDemo = () => {
-        const [searchText, setSearchText] = useState("");
+      const SearchCaseDemo = ({ title, initialQuery, ...listProps }) => {
+        const [searchText, setSearchText] = useState(initialQuery);
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
-          <div id="search-states" className="demo-section">
-            <h2>Search states — few results, no results, searchFallback</h2>
-            <p>
-              Type <code>ap</code> for a few matches, <code>zzz</code> for none.
-              All three lists get the same <code>searchText</code>; they differ
-              only in <code>searchFallback</code>. With
-              <code>searchFallback={"{false}"}</code> the list hides itself
-              entirely when a search yields nothing (no empty bordered box).
-            </p>
+          <div style={{ minWidth: "200px" }}>
+            <h3>{title}</h3>
             <Box flex="y" spacing="s">
               <Input
+                value={searchText}
                 placeholder="Search fruits…"
                 expandX
                 paddingY="6"
                 size="m"
                 action={(value) => setSearchText(value)}
               />
-              <Box flex="x" spacing="l" style={{ flexWrap: "wrap" }}>
-                <div>
-                  <h3>Default searchFallback</h3>
-                  <List searchText={searchText} expandX maxHeight="200">
-                    {renderFruitItems(fruits, getItemMatchInfo)}
-                  </List>
-                </div>
-                <div>
-                  <h3>Custom searchFallback</h3>
-                  <List
-                    searchText={searchText}
-                    searchFallback={<Box padding="s">Nothing here 🤷</Box>}
-                    expandX
-                    maxHeight="200"
-                  >
-                    {renderFruitItems(fruits, getItemMatchInfo)}
-                  </List>
-                </div>
-                <div>
-                  <h3>searchFallback={"{false}"} (list hides)</h3>
-                  <List
-                    searchText={searchText}
-                    searchFallback={false}
-                    expandX
-                    maxHeight="200"
-                  >
-                    {renderFruitItems(fruits, getItemMatchInfo)}
-                  </List>
-                </div>
-              </Box>
+              <List
+                searchText={searchText}
+                expandX
+                maxHeight="180"
+                {...listProps}
+              >
+                {renderFruitItems(fruits, getItemMatchInfo)}
+              </List>
             </Box>
           </div>
         );
       };
+
+      const SearchStatesDemo = () => (
+        <div id="search-states" className="demo-section">
+          <h2>Search states — few results, no results, searchFallback</h2>
+          <p>
+            Each case has its own search field, pre-filled so the applicable
+            state shows immediately (type to change it). The lists differ only
+            in <code>searchFallback</code>; with{" "}
+            <code>searchFallback={"{false}"}</code> the list hides entirely on
+            no results instead of showing an empty bordered box.
+          </p>
+          <Box flex="x" spacing="l" style={{ flexWrap: "wrap" }}>
+            <SearchCaseDemo title="Few results" initialQuery="ap" />
+            <SearchCaseDemo
+              title="No results — default fallback"
+              initialQuery="zzz"
+            />
+            <SearchCaseDemo
+              title="No results — custom fallback"
+              initialQuery="zzz"
+              searchFallback={<Box padding="s">Nothing here 🤷</Box>}
+            />
+            <SearchCaseDemo
+              title="No results — searchFallback={false} (hides)"
+              initialQuery="zzz"
+              searchFallback={false}
+            />
+          </Box>
+        </div>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>
