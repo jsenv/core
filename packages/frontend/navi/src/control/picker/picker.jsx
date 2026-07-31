@@ -708,11 +708,12 @@ const PickerFirstResolver = (props) => {
  * @param {"nearby"|"attached"} [popoverMode="nearby"] In "attached" mode the
  *   popover sits directly on the trigger and visually absorbs it (a clone of
  *   the trigger is drawn inside the popover); "nearby" leaves a small gap.
- * @param {string} [positionArea] Where the popover goes relative to the
- *   trigger — same grammar as Popover's own `positionArea` ("top", "right-end",
- *   "inset(top-left)", …). Defaults to "bottom-start" ("inset(top-left)" in
- *   "attached" mode). The popover still flips to the opposite side on its own
- *   when there isn't enough room.
+ * @param {string} [positionArea] Where the popup goes — relative to the trigger
+ *   in popover mode, relative to the viewport in dialog mode. Same grammar as
+ *   Popover/Dialog's own `positionArea` ("top", "right-end", "inset(top-left)",
+ *   …). Defaults to "bottom-start" in popover mode ("inset(top-left)" when
+ *   "attached"), and to Dialog's own "center" in dialog mode. A popover still
+ *   flips to the opposite side on its own when there isn't enough room.
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.

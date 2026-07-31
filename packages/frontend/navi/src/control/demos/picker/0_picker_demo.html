@@ -142,8 +142,9 @@
               <PopoverSizingDemo />
               <DialogSizingDemo />
             </Chapter>
-            <Chapter id="popup-position" title="Popover position">
-              <PositionAreaDemo />
+            <Chapter id="popup-position" title="Popup position">
+              <PopoverPositionDemo />
+              <DialogPositionDemo />
             </Chapter>
             <Chapter id="loading" title="Loading & error">
               <ContentLoadingDemo />
@@ -241,7 +242,15 @@
               </ol>
             </li>
             <li>
-              <Link href="#popup-position">Popover position</Link>
+              <Link href="#popup-position">Popup position</Link>
+              <ol>
+                <li>
+                  <Link href="#popup-position-popover">Popover</Link>
+                </li>
+                <li>
+                  <Link href="#popup-position-dialog">Dialog</Link>
+                </li>
+              </ol>
             </li>
             <li>
               <Link href="#loading">Loading &amp; error</Link>
@@ -626,54 +635,91 @@
         "center",
       ];
 
-      const PositionAreaDemo = () => {
+      const PositionAreaStage = ({ children }) => (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "260px",
+            marginTop: "16px",
+            background:
+              "repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f2f2f2 10px, #f2f2f2 20px)",
+            borderRadius: "6px",
+          }}
+        >
+          {children}
+        </div>
+      );
+
+      const PositionAreaSelect = ({ value, onChange }) => (
+        <label style={{ fontSize: "12px", color: "#555" }}>
+          positionArea{" "}
+          <select value={value} onChange={(e) => onChange(e.target.value)}>
+            {POSITION_AREAS.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+
+      const PopoverPositionDemo = () => {
         const [positionArea, setPositionArea] = useState("bottom-start");
 
         return (
-          <>
+          <Subsection id="popup-position-popover" title="Popover">
             <p>
               A bare token places the popover next to the trigger,{" "}
               <code>inset(…)</code> makes it overlap. It still flips to the
               opposite side on its own when there isn't enough room.
             </p>
-            <Box flex="x" spacing="s" alignY="center" flexWrap>
-              <label style={{ fontSize: "12px", color: "#555" }}>
-                positionArea{" "}
-                <select
-                  value={positionArea}
-                  onChange={(e) => setPositionArea(e.target.value)}
-                >
-                  {POSITION_AREAS.map((area) => (
-                    <option key={area} value={area}>
-                      {area}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </Box>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                minHeight: "260px",
-                marginTop: "16px",
-                background:
-                  "repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f2f2f2 10px, #f2f2f2 20px)",
-                borderRadius: "6px",
-              }}
-            >
+            <PositionAreaSelect
+              value={positionArea}
+              onChange={setPositionArea}
+            />
+            <PositionAreaStage>
               <Picker
-                key={positionArea}
                 placeholder="Open me…"
+                mode="popover"
                 positionArea={positionArea}
                 popupWidthFitContent
-                mode="popover"
+                pointerInteractionOutsideEffect="none"
               >
                 <ShortPickerContent />
               </Picker>
-            </div>
-          </>
+            </PositionAreaStage>
+          </Subsection>
+        );
+      };
+
+      const DialogPositionDemo = () => {
+        const [positionArea, setPositionArea] = useState("center");
+
+        return (
+          <Subsection id="popup-position-dialog" title="Dialog">
+            <p>
+              A dialog docks against the viewport rather than the trigger, and
+              defaults to <code>center</code>. It is modal, so the browser's own
+              backdrop swallows every outside click — unlike the popover above,
+              the select can only be changed while it is closed.
+            </p>
+            <PositionAreaSelect
+              value={positionArea}
+              onChange={setPositionArea}
+            />
+            <PositionAreaStage>
+              <Picker
+                placeholder="Open me…"
+                mode="dialog"
+                positionArea={positionArea}
+                popupWidthFitContent
+              >
+                <ShortPickerContent />
+              </Picker>
+            </PositionAreaStage>
+          </Subsection>
         );
       };
 
@@ -1152,7 +1198,12 @@
 
       // `articles` is what the server gave us — empty until the load settles.
       const ArticleList = ({ articles, loading, selectedId }) => (
-        <List selectable loading={loading} loadingSkeletonCount={3}>
+        <List
+          selectable
+          command="--navi-send"
+          loading={loading}
+          loadingSkeletonCount={3}
+        >
           {articles.map((article, i) => (
             <ListItem
               selectable

@@ -667,7 +667,7 @@ const PickerContentInsidePopup = (props) => {
           isPopover
             ? (positionArea ??
               (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
-            : undefined
+            : positionArea
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
         marginWithContainer={isPopover ? marginWithContainer : undefined}
