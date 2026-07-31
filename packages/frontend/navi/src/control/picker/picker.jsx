@@ -657,6 +657,9 @@ const PickerFirstResolver = (props) => {
  *   action?: (value: any, event: Event) => void,
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog",
+ *   popoverMode?: "nearby" | "attached",
+ *   positionArea?: string,
+ *   popupWidthFitContent?: boolean,
  *   variant?: "icon" | "headless",
  *   icon?: import("preact").ComponentChildren,
  *   maxLines?: number,
@@ -669,6 +672,19 @@ const PickerFirstResolver = (props) => {
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {"nearby"|"attached"} [popoverMode="nearby"] In "attached" mode the
+ *   popover sits directly on the trigger and visually absorbs it (a clone of
+ *   the trigger is drawn inside the popover); "nearby" leaves a small gap.
+ * @param {string} [positionArea] Where the popover goes relative to the
+ *   trigger — same grammar as Popover's own `positionArea` ("top", "right-end",
+ *   "inset(top-left)", …). Defaults to "bottom-start" ("inset(top-left)" in
+ *   "attached" mode). The popover still flips to the opposite side on its own
+ *   when there isn't enough room.
+ * @param {boolean} [popupWidthFitContent] By default the popup is at least as
+ *   wide as the trigger. Set this to let the content size it instead, so a
+ *   popup narrower than the trigger stays narrow.
+ * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
+ *   (default 300px). The popover shrinks below it when space is tight.
  */
 export const Picker = createComponentResolver([
   PickerFirstResolver,

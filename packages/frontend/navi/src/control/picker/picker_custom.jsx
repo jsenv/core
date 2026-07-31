@@ -39,6 +39,11 @@ const css = /* css */ `
         --popover-background-color: var(--picker-background-color);
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
+        /* No fallback on purpose: when the picker's own popoverMaxHeight prop
+           is unset this declaration is invalid at computed-value time, which
+           leaves --popover-max-height unset and lets the popover fall back to
+           --popover-max-height-default. */
+        --popover-max-height: var(--picker-popover-max-height);
 
         /* At least as wide as the trigger — unless popupWidthFitContent, then
            let the content (e.g. a Wheel) size the popover (see picker.jsx). */
@@ -605,6 +610,7 @@ const PickerContentInsidePopup = (props) => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
+    positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
@@ -659,9 +665,8 @@ const PickerContentInsidePopup = (props) => {
         animation={animation}
         positionArea={
           isPopover
-            ? popoverMode === "nearby"
-              ? "bottom-start"
-              : "inset(top-left)"
+            ? (positionArea ??
+              (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
             : undefined
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}

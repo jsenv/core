@@ -93,13 +93,6 @@ const DEFAULT_BEHAVIORS = [
     // no fallback: only claims Tab, other keys continue to next entries
   },
   {
-    // Escape natively dismisses only <dialog> elements
-    test: (el) => el.tagName === "DIALOG" || Boolean(el.closest("dialog")),
-    keys: {
-      escape: "dismiss",
-    },
-  },
-  {
     test: (el) => el.matches("input[type='radio'], input[type='checkbox']"),
     keys: {
       space: (e) => {
@@ -246,6 +239,18 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       space: "activate",
       enter: "activate",
+    },
+  },
+  {
+    // Escape natively dismisses only <dialog> elements. Deliberately late in
+    // the list: the focused element gets first claim on Escape, because the
+    // browser resolves the close request innermost-first. A non-empty
+    // <input type="search"> inside a dialog consumes the first Escape to clear
+    // itself and only a second one reaches the dialog — reporting "dismiss"
+    // here would let our own Escape-to-close shortcuts fire on the first press.
+    test: (el) => el.tagName === "DIALOG" || Boolean(el.closest("dialog")),
+    keys: {
+      escape: "dismiss",
     },
   },
   {

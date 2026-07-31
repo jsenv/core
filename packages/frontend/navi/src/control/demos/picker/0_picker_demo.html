@@ -128,6 +128,7 @@
               <WidthDemo />
               <OverflowDemo />
               <MaxLinesDemo />
+              <PopupWidthDemo />
             </Chapter>
             <Chapter id="icon" title="Picker icon">
               <PickerIconDemo />
@@ -147,6 +148,9 @@
             <Chapter id="popup-sizing" title="Popup sizing">
               <PopoverSizingDemo />
               <DialogSizingDemo />
+            </Chapter>
+            <Chapter id="popup-position" title="Popover position">
+              <PositionAreaDemo />
             </Chapter>
             <Chapter id="loading" title="Loading & error">
               <LoadingIntro />
@@ -212,6 +216,11 @@
                 <li>
                   <Link href="#dim-maxlines">Multi-line with maxLines</Link>
                 </li>
+                <li>
+                  <Link href="#dim-popup-width">
+                    Popup width follows the trigger
+                  </Link>
+                </li>
               </ol>
             </li>
             <li>
@@ -239,6 +248,9 @@
                   <Link href="#popup-sizing-dialog">Dialog</Link>
                 </li>
               </ol>
+            </li>
+            <li>
+              <Link href="#popup-position">Popover position</Link>
             </li>
             <li>
               <Link href="#loading">Loading &amp; error</Link>
@@ -587,6 +599,150 @@
           </Box>
         </Subsection>
       );
+
+      const ShortPickerContent = () => (
+        <div
+          style={{
+            padding: "10px 14px",
+            fontSize: "13px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Short
+        </div>
+      );
+
+      const PopupWidthDemo = () => (
+        <Subsection
+          id="dim-popup-width"
+          title="Popup width follows the trigger"
+        >
+          <p>
+            The popover is anchored to the trigger and takes its width as a
+            floor (<code>min-width: var(--anchor-width)</code>), so the popup
+            never looks detached from the button that opened it. Both pickers
+            below open the exact same one-word content.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Default{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (popup stretches to the trigger)
+                </code>
+              </Label>
+              <Picker placeholder="A deliberately wide trigger…" width="320px">
+                <ShortPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>popupWidthFitContent</code>{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (content sizes the popup)
+                </code>
+              </Label>
+              <Picker
+                placeholder="A deliberately wide trigger…"
+                width="320px"
+                popupWidthFitContent
+              >
+                <ShortPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+          <p style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}>
+            Opt out with <code>popupWidthFitContent</code> when the content has
+            its own natural width — a wheel, a color swatch grid — and being
+            dragged to the trigger's width would only add empty space.
+          </p>
+        </Subsection>
+      );
+
+      // ── Popover position ──────────────────────────────────────────────────────
+
+      const POSITION_AREAS = [
+        "bottom-start",
+        "bottom",
+        "bottom-end",
+        "top-start",
+        "top",
+        "top-end",
+        "right-start",
+        "right",
+        "left-start",
+        "left",
+        "inset(top-left)",
+        "center",
+      ];
+
+      const PositionAreaDemo = () => {
+        const [positionArea, setPositionArea] = useState("bottom-start");
+
+        return (
+          <>
+            <p>
+              <code>positionArea</code> says where the popover goes relative to
+              the trigger: a compass token (<code>top</code>,{" "}
+              <code>bottom-end</code>, <code>right-start</code>, …) places the
+              popover <em>next to</em> the trigger, while wrapping it in{" "}
+              <code>inset(…)</code> (e.g. <code>inset(top-left)</code>) makes it
+              overlap the trigger instead. <code>center</code> covers it.
+            </p>
+            <p>
+              The default is <code>bottom-start</code>. Whatever you ask for,
+              the popover still flips to the opposite side on its own when there
+              isn't enough room — scroll the trigger near the top or bottom of
+              the window and reopen it to see that happen.
+            </p>
+            <Box flex="x" spacing="s" alignY="center" flexWrap>
+              <label style={{ fontSize: "12px", color: "#555" }}>
+                positionArea{" "}
+                <select
+                  value={positionArea}
+                  onChange={(e) => setPositionArea(e.target.value)}
+                >
+                  {POSITION_AREAS.map((area) => (
+                    <option key={area} value={area}>
+                      {area}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </Box>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                minHeight: "260px",
+                marginTop: "16px",
+                background:
+                  "repeating-linear-gradient(45deg, #fafafa, #fafafa 10px, #f2f2f2 10px, #f2f2f2 20px)",
+                borderRadius: "6px",
+              }}
+            >
+              <Picker
+                key={positionArea}
+                placeholder="Open me…"
+                positionArea={positionArea}
+                popupWidthFitContent
+                mode="popover"
+              >
+                <ShortPickerContent />
+              </Picker>
+            </div>
+            <p
+              style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}
+            >
+              <code>popoverMode="attached"</code> is a shorthand for the
+              overlapping case: it forces <code>inset(top-left)</code> and draws
+              a clone of the trigger inside the popover so the two read as a
+              single surface.
+            </p>
+          </>
+        );
+      };
 
       // ── Icon / alignment / value / custom UI ─────────────────────────────────
 

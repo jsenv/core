@@ -86,7 +86,10 @@ let openLocalPopoverCount = 0;
 const css = /* css */ `
   @layer navi {
     .navi_popover {
-      --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
+      /* soft: user-configurable preferred max-height. Kept as a *default*
+         rather than a value so an outer component can bridge its own prop into
+         --popover-max-height without having to restate 300px (see picker). */
+      --popover-max-height-default: 300px;
       --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
       --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
 
@@ -137,7 +140,7 @@ const css = /* css */ `
       var(--popover-maxmax-width)
     );
     --x-popover-max-height: min(
-      var(--popover-max-height),
+      var(--popover-max-height, var(--popover-max-height-default)),
       var(--container-position-remaining-height, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
