@@ -155,6 +155,36 @@
       .expenses-table th.col-del, .expenses-table td.col-del { width: 28px; }
       .expenses-table th.col-amount, .expenses-table td.col-amount { text-align: right; width: 90px; }
       .expenses-table th.col-tva, .expenses-table td.col-tva { width: 60px; }
+      .expenses-table th.col-total, .expenses-table td.col-total { text-align: right; width: 90px; }
+      .expenses-table th.col-ratio, .expenses-table td.col-ratio { width: 56px; }
+      .expenses-table th.col-pdf, .expenses-table td.col-pdf { width: 30px; text-align: center; }
+      .expenses-table td.col-amount {
+        color: #b5651d;
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      .btn-pdf {
+        display: inline-block;
+        padding: 2px 5px;
+        font-size: 14px;
+        line-height: 1;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .btn-pdf:hover { background: #f5ebe0; }
+      .pdf-status td {
+        padding: 2px 7px 6px;
+        font-size: 11px;
+        border-bottom: 1px solid #f0e8e0;
+      }
+      .pdf-status.state-ok td { color: #217a3c; }
+      .pdf-status.state-error td { color: #c0392b; }
+      .pdf-status.state-loading td { color: #777; }
+      .editor-hint {
+        margin-bottom: 8px;
+        color: #777;
+        font-size: 11px;
+      }
       .expenses-table td {
         padding: 3px 4px;
         border-bottom: 1px solid #f0e8e0;
@@ -362,6 +392,12 @@
           Dépenses
           <button onclick="addExpenseTemplate()">+ Ajouter</button>
         </h2>
+        <p class="editor-hint">
+          Le <strong>total</strong> est le montant de la facture, le
+          <strong>ratio</strong> la part professionnelle&nbsp;; seul le montant
+          remboursé apparaît dans le document. Le bouton 📎 analyse une facture
+          PDF pour en extraire le total et la date de prélèvement.
+        </p>
         <table class="expenses-table">
           <thead>
             <tr>
@@ -370,7 +406,10 @@
               <th>Catégorie</th>
               <th>Commentaire</th>
               <th class="col-tva">TVA</th>
-              <th class="col-amount">Montant TTC</th>
+              <th class="col-total">Total facture</th>
+              <th class="col-ratio">Ratio</th>
+              <th class="col-amount" title="Total × ratio, montant repris dans le document">Remboursé</th>
+              <th class="col-pdf"></th>
               <th class="col-del"></th>
             </tr>
           </thead>
@@ -426,12 +465,14 @@
       const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
       // Default fixed expenses — edit in the editor table
+      // "total" is the invoice amount, "ratio" the professional share;
+      // the amount put in the document is total × ratio
       let templates = [
-        { enabled: true, day: 2,  category: "LOYERS ET CHARGES", comment: "1/7 Prêt",     tva: "", amount: "251,28" },
-        { enabled: true, day: 5,  category: "INTERNET",          comment: "⅔ Internet",    tva: "", amount: "20,45"  },
-        { enabled: true, day: 5,  category: "TÉLÉPHONE",         comment: "⅔ Téléphone",   tva: "", amount: "6,90"   },
-        { enabled: true, day: 5,  category: "LOYERS ET CHARGES", comment: "1/7 Gaz",        tva: "", amount: "18,06"  },
-        { enabled: false, day: 6, category: "LOYERS ET CHARGES", comment: "1/7 Electricité",  tva: "", amount: ""       },
+        { enabled: true, day: 2,  category: "LOYERS ET CHARGES", comment: "1/7 Prêt",        tva: "", total: "1758,96", ratio: "1/7" },
+        { enabled: true, day: 5,  category: "INTERNET",          comment: "⅔ Internet",      tva: "", total: "30,68",   ratio: "2/3" },
+        { enabled: true, day: 5,  category: "TÉLÉPHONE",         comment: "⅔ Téléphone",     tva: "", total: "10,35",   ratio: "2/3" },
+        { enabled: true, day: 5,  category: "LOYERS ET CHARGES", comment: "1/7 Gaz",         tva: "", total: "126,42",  ratio: "1/7" },
+        { enabled: false, day: 6, category: "LOYERS ET CHARGES", comment: "1/7 Electricité", tva: "", total: "",        ratio: "1/7" },
       ];
 
       const $ = (id) => document.getElementById(id);
@@ -467,6 +508,7 @@
         const tbody = $("templates-body");
         tbody.innerHTML = "";
         templates.forEach((t, i) => {
+          const reimbursed = computeReimbursed(t);
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td class="col-chk"><input type="checkbox" ${t.enabled ? "checked" : ""} onchange="templates[${i}].enabled = this.checked"></td>
@@ -474,16 +516,39 @@
             <td><input type="text" value="${escHtml(t.category)}" oninput="templates[${i}].category = this.value"></td>
             <td><input type="text" value="${escHtml(t.comment)}" oninput="templates[${i}].comment = this.value"></td>
             <td class="col-tva"><input type="text" value="${escHtml(t.tva)}" style="width:54px" oninput="templates[${i}].tva = this.value"></td>
-            <td class="col-amount"><input type="text" value="${escHtml(t.amount)}" style="text-align:right" oninput="templates[${i}].amount = this.value"></td>
+            <td class="col-total"><input type="text" value="${escHtml(t.total)}" style="text-align:right" oninput="updateTemplateField(${i}, 'total', this.value)"></td>
+            <td class="col-ratio"><input type="text" value="${escHtml(t.ratio)}" oninput="updateTemplateField(${i}, 'ratio', this.value)"></td>
+            <td class="col-amount">${reimbursed === null ? "—" : `${escHtml(formatAmount(reimbursed))} €`}</td>
+            <td class="col-pdf">
+              <label class="btn-pdf" title="Analyser une facture PDF">📎
+                <input type="file" accept="application/pdf" hidden onchange="importPdf(${i}, this)">
+              </label>
+            </td>
             <td class="col-del"><button class="btn-del-exp" onclick="deleteTemplate(${i})">×</button></td>
           `;
           tbody.appendChild(tr);
+          if (t.pdfStatus) {
+            const statusTr = document.createElement("tr");
+            statusTr.className = `pdf-status state-${t.pdfStatus.state}`;
+            statusTr.innerHTML = `<td></td><td colspan="9">${escHtml(t.pdfStatus.message)}</td>`;
+            tbody.appendChild(statusTr);
+          }
         });
       }
       renderTemplates();
 
+      // only the reimbursed cell needs a redraw, but rerendering the whole table
+      // would steal the focus from the input being typed into
+      window.updateTemplateField = (i, field, value) => {
+        templates[i][field] = value;
+        const reimbursed = computeReimbursed(templates[i]);
+        const rows = $("templates-body").querySelectorAll("tr:not(.pdf-status)");
+        rows[i].querySelector(".col-amount").textContent =
+          reimbursed === null ? "—" : `${formatAmount(reimbursed)} €`;
+      };
+
       window.addExpenseTemplate = () => {
-        templates.push({ enabled: true, day: 1, category: "", comment: "", tva: "", amount: "" });
+        templates.push({ enabled: true, day: 1, category: "", comment: "", tva: "", total: "", ratio: "1" });
         renderTemplates();
       };
 
@@ -509,7 +574,16 @@
             const dayInMonth = new Date(year, month - 1, t.day).getDate();
             // Clamp to last day of month if needed
             const d = new Date(year, month - 1, dayInMonth > 0 ? t.day : 0);
-            tbody.appendChild(createRow(formatDate(d), t.category, t.comment, t.tva, t.amount));
+            const reimbursed = computeReimbursed(t);
+            tbody.appendChild(
+              createRow(
+                formatDate(d),
+                t.category,
+                t.comment,
+                t.tva,
+                reimbursed === null ? "" : formatAmount(reimbursed),
+              ),
+            );
           });
         updateTotal();
       };
@@ -560,6 +634,245 @@
         $("trips-body").innerHTML = "";
         updateTotal();
       };
+
+      // ---- Amounts and ratios ----
+      function parseAmount(str) {
+        const cleaned = String(str).replace(/[\s€]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(",", ".");
+        const number = parseFloat(cleaned);
+        return isNaN(number) ? null : number;
+      }
+      function parseRatio(str) {
+        const cleaned = String(str).trim();
+        if (!cleaned) { return 1; }
+        const fraction = cleaned.match(/^(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)$/);
+        if (fraction) {
+          const numerator = parseFloat(fraction[1].replace(",", "."));
+          const denominator = parseFloat(fraction[2].replace(",", "."));
+          return denominator === 0 ? null : numerator / denominator;
+        }
+        const number = parseFloat(cleaned.replace(",", "."));
+        return isNaN(number) ? null : number;
+      }
+      function computeReimbursed(t) {
+        const total = parseAmount(t.total);
+        const ratio = parseRatio(t.ratio);
+        if (total === null || ratio === null) { return null; }
+        return total * ratio;
+      }
+      function formatAmount(number) {
+        return number.toFixed(2).replace(".", ",");
+      }
+
+      // ---- Invoice PDF analysis ----
+      window.importPdf = async (i, input) => {
+        const file = input.files[0];
+        input.value = "";
+        if (!file) { return; }
+        const t = templates[i];
+        t.pdfStatus = { state: "loading", message: `${file.name} — analyse en cours…` };
+        renderTemplates();
+        try {
+          const text = await extractPdfText(await file.arrayBuffer());
+          const invoice = findInvoiceFields(text);
+          if (invoice.amount === null) {
+            throw new Error("montant introuvable dans le PDF");
+          }
+          t.total = formatAmount(invoice.amount);
+          const details = [`total ${t.total} €`];
+          if (invoice.date) {
+            t.day = invoice.date.getDate();
+            details.push(`prélevé le ${formatDate(invoice.date)}`);
+          }
+          t.pdfStatus = {
+            state: "ok",
+            message: `${file.name} — ${details.join(", ")}`,
+          };
+        } catch (e) {
+          t.pdfStatus = {
+            state: "error",
+            message: `${file.name} — ${e.message}. Saisir le total à la main, le ratio sera appliqué.`,
+          };
+        }
+        renderTemplates();
+      };
+
+      /*
+       * Pulls the text out of a PDF without any library: content streams are
+       * located by scanning for the "stream" keyword, inflated when they are
+       * FlateDecode, then the strings of the text operators are collected.
+       * Fails on PDFs whose fonts use glyph ids (nothing readable comes out),
+       * hence the manual fallback on the total.
+       */
+      async function extractPdfText(arrayBuffer) {
+        const bytes = new Uint8Array(arrayBuffer);
+        const raw = latin1(bytes);
+        if (!raw.startsWith("%PDF")) {
+          throw new Error("ce fichier n'est pas un PDF");
+        }
+        const parts = [];
+        let searchIndex = 0;
+        while (true) {
+          const streamIndex = raw.indexOf("stream", searchIndex);
+          if (streamIndex === -1) { break; }
+          const endIndex = raw.indexOf("endstream", streamIndex);
+          if (endIndex === -1) { break; }
+          searchIndex = endIndex + "endstream".length;
+          const dictionary = raw.slice(raw.lastIndexOf("<<", streamIndex), streamIndex);
+          let dataIndex = streamIndex + "stream".length;
+          if (raw[dataIndex] === "\r") { dataIndex += 1; }
+          if (raw[dataIndex] === "\n") { dataIndex += 1; }
+          // the eol before "endstream" is not part of the data, and inflating
+          // fails on anything trailing the compressed payload
+          const lengthMatch = dictionary.match(/\/Length\s+(\d+)\b/);
+          let dataEndIndex = endIndex;
+          if (lengthMatch && dataIndex + Number(lengthMatch[1]) <= endIndex) {
+            dataEndIndex = dataIndex + Number(lengthMatch[1]);
+          } else {
+            while (dataEndIndex > dataIndex && (raw[dataEndIndex - 1] === "\n" || raw[dataEndIndex - 1] === "\r")) {
+              dataEndIndex -= 1;
+            }
+          }
+          const data = bytes.subarray(dataIndex, dataEndIndex);
+          let content;
+          if (dictionary.includes("/FlateDecode")) {
+            content = await inflate(data);
+          } else if (!dictionary.includes("/Filter")) {
+            content = latin1(data);
+          }
+          if (content && (content.includes("Tj") || content.includes("TJ"))) {
+            parts.push(readTextOperators(content));
+          }
+        }
+        if (parts.length === 0) {
+          throw new Error("aucun texte lisible dans le PDF");
+        }
+        return parts.join(" ");
+      }
+
+      async function inflate(data) {
+        for (const format of ["deflate", "deflate-raw"]) {
+          try {
+            const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream(format));
+            const decompressed = new Uint8Array(await new Response(stream).arrayBuffer());
+            return latin1(decompressed);
+          } catch {
+            continue;
+          }
+        }
+        return null;
+      }
+
+      function readTextOperators(content) {
+        const chunks = [];
+        let index = 0;
+        while (index < content.length) {
+          const char = content[index];
+          if (char === "(") {
+            let text = "";
+            let depth = 1;
+            index += 1;
+            while (index < content.length && depth > 0) {
+              const current = content[index];
+              if (current === "\\") {
+                const escaped = content[index + 1];
+                const octal = content.slice(index + 1, index + 4);
+                if (/^[0-7]{3}$/.test(octal)) {
+                  text += String.fromCharCode(parseInt(octal, 8));
+                  index += 4;
+                  continue;
+                }
+                text += escaped === "n" || escaped === "r" || escaped === "t" ? " " : escaped;
+                index += 2;
+                continue;
+              }
+              if (current === "(") { depth += 1; }
+              if (current === ")") {
+                depth -= 1;
+                if (depth === 0) { break; }
+              }
+              text += current;
+              index += 1;
+            }
+            chunks.push(text);
+            index += 1;
+            continue;
+          }
+          if (char === "<" && content[index + 1] !== "<") {
+            const closingIndex = content.indexOf(">", index);
+            if (closingIndex === -1) { break; }
+            const hex = content.slice(index + 1, closingIndex).replace(/\s/g, "");
+            let text = "";
+            for (let hexIndex = 0; hexIndex + 1 < hex.length; hexIndex += 2) {
+              text += String.fromCharCode(parseInt(hex.slice(hexIndex, hexIndex + 2), 16));
+            }
+            chunks.push(text);
+            index = closingIndex + 1;
+            continue;
+          }
+          // a positioning operator ends the current word
+          if (/^(?:Td|TD|Tm|T\*|TJ|Tj|ET)/.test(content.slice(index, index + 2))) {
+            chunks.push(" ");
+            index += 2;
+            continue;
+          }
+          index += 1;
+        }
+        return chunks.join("");
+      }
+
+      const AMOUNT = String.raw`\d[\d\s.]*,\d{2}`;
+      function findInvoiceFields(text) {
+        // text runs are split unpredictably, so amounts are searched both in the
+        // spaced text (to recognize the labels) and in the tight one
+        const spaced = normalizeInvoiceText(text);
+        const tight = spaced.replace(/\s+/g, "");
+        const search = (spacedPattern, tightPattern) => {
+          return spaced.match(spacedPattern) || tight.match(tightPattern);
+        };
+        const prelevement = search(
+          new RegExp(String.raw`MONTANT\s*PRELEVE\s*LE\s*(\d{2}\/\d{2}\/\d{4})\D*(${AMOUNT})`, "i"),
+          new RegExp(String.raw`MONTANTPRELEVELE(\d{2}\/\d{2}\/\d{4})\D*(${AMOUNT})`, "i"),
+        );
+        if (prelevement) {
+          return {
+            amount: parseAmount(prelevement[2]),
+            date: parseFrenchDate(prelevement[1]),
+          };
+        }
+        const totalTTC = search(
+          new RegExp(String.raw`TOTAL\s*TTC\s*(${AMOUNT})`, "i"),
+          new RegExp(String.raw`TOTALTTC(${AMOUNT})`, "i"),
+        );
+        const dateMatch = search(
+          /(?:PRELEVE|PAIEMENT|PAYE)\s*LE\s*(\d{2}\/\d{2}\/\d{4})/i,
+          /(?:PRELEVELE|PAIEMENTLE|PAYELE)(\d{2}\/\d{2}\/\d{4})/i,
+        );
+        return {
+          amount: totalTTC ? parseAmount(totalTTC[1]) : null,
+          date: dateMatch ? parseFrenchDate(dateMatch[1]) : null,
+        };
+      }
+
+      function normalizeInvoiceText(text) {
+        return text
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") // drop accents: PRÉLEVÉ and PRELEVE must match alike
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function parseFrenchDate(str) {
+        const [day, month, year] = str.split("/").map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function latin1(bytes) {
+        let str = "";
+        for (let i = 0; i < bytes.length; i += 8192) {
+          str += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+        }
+        return str;
+      }
 
       // ---- Helpers ----
       function toISODate(d) {

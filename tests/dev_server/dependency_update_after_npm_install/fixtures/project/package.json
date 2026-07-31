@@ -2,6 +2,7 @@
   "name": "whatever",
   "private": true,
   "dependencies": {
+    "bar": "*",
     "foo": "*"
   }
 }

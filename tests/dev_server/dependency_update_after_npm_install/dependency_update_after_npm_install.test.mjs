@@ -1,49 +1,49 @@
 /*
- * What happens when "npm install" brings a new version of a dependency
- * while the dev server is running: the package directory is replaced on the
+ * What happens when "npm install" brings a new version of a dependency while
+ * the dev server is running: the package directory is replaced on the
  * filesystem (node_modules is not watched by the dev server), then the browser
  * is reloaded.
  *
- * - "main.html" imports the package from an external js module -> the new version is used
- * - "inline.html" imports the package from an inline js module -> the old version is still used
- *   (the 304 check for an inline script is done against its parent HTML etag,
- *   and the HTML content did not change)
+ * - "main.html" imports the package from an external js module
+ * - "inline.html" imports the package from an inline js module; an inline js
+ *   module is cached using the etag of the html file containing it, which stays
+ *   identical when only the resolution of one of its imports changes
+ *
+ * Each html uses its own package so that one scenario cannot warm up the
+ * browser cache for the other.
  */
 
 import { assert } from "@jsenv/assert";
-import {
-  ensureEmptyDirectory,
-  writeFileStructureSync,
-} from "@jsenv/filesystem";
+import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 const debug = false; // true to have browser UI + keep it open after test
-const nodeModulesDirectoryUrl = new URL(
-  "./client/node_modules/",
-  import.meta.url,
-);
-const installFoo = ({ version, answer }) => {
-  writeFileStructureSync(nodeModulesDirectoryUrl, {
-    "foo/package.json": JSON.stringify(
-      { name: "foo", private: true, version },
-      null,
-      "  ",
-    ),
-    "foo/index.js": `export { answer } from "./answer.js";`,
-    "foo/answer.js": `export const answer = ${answer};`,
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+const npmInstall = (packageFixtureName) => {
+  const packageName = packageFixtureName.slice(
+    0,
+    packageFixtureName.indexOf("_"),
+  );
+  replaceFileStructureSync({
+    from: new URL(`./fixtures/${packageFixtureName}/`, import.meta.url),
+    to: new URL(`./node_modules/${packageName}/`, sourceDirectoryUrl),
   });
 };
 
-await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
-installFoo({ version: "1.0.0", answer: 42 });
+replaceFileStructureSync({
+  from: new URL("./fixtures/project/", import.meta.url),
+  to: sourceDirectoryUrl,
+});
+npmInstall("foo_1.0.0");
+npmInstall("bar_1.0.0");
+
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: import.meta.resolve("./client/src/"),
+  sourceDirectoryUrl: new URL("./src/", sourceDirectoryUrl),
   keepProcessAlive: false,
-  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
   port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
@@ -64,7 +64,7 @@ try {
       const expect = 42;
       assert({ actual, expect });
     }
-    installFoo({ version: "1.0.1", answer: 43 });
+    npmInstall("foo_1.0.1");
     await page.reload();
     {
       const actual = await getResult();
@@ -73,25 +73,22 @@ try {
     }
   }
 
-  installFoo({ version: "1.0.2", answer: 44 });
-
   inline_js_module: {
     await page.goto(`${devServer.origin}/inline.html`);
     {
       const actual = await getResult();
-      const expect = 44;
+      const expect = 42;
       assert({ actual, expect });
     }
-    installFoo({ version: "1.0.3", answer: 45 });
+    npmInstall("bar_1.0.1");
     await page.reload();
     {
       const actual = await getResult();
-      const expect = 45;
+      const expect = 43;
       assert({ actual, expect });
     }
   }
 } finally {
-  installFoo({ version: "1.0.0", answer: 42 });
   if (!debug) {
     browser.close();
   }
