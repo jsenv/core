@@ -22,6 +22,7 @@ import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
+import { Text } from "../../text/text.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -268,7 +269,11 @@ const css = /* css */ `
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
     scroll-margin-left: var(--x-list-scroll-spacing-left);
 
-    &[aria-hidden="true"] {
+    /* The "invisible_and_inert" search no-match mode keeps items in the DOM
+       (to preserve layout) but hides them — it sets BOTH aria-hidden and inert.
+       Scope to that pair so the presentation placeholders that are only
+       aria-hidden (skeleton rows, the loader) stay visible. */
+    &[aria-hidden="true"][inert] {
       opacity: 0;
     }
 
@@ -378,39 +383,10 @@ const css = /* css */ `
     }
   }
   /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
-     A skeleton row is a shimmering bar; the loader row centers a spinner. */
+     A skeleton row reuses <Text loading> for the shimmer bar; the loader row
+     centers a spinner. */
   .navi_list_item_skeleton {
     pointer-events: none;
-  }
-  .navi_list_item_skeleton_bar {
-    display: block;
-    width: 100%;
-    height: 1em;
-    /* Neutral translucent gray reads on both light and dark backgrounds — note
-       light-dark() only accepts <color>, not a gradient, so it can't be used
-       here. */
-    background: linear-gradient(
-      90deg,
-      rgba(128, 128, 128, 0.12) 25%,
-      rgba(128, 128, 128, 0.26) 37%,
-      rgba(128, 128, 128, 0.12) 63%
-    );
-    background-size: 400% 100%;
-    border-radius: 4px;
-    animation: navi_list_skeleton_shimmer 1.4s ease infinite;
-  }
-  @keyframes navi_list_skeleton_shimmer {
-    0% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0 50%;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .navi_list_item_skeleton_bar {
-      animation: none;
-    }
   }
   .navi_list_loader {
     display: flex;
@@ -1575,8 +1551,10 @@ const ListItemPresentation = (props) => {
 };
 // A <List.Item skeleton> — a non-interactive placeholder row shown while a list
 // is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
-// and renders a shimmering bar; Box layout props (padding, spacing…) pass
-// through so a skeletonTemplate can match the real items' metrics.
+// and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
+// pass through so a skeletonTemplate can match the real items' metrics; and when
+// children are provided they render as-is, so a template can reproduce a
+// multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
 const ListItemSkeletonResolver = (props) => {
   const Next = useNextResolver();
   if (props.skeleton) {
@@ -1585,8 +1563,6 @@ const ListItemSkeletonResolver = (props) => {
   return <Next {...props} />;
 };
 const ListItemSkeleton = (props) => {
-  // skeleton (the marker) and children are intentionally dropped: the row is a
-  // fixed placeholder bar, not the item's real content.
   // eslint-disable-next-line no-unused-vars
   const { skeleton, children, ...rest } = props;
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
@@ -1600,7 +1576,7 @@ const ListItemSkeleton = (props) => {
       {...columnsOverrideProps}
       baseClassName="navi_list_item navi_list_item_skeleton"
     >
-      <span className="navi_list_item_skeleton_bar" />
+      {children ?? <Text loading />}
     </Box>
   );
 };
