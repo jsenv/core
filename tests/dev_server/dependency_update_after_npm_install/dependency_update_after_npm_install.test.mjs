@@ -73,24 +73,25 @@ try {
     }
   }
 
-  installFoo({ version: "1.0.0", answer: 42 });
+  installFoo({ version: "1.0.2", answer: 44 });
 
   inline_js_module: {
     await page.goto(`${devServer.origin}/inline.html`);
     {
       const actual = await getResult();
-      const expect = 42;
+      const expect = 44;
       assert({ actual, expect });
     }
-    installFoo({ version: "1.0.1", answer: 43 });
+    installFoo({ version: "1.0.3", answer: 45 });
     await page.reload();
     {
       const actual = await getResult();
-      const expect = 43;
+      const expect = 45;
       assert({ actual, expect });
     }
   }
 } finally {
+  installFoo({ version: "1.0.0", answer: 42 });
   if (!debug) {
     browser.close();
   }

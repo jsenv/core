@@ -246,37 +246,55 @@ export const devServerPluginServeSourceFiles = ({
           }
           const urlInfo = reference.urlInfo;
           const ifNoneMatch = request.headers["if-none-match"];
-          const urlInfoTargetedByCache =
-            urlInfo.findParentIfInline() || urlInfo;
+          const inlineParentUrlInfo = urlInfo.findParentIfInline();
+          const urlInfoTargetedByCache = inlineParentUrlInfo || urlInfo;
+          const respondWithNotModified = () => {
+            const headers = {
+              "cache-control": `private,max-age=0,must-revalidate`,
+            };
+            Object.keys(urlInfo.headers).forEach((key) => {
+              if (key !== "content-length") {
+                headers[key] = urlInfo.headers[key];
+              }
+            });
+            return {
+              status: 304,
+              headers,
+            };
+          };
 
           try {
-            if (!urlInfo.error && ifNoneMatch) {
+            // an inline url info is cooked again every time the file containing it
+            // is cooked, so its content is only known after cooking; its etag is
+            // compared below, once cooked
+            if (!urlInfo.error && ifNoneMatch && !inlineParentUrlInfo) {
               const [clientOriginalContentEtag, clientContentEtag] =
                 ifNoneMatch.split("_");
               if (
-                urlInfoTargetedByCache.originalContentEtag ===
-                  clientOriginalContentEtag &&
-                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-                urlInfoTargetedByCache.isValid()
+                urlInfo.originalContentEtag === clientOriginalContentEtag &&
+                urlInfo.contentEtag === clientContentEtag &&
+                urlInfo.isValid()
               ) {
-                const headers = {
-                  "cache-control": `private,max-age=0,must-revalidate`,
-                };
-                Object.keys(urlInfo.headers).forEach((key) => {
-                  if (key !== "content-length") {
-                    headers[key] = urlInfo.headers[key];
-                  }
-                });
-                return {
-                  status: 304,
-                  headers,
-                };
+                return respondWithNotModified();
               }
             }
             await urlInfo.cook({ request, reference });
             let { response } = urlInfo;
             if (response) {
               return response;
+            }
+            // the original content of an inline url info is the one of the file
+            // containing it, but its cooked content is its own: it can change while
+            // the containing file stays identical (an import resolving to a new
+            // version of a package for instance)
+            const eTag = `${urlInfoTargetedByCache.originalContentEtag}_${urlInfo.contentEtag}`;
+            if (
+              !urlInfo.error &&
+              ifNoneMatch === eTag &&
+              inlineParentUrlInfo &&
+              !cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+            ) {
+              return respondWithNotModified();
             }
             response = {
               url: reference.url,
@@ -294,7 +312,7 @@ export const devServerPluginServeSourceFiles = ({
                   : {
                       "cache-control": `private,max-age=0,must-revalidate`,
                       // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                      "eTag": eTag,
                     }),
                 ...urlInfo.headers,
                 "content-type": urlInfo.contentType,
