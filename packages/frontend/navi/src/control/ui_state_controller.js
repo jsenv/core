@@ -1382,6 +1382,18 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           if (child !== firstChildControllerRef.current) {
             return;
           }
+          if (
+            silent &&
+            child.uiState === undefined &&
+            s.realUIStateController.uiState !== undefined
+          ) {
+            // A silent sync means the child's own structure changed (children
+            // mounted/unmounted), not that the user acted. A child that ends up
+            // with no value there is one that currently *cannot* express one —
+            // a <List loading> holds no items yet — which must not read as the
+            // user clearing the picker, nor fire its uiAction.
+            return;
+          }
           updatingRef.current = true;
           // Use a different event type for silent (mount/unmount) syncs so that
           // the picker's setUIState does not fire navi_change or action pipelines.

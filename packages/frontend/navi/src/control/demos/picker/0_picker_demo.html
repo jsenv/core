@@ -88,12 +88,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import {
-        useEffect,
-        useLayoutEffect,
-        useRef,
-        useState,
-      } from "preact/hooks";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -105,7 +100,6 @@
         NaviDebug,
         Picker,
         Text,
-        openCallout,
         route,
         setupRoutes,
       } from "@jsenv/navi";
@@ -152,8 +146,6 @@
               <PositionAreaDemo />
             </Chapter>
             <Chapter id="loading" title="Loading & error">
-              <LoadingIntro />
-              <ActionLoadingDemo />
               <ContentLoadingDemo />
               <ValueLoadingDemo />
             </Chapter>
@@ -255,9 +247,6 @@
               <Link href="#loading">Loading &amp; error</Link>
               <ol>
                 <li>
-                  <Link href="#loading-action">The picker's own action</Link>
-                </li>
-                <li>
                   <Link href="#loading-content">Loading content</Link>
                 </li>
                 <li>
@@ -346,10 +335,6 @@
 
       const FontSizeDemo = () => (
         <Subsection id="dim-font-size" title="Font size">
-          <p>
-            The picker inherits font size from its container, which drives its
-            overall size.
-          </p>
           <Box flex="x" spacing="m" alignY="end" flexWrap>
             {["xs", "m", "xl", "xxl"].map((size) => (
               <Field key={size} vertical>
@@ -419,15 +404,6 @@
             </Field>
           </Box>
 
-          <p style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}>
-            The adjacent element shifts as the picker grows. Even without
-            anything next to it, an unstable width feels unpolished.
-          </p>
-
-          <p style={{ marginTop: "16px" }}>
-            Set <code>minWidth</code> to a fixed value to prevent layout shift
-            while still allowing the picker to grow for longer values.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -465,10 +441,6 @@
             </Field>
           </Box>
 
-          <p style={{ marginTop: "16px" }}>
-            Use <code>expandX</code> to make the picker fill its container width
-            entirely, also preventing layout shift.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -510,11 +482,6 @@
 
       const OverflowDemo = () => (
         <Subsection id="dim-overflow" title="Single-line overflow">
-          <p>
-            When the value is wider than the picker (here constrained to{" "}
-            <code>maxWidth="200"</code>), the text is clipped with an ellipsis
-            on a single line.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>Long sentence</Label>
@@ -544,11 +511,6 @@
 
       const MaxLinesDemo = () => (
         <Subsection id="dim-maxlines" title="Multi-line with maxLines">
-          <p>
-            <code>maxLines</code> lets the text flow onto multiple lines before
-            truncating. At <code>maxLines=3</code> the text wraps up to three
-            rows then clips with an ellipsis.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -616,12 +578,6 @@
           id="dim-popup-width"
           title="Popup width follows the trigger"
         >
-          <p>
-            The popover is anchored to the trigger and takes its width as a
-            floor (<code>min-width: var(--anchor-width)</code>), so the popup
-            never looks detached from the button that opened it. Both pickers
-            below open the exact same one-word content.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -650,11 +606,6 @@
               </Picker>
             </Field>
           </Box>
-          <p style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}>
-            Opt out with <code>popupWidthFitContent</code> when the content has
-            its own natural width — a wheel, a color swatch grid — and being
-            dragged to the trigger's width would only add empty space.
-          </p>
         </Subsection>
       );
 
@@ -681,18 +632,9 @@
         return (
           <>
             <p>
-              <code>positionArea</code> says where the popover goes relative to
-              the trigger: a compass token (<code>top</code>,{" "}
-              <code>bottom-end</code>, <code>right-start</code>, …) places the
-              popover <em>next to</em> the trigger, while wrapping it in{" "}
-              <code>inset(…)</code> (e.g. <code>inset(top-left)</code>) makes it
-              overlap the trigger instead. <code>center</code> covers it.
-            </p>
-            <p>
-              The default is <code>bottom-start</code>. Whatever you ask for,
-              the popover still flips to the opposite side on its own when there
-              isn't enough room — scroll the trigger near the top or bottom of
-              the window and reopen it to see that happen.
+              A bare token places the popover next to the trigger,{" "}
+              <code>inset(…)</code> makes it overlap. It still flips to the
+              opposite side on its own when there isn't enough room.
             </p>
             <Box flex="x" spacing="s" alignY="center" flexWrap>
               <label style={{ fontSize: "12px", color: "#555" }}>
@@ -731,14 +673,6 @@
                 <ShortPickerContent />
               </Picker>
             </div>
-            <p
-              style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}
-            >
-              <code>popoverMode="attached"</code> is a shorthand for the
-              overlapping case: it forces <code>inset(top-left)</code> and draws
-              a clone of the trigger inside the popover so the two read as a
-              single surface.
-            </p>
           </>
         );
       };
@@ -747,12 +681,6 @@
 
       const PickerIconDemo = () => (
         <>
-          <p>
-            The picker shows a dropdown icon by default. You can replace it with
-            your own icon through the <code>icon</code> prop. The icon size
-            follows the control size, stays centered on single-line pickers, and
-            moves to the top when the value spans multiple lines.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -870,10 +798,6 @@
 
       const TextAlignDemo = () => (
         <>
-          <p>
-            The <code>textAlign</code> prop controls how text is positioned
-            inside the picker trigger button.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>
@@ -936,11 +860,6 @@
 
         return (
           <>
-            <p>
-              When no value is selected, the picker shows a faded placeholder
-              text. The color appears muted to indicate that it's not an actual
-              value. When you select a value, the color returns to normal.
-            </p>
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
@@ -987,11 +906,6 @@
 
         return (
           <>
-            <p>
-              Instead of using the default trigger button UI, you can provide
-              your own custom UI through the <code>ui</code> prop. This lets you
-              create custom pickers with completely custom styling and content.
-            </p>
             <Box flex="y" spacing="m">
               <Field vertical>
                 <Label>
@@ -1070,19 +984,9 @@
         return (
           <>
             <p>
-              The <code>mode</code> prop controls where the picker's popup
-              appears. <code>"popover"</code> positions it next to the trigger
-              (default), while <code>"dialog"</code> shows a full-screen modal
-              centered on the page.
-            </p>
-            <p>
-              In <strong>dialog mode</strong> the picker pushes a new browser
-              history entry when it opens (via <code>useNavState</code> with{" "}
-              <code>type="push"</code>). Pressing the browser back button — or
-              the Android back gesture — closes the dialog and restores the
-              previous history entry, without navigating away from the page.
-              Popover mode uses <code>type="replace"</code> so it never adds a
-              history entry.
+              Dialog mode pushes a history entry, so the browser back button (or
+              the Android back gesture) closes it instead of leaving the page.
+              Popover mode replaces it, never adding an entry.
             </p>
             <Box flex="y" spacing="m">
               <Field vertical>
@@ -1104,18 +1008,6 @@
                 >
                   <BasicPickerContent />
                 </Picker>
-                <p
-                  style={{
-                    marginTop: "8px",
-                    fontSize: "12px",
-                    color: "#666",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Opens as a dropdown next to the trigger button. Great for
-                  compact interfaces where space is available. Back button
-                  navigates as usual.
-                </p>
               </Field>
               <NavInspect />
               <Field vertical>
@@ -1137,19 +1029,6 @@
                 >
                   <BasicPickerContent />
                 </Picker>
-                <p
-                  style={{
-                    marginTop: "8px",
-                    fontSize: "12px",
-                    color: "#666",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Opens as a modal. A history entry is pushed so the browser
-                  back button (or Android back gesture) closes the dialog
-                  instead of leaving the page. Try it: open the dialog then
-                  press browser back.
-                </p>
               </Field>
               <NavInspect />
             </Box>
@@ -1174,13 +1053,8 @@
       const PopoverSizingDemo = () => (
         <Subsection id="popup-sizing-popover" title="Popover">
           <p>
-            In popover mode the popup is capped at <code>300px</code> tall by
-            default — enough to show a handful of options without overwhelming
-            the page. It will automatically shrink further if there isn't enough
-            space above or below the trigger.
-          </p>
-          <p>
-            Use <code>popoverMaxHeight</code> to raise or lower that cap.
+            The cap is a ceiling, not a height: the popover shrinks below it
+            when there isn't enough space above or below the trigger.
           </p>
           <Box flex="y" spacing="m">
             <Field vertical>
@@ -1210,14 +1084,6 @@
 
       const DialogSizingDemo = () => (
         <Subsection id="popup-sizing-dialog" title="Dialog">
-          <p>
-            In dialog mode the popup sizes itself to its content — it takes only
-            the space it needs, up to the available viewport height.
-          </p>
-          <p>
-            Pass <code>dialogExpandY</code> to make it fill the full available
-            height regardless of content size.
-          </p>
           <Box flex="y" spacing="m">
             <Field vertical>
               <Label>Default — sizes to content</Label>
@@ -1247,19 +1113,13 @@
       const findArticleById = (id) => ARTICLES.find((a) => a.id === id);
       const LOAD_DELAY = 1200;
 
-      // A fake remote load whose outcome is chosen by the caller: `load()`
-      // settles on "loaded", `fail()` on "error". Starts in "loading" so every
-      // example below is already mid-flight when the page appears.
+      // A fake remote load whose outcome the reader chooses.
       const useFakeLoad = () => {
         const [phase, setPhase] = useState("loading");
-        // Identifies one attempt: a failure the user has dismissed must not
-        // come back, but the *next* failure must.
-        const [attempt, setAttempt] = useState(0);
         const timerRef = useRef(null);
         const settleOn = (outcome) => {
           clearTimeout(timerRef.current);
           setPhase("loading");
-          setAttempt((previous) => previous + 1);
           timerRef.current = setTimeout(() => setPhase(outcome), LOAD_DELAY);
         };
         useEffect(() => {
@@ -1268,7 +1128,6 @@
         }, []);
         return {
           phase,
-          attempt,
           load: () => settleOn("loaded"),
           fail: () => settleOn("error"),
         };
@@ -1291,66 +1150,9 @@
         </Box>
       );
 
-      // The picker publishes its open state as aria-expanded on its root
-      // element — that is the only thing the examples below need to decide
-      // where the error goes (callout on the trigger vs inline in the popup).
-      const usePickerOpened = (pickerRef) => {
-        const [opened, setOpened] = useState(false);
-        useLayoutEffect(() => {
-          const pickerEl = pickerRef.current;
-          const sync = () => {
-            setOpened(pickerEl.getAttribute("aria-expanded") === "true");
-          };
-          sync();
-          const observer = new MutationObserver(sync);
-          observer.observe(pickerEl, {
-            attributes: true,
-            attributeFilter: ["aria-expanded"],
-          });
-          return () => observer.disconnect();
-        }, []);
-        return opened;
-      };
-
-      // A closed picker has nowhere to render the failure, so it surfaces as a
-      // callout anchored on the trigger instead. Dismissing that callout
-      // discards the failure: it stays gone while the picker is opened and
-      // closed again, and only the next attempt may raise a new one.
-      const useErrorCallout = (pickerRef, { active, message, attempt }) => {
-        const dismissedAttemptRef = useRef(null);
-        useEffect(() => {
-          if (!active || dismissedAttemptRef.current === attempt) {
-            return undefined;
-          }
-          let closedByUs = false;
-          const callout = openCallout(message, {
-            anchorElement: pickerRef.current,
-            status: "error",
-            skipFocus: true,
-            onClose: () => {
-              if (!closedByUs) {
-                dismissedAttemptRef.current = attempt;
-              }
-            },
-          });
-          return () => {
-            closedByUs = true;
-            callout.requestClose(new CustomEvent("cleanup"), "example_cleanup");
-          };
-        }, [active, message, attempt]);
-      };
-
-      // The "choose an article" list. `articles` is what the server gave us —
-      // empty until the load settles, which is the whole point: while loading
-      // there is nothing to render, so the List draws loadingSkeletonCount
-      // placeholder rows instead, and `error` replaces them with a callout.
-      const ArticleList = ({ articles, loading, error, selectedId }) => (
-        <List
-          selectable
-          loading={loading}
-          loadingSkeletonCount={3}
-          error={error}
-        >
+      // `articles` is what the server gave us — empty until the load settles.
+      const ArticleList = ({ articles, loading, selectedId }) => (
+        <List selectable loading={loading} loadingSkeletonCount={3}>
           {articles.map((article, i) => (
             <ListItem
               selectable
@@ -1368,149 +1170,30 @@
         </List>
       );
 
-      const LoadingIntro = () => (
-        <p>
-          Two things can be loading around a picker, and they are independent:
-          the picker's <em>own</em> action, and whatever the popup content needs
-          from the server. A busy popup never blocks the trigger — the picker
-          stays openable so the user can watch the content arrive (or fail).
-        </p>
-      );
-
-      const ActionLoadingDemo = () => {
-        const [saved, setSaved] = useState(ARTICLES[0].title);
-        const [live, setLive] = useState(ARTICLES[0].title);
-
-        return (
-          <Subsection id="loading-action" title="The picker's own action">
-            <p>
-              While an async <code>action</code> or <code>uiAction</code> runs,
-              the picker draws a loading outline around itself and refuses
-              further interaction until it settles. <code>action</code> runs
-              once, when the popup closes with a changed value;{" "}
-              <code>uiAction</code> runs on every selection.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  <code>action</code> — runs on close
-                </Label>
-                <Picker
-                  name="loading_action"
-                  placeholder="Choose an article…"
-                  value={saved}
-                  action={async (value) => {
-                    await new Promise((resolve) =>
-                      setTimeout(resolve, LOAD_DELAY),
-                    );
-                    setSaved(value);
-                  }}
-                  minWidth="240"
-                >
-                  <List selectable>
-                    {ARTICLES.map((article, i) => (
-                      <ListItem
-                        selectable
-                        key={article.id}
-                        id={`action_${article.id}`}
-                        index={i}
-                        value={article.title}
-                        selected={saved === article.title}
-                        paddingX="m"
-                        paddingY="s"
-                      >
-                        {article.title}
-                      </ListItem>
-                    ))}
-                  </List>
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  <code>uiAction</code> — runs on every selection
-                </Label>
-                <Picker
-                  name="loading_ui_action"
-                  placeholder="Choose an article…"
-                  value={live}
-                  uiAction={async (value) => {
-                    await new Promise((resolve) =>
-                      setTimeout(resolve, LOAD_DELAY),
-                    );
-                    setLive(value);
-                  }}
-                  minWidth="240"
-                >
-                  <List selectable>
-                    {ARTICLES.map((article, i) => (
-                      <ListItem
-                        selectable
-                        key={article.id}
-                        id={`ui_action_${article.id}`}
-                        index={i}
-                        value={article.title}
-                        selected={live === article.title}
-                        paddingX="m"
-                        paddingY="s"
-                      >
-                        {article.title}
-                      </ListItem>
-                    ))}
-                  </List>
-                </Picker>
-              </Field>
-            </Box>
-          </Subsection>
-        );
-      };
-
       const ContentLoadingDemo = () => {
-        const { phase, attempt, load, fail } = useFakeLoad();
-        const pickerRef = useRef(null);
-        const opened = usePickerOpened(pickerRef);
-        useErrorCallout(pickerRef, {
-          active: phase === "error" && !opened,
-          message: "Could not load the list of articles.",
-          attempt,
-        });
+        const { phase, load, fail } = useFakeLoad();
 
         return (
           <Subsection id="loading-content" title="Loading content">
-            <p>
-              Nothing is selected yet, so the trigger shows its placeholder and
-              is immediately usable. The <em>content</em> is what loads: the
-              article list comes from the server, so until it lands there is
-              literally nothing to render. Open the picker while the request is
-              in flight and the <code>&lt;List loading&gt;</code> shows
-              placeholder rows in place of items it doesn't have yet.
-            </p>
-            <p>
-              Make it fail and the error goes wherever the user is looking — a
-              callout on the trigger when the picker is closed, the List's own
-              inline callout (its <code>error</code> prop) when it is open. Both
-              examples use <code>pointerInteractionOutsideEffect="none"</code>,
-              purely so the picker stays open while you drive it from the
-              buttons above: no backdrop, outside clicks land on whatever they
-              hit.
-            </p>
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
-              <Label>Article picker (nothing selected)</Label>
+              <Label>Nothing selected — only the content loads</Label>
               <Picker
-                ref={pickerRef}
                 name="loading_content"
                 placeholder="Choose an article…"
                 minWidth="240"
+                error={
+                  phase === "error"
+                    ? "Could not load the list of articles."
+                    : undefined
+                }
+                // Demo affordance only: keeps the popup open while you press the
+                // buttons above ("none" = no backdrop, outside clicks pass through).
                 pointerInteractionOutsideEffect="none"
               >
                 <ArticleList
                   articles={phase === "loaded" ? ARTICLES : []}
                   loading={phase === "loading"}
-                  error={
-                    phase === "error"
-                      ? "Could not load the list of articles."
-                      : undefined
-                  }
                 />
               </Picker>
             </Field>
@@ -1520,18 +1203,10 @@
 
       const ValueLoadingDemo = () => {
         const [articleId, setArticleId] = useState(ARTICLES[1].id);
-        const { phase, attempt, load, fail } = useFakeLoad();
-        const pickerRef = useRef(null);
-        const opened = usePickerOpened(pickerRef);
-        useErrorCallout(pickerRef, {
-          active: phase === "error" && !opened,
-          message: "Could not load the selected article.",
-          attempt,
-        });
+        const { phase, load, fail } = useFakeLoad();
 
-        // The selected value is an id, not something a human can read: until
-        // its title arrives the trigger has nothing to show, so it shows a
-        // skeleton bar the size of a title instead of an empty box.
+        // The value is an id: until its title arrives there is nothing readable
+        // to put in the trigger.
         const triggerUI =
           phase === "loading" ? (
             <Text loading width="180px" />
@@ -1543,35 +1218,23 @@
 
         return (
           <Subsection id="loading-value" title="Loading the selected label">
-            <p>
-              Here the picker already has a value — <code>{articleId}</code> —
-              but that is a technical id. The title has to be fetched before
-              anything can be displayed, so the trigger shows a{" "}
-              <code>&lt;Text loading&gt;</code> skeleton in the meantime rather
-              than the raw id or an empty box.
-            </p>
-            <p>
-              The same request brings the list, so the popup is in its skeleton
-              state at the same time. Once loaded, pick another article and
-              everything is fetched again. Failing it surfaces the same way as
-              above — callout when closed, the List's inline callout when open.
-            </p>
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
-              <Label>Article picker (value = an id)</Label>
+              <Label>
+                Selected value is <code>{articleId}</code> — its title loads too
+              </Label>
               <Picker
-                ref={pickerRef}
                 name="loading_value"
                 value={articleId}
                 ui={triggerUI}
                 minWidth="240"
+                error={
+                  phase === "error"
+                    ? "Could not load the selected article."
+                    : undefined
+                }
                 pointerInteractionOutsideEffect="none"
                 uiAction={(value) => {
-                  // While loading the list has no items, so the facade syncs an
-                  // empty selection up — that is not the user picking anything.
-                  if (!value) {
-                    return;
-                  }
                   setArticleId(value);
                   load();
                 }}
@@ -1579,11 +1242,6 @@
                 <ArticleList
                   articles={phase === "loaded" ? ARTICLES : []}
                   loading={phase === "loading"}
-                  error={
-                    phase === "error"
-                      ? "Could not load the selected article."
-                      : undefined
-                  }
                   selectedId={articleId}
                 />
               </Picker>

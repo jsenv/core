@@ -1,5 +1,5 @@
 import { performTabNavigation } from "@jsenv/dom";
-import { useContext, useRef } from "preact/hooks";
+import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
@@ -18,6 +18,7 @@ import {
 import { getUIStateControllerById } from "../controller_registry.js";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
+import { createOpenToken } from "../rules/control_callout.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
@@ -327,6 +328,7 @@ const PickerButton = (props) => {
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
     popupWidthFitContent,
+    error,
   } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
@@ -344,6 +346,7 @@ const PickerButton = (props) => {
   const value = uiStateController.uiState;
   const { basePseudoState, children } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  usePickerErrorCallout(uiStateController, error);
 
   return (
     <Box
@@ -365,6 +368,7 @@ const PickerButton = (props) => {
       ui={undefined}
       maxLines={undefined}
       popupWidthFitContent={undefined}
+      error={undefined}
       dayLabel={undefined}
       // This wrapper will receive keyboard event bubbling from the picker popup content
       // we re-dispatch on the input (to get escape to close for instance)
@@ -498,6 +502,30 @@ const PickerButton = (props) => {
 };
 const isWithinPickerContent = (el, pickerEl) => {
   return pickerEl.querySelector(".navi_picker_content")?.contains(el);
+};
+
+const PICKER_ERROR_TOKEN = createOpenToken();
+// The `error` prop rides the control's own callout — the same surface already
+// used for failing constraints — so a caller never has to decide where to put
+// the message. It shows whether the popup is open or closed, and dismissing it
+// discards that error: only a new `error` value raises another one.
+const usePickerErrorCallout = (uiStateController, error) => {
+  useEffect(() => {
+    const { callout } = uiStateController.rules;
+    const closeEvent = new CustomEvent("picker_error_cleared", { detail: {} });
+    if (!error) {
+      callout.removeOpenToken(PICKER_ERROR_TOKEN, closeEvent);
+      return undefined;
+    }
+    callout.addOpenToken(PICKER_ERROR_TOKEN, {
+      message: error === true ? "Something went wrong." : error,
+      status: "error",
+      skipFocus: true,
+    });
+    return () => {
+      callout.removeOpenToken(PICKER_ERROR_TOKEN, closeEvent);
+    };
+  }, [error]);
 };
 
 const PickerInput = (props) => {
@@ -653,6 +681,7 @@ const PickerFirstResolver = (props) => {
  *   step?: string | number,
  *   disabled?: boolean,
  *   readOnly?: boolean,
+ *   error?: boolean | string,
  *   uiAction?: (value: any, event: Event) => void,
  *   action?: (value: any, event: Event) => void,
  *   children?: import("preact").ComponentChildren,
@@ -672,6 +701,10 @@ const PickerFirstResolver = (props) => {
  *   ref?: import("preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {boolean|string} [error] Something went wrong around this picker (its
+ *   content failed to load, its value could not be resolved…). Shown as a
+ *   callout on the trigger, open or closed — the caller has nothing to place.
+ *   Dismissing it discards that error; a new `error` value raises another one.
  * @param {"nearby"|"attached"} [popoverMode="nearby"] In "attached" mode the
  *   popover sits directly on the trigger and visually absorbs it (a clone of
  *   the trigger is drawn inside the popover); "nearby" leaves a small gap.

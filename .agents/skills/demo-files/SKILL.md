@@ -1,7 +1,24 @@
 ---
 name: demo-files
-description: How to run and verify the `*_demo.html` files scattered across packages (e.g. packages/frontend/navi/src/control/demos/). Use when the user explicitly asks to load a demo in a browser / Playwright to check it works — not proactively (see .agents/instructions.md's "never verify on your own initiative" constraint).
+description: How to write, run and verify the `*_demo.html` files scattered across packages (e.g. packages/frontend/navi/src/control/demos/). Use when writing a demo, or when the user explicitly asks to load one in a browser / Playwright to check it works — the latter not proactively (see .agents/instructions.md's "never verify on your own initiative" constraint).
 ---
+
+## Writing a demo: show, don't explain
+
+A demo is something the reader _uses_. A well-chosen example, split into steps and
+labelled, replaces paragraphs of prose. See
+[.agents/instructions.md](../../instructions.md#demo-files) for the rule; concretely:
+
+- Each example gets a short `<Label>`/`<legend>` naming the case and the prop that
+  drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) — that is
+  usually the entire explanation needed.
+- Prefer adding a _contrasting_ example over writing a sentence about the
+  difference: default next to opted-out, loading next to loaded.
+- Write a paragraph only for what the example genuinely cannot show: an invariant,
+  a browser constraint, a rejected approach, a "this looks wrong but isn't".
+- Never narrate what the reader is about to see ("press Load to watch it swap"),
+  restate a prop's semantics that the label already carries, or explain machinery
+  the demo doesn't exercise.
 
 ## Overview
 
