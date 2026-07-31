@@ -59,6 +59,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  *
  * A bit like https://tetherjs.dev/ but different
  */
+// The event type observeSize() reports with — recognized by check() as "the
+// change is in another element, not in the tracked rect".
+const OBSERVED_ELEMENT_SIZE_CHANGE = "observed_element_size_change";
+
 export const visibleRectEffect = (
   element,
   update,
@@ -308,6 +312,18 @@ export const visibleRectEffect = (
       });
     };
 
+    // An observeSize() delivery reports a size change in some *other*
+    // element — this one's own rect and the viewport are both typically
+    // untouched by it, so the dedup below would skip every single one,
+    // defeating the whole point of observeSize (a popover reconsidering its
+    // placement once its own content shrinks/grows, a callout re-measuring
+    // against its message body).
+    if (event.type === OBSERVED_ELEMENT_SIZE_CHANGE) {
+      lastVisibleRect = visibleRect;
+      lastViewportRect = viewportRect;
+      notify("observed element size changed");
+      return;
+    }
     const visibleRectChanged =
       !lastVisibleRect ||
       lastVisibleRect.left !== visibleRect.left ||
@@ -716,7 +732,7 @@ export const visibleRectEffect = (
       pendingFrame = requestAnimationFrame(() => {
         pendingFrame = null;
         check(
-          new CustomEvent("observed_element_size_change", {
+          new CustomEvent(OBSERVED_ELEMENT_SIZE_CHANGE, {
             detail: { width, height },
           }),
         );

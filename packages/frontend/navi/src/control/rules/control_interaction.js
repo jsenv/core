@@ -75,9 +75,11 @@ export const createControlInteraction = (
     // Check managed controls — a non-interactable child blocks the parent,
     // UNLESS the child's failing constraint has `ignoredByParents: true`
     // (e.g. a disabled child inside a group should not prevent the group from acting).
+    // Only the children that are reachable alongside the parent take part: a
+    // picker's popup content is excluded, see getInteractionBlockingControls.
     failingManagedInteraction = null;
     if (!interactionFailedConstraintInfo) {
-      for (const mc of controller.getManagedControls()) {
+      for (const mc of controller.getInteractionBlockingControls()) {
         const mci = mc.rules.interaction;
         if (!mci) {
           continue;

@@ -56,7 +56,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -81,15 +81,24 @@ import {
 const css = /* css */ `
   @layer navi {
     .navi_dialog {
-      /* min gap between dialog edges and viewport */
-      /* not named margin because it's not implemented with margins (which are needed for centering) */
-      --dialog-viewport-spacing: 3dvw;
+      /* Min gap between the dialog and the edges of its container. Written
+         from the marginWithContainer prop (see below) — hence --x-, not a knob
+         to set from CSS — so the size caps here and the placement can never
+         disagree. The literal is only what a dialog painted before that ever
+         runs falls back to. Not named "margin" because it isn't implemented
+         with margins (those are needed for centering).
+
+         Capping the *size* here rather than only offsetting the position is
+         what makes a centered dialog follow the mobile virtual keyboard for
+         free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
+         reflows the dialog itself as the keyboard opens. */
+      --x-dialog-viewport-spacing: 3vvw;
 
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvw) - 2 * var(--x-dialog-viewport-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvh) - 2 * var(--x-dialog-viewport-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
@@ -322,8 +331,14 @@ const css = /* css */ `
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
- * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
- *   between the dialog and the edges of its container.
+ * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
+ *   between the dialog and the edges of its container, whatever its
+ *   `positionArea`: it both caps the dialog's own size (via
+ *   `--x-dialog-viewport-spacing`, written from this prop) and offsets a docked
+ *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
+ *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
+ *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
+ *   meant to sit flush (a side panel).
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
@@ -463,7 +478,10 @@ const useDialogProps = (props) => {
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea = "center",
-    marginWithContainer = 0,
+    // A dialog docked against an edge must keep the same gap its own size cap
+    // already guarantees a centered one — so this drives both (see
+    // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
+    marginWithContainer = "3vvw",
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -500,6 +518,18 @@ const useDialogProps = (props) => {
   const debugFocus = useDebugFocus();
   const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
+  // positionDialog lives in openEffect's closure — created once, when the
+  // dialog opens. Reading the placement props through a ref instead of that
+  // closure is what lets a change while open take effect on the spot (see the
+  // reposition effect below) rather than only on the next opening.
+  const positionPropsRef = useRef(null);
+  positionPropsRef.current = { positionArea, marginWithContainer };
+  const repositionRef = useRef(null);
+  useEffect(() => {
+    repositionRef.current?.(
+      new CustomEvent("position_props_change", { detail: {} }),
+    );
+  }, [positionArea, marginWithContainer]);
   const positionAreaParseResult = parsePositionArea(positionArea);
   if (!positionAreaParseResult) {
     console.warn(`Dialog: invalid positionArea="${positionArea}"`);
@@ -656,10 +686,29 @@ const useDialogProps = (props) => {
     // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
+      const { positionArea, marginWithContainer } = positionPropsRef.current;
+      let marginWithContainerInPixels = resolveSpacingSize(marginWithContainer);
+      if (typeof marginWithContainerInPixels !== "number") {
+        // A value only CSS could evaluate (a spacing token resolving to a var(),
+        // a percentage…) — the placement below needs a real number, and letting
+        // it through would put the dialog at NaN.
+        console.warn(
+          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number or a viewport length ("3vvw", "2vvh").`,
+        );
+        marginWithContainerInPixels = 0;
+      }
+      // The size caps read the same gap in CSS as the placement below applies
+      // in pixels, so a docked dialog and a centered one keep the same
+      // distance from the edges. Written resolved (not as the raw prop) so a
+      // spacing token stays valid inside the caps' own calc().
+      dialogEl.style.setProperty(
+        "--x-dialog-viewport-spacing",
+        `${marginWithContainerInPixels}px`,
+      );
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
-        marginWithContainer: resolveSpacingSize(marginWithContainer),
+        marginWithContainer: marginWithContainerInPixels,
         event: triggerEvent,
       };
       let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
@@ -707,7 +756,19 @@ const useDialogProps = (props) => {
       { event: e, skipElementResize: true },
     );
     rectEffect.observeSize(dialogEl);
+    // Exposed for the placement-props effect below, which needs to re-place an
+    // already-open dialog.
+    repositionRef.current = (repositionEvent) => {
+      // data-position-*-current pins an open dialog to the side it first
+      // resolved to, so a resize never makes it jump (pickPositionRelativeTo
+      // reads it back and prefers it over the requested area). A new placement
+      // request is precisely the case where that memory must not win.
+      dialogEl.removeAttribute("data-position-x-current");
+      dialogEl.removeAttribute("data-position-y-current");
+      positionDialog(repositionEvent);
+    };
     addCleanup(() => {
+      repositionRef.current = null;
       rectEffect.disconnect();
     });
     // A descendant anchored to something inside this dialog (a Callout, a

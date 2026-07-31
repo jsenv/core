@@ -8,7 +8,11 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "@jsenv/navi/src/popup/open_controller.js";
-import { Popup, usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
+import {
+  PopupModeContext,
+  useResolvedPopupMode,
+} from "@jsenv/navi/src/popup/popup_mode.jsx";
+import { Popup } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
@@ -18,7 +22,6 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import { PickerModeContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -27,8 +30,7 @@ const css = /* css */ `
        themselves — nothing to redefine here. Only the picker's own look
        (border color/radius/width, background) needs bridging into the vars
        Popover/Dialog actually consume, plus a couple of genuinely
-       picker-specific bits below (anchor-width min-width, the anchor clone,
-       the nested list). */
+       picker-specific bits below (anchor-width min-width, the nested list). */
 
     /* popover */
     &[aria-haspopup="listbox"] {
@@ -39,51 +41,16 @@ const css = /* css */ `
         --popover-background-color: var(--picker-background-color);
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
+        /* No fallback on purpose: when the picker's own popoverMaxHeight prop
+           is unset this declaration is invalid at computed-value time, which
+           leaves --popover-max-height unset and lets the popover fall back to
+           --popover-max-height-default. */
+        --popover-max-height: var(--picker-popover-max-height);
 
         /* At least as wide as the trigger — unless popupWidthFitContent, then
            let the content (e.g. a Wheel) size the popover (see picker.jsx). */
         min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */
-
-        /* The anchor placeholder is a non-interactive visual clone of the
-           trigger. It makes the popover wrap both the trigger area and the list
-           under a single border/shadow. CSS order places it before the list
-           when the popover is below the trigger, and after when above. */
-        .navi_picker_anchor_clone {
-          display: flex;
-          /* To make clone same height as original we need to force it because context can impact height */
-          /* Like siblings with a bigger height in a flex container */
-          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
-          min-height: var(--anchor-inner-height);
-          /* Mirror the trigger's padding so the clone looks identical */
-          padding-top: var(--x-picker-padding-top);
-          padding-right: var(--x-picker-padding-right);
-          padding-bottom: var(--x-picker-padding-bottom);
-          padding-left: var(--x-picker-padding-left);
-          flex-shrink: 0;
-          flex-direction: column;
-          justify-content: center;
-          gap: var(--navi-s);
-          order: -1; /* before the list — popover is below the trigger */
-          background: var(--x-picker-background-color);
-          border-bottom: var(--picker-border-width) solid
-            var(--x-picker-border-color);
-
-          &:hover {
-            --x-picker-background-color: var(--picker-background-color-hover);
-            --x-picker-border-color: var(--picker-border-color-hover);
-          }
-        }
-
-        &[data-position-y-current="top"],
-        &[data-position-y-current="inset-bottom"] {
-          .navi_picker_anchor_clone {
-            order: 1; /* after the list — popover is above the trigger */
-            border-top: var(--picker-border-width) solid
-              var(--x-picker-border-color);
-            border-bottom: none;
-          }
-        }
 
         /* The list scrolls inside the popover */
         .navi_list_container {
@@ -98,16 +65,15 @@ const css = /* css */ `
       }
 
       &[aria-expanded="true"] {
-        &[navi-popover-mode="overlay"],
-        &[navi-popover-mode="attached"] {
+        &[navi-popover-mode="overlay"] {
           /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
           of the underlying select borders. We hide them to ensure this cannot happen.  */
           border-color: transparent;
         }
 
         /* Popover itself has no opinion on its content's own layout (plain
-           div, block by default) — the picker's content (anchor clone +
-           list) needs to stack vertically. */
+           div, block by default) — the picker's content needs to stack
+           vertically. */
         .navi_popover {
           display: flex;
           flex-direction: column;
@@ -255,11 +221,11 @@ const PickerCustom = (props) => {
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
   // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
-  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
   // doesn't switch between Popover and Dialog), with resetMode called from
   // this picker's own onClose below to re-evaluate on the *next* open.
-  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
+  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth);
 
   const pickerProps = {
     ...props,
@@ -605,6 +571,7 @@ const PickerContentInsidePopup = (props) => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
+    positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
@@ -659,10 +626,9 @@ const PickerContentInsidePopup = (props) => {
         animation={animation}
         positionArea={
           isPopover
-            ? popoverMode === "nearby"
-              ? "bottom-start"
-              : "inset(top-left)"
-            : undefined
+            ? (positionArea ??
+              (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)"))
+            : positionArea
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
         marginWithContainer={isPopover ? marginWithContainer : undefined}
@@ -680,26 +646,10 @@ const PickerContentInsidePopup = (props) => {
         expandX={!isPopover ? expandX : undefined}
         expandY={!isPopover ? expandY : undefined}
       >
-        {/* In "attached" mode clone the trigger visually so the popup wraps both the trigger
-            and the list with a unified border/shadow. The clone is not
-            interactive — the real trigger behind it handles all events. */}
-        {isPopover && popoverMode === "attached" ? (
-          <div
-            className="navi_picker_anchor_clone"
-            onMouseDown={(e) => {
-              if (e.button !== 0) {
-                return;
-              }
-              popupProps.openController.requestClose(e, { isCancel: true });
-            }}
-          >
-            {props.trigger}
-          </div>
-        ) : null}
-        {/* Let the popup content branch on the mode via usePickerMode(). */}
-        <PickerModeContext.Provider value={mode}>
+        {/* Let the popup content branch on the mode via usePopupMode(). */}
+        <PopupModeContext.Provider value={mode}>
           {children}
-        </PickerModeContext.Provider>
+        </PopupModeContext.Provider>
       </Popup>
     </Next>
   );

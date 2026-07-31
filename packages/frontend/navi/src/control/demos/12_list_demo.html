@@ -31,11 +31,22 @@
       }
 
       .demo-section h2 {
+        position: relative;
         margin: 0 0 8px;
         padding-bottom: 10px;
         color: #333;
         font-size: 1.1rem;
         border-bottom: 2px solid #eee;
+        scroll-margin-top: 12px;
+      }
+
+      .demo-section h3 {
+        position: relative;
+        margin: 20px 0 8px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
       }
 
       .demo-section p {
@@ -43,6 +54,36 @@
         color: #555;
         font-size: 0.9rem;
         line-height: 1.5;
+      }
+
+      .toc-list {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 2;
+      }
+      .toc-list a {
+        color: #1a56cc;
+        text-decoration: none;
+      }
+      .toc-list a:hover {
+        text-decoration: underline;
+      }
+      .toc-list ol {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 2;
+        list-style: lower-alpha;
+      }
+
+      .demo-subsection {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+      }
+      .demo-subsection:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
       }
 
       .value-display {
@@ -69,7 +110,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -80,6 +121,7 @@
         Box,
         NaviDebug,
         Icon,
+        Link,
       } from "@jsenv/navi";
 
       // 200 auto-generated items
@@ -115,56 +157,138 @@
         return (
           <NaviDebug debugAction debugInteraction>
             <TableOfContents />
-            <DisplayOnlyDemo />
-            <HorizontalDemo />
-            <WidthDemo />
-            <WidthExpandXDemo />
-            <OverflowDemo />
-            <SearchableExternalInputDemo />
-            <SearchableDemo />
-            <GroupedSearchDemo />
-            <ListItemGroupDemo />
-            <SplitMatchDemo />
+            <Chapter id="presentation" title="Presentation">
+              <DisplayOnlyDemo />
+              <HorizontalDemo />
+            </Chapter>
+            <Chapter id="sizing" title="Sizing">
+              <WidthDemo />
+              <WidthExpandXDemo />
+              <HeightDemo />
+            </Chapter>
+            <LoadingDemo />
+            <Chapter id="search" title="Search">
+              <SearchStatesDemo />
+              <SearchableExternalInputDemo />
+              <SearchableDemo />
+              <GroupedSearchDemo />
+              <SplitMatchDemo />
+            </Chapter>
+            <Chapter id="grouping" title="Grouping">
+              <ListItemGroupDemo />
+            </Chapter>
           </NaviDebug>
         );
       };
+
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // A chapter groups related demos under one h2. Each demo inside renders as
+      // a <div className="demo-subsection"> with its own h3.
+      const Chapter = ({ id, title, children }) => (
+        <div className="demo-section">
+          <Heading level={2} id={id}>
+            {title}
+          </Heading>
+          {children}
+        </div>
+      );
 
       const TableOfContents = () => {
         return (
           <div class="demo-section">
             <h2>Table of contents</h2>
-            <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
+            <ol className="toc-list">
               <li>
-                <a href="#display-only">Display only</a>
+                <Link href="#presentation">Presentation</Link>
+                <ol>
+                  <li>
+                    <Link href="#display-only">Display only</Link>
+                  </li>
+                  <li>
+                    <Link href="#horizontal">Horizontal</Link>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#horizontal">Horizontal</a>
+                <Link href="#sizing">Sizing</Link>
+                <ol>
+                  <li>
+                    <Link href="#width">Width</Link>
+                  </li>
+                  <li>
+                    <Link href="#width-expand-x">Width — with expandX</Link>
+                  </li>
+                  <li>
+                    <Link href="#height">
+                      Height within a container (expandY)
+                    </Link>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#width">Width behaviour</a>
+                <Link href="#loading">Loading &amp; error</Link>
+                <ol>
+                  <li>
+                    <Link href="#loading-states">States</Link>
+                  </li>
+                  <li>
+                    <Link href="#loading-default">Default skeleton</Link>
+                  </li>
+                  <li>
+                    <Link href="#loading-padding">Custom padding</Link>
+                  </li>
+                  <li>
+                    <Link href="#loading-layout">Title + subtitle layout</Link>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#width-expand-x">Width behaviour — with expandX</a>
+                <Link href="#search">Search</Link>
+                <ol>
+                  <li>
+                    <Link href="#search-fallback">
+                      Fallbacks — few / none / searchFallback
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#search-external">Input outside the list</Link>
+                  </li>
+                  <li>
+                    <Link href="#search-inline">Input inside the list</Link>
+                  </li>
+                  <li>
+                    <Link href="#search-grouped">
+                      Many items, grouped by letter
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#search-split">
+                      Split matches / non-matches
+                    </Link>
+                  </li>
+                </ol>
               </li>
               <li>
-                <a href="#overflow">Dimension within container</a>
-              </li>
-              <li>
-                <a href="#search-external">
-                  Search — input outside list (listId)
-                </a>
-              </li>
-              <li>
-                <a href="#search-inline">Search — input inside list</a>
-              </li>
-              <li>
-                <a href="#large-list">Search — many items, grouped by letter</a>
-              </li>
-              <li>
-                <a href="#grouped">Grouped suggestions</a>
-              </li>
-              <li>
-                <a href="#split-match">Split matches / non-matches</a>
+                <Link href="#grouping">Grouping</Link>
+                <ol>
+                  <li>
+                    <Link href="#grouped">Grouped suggestions</Link>
+                  </li>
+                </ol>
               </li>
             </ol>
           </div>
@@ -193,7 +317,10 @@
 
       const DisplayOnlyDemo = () => {
         return (
-          <div id="display-only" className="demo-section">
+          <div className="demo-subsection">
+            <Heading level={3} id="display-only">
+              Display only
+            </Heading>
             <p>
               By default a <code>List</code> is purely presentational — no hover
               state, no selection, no keyboard navigation. Items render as
@@ -215,8 +342,10 @@
       const SIZES = ["XS", "S", "M", "L", "XL"];
 
       const HorizontalDemo = () => (
-        <div id="horizontal" className="demo-section">
-          <h2>Horizontal</h2>
+        <div className="demo-subsection">
+          <Heading level={3} id="horizontal">
+            Horizontal
+          </Heading>
           <p>
             Avec <code>horizontal</code> les items s'affichent en ligne.{" "}
             <code>spacing</code> s'applique entre eux. Les items supportent{" "}
@@ -327,8 +456,10 @@
 
       const WidthDemo = () => {
         return (
-          <div id="width" className="demo-section">
-            <h2>Width behaviour</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="width">
+              Width
+            </Heading>
             <p>
               By default the list is as wide as its widest item but will never
               exceed its parent width (<code>max-width: 100%</code>). Each case
@@ -621,8 +752,10 @@
 
       const WidthExpandXDemo = () => {
         return (
-          <div id="width-expand-x" className="demo-section">
-            <h2>Width behaviour — with expandX</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="width-expand-x">
+              Width — with expandX
+            </Heading>
             <p>
               With <code>expandX</code> the list fills its parent width. The
               overflow cases rely on the same parent constraint — the list
@@ -761,10 +894,20 @@
         );
       };
 
-      // ── 2c. Dimension within container ────────────────────────────────────────
+      // ── 2c. Height within a container ─────────────────────────────────────────
+
+      // A visible border + background on the list itself (distinct from the
+      // dashed container) makes expandY's effect obvious: the blue list box
+      // either hugs its content or grows to fill the grey container.
+      const VISIBLE_LIST_PROPS = {
+        borderWidth: "1",
+        borderColor: "light-dark(#3b82f6, #60a5fa)",
+        borderRadius: "3px",
+        backgroundColor: "light-dark(#eff6ff, #172554)",
+      };
 
       const SmallList = ({ expandY }) => (
-        <List expandY={expandY}>
+        <List expandY={expandY} {...VISIBLE_LIST_PROPS}>
           {FRUITS.slice(0, 2).map((fruit, i) => (
             <ListItem key={fruit} index={i} id={fruit} value={fruit}>
               {fruit}
@@ -774,7 +917,7 @@
       );
 
       const LargeList = ({ expandY }) => (
-        <List expandY={expandY}>
+        <List expandY={expandY} {...VISIBLE_LIST_PROPS}>
           {FRUITS.map((fruit, i) => (
             <ListItem key={fruit} index={i} id={fruit} value={fruit}>
               {fruit}
@@ -926,15 +1069,15 @@
         const [expandY, setExpandY] = useState(false);
         return (
           <>
-            <h3
+            <h4
               style={{
                 margin: "24px 0 8px",
-                fontSize: "0.95rem",
+                fontSize: "0.9rem",
                 color: "#444",
               }}
             >
               With sibling element
-            </h3>
+            </h4>
             <p>
               The container is a flex column with spacing. The first child is a
               fixed-height red bar; the second is the list. With{" "}
@@ -960,15 +1103,23 @@
         );
       };
 
-      const OverflowDemo = () => {
+      const HeightDemo = () => {
         return (
-          <div id="overflow" className="demo-section">
-            <h2>Dimension within container</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="height">
+              Height within a container (expandY)
+            </Heading>
             <p>
-              The dashed border represents the container constraint. Without{" "}
-              <code>expandY</code> the list keeps its own internal scroll at 220
-              px — a smaller container just clips it. With <code>expandY</code>{" "}
-              the list defers to the container's size and scrolls within it.
+              The dashed grey box is the container; the blue box is the list
+              itself. Without <code>expandY</code> the list is only as tall as
+              its content (a taller list scrolls at its own{" "}
+              <code>maxHeight</code>). With <code>expandY</code> the list grows
+              to fill the container's height and scrolls within it — so it needs
+              a container with a real height to fill. The{" "}
+              <strong>max-height only</strong> column has no fixed height, so
+              there is nothing to grow into and <code>expandY</code> changes
+              nothing there; the effect shows in the{" "}
+              <strong>height: 100px</strong> column.
             </p>
             <SimpleContainerSection />
             <SiblingContainerSection />
@@ -982,7 +1133,10 @@
         const [searchText, setSearchText] = useState("");
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
-          <div id="search-external" className="demo-section">
+          <div className="demo-subsection">
+            <Heading level={3} id="search-external">
+              Input outside the list (listId)
+            </Heading>
             <p>
               When the input lives outside the list, pass <code>listId</code> on
               the <code>Input</code> pointing to the list's <code>id</code>.
@@ -1037,7 +1191,10 @@
         const [searchText, setSearchText] = useState("");
         const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
         return (
-          <div id="search-inline" className="demo-section">
+          <div className="demo-subsection">
+            <Heading level={3} id="search-inline">
+              Input inside the list
+            </Heading>
             <p>
               Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
               auto-connects it to the list via context. Keyboard events (arrows,
@@ -1095,8 +1252,10 @@
         ).length;
 
         return (
-          <Box id="large-list" className="demo-section">
-            <h2>Search — many items, grouped by letter</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-grouped">
+              Many items, grouped by letter
+            </Heading>
             <p>
               Matching items rise to the top, grouped by initial letter. All
               items remain visible.
@@ -1145,6 +1304,7 @@
                         <ListItem
                           key={item}
                           index={i}
+                          id={item}
                           matchInfo={matchInfo}
                           style={{ backgroundColor: SUGGESTION_BG }}
                         >
@@ -1156,7 +1316,7 @@
                 ));
               })()}
             </List>
-          </Box>
+          </div>
         );
       };
 
@@ -1187,8 +1347,10 @@
 
       const ListItemGroupDemo = () => {
         return (
-          <div id="grouped" className="demo-section">
-            <h2>Grouped suggestions</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="grouped">
+              Grouped suggestions
+            </Heading>
             <p>Options organized into labeled groups using ListItemGroup.</p>
             <List fallback="No results" style={{ maxHeight: "280px" }} expandX>
               <ListItem index={0}>
@@ -1236,8 +1398,10 @@
         );
 
         return (
-          <div id="split-match" className="demo-section">
-            <h2>Split matches / non-matches</h2>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-split">
+              Split matches / non-matches
+            </Heading>
             <p>
               Matching items and non-matching items are shown in separate
               groups, each with a count. When the search is empty, all items are
@@ -1284,6 +1448,7 @@
                     <ListItem
                       key={item}
                       index={i}
+                      id={item}
                       matchInfo={getItemMatchInfo(item)}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
@@ -1312,6 +1477,7 @@
                     <ListItem
                       key={item}
                       index={matches.length + i}
+                      id={item}
                       style={{ backgroundColor: SUGGESTION_BG }}
                     >
                       {item}
@@ -1323,6 +1489,311 @@
           </div>
         );
       };
+
+      // ── Loading state ──────────────────────────────────────────────────────────
+
+      const renderFruitItems = (items, matchInfoOf, { paddingY = "s" } = {}) =>
+        items.map((fruit, i) => (
+          <ListItem
+            key={fruit}
+            index={i}
+            id={fruit}
+            value={fruit}
+            matchInfo={matchInfoOf ? matchInfoOf(fruit) : undefined}
+            paddingX="m"
+            paddingY={paddingY}
+          >
+            {fruit}
+          </ListItem>
+        ));
+
+      const SOME_FRUITS = FRUITS.slice(0, 6);
+
+      const LOADING_STATES = ["skeleton", "loader", "loaded", "error"];
+
+      // Fakes an async load: starts idle (showing the skeleton), then "load"
+      // keeps the skeleton for a moment before flipping to loaded — so the
+      // skeleton→content transition is actually visible. Reload replays it.
+      const useSimulatedLoad = (delay = 1400) => {
+        const [phase, setPhase] = useState("idle"); // idle | loading | loaded
+        const timerRef = useRef(null);
+        const load = () => {
+          setPhase("loading");
+          clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => setPhase("loaded"), delay);
+        };
+        return { phase, loading: phase !== "loaded", load };
+      };
+
+      const LoadButton = ({ phase, onLoad }) => (
+        <button
+          type="button"
+          onClick={onLoad}
+          disabled={phase === "loading"}
+          style={{
+            alignSelf: "flex-start",
+            marginBottom: "10px",
+            padding: "6px 14px",
+            fontSize: "0.85rem",
+            color: "#fff",
+            background: phase === "loading" ? "#93c5fd" : "#3b82f6",
+            border: "none",
+            borderRadius: "6px",
+            cursor: phase === "loading" ? "default" : "pointer",
+          }}
+        >
+          {phase === "loading"
+            ? "Loading…"
+            : phase === "loaded"
+              ? "Reload"
+              : "Load"}
+        </button>
+      );
+
+      // A title + subtitle item: a short bold title over a long, muted address.
+      // The size/weight gap between the two lines is deliberately large so the
+      // hierarchy — and the skeleton that mirrors it — reads at a glance.
+      const PEOPLE = [
+        {
+          name: "Ada Lovelace",
+          address: "12 St James's Square, Marylebone, London W1U 3DE",
+        },
+        {
+          name: "Alan Turing",
+          address: "78 High Street, Wilmslow, Cheshire SK9 1AT",
+        },
+        {
+          name: "Grace Hopper",
+          address: "4401 Massachusetts Avenue NW, Washington, DC 20016",
+        },
+      ];
+
+      const PersonItem = ({ person, index }) => (
+        <ListItem
+          index={index}
+          id={person.name}
+          value={person.name}
+          paddingX="m"
+          paddingY="s"
+        >
+          <Box flex="y" spacing="xs" expandX>
+            <Text bold size="l">
+              {person.name}
+            </Text>
+            <Text size="xs" color="secondary">
+              {person.address}
+            </Text>
+          </Box>
+        </ListItem>
+      );
+
+      // The skeleton mirrors PersonItem: a short (40%) title bar the height of a
+      // large line, over a long (80%) address bar the height of an xs line —
+      // matching that titles are short and addresses run wide.
+      // The widths go on the <Text> itself: wrapping it in a sizing <Box> would
+      // make the row taller than the loaded one, because that Box's line box is
+      // floored by the item font-size strut (16px) while an "xs" line is 15px.
+      const PERSON_SKELETON_TEMPLATE = (
+        <ListItem skeleton paddingX="m" paddingY="s">
+          <Box flex="y" spacing="xs" expandX>
+            <Text loading bold size="l" width="40%" />
+            <Text loading size="xs" width="80%" />
+          </Box>
+        </ListItem>
+      );
+
+      const DefaultSkeletonExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List loading={loading} expandX>
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
+          </Box>
+        );
+      };
+
+      const CustomPaddingExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List
+              loading={loading}
+              loadingSkeletonCount={SOME_FRUITS.length}
+              skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
+              expandX
+            >
+              {renderFruitItems(SOME_FRUITS, undefined, { paddingY: "m" })}
+            </List>
+          </Box>
+        );
+      };
+
+      const TitleSubtitleExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List
+              loading={loading}
+              loadingSkeletonCount={PEOPLE.length}
+              skeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              expandX
+            >
+              {PEOPLE.map((person, i) => (
+                <PersonItem key={person.name} person={person} index={i} />
+              ))}
+            </List>
+          </Box>
+        );
+      };
+
+      const LoadingDemo = () => {
+        const [state, setState] = useState("skeleton");
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="loading">
+              Loading &amp; error
+            </Heading>
+            <p>
+              While loading, a list shows placeholder content in place of its
+              items — <code>loadingSkeletonCount</code> skeleton rows by
+              default, or a single spinner with{" "}
+              <code>loadingIndicator="loader"</code>. The <code>error</code>{" "}
+              prop replaces them with an inline callout. The examples below
+              start on their skeleton — press <em>Load</em> to watch it swap for
+              the real content.
+            </p>
+            <Heading level={3} id="loading-states">
+              States
+            </Heading>
+            <div style={{ display: "flex", gap: "14px", marginBottom: "12px" }}>
+              {LOADING_STATES.map((s) => (
+                <label key={s} style={{ display: "inline-flex", gap: "4px" }}>
+                  <input
+                    type="radio"
+                    name="loading-state"
+                    checked={state === s}
+                    onChange={() => setState(s)}
+                  />
+                  {s}
+                </label>
+              ))}
+            </div>
+            <List
+              loading={state === "skeleton" || state === "loader"}
+              loadingIndicator={state === "loader" ? "loader" : "skeleton"}
+              error={
+                state === "error"
+                  ? "Failed to load fruits. Please try again."
+                  : undefined
+              }
+              expandX
+              maxHeight="240"
+            >
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
+
+            <Heading level={3} id="loading-default">
+              Default skeleton
+            </Heading>
+            <p>
+              No <code>skeletonTemplate</code> — each row is a full-width{" "}
+              <code>&lt;Text loading&gt;</code> bar.
+            </p>
+            <DefaultSkeletonExample />
+
+            <Heading level={3} id="loading-padding">
+              Custom padding
+            </Heading>
+            <p>
+              Pass a <code>skeletonTemplate</code> so the placeholder matches
+              the real rows' padding, and a <code>loadingSkeletonCount</code>{" "}
+              equal to the expected item count so the list keeps the same height
+              across the swap.
+            </p>
+            <CustomPaddingExample />
+
+            <Heading level={3} id="loading-layout">
+              Matching a title + subtitle layout
+            </Heading>
+            <p>
+              When items have their own arrangement, the{" "}
+              <code>skeletonTemplate</code> reproduces it with one{" "}
+              <code>&lt;Text loading&gt;</code> per line, each sized to mimic
+              the real content — a short title bar over a wide address bar;{" "}
+              <code>loadingSkeletonCount</code> matches the known length. Press{" "}
+              <em>Load</em> to see how closely the placeholder tracks the loaded
+              rows.
+            </p>
+            <TitleSubtitleExample />
+          </div>
+        );
+      };
+
+      // ── Search states — few / none, with & without searchFallback ──────────────
+
+      const SearchCaseDemo = ({ title, initialQuery, ...listProps }) => {
+        const [searchText, setSearchText] = useState(initialQuery);
+        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
+        return (
+          <div style={{ minWidth: "200px" }}>
+            <h3>{title}</h3>
+            <Box flex="y" spacing="s">
+              <Input
+                value={searchText}
+                placeholder="Search fruits…"
+                expandX
+                paddingY="6"
+                size="m"
+                action={(value) => setSearchText(value)}
+              />
+              <List
+                searchText={searchText}
+                expandX
+                maxHeight="180"
+                {...listProps}
+              >
+                {renderFruitItems(fruits, getItemMatchInfo)}
+              </List>
+            </Box>
+          </div>
+        );
+      };
+
+      const SearchStatesDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="search-fallback">
+            Fallbacks — few / none / searchFallback
+          </Heading>
+          <p>
+            Each case has its own search field, pre-filled so the applicable
+            state shows immediately (type to change it). The lists differ only
+            in <code>searchFallback</code>; with{" "}
+            <code>searchFallback={"{false}"}</code> the list hides entirely on
+            no results instead of showing an empty bordered box.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <SearchCaseDemo title="Few results" initialQuery="ap" />
+            <SearchCaseDemo
+              title="No results — default fallback"
+              initialQuery="zzz"
+            />
+            <SearchCaseDemo
+              title="No results — custom fallback"
+              initialQuery="zzz"
+              searchFallback={<Box padding="s">Nothing here 🤷</Box>}
+            />
+            <SearchCaseDemo
+              title="No results — searchFallback={false} (hides)"
+              initialQuery="zzz"
+              searchFallback={false}
+            />
+          </Box>
+        </div>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>

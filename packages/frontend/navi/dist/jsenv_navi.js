@@ -2,7 +2,7 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { installImportMetaCssBuild, windowWidthSignal } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal } from "./jsenv_navi_side_effects.js";
 import { isValidElement, createContext, h, toChildArray, render, Fragment, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
@@ -6821,6 +6821,7 @@ const VISUAL_PROPS = {
   scrollbarWidth: PASS_THROUGH,
   scrollbarGutter: PASS_THROUGH,
   scrollMarginBlock: PASS_THROUGH,
+  scrollMarginInline: PASS_THROUGH,
   scrollMargin: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
@@ -7076,7 +7077,37 @@ const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
 const isSizeSpacingKey = (key) => {
   return sizeSpacingKeySet.has(key);
 };
+// Viewport-relative units, resolved to pixels here because a JS consumer (popup
+// positioning) needs an actual number, not a length only CSS can evaluate.
+// "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
+// shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
+// they are what a popup meant to stay clear of the keyboard should use.
+const VIEWPORT_UNIT_SIGNALS = {
+  vvw: visualViewportWidthSignal,
+  vvh: visualViewportHeightSignal,
+  vw: windowWidthSignal,
+  vh: windowHeightSignal,
+  dvw: windowWidthSignal,
+  dvh: windowHeightSignal,
+};
+const VIEWPORT_LENGTH_REGEX = /^(-?\d+(?:\.\d+)?)(vvw|vvh|dvw|dvh|vw|vh)$/;
+const resolveViewportLength = (size) => {
+  if (typeof size !== "string") {
+    return null;
+  }
+  const match = VIEWPORT_LENGTH_REGEX.exec(size);
+  if (!match) {
+    return null;
+  }
+  const [, amount, unit] = match;
+  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
+};
+
 const resolveSpacingSize = (size, element, property = "padding") => {
+  const viewportLength = resolveViewportLength(size);
+  if (viewportLength !== null) {
+    return viewportLength;
+  }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
 
@@ -21286,9 +21317,11 @@ const createControlInteraction = (
     // Check managed controls — a non-interactable child blocks the parent,
     // UNLESS the child's failing constraint has `ignoredByParents: true`
     // (e.g. a disabled child inside a group should not prevent the group from acting).
+    // Only the children that are reachable alongside the parent take part: a
+    // picker's popup content is excluded, see getInteractionBlockingControls.
     failingManagedInteraction = null;
     if (!interactionFailedConstraintInfo) {
-      for (const mc of controller.getManagedControls()) {
+      for (const mc of controller.getInteractionBlockingControls()) {
         const mci = mc.rules.interaction;
         if (!mci) {
           continue;
@@ -22750,6 +22783,7 @@ const useRenderScope = (init, update) => {
  *   props: Object;
  *   ref: Ref; // Used to dispatch DOM events
  *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
+ *   getInteractionBlockingControls(): UIStateController[]; // Subset of the above whose busy state also blocks interacting with this controller
  * }
  * ```
  */
@@ -22867,6 +22901,10 @@ const useUIStateController = (
           }
           return [];
         },
+        // A facade child lives inside the control's own popup, so it is out of
+        // reach until that popup opens. Letting it block interaction would make
+        // a picker whose content is loading impossible to open at all.
+        getInteractionBlockingControls: () => [],
         onUIAction: (e, { skipCommand } = {}) => {
           if (controlType === "button" && controller.controlHostProps.name) {
             const buttonName = controller.controlHostProps.name;
@@ -23798,6 +23836,11 @@ const useUIGroupStateController = (
           if (!cascadeValidationToChildren) return [];
           return childUIStateControllerArray.slice();
         },
+        // Group children sit next to the group itself: a busy one really does
+        // prevent the group from acting as a whole.
+        getInteractionBlockingControls: () => {
+          return controller.getManagedControls();
+        },
         subscribe: subscribeUIState,
       };
       const rules = createControlRules(controller, {
@@ -24033,11 +24076,30 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           }
           return child.getManagedControls();
         },
+        getInteractionBlockingControls: () => {
+          const child = firstChildControllerRef.current;
+          if (!child) {
+            return [];
+          }
+          return child.getInteractionBlockingControls();
+        },
         onChildUIAction: (child, e, { stateChanged, silent = false }) => {
           if (!stateChanged) {
             return;
           }
           if (child !== firstChildControllerRef.current) {
+            return;
+          }
+          if (
+            silent &&
+            child.uiState === undefined &&
+            s.realUIStateController.uiState !== undefined
+          ) {
+            // A silent sync means the child's own structure changed (children
+            // mounted/unmounted), not that the user acted. A child that ends up
+            // with no value there is one that currently *cannot* express one —
+            // a <List loading> holds no items yet — which must not read as the
+            // user clearing the picker, nor fire its uiAction.
             return;
           }
           updatingRef.current = true;
@@ -28646,6 +28708,7 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
       --link-loading-outline-size: 1px;
+      --link-outline-width: 2px;
 
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;
@@ -28781,6 +28844,10 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
         --x-link-color: var(--link-color);
       }
     }
+    &[data-anchor] {
+      /* Usually better to have some spacing between the anchor and the scroll top */
+      scroll-margin-block: calc(1em + var(--link-outline-width) + 1px);
+    }
     /* Hover */
     &[data-hover] {
       --x-link-background: var(--x-link-background-hover);
@@ -28788,7 +28855,7 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
     &[data-focus-visible] {
-      outline-width: 2px;
+      outline-width: var(--link-outline-width);
     }
     /* Pressed */
     &[data-pressed] {
@@ -35947,20 +36014,6 @@ const renderSafe = (value) => {
 
 const PickerContext = createContext();
 
-// The resolved popup mode of the surrounding Picker: "popover" or "dialog"
-// (frozen for the lifetime of an opening — see usePopupMode). Provided around the
-// picker's popup content so that content can render differently per mode.
-const PickerModeContext = createContext(undefined);
-
-/**
- * Read the mode ("popover" | "dialog") of the Picker whose popup this is rendered
- * inside. Only meaningful for a Picker's popup content (its children); returns
- * undefined anywhere else.
- *
- * @returns {"popover" | "dialog" | undefined}
- */
-const usePickerMode = () => useContext(PickerModeContext);
-
 /**
  * Mirrors what browsers do when navigating to a page:
  * 1. Focus the first element with [navi-autofocus] (but not [navi-autofocus="fallback"]) inside the container
@@ -36028,14 +36081,16 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         }
       }
       if (!target) {
-        // querySelector only searches descendants — but the container itself may
-        // carry [navi-autofocus="fallback"] (a focusable popup root with nothing
-        // else to focus). It's fine to focus the container in that case.
-        const naviAutoFocusFallback = containerEl.matches(
-          `[navi-autofocus="fallback"]`,
-        )
-          ? containerEl
-          : containerEl.querySelector(`[navi-autofocus="fallback"]`);
+        // A [navi-autofocus="fallback"] INSIDE the container (e.g. a search
+        // input) wins over the container itself. The container is only the
+        // fallback-of-the-fallback: a focusable popup root gets focus solely
+        // when nothing inside it already carries the fallback. (matches() covers
+        // the container-only case since querySelector searches descendants only.)
+        const naviAutoFocusFallback =
+          containerEl.querySelector(`[navi-autofocus="fallback"]`) ||
+          (containerEl.matches(`[navi-autofocus="fallback"]`)
+            ? containerEl
+            : null);
         if (naviAutoFocusFallback) {
           reason = "navi-autofocus fallback";
           target = naviAutoFocusFallback;
@@ -36157,26 +36212,32 @@ const createOpenController = (
   // open() ignores the request — no need to know *which* element triggers
   // it. A bubble-phase listener (runs after everything else, once the click
   // reaches document) clears the flag if nothing consumed it, meaning this
-  // click never resulted in an open() call. A microtask is a last-resort
-  // safety net in case the click never reaches document at all (e.g. some
-  // ancestor called stopPropagation()).
+  // click never resulted in an open() call. A timeout is a last-resort safety
+  // net in case the click never reaches document at all (e.g. some ancestor
+  // called stopPropagation()) — a *task*, never a microtask: a microtask
+  // checkpoint runs between two listeners of the same trusted event dispatch,
+  // so it would clear the flag before the bubble-phase handler this is meant
+  // to block ever runs, which is precisely the case it exists for.
   const armSuppressNextOpenRequest = () => {
     disarmSuppressNextOpenRequest?.();
+    let safetyTimeout = null;
     const onCaptureClick = () => {
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });
       suppressNextOpenRequest = true;
       document.addEventListener("click", onBubbleClick);
-      queueMicrotask(() => {
+      safetyTimeout = setTimeout(() => {
         suppressNextOpenRequest = false;
       });
     };
     const onBubbleClick = () => {
       document.removeEventListener("click", onBubbleClick);
+      clearTimeout(safetyTimeout);
       suppressNextOpenRequest = false;
     };
     disarmSuppressNextOpenRequest = () => {
+      clearTimeout(safetyTimeout);
       document.removeEventListener("click", onCaptureClick, {
         capture: true,
       });
@@ -36465,6 +36526,61 @@ const useOpenControllerByProps = (props) => {
 };
 
 /**
+ * Where the "popover or dialog?" answer lives, for both the components that
+ * decide it and the content that renders inside one.
+ *
+ * `useResolvedPopupMode` is the decision (screen size + maxWidth heuristic),
+ * called by whatever renders the popup — `Popup` itself, or `picker_custom.jsx`
+ * which needs the answer for its own mode-dependent history/ARIA handling on
+ * top of picking a renderer. `usePopupMode` is the read side: any content
+ * rendered inside a popup can call it to lay itself out differently in a
+ * dropdown than in a full-screen modal.
+ */
+
+const PopupModeContext = createContext(undefined);
+
+/**
+ * Read the mode of the popup this is rendered inside — a `Popup`, or a
+ * `Picker`'s own popup. Returns undefined outside of any popup content.
+ *
+ * @returns {"popover" | "dialog" | undefined}
+ */
+const usePopupMode = () => useContext(PopupModeContext);
+
+/**
+ * Resolves which of Popover/Dialog a popup should be. Frozen for the component
+ * instance's lifetime, so a screen resize never switches an already-mounted
+ * popup from one to the other mid-session.
+ *
+ * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
+ *   resolve automatically.
+ * @param {string} [maxWidth] - A small enough value is treated as "compact",
+ *   staying a popover even on a small screen.
+ * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
+ *   `resetMode` function a caller can call (e.g. on close) to force the *next*
+ *   call to re-resolve from scratch instead of keeping the frozen value —
+ *   `Popup` itself never needs this (it has no notion of open/close of its
+ *   own), `picker_custom.jsx` does (re-evaluates screen size on every fresh
+ *   open).
+ */
+const useResolvedPopupMode = (modeProp, maxWidth) => {
+  const defaultModeRef = useRef(null);
+  if (defaultModeRef.current === null) {
+    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
+  }
+  const resetMode = () => {
+    defaultModeRef.current = null;
+  };
+  return [defaultModeRef.current, resetMode];
+};
+const resolvePopupMode = (modeProp, maxWidth) => {
+  const isSmallScreen = windowWidthSignal.peek() <= 600;
+  const maxWidthPx = parseFloat(maxWidth);
+  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
+  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
+};
+
+/**
  * Entry/exit animation CSS shared by Popover and Dialog.
  *
  * Relies on `transition-behavior: allow-discrete` so the browser keeps the
@@ -36561,7 +36677,8 @@ const popupCss = /* css */ `
        this list contains (no shared transition-property to clobber, no
        propertyName to filter). */
     &[navi-animation] {
-      transition-property: display, overlay, opacity, translate, scale, box-shadow;
+      transition-property:
+        display, overlay, opacity, translate, scale, box-shadow;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),
@@ -36924,15 +37041,24 @@ installImportMetaCssBuild(import.meta);/**
 const css$v = /* css */`
   @layer navi {
     .navi_dialog {
-      /* min gap between dialog edges and viewport */
-      /* not named margin because it's not implemented with margins (which are needed for centering) */
-      --dialog-viewport-spacing: 3dvw;
+      /* Min gap between the dialog and the edges of its container. Written
+         from the marginWithContainer prop (see below) — hence --x-, not a knob
+         to set from CSS — so the size caps here and the placement can never
+         disagree. The literal is only what a dialog painted before that ever
+         runs falls back to. Not named "margin" because it isn't implemented
+         with margins (those are needed for centering).
+
+         Capping the *size* here rather than only offsetting the position is
+         what makes a centered dialog follow the mobile virtual keyboard for
+         free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
+         reflows the dialog itself as the keyboard opens. */
+      --x-dialog-viewport-spacing: 3vvw;
 
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvw) - 2 * var(--x-dialog-viewport-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvh) - 2 * var(--x-dialog-viewport-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
@@ -37165,8 +37291,14 @@ const css$v = /* css */`
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
- * @param {string|number} [props.marginWithContainer=0] - Extra spacing kept
- *   between the dialog and the edges of its container.
+ * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
+ *   between the dialog and the edges of its container, whatever its
+ *   `positionArea`: it both caps the dialog's own size (via
+ *   `--x-dialog-viewport-spacing`, written from this prop) and offsets a docked
+ *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
+ *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
+ *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
+ *   meant to sit flush (a side panel).
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
@@ -37312,7 +37444,10 @@ const useDialogProps = props => {
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea = "center",
-    marginWithContainer = 0,
+    // A dialog docked against an edge must keep the same gap its own size cap
+    // already guarantees a centered one — so this drives both (see
+    // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
+    marginWithContainer = "3vvw",
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -37349,6 +37484,21 @@ const useDialogProps = props => {
   const debugFocus = useDebugFocus();
   const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
+  // positionDialog lives in openEffect's closure — created once, when the
+  // dialog opens. Reading the placement props through a ref instead of that
+  // closure is what lets a change while open take effect on the spot (see the
+  // reposition effect below) rather than only on the next opening.
+  const positionPropsRef = useRef(null);
+  positionPropsRef.current = {
+    positionArea,
+    marginWithContainer
+  };
+  const repositionRef = useRef(null);
+  useEffect(() => {
+    repositionRef.current?.(new CustomEvent("position_props_change", {
+      detail: {}
+    }));
+  }, [positionArea, marginWithContainer]);
   const positionAreaParseResult = parsePositionArea(positionArea);
   if (!positionAreaParseResult) {
     console.warn(`Dialog: invalid positionArea="${positionArea}"`);
@@ -37492,10 +37642,27 @@ const useDialogProps = props => {
     // custom renderer. applyNewPosition sets --container-position-remaining-height/-width
     // from the result, same as popover.jsx.
     const positionDialog = triggerEvent => {
+      const {
+        positionArea,
+        marginWithContainer
+      } = positionPropsRef.current;
+      let marginWithContainerInPixels = resolveSpacingSize(marginWithContainer);
+      if (typeof marginWithContainerInPixels !== "number") {
+        // A value only CSS could evaluate (a spacing token resolving to a var(),
+        // a percentage…) — the placement below needs a real number, and letting
+        // it through would put the dialog at NaN.
+        console.warn(`Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number or a viewport length ("3vvw", "2vvh").`);
+        marginWithContainerInPixels = 0;
+      }
+      // The size caps read the same gap in CSS as the placement below applies
+      // in pixels, so a docked dialog and a centered one keep the same
+      // distance from the edges. Written resolved (not as the raw prop) so a
+      // spacing token stays valid inside the caps' own calc().
+      dialogEl.style.setProperty("--x-dialog-viewport-spacing", `${marginWithContainerInPixels}px`);
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
-        marginWithContainer: resolveSpacingSize(marginWithContainer),
+        marginWithContainer: marginWithContainerInPixels,
         event: triggerEvent
       };
       let position = pickPositionRelativeTo(dialogEl, null, pickOptions);
@@ -37541,7 +37708,19 @@ const useDialogProps = props => {
       skipElementResize: true
     });
     rectEffect.observeSize(dialogEl);
+    // Exposed for the placement-props effect below, which needs to re-place an
+    // already-open dialog.
+    repositionRef.current = repositionEvent => {
+      // data-position-*-current pins an open dialog to the side it first
+      // resolved to, so a resize never makes it jump (pickPositionRelativeTo
+      // reads it back and prefers it over the requested area). A new placement
+      // request is precisely the case where that memory must not win.
+      dialogEl.removeAttribute("data-position-x-current");
+      dialogEl.removeAttribute("data-position-y-current");
+      positionDialog(repositionEvent);
+    };
     addCleanup(() => {
+      repositionRef.current = null;
       rectEffect.disconnect();
     });
     // A descendant anchored to something inside this dialog (a Callout, a
@@ -37833,7 +38012,10 @@ let openLocalPopoverCount = 0;
 const css$u = /* css */`
   @layer navi {
     .navi_popover {
-      --popover-max-height: 300px; /* soft: user-configurable preferred max-height */
+      /* soft: user-configurable preferred max-height. Kept as a *default*
+         rather than a value so an outer component can bridge its own prop into
+         --popover-max-height without having to restate 300px (see picker). */
+      --popover-max-height-default: 300px;
       --popover-maxmax-height: calc(0.95 * var(--navi-vvh));
       --popover-maxmax-width: calc(0.95 * var(--navi-vvw));
 
@@ -37884,7 +38066,7 @@ const css$u = /* css */`
       var(--popover-maxmax-width)
     );
     --x-popover-max-height: min(
-      var(--popover-max-height),
+      var(--popover-max-height, var(--popover-max-height-default)),
       var(--container-position-remaining-height, var(--popover-maxmax-height)),
       var(--popover-maxmax-height)
     );
@@ -38313,6 +38495,24 @@ const usePopoverProps = props => {
   // (see resolveAutoAnimationKind).
   const isAutoAnimation = animation === true || animation === "auto";
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  // positionPopover lives in openEffect's closure — created once, when the
+  // popover opens. Reading the placement props through a ref instead of that
+  // closure is what lets a change while open take effect on the spot (see the
+  // reposition effect below) rather than only on the next opening.
+  const positionPropsRef = useRef(null);
+  positionPropsRef.current = {
+    positionArea,
+    positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid,
+    marginWithAnchor,
+    marginWithContainer
+  };
+  const repositionRef = useRef(null);
+  useEffect(() => {
+    repositionRef.current?.(new CustomEvent("position_props_change", {
+      detail: {}
+    }));
+  }, [positionArea, positionAreaFixed, positionAreaWhenAnchorIsInvalid, marginWithAnchor, marginWithContainer]);
   // The custom renderer's own starting-hidden state is a stylesheet default
   // now (&:not([popover]) { display: none } on .navi_popover/
   // .navi_popover_backdrop above) rather than set here imperatively — a
@@ -38509,6 +38709,13 @@ const usePopoverProps = props => {
     // via-attribute renderer (see its own computation above).
     const effectiveAnchor = hasAnchorElement ? anchorElement : positionedAncestor;
     const positionPopover = positionEvent => {
+      const {
+        positionArea,
+        positionAreaFixed,
+        positionAreaWhenAnchorIsInvalid,
+        marginWithAnchor,
+        marginWithContainer
+      } = positionPropsRef.current;
       let position;
       if (hasAnchorElement) {
         const {
@@ -38676,6 +38883,21 @@ const usePopoverProps = props => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // Exposed for the placement-props effect above, which needs to re-place an
+    // already-open popover.
+    repositionRef.current = repositionEvent => {
+      // data-position-*-current pins an open popover to the side it first
+      // resolved to, so scrolling or a content resize never makes it jump
+      // (pickPositionRelativeTo reads it back and prefers it over the
+      // requested area). A new placement request is precisely the case where
+      // that memory must not win — drop it before re-resolving.
+      popoverEl.removeAttribute("data-position-x-current");
+      popoverEl.removeAttribute("data-position-y-current");
+      positionPopover(repositionEvent);
+    };
+    addCleanup(() => {
+      repositionRef.current = null;
+    });
     // A descendant anchored to something inside this popover (a Callout, a
     // further-nested Popover) needing to know about this popover's own
     // left/top repositioning transition — not just that the target changed
@@ -39002,12 +39224,12 @@ const resolvePositionAreaAndAnimationKind = ({
 installImportMetaCssBuild(import.meta);/**
  * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
  * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
- * shortcuts, history-driven expanded state, anchor-clone "attached" mode):
+ * shortcuts, history-driven expanded state):
  * just picks between rendering a Popover or a Dialog and applies the shared
  * "popup box" look (padding, background, border-radius, box-shadow) to
  * whichever one it renders.
  *
- * Mode resolution (`usePopupMode` below) is shared with picker_custom.jsx,
+ * Mode resolution (`useResolvedPopupMode`, popup_mode.jsx) is shared with picker_custom.jsx,
  * not just mirrored — the picker needs the resolved mode itself (for its own
  * mode-dependent history/ARIA handling), not just to pick which of Popover/
  * Dialog to render, so it calls the same hook directly instead of
@@ -39150,7 +39372,12 @@ const Popup = props => {
     positionAreaFixed,
     ...rest
   } = props;
-  const [mode] = usePopupMode(modeProp, maxWidth);
+  const [mode] = useResolvedPopupMode(modeProp, maxWidth);
+  // So the content can lay itself out per mode — see usePopupMode.
+  const childrenWithMode = jsx(PopupModeContext.Provider, {
+    value: mode,
+    children: children
+  });
   if (mode === "dialog") {
     const expandXResolved = expand || expandX;
     const expandYResolved = expand || expandY;
@@ -39161,7 +39388,7 @@ const Popup = props => {
       className: withPropsClassName("navi_popup", className),
       "data-expand-x": expandXResolved ? "" : undefined,
       "data-expand-y": expandYResolved ? "" : undefined,
-      children: children
+      children: childrenWithMode
     });
   }
   return jsx(Popover, {
@@ -39173,52 +39400,8 @@ const Popup = props => {
     focusCapture: focusCapture,
     positionAreaFixed: positionAreaFixed,
     className: withPropsClassName("navi_popup", className),
-    children: children
+    children: childrenWithMode
   });
-};
-
-/**
- * Frozen for the component instance's lifetime — mirrors `Popup`'s own
- * mode-resolution timing (a screen resize while already mounted doesn't
- * switch between Popover and Dialog mid-session).
- *
- * @param {"dialog"|"popover"} [modeProp]
- * @param {string} [maxWidth]
- * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
- *   `resetMode` function a caller can call (e.g. on close) to force the
- *   *next* call to re-resolve from scratch instead of keeping the frozen
- *   value — `Popup` itself never needs this (it has no notion of
- *   open/close of its own), `picker_custom.jsx` does (re-evaluates screen
- *   size on every fresh open).
- */
-const usePopupMode = (modeProp, maxWidth) => {
-  const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
-  }
-  const resetMode = () => {
-    defaultModeRef.current = null;
-  };
-  return [defaultModeRef.current, resetMode];
-};
-/**
- * Same small-screen/`maxWidth`-compact heuristic `Popup` uses internally,
- * exported so `picker_custom.jsx` (which needs the resolved mode itself,
- * for its own mode-dependent history/ARIA handling — not just to pick which
- * of Popover/Dialog to render, the way `Popup` only ever needs it) doesn't
- * have to duplicate it.
- *
- * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
- *   resolve automatically.
- * @param {string} [maxWidth] - A small enough value is treated as
- *   "compact", staying a popover even on a small screen.
- * @returns {"dialog"|"popover"}
- */
-const resolvePopupMode = (modeProp, maxWidth) => {
-  const isSmallScreen = windowWidthSignal.peek() <= 600;
-  const maxWidthPx = parseFloat(maxWidth);
-  const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
 };
 
 installImportMetaCssBuild(import.meta);const css$s = /* css */`
@@ -39228,8 +39411,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
        themselves — nothing to redefine here. Only the picker's own look
        (border color/radius/width, background) needs bridging into the vars
        Popover/Dialog actually consume, plus a couple of genuinely
-       picker-specific bits below (anchor-width min-width, the anchor clone,
-       the nested list). */
+       picker-specific bits below (anchor-width min-width, the nested list). */
 
     /* popover */
     &[aria-haspopup="listbox"] {
@@ -39240,51 +39422,16 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
         --popover-background-color: var(--picker-background-color);
         --popover-outline-width: var(--picker-outline-width);
         --popover-outline-color: var(--picker-outline-color);
+        /* No fallback on purpose: when the picker's own popoverMaxHeight prop
+           is unset this declaration is invalid at computed-value time, which
+           leaves --popover-max-height unset and lets the popover fall back to
+           --popover-max-height-default. */
+        --popover-max-height: var(--picker-popover-max-height);
 
         /* At least as wide as the trigger — unless popupWidthFitContent, then
            let the content (e.g. a Wheel) size the popover (see picker.jsx). */
         min-width: var(--picker-popover-min-width, var(--anchor-width, 0px));
         cursor: default; /* Reset pointer cursor within the select */
-
-        /* The anchor placeholder is a non-interactive visual clone of the
-           trigger. It makes the popover wrap both the trigger area and the list
-           under a single border/shadow. CSS order places it before the list
-           when the popover is below the trigger, and after when above. */
-        .navi_picker_anchor_clone {
-          display: flex;
-          /* To make clone same height as original we need to force it because context can impact height */
-          /* Like siblings with a bigger height in a flex container */
-          /* We subtract the border sizes as anchor-height includes borders in the dimensions */
-          min-height: var(--anchor-inner-height);
-          /* Mirror the trigger's padding so the clone looks identical */
-          padding-top: var(--x-picker-padding-top);
-          padding-right: var(--x-picker-padding-right);
-          padding-bottom: var(--x-picker-padding-bottom);
-          padding-left: var(--x-picker-padding-left);
-          flex-shrink: 0;
-          flex-direction: column;
-          justify-content: center;
-          gap: var(--navi-s);
-          order: -1; /* before the list — popover is below the trigger */
-          background: var(--x-picker-background-color);
-          border-bottom: var(--picker-border-width) solid
-            var(--x-picker-border-color);
-
-          &:hover {
-            --x-picker-background-color: var(--picker-background-color-hover);
-            --x-picker-border-color: var(--picker-border-color-hover);
-          }
-        }
-
-        &[data-position-y-current="top"],
-        &[data-position-y-current="inset-bottom"] {
-          .navi_picker_anchor_clone {
-            order: 1; /* after the list — popover is above the trigger */
-            border-top: var(--picker-border-width) solid
-              var(--x-picker-border-color);
-            border-bottom: none;
-          }
-        }
 
         /* The list scrolls inside the popover */
         .navi_list_container {
@@ -39299,16 +39446,15 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
       }
 
       &[aria-expanded="true"] {
-        &[navi-popover-mode="overlay"],
-        &[navi-popover-mode="attached"] {
+        &[navi-popover-mode="overlay"] {
           /* When sizes uses float AND the border uses border-radius it's possible it's possible to see some pixels
           of the underlying select borders. We hide them to ensure this cannot happen.  */
           border-color: transparent;
         }
 
         /* Popover itself has no opinion on its content's own layout (plain
-           div, block by default) — the picker's content (anchor clone +
-           list) needs to stack vertically. */
+           div, block by default) — the picker's content needs to stack
+           vertically. */
         .navi_popover {
           display: flex;
           flex-direction: column;
@@ -39456,11 +39602,11 @@ const PickerCustom = props => {
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
   // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
-  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
   // doesn't switch between Popover and Dialog), with resetMode called from
   // this picker's own onClose below to re-evaluate on the *next* open.
-  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
+  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth);
   const pickerProps = {
     ...props
   };
@@ -39801,6 +39947,7 @@ const PickerContentInsidePopup = props => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
+    positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
     marginWithContainer = 10,
@@ -39846,11 +39993,11 @@ const PickerContentInsidePopup = props => {
         }
       });
     },
-    children: jsxs(Popup, {
+    children: jsx(Popup, {
       ...popupProps,
       mode: mode,
       animation: animation,
-      positionArea: isPopover ? popoverMode === "nearby" ? "bottom-start" : "inset(top-left)" : undefined,
+      positionArea: isPopover ? positionArea ?? (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)") : positionArea,
       marginWithAnchor: isPopover ? popoverSpacing : undefined,
       marginWithContainer: isPopover ? marginWithContainer : undefined,
       scrollCapture: scrollCapture === "dialog" ? !isPopover : scrollCapture === "popover" ? isPopover : scrollCapture,
@@ -39858,21 +40005,10 @@ const PickerContentInsidePopup = props => {
       focusCapture: isPopover ? focusCapture : undefined,
       expandX: !isPopover ? expandX : undefined,
       expandY: !isPopover ? expandY : undefined,
-      children: [isPopover && popoverMode === "attached" ? jsx("div", {
-        className: "navi_picker_anchor_clone",
-        onMouseDown: e => {
-          if (e.button !== 0) {
-            return;
-          }
-          popupProps.openController.requestClose(e, {
-            isCancel: true
-          });
-        },
-        children: props.trigger
-      }) : null, jsx(PickerModeContext.Provider, {
+      children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
-      })]
+      })
     })
   });
 };
@@ -40510,6 +40646,84 @@ const toDate = (value, parseString) => {
     return isNaN(d.getTime()) ? null : d;
   }
   return null;
+};
+
+const LoadingDotsSvg = () => {
+  return jsxs("svg", {
+    viewBox: "0 0 200 200",
+    width: "100%",
+    height: "100%",
+    xmlns: "http://www.w3.org/2000/svg",
+    children: [jsx("rect", {
+      fill: "currentColor",
+      stroke: "currentColor",
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "25",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "-.4"
+      })
+    }), jsx("rect", {
+      fill: "currentColor",
+      stroke: "currentColor",
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "85",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "-.2"
+      })
+    }), jsx("rect", {
+      fill: "currentColor",
+      stroke: "currentColor",
+      "stroke-width": "15",
+      width: "30",
+      height: "30",
+      x: "145",
+      y: "85",
+      children: jsx("animate", {
+        attributeName: "opacity",
+        calcMode: "spline",
+        dur: "2",
+        values: "1;0;1;",
+        keySplines: ".5 0 .5 1;.5 0 .5 1",
+        repeatCount: "indefinite",
+        begin: "0"
+      })
+    })]
+  });
+};
+
+const LoadingIndicator = ({
+  variant = "circle",
+  ...props
+}) => {
+  if (variant === "dots") {
+    return jsx(Icon, {
+      ...props,
+      children: jsx(LoadingDotsSvg, {})
+    });
+  }
+  return jsx(Icon, {
+    circle: true,
+    ...props,
+    children: jsx(LoadingIndicatorFluid, {})
+  });
 };
 
 installImportMetaCssBuild(import.meta);const css$r = /* css */`
@@ -41266,6 +41480,11 @@ const ListSelectable = props => {
     "navi-has-selected-background": selectedIndicator === "backgroundColor" ? "" : undefined,
     ...listControlRootProps,
     ...listControlProps,
+    // "loading" is a control prop, so useControlgroupProps consumes it (into
+    // aria-busy / the :-navi-loading pseudo state) and it does not survive
+    // into the props below. ListUI needs it too — it is what makes the list
+    // render skeleton rows instead of its (not yet known) items.
+    loading: props.loading,
     name: undefined,
     value: undefined,
     defaultValue: undefined,
@@ -41789,6 +42008,16 @@ const css$p = /* css */`
     }
     &[data-expand-y] {
       --list-max-height: none;
+
+      /* expandY grows the container to fill its parent (flex-grow, applied by
+         Box). The scroll container must then fill that grown height and take
+         over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
+         below its content so overflow:auto scrolls instead of the content
+         pushing past the container (which overflow:hidden would just clip). */
+      .navi_list_scroll_container {
+        min-height: 0;
+        flex: 1;
+      }
     }
     &[navi-nothing-to-display] {
       display: none;
@@ -41891,7 +42120,11 @@ const css$p = /* css */`
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
     scroll-margin-left: var(--x-list-scroll-spacing-left);
 
-    &[aria-hidden="true"] {
+    /* The "invisible_and_inert" search no-match mode keeps items in the DOM
+       (to preserve layout) but hides them — it sets BOTH aria-hidden and inert.
+       Scope to that pair so the presentation placeholders that are only
+       aria-hidden (skeleton rows, the loader) stay visible. */
+    &[aria-hidden="true"][inert] {
       opacity: 0;
     }
 
@@ -42000,6 +42233,39 @@ const css$p = /* css */`
       user-select: none;
     }
   }
+  /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
+     A skeleton row reuses <Text loading> for the shimmer bar; the loader row
+     centers a spinner. */
+  .navi_list_item_skeleton {
+    pointer-events: none;
+  }
+  .navi_list_loader {
+    display: flex;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+    color: light-dark(#888, #aaa);
+  }
+  /* Error state (List error prop): an inline callout describing why the list
+     failed to load, shown in place of the items. */
+  .navi_list_error {
+    display: flex;
+    margin: 8px;
+    padding: 10px 12px;
+    align-items: flex-start;
+    gap: 8px;
+    color: light-dark(#b91c1c, #fca5a5);
+    font-size: 0.9em;
+    line-height: 1.4;
+    background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
+    border-radius: 6px;
+  }
+  .navi_list_error_icon {
+    flex: none;
+    font-size: 1em;
+    line-height: 1.4;
+  }
   [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
@@ -42090,6 +42356,11 @@ const ListUI = props => {
     columns,
     searchText,
     searchNoMatchMode = "remove",
+    loading,
+    loadingIndicator = "skeleton",
+    loadingSkeletonCount = 3,
+    skeletonTemplate,
+    error,
     horizontal,
     spacing,
     ...rest
@@ -42161,9 +42432,63 @@ const ListUI = props => {
   const noMatchCount = tracker.noMatchCountSignal.value;
   const itemCount = tracker.countSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const searching = Boolean(searchText);
   const fallbackDisabled = fallback !== undefined && !fallback;
   const searchFallbackDisabled = searchFallback !== undefined && !searchFallback;
-  const nothingToDisplay = allNoMatch && searchFallbackDisabled && searchNoMatchMode === "remove" || itemCount === 0 && fallbackDisabled;
+  // No item is visible when the list is empty (filtering may happen outside the
+  // list, dropping itemCount to 0) or when a search removed them all — only the
+  // "remove" mode empties the view; "muted"/"below"/… keep items on screen.
+  const noVisibleItems = itemCount === 0 || allNoMatch && searchNoMatchMode === "remove";
+  // Which fallback message actually renders (mirrors SearchFallback / Fallback
+  // below): during a search an empty/no-match result is a "no match" state (the
+  // search fallback), otherwise an empty list is the "empty" state.
+  const searchFallbackShown = (allNoMatch || searching && itemCount === 0) && !searchFallbackDisabled;
+  const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+  // Hide the whole list — border included — when there is genuinely nothing to
+  // show: no visible items AND no fallback message. Never while loading or in
+  // error (the placeholder / error message ARE the content to display).
+  const nothingToDisplay = !loading && !error && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
+
+  // Placeholder content replaces the real children: an error message when the
+  // load failed (takes precedence), otherwise — while loading — skeleton rows
+  // (default, count loadingSkeletonCount, look skeletonTemplate) or a single
+  // centered loader when loadingIndicator="loader".
+  let content = children;
+  if (error) {
+    content = jsxs(ListItem, {
+      role: "presentation",
+      baseClassName: "navi_list_item navi_list_error",
+      children: [jsx("span", {
+        className: "navi_list_error_icon",
+        "aria-hidden": "true",
+        children: "\u26A0"
+      }), jsx("span", {
+        children: error === true ? "Something went wrong." : error
+      })]
+    });
+  } else if (loading) {
+    if (loadingIndicator === "loader") {
+      content = jsx(ListItem, {
+        role: "presentation",
+        "aria-hidden": "true",
+        baseClassName: "navi_list_item navi_list_loader",
+        children: jsx(LoadingIndicator, {})
+      });
+    } else {
+      const template = skeletonTemplate ?? jsx(ListItem, {
+        skeleton: true
+      });
+      const skeletons = [];
+      let skeletonIndex = 0;
+      while (skeletonIndex < loadingSkeletonCount) {
+        skeletons.push(cloneElement(template, {
+          key: `navi-list-skeleton-${skeletonIndex}`
+        }));
+        skeletonIndex++;
+      }
+      content = skeletons;
+    }
+  }
   return jsx(Box, {
     ...rest,
     ref: ref,
@@ -42177,6 +42502,8 @@ const ListUI = props => {
     expand: expand,
     "navi-zero-match": allNoMatch ? "" : undefined,
     "navi-nothing-to-display": nothingToDisplay ? "" : undefined,
+    "navi-loading": loading ? "" : undefined,
+    "navi-error": error ? "" : undefined,
     styleCSSVars: LIST_STYLE_CSS_VARS,
     pseudoClasses: LIST_PSEUDO_CLASSES,
     hasChildUsingForwardedProps: true,
@@ -42198,6 +42525,9 @@ const ListUI = props => {
       role: role,
       fallback: fallback,
       searchFallback: searchFallback,
+      searching: searching,
+      loading: loading,
+      error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
       expandX: expandX || expand,
@@ -42208,7 +42538,7 @@ const ListUI = props => {
       renderWindow: renderWindow,
       virtualItemSizeSignal: virtualItemSizeSignal,
       pendingScrollRef: pendingScrollRef,
-      children: children
+      children: content
     })
   });
 };
@@ -42238,6 +42568,11 @@ const ListFirstResolver = props => {
  *   searchFallback?: import("ignore:preact").ComponentChildren,
  *   searchText?: string,
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
+ *   loading?: boolean,
+ *   loadingIndicator?: "skeleton" | "loader",
+ *   loadingSkeletonCount?: number,
+ *   skeletonTemplate?: import("ignore:preact").ComponentChildren,
+ *   error?: boolean | import("ignore:preact").ComponentChildren,
  *   separator?: boolean | import("ignore:preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
@@ -42255,6 +42590,9 @@ const ListContent = ({
   role,
   fallback,
   searchFallback,
+  searching,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   expandX,
@@ -42274,6 +42612,9 @@ const ListContent = ({
       role: role,
       fallback: fallback,
       searchFallback: searchFallback,
+      searching: searching,
+      loading: loading,
+      error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator === true ? jsx(Separator, {
         margin: "0"
@@ -42772,6 +43113,9 @@ const UnorderedList = ({
   virtualItemSizeSignal,
   fallback,
   searchFallback,
+  searching,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -42780,6 +43124,9 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
+  // No empty/no-match message while loading or in error — the placeholder /
+  // error message is the content, even though no items are tracked yet.
+  const suppressFallback = loading || Boolean(error);
   return jsxs(Box, {
     as: "ul",
     flex: columns ? undefined : horizontal ? "x" : "y",
@@ -42791,11 +43138,13 @@ const UnorderedList = ({
     children: [jsx(BeforeFiller, {
       virtualItemSizeSignal: virtualItemSizeSignal,
       renderWindowStart: renderWindow.start
-    }), jsx(SearchFallback, {
+    }), !suppressFallback && jsx(SearchFallback, {
       searchFallback: searchFallback,
+      searching: searching,
       tracker: tracker
-    }), jsx(Fallback, {
+    }), !suppressFallback && jsx(Fallback, {
       fallback: fallback,
+      searching: searching,
       tracker: tracker
     }), jsx(SearchNoMatchModeContext.Provider, {
       value: searchNoMatchMode,
@@ -42820,16 +43169,18 @@ const UnorderedList = ({
   });
 };
 
-// Show when all matchable items (those with a match prop) are non-matching.
-// The match prop on List.Item signals participation in a matching system
-// (search, filter, etc.). searchFallback appears when every such item has match=false.
+// The "no match" message. Shown when a search left nothing to display: either
+// every matchable item has match=false (in-list filtering), or the list is empty
+// during an active search (filtering done outside the list, so itemCount is 0).
 const SearchFallback = ({
   tracker,
-  searchFallback
+  searchFallback,
+  searching
 }) => {
   const itemCount = tracker.countSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
-  const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
+  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const showMatchFallback = allNoMatch || searching && itemCount === 0;
   if (searchFallback === undefined) {
     searchFallback = naviI18n("list.no_match");
   }
@@ -42848,14 +43199,21 @@ const SearchFallback = ({
     children: searchFallback
   });
 };
+// The "empty list" message. Not shown during a search — an empty search result
+// is a "no match" state (SearchFallback), not an empty-list state.
 const Fallback = ({
   tracker,
-  fallback
+  fallback,
+  searching
 }) => {
   const itemCount = tracker.countSignal.value;
-  const showFallback = itemCount === 0;
+  const showFallback = itemCount === 0 && !searching;
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
+  }
+  if (!fallback) {
+    // explicitely disabled by user (<List fallback={false|null|''}>)
+    return null;
   }
   if (!showFallback) {
     return null;
@@ -42970,11 +43328,57 @@ const ListItemPresentation = props => {
     ...columnsOverrideProps
   });
 };
+// A <List.Item skeleton> — a non-interactive placeholder row shown while a list
+// is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
+// and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
+// pass through so a skeletonTemplate can match the real items' metrics; and when
+// children are provided they render as-is, so a template can reproduce a
+// multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
+const ListItemSkeletonResolver = props => {
+  const Next = useNextResolver();
+  if (props.skeleton) {
+    return jsx(ListItemSkeleton, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
+const ListItemSkeleton = props => {
+  // Without vertical padding the bars of consecutive rows touch and read as one
+  // block; "s" is enough air for them to be seen as separate rows.
+  // eslint-disable-next-line no-unused-vars
+  const {
+    skeleton,
+    children,
+    paddingY = "s",
+    ...rest
+  } = props;
+  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+  return jsx(Box, {
+    as: "li",
+    role: "presentation",
+    "aria-hidden": "true",
+    paddingY: paddingY,
+    ...rest,
+    ...columnsOverrideProps,
+    baseClassName: "navi_list_item navi_list_item_skeleton",
+    children: children ?? jsx(Text, {
+      loading: true
+    })
+  });
+};
 const ListItemUI = props => {
-  if (props.id === undefined) {
+  // A stable id/index only matters when the item's identity must survive
+  // reordering — i.e. it is selectable (selected/pointed state) or participates
+  // in a matching system (search reorders items). A purely presentational,
+  // static list doesn't need either, so don't nag about them there.
+  const identityMatters = props.selectable || Boolean(props.matchInfo) || props.value !== undefined;
+  if (identityMatters && props.id === undefined) {
     console.warn("ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.");
   }
-  if (props.index === undefined) {
+  if (identityMatters && props.index === undefined) {
     console.warn("ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.");
   }
   const idDefault = useId();
@@ -42987,6 +43391,13 @@ const ListItemUI = props => {
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
   // matchRanges }), so there is exactly one way to wire it up.
   const matchInfo = props.matchInfo;
+  // Expose match on the tracked item: the tracker counts non-matching items via
+  // `item.match === false` (drives noMatchCount → allNoMatch → the searchFallback
+  // / hide-when-empty behavior). Without this a matchInfo-based search would
+  // filter items out but never register them as "no match".
+  if (matchInfo) {
+    props.match = matchInfo.match;
+  }
   // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
   if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
@@ -43160,6 +43571,10 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
+ *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
+ *               instead of a real item. Used as the List `skeletonTemplate`
+ *               while `loading`; Box layout props (padding…) pass through so the
+ *               placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item
  *               is selected. Can be any type (string, number, object…).
  *   selected  — controlled selected state. Pass `selected === value` (single) or
@@ -43186,7 +43601,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *                               CSS Highlight API.
  *   ...rest   — forwarded to the rendered <li> element
  */
-const ListItem = createComponentResolver([ListItemFirstResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI]);
+const ListItem = createComponentResolver([ListItemFirstResolver, ListItemSkeletonResolver, ListItemSelectableResolver, ListItemHeaderOrFooterResolver, ListItemPresentationResolver, ListItemUI]);
 List.Item = ListItem;
 
 /**
@@ -44291,7 +44706,8 @@ const PickerButton = props => {
     // --anchor-width). Set true when the CONTENT should dictate the popover width
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
-    popupWidthFitContent
+    popupWidthFitContent,
+    error
   } = props;
   const isSingleLine = maxLines === 1;
   const inputRef = useRef(null);
@@ -44308,6 +44724,7 @@ const PickerButton = props => {
     children
   } = inputProps;
   const loading = basePseudoState[":-navi-loading"];
+  usePickerErrorCallout(uiStateController, error);
   return jsxs(Box, {
     as: "div",
     ref: ref,
@@ -44327,6 +44744,7 @@ const PickerButton = props => {
     ui: undefined,
     maxLines: undefined,
     popupWidthFitContent: undefined,
+    error: undefined,
     dayLabel: undefined
     // This wrapper will receive keyboard event bubbling from the picker popup content
     // we re-dispatch on the input (to get escape to close for instance)
@@ -44450,6 +44868,33 @@ const PickerButton = props => {
 };
 const isWithinPickerContent = (el, pickerEl) => {
   return pickerEl.querySelector(".navi_picker_content")?.contains(el);
+};
+const PICKER_ERROR_TOKEN = createOpenToken();
+// The `error` prop rides the control's own callout — the same surface already
+// used for failing constraints — so a caller never has to decide where to put
+// the message. It shows whether the popup is open or closed, and dismissing it
+// discards that error: only a new `error` value raises another one.
+const usePickerErrorCallout = (uiStateController, error) => {
+  useEffect(() => {
+    const {
+      callout
+    } = uiStateController.rules;
+    const closeEvent = new CustomEvent("picker_error_cleared", {
+      detail: {}
+    });
+    if (!error) {
+      callout.removeOpenToken(PICKER_ERROR_TOKEN, closeEvent);
+      return undefined;
+    }
+    callout.addOpenToken(PICKER_ERROR_TOKEN, {
+      message: error === true ? "Something went wrong." : error,
+      status: "error",
+      skipFocus: true
+    });
+    return () => {
+      callout.removeOpenToken(PICKER_ERROR_TOKEN, closeEvent);
+    };
+  }, [error]);
 };
 const PickerInput = props => {
   const {
@@ -44577,10 +45022,14 @@ const PickerFirstResolver = props => {
  *   step?: string | number,
  *   disabled?: boolean,
  *   readOnly?: boolean,
+ *   error?: boolean | string,
  *   uiAction?: (value: any, event: Event) => void,
  *   action?: (value: any, event: Event) => void,
  *   children?: import("ignore:preact").ComponentChildren,
  *   mode?: "popover" | "dialog",
+ *   popoverMode?: "nearby" | "overlay",
+ *   positionArea?: string,
+ *   popupWidthFitContent?: boolean,
  *   variant?: "icon" | "headless",
  *   icon?: import("ignore:preact").ComponentChildren,
  *   maxLines?: number,
@@ -44593,6 +45042,24 @@ const PickerFirstResolver = props => {
  *   ref?: import("ignore:preact").RefObject<HTMLElement>,
  *   [key: string]: any,
  * }>}
+ * @param {boolean|string} [error] Something went wrong around this picker (its
+ *   content failed to load, its value could not be resolved…). Shown as a
+ *   callout on the trigger, open or closed — the caller has nothing to place.
+ *   Dismissing it discards that error; a new `error` value raises another one.
+ * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
+ *   over the trigger, "nearby" leaves a small gap below it.
+ * @param {string} [positionArea] Where the popup goes — relative to the trigger
+ *   in popover mode, relative to the viewport in dialog mode. Same grammar as
+ *   Popover/Dialog's own `positionArea` ("top", "right-end", "inset(top-left)",
+ *   …). Defaults to "bottom-start" in popover mode ("inset(top-left)" when
+ *   popoverMode is "overlay"), and to Dialog's own "center" in dialog mode. A
+ *   popover still flips to the opposite side on its own when there isn't
+ *   enough room.
+ * @param {boolean} [popupWidthFitContent] By default the popup is at least as
+ *   wide as the trigger. Set this to let the content size it instead, so a
+ *   popup narrower than the trigger stays narrow.
+ * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
+ *   (default 300px). The popover shrinks below it when space is tight.
  */
 const Picker = createComponentResolver([PickerFirstResolver, PickerPresetResolver, PickerCustomResolver, PickerTypeResolver, PickerButton]);
 Picker.UI = PickerDefaultUI;
@@ -50764,67 +51231,6 @@ const Address = ({
   });
 };
 
-const LoadingDotsSvg = () => {
-  return jsxs("svg", {
-    viewBox: "0 0 200 200",
-    width: "100%",
-    height: "100%",
-    xmlns: "http://www.w3.org/2000/svg",
-    children: [jsx("rect", {
-      fill: "currentColor",
-      stroke: "currentColor",
-      "stroke-width": "15",
-      width: "30",
-      height: "30",
-      x: "25",
-      y: "85",
-      children: jsx("animate", {
-        attributeName: "opacity",
-        calcMode: "spline",
-        dur: "2",
-        values: "1;0;1;",
-        keySplines: ".5 0 .5 1;.5 0 .5 1",
-        repeatCount: "indefinite",
-        begin: "-.4"
-      })
-    }), jsx("rect", {
-      fill: "currentColor",
-      stroke: "currentColor",
-      "stroke-width": "15",
-      width: "30",
-      height: "30",
-      x: "85",
-      y: "85",
-      children: jsx("animate", {
-        attributeName: "opacity",
-        calcMode: "spline",
-        dur: "2",
-        values: "1;0;1;",
-        keySplines: ".5 0 .5 1;.5 0 .5 1",
-        repeatCount: "indefinite",
-        begin: "-.2"
-      })
-    }), jsx("rect", {
-      fill: "currentColor",
-      stroke: "currentColor",
-      "stroke-width": "15",
-      width: "30",
-      height: "30",
-      x: "145",
-      y: "85",
-      children: jsx("animate", {
-        attributeName: "opacity",
-        calcMode: "spline",
-        dur: "2",
-        values: "1;0;1;",
-        keySplines: ".5 0 .5 1;.5 0 .5 1",
-        repeatCount: "indefinite",
-        begin: "0"
-      })
-    })]
-  });
-};
-
 const formatNumber = (value, { lang = languagesSignal.value } = {}) => {
   return new Intl.NumberFormat(lang).format(value);
 };
@@ -52229,23 +52635,6 @@ const Image = ({
   });
 };
 
-const LoadingIndicator = ({
-  variant = "circle",
-  ...props
-}) => {
-  if (variant === "dots") {
-    return jsx(Icon, {
-      ...props,
-      children: jsx(LoadingDotsSvg, {})
-    });
-  }
-  return jsx(Icon, {
-    circle: true,
-    ...props,
-    children: jsx(LoadingIndicatorFluid, {})
-  });
-};
-
 const Svg = props => {
   return jsx(Box, {
     ...props,
@@ -52744,7 +53133,12 @@ const SidePanel = ({
     onClose: onClose,
     layer: layer,
     anchorCustomEventDetail: "ignore",
-    positionArea: side,
+    positionArea: side
+    // A side panel is flush against the edge it slides in from — none of
+    // Dialog's own default gap with the container.
+    ,
+
+    marginWithContainer: 0,
     animation: animation === true ? `slide-from-${side}` : animation,
     pointerInteractionOutsideEffect: closeOnClickOutside ? "close" : "none",
     focusCapture: closeOnClickOutside,
@@ -52960,5 +53354,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePickerMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

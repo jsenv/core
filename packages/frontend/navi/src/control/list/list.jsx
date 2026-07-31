@@ -4,7 +4,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { createContext } from "preact";
+import { cloneElement, createContext } from "preact";
 import {
   useContext,
   useId,
@@ -18,9 +18,11 @@ import {
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
+import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
+import { Text } from "../../text/text.jsx";
 import { useItemTracker } from "../../utils/item_tracker/use_item_tracker.js";
 import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effect.js";
 import { getUIStateControllerById } from "../controller_registry.js";
@@ -155,6 +157,16 @@ const css = /* css */ `
     }
     &[data-expand-y] {
       --list-max-height: none;
+
+      /* expandY grows the container to fill its parent (flex-grow, applied by
+         Box). The scroll container must then fill that grown height and take
+         over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
+         below its content so overflow:auto scrolls instead of the content
+         pushing past the container (which overflow:hidden would just clip). */
+      .navi_list_scroll_container {
+        min-height: 0;
+        flex: 1;
+      }
     }
     &[navi-nothing-to-display] {
       display: none;
@@ -257,7 +269,11 @@ const css = /* css */ `
     scroll-margin-bottom: var(--x-list-scroll-spacing-bottom);
     scroll-margin-left: var(--x-list-scroll-spacing-left);
 
-    &[aria-hidden="true"] {
+    /* The "invisible_and_inert" search no-match mode keeps items in the DOM
+       (to preserve layout) but hides them — it sets BOTH aria-hidden and inert.
+       Scope to that pair so the presentation placeholders that are only
+       aria-hidden (skeleton rows, the loader) stay visible. */
+    &[aria-hidden="true"][inert] {
       opacity: 0;
     }
 
@@ -366,6 +382,39 @@ const css = /* css */ `
       user-select: none;
     }
   }
+  /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
+     A skeleton row reuses <Text loading> for the shimmer bar; the loader row
+     centers a spinner. */
+  .navi_list_item_skeleton {
+    pointer-events: none;
+  }
+  .navi_list_loader {
+    display: flex;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+    color: light-dark(#888, #aaa);
+  }
+  /* Error state (List error prop): an inline callout describing why the list
+     failed to load, shown in place of the items. */
+  .navi_list_error {
+    display: flex;
+    margin: 8px;
+    padding: 10px 12px;
+    align-items: flex-start;
+    gap: 8px;
+    color: light-dark(#b91c1c, #fca5a5);
+    font-size: 0.9em;
+    line-height: 1.4;
+    background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    border: 1px solid light-dark(#fecaca, rgba(248, 113, 113, 0.4));
+    border-radius: 6px;
+  }
+  .navi_list_error_icon {
+    flex: none;
+    font-size: 1em;
+    line-height: 1.4;
+  }
   [navi-virtual-filler="after"] {
     /* for some reason preact ends up puttin this element before the list items in some scenarios
      I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
@@ -457,6 +506,11 @@ const ListUI = (props) => {
     columns,
     searchText,
     searchNoMatchMode = "remove",
+    loading,
+    loadingIndicator = "skeleton",
+    loadingSkeletonCount = 3,
+    skeletonTemplate,
+    error,
     horizontal,
     spacing,
     ...rest
@@ -544,12 +598,74 @@ const ListUI = (props) => {
   const noMatchCount = tracker.noMatchCountSignal.value;
   const itemCount = tracker.countSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const searching = Boolean(searchText);
   const fallbackDisabled = fallback !== undefined && !fallback;
   const searchFallbackDisabled =
     searchFallback !== undefined && !searchFallback;
+  // No item is visible when the list is empty (filtering may happen outside the
+  // list, dropping itemCount to 0) or when a search removed them all — only the
+  // "remove" mode empties the view; "muted"/"below"/… keep items on screen.
+  const noVisibleItems =
+    itemCount === 0 || (allNoMatch && searchNoMatchMode === "remove");
+  // Which fallback message actually renders (mirrors SearchFallback / Fallback
+  // below): during a search an empty/no-match result is a "no match" state (the
+  // search fallback), otherwise an empty list is the "empty" state.
+  const searchFallbackShown =
+    (allNoMatch || (searching && itemCount === 0)) && !searchFallbackDisabled;
+  const emptyFallbackShown = !searching && itemCount === 0 && !fallbackDisabled;
+  // Hide the whole list — border included — when there is genuinely nothing to
+  // show: no visible items AND no fallback message. Never while loading or in
+  // error (the placeholder / error message ARE the content to display).
   const nothingToDisplay =
-    (allNoMatch && searchFallbackDisabled && searchNoMatchMode === "remove") ||
-    (itemCount === 0 && fallbackDisabled);
+    !loading &&
+    !error &&
+    noVisibleItems &&
+    !searchFallbackShown &&
+    !emptyFallbackShown;
+
+  // Placeholder content replaces the real children: an error message when the
+  // load failed (takes precedence), otherwise — while loading — skeleton rows
+  // (default, count loadingSkeletonCount, look skeletonTemplate) or a single
+  // centered loader when loadingIndicator="loader".
+  let content = children;
+  if (error) {
+    content = (
+      <ListItem
+        role="presentation"
+        baseClassName="navi_list_item navi_list_error"
+      >
+        <span className="navi_list_error_icon" aria-hidden="true">
+          ⚠
+        </span>
+        <span>{error === true ? "Something went wrong." : error}</span>
+      </ListItem>
+    );
+  } else if (loading) {
+    if (loadingIndicator === "loader") {
+      content = (
+        <ListItem
+          role="presentation"
+          aria-hidden="true"
+          baseClassName="navi_list_item navi_list_loader"
+        >
+          <LoadingIndicator />
+        </ListItem>
+      );
+    } else {
+      const template = skeletonTemplate ?? <ListItem skeleton />;
+      const skeletons = [];
+      let skeletonIndex = 0;
+      while (skeletonIndex < loadingSkeletonCount) {
+        skeletons.push(
+          cloneElement(template, {
+            key: `navi-list-skeleton-${skeletonIndex}`,
+          }),
+        );
+        skeletonIndex++;
+      }
+      content = skeletons;
+    }
+  }
 
   return (
     <Box
@@ -565,6 +681,8 @@ const ListUI = (props) => {
       expand={expand}
       navi-zero-match={allNoMatch ? "" : undefined}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
+      navi-loading={loading ? "" : undefined}
+      navi-error={error ? "" : undefined}
       styleCSSVars={LIST_STYLE_CSS_VARS}
       pseudoClasses={LIST_PSEUDO_CLASSES}
       hasChildUsingForwardedProps
@@ -588,6 +706,9 @@ const ListUI = (props) => {
         role={role}
         fallback={fallback}
         searchFallback={searchFallback}
+        searching={searching}
+        loading={loading}
+        error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX || expand}
@@ -599,7 +720,7 @@ const ListUI = (props) => {
         virtualItemSizeSignal={virtualItemSizeSignal}
         pendingScrollRef={pendingScrollRef}
       >
-        {children}
+        {content}
       </ListContent>
     </Box>
   );
@@ -629,6 +750,11 @@ const ListFirstResolver = (props) => {
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
+ *   loading?: boolean,
+ *   loadingIndicator?: "skeleton" | "loader",
+ *   loadingSkeletonCount?: number,
+ *   skeletonTemplate?: import("preact").ComponentChildren,
+ *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
@@ -650,6 +776,9 @@ const ListContent = ({
   role,
   fallback,
   searchFallback,
+  searching,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   expandX,
@@ -669,6 +798,9 @@ const ListContent = ({
         role={role}
         fallback={fallback}
         searchFallback={searchFallback}
+        searching={searching}
+        loading={loading}
+        error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX}
@@ -1215,6 +1347,9 @@ const UnorderedList = ({
   virtualItemSizeSignal,
   fallback,
   searchFallback,
+  searching,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -1223,6 +1358,10 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
+  // No empty/no-match message while loading or in error — the placeholder /
+  // error message is the content, even though no items are tracked yet.
+  const suppressFallback = loading || Boolean(error);
+
   return (
     <Box
       as="ul"
@@ -1237,8 +1376,16 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      <SearchFallback searchFallback={searchFallback} tracker={tracker} />
-      <Fallback fallback={fallback} tracker={tracker} />
+      {!suppressFallback && (
+        <SearchFallback
+          searchFallback={searchFallback}
+          searching={searching}
+          tracker={tracker}
+        />
+      )}
+      {!suppressFallback && (
+        <Fallback fallback={fallback} searching={searching} tracker={tracker} />
+      )}
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
@@ -1259,13 +1406,14 @@ const UnorderedList = ({
   );
 };
 
-// Show when all matchable items (those with a match prop) are non-matching.
-// The match prop on List.Item signals participation in a matching system
-// (search, filter, etc.). searchFallback appears when every such item has match=false.
-const SearchFallback = ({ tracker, searchFallback }) => {
+// The "no match" message. Shown when a search left nothing to display: either
+// every matchable item has match=false (in-list filtering), or the list is empty
+// during an active search (filtering done outside the list, so itemCount is 0).
+const SearchFallback = ({ tracker, searchFallback, searching }) => {
   const itemCount = tracker.countSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
-  const showMatchFallback = noMatchCount > 0 && noMatchCount === itemCount;
+  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
+  const showMatchFallback = allNoMatch || (searching && itemCount === 0);
 
   if (searchFallback === undefined) {
     searchFallback = naviI18n("list.no_match");
@@ -1288,13 +1436,18 @@ const SearchFallback = ({ tracker, searchFallback }) => {
     </ListItem>
   );
 };
-const Fallback = ({ tracker, fallback }) => {
+// The "empty list" message. Not shown during a search — an empty search result
+// is a "no match" state (SearchFallback), not an empty-list state.
+const Fallback = ({ tracker, fallback, searching }) => {
   const itemCount = tracker.countSignal.value;
-  const showFallback = itemCount === 0;
+  const showFallback = itemCount === 0 && !searching;
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
   }
-
+  if (!fallback) {
+    // explicitely disabled by user (<List fallback={false|null|''}>)
+    return null;
+  }
   if (!showFallback) {
     return null;
   }
@@ -1396,13 +1549,53 @@ const ListItemPresentation = (props) => {
 
   return <Box as="li" {...props} {...columnsOverrideProps} />;
 };
+// A <List.Item skeleton> — a non-interactive placeholder row shown while a list
+// is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
+// and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
+// pass through so a skeletonTemplate can match the real items' metrics; and when
+// children are provided they render as-is, so a template can reproduce a
+// multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
+const ListItemSkeletonResolver = (props) => {
+  const Next = useNextResolver();
+  if (props.skeleton) {
+    return <ListItemSkeleton {...props} />;
+  }
+  return <Next {...props} />;
+};
+const ListItemSkeleton = (props) => {
+  // Without vertical padding the bars of consecutive rows touch and read as one
+  // block; "s" is enough air for them to be seen as separate rows.
+  // eslint-disable-next-line no-unused-vars
+  const { skeleton, children, paddingY = "s", ...rest } = props;
+  const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+
+  return (
+    <Box
+      as="li"
+      role="presentation"
+      aria-hidden="true"
+      paddingY={paddingY}
+      {...rest}
+      {...columnsOverrideProps}
+      baseClassName="navi_list_item navi_list_item_skeleton"
+    >
+      {children ?? <Text loading />}
+    </Box>
+  );
+};
 const ListItemUI = (props) => {
-  if (props.id === undefined) {
+  // A stable id/index only matters when the item's identity must survive
+  // reordering — i.e. it is selectable (selected/pointed state) or participates
+  // in a matching system (search reorders items). A purely presentational,
+  // static list doesn't need either, so don't nag about them there.
+  const identityMatters =
+    props.selectable || Boolean(props.matchInfo) || props.value !== undefined;
+  if (identityMatters && props.id === undefined) {
     console.warn(
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
     );
   }
-  if (props.index === undefined) {
+  if (identityMatters && props.index === undefined) {
     console.warn(
       "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
     );
@@ -1417,6 +1610,13 @@ const ListItemUI = (props) => {
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
   // matchRanges }), so there is exactly one way to wire it up.
   const matchInfo = props.matchInfo;
+  // Expose match on the tracked item: the tracker counts non-matching items via
+  // `item.match === false` (drives noMatchCount → allNoMatch → the searchFallback
+  // / hide-when-empty behavior). Without this a matchInfo-based search would
+  // filter items out but never register them as "no match".
+  if (matchInfo) {
+    props.match = matchInfo.match;
+  }
   // Derive filtered/hidden/muted from matchInfo.match + searchNoMatchMode context.
   if (matchInfo?.match === false) {
     if (searchNoMatchMode === "remove") {
@@ -1591,6 +1791,10 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
+ *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
+ *               instead of a real item. Used as the List `skeletonTemplate`
+ *               while `loading`; Box layout props (padding…) pass through so the
+ *               placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item
  *               is selected. Can be any type (string, number, object…).
  *   selected  — controlled selected state. Pass `selected === value` (single) or
@@ -1619,6 +1823,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  */
 export const ListItem = createComponentResolver([
   ListItemFirstResolver,
+  ListItemSkeletonResolver,
   ListItemSelectableResolver,
   ListItemHeaderOrFooterResolver,
   ListItemPresentationResolver,

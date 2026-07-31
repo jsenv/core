@@ -103,6 +103,17 @@ A file's own top-of-file comment has exactly two jobs:
 
 Nothing else belongs there. Other sources already cover everything else — the top-level comment must not restate what they say: the code itself (well-named functions/variables), inline comments (the _why_ at one specific line), JSDoc (a prop's accepted values/semantics), external docs, demo files. If a paragraph in a top-level comment is really documenting a prop's grammar or "how to use this component," move it to JSDoc instead — don't duplicate it in both places. Before adding a paragraph to a top-level comment, ask: is this orientation, or a warning about a rejected approach? If neither, it belongs somewhere else (or nowhere).
 
+#### Demo files
+
+Demos are used, not read. A well-chosen example, cut into steps and carrying a short label, is worth a thousand words — so write the examples, not the commentary around them.
+
+- Default to **no prose**. A `<Label>`/`<legend>` naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) is normally the whole explanation.
+- When a difference needs making clear, add the **contrasting example** rather than a sentence about it: default beside opted-out, loading beside loaded.
+- Keep a paragraph only for what the example genuinely cannot show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
+- Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo doesn't exercise.
+
+See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running them.
+
 ### CSS
 
 - CSS-in-JS using `import.meta.css` for component styles
