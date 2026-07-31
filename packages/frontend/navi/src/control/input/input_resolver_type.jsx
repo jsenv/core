@@ -6,6 +6,7 @@ import { PhoneSvg } from "@jsenv/navi/src/graphic/icons/phone_svg.jsx";
 import { SearchSvg } from "@jsenv/navi/src/graphic/icons/search_svg.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
+import { dispatchRequestClearUIState } from "../ui_state_dom.js";
 import { Button } from "./button.jsx";
 import { InputIconSlot, InputRightSlot } from "./input_components.jsx";
 import { InputTextualContext } from "./input_textual_context.js";
@@ -36,7 +37,29 @@ export const InputTypeResolver = (props) => {
 const InputSearch = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
+  return (
+    <Next
+      ui={<InputSearchUI icon={props.icon} />}
+      {...props}
+      onKeyDown={(e) => {
+        props.onKeyDown?.(e);
+        if (e.key !== "Escape" || e.defaultPrevented) {
+          return;
+        }
+        const inputEl = e.currentTarget;
+        if (inputEl.value === "") {
+          return;
+        }
+        dispatchRequestClearUIState(inputEl, e);
+        // Escape empties the search before it means anything else: without
+        // this, a search field inside a popover/dialog would clear AND dismiss
+        // the popup in one keystroke (both the browser's own light-dismiss and
+        // the enclosing Popover/Dialog/Picker react to the same Escape).
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+    />
+  );
 };
 const InputSearchUI = ({ icon }) => {
   const { value, id } = useContext(InputTextualContext);

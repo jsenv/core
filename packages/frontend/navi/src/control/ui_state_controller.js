@@ -74,6 +74,7 @@ const useRenderScope = (init, update) => {
  *   props: Object;
  *   ref: Ref; // Used to dispatch DOM events
  *   getManagedControls(): UIStateController[]; // Returns controls whose validity is managed by this controller
+ *   getInteractionBlockingControls(): UIStateController[]; // Subset of the above whose busy state also blocks interacting with this controller
  * }
  * ```
  */
@@ -191,6 +192,10 @@ export const useUIStateController = (
           }
           return [];
         },
+        // A facade child lives inside the control's own popup, so it is out of
+        // reach until that popup opens. Letting it block interaction would make
+        // a picker whose content is loading impossible to open at all.
+        getInteractionBlockingControls: () => [],
         onUIAction: (e, { skipCommand } = {}) => {
           if (controlType === "button" && controller.controlHostProps.name) {
             const buttonName = controller.controlHostProps.name;
@@ -1123,6 +1128,11 @@ export const useUIGroupStateController = (
           if (!cascadeValidationToChildren) return [];
           return childUIStateControllerArray.slice();
         },
+        // Group children sit next to the group itself: a busy one really does
+        // prevent the group from acting as a whole.
+        getInteractionBlockingControls: () => {
+          return controller.getManagedControls();
+        },
         subscribe: subscribeUIState,
       };
       const rules = createControlRules(controller, {
@@ -1357,6 +1367,13 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
             return [];
           }
           return child.getManagedControls();
+        },
+        getInteractionBlockingControls: () => {
+          const child = firstChildControllerRef.current;
+          if (!child) {
+            return [];
+          }
+          return child.getInteractionBlockingControls();
         },
         onChildUIAction: (child, e, { stateChanged, silent = false }) => {
           if (!stateChanged) {

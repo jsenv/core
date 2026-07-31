@@ -15,6 +15,12 @@
         max-width: 600px;
         margin: 0 auto;
       }
+      h1 {
+        margin-bottom: 32px;
+        color: #333;
+        font-size: 1.8rem;
+        text-align: center;
+      }
       .demo-section {
         margin-bottom: 24px;
         padding: 24px;
@@ -22,30 +28,38 @@
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
-      h1 {
-        margin-bottom: 32px;
-        color: #333;
-        font-size: 1.8rem;
-        text-align: center;
-      }
-      .demo-section h3 {
-        margin: 24px 0 6px;
-        color: #555;
-        font-weight: 600;
-        font-size: 0.95rem;
-      }
       .demo-section h2 {
+        position: relative;
         margin: 0 0 8px;
         padding-bottom: 10px;
         color: #333;
         font-size: 1.1rem;
         border-bottom: 2px solid #eee;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 20px 0 8px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.95rem;
+        scroll-margin-top: 12px;
       }
       .demo-section p {
         margin: 0 0 16px;
         color: #555;
         font-size: 0.9rem;
         line-height: 1.5;
+      }
+      .demo-subsection {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+      }
+      .demo-subsection:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
       }
       .toc-list {
         margin: 0;
@@ -59,6 +73,12 @@
       .toc-list a:hover {
         text-decoration: underline;
       }
+      .toc-list ol {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 2;
+        list-style: lower-alpha;
+      }
     </style>
   </head>
   <body>
@@ -69,11 +89,24 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        useEffect,
+        useLayoutEffect,
+        useRef,
+        useState,
+      } from "preact/hooks";
+      import {
         Box,
+        Button,
         Field,
+        Input,
         Label,
-        Picker,
+        Link,
+        MessageBox,
         NaviDebug,
+        Picker,
+        RadioGroup,
+        Text,
+        openCallout,
         route,
         setupRoutes,
       } from "@jsenv/navi";
@@ -86,62 +119,143 @@
       });
       setupRoutes([DEMO_ROUTE]);
 
+      const App = () => (
+        <NaviDebug debugAll>
+          <Box flex="y" spacing="l">
+            <TableOfContents />
+            <Chapter id="dimensions" title="Dimensions — size & overflow">
+              <FontSizeDemo />
+              <WidthDemo />
+              <OverflowDemo />
+              <MaxLinesDemo />
+            </Chapter>
+            <Chapter id="icon" title="Picker icon">
+              <PickerIconDemo />
+            </Chapter>
+            <Chapter id="text-align" title="Text alignment">
+              <TextAlignDemo />
+            </Chapter>
+            <Chapter id="value" title="Default value & placeholder">
+              <DefaultValueDemo />
+            </Chapter>
+            <Chapter id="custom-ui" title="Custom UI via prop ui">
+              <CustomUIDemo />
+            </Chapter>
+            <Chapter id="modes" title="Popover vs dialog mode">
+              <PopoverDialogDemo />
+            </Chapter>
+            <Chapter id="popup-sizing" title="Popup sizing">
+              <PopoverSizingDemo />
+              <DialogSizingDemo />
+            </Chapter>
+            <Chapter id="loading" title="Loading & error">
+              <LoadingIntro />
+              <ActionLoadingDemo />
+              <ContentLoadingDemo />
+              <ValueLoadingDemo />
+            </Chapter>
+          </Box>
+        </NaviDebug>
+      );
+
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // A chapter groups related demos under one h2. Each demo inside renders as
+      // a <div className="demo-subsection"> with its own h3.
+      const Chapter = ({ id, title, children }) => (
+        <div className="demo-section">
+          <Heading level={2} id={id}>
+            {title}
+          </Heading>
+          {children}
+        </div>
+      );
+
+      const Subsection = ({ id, title, children }) => (
+        <div className="demo-subsection">
+          <Heading level={3} id={id}>
+            {title}
+          </Heading>
+          {children}
+        </div>
+      );
+
       const TableOfContents = () => (
         <div class="demo-section">
           <h2>Table of contents</h2>
           <ol class="toc-list">
             <li>
-              <a href="#section-1">1. Dimensions — size &amp; overflow</a>
-              <ol class="toc-list" style={{ marginTop: 0 }}>
+              <Link href="#dimensions">Dimensions — size &amp; overflow</Link>
+              <ol>
                 <li>
-                  <a href="#dim-font-size">Font size</a>
+                  <Link href="#dim-font-size">Font size</Link>
                 </li>
                 <li>
-                  <a href="#dim-width">Width adapts to value</a>
+                  <Link href="#dim-width">Width adapts to value</Link>
                 </li>
                 <li>
-                  <a href="#dim-overflow">Single-line overflow</a>
+                  <Link href="#dim-overflow">Single-line overflow</Link>
                 </li>
                 <li>
-                  <a href="#dim-maxrows">Multi-line with maxLines</a>
+                  <Link href="#dim-maxlines">Multi-line with maxLines</Link>
                 </li>
               </ol>
             </li>
             <li>
-              <a href="#section-2">2. Picker icon</a>
+              <Link href="#icon">Picker icon</Link>
             </li>
             <li>
-              <a href="#section-3">3. Text alignment — center &amp; right</a>
+              <Link href="#text-align">Text alignment</Link>
             </li>
             <li>
-              <a href="#section-4">4. Default value &amp; placeholder</a>
+              <Link href="#value">Default value &amp; placeholder</Link>
             </li>
             <li>
-              <a href="#section-5">5. Custom UI via prop ui</a>
+              <Link href="#custom-ui">Custom UI via prop ui</Link>
             </li>
             <li>
-              <a href="#section-6">6. Popover vs Dialog mode</a>
+              <Link href="#modes">Popover vs dialog mode</Link>
             </li>
             <li>
-              <a href="#section-7">7. Popup sizing</a>
+              <Link href="#popup-sizing">Popup sizing</Link>
+              <ol>
+                <li>
+                  <Link href="#popup-sizing-popover">Popover</Link>
+                </li>
+                <li>
+                  <Link href="#popup-sizing-dialog">Dialog</Link>
+                </li>
+              </ol>
+            </li>
+            <li>
+              <Link href="#loading">Loading &amp; error</Link>
+              <ol>
+                <li>
+                  <Link href="#loading-action">The picker's own action</Link>
+                </li>
+                <li>
+                  <Link href="#loading-content">Loading content</Link>
+                </li>
+                <li>
+                  <Link href="#loading-value">Loading the selected label</Link>
+                </li>
+              </ol>
             </li>
           </ol>
         </div>
-      );
-
-      const App = () => (
-        <NaviDebug debugAll>
-          <Box flex="y" spacing="l">
-            <TableOfContents />
-            <DimensionsDemo />
-            <PickerIconDemo />
-            <TextAlignDemo />
-            <DefaultValueDemo />
-            <CustomUIDemo />
-            <PopoverDialogDemo />
-            <PopupSizingDemo />
-          </Box>
-        </NaviDebug>
       );
 
       const AdjacentElement = () => (
@@ -217,339 +331,456 @@
         </div>
       );
 
-      const DimensionsDemo = () => {
-        return (
-          <div id="section-1" class="demo-section">
-            <h2>1. Dimensions — size &amp; overflow</h2>
+      // ── Dimensions ────────────────────────────────────────────────────────────
 
-            <h3 id="dim-font-size" style={{ marginTop: "24px" }}>
-              Font size
-            </h3>
-            <p>
-              The picker inherits font size from its container, which drives its
-              overall size.
-            </p>
-            <Box flex="x" spacing="m" alignY="end" flexWrap>
-              {["xs", "m", "xl", "xxl"].map((size) => (
-                <Field key={size} vertical>
-                  <Label>
-                    <code style={{ fontWeight: "normal" }}>size={size}</code>
-                  </Label>
-                  <Picker
-                    name={`dim_font_${size}`}
-                    placeholder="Fruit…"
-                    value=""
-                    action={() => {}}
-                    size={size}
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                </Field>
-              ))}
-            </Box>
-
-            <h3 id="dim-width" style={{ marginTop: "24px" }}>
-              Width adapts to value
-            </h3>
-            <Box
-              flex="x"
-              spacing="s"
-              alignY="center"
-              style={{ marginBottom: "12px" }}
-            >
-              <AdjacentElement />
-              <span style={{ fontSize: "12px", color: "#555" }}>
-                ← this represents an element sitting next to the picker
-              </span>
-            </Box>
-            <Box flex="y" spacing="m">
-              <Field vertical>
+      const FontSizeDemo = () => (
+        <Subsection id="dim-font-size" title="Font size">
+          <p>
+            The picker inherits font size from its container, which drives its
+            overall size.
+          </p>
+          <Box flex="x" spacing="m" alignY="end" flexWrap>
+            {["xs", "m", "xl", "xxl"].map((size) => (
+              <Field key={size} vertical>
                 <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(default)</code>
+                  <code style={{ fontWeight: "normal" }}>size={size}</code>
                 </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_width_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(default)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_width_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <p
-              style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}
-            >
-              The adjacent element shifts as the picker grows. Even without
-              anything next to it, an unstable width feels unpolished.
-            </p>
-
-            <p style={{ marginTop: "16px" }}>
-              Set <code>minWidth</code> to a fixed value to prevent layout shift
-              while still allowing the picker to grow for longer values.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_minwidth_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                    minWidth="140"
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center">
-                  <Picker
-                    name="dim_minwidth_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                    minWidth="140"
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <p style={{ marginTop: "16px" }}>
-              Use <code>expandX</code> to make the picker fill its container
-              width entirely, also preventing layout shift.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Short value{" "}
-                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center" expandX>
-                  <Picker
-                    name="dim_expandx_short"
-                    value={SHORT_VALUE}
-                    action={() => {}}
-                    expandX
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Medium value{" "}
-                  <code style={{ fontWeight: "normal" }}>(expandX)</code>
-                </Label>
-                <Box flex="x" spacing="s" alignY="center" expandX>
-                  <Picker
-                    name="dim_expandx_medium"
-                    value={MEDIUM_VALUE}
-                    action={() => {}}
-                    expandX
-                  >
-                    <BasicPickerContent />
-                  </Picker>
-                  <AdjacentElement />
-                </Box>
-              </Field>
-            </Box>
-
-            <h3 id="dim-overflow" style={{ marginTop: "24px" }}>
-              Single-line overflow
-            </h3>
-            <p>
-              When the value is wider than the picker (here constrained to{" "}
-              <code>maxWidth="200"</code>), the text is clipped with an ellipsis
-              on a single line.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>Long sentence</Label>
                 <Picker
-                  name="dim_sentence"
-                  value={LONG_SENTENCE}
+                  name={`dim_font_${size}`}
+                  placeholder="Fruit…"
+                  value=""
                   action={() => {}}
-                  maxWidth="200"
+                  size={size}
                 >
                   <BasicPickerContent />
                 </Picker>
               </Field>
-              <Field vertical>
-                <Label>Long word</Label>
-                <Picker
-                  name="dim_word"
-                  value={LONG_WORD}
-                  action={() => {}}
-                  maxWidth="200"
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-            </Box>
+            ))}
+          </Box>
+        </Subsection>
+      );
 
-            <h3 id="dim-maxrows" style={{ marginTop: "24px" }}>
-              Multi-line with maxLines
-            </h3>
-            <p>
-              <code>maxLines</code> lets the text flow onto multiple lines
-              before truncating. At <code>maxLines=3</code> the text wraps up to
-              three rows then clips with an ellipsis.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Long sentence{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-                </Label>
+      const WidthDemo = () => (
+        <Subsection id="dim-width" title="Width adapts to value">
+          <Box
+            flex="x"
+            spacing="s"
+            alignY="center"
+            style={{ marginBottom: "12px" }}
+          >
+            <AdjacentElement />
+            <span style={{ fontSize: "12px", color: "#555" }}>
+              ← this represents an element sitting next to the picker
+            </span>
+          </Box>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Short value{" "}
+                <code style={{ fontWeight: "normal" }}>(default)</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center">
                 <Picker
-                  name="dim_sentence_maxrows"
-                  value={LONG_SENTENCE}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Long word{" "}
-                  <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
-                </Label>
-                <Picker
-                  name="dim_word_maxrows"
-                  value={LONG_WORD}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Exceeds maxLines{" "}
-                  <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
-                </Label>
-                <Picker
-                  name="dim_clamp_maxrows"
-                  value={VERY_LONG_TEXT}
-                  action={() => {}}
-                  maxWidth="200"
-                  maxLines={3}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-            </Box>
-          </div>
-        );
-      };
-
-      const TextAlignDemo = () => {
-        return (
-          <div id="section-3" class="demo-section">
-            <h2>3. Text alignment — center &amp; right</h2>
-            <p>
-              The <code>textAlign</code> prop controls how text is positioned
-              inside the picker trigger button.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Left aligned{" "}
-                  <code style={{ fontWeight: "normal" }}>(default)</code>
-                </Label>
-                <Picker
-                  name="align_left"
-                  placeholder="Select…"
+                  name="dim_width_short"
                   value={SHORT_VALUE}
                   action={() => {}}
-                  width="200px"
                 >
                   <BasicPickerContent />
                 </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Center aligned{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (textAlign="center")
-                  </code>
-                </Label>
+                <AdjacentElement />
+              </Box>
+            </Field>
+            <Field vertical>
+              <Label>
+                Medium value{" "}
+                <code style={{ fontWeight: "normal" }}>(default)</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center">
                 <Picker
-                  name="align_center"
-                  placeholder="Select…"
+                  name="dim_width_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                >
+                  <BasicPickerContent />
+                </Picker>
+                <AdjacentElement />
+              </Box>
+            </Field>
+          </Box>
+
+          <p style={{ marginTop: "12px", color: "#666", fontStyle: "italic" }}>
+            The adjacent element shifts as the picker grows. Even without
+            anything next to it, an unstable width feels unpolished.
+          </p>
+
+          <p style={{ marginTop: "16px" }}>
+            Set <code>minWidth</code> to a fixed value to prevent layout shift
+            while still allowing the picker to grow for longer values.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Short value{" "}
+                <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center">
+                <Picker
+                  name="dim_minwidth_short"
                   value={SHORT_VALUE}
                   action={() => {}}
-                  width="200px"
-                  textAlign="center"
+                  minWidth="140"
                 >
                   <BasicPickerContent />
                 </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Right aligned{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (textAlign="right")
-                  </code>
-                </Label>
+                <AdjacentElement />
+              </Box>
+            </Field>
+            <Field vertical>
+              <Label>
+                Medium value{" "}
+                <code style={{ fontWeight: "normal" }}>(minWidth="140")</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center">
                 <Picker
-                  name="align_right"
-                  placeholder="Select…"
+                  name="dim_minwidth_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                  minWidth="140"
+                >
+                  <BasicPickerContent />
+                </Picker>
+                <AdjacentElement />
+              </Box>
+            </Field>
+          </Box>
+
+          <p style={{ marginTop: "16px" }}>
+            Use <code>expandX</code> to make the picker fill its container width
+            entirely, also preventing layout shift.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Short value{" "}
+                <code style={{ fontWeight: "normal" }}>(expandX)</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center" expandX>
+                <Picker
+                  name="dim_expandx_short"
                   value={SHORT_VALUE}
                   action={() => {}}
-                  width="200px"
-                  textAlign="right"
+                  expandX
                 >
                   <BasicPickerContent />
                 </Picker>
-              </Field>
-            </Box>
-          </div>
-        );
-      };
+                <AdjacentElement />
+              </Box>
+            </Field>
+            <Field vertical>
+              <Label>
+                Medium value{" "}
+                <code style={{ fontWeight: "normal" }}>(expandX)</code>
+              </Label>
+              <Box flex="x" spacing="s" alignY="center" expandX>
+                <Picker
+                  name="dim_expandx_medium"
+                  value={MEDIUM_VALUE}
+                  action={() => {}}
+                  expandX
+                >
+                  <BasicPickerContent />
+                </Picker>
+                <AdjacentElement />
+              </Box>
+            </Field>
+          </Box>
+        </Subsection>
+      );
+
+      const OverflowDemo = () => (
+        <Subsection id="dim-overflow" title="Single-line overflow">
+          <p>
+            When the value is wider than the picker (here constrained to{" "}
+            <code>maxWidth="200"</code>), the text is clipped with an ellipsis
+            on a single line.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>Long sentence</Label>
+              <Picker
+                name="dim_sentence"
+                value={LONG_SENTENCE}
+                action={() => {}}
+                maxWidth="200"
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>Long word</Label>
+              <Picker
+                name="dim_word"
+                value={LONG_WORD}
+                action={() => {}}
+                maxWidth="200"
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </Subsection>
+      );
+
+      const MaxLinesDemo = () => (
+        <Subsection id="dim-maxlines" title="Multi-line with maxLines">
+          <p>
+            <code>maxLines</code> lets the text flow onto multiple lines before
+            truncating. At <code>maxLines=3</code> the text wraps up to three
+            rows then clips with an ellipsis.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Long sentence{" "}
+                <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
+              </Label>
+              <Picker
+                name="dim_sentence_maxrows"
+                value={LONG_SENTENCE}
+                action={() => {}}
+                maxWidth="200"
+                maxLines={3}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Long word{" "}
+                <code style={{ fontWeight: "normal" }}>(maxLines=3)</code>
+              </Label>
+              <Picker
+                name="dim_word_maxrows"
+                value={LONG_WORD}
+                action={() => {}}
+                maxWidth="200"
+                maxLines={3}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Exceeds maxLines{" "}
+                <code style={{ fontWeight: "normal" }}>(ellipsis)</code>
+              </Label>
+              <Picker
+                name="dim_clamp_maxrows"
+                value={VERY_LONG_TEXT}
+                action={() => {}}
+                maxWidth="200"
+                maxLines={3}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </Subsection>
+      );
+
+      // ── Icon / alignment / value / custom UI ─────────────────────────────────
+
+      const PickerIconDemo = () => (
+        <>
+          <p>
+            The picker shows a dropdown icon by default. You can replace it with
+            your own icon through the <code>icon</code> prop. The icon size
+            follows the control size, stays centered on single-line pickers, and
+            moves to the top when the value spans multiple lines.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Default icon{" "}
+                <code style={{ fontWeight: "normal" }}>(dropdown)</code>
+              </Label>
+              <Picker name="icon_default" value="Hello world" action={() => {}}>
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Custom icon{" "}
+                <code style={{ fontWeight: "normal" }}>(icon prop)</code>
+              </Label>
+              <Picker
+                name="icon_custom"
+                value="Hello world"
+                action={() => {}}
+                icon={<VioletSquareIcon />}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Font size impacts icon{" "}
+                <code style={{ fontWeight: "normal" }}>(size prop)</code>
+              </Label>
+              <Box flex="y" spacing="s">
+                <Box flex="x" spacing="m" alignY="end" flexWrap>
+                  {["xs", "m", "xl", "xxl"].map((size) => (
+                    <Picker
+                      key={`icon_size_default_${size}`}
+                      id={`icon_size_default_${size}`}
+                      name={`icon_size_default_${size}`}
+                      value="Hello world"
+                      action={() => {}}
+                      size={size}
+                    >
+                      <BasicPickerContent />
+                    </Picker>
+                  ))}
+                </Box>
+                <Box flex="x" spacing="m" alignY="end" flexWrap>
+                  {["xs", "m", "xl", "xxl"].map((size) => (
+                    <Picker
+                      key={`icon_size_custom_${size}`}
+                      id={`icon_size_custom_${size}`}
+                      name={`icon_size_custom_${size}`}
+                      value="Hello world"
+                      action={() => {}}
+                      size={size}
+                      icon={<VioletSquareIcon />}
+                    >
+                      <BasicPickerContent />
+                    </Picker>
+                  ))}
+                </Box>
+                <Box flex="x" spacing="m" alignY="end" flexWrap>
+                  {["xs", "m", "xl", "xxl"].map((size) => (
+                    <Picker
+                      key={`icon_size_calendar_${size}`}
+                      id={`icon_size_calendar_${size}`}
+                      name={`icon_size_calendar_${size}`}
+                      value="Hello world"
+                      action={() => {}}
+                      size={size}
+                      icon={<CalendarSvg />}
+                    >
+                      <BasicPickerContent />
+                    </Picker>
+                  ))}
+                </Box>
+              </Box>
+            </Field>
+            <Field vertical>
+              <Label>
+                Single-line tall UI{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (icon stays vertically centered)
+                </code>
+              </Label>
+              <Picker
+                name="icon_tall_ui"
+                value=""
+                action={() => {}}
+                ui={<TallPickerUI label="Custom UI with bigger height" />}
+                icon={<VioletSquareIcon />}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Multi-line value{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (maxLines=3, icon stays on top)
+                </code>
+              </Label>
+              <Picker
+                name="icon_multiline"
+                value={VERY_LONG_TEXT}
+                action={() => {}}
+                width="260px"
+                maxLines={3}
+                icon={<VioletSquareIcon />}
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </>
+      );
+
+      const TextAlignDemo = () => (
+        <>
+          <p>
+            The <code>textAlign</code> prop controls how text is positioned
+            inside the picker trigger button.
+          </p>
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                Left aligned{" "}
+                <code style={{ fontWeight: "normal" }}>(default)</code>
+              </Label>
+              <Picker
+                name="align_left"
+                placeholder="Select…"
+                value={SHORT_VALUE}
+                action={() => {}}
+                width="200px"
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Center aligned{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (textAlign="center")
+                </code>
+              </Label>
+              <Picker
+                name="align_center"
+                placeholder="Select…"
+                value={SHORT_VALUE}
+                action={() => {}}
+                width="200px"
+                textAlign="center"
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                Right aligned{" "}
+                <code style={{ fontWeight: "normal" }}>
+                  (textAlign="right")
+                </code>
+              </Label>
+              <Picker
+                name="align_right"
+                placeholder="Select…"
+                value={SHORT_VALUE}
+                action={() => {}}
+                width="200px"
+                textAlign="right"
+              >
+                <BasicPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </>
+      );
 
       const DefaultValueDemo = () => {
         const noValueSignal = { value: "" };
         const withValueSignal = { value: "Grape" };
 
         return (
-          <div id="section-4" class="demo-section">
-            <h2>4. Default value &amp; placeholder</h2>
+          <>
             <p>
               When no value is selected, the picker shows a faded placeholder
               text. The color appears muted to indicate that it's not an actual
@@ -591,7 +822,7 @@
                 </Picker>
               </Field>
             </Box>
-          </div>
+          </>
         );
       };
 
@@ -600,8 +831,7 @@
         const value = customValueSignal.value;
 
         return (
-          <div id="section-5" class="demo-section">
-            <h2>5. Custom UI via prop ui</h2>
+          <>
             <p>
               Instead of using the default trigger button UI, you can provide
               your own custom UI through the <code>ui</code> prop. This lets you
@@ -675,137 +905,7 @@
                 </Picker>
               </Field>
             </Box>
-          </div>
-        );
-      };
-
-      const PickerIconDemo = () => {
-        return (
-          <div id="section-2" class="demo-section">
-            <h2>2. Picker icon</h2>
-            <p>
-              The picker shows a dropdown icon by default. You can replace it
-              with your own icon through the <code>icon</code> prop. The icon
-              size follows the control size, stays centered on single-line
-              pickers, and moves to the top when the value spans multiple lines.
-            </p>
-            <Box flex="y" spacing="m">
-              <Field vertical>
-                <Label>
-                  Default icon{" "}
-                  <code style={{ fontWeight: "normal" }}>(dropdown)</code>
-                </Label>
-                <Picker
-                  name="icon_default"
-                  value="Hello world"
-                  action={() => {}}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Custom icon{" "}
-                  <code style={{ fontWeight: "normal" }}>(icon prop)</code>
-                </Label>
-                <Picker
-                  name="icon_custom"
-                  value="Hello world"
-                  action={() => {}}
-                  icon={<VioletSquareIcon />}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Font size impacts icon{" "}
-                  <code style={{ fontWeight: "normal" }}>(size prop)</code>
-                </Label>
-                <Box flex="y" spacing="s">
-                  <Box flex="x" spacing="m" alignY="end" flexWrap>
-                    {["xs", "m", "xl", "xxl"].map((size) => (
-                      <Picker
-                        key={`icon_size_default_${size}`}
-                        id={`icon_size_default_${size}`}
-                        name={`icon_size_default_${size}`}
-                        value="Hello world"
-                        action={() => {}}
-                        size={size}
-                      >
-                        <BasicPickerContent />
-                      </Picker>
-                    ))}
-                  </Box>
-                  <Box flex="x" spacing="m" alignY="end" flexWrap>
-                    {["xs", "m", "xl", "xxl"].map((size) => (
-                      <Picker
-                        key={`icon_size_custom_${size}`}
-                        id={`icon_size_custom_${size}`}
-                        name={`icon_size_custom_${size}`}
-                        value="Hello world"
-                        action={() => {}}
-                        size={size}
-                        icon={<VioletSquareIcon />}
-                      >
-                        <BasicPickerContent />
-                      </Picker>
-                    ))}
-                  </Box>
-                  <Box flex="x" spacing="m" alignY="end" flexWrap>
-                    {["xs", "m", "xl", "xxl"].map((size) => (
-                      <Picker
-                        key={`icon_size_calendar_${size}`}
-                        id={`icon_size_calendar_${size}`}
-                        name={`icon_size_calendar_${size}`}
-                        value="Hello world"
-                        action={() => {}}
-                        size={size}
-                        icon={<CalendarSvg />}
-                      >
-                        <BasicPickerContent />
-                      </Picker>
-                    ))}
-                  </Box>
-                </Box>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Single-line tall UI{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (icon stays vertically centered)
-                  </code>
-                </Label>
-                <Picker
-                  name="icon_tall_ui"
-                  value=""
-                  action={() => {}}
-                  ui={<TallPickerUI label="Custom UI with bigger height" />}
-                  icon={<VioletSquareIcon />}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-              <Field vertical>
-                <Label>
-                  Multi-line value{" "}
-                  <code style={{ fontWeight: "normal" }}>
-                    (maxLines=3, icon stays on top)
-                  </code>
-                </Label>
-                <Picker
-                  name="icon_multiline"
-                  value={VERY_LONG_TEXT}
-                  action={() => {}}
-                  width="260px"
-                  maxLines={3}
-                  icon={<VioletSquareIcon />}
-                >
-                  <BasicPickerContent />
-                </Picker>
-              </Field>
-            </Box>
-          </div>
+          </>
         );
       };
 
@@ -813,8 +913,7 @@
         const modeSignal = { popover: "Grape", dialog: "Banana" };
 
         return (
-          <div id="section-6" class="demo-section">
-            <h2>6. Popover vs Dialog mode — back-button close</h2>
+          <>
             <p>
               The <code>mode</code> prop controls where the picker's popup
               appears. <code>"popover"</code> positions it next to the trigger
@@ -899,7 +998,7 @@
               </Field>
               <NavInspect />
             </Box>
-          </div>
+          </>
         );
       };
 
@@ -917,11 +1016,8 @@
         </div>
       );
 
-      const PopupSizingDemo = () => (
-        <div id="section-7" class="demo-section">
-          <h2>7. Popup sizing</h2>
-
-          <h3 style={{ marginTop: "24px" }}>Popover</h3>
+      const PopoverSizingDemo = () => (
+        <Subsection id="popup-sizing-popover" title="Popover">
           <p>
             In popover mode the popup is capped at <code>300px</code> tall by
             default — enough to show a handful of options without overwhelming
@@ -954,8 +1050,11 @@
               </Picker>
             </Field>
           </Box>
+        </Subsection>
+      );
 
-          <h3 style={{ marginTop: "24px" }}>Dialog</h3>
+      const DialogSizingDemo = () => (
+        <Subsection id="popup-sizing-dialog" title="Dialog">
           <p>
             In dialog mode the popup sizes itself to its content — it takes only
             the space it needs, up to the available viewport height.
@@ -980,14 +1079,359 @@
               </Picker>
             </Field>
           </Box>
-        </div>
+        </Subsection>
       );
 
-      render(
-        <App />,
+      // ── Loading & error ───────────────────────────────────────────────────────
 
-        document.getElementById("app"),
+      const ARTICLES = [
+        { id: "art-101", title: "Notes on the Analytical Engine" },
+        { id: "art-102", title: "On Computable Numbers" },
+        { id: "art-103", title: "The Education of a Computer" },
+      ];
+      const findArticleById = (id) => ARTICLES.find((a) => a.id === id);
+      const LOAD_DELAY = 1200;
+
+      // A fake remote load whose outcome is chosen by the caller: `load()`
+      // settles on "loaded", `fail()` on "error". Starts in "loading" so every
+      // example below is already mid-flight when the page appears.
+      const useFakeLoad = () => {
+        const [phase, setPhase] = useState("loading");
+        const timerRef = useRef(null);
+        const settleOn = (outcome) => {
+          clearTimeout(timerRef.current);
+          setPhase("loading");
+          timerRef.current = setTimeout(() => setPhase(outcome), LOAD_DELAY);
+        };
+        useEffect(() => {
+          settleOn("loaded");
+          return () => clearTimeout(timerRef.current);
+        }, []);
+        return {
+          phase,
+          load: () => settleOn("loaded"),
+          fail: () => settleOn("error"),
+        };
+      };
+
+      const LoadControls = ({ phase, load, fail }) => (
+        <Box
+          flex="x"
+          spacing="s"
+          alignY="center"
+          style={{ marginBottom: "12px" }}
+        >
+          <Button action={load} disabled={phase === "loading"}>
+            Load
+          </Button>
+          <Button action={fail} disabled={phase === "loading"}>
+            Make it fail
+          </Button>
+          <code style={{ fontSize: "12px", color: "#666" }}>phase={phase}</code>
+        </Box>
       );
+
+      // The picker publishes its open state as aria-expanded on its root
+      // element — that is the only thing the examples below need to decide
+      // where the error goes (callout on the trigger vs inline in the popup).
+      const usePickerOpened = (pickerRef) => {
+        const [opened, setOpened] = useState(false);
+        useLayoutEffect(() => {
+          const pickerEl = pickerRef.current;
+          const sync = () => {
+            setOpened(pickerEl.getAttribute("aria-expanded") === "true");
+          };
+          sync();
+          const observer = new MutationObserver(sync);
+          observer.observe(pickerEl, {
+            attributes: true,
+            attributeFilter: ["aria-expanded"],
+          });
+          return () => observer.disconnect();
+        }, []);
+        return opened;
+      };
+
+      // A closed picker has nowhere to render the failure, so it surfaces as a
+      // callout anchored on the trigger instead.
+      const useErrorCallout = (pickerRef, active, message) => {
+        useEffect(() => {
+          if (!active) {
+            return undefined;
+          }
+          const callout = openCallout(message, {
+            anchorElement: pickerRef.current,
+            status: "error",
+            skipFocus: true,
+          });
+          return () => {
+            callout.requestClose(new CustomEvent("cleanup"), "example_cleanup");
+          };
+        }, [active, message]);
+      };
+
+      // The "choose an article" UI. Deliberately not a <List> — a plain radio
+      // group is enough to show what a picker does with its facade child.
+      const ArticleChoice = ({ name }) => (
+        <RadioGroup
+          name={name}
+          flex="y"
+          alignX="start"
+          padding="s"
+          spacing="xs"
+        >
+          {ARTICLES.map((article) => (
+            <Field
+              key={article.id}
+              as="label"
+              flex
+              alignY="center"
+              spacing="s"
+              padding="xs"
+            >
+              <Input type="radio" value={article.id} />
+              {article.title}
+            </Field>
+          ))}
+        </RadioGroup>
+      );
+
+      const ArticleChoiceSkeleton = () => (
+        <Box flex="y" spacing="s" padding="s" width="240px">
+          {ARTICLES.map((article) => (
+            <Text key={article.id} loading width="80%" />
+          ))}
+        </Box>
+      );
+
+      const LoadingIntro = () => (
+        <p>
+          Two things can be loading around a picker, and they are independent:
+          the picker's <em>own</em> action, and whatever the popup content needs
+          from the server. A busy popup never blocks the trigger — the picker
+          stays openable so the user can watch the content arrive (or fail).
+        </p>
+      );
+
+      const ActionLoadingDemo = () => {
+        const [saved, setSaved] = useState(ARTICLES[0].title);
+        const [live, setLive] = useState(ARTICLES[0].title);
+        const ARTICLE_TITLES = ARTICLES.map((a) => a.title);
+
+        return (
+          <Subsection id="loading-action" title="The picker's own action">
+            <p>
+              While an async <code>action</code> or <code>uiAction</code> runs,
+              the picker draws a loading outline around itself and refuses
+              further interaction until it settles. <code>action</code> runs
+              once, when the popup closes with a changed value;{" "}
+              <code>uiAction</code> runs on every selection.
+            </p>
+            <Box flex="y" spacing="m">
+              <Field vertical>
+                <Label>
+                  <code>action</code> — runs on close
+                </Label>
+                <Picker
+                  name="loading_action"
+                  placeholder="Choose an article…"
+                  value={saved}
+                  action={async (value) => {
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, LOAD_DELAY),
+                    );
+                    setSaved(value);
+                  }}
+                  minWidth="240"
+                >
+                  <RadioGroup
+                    name="loading_action_choice"
+                    flex="y"
+                    alignX="start"
+                    padding="s"
+                    spacing="xs"
+                  >
+                    {ARTICLE_TITLES.map((title) => (
+                      <Field
+                        key={title}
+                        as="label"
+                        flex
+                        alignY="center"
+                        spacing="s"
+                        padding="xs"
+                      >
+                        <Input type="radio" value={title} />
+                        {title}
+                      </Field>
+                    ))}
+                  </RadioGroup>
+                </Picker>
+              </Field>
+              <Field vertical>
+                <Label>
+                  <code>uiAction</code> — runs on every selection
+                </Label>
+                <Picker
+                  name="loading_ui_action"
+                  placeholder="Choose an article…"
+                  value={live}
+                  uiAction={async (value) => {
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, LOAD_DELAY),
+                    );
+                    setLive(value);
+                  }}
+                  minWidth="240"
+                >
+                  <RadioGroup
+                    name="loading_ui_action_choice"
+                    flex="y"
+                    alignX="start"
+                    padding="s"
+                    spacing="xs"
+                  >
+                    {ARTICLE_TITLES.map((title) => (
+                      <Field
+                        key={title}
+                        as="label"
+                        flex
+                        alignY="center"
+                        spacing="s"
+                        padding="xs"
+                      >
+                        <Input type="radio" value={title} />
+                        {title}
+                      </Field>
+                    ))}
+                  </RadioGroup>
+                </Picker>
+              </Field>
+            </Box>
+          </Subsection>
+        );
+      };
+
+      const ContentLoadingDemo = () => {
+        const { phase, load, fail } = useFakeLoad();
+        const pickerRef = useRef(null);
+        const opened = usePickerOpened(pickerRef);
+        useErrorCallout(
+          pickerRef,
+          phase === "error" && !opened,
+          "Could not load the list of articles.",
+        );
+
+        return (
+          <Subsection id="loading-content" title="Loading content">
+            <p>
+              Nothing is selected yet, so the trigger shows its placeholder and
+              is immediately usable. The <em>content</em> is what loads: open
+              the picker while it is in flight and you see the article list in
+              its skeleton state.
+            </p>
+            <p>
+              Make it fail and the error goes wherever the user is looking — a
+              callout on the trigger when the picker is closed, an inline
+              message inside the popup when it is open. The picker uses{" "}
+              <code>pointerInteractionOutsideEffect="capture"</code> so it stays
+              open while you press the buttons below.
+            </p>
+            <LoadControls phase={phase} load={load} fail={fail} />
+            <Field vertical>
+              <Label>Article picker (nothing selected)</Label>
+              <Picker
+                ref={pickerRef}
+                name="loading_content"
+                placeholder="Choose an article…"
+                minWidth="240"
+                pointerInteractionOutsideEffect="capture"
+              >
+                {phase === "loading" ? (
+                  <ArticleChoiceSkeleton />
+                ) : phase === "error" ? (
+                  <Box padding="s" width="240px">
+                    <MessageBox status="error" icon>
+                      Could not load the list of articles.
+                    </MessageBox>
+                  </Box>
+                ) : (
+                  <ArticleChoice name="loading_content_choice" />
+                )}
+              </Picker>
+            </Field>
+          </Subsection>
+        );
+      };
+
+      const ValueLoadingDemo = () => {
+        const [articleId, setArticleId] = useState(ARTICLES[1].id);
+        const { phase, load, fail } = useFakeLoad();
+        const pickerRef = useRef(null);
+        const opened = usePickerOpened(pickerRef);
+        useErrorCallout(
+          pickerRef,
+          phase === "error" && !opened,
+          "Could not load the selected article.",
+        );
+
+        // The selected value is an id, not something a human can read: until
+        // its title arrives the trigger has nothing to show, so it shows a
+        // skeleton bar the size of a title instead of an empty box.
+        const triggerUI =
+          phase === "loading" ? (
+            <Text loading width="180px" />
+          ) : phase === "error" ? (
+            <Text color="secondary">Unavailable</Text>
+          ) : (
+            <>{findArticleById(articleId).title}</>
+          );
+
+        return (
+          <Subsection id="loading-value" title="Loading the selected label">
+            <p>
+              Here the picker already has a value — <code>{articleId}</code> —
+              but that is a technical id. The title has to be fetched before
+              anything can be displayed, so the trigger shows a{" "}
+              <code>&lt;Text loading&gt;</code> skeleton in the meantime rather
+              than the raw id or an empty box.
+            </p>
+            <p>
+              The popup content is available throughout: pick another article
+              and its title is fetched again. Failing the fetch surfaces the
+              same way as above — callout when closed, inline message when open.
+            </p>
+            <LoadControls phase={phase} load={load} fail={fail} />
+            <Field vertical>
+              <Label>Article picker (value = an id)</Label>
+              <Picker
+                ref={pickerRef}
+                name="loading_value"
+                value={articleId}
+                ui={triggerUI}
+                minWidth="240"
+                pointerInteractionOutsideEffect="capture"
+                uiAction={(value) => {
+                  setArticleId(value);
+                  load();
+                }}
+              >
+                <Box flex="y">
+                  {phase === "error" ? (
+                    <Box padding="s">
+                      <MessageBox status="error" icon>
+                        Could not load the selected article.
+                      </MessageBox>
+                    </Box>
+                  ) : null}
+                  <ArticleChoice name="loading_value_choice" />
+                </Box>
+              </Picker>
+            </Field>
+          </Subsection>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
     </script>
   </body>
 </html>
