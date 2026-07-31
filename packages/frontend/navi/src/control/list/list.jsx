@@ -156,6 +156,16 @@ const css = /* css */ `
     }
     &[data-expand-y] {
       --list-max-height: none;
+
+      /* expandY grows the container to fill its parent (flex-grow, applied by
+         Box). The scroll container must then fill that grown height and take
+         over the internal scroll — flex:1 fills it, min-height:0 lets it shrink
+         below its content so overflow:auto scrolls instead of the content
+         pushing past the container (which overflow:hidden would just clip). */
+      .navi_list_scroll_container {
+        min-height: 0;
+        flex: 1;
+      }
     }
     &[navi-nothing-to-display] {
       display: none;
