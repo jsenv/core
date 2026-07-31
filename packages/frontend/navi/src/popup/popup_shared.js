@@ -142,4 +142,3 @@ export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
     parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
   return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
 };
-

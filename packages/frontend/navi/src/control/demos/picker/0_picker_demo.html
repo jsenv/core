@@ -101,6 +101,7 @@
         Picker,
         Text,
         route,
+        usePopupMode,
         setupRoutes,
       } from "@jsenv/navi";
       import { NavInspect } from "@jsenv/navi/src/control/demos/utils/nav_inspect.jsx";
@@ -137,6 +138,7 @@
             </Chapter>
             <Chapter id="modes" title="Popover vs dialog mode">
               <PopoverDialogDemo />
+              <ModeAwareContentDemo />
             </Chapter>
             <Chapter id="popup-sizing" title="Popup sizing">
               <PopoverSizingDemo />
@@ -229,6 +231,14 @@
             </li>
             <li>
               <Link href="#modes">Popover vs dialog mode</Link>
+              <ol>
+                <li>
+                  <Link href="#modes-history">Back-button close</Link>
+                </li>
+                <li>
+                  <Link href="#modes-content">Content aware of the mode</Link>
+                </li>
+              </ol>
             </li>
             <li>
               <Link href="#popup-sizing">Popup sizing</Link>
@@ -1028,7 +1038,7 @@
         const modeSignal = { popover: "Grape", dialog: "Banana" };
 
         return (
-          <>
+          <Subsection id="modes-history" title="Back-button close">
             <p>
               Dialog mode pushes a history entry, so the browser back button (or
               the Android back gesture) closes it instead of leaving the page.
@@ -1078,9 +1088,61 @@
               </Field>
               <NavInspect />
             </Box>
-          </>
+          </Subsection>
         );
       };
+
+      // A dialog gets the full screen and no trigger next to it, so it can
+      // afford a title and a bigger touch target; a popover hangs off a visible
+      // trigger and should stay compact. usePopupMode() is what lets one set of
+      // children do both.
+      const FruitPickerContent = () => {
+        const mode = usePopupMode();
+        const isDialog = mode === "dialog";
+
+        return (
+          <Box flex="y" padding={isDialog ? "l" : "s"} spacing="s">
+            {isDialog ? (
+              <Text bold size="l">
+                Pick a fruit
+              </Text>
+            ) : null}
+            <Box flex="y" alignX="start" spacing={isDialog ? "m" : "xs"}>
+              {["Apple", "Grape", "Banana"].map((fruit) => (
+                <Text key={fruit} size={isDialog ? "l" : "m"}>
+                  {fruit}
+                </Text>
+              ))}
+            </Box>
+            <Text size="xs" color="secondary">
+              rendered as a {mode}
+            </Text>
+          </Box>
+        );
+      };
+
+      const ModeAwareContentDemo = () => (
+        <Subsection id="modes-content" title="Content aware of the mode">
+          <Box flex="y" spacing="m">
+            <Field vertical>
+              <Label>
+                <code>mode="popover"</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="popover" minWidth="200">
+                <FruitPickerContent />
+              </Picker>
+            </Field>
+            <Field vertical>
+              <Label>
+                <code>mode="dialog"</code>
+              </Label>
+              <Picker placeholder="Open me…" mode="dialog" minWidth="200">
+                <FruitPickerContent />
+              </Picker>
+            </Field>
+          </Box>
+        </Subsection>
+      );
 
       const TallPickerContent = () => (
         <div style={{ padding: "16px" }}>
@@ -1271,7 +1333,10 @@
           );
 
         return (
-          <Subsection id="loading-value" title={`"${ARTICLES[1].id}" is selected`}>
+          <Subsection
+            id="loading-value"
+            title={`"${ARTICLES[1].id}" is selected`}
+          >
             <LoadControls phase={phase} load={load} fail={fail} />
             <Box flex="x" alignX="end">
               <Picker

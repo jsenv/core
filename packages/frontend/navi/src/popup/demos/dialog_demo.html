@@ -712,6 +712,7 @@
         layer,
         animation,
         animationDuration,
+        marginWithContainer,
       }) => {
         const dialogId = useId();
         return (
@@ -730,6 +731,7 @@
               positionArea={positionArea}
               animation={animation}
               animationDuration={animationDuration}
+              marginWithContainer={marginWithContainer}
               className="demo_dialog_box"
             >
               <p style={{ marginTop: 0 }}>{label}</p>
@@ -739,15 +741,50 @@
         );
       };
 
+      // Values a marginWithContainer can take, exercised against both
+      // containers below (the viewport, and a small local one). "vvw" is
+      // viewport-relative whatever the container — the same gap everywhere,
+      // which reads as a feature at viewport scale and as too much inside a
+      // small container.
+      const MARGIN_WITH_CONTAINER_VALUES = [
+        { label: 'default ("3vvw")', value: undefined },
+        { label: "0", value: 0 },
+        { label: "10 (px)", value: 10 },
+        { label: "40 (px)", value: 40 },
+        { label: '"10vvw"', value: "10vvw" },
+      ];
+
+      const useMarginWithContainer = () => {
+        const [index, setIndex] = useState(0);
+        const control = (
+          <label style={{ fontSize: "13px" }}>
+            marginWithContainer{" "}
+            <select
+              value={index}
+              onChange={(e) => setIndex(Number(e.target.value))}
+            >
+              {MARGIN_WITH_CONTAINER_VALUES.map(({ label }, i) => (
+                <option key={label} value={i}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        );
+        return [MARGIN_WITH_CONTAINER_VALUES[index].value, control];
+      };
+
       // layer="top" (default) — the browser's own top layer, so no
       // container needed at all: each button just opens the same dialog
       // docked to (or centered in) the whole viewport.
       const TopLayerPositionSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_position_top_layer");
+        const [marginWithContainer, marginControl] = useMarginWithContainer();
         return (
           <div id="position-top-layer" class="demo-subsection">
             <h3>3.1 top layer</h3>
+            {marginControl}
             <AreaGrid
               renderCell={(token) => (
                 <PositionDialog
@@ -756,6 +793,7 @@
                   duplicate={isDuplicatePointArea(token)}
                   animation={animation}
                   animationDuration={animationDuration}
+                  marginWithContainer={marginWithContainer}
                 />
               )}
             />
@@ -773,6 +811,7 @@
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_position_local_layer");
+        const [marginWithContainer, marginControl] = useMarginWithContainer();
         return (
           <div id="position-local-layer" class="demo-subsection">
             <h3>3.2 local layer</h3>
@@ -787,6 +826,7 @@
               back gesture), a known, accepted limitation of{" "}
               <code>layer="local"</code>, not a bug.
             </p>
+            {marginControl}
             <div class="demo-container">
               <span class="demo-container-label">container</span>
               {/* Focusable but outside any dialog — with a dialog open, Tab
@@ -804,6 +844,7 @@
                   positionArea={token}
                   animation={animation}
                   animationDuration={animationDuration}
+                  marginWithContainer={marginWithContainer}
                   className="demo_dialog_box"
                 >
                   <p style={{ marginTop: 0 }}>{token}</p>
@@ -829,56 +870,6 @@
         );
       };
 
-      const MARGIN_WITH_CONTAINER_CASES = [
-        { label: 'default ("3dvw")', margin: undefined },
-        { label: "0 — flush", margin: 0 },
-        { label: '"m"', margin: "m" },
-        { label: '"10%" of the container', margin: "10%" },
-      ];
-
-      const MarginWithContainerDialog = ({ label, margin }) => {
-        const dialogId = useId();
-        return (
-          <>
-            <Button
-              command="--navi-toggle"
-              commandFor={dialogId}
-              className="demo-position-button"
-            >
-              {label}
-            </Button>
-            <Dialog
-              id={dialogId}
-              positionArea="top-start"
-              marginWithContainer={margin}
-              className="demo_dialog_box"
-            >
-              <p style={{ marginTop: 0 }}>{label}</p>
-              <Button command="--navi-close">Close</Button>
-            </Dialog>
-          </>
-        );
-      };
-
-      const MarginWithContainerSection = () => (
-        <div id="position-margin" class="demo-subsection">
-          <h3>3.3 marginWithContainer</h3>
-          <p>
-            Same gap whatever the <code>positionArea</code> — all four dock to{" "}
-            <code>top-start</code>.
-          </p>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {MARGIN_WITH_CONTAINER_CASES.map(({ label, margin }) => (
-              <MarginWithContainerDialog
-                key={label}
-                label={label}
-                margin={margin}
-              />
-            ))}
-          </div>
-        </div>
-      );
-
       const PositionSection = () => (
         <section id="position" class="demo-section">
           <h2>3. Position</h2>
@@ -900,7 +891,6 @@
           </p>
           <TopLayerPositionSection />
           <LocalLayerPositionSection />
-          <MarginWithContainerSection />
         </section>
       );
 
@@ -922,9 +912,6 @@
                 </li>
                 <li>
                   <a href="#position-local-layer">local layer</a>
-                </li>
-                <li>
-                  <a href="#position-margin">marginWithContainer</a>
                 </li>
               </ol>
             </li>

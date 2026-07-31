@@ -95,7 +95,8 @@ export const popupCss = /* css */ `
        this list contains (no shared transition-property to clobber, no
        propertyName to filter). */
     &[navi-animation] {
-      transition-property: display, overlay, opacity, translate, scale, box-shadow;
+      transition-property:
+        display, overlay, opacity, translate, scale, box-shadow;
       transition-duration:
         var(--popup-animation-duration), var(--popup-animation-duration),
         var(--popup-opacity-duration), var(--popup-translate-duration),

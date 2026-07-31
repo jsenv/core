@@ -61,6 +61,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
 import { onRequestInteraction } from "../control/rules/control_interaction.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import {
@@ -74,7 +75,6 @@ import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
   resolveDirectionValue,
-  resolveMarginWithContainer,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
 
@@ -82,18 +82,23 @@ const css = /* css */ `
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
-         from the marginWithContainer prop (see below) so the size caps here
-         and the placement can never disagree; the literal is only what a
-         dialog painted before that ever runs falls back to. Not named
-         "margin" because it isn't implemented with margins (those are needed
-         for centering). */
-      --dialog-viewport-spacing: 3dvw;
+         from the marginWithContainer prop (see below) — hence --x-, not a knob
+         to set from CSS — so the size caps here and the placement can never
+         disagree. The literal is only what a dialog painted before that ever
+         runs falls back to. Not named "margin" because it isn't implemented
+         with margins (those are needed for centering).
+
+         Capping the *size* here rather than only offsetting the position is
+         what makes a centered dialog follow the mobile virtual keyboard for
+         free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
+         reflows the dialog itself as the keyboard opens. */
+      --x-dialog-viewport-spacing: 3vvw;
 
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvw) - 2 * var(--x-dialog-viewport-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--dialog-viewport-spacing)
+        var(--navi-vvh) - 2 * var(--x-dialog-viewport-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
@@ -326,13 +331,14 @@ const css = /* css */ `
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
- * @param {string|number} [props.marginWithContainer="3dvw"] - Minimum gap kept
+ * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
- *   `--dialog-viewport-spacing`, which is written from this prop) and offsets a
- *   docked one from the edge it docks to. Accepts a spacing token ("s", "m"…),
- *   a number of pixels, or any CSS length — a percentage resolves against the
- *   container. Pass 0 for a dialog meant to sit flush (a side panel).
+ *   `--x-dialog-viewport-spacing`, written from this prop) and offsets a docked
+ *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
+ *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
+ *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
+ *   meant to sit flush (a side panel).
  * @param {"close"|"cancel"|"capture"|"none"} [props.pointerInteractionOutsideEffect="close"]
  *   - `"close"` closes the dialog on an outside click. `"capture"`/`"none"`
  *   both just absorb the click without closing (visually dimmed backdrop vs.
@@ -474,8 +480,8 @@ const useDialogProps = (props) => {
     positionArea = "center",
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
-    // --dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
-    marginWithContainer = "3dvw",
+    // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
+    marginWithContainer = "3vvw",
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -681,16 +687,22 @@ const useDialogProps = (props) => {
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
       const { positionArea, marginWithContainer } = positionPropsRef.current;
-      const marginWithContainerInPixels = resolveMarginWithContainer(
-        marginWithContainer,
-        positionedAncestor,
-      );
+      let marginWithContainerInPixels = resolveSpacingSize(marginWithContainer);
+      if (typeof marginWithContainerInPixels !== "number") {
+        // A value only CSS could evaluate (a spacing token resolving to a var(),
+        // a percentage…) — the placement below needs a real number, and letting
+        // it through would put the dialog at NaN.
+        console.warn(
+          `Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number or a viewport length ("3vvw", "2vvh").`,
+        );
+        marginWithContainerInPixels = 0;
+      }
       // The size caps read the same gap in CSS as the placement below applies
       // in pixels, so a docked dialog and a centered one keep the same
       // distance from the edges. Written resolved (not as the raw prop) so a
       // spacing token stays valid inside the caps' own calc().
       dialogEl.style.setProperty(
-        "--dialog-viewport-spacing",
+        "--x-dialog-viewport-spacing",
         `${marginWithContainerInPixels}px`,
       );
       const pickOptions = {
