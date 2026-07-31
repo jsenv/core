@@ -721,7 +721,8 @@ const ListUI = (props) => {
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
-        suppressFallback={loading || Boolean(error)}
+        loading={loading}
+        error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
         expandX={expandX || expand}
@@ -790,7 +791,8 @@ const ListContent = ({
   fallback,
   searchFallback,
   searching,
-  suppressFallback,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   expandX,
@@ -811,7 +813,8 @@ const ListContent = ({
         fallback={fallback}
         searchFallback={searchFallback}
         searching={searching}
-        suppressFallback={suppressFallback}
+        loading={loading}
+        error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator === true ? <Separator margin="0" /> : separator}
         expandX={expandX}
@@ -1359,7 +1362,8 @@ const UnorderedList = ({
   fallback,
   searchFallback,
   searching,
-  suppressFallback,
+  loading,
+  error,
   searchNoMatchMode,
   separator,
   horizontal,
@@ -1368,6 +1372,10 @@ const UnorderedList = ({
   children,
   ...rest
 }) => {
+  // No empty/no-match message while loading or in error — the placeholder /
+  // error message is the content, even though no items are tracked yet.
+  const suppressFallback = loading || Boolean(error);
+
   return (
     <Box
       as="ul"
@@ -1382,8 +1390,6 @@ const UnorderedList = ({
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
       />
-      {/* No empty/no-match message while loading or in error — the placeholder /
-          error message is the content, even though no items are tracked yet. */}
       {!suppressFallback && (
         <SearchFallback
           searchFallback={searchFallback}
