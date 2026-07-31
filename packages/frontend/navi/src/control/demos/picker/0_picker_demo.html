@@ -1488,9 +1488,10 @@
             <p>
               Make it fail and the error goes wherever the user is looking — a
               callout on the trigger when the picker is closed, an inline
-              message inside the popup when it is open. The picker uses{" "}
-              <code>pointerInteractionOutsideEffect="capture"</code> so it stays
-              open while you press the buttons below.
+              message inside the popup when it is open. Both examples use{" "}
+              <code>pointerInteractionOutsideEffect="none"</code>, purely so the
+              picker stays open while you drive it from the buttons above: no
+              backdrop, outside clicks land on whatever they hit.
             </p>
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
@@ -1500,7 +1501,7 @@
                 name="loading_content"
                 placeholder="Choose an article…"
                 minWidth="240"
-                pointerInteractionOutsideEffect="capture"
+                pointerInteractionOutsideEffect="none"
               >
                 {phase === "loading" ? (
                   <ArticleChoiceSkeleton />
@@ -1565,7 +1566,7 @@
                 value={articleId}
                 ui={triggerUI}
                 minWidth="240"
-                pointerInteractionOutsideEffect="capture"
+                pointerInteractionOutsideEffect="none"
                 uiAction={(value) => {
                   setArticleId(value);
                   load();
