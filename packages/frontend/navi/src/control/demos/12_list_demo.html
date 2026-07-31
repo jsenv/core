@@ -110,7 +110,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -1511,15 +1511,61 @@
 
       const LOADING_STATES = ["skeleton", "loader", "loaded", "error"];
 
-      const LABEL_STYLE = { fontSize: "0.8rem", color: "#888" };
+      // Fakes an async load: starts idle (showing the skeleton), then "load"
+      // keeps the skeleton for a moment before flipping to loaded — so the
+      // skeleton→content transition is actually visible. Reload replays it.
+      const useSimulatedLoad = (delay = 1400) => {
+        const [phase, setPhase] = useState("idle"); // idle | loading | loaded
+        const timerRef = useRef(null);
+        const load = () => {
+          setPhase("loading");
+          clearTimeout(timerRef.current);
+          timerRef.current = setTimeout(() => setPhase("loaded"), delay);
+        };
+        return { phase, loading: phase !== "loaded", load };
+      };
 
-      // A title + subtitle item, rendered as a real row. Its placeholder twin
-      // (PERSON_SKELETON_TEMPLATE) mirrors the same arrangement with one
-      // <Text loading> bar per line, so skeleton and loaded rows line up.
+      const LoadButton = ({ phase, onLoad }) => (
+        <button
+          type="button"
+          onClick={onLoad}
+          disabled={phase === "loading"}
+          style={{
+            alignSelf: "flex-start",
+            marginBottom: "10px",
+            padding: "6px 14px",
+            fontSize: "0.85rem",
+            color: "#fff",
+            background: phase === "loading" ? "#93c5fd" : "#3b82f6",
+            border: "none",
+            borderRadius: "6px",
+            cursor: phase === "loading" ? "default" : "pointer",
+          }}
+        >
+          {phase === "loading"
+            ? "Loading…"
+            : phase === "loaded"
+              ? "Reload"
+              : "Load"}
+        </button>
+      );
+
+      // A title + subtitle item: a short bold title over a long, muted address.
+      // The size/weight gap between the two lines is deliberately large so the
+      // hierarchy — and the skeleton that mirrors it — reads at a glance.
       const PEOPLE = [
-        { name: "Ada Lovelace", role: "Mathematician" },
-        { name: "Alan Turing", role: "Computer scientist" },
-        { name: "Grace Hopper", role: "Rear admiral" },
+        {
+          name: "Ada Lovelace",
+          address: "12 St James's Square, Marylebone, London W1U 3DE",
+        },
+        {
+          name: "Alan Turing",
+          address: "78 High Street, Wilmslow, Cheshire SK9 1AT",
+        },
+        {
+          name: "Grace Hopper",
+          address: "4401 Massachusetts Avenue NW, Washington, DC 20016",
+        },
       ];
 
       const PersonItem = ({ person, index }) => (
@@ -1531,26 +1577,78 @@
           paddingY="s"
         >
           <Box flex="y" spacing="xs" expandX>
-            <Text bold>{person.name}</Text>
+            <Text bold size="l">
+              {person.name}
+            </Text>
             <Text size="xs" color="secondary">
-              {person.role}
+              {person.address}
             </Text>
           </Box>
         </ListItem>
       );
 
+      // The skeleton mirrors PersonItem: a short (40%) title bar the height of a
+      // large line, over a long (80%) address bar the height of an xs line —
+      // matching that titles are short and addresses run wide.
       const PERSON_SKELETON_TEMPLATE = (
         <ListItem skeleton paddingX="m" paddingY="s">
           <Box flex="y" spacing="xs" expandX>
-            <Text loading bold>
-              Placeholder name
-            </Text>
-            <Text loading size="xs" color="secondary">
-              Placeholder role
-            </Text>
+            <Box width="40%">
+              <Text loading bold size="l" />
+            </Box>
+            <Box width="80%">
+              <Text loading size="xs" />
+            </Box>
           </Box>
         </ListItem>
       );
+
+      const DefaultSkeletonExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List loading={loading} expandX>
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
+          </Box>
+        );
+      };
+
+      const CustomPaddingExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List
+              loading={loading}
+              skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
+              expandX
+            >
+              {renderFruitItems(SOME_FRUITS)}
+            </List>
+          </Box>
+        );
+      };
+
+      const TitleSubtitleExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List
+              loading={loading}
+              loadingSkeletonCount={PEOPLE.length}
+              skeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              expandX
+            >
+              {PEOPLE.map((person, i) => (
+                <PersonItem key={person.name} person={person} index={i} />
+              ))}
+            </List>
+          </Box>
+        );
+      };
 
       const LoadingDemo = () => {
         const [state, setState] = useState("skeleton");
@@ -1564,7 +1662,9 @@
               items — <code>loadingSkeletonCount</code> skeleton rows by
               default, or a single spinner with{" "}
               <code>loadingIndicator="loader"</code>. The <code>error</code>{" "}
-              prop replaces them with an inline callout.
+              prop replaces them with an inline callout. The examples below
+              start on their skeleton — press <em>Load</em> to watch it swap for
+              the real content.
             </p>
             <Heading level={3} id="loading-states">
               States
@@ -1603,9 +1703,7 @@
               No <code>skeletonTemplate</code> — each row is a full-width{" "}
               <code>&lt;Text loading&gt;</code> bar.
             </p>
-            <List loading expandX>
-              {renderFruitItems(SOME_FRUITS)}
-            </List>
+            <DefaultSkeletonExample />
 
             <Heading level={3} id="loading-padding">
               Custom padding
@@ -1614,13 +1712,7 @@
               Pass a <code>skeletonTemplate</code> so the placeholder matches
               the real rows' padding.
             </p>
-            <List
-              loading
-              skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
-              expandX
-            >
-              {renderFruitItems(SOME_FRUITS)}
-            </List>
+            <CustomPaddingExample />
 
             <Heading level={3} id="loading-layout">
               Matching a title + subtitle layout
@@ -1628,33 +1720,13 @@
             <p>
               When items have their own arrangement, the{" "}
               <code>skeletonTemplate</code> reproduces it with one{" "}
-              <code>&lt;Text loading&gt;</code> per line;{" "}
-              <code>loadingSkeletonCount</code> matches the known length. Loaded
-              first, its skeleton twin directly below — same shape.
+              <code>&lt;Text loading&gt;</code> per line, each sized to mimic
+              the real content — a short title bar over a wide address bar;{" "}
+              <code>loadingSkeletonCount</code> matches the known length. Press{" "}
+              <em>Load</em> to see how closely the placeholder tracks the loaded
+              rows.
             </p>
-            <Box flex="y" spacing="m" alignX="start" expandX>
-              <Box flex="y" spacing="xs" alignX="start" expandX>
-                <strong style={LABEL_STYLE}>Loaded</strong>
-                <List expandX>
-                  {PEOPLE.map((person, i) => (
-                    <PersonItem key={person.name} person={person} index={i} />
-                  ))}
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs" alignX="start" expandX>
-                <strong style={LABEL_STYLE}>Loading (skeleton twin)</strong>
-                <List
-                  loading
-                  loadingSkeletonCount={PEOPLE.length}
-                  skeletonTemplate={PERSON_SKELETON_TEMPLATE}
-                  expandX
-                >
-                  {PEOPLE.map((person, i) => (
-                    <PersonItem key={person.name} person={person} index={i} />
-                  ))}
-                </List>
-              </Box>
-            </Box>
+            <TitleSubtitleExample />
           </div>
         );
       };
