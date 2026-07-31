@@ -654,13 +654,6 @@
                   borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
-              <Box flex="y" spacing="xs" alignX="start">
-                <StyleSelect
-                  label='popoverMode="attached"'
-                  popoverMode="attached"
-                  borderRadius={rounded ? "m" : "0"}
-                />
-              </Box>
             </Box>
 
             {/* ── 3-column: popover wider than trigger ── */}
@@ -695,14 +688,6 @@
                   borderRadius={rounded ? "m" : "0"}
                 />
               </Box>
-              <Box flex="y" spacing="xs" alignX="start">
-                <StyleSelect
-                  label='popoverMode="attached"'
-                  wideList
-                  popoverMode="attached"
-                  borderRadius={rounded ? "m" : "0"}
-                />
-              </Box>
             </Box>
 
             {/* ── explanations ── */}
@@ -729,29 +714,10 @@
                 natural behaviour and is used widely (GitHub, Linear, etc.).
               </li>
             </ul>
-            <p style={{ fontSize: "13px", color: "#444", margin: "0 0 6px" }}>
-              The other modes have valid use cases but come with trade-offs:
+            <p style={{ fontSize: "13px", color: "#444", margin: 0 }}>
+              <b>"overlay"</b> has valid use cases but covers the trigger when
+              open, which can feel disorienting.
             </p>
-            <ul
-              style={{
-                fontSize: "13px",
-                color: "#444",
-                margin: 0,
-                paddingLeft: "20px",
-                lineHeight: "1.7",
-              }}
-            >
-              <li>
-                <b>"overlay"</b> — the popover covers the trigger when open,
-                which can feel disorienting.
-              </li>
-              <li>
-                <b>"attached"</b> — when the popover is wider, the trigger grows
-                with it, so two things change at once instead of one. If you use
-                a custom trigger it needs to be fluid in width for this to work
-                correctly.
-              </li>
-            </ul>
           </div>
         );
       };

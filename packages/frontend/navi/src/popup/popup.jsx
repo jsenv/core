@@ -1,7 +1,7 @@
 /**
  * A lightweight version of picker_custom.jsx's own Popover/Dialog switch —
  * no picker concepts (value/action tracking, keyboard letter/arrow-to-open
- * shortcuts, history-driven expanded state, anchor-clone "attached" mode):
+ * shortcuts, history-driven expanded state):
  * just picks between rendering a Popover or a Dialog and applies the shared
  * "popup box" look (padding, background, border-radius, box-shadow) to
  * whichever one it renders.

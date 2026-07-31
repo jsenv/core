@@ -686,7 +686,7 @@ const PickerFirstResolver = (props) => {
  *   action?: (value: any, event: Event) => void,
  *   children?: import("preact").ComponentChildren,
  *   mode?: "popover" | "dialog",
- *   popoverMode?: "nearby" | "attached",
+ *   popoverMode?: "nearby" | "overlay",
  *   positionArea?: string,
  *   popupWidthFitContent?: boolean,
  *   variant?: "icon" | "headless",
@@ -705,15 +705,15 @@ const PickerFirstResolver = (props) => {
  *   content failed to load, its value could not be resolved…). Shown as a
  *   callout on the trigger, open or closed — the caller has nothing to place.
  *   Dismissing it discards that error; a new `error` value raises another one.
- * @param {"nearby"|"attached"} [popoverMode="nearby"] In "attached" mode the
- *   popover sits directly on the trigger and visually absorbs it (a clone of
- *   the trigger is drawn inside the popover); "nearby" leaves a small gap.
+ * @param {"nearby"|"overlay"} [popoverMode="nearby"] "overlay" lays the popover
+ *   over the trigger, "nearby" leaves a small gap below it.
  * @param {string} [positionArea] Where the popup goes — relative to the trigger
  *   in popover mode, relative to the viewport in dialog mode. Same grammar as
  *   Popover/Dialog's own `positionArea` ("top", "right-end", "inset(top-left)",
  *   …). Defaults to "bottom-start" in popover mode ("inset(top-left)" when
- *   "attached"), and to Dialog's own "center" in dialog mode. A popover still
- *   flips to the opposite side on its own when there isn't enough room.
+ *   popoverMode is "overlay"), and to Dialog's own "center" in dialog mode. A
+ *   popover still flips to the opposite side on its own when there isn't
+ *   enough room.
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
