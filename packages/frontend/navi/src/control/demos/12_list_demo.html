@@ -1492,7 +1492,7 @@
 
       // ── Loading state ──────────────────────────────────────────────────────────
 
-      const renderFruitItems = (items, matchInfoOf) =>
+      const renderFruitItems = (items, matchInfoOf, { paddingY = "s" } = {}) =>
         items.map((fruit, i) => (
           <ListItem
             key={fruit}
@@ -1501,7 +1501,7 @@
             value={fruit}
             matchInfo={matchInfoOf ? matchInfoOf(fruit) : undefined}
             paddingX="m"
-            paddingY="s"
+            paddingY={paddingY}
           >
             {fruit}
           </ListItem>
@@ -1590,15 +1590,14 @@
       // The skeleton mirrors PersonItem: a short (40%) title bar the height of a
       // large line, over a long (80%) address bar the height of an xs line —
       // matching that titles are short and addresses run wide.
+      // The widths go on the <Text> itself: wrapping it in a sizing <Box> would
+      // make the row taller than the loaded one, because that Box's line box is
+      // floored by the item font-size strut (16px) while an "xs" line is 15px.
       const PERSON_SKELETON_TEMPLATE = (
         <ListItem skeleton paddingX="m" paddingY="s">
           <Box flex="y" spacing="xs" expandX>
-            <Box width="40%">
-              <Text loading bold size="l" />
-            </Box>
-            <Box width="80%">
-              <Text loading size="xs" />
-            </Box>
+            <Text loading bold size="l" width="40%" />
+            <Text loading size="xs" width="80%" />
           </Box>
         </ListItem>
       );
@@ -1622,10 +1621,11 @@
             <LoadButton phase={phase} onLoad={load} />
             <List
               loading={loading}
+              loadingSkeletonCount={SOME_FRUITS.length}
               skeletonTemplate={<ListItem skeleton paddingX="m" paddingY="m" />}
               expandX
             >
-              {renderFruitItems(SOME_FRUITS)}
+              {renderFruitItems(SOME_FRUITS, undefined, { paddingY: "m" })}
             </List>
           </Box>
         );
@@ -1710,7 +1710,9 @@
             </Heading>
             <p>
               Pass a <code>skeletonTemplate</code> so the placeholder matches
-              the real rows' padding.
+              the real rows' padding, and a <code>loadingSkeletonCount</code>{" "}
+              equal to the expected item count so the list keeps the same height
+              across the swap.
             </p>
             <CustomPaddingExample />
 

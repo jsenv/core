@@ -49,6 +49,7 @@ const css = /* css */ `
       --link-text-decoration-hover: var(--link-text-decoration);
       --link-cursor: pointer;
       --link-loading-outline-size: 1px;
+      --link-outline-width: 2px;
 
       --link-current-indicator-size: 2px;
       --link-current-indicator-spacing: 0;
@@ -184,6 +185,10 @@ const css = /* css */ `
         --x-link-color: var(--link-color);
       }
     }
+    &[data-anchor] {
+      /* Usually better to have some spacing between the anchor and the scroll top */
+      scroll-margin-block: calc(1em + var(--link-outline-width) + 1px);
+    }
     /* Hover */
     &[data-hover] {
       --x-link-background: var(--x-link-background-hover);
@@ -191,7 +196,7 @@ const css = /* css */ `
       --x-link-text-decoration: var(--x-link-text-decoration-hover);
     }
     &[data-focus-visible] {
-      outline-width: 2px;
+      outline-width: var(--link-outline-width);
     }
     /* Pressed */
     &[data-pressed] {

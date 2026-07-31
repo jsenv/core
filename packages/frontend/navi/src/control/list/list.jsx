@@ -1563,8 +1563,10 @@ const ListItemSkeletonResolver = (props) => {
   return <Next {...props} />;
 };
 const ListItemSkeleton = (props) => {
+  // Without vertical padding the bars of consecutive rows touch and read as one
+  // block; "s" is enough air for them to be seen as separate rows.
   // eslint-disable-next-line no-unused-vars
-  const { skeleton, children, ...rest } = props;
+  const { skeleton, children, paddingY = "s", ...rest } = props;
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
 
   return (
@@ -1572,6 +1574,7 @@ const ListItemSkeleton = (props) => {
       as="li"
       role="presentation"
       aria-hidden="true"
+      paddingY={paddingY}
       {...rest}
       {...columnsOverrideProps}
       baseClassName="navi_list_item navi_list_item_skeleton"

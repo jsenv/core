@@ -468,6 +468,7 @@ const VISUAL_PROPS = {
   scrollbarWidth: PASS_THROUGH,
   scrollbarGutter: PASS_THROUGH,
   scrollMarginBlock: PASS_THROUGH,
+  scrollMarginInline: PASS_THROUGH,
   scrollMargin: PASS_THROUGH,
 };
 const CONTENT_PROPS = {
