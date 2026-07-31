@@ -119,6 +119,7 @@
         Text,
         useSearchText,
         Box,
+        LoadingIndicator,
         NaviDebug,
         Icon,
         Link,
@@ -1509,7 +1510,27 @@
 
       const SOME_FRUITS = FRUITS.slice(0, 6);
 
-      const LOADING_STATES = ["skeleton", "loader", "loaded", "error"];
+      const LOADING_STATES = [
+        "skeleton",
+        "loader",
+        "custom",
+        "loaded",
+        "error",
+      ];
+      const CUSTOM_LOADING_FALLBACK = (
+        <Box
+          flex
+          alignX="center"
+          alignY="center"
+          spacing="s"
+          expandX
+          padding="l"
+          color="secondary"
+        >
+          <LoadingIndicator />
+          <Text>Loading fruits…</Text>
+        </Box>
+      );
 
       // Fakes an async load: starts idle (showing the skeleton), then "load"
       // keeps the skeleton for a moment before flipping to loaded — so the
@@ -1660,8 +1681,9 @@
             <p>
               While loading, a list shows placeholder content in place of its
               items — <code>loadingSkeletonCount</code> skeleton rows by
-              default, or a single spinner with{" "}
-              <code>loadingIndicator="loader"</code>. The <code>error</code>{" "}
+              default, a single spinner with{" "}
+              <code>loadingFallback="loader"</code>, or whatever element is
+              passed as <code>loadingFallback</code>. The <code>error</code>{" "}
               prop replaces them with an inline callout. The examples below
               start on their skeleton — press <em>Load</em> to watch it swap for
               the real content.
@@ -1683,8 +1705,12 @@
               ))}
             </div>
             <List
-              loading={state === "skeleton" || state === "loader"}
-              loadingIndicator={state === "loader" ? "loader" : "skeleton"}
+              loading={
+                state === "skeleton" || state === "loader" || state === "custom"
+              }
+              loadingFallback={
+                state === "custom" ? CUSTOM_LOADING_FALLBACK : state
+              }
               error={
                 state === "error"
                   ? "Failed to load fruits. Please try again."

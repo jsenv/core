@@ -382,9 +382,10 @@ const css = /* css */ `
       user-select: none;
     }
   }
-  /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
+  /* Loading placeholders (see List's loading / loadingFallback / skeletonTemplate).
      A skeleton row reuses <Text loading> for the shimmer bar; the loader row
-     centers a spinner. */
+     centers a spinner; a custom loadingFallback is only given a row to live in,
+     its own markup does the layout. */
   .navi_list_item_skeleton {
     pointer-events: none;
   }
@@ -394,6 +395,9 @@ const css = /* css */ `
     align-items: center;
     justify-content: center;
     color: light-dark(#888, #aaa);
+  }
+  .navi_list_loading_fallback {
+    display: flex;
   }
   /* Error state (List error prop): an inline callout describing why the list
      failed to load, shown in place of the items. */
@@ -507,7 +511,7 @@ const ListUI = (props) => {
     searchText,
     searchNoMatchMode = "remove",
     loading,
-    loadingIndicator = "skeleton",
+    loadingFallback = "skeleton",
     loadingSkeletonCount = 3,
     skeletonTemplate,
     error,
@@ -624,9 +628,8 @@ const ListUI = (props) => {
     !emptyFallbackShown;
 
   // Placeholder content replaces the real children: an error message when the
-  // load failed (takes precedence), otherwise — while loading — skeleton rows
-  // (default, count loadingSkeletonCount, look skeletonTemplate) or a single
-  // centered loader when loadingIndicator="loader".
+  // load failed (takes precedence), otherwise — while loading — whatever
+  // loadingFallback asks for.
   let content = children;
   if (error) {
     content = (
@@ -640,18 +643,8 @@ const ListUI = (props) => {
         <span>{error === true ? "Something went wrong." : error}</span>
       </ListItem>
     );
-  } else if (loading) {
-    if (loadingIndicator === "loader") {
-      content = (
-        <ListItem
-          role="presentation"
-          aria-hidden="true"
-          baseClassName="navi_list_item navi_list_loader"
-        >
-          <LoadingIndicator />
-        </ListItem>
-      );
-    } else {
+  } else if (loading && loadingFallback) {
+    if (loadingFallback === "skeleton") {
       const template = skeletonTemplate ?? <ListItem skeleton />;
       const skeletons = [];
       let skeletonIndex = 0;
@@ -664,6 +657,27 @@ const ListUI = (props) => {
         skeletonIndex++;
       }
       content = skeletons;
+    } else if (loadingFallback === "loader") {
+      content = (
+        <ListItem
+          role="presentation"
+          aria-hidden="true"
+          baseClassName="navi_list_item navi_list_loader"
+        >
+          <LoadingIndicator />
+        </ListItem>
+      );
+    } else {
+      // Custom content is not aria-hidden (unlike the bare spinner): it usually
+      // carries a message worth announcing.
+      content = (
+        <ListItem
+          role="presentation"
+          baseClassName="navi_list_item navi_list_loading_fallback"
+        >
+          {loadingFallback}
+        </ListItem>
+      );
     }
   }
 
@@ -751,7 +765,7 @@ const ListFirstResolver = (props) => {
  *   searchText?: string,
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   loading?: boolean,
- *   loadingIndicator?: "skeleton" | "loader",
+ *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
  *   loadingSkeletonCount?: number,
  *   skeletonTemplate?: import("preact").ComponentChildren,
  *   error?: boolean | import("preact").ComponentChildren,
@@ -766,6 +780,11 @@ const ListFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
+ *   What to display in place of the items while `loading`: `"skeleton"` renders
+ *   `loadingSkeletonCount` placeholder rows (look: `skeletonTemplate`),
+ *   `"loader"` a single centered spinner, and anything else is rendered as-is
+ *   in a row of its own. A falsy value displays nothing.
  */
 export const List = createComponentResolver([
   ListFirstResolver,
