@@ -221,5 +221,5 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export { installImportMetaCssBuild, windowWidthSignal };
+export { installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map
