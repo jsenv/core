@@ -255,6 +255,9 @@
                   <li>
                     <Link href="#loading-layout">Title + subtitle layout</Link>
                   </li>
+                  <li>
+                    <Link href="#loading-separator">With separators</Link>
+                  </li>
                 </ol>
               </li>
               <li>
@@ -1673,6 +1676,26 @@
         );
       };
 
+      const SeparatorExample = () => {
+        const { phase, loading, load } = useSimulatedLoad();
+        return (
+          <Box flex="y" alignX="start" expandX>
+            <LoadButton phase={phase} onLoad={load} />
+            <List
+              separator
+              loading={loading}
+              loadingSkeletonCount={PEOPLE.length}
+              loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              expandX
+            >
+              {PEOPLE.map((person, i) => (
+                <PersonItem key={person.name} person={person} index={i} />
+              ))}
+            </List>
+          </Box>
+        );
+      };
+
       const LoadingDemo = () => {
         const [state, setState] = useState("skeleton");
         return (
@@ -1757,6 +1780,11 @@
               rows.
             </p>
             <TitleSubtitleExample />
+
+            <Heading level={3} id="loading-separator">
+              With separators
+            </Heading>
+            <SeparatorExample />
           </div>
         );
       };

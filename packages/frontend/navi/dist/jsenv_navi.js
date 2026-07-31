@@ -42516,12 +42516,20 @@ const ListUI = props => {
     });
   } else if (loading && loadingFallback) {
     if (loadingFallback === "skeleton") {
+      // Skeleton rows draw their own separators: they never reach ListItemUI
+      // (where real items get theirs from SeparatorContext), and without them
+      // the list would visibly gain its dividers only once loaded.
       const template = loadingSkeletonTemplate ?? jsx(ListItem, {
         skeleton: true
       });
       const skeletons = [];
       let skeletonIndex = 0;
       while (skeletonIndex < loadingSkeletonCount) {
+        if (separator && skeletonIndex > 0) {
+          skeletons.push(cloneElement(resolveSeparatorVnode(separator, skeletonIndex - 1), {
+            key: `navi-list-skeleton-separator-${skeletonIndex}`
+          }));
+        }
         skeletons.push(cloneElement(template, {
           key: `navi-list-skeleton-${skeletonIndex}`
         }));
@@ -42677,9 +42685,7 @@ const ListContent = ({
       loading: loading,
       error: error,
       searchNoMatchMode: searchNoMatchMode,
-      separator: separator === true ? jsx(Separator, {
-        margin: "0"
-      }) : separator,
+      separator: separator,
       expandX: expandX
       // Deliberately not expandY here (unlike expandX above): the outer
       // .navi_list_container already gets its own expandY treatment (see
@@ -43511,7 +43517,7 @@ const ListItemUI = props => {
   }
   // separatorIndex is only used as the function-form argument (gap index)
   const separatorIndex = groupVisibleIndex === null ? visibleIndex : groupVisibleIndex;
-  const separatorVnode = typeof separator === "function" ? separator(separatorIndex - 1) : separator;
+  const separatorVnode = resolveSeparatorVnode(separator, separatorIndex - 1);
   return jsxs(Fragment$1, {
     children: [separatorVnode, listItemVnode]
   });
@@ -43721,6 +43727,21 @@ const ListItemGroup = ({
       })
     })]
   });
+};
+
+// The `separator` prop accepts `true` (the default divider), a vnode, or a
+// function receiving the gap index — this turns any of them into the vnode to
+// render at that gap.
+const resolveSeparatorVnode = (separator, gapIndex) => {
+  if (separator === true) {
+    return jsx(Separator, {
+      margin: "0"
+    });
+  }
+  if (typeof separator === "function") {
+    return separator(gapIndex);
+  }
+  return separator;
 };
 
 const PickerNaviTime = props => {
