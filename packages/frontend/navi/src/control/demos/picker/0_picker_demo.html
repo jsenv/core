@@ -98,13 +98,12 @@
         Box,
         Button,
         Field,
-        Input,
         Label,
         Link,
-        MessageBox,
+        List,
+        ListItem,
         NaviDebug,
         Picker,
-        RadioGroup,
         Text,
         openCallout,
         route,
@@ -1326,38 +1325,32 @@
         }, [active, message]);
       };
 
-      // The "choose an article" UI. Deliberately not a <List> — a plain radio
-      // group is enough to show what a picker does with its facade child.
-      const ArticleChoice = ({ name }) => (
-        <RadioGroup
-          name={name}
-          flex="y"
-          alignX="start"
-          padding="s"
-          spacing="xs"
+      // The "choose an article" list. `articles` is what the server gave us —
+      // empty until the load settles, which is the whole point: while loading
+      // there is nothing to render, so the List draws loadingSkeletonCount
+      // placeholder rows instead, and `error` replaces them with a callout.
+      const ArticleList = ({ articles, loading, error, selectedId }) => (
+        <List
+          selectable
+          loading={loading}
+          loadingSkeletonCount={3}
+          error={error}
         >
-          {ARTICLES.map((article) => (
-            <Field
+          {articles.map((article, i) => (
+            <ListItem
+              selectable
               key={article.id}
-              as="label"
-              flex
-              alignY="center"
-              spacing="s"
-              padding="xs"
+              id={article.id}
+              index={i}
+              value={article.id}
+              selected={selectedId === article.id}
+              paddingX="m"
+              paddingY="s"
             >
-              <Input type="radio" value={article.id} />
               {article.title}
-            </Field>
+            </ListItem>
           ))}
-        </RadioGroup>
-      );
-
-      const ArticleChoiceSkeleton = () => (
-        <Box flex="y" spacing="s" padding="s" width="240px">
-          {ARTICLES.map((article) => (
-            <Text key={article.id} loading width="80%" />
-          ))}
-        </Box>
+        </List>
       );
 
       const LoadingIntro = () => (
@@ -1372,7 +1365,6 @@
       const ActionLoadingDemo = () => {
         const [saved, setSaved] = useState(ARTICLES[0].title);
         const [live, setLive] = useState(ARTICLES[0].title);
-        const ARTICLE_TITLES = ARTICLES.map((a) => a.title);
 
         return (
           <Subsection id="loading-action" title="The picker's own action">
@@ -1400,27 +1392,22 @@
                   }}
                   minWidth="240"
                 >
-                  <RadioGroup
-                    name="loading_action_choice"
-                    flex="y"
-                    alignX="start"
-                    padding="s"
-                    spacing="xs"
-                  >
-                    {ARTICLE_TITLES.map((title) => (
-                      <Field
-                        key={title}
-                        as="label"
-                        flex
-                        alignY="center"
-                        spacing="s"
-                        padding="xs"
+                  <List selectable>
+                    {ARTICLES.map((article, i) => (
+                      <ListItem
+                        selectable
+                        key={article.id}
+                        id={`action_${article.id}`}
+                        index={i}
+                        value={article.title}
+                        selected={saved === article.title}
+                        paddingX="m"
+                        paddingY="s"
                       >
-                        <Input type="radio" value={title} />
-                        {title}
-                      </Field>
+                        {article.title}
+                      </ListItem>
                     ))}
-                  </RadioGroup>
+                  </List>
                 </Picker>
               </Field>
               <Field vertical>
@@ -1439,27 +1426,22 @@
                   }}
                   minWidth="240"
                 >
-                  <RadioGroup
-                    name="loading_ui_action_choice"
-                    flex="y"
-                    alignX="start"
-                    padding="s"
-                    spacing="xs"
-                  >
-                    {ARTICLE_TITLES.map((title) => (
-                      <Field
-                        key={title}
-                        as="label"
-                        flex
-                        alignY="center"
-                        spacing="s"
-                        padding="xs"
+                  <List selectable>
+                    {ARTICLES.map((article, i) => (
+                      <ListItem
+                        selectable
+                        key={article.id}
+                        id={`ui_action_${article.id}`}
+                        index={i}
+                        value={article.title}
+                        selected={live === article.title}
+                        paddingX="m"
+                        paddingY="s"
                       >
-                        <Input type="radio" value={title} />
-                        {title}
-                      </Field>
+                        {article.title}
+                      </ListItem>
                     ))}
-                  </RadioGroup>
+                  </List>
                 </Picker>
               </Field>
             </Box>
@@ -1481,17 +1463,20 @@
           <Subsection id="loading-content" title="Loading content">
             <p>
               Nothing is selected yet, so the trigger shows its placeholder and
-              is immediately usable. The <em>content</em> is what loads: open
-              the picker while it is in flight and you see the article list in
-              its skeleton state.
+              is immediately usable. The <em>content</em> is what loads: the
+              article list comes from the server, so until it lands there is
+              literally nothing to render. Open the picker while the request is
+              in flight and the <code>&lt;List loading&gt;</code> shows
+              placeholder rows in place of items it doesn't have yet.
             </p>
             <p>
               Make it fail and the error goes wherever the user is looking — a
-              callout on the trigger when the picker is closed, an inline
-              message inside the popup when it is open. Both examples use{" "}
-              <code>pointerInteractionOutsideEffect="none"</code>, purely so the
-              picker stays open while you drive it from the buttons above: no
-              backdrop, outside clicks land on whatever they hit.
+              callout on the trigger when the picker is closed, the List's own
+              inline callout (its <code>error</code> prop) when it is open. Both
+              examples use <code>pointerInteractionOutsideEffect="none"</code>,
+              purely so the picker stays open while you drive it from the
+              buttons above: no backdrop, outside clicks land on whatever they
+              hit.
             </p>
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
@@ -1503,17 +1488,15 @@
                 minWidth="240"
                 pointerInteractionOutsideEffect="none"
               >
-                {phase === "loading" ? (
-                  <ArticleChoiceSkeleton />
-                ) : phase === "error" ? (
-                  <Box padding="s" width="240px">
-                    <MessageBox status="error" icon>
-                      Could not load the list of articles.
-                    </MessageBox>
-                  </Box>
-                ) : (
-                  <ArticleChoice name="loading_content_choice" />
-                )}
+                <ArticleList
+                  articles={phase === "loaded" ? ARTICLES : []}
+                  loading={phase === "loading"}
+                  error={
+                    phase === "error"
+                      ? "Could not load the list of articles."
+                      : undefined
+                  }
+                />
               </Picker>
             </Field>
           </Subsection>
@@ -1553,9 +1536,10 @@
               than the raw id or an empty box.
             </p>
             <p>
-              The popup content is available throughout: pick another article
-              and its title is fetched again. Failing the fetch surfaces the
-              same way as above — callout when closed, inline message when open.
+              The same request brings the list, so the popup is in its skeleton
+              state at the same time. Once loaded, pick another article and
+              everything is fetched again. Failing it surfaces the same way as
+              above — callout when closed, the List's inline callout when open.
             </p>
             <LoadControls phase={phase} load={load} fail={fail} />
             <Field vertical>
@@ -1572,16 +1556,16 @@
                   load();
                 }}
               >
-                <Box flex="y">
-                  {phase === "error" ? (
-                    <Box padding="s">
-                      <MessageBox status="error" icon>
-                        Could not load the selected article.
-                      </MessageBox>
-                    </Box>
-                  ) : null}
-                  <ArticleChoice name="loading_value_choice" />
-                </Box>
+                <ArticleList
+                  articles={phase === "loaded" ? ARTICLES : []}
+                  loading={phase === "loading"}
+                  error={
+                    phase === "error"
+                      ? "Could not load the selected article."
+                      : undefined
+                  }
+                  selectedId={articleId}
+                />
               </Picker>
             </Field>
           </Subsection>
