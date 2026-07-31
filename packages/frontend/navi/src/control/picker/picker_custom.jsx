@@ -8,7 +8,11 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "@jsenv/navi/src/popup/open_controller.js";
-import { Popup, usePopupMode } from "@jsenv/navi/src/popup/popup.jsx";
+import {
+  PopupModeContext,
+  useResolvedPopupMode,
+} from "@jsenv/navi/src/popup/popup_mode.jsx";
+import { Popup } from "@jsenv/navi/src/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
@@ -18,7 +22,6 @@ import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
 } from "../ui_state_dom.js";
-import { PickerModeContext } from "./picker_context.jsx";
 
 const css = /* css */ `
   .navi_picker {
@@ -218,11 +221,11 @@ const PickerCustom = (props) => {
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
   // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
-  // popup.jsx's own usePopupMode) — frozen for the lifetime of an opening
+  // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
   // doesn't switch between Popover and Dialog), with resetMode called from
   // this picker's own onClose below to re-evaluate on the *next* open.
-  const [mode, resetMode] = usePopupMode(modeProp, props.maxWidth);
+  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth);
 
   const pickerProps = {
     ...props,
@@ -643,10 +646,10 @@ const PickerContentInsidePopup = (props) => {
         expandX={!isPopover ? expandX : undefined}
         expandY={!isPopover ? expandY : undefined}
       >
-        {/* Let the popup content branch on the mode via usePickerMode(). */}
-        <PickerModeContext.Provider value={mode}>
+        {/* Let the popup content branch on the mode via usePopupMode(). */}
+        <PopupModeContext.Provider value={mode}>
           {children}
-        </PickerModeContext.Provider>
+        </PopupModeContext.Provider>
       </Popup>
     </Next>
   );

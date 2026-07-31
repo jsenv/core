@@ -74,7 +74,7 @@
         Wheel,
         WheelGroup,
         Picker,
-        usePickerMode,
+        usePopupMode,
         Button,
         Box,
         Unit,
@@ -177,7 +177,7 @@
 
       // Dialog surface: bigger wheels + explicit Annuler / Définir actions.
       const DurationPickerContent = () => {
-        const mode = usePickerMode();
+        const mode = usePopupMode();
         if (mode === "dialog") {
           return (
             <Box flex="y" spacing="l" padding="xl" alignX="center">

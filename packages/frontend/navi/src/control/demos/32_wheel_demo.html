@@ -211,7 +211,7 @@
         Wheel,
         WheelGroup,
         Picker,
-        usePickerMode,
+        usePopupMode,
         Form,
         Button,
         Box,
@@ -583,14 +583,14 @@
         </WheelGroup>
       );
 
-      // Popover and dialog are two different UIs (usePickerMode() is only
+      // Popover and dialog are two different UIs (usePopupMode() is only
       // available to a Picker's children). Popover: compact, spin live and click
       // outside to commit. Dialog: a deliberate modal surface — bigger wheels,
       // more padding, and explicit Annuler / Define actions (commit via a
       // button, like the picker in 09_input_duration_demo.html). The dialog case
       // is a full early return so the two surfaces stay clearly separated.
       const DurationPickerContent = () => {
-        const mode = usePickerMode();
+        const mode = usePopupMode();
 
         if (mode === "dialog") {
           return (

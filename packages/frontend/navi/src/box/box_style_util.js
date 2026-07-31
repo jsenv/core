@@ -1,5 +1,12 @@
 import { mergeOneStyle, normalizeStyle } from "@jsenv/dom";
 
+import {
+  visualViewportHeightSignal,
+  visualViewportWidthSignal,
+  windowHeightSignal,
+  windowWidthSignal,
+} from "../layout/responsive.js";
+
 const PASS_THROUGH = { name: "pass_through" };
 const applyOnCSSProp = (cssStyle) => {
   return (value) => {
@@ -724,7 +731,37 @@ const sizeSpacingKeySet = new Set(Object.keys(SIZE_MAP));
 export const isSizeSpacingKey = (key) => {
   return sizeSpacingKeySet.has(key);
 };
+// Viewport-relative units, resolved to pixels here because a JS consumer (popup
+// positioning) needs an actual number, not a length only CSS can evaluate.
+// "vvw"/"vvh" are navi's own: the *visual* viewport, which — unlike vw/dvw —
+// shrinks when the mobile virtual keyboard opens (see layout/responsive.js), so
+// they are what a popup meant to stay clear of the keyboard should use.
+const VIEWPORT_UNIT_SIGNALS = {
+  vvw: visualViewportWidthSignal,
+  vvh: visualViewportHeightSignal,
+  vw: windowWidthSignal,
+  vh: windowHeightSignal,
+  dvw: windowWidthSignal,
+  dvh: windowHeightSignal,
+};
+const VIEWPORT_LENGTH_REGEX = /^(-?\d+(?:\.\d+)?)(vvw|vvh|dvw|dvh|vw|vh)$/;
+const resolveViewportLength = (size) => {
+  if (typeof size !== "string") {
+    return null;
+  }
+  const match = VIEWPORT_LENGTH_REGEX.exec(size);
+  if (!match) {
+    return null;
+  }
+  const [, amount, unit] = match;
+  return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
+};
+
 export const resolveSpacingSize = (size, element, property = "padding") => {
+  const viewportLength = resolveViewportLength(size);
+  if (viewportLength !== null) {
+    return viewportLength;
+  }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
 export const resolveTypoSize = (size, element, property = "fontSize") => {

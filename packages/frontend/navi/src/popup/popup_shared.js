@@ -6,8 +6,6 @@
 
 import { findEvent } from "@jsenv/dom";
 
-import { resolveSpacingSize } from "../box/box_style_util.js";
-
 /**
  * Disables pointer-events on `el` until its current CSS transition settles
  * (via `transitionend`, with a safety `setTimeout` fallback matching the
@@ -145,22 +143,3 @@ export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
   return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
 };
 
-/**
- * Resolves a `marginWithContainer`-style value to pixels, in `container`'s own
- * context: a number passes through, a spacing token ("s", "m"…) goes through
- * the usual size map, and anything else is a CSS length only the browser can
- * evaluate ("3dvw", "1rem", "5%") — measured with a throwaway probe, so a
- * percentage means "of the container" and viewport units mean what they say.
- */
-export const resolveMarginWithContainer = (value, container) => {
-  const resolved = resolveSpacingSize(value);
-  if (typeof resolved === "number") {
-    return resolved;
-  }
-  const probe = document.createElement("div");
-  probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;height:0;width:${resolved};`;
-  container.appendChild(probe);
-  const widthInPixels = probe.getBoundingClientRect().width;
-  probe.remove();
-  return widthInPixels;
-};

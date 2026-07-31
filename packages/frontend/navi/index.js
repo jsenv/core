@@ -122,7 +122,6 @@ export { Input } from "./src/control/input/input.jsx";
 export { InputDuration } from "./src/control/input/input_duration.jsx";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
-export { usePickerMode } from "./src/control/picker/picker_context.jsx";
 export {
   getNowHours,
   getNowHoursRoundedToStep,
@@ -216,10 +215,11 @@ export { Separator } from "./src/layout/separator.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
-// popup (popover, dialog, tooltip, side panel ...)
+// Popup (popover, dialog, tooltip, side panel ...)
 export { Dialog } from "./src/popup/dialog.jsx";
 export { Popover } from "./src/popup/popover.jsx";
 export { Popup } from "./src/popup/popup.jsx";
+export { usePopupMode } from "./src/popup/popup_mode.jsx";
 export { SidePanel } from "./src/popup/side_panel.jsx";
 export { createSlot } from "./src/popup/slot.jsx";
 
