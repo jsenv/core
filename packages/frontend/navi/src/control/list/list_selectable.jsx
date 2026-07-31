@@ -316,6 +316,11 @@ const ListSelectable = (props) => {
       }
       {...listControlRootProps}
       {...listControlProps}
+      // "loading" is a control prop, so useControlgroupProps consumes it (into
+      // aria-busy / the :-navi-loading pseudo state) and it does not survive
+      // into the props below. ListUI needs it too — it is what makes the list
+      // render skeleton rows instead of its (not yet known) items.
+      loading={props.loading}
       name={undefined}
       value={undefined}
       defaultValue={undefined}

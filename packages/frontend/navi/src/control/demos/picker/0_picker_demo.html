@@ -1252,10 +1252,14 @@
       // example below is already mid-flight when the page appears.
       const useFakeLoad = () => {
         const [phase, setPhase] = useState("loading");
+        // Identifies one attempt: a failure the user has dismissed must not
+        // come back, but the *next* failure must.
+        const [attempt, setAttempt] = useState(0);
         const timerRef = useRef(null);
         const settleOn = (outcome) => {
           clearTimeout(timerRef.current);
           setPhase("loading");
+          setAttempt((previous) => previous + 1);
           timerRef.current = setTimeout(() => setPhase(outcome), LOAD_DELAY);
         };
         useEffect(() => {
@@ -1264,6 +1268,7 @@
         }, []);
         return {
           phase,
+          attempt,
           load: () => settleOn("loaded"),
           fail: () => settleOn("error"),
         };
@@ -1308,21 +1313,31 @@
       };
 
       // A closed picker has nowhere to render the failure, so it surfaces as a
-      // callout anchored on the trigger instead.
-      const useErrorCallout = (pickerRef, active, message) => {
+      // callout anchored on the trigger instead. Dismissing that callout
+      // discards the failure: it stays gone while the picker is opened and
+      // closed again, and only the next attempt may raise a new one.
+      const useErrorCallout = (pickerRef, { active, message, attempt }) => {
+        const dismissedAttemptRef = useRef(null);
         useEffect(() => {
-          if (!active) {
+          if (!active || dismissedAttemptRef.current === attempt) {
             return undefined;
           }
+          let closedByUs = false;
           const callout = openCallout(message, {
             anchorElement: pickerRef.current,
             status: "error",
             skipFocus: true,
+            onClose: () => {
+              if (!closedByUs) {
+                dismissedAttemptRef.current = attempt;
+              }
+            },
           });
           return () => {
+            closedByUs = true;
             callout.requestClose(new CustomEvent("cleanup"), "example_cleanup");
           };
-        }, [active, message]);
+        }, [active, message, attempt]);
       };
 
       // The "choose an article" list. `articles` is what the server gave us —
@@ -1450,14 +1465,14 @@
       };
 
       const ContentLoadingDemo = () => {
-        const { phase, load, fail } = useFakeLoad();
+        const { phase, attempt, load, fail } = useFakeLoad();
         const pickerRef = useRef(null);
         const opened = usePickerOpened(pickerRef);
-        useErrorCallout(
-          pickerRef,
-          phase === "error" && !opened,
-          "Could not load the list of articles.",
-        );
+        useErrorCallout(pickerRef, {
+          active: phase === "error" && !opened,
+          message: "Could not load the list of articles.",
+          attempt,
+        });
 
         return (
           <Subsection id="loading-content" title="Loading content">
@@ -1505,14 +1520,14 @@
 
       const ValueLoadingDemo = () => {
         const [articleId, setArticleId] = useState(ARTICLES[1].id);
-        const { phase, load, fail } = useFakeLoad();
+        const { phase, attempt, load, fail } = useFakeLoad();
         const pickerRef = useRef(null);
         const opened = usePickerOpened(pickerRef);
-        useErrorCallout(
-          pickerRef,
-          phase === "error" && !opened,
-          "Could not load the selected article.",
-        );
+        useErrorCallout(pickerRef, {
+          active: phase === "error" && !opened,
+          message: "Could not load the selected article.",
+          attempt,
+        });
 
         // The selected value is an id, not something a human can read: until
         // its title arrives the trigger has nothing to show, so it shows a
