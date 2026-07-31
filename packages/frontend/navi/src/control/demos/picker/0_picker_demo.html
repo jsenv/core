@@ -1225,10 +1225,11 @@
         const { phase, load, fail } = useFakeLoad();
 
         return (
-          <Subsection id="loading-content" title="Loading content">
+          <Subsection id="loading-content" title="Nothing selected">
             <LoadControls phase={phase} load={load} fail={fail} />
-            <Field vertical>
-              <Label>Nothing selected — only the content loads</Label>
+            {/* Pushed to the right so the popover, which opens under it, never
+                covers the buttons above-left. */}
+            <Box flex="x" alignX="end">
               <Picker
                 name="loading_content"
                 placeholder="Choose an article…"
@@ -1247,7 +1248,7 @@
                   loading={phase === "loading"}
                 />
               </Picker>
-            </Field>
+            </Box>
           </Subsection>
         );
       };
@@ -1270,13 +1271,9 @@
           );
 
         return (
-          <Subsection id="loading-value" title="Loading the selected label">
+          <Subsection id="loading-value" title={`"${ARTICLES[1].id}" is selected`}>
             <LoadControls phase={phase} load={load} fail={fail} />
-            <Field vertical>
-              <Label>
-                Value is <code>{articleId}</code> — the trigger shows the title
-                it has to load
-              </Label>
+            <Box flex="x" alignX="end">
               <Picker
                 name="loading_value"
                 value={articleId}
@@ -1298,7 +1295,7 @@
                   selectedId={articleId}
                 />
               </Picker>
-            </Field>
+            </Box>
           </Subsection>
         );
       };

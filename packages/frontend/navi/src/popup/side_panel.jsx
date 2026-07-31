@@ -248,6 +248,9 @@ export const SidePanel = ({
       layer={layer}
       anchorCustomEventDetail="ignore"
       positionArea={side}
+      // A side panel is flush against the edge it slides in from — none of
+      // Dialog's own default gap with the container.
+      marginWithContainer={0}
       animation={animation === true ? `slide-from-${side}` : animation}
       pointerInteractionOutsideEffect={closeOnClickOutside ? "close" : "none"}
       focusCapture={closeOnClickOutside}

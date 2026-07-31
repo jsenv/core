@@ -829,6 +829,56 @@
         );
       };
 
+      const MARGIN_WITH_CONTAINER_CASES = [
+        { label: 'default ("3dvw")', margin: undefined },
+        { label: "0 — flush", margin: 0 },
+        { label: '"m"', margin: "m" },
+        { label: '"10%" of the container', margin: "10%" },
+      ];
+
+      const MarginWithContainerDialog = ({ label, margin }) => {
+        const dialogId = useId();
+        return (
+          <>
+            <Button
+              command="--navi-toggle"
+              commandFor={dialogId}
+              className="demo-position-button"
+            >
+              {label}
+            </Button>
+            <Dialog
+              id={dialogId}
+              positionArea="top-start"
+              marginWithContainer={margin}
+              className="demo_dialog_box"
+            >
+              <p style={{ marginTop: 0 }}>{label}</p>
+              <Button command="--navi-close">Close</Button>
+            </Dialog>
+          </>
+        );
+      };
+
+      const MarginWithContainerSection = () => (
+        <div id="position-margin" class="demo-subsection">
+          <h3>3.3 marginWithContainer</h3>
+          <p>
+            Same gap whatever the <code>positionArea</code> — all four dock to{" "}
+            <code>top-start</code>.
+          </p>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            {MARGIN_WITH_CONTAINER_CASES.map(({ label, margin }) => (
+              <MarginWithContainerDialog
+                key={label}
+                label={label}
+                margin={margin}
+              />
+            ))}
+          </div>
+        </div>
+      );
+
       const PositionSection = () => (
         <section id="position" class="demo-section">
           <h2>3. Position</h2>
@@ -836,22 +886,21 @@
             The full <code>positionArea</code> grammar Dialog now shares with
             Popover — a single compass token (<code>top</code>/
             <code>top-start</code>/<code>top-end</code>/<code>top-left</code>/
-            <code>top-right</code>, <code>right</code>/
-            <code>right-start</code>/<code>right-end</code>,{" "}
-            <code>bottom</code>/<code>bottom-start</code>/
-            <code>bottom-end</code>/<code>bottom-left</code>/
-            <code>bottom-right</code>, <code>left</code>/
-            <code>left-start</code>/<code>left-end</code>, or{" "}
-            <code>center</code>), optionally wrapped in{" "}
-            <code>inset(...)</code> for the overlapping variant (e.g.{" "}
-            <code>inset(top)</code>). Dialog is never really anchored, so
-            several combinations (dimmed below) land on the exact same final
-            position — kept anyway because <code>positionArea</code> alone still
-            picks which animation direction plays for{" "}
-            <code>animation="auto"</code>.
+            <code>top-right</code>, <code>right</code>/<code>right-start</code>/
+            <code>right-end</code>, <code>bottom</code>/
+            <code>bottom-start</code>/<code>bottom-end</code>/
+            <code>bottom-left</code>/<code>bottom-right</code>,{" "}
+            <code>left</code>/<code>left-start</code>/<code>left-end</code>, or{" "}
+            <code>center</code>), optionally wrapped in <code>inset(...)</code>{" "}
+            for the overlapping variant (e.g. <code>inset(top)</code>). Dialog
+            is never really anchored, so several combinations (dimmed below)
+            land on the exact same final position — kept anyway because{" "}
+            <code>positionArea</code> alone still picks which animation
+            direction plays for <code>animation="auto"</code>.
           </p>
           <TopLayerPositionSection />
           <LocalLayerPositionSection />
+          <MarginWithContainerSection />
         </section>
       );
 
@@ -873,6 +922,9 @@
                 </li>
                 <li>
                   <a href="#position-local-layer">local layer</a>
+                </li>
+                <li>
+                  <a href="#position-margin">marginWithContainer</a>
                 </li>
               </ol>
             </li>
