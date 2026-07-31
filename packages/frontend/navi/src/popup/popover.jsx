@@ -54,7 +54,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useId, useRef } from "preact/hooks";
+import { useEffect, useId, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -567,6 +567,30 @@ const usePopoverProps = (props) => {
   const isAutoAnimation = animation === true || animation === "auto";
 
   const hasBackdrop = pointerInteractionOutsideEffect !== "none";
+  // positionPopover lives in openEffect's closure — created once, when the
+  // popover opens. Reading the placement props through a ref instead of that
+  // closure is what lets a change while open take effect on the spot (see the
+  // reposition effect below) rather than only on the next opening.
+  const positionPropsRef = useRef(null);
+  positionPropsRef.current = {
+    positionArea,
+    positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid,
+    marginWithAnchor,
+    marginWithContainer,
+  };
+  const repositionRef = useRef(null);
+  useEffect(() => {
+    repositionRef.current?.(
+      new CustomEvent("position_props_change", { detail: {} }),
+    );
+  }, [
+    positionArea,
+    positionAreaFixed,
+    positionAreaWhenAnchorIsInvalid,
+    marginWithAnchor,
+    marginWithContainer,
+  ]);
   // The custom renderer's own starting-hidden state is a stylesheet default
   // now (&:not([popover]) { display: none } on .navi_popover/
   // .navi_popover_backdrop above) rather than set here imperatively — a
@@ -769,6 +793,13 @@ const usePopoverProps = (props) => {
       : positionedAncestor;
 
     const positionPopover = (positionEvent) => {
+      const {
+        positionArea,
+        positionAreaFixed,
+        positionAreaWhenAnchorIsInvalid,
+        marginWithAnchor,
+        marginWithContainer,
+      } = positionPropsRef.current;
       let position;
 
       if (hasAnchorElement) {
@@ -957,6 +988,21 @@ const usePopoverProps = (props) => {
     // while open (e.g. an expand/collapse toggle inside it) — not just when
     // the anchor itself moves/resizes/re-anchors.
     rectEffect.observeSize(popoverEl);
+    // Exposed for the placement-props effect above, which needs to re-place an
+    // already-open popover.
+    repositionRef.current = (repositionEvent) => {
+      // data-position-*-current pins an open popover to the side it first
+      // resolved to, so scrolling or a content resize never makes it jump
+      // (pickPositionRelativeTo reads it back and prefers it over the
+      // requested area). A new placement request is precisely the case where
+      // that memory must not win — drop it before re-resolving.
+      popoverEl.removeAttribute("data-position-x-current");
+      popoverEl.removeAttribute("data-position-y-current");
+      positionPopover(repositionEvent);
+    };
+    addCleanup(() => {
+      repositionRef.current = null;
+    });
     // A descendant anchored to something inside this popover (a Callout, a
     // further-nested Popover) needing to know about this popover's own
     // left/top repositioning transition — not just that the target changed

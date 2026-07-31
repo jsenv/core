@@ -1262,7 +1262,9 @@
           phase === "loading" ? (
             <Text loading width="180px" />
           ) : phase === "error" ? (
-            <Text color="secondary">Unavailable</Text>
+            // Better than nothing: the raw id at least identifies what is
+            // selected, and the error callout says why it is not a title.
+            <Text color="secondary">{articleId}</Text>
           ) : (
             <>{findArticleById(articleId).title}</>
           );
