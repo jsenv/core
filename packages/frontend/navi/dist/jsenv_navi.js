@@ -42278,9 +42278,10 @@ const css$p = /* css */`
       user-select: none;
     }
   }
-  /* Loading placeholders (see List's loading / loadingIndicator / skeletonTemplate).
+  /* Loading placeholders (see List's loading / loadingFallback / loadingSkeletonTemplate).
      A skeleton row reuses <Text loading> for the shimmer bar; the loader row
-     centers a spinner. */
+     centers a spinner; a custom loadingFallback is only given a row to live in,
+     its own markup does the layout. */
   .navi_list_item_skeleton {
     pointer-events: none;
   }
@@ -42290,6 +42291,9 @@ const css$p = /* css */`
     align-items: center;
     justify-content: center;
     color: light-dark(#888, #aaa);
+  }
+  .navi_list_loading_fallback {
+    display: flex;
   }
   /* Error state (List error prop): an inline callout describing why the list
      failed to load, shown in place of the items. */
@@ -42402,9 +42406,9 @@ const ListUI = props => {
     searchText,
     searchNoMatchMode = "remove",
     loading,
-    loadingIndicator = "skeleton",
+    loadingFallback = "skeleton",
     loadingSkeletonCount = 3,
-    skeletonTemplate,
+    loadingSkeletonTemplate,
     error,
     horizontal,
     spacing,
@@ -42495,9 +42499,8 @@ const ListUI = props => {
   const nothingToDisplay = !loading && !error && noVisibleItems && !searchFallbackShown && !emptyFallbackShown;
 
   // Placeholder content replaces the real children: an error message when the
-  // load failed (takes precedence), otherwise — while loading — skeleton rows
-  // (default, count loadingSkeletonCount, look skeletonTemplate) or a single
-  // centered loader when loadingIndicator="loader".
+  // load failed (takes precedence), otherwise — while loading — whatever
+  // loadingFallback asks for.
   let content = children;
   if (error) {
     content = jsxs(ListItem, {
@@ -42511,16 +42514,9 @@ const ListUI = props => {
         children: error === true ? "Something went wrong." : error
       })]
     });
-  } else if (loading) {
-    if (loadingIndicator === "loader") {
-      content = jsx(ListItem, {
-        role: "presentation",
-        "aria-hidden": "true",
-        baseClassName: "navi_list_item navi_list_loader",
-        children: jsx(LoadingIndicator, {})
-      });
-    } else {
-      const template = skeletonTemplate ?? jsx(ListItem, {
+  } else if (loading && loadingFallback) {
+    if (loadingFallback === "skeleton") {
+      const template = loadingSkeletonTemplate ?? jsx(ListItem, {
         skeleton: true
       });
       const skeletons = [];
@@ -42532,6 +42528,21 @@ const ListUI = props => {
         skeletonIndex++;
       }
       content = skeletons;
+    } else if (loadingFallback === "loader") {
+      content = jsx(ListItem, {
+        role: "presentation",
+        "aria-hidden": "true",
+        baseClassName: "navi_list_item navi_list_loader",
+        children: jsx(LoadingIndicator, {})
+      });
+    } else {
+      // Custom content is not aria-hidden (unlike the bare spinner): it usually
+      // carries a message worth announcing.
+      content = jsx(ListItem, {
+        role: "presentation",
+        baseClassName: "navi_list_item navi_list_loading_fallback",
+        children: loadingFallback
+      });
     }
   }
   return jsx(Box, {
@@ -42614,9 +42625,9 @@ const ListFirstResolver = props => {
  *   searchText?: string,
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   loading?: boolean,
- *   loadingIndicator?: "skeleton" | "loader",
+ *   loadingFallback?: "skeleton" | "loader" | import("ignore:preact").ComponentChildren,
  *   loadingSkeletonCount?: number,
- *   skeletonTemplate?: import("ignore:preact").ComponentChildren,
+ *   loadingSkeletonTemplate?: import("ignore:preact").ComponentChildren,
  *   error?: boolean | import("ignore:preact").ComponentChildren,
  *   separator?: boolean | import("ignore:preact").ComponentChildren,
  *   lockSize?: boolean,
@@ -42629,6 +42640,11 @@ const ListFirstResolver = props => {
  *   children?: import("ignore:preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {"skeleton"|"loader"|import("ignore:preact").ComponentChildren} [props.loadingFallback="skeleton"]
+ *   What to display in place of the items while `loading`: `"skeleton"` renders
+ *   `loadingSkeletonCount` placeholder rows (look: `loadingSkeletonTemplate`),
+ *   `"loader"` a single centered spinner, and anything else is rendered as-is
+ *   in a row of its own. A falsy value displays nothing.
  */
 const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({
@@ -43376,7 +43392,7 @@ const ListItemPresentation = props => {
 // A <List.Item skeleton> — a non-interactive placeholder row shown while a list
 // is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
 // and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
-// pass through so a skeletonTemplate can match the real items' metrics; and when
+// pass through so a loadingSkeletonTemplate can match the real items' metrics; and when
 // children are provided they render as-is, so a template can reproduce a
 // multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
 const ListItemSkeletonResolver = props => {
@@ -43617,7 +43633,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
  *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
- *               instead of a real item. Used as the List `skeletonTemplate`
+ *               instead of a real item. Used as the List `loadingSkeletonTemplate`
  *               while `loading`; Box layout props (padding…) pass through so the
  *               placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item
