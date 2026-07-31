@@ -3,22 +3,61 @@ import { findFocusable, getElementSignature } from "@jsenv/dom";
 import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 
 /**
- * Mirrors what browsers do when navigating to a page:
- * 1. Focus the first element with [navi-autofocus] (but not [navi-autofocus="fallback"]) inside the container
- * 2. Fall back to the first focusable element
- * 3. Fall back to the first element with [navi-autofocus="fallback"]
- * Does nothing if no candidate is found.
+ * Decides which element receives focus when a container (popover, dialog, …)
+ * opens, and gives it back to where it came from when the container closes.
+ *
+ * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
+ * focus lands. Candidates are tried in this order:
+ * 1. The element that held focus when the container was last closed, if it
+ *    opted into that with "fallback" or "restore"
+ * 2. [navi-autofocus] with any other value ("" for a plain `autoFocus`)
+ * 3. The first focusable element
+ * 4. [navi-autofocus="fallback"], the container itself included
+ * 5. The element focused before the container opened
+ *
+ * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
+ * a fresh open, it only gets it back.
  */
+
+// The element that held focus when a container closed is marked with
+// [navi-autofocus-last-focused], and its container with
+// [navi-autofocus-restore]. Both carry the same generated id: containers can
+// nest (a popover inside a dialog), so the id is what tells a reopening
+// container which mark among its descendants is its own.
+let restoreIdCounter = 0;
+
+const isRestorableAutofocus = (el) => {
+  const value = el.getAttribute("navi-autofocus");
+  return value === "fallback" || value === "restore";
+};
+
+const clearAutofocusRestore = (containerEl) => {
+  const restoreId = containerEl.getAttribute("navi-autofocus-restore");
+  if (restoreId === null) {
+    return null;
+  }
+  containerEl.removeAttribute("navi-autofocus-restore");
+  const selector = `[navi-autofocus-last-focused="${restoreId}"]`;
+  const lastFocused = containerEl.matches(selector)
+    ? containerEl
+    : containerEl.querySelector(selector);
+  if (lastFocused) {
+    lastFocused.removeAttribute("navi-autofocus-last-focused");
+  }
+  return lastFocused;
+};
+
 export const markAutofocusRestoreOnClose = (containerEl) => {
+  clearAutofocusRestore(containerEl);
   const focused = document.activeElement;
   if (
     focused &&
-    containerEl.contains(focused) &&
-    focused.getAttribute("navi-autofocus") === "fallback"
+    (containerEl === focused || containerEl.contains(focused)) &&
+    isRestorableAutofocus(focused)
   ) {
-    containerEl.setAttribute("navi-autofocus-restore", "");
-  } else {
-    containerEl.removeAttribute("navi-autofocus-restore");
+    const restoreId = `${++restoreIdCounter}`;
+    containerEl.setAttribute("navi-autofocus-restore", restoreId);
+    focused.setAttribute("navi-autofocus-last-focused", restoreId);
   }
 };
 
@@ -40,19 +79,14 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     transferFocus: (transferEvent, containerEl) => {
       let target;
       let reason;
-      if (containerEl.hasAttribute("navi-autofocus-restore")) {
-        containerEl.removeAttribute("navi-autofocus-restore");
-        const naviAutoFocusFallback = containerEl.querySelector(
-          "[navi-autofocus='fallback']",
-        );
-        if (naviAutoFocusFallback) {
-          reason = "navi-autofocus fallback (restore)";
-          target = naviAutoFocusFallback;
-        }
+      const lastFocused = clearAutofocusRestore(containerEl);
+      if (lastFocused) {
+        reason = "element focused when closed (restore)";
+        target = lastFocused;
       }
       if (!target) {
         const naviAutoFocus = containerEl.querySelector(
-          "[navi-autofocus]:not([navi-autofocus='fallback'])",
+          `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
         );
         if (naviAutoFocus) {
           reason = "navi-autofocus";
@@ -61,7 +95,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       }
       if (!target) {
         const focusable = findFocusable(containerEl, {
-          exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+          exclude: isRestorableAutofocus,
         });
         if (focusable) {
           reason = "first focusable element";

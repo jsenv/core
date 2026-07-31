@@ -391,9 +391,10 @@ const css = /* css */ `
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
  *   so `autoFocus="fallback"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
- * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
- *   `use_auto_focus.js` — `"fallback"` focuses the popover itself if it has
- *   no other focusable descendant.
+ * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
+ *   `focus_transfer.js` — `"fallback"` focuses the popover itself if it has
+ *   no other focusable descendant, `"restore"` keeps it out of the opening
+ *   focus chain unless it held focus when the popover closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as

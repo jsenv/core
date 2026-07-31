@@ -31,8 +31,12 @@ import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
- * @param {boolean} autoFocus
- *   When false the hook is a no-op.
+ * @param {boolean|"fallback"|"restore"} autoFocus
+ *   When false the hook is a no-op. `"fallback"` claims focus only when nothing
+ *   more specific already did. `"restore"` never claims focus on open; it only
+ *   gets focus back from an ancestor that closed while it was focused (see
+ *   focus_transfer.js) — typically a text input that must not pop the mobile
+ *   keyboard open every time, but should stay where the user left it.
  * @param {object} [options]
  * @param {boolean} [options.preventScroll]
  *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
@@ -53,6 +57,11 @@ export const useAutoFocus = (
 
   const triggerAutofocus = (e) => {
     if (!autoFocus) {
+      return () => {};
+    }
+    if (autoFocus === "restore") {
+      // "restore" never claims focus on its own; the only way it gets focus is
+      // an ancestor reopening and handing it back (see focus_transfer.js).
       return () => {};
     }
     const focusableElement = focusableElementRef.current;
