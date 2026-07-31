@@ -21724,8 +21724,12 @@ const createDisplayedEvent = (ancestor) => {
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
- * @param {boolean} autoFocus
- *   When false the hook is a no-op.
+ * @param {boolean|"fallback"|"restore"} autoFocus
+ *   When false the hook is a no-op. `"fallback"` claims focus only when nothing
+ *   more specific already did. `"restore"` never claims focus on open; it only
+ *   gets focus back from an ancestor that closed while it was focused (see
+ *   focus_transfer.js) — typically a text input that must not pop the mobile
+ *   keyboard open every time, but should stay where the user left it.
  * @param {object} [options]
  * @param {boolean} [options.preventScroll]
  *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
@@ -21746,6 +21750,11 @@ const useAutoFocus = (
 
   const triggerAutofocus = (e) => {
     if (!autoFocus) {
+      return () => {};
+    }
+    if (autoFocus === "restore") {
+      // "restore" never claims focus on its own; the only way it gets focus is
+      // an ancestor reopening and handing it back (see focus_transfer.js).
       return () => {};
     }
     const focusableElement = focusableElementRef.current;
@@ -36015,22 +36024,61 @@ const renderSafe = (value) => {
 const PickerContext = createContext();
 
 /**
- * Mirrors what browsers do when navigating to a page:
- * 1. Focus the first element with [navi-autofocus] (but not [navi-autofocus="fallback"]) inside the container
- * 2. Fall back to the first focusable element
- * 3. Fall back to the first element with [navi-autofocus="fallback"]
- * Does nothing if no candidate is found.
+ * Decides which element receives focus when a container (popover, dialog, …)
+ * opens, and gives it back to where it came from when the container closes.
+ *
+ * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
+ * focus lands. Candidates are tried in this order:
+ * 1. The element that held focus when the container was last closed, if it
+ *    opted into that with "fallback" or "restore"
+ * 2. [navi-autofocus] with any other value ("" for a plain `autoFocus`)
+ * 3. The first focusable element
+ * 4. [navi-autofocus="fallback"], the container itself included
+ * 5. The element focused before the container opened
+ *
+ * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
+ * a fresh open, it only gets it back.
  */
+
+// The element that held focus when a container closed is marked with
+// [navi-autofocus-last-focused], and its container with
+// [navi-autofocus-restore]. Both carry the same generated id: containers can
+// nest (a popover inside a dialog), so the id is what tells a reopening
+// container which mark among its descendants is its own.
+let restoreIdCounter = 0;
+
+const isRestorableAutofocus = (el) => {
+  const value = el.getAttribute("navi-autofocus");
+  return value === "fallback" || value === "restore";
+};
+
+const clearAutofocusRestore = (containerEl) => {
+  const restoreId = containerEl.getAttribute("navi-autofocus-restore");
+  if (restoreId === null) {
+    return null;
+  }
+  containerEl.removeAttribute("navi-autofocus-restore");
+  const selector = `[navi-autofocus-last-focused="${restoreId}"]`;
+  const lastFocused = containerEl.matches(selector)
+    ? containerEl
+    : containerEl.querySelector(selector);
+  if (lastFocused) {
+    lastFocused.removeAttribute("navi-autofocus-last-focused");
+  }
+  return lastFocused;
+};
+
 const markAutofocusRestoreOnClose = (containerEl) => {
+  clearAutofocusRestore(containerEl);
   const focused = document.activeElement;
   if (
     focused &&
-    containerEl.contains(focused) &&
-    focused.getAttribute("navi-autofocus") === "fallback"
+    (containerEl === focused || containerEl.contains(focused)) &&
+    isRestorableAutofocus(focused)
   ) {
-    containerEl.setAttribute("navi-autofocus-restore", "");
-  } else {
-    containerEl.removeAttribute("navi-autofocus-restore");
+    const restoreId = `${++restoreIdCounter}`;
+    containerEl.setAttribute("navi-autofocus-restore", restoreId);
+    focused.setAttribute("navi-autofocus-last-focused", restoreId);
   }
 };
 
@@ -36052,19 +36100,14 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
     transferFocus: (transferEvent, containerEl) => {
       let target;
       let reason;
-      if (containerEl.hasAttribute("navi-autofocus-restore")) {
-        containerEl.removeAttribute("navi-autofocus-restore");
-        const naviAutoFocusFallback = containerEl.querySelector(
-          "[navi-autofocus='fallback']",
-        );
-        if (naviAutoFocusFallback) {
-          reason = "navi-autofocus fallback (restore)";
-          target = naviAutoFocusFallback;
-        }
+      const lastFocused = clearAutofocusRestore(containerEl);
+      if (lastFocused) {
+        reason = "element focused when closed (restore)";
+        target = lastFocused;
       }
       if (!target) {
         const naviAutoFocus = containerEl.querySelector(
-          "[navi-autofocus]:not([navi-autofocus='fallback'])",
+          `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
         );
         if (naviAutoFocus) {
           reason = "navi-autofocus";
@@ -36073,7 +36116,7 @@ const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       }
       if (!target) {
         const focusable = findFocusable(containerEl, {
-          exclude: (el) => el.getAttribute("navi-autofocus") === "fallback",
+          exclude: isRestorableAutofocus,
         });
         if (focusable) {
           reason = "first focusable element";
@@ -37329,9 +37372,10 @@ const css$v = /* css */`
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
  *   `autoFocus="fallback"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
- * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
- *   `use_auto_focus.js` — `"fallback"` focuses the dialog itself if it has
- *   no other focusable descendant.
+ * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
+ *   `focus_transfer.js` — `"fallback"` focuses the dialog itself if it has
+ *   no other focusable descendant, `"restore"` keeps it out of the opening
+ *   focus chain unless it held focus when the dialog closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
@@ -38317,9 +38361,10 @@ const css$u = /* css */`
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
  *   so `autoFocus="fallback"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
- * @param {boolean|"fallback"} [props.autoFocus="fallback"] - See
- *   `use_auto_focus.js` — `"fallback"` focuses the popover itself if it has
- *   no other focusable descendant.
+ * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
+ *   `focus_transfer.js` — `"fallback"` focuses the popover itself if it has
+ *   no other focusable descendant, `"restore"` keeps it out of the opening
+ *   focus chain unless it held focus when the popover closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
