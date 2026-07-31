@@ -2,6 +2,11 @@ import { createDetailedMessage, generateContentFrame } from "@jsenv/humanize";
 import { stringifyUrlSite } from "@jsenv/urls";
 import { pathToFileURL } from "node:url";
 
+import {
+  packageNameFromSpecifier,
+  readDependencyStatus,
+} from "./package_dependencies.js";
+
 export const createResolveUrlError = ({
   jsenvPluginsController,
   reference,
@@ -41,6 +46,15 @@ ${reason}`,
     });
   }
   if (error.code === "MODULE_NOT_FOUND") {
+    const notInstalledStatus = readNotInstalledStatus(reference);
+    if (notInstalledStatus) {
+      const { packageName, declaredVersion } = notInstalledStatus;
+      return createFailedToResolveUrlError({
+        "reason": `"${packageName}" is declared in package.json but not installed`,
+        "declared version": declaredVersion,
+        "suggestion": `run npm install, the page will reload once "${packageName}" is installed`,
+      });
+    }
     const bareSpecifierError = createFailedToResolveUrlError({
       reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
     });
@@ -293,6 +307,19 @@ const getErrorTrace = (error, reference) => {
       content: urlInfo.content,
     }),
   };
+};
+
+const readNotInstalledStatus = (reference) => {
+  const { packageDirectory } = reference.ownerUrlInfo.context;
+  if (!packageDirectory) {
+    return null;
+  }
+  const packageName = packageNameFromSpecifier(reference.specifier);
+  const status = readDependencyStatus(packageDirectory, packageName);
+  if (!status || status.state !== "missing") {
+    return null;
+  }
+  return status;
 };
 
 const detailsFromFirstReference = (reference) => {
