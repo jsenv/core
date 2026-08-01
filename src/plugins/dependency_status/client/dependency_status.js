@@ -9,11 +9,15 @@ let removeOverlay = () => {};
 
 export const initDependencyStatus = ({ problems }) => {
   render(problems);
-  window.__server_events__.listenEvents({
-    dependency_status: (event) => {
-      render(event.data.problems);
-    },
-  });
+  // without the server events channel the page only knows the state it was
+  // served with, which is still better than nothing
+  if (window.__server_events__) {
+    window.__server_events__.listenEvents({
+      dependency_status: (event) => {
+        render(event.data.problems);
+      },
+    });
+  }
 };
 
 const render = (problems) => {
