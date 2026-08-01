@@ -186,6 +186,7 @@ const css = /* css */ `
       flex-grow: 1;
       justify-content: inherit;
       pointer-events: none;
+      user-select: none;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -224,7 +225,6 @@ const css = /* css */ `
       outline: none;
       cursor: inherit;
       pointer-events: auto;
-      user-select: all;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;
