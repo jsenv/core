@@ -116,13 +116,29 @@ const run = async () => {
       await waitForAnswer(page, 43);
     }
 
-    warning_overlay_is_gone: {
-      const actual = await page.evaluate(
-        /* eslint-disable no-undef */
-        () => Boolean(document.querySelector("jsenv-warning-overlay")),
-        /* eslint-enable no-undef */
+    versions_match: {
+      writeFileSync(
+        new URL("./output/page_after_install.png", import.meta.url),
+        await page.screenshot(),
       );
-      const expect = false;
+      const actual = {
+        answer: await page.evaluate(
+          /* eslint-disable no-undef */
+          () => window.answer,
+          /* eslint-enable no-undef */
+        ),
+        rendered: await page.locator("#app").textContent(),
+        warningOverlay: await page.evaluate(
+          /* eslint-disable no-undef */
+          () => Boolean(document.querySelector("jsenv-warning-overlay")),
+          /* eslint-enable no-undef */
+        ),
+      };
+      const expect = {
+        answer: 43,
+        rendered: "43",
+        warningOverlay: false,
+      };
       assert({ actual, expect });
     }
   } finally {

@@ -1313,7 +1313,10 @@ window.__supervisor__ = (() => {
           position: relative;
           box-sizing: border-box;
           width: 800px;
-          max-width: 100vw;
+          /* keep a margin visible on every side, the content scrolls rather
+             than the overlay growing edge to edge */
+          max-width: 98dvw;
+          max-height: calc(100dvh - 60px);
           margin: 30px auto;
           padding: 25px 40px;
           padding-top: 0;
@@ -1324,7 +1327,7 @@ window.__supervisor__ = (() => {
           box-shadow:
             0 20px 40px rgb(0 0 0 / 30%),
             0 15px 12px rgb(0 0 0 / 20%);
-          overflow: hidden; /* for h1 margins */
+          overflow: auto; /* creates a block formatting context, for h1 margins */
         }
 
         h1 {

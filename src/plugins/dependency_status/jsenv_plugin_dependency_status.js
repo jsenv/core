@@ -22,6 +22,14 @@ export const jsenvPluginDependencyStatus = ({
     serverEvents: {
       dependency_status: (serverEventInfo) => {
         dependencyProblemEventEmitter.on((problems) => {
+          // the state is baked into the html by the injection below, so a page
+          // served from the graph as it is would come back with the previous
+          // state, which is exactly what a reload triggered by an install does
+          for (const urlInfo of serverEventInfo.kitchen.graph.urlInfoMap.values()) {
+            if (urlInfo.type === "html" && urlInfo.content !== undefined) {
+              urlInfo.onModified();
+            }
+          }
           serverEventInfo.sendServerEvent({ problems });
         });
       },

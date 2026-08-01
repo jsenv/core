@@ -4,28 +4,15 @@
 run()
 ```
 
-# 1/2 write 3 files into "./output/"
+# 1/2 write 4 files into "./output/"
 
 see [./output/](./output/)
 
-# 2/2 reject
+# 2/2 resolve
 
-![img](reject.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-AssertionError: actual and expect are different
-
-actual: true
-expect: false
-  at run (base/dependency_outdated.test.mjs:126:7)
-  at async base/dependency_outdated.test.mjs:144:1
+```js
+undefined
 ```
-
-</details>
-
 
 ---
 
