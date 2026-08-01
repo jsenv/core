@@ -304,6 +304,11 @@ export const formatMinuteDuration = (
   minutes,
   { lang = languagesSignal.value, format = "long", clockStyle = false } = {},
 ) => {
+  if (minutes < 0) {
+    // the h/m split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle })}`;
+  }
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
@@ -371,6 +376,11 @@ export const formatSecondDuration = (
   seconds,
   { lang = languagesSignal.value, format = "long" } = {},
 ) => {
+  if (seconds < 0) {
+    // the h/m/s split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatSecondDuration(-seconds, { lang, format })}`;
+  }
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
