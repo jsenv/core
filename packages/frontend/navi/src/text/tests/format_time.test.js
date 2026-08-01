@@ -66,13 +66,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
           "2026-05-11 (today)",
           "long",
           "fr",
-          formatDay(new Date("2026-05-11T09:00:00"), { lang: "fr", format: "long" }),
+          formatDay(new Date("2026-05-11T09:00:00"), {
+            lang: "fr",
+            format: "long",
+          }),
         ],
         [
           "2026-05-18 (next week)",
           "long",
           "fr",
-          formatDay(new Date("2026-05-18T09:00:00"), { lang: "fr", format: "long" }),
+          formatDay(new Date("2026-05-18T09:00:00"), {
+            lang: "fr",
+            format: "long",
+          }),
         ],
       ],
     );
@@ -106,9 +112,21 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return table(
       ["date", "locale", "result"],
       [
-        ["2026-05-01", "fr", formatMonth(new Date("2026-05-01"), { lang: "fr" })],
-        ["2026-05-01", "en", formatMonth(new Date("2026-05-01"), { lang: "en" })],
-        ["2026-01-01", "fr", formatMonth(new Date("2026-01-01"), { lang: "fr" })],
+        [
+          "2026-05-01",
+          "fr",
+          formatMonth(new Date("2026-05-01"), { lang: "fr" }),
+        ],
+        [
+          "2026-05-01",
+          "en",
+          formatMonth(new Date("2026-05-01"), { lang: "en" }),
+        ],
+        [
+          "2026-01-01",
+          "fr",
+          formatMonth(new Date("2026-01-01"), { lang: "fr" }),
+        ],
       ],
     );
   });
@@ -141,7 +159,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return table(
       ["start offset", "duration", "locale", "result"],
       [
-        ["+30s", 0, "fr", formatTimeRelative(ms(+30_000), 0, { lang: "fr", ...opts })],
+        [
+          "+30s",
+          0,
+          "fr",
+          formatTimeRelative(ms(+30_000), 0, { lang: "fr", ...opts }),
+        ],
         [
           "+20min",
           0,
@@ -160,12 +183,20 @@ await snapshotTests(import.meta.url, ({ test }) => {
           "fr",
           formatTimeRelative(ms(+90 * 60_000), 0, { lang: "fr", ...opts }),
         ],
-        ["+4h", 0, "fr", formatTimeRelative(ms(+4 * 3_600_000), 0, { lang: "fr", ...opts })],
+        [
+          "+4h",
+          0,
+          "fr",
+          formatTimeRelative(ms(+4 * 3_600_000), 0, { lang: "fr", ...opts }),
+        ],
         [
           "tomorrow 20h",
           0,
           "fr",
-          formatTimeRelative(new Date("2026-05-12T20:00:00"), 0, { lang: "fr", ...opts }),
+          formatTimeRelative(new Date("2026-05-12T20:00:00"), 0, {
+            lang: "fr",
+            ...opts,
+          }),
         ],
         [
           "+3 days",
@@ -198,13 +229,19 @@ await snapshotTests(import.meta.url, ({ test }) => {
           "-10min",
           "1h",
           "fr",
-          formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, { lang: "fr", ...opts }),
+          formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, {
+            lang: "fr",
+            ...opts,
+          }),
         ],
         [
           "-10min",
           "1h",
           "en",
-          formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, { lang: "en", ...opts }),
+          formatTimeRelative(ms(-10 * 60_000), 60 * 60_000, {
+            lang: "en",
+            ...opts,
+          }),
         ],
       ],
     );
@@ -219,9 +256,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
           "-3h",
           "1h",
           "fr",
-          formatTimeRelative(ms(-3 * 3_600_000), 3_600_000, { lang: "fr", ...opts }),
+          formatTimeRelative(ms(-3 * 3_600_000), 3_600_000, {
+            lang: "fr",
+            ...opts,
+          }),
         ],
-        ["-5min", 0, "fr", formatTimeRelative(ms(-5 * 60_000), 0, { lang: "fr", ...opts })],
+        [
+          "-5min",
+          0,
+          "fr",
+          formatTimeRelative(ms(-5 * 60_000), 0, { lang: "fr", ...opts }),
+        ],
       ],
     );
   });
@@ -264,7 +309,10 @@ await snapshotTests(import.meta.url, ({ test }) => {
 
   test("formatHourDuration", () => {
     const run = (hours, locale, long = false) =>
-      formatHourDuration(hours, { lang: locale, format: long ? "long" : "compact" });
+      formatHourDuration(hours, {
+        lang: locale,
+        format: long ? "long" : "compact",
+      });
     return table(
       ["hours", "locale", "long", "result"],
       [
@@ -276,6 +324,37 @@ await snapshotTests(import.meta.url, ({ test }) => {
         [1.5, "fr", true, run(1.5, "fr", true)],
         [2.25, "fr", true, run(2.25, "fr", true)],
       ],
+    );
+  });
+
+  // clockStyle is what <Time type="time"> uses: the minutes are a time of day,
+  // so a zero hour is kept and a zero minute is printed rather than dropped
+  test("formatMinuteDuration — clockStyle", () => {
+    const run = (minutes, locale, format) =>
+      formatMinuteDuration(minutes, { lang: locale, format, clockStyle: true });
+    const rows = [];
+    for (const [label, minutes] of [
+      ["00:00", 0],
+      ["00:05", 5],
+      ["09:05", 545],
+      ["10:00", 600],
+      ["14:30", 870],
+      ["14:00", 840],
+    ]) {
+      for (const locale of ["fr", "en"]) {
+        rows.push([
+          label,
+          locale,
+          run(minutes, locale, "long"),
+          run(minutes, locale, "short"),
+          run(minutes, locale, "narrow"),
+          run(minutes, locale, "compact"),
+        ]);
+      }
+    }
+    return table(
+      ["time", "locale", "long", "short", "narrow", "compact"],
+      rows,
     );
   });
 });

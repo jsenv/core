@@ -38,13 +38,19 @@ return table(
       "2026-05-11 (today)",
       "long",
       "fr",
-      formatDay(new Date("2026-05-11T09:00:00"), { lang: "fr", format: "long" }),
+      formatDay(new Date("2026-05-11T09:00:00"), {
+        lang: "fr",
+        format: "long",
+      }),
     ],
     [
       "2026-05-18 (next week)",
       "long",
       "fr",
-      formatDay(new Date("2026-05-18T09:00:00"), { lang: "fr", format: "long" }),
+      formatDay(new Date("2026-05-18T09:00:00"), {
+        lang: "fr",
+        format: "long",
+      }),
     ],
   ],
 );

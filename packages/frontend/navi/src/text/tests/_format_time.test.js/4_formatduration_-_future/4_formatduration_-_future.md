@@ -5,7 +5,12 @@ const ms = (n) => NOW.getTime() + n;
 return table(
   ["start offset", "duration", "locale", "result"],
   [
-    ["+30s", 0, "fr", formatTimeRelative(ms(+30_000), 0, { lang: "fr", ...opts })],
+    [
+      "+30s",
+      0,
+      "fr",
+      formatTimeRelative(ms(+30_000), 0, { lang: "fr", ...opts }),
+    ],
     [
       "+20min",
       0,
@@ -24,12 +29,20 @@ return table(
       "fr",
       formatTimeRelative(ms(+90 * 60_000), 0, { lang: "fr", ...opts }),
     ],
-    ["+4h", 0, "fr", formatTimeRelative(ms(+4 * 3_600_000), 0, { lang: "fr", ...opts })],
+    [
+      "+4h",
+      0,
+      "fr",
+      formatTimeRelative(ms(+4 * 3_600_000), 0, { lang: "fr", ...opts }),
+    ],
     [
       "tomorrow 20h",
       0,
       "fr",
-      formatTimeRelative(new Date("2026-05-12T20:00:00"), 0, { lang: "fr", ...opts }),
+      formatTimeRelative(new Date("2026-05-12T20:00:00"), 0, {
+        lang: "fr",
+        ...opts,
+      }),
     ],
     [
       "+3 days",

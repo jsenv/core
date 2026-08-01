@@ -2,7 +2,10 @@
 
 ```js
 const run = (hours, locale, long = false) =>
-  formatHourDuration(hours, { lang: locale, format: long ? "long" : "compact" });
+  formatHourDuration(hours, {
+    lang: locale,
+    format: long ? "long" : "compact",
+  });
 return table(
   ["hours", "locale", "long", "result"],
   [

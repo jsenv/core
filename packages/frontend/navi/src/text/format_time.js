@@ -284,7 +284,10 @@ export const formatTime = (date, lang) => {
  *     doesn't collapse to something indistinguishable from an actual
  *     5-minute duration.
  *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
- *     (e.g. "5h30" → "05h30"), so it reads closer to a "05:30" clock.
+ *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
+ *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
+ *     formats spell out their units, so "10 heures"/"10h" reads fine there
+ *     and only "compact" needs the clock shape.
  *   Must not be set for plain duration formatting.
  *
  * @example
@@ -295,6 +298,7 @@ export const formatTime = (date, lang) => {
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
  * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
  * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
  */
 export const formatMinuteDuration = (
   minutes,
@@ -325,7 +329,8 @@ export const formatMinuteDuration = (
     return `${m}${mSym}`;
   }
   if (m === 0) {
-    return `${hStr}${hSym}`;
+    // "10h00" on a clock, "2h" for a real 2 hours duration
+    return clockStyle ? `${hStr}${hSym}00` : `${hStr}${hSym}`;
   }
   return `${hStr}${hSym}${String(m).padStart(2, "0")}`;
 };
@@ -513,7 +518,9 @@ export const formatDuration = (
   }
 
   if (hasNonZero("seconds")) {
-    parts.push(`${formatCompactNumber(duration.seconds, lang)}${sym("second")}`);
+    parts.push(
+      `${formatCompactNumber(duration.seconds, lang)}${sym("second")}`,
+    );
   }
   if (hasNonZero("milliseconds")) {
     parts.push(

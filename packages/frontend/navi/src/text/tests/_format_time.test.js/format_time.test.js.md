@@ -11,6 +11,7 @@
 - [formatMinuteDuration — compact (default)](7_formatminuteduration_%E2%80%94_compact_(default)/7_formatminuteduration_%E2%80%94_compact_(default).md)
 - [formatMinuteDuration — long](8_formatminuteduration_%E2%80%94_long/8_formatminuteduration_%E2%80%94_long.md)
 - [formatHourDuration](9_formathourduration/9_formathourduration.md)
+- [formatMinuteDuration — clockStyle](10_formatminuteduration_%E2%80%94_clockstyle/10_formatminuteduration_%E2%80%94_clockstyle.md)
 
 ---
 
