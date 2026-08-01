@@ -64,6 +64,14 @@ export const replaceFluctuatingValues = (
     });
     return string;
   };
+  // node prefixes the warnings it emits with the pid, as in
+  // "(node:9356) [DEP0205] DeprecationWarning: ..."
+  const replaceProcessIds = (string) => {
+    string = string.replace(/\(node:\d+\)/g, () => {
+      return "(node:<X>)";
+    });
+    return string;
+  };
   const replaceSizes = (string) => {
     // the size of files might slighly differ from an OS to an other
     // we round the floats to make them predictable
@@ -93,6 +101,7 @@ export const replaceFluctuatingValues = (
       return replaceFilesystemWellKnownValues(string);
     }
     string = replaceTimestamps(string);
+    string = replaceProcessIds(string);
     if (!preserveAnsi) {
       string = stripAnsi(string);
     }

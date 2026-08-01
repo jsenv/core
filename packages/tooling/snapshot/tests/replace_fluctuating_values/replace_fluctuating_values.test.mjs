@@ -118,3 +118,16 @@ And file urls
   const expect = `"http://jsenv.dev/").href`;
   assert({ actual, expect });
 }
+
+// node warnings are prefixed with the pid
+{
+  const actual = replaceFluctuatingValues(
+    `(node:9356) [DEP0205] DeprecationWarning: \`module.register()\` is deprecated.
+(node:1) Warning: something else
+(node:abc) not a pid`,
+  );
+  const expect = `(node:<X>) [DEP0205] DeprecationWarning: \`module.register()\` is deprecated.
+(node:<X>) Warning: something else
+(node:abc) not a pid`;
+  assert({ actual, expect });
+}
