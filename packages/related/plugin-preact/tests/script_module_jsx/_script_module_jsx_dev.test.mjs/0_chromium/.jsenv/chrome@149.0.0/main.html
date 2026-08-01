@@ -7,8 +7,27 @@
   </head>
   <body>
     <jsenv-scripts>
+      <script src="/@fs@jsenv/core/src/plugins/server_events/client/server_events_client.js" jsenv-injected-by="jsenv:server_events"></script>
+      <script jsenv-injected-by="jsenv:server_events" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+        window.__server_events__.setup({
+          "logs": true
+        });
+      </script>
+      <script src="/@fs@jsenv/core/src/plugins/client_monitoring/client/client_reporter.js" jsenv-injected-by="jsenv:client_monitoring"></script>
+      <script jsenv-injected-by="jsenv:client_monitoring" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+        window.__client_monitoring__.setup({
+          
+        });
+      </script>
       <script type="module" src="/@fs@jsenv/core/node_modules/preact/debug/dist/debug.mjs?v=11.0.0-beta.2" jsenv-injected-by="jsenv:preact"></script>
       <script src="/@fs@jsenv/core/packages/backend/server/src/plugins/autoreload_on_server_restart/client/autoreload_on_server_restart.js" jsenv-injected-by="jsenv:autoreload_on_server_restart" data-ws-endpoint="/.internal/events.websocket"></script>
+      <script type="module" jsenv-injected-by="jsenv:dependency_status" content-indented="">
+        import { initDependencyStatus } from "/@fs@jsenv/core/src/plugins/dependency_status/client/dependency_status.js";
+            
+        initDependencyStatus({
+          "problems": []
+        });
+      </script>
       <script type="module" jsenv-injected-by="jsenv:drop_to_open" content-indented="">
         import { initDropToOpen } from "/@fs@jsenv/core/src/plugins/drop_to_open/client/drop_to_open.js";
             
