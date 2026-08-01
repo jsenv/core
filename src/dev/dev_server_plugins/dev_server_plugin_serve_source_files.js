@@ -312,7 +312,7 @@ export const devServerPluginServeSourceFiles = ({
                   : {
                       "cache-control": `private,max-age=0,must-revalidate`,
                       // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                      "eTag": eTag,
+                      eTag,
                     }),
                 ...urlInfo.headers,
                 "content-type": urlInfo.contentType,

@@ -9,13 +9,17 @@ RESOLVE_URL_ERROR: Failed to resolve url reference
 base/client/node_modules/foo/index.js:1:7
 1 | import "not_found";
           ^
-"not_found" is a bare specifier but cannot be remapped to a package
+"not_found" is declared by "foo" but not installed
 --- first reference in project ---
 base/client/main.js:1:7
+--- declared version ---
+*
+--- suggestion ---
+run npm install, the page will reload once "not_found" is installed
 --- plugin name ---
 "jsenv:node_esm_resolution"
-  at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:16:26)
-  at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:44:32)
+  at createFailedToResolveUrlError (@jsenv/core/src/kitchen/errors.js:21:26)
+  at createResolveUrlError (@jsenv/core/src/kitchen/errors.js:53:14)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:401:13)
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:385:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:41:41)
