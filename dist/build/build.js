@@ -132,6 +132,136 @@ const watchSourceFiles = (
 
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
 
+/*
+ * Compares what a package.json declares with what is actually inside
+ * node_modules, so the dev server can tell a dependency apart when it is
+ * missing (never installed) or outdated (installed at an other version).
+ *
+ * Only the dependencies declared by a package are looked at, never the
+ * transitive ones: a declared dependency is what pulls the rest, so it is
+ * enough to know whether an install is needed or over.
+ *
+ * Only exact declared versions ("1.2.3") are compared: a range ("^1.2.3"), a
+ * file/workspace protocol or a tag cannot be checked without resolving what npm
+ * would pick, which is way beyond what is needed here.
+ */
+
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+];
+
+const packageNameFromSpecifier = (specifier) => {
+  const parts = specifier.split("/");
+  if (specifier[0] === "@") {
+    return parts.slice(0, 2).join("/");
+  }
+  return parts[0];
+};
+
+/*
+ * declaringDirectoryUrl is the package directory the importer belongs to, which
+ * is not always the project one: a file inside node_modules resolves its bare
+ * specifiers against the dependencies of the package containing it.
+ */
+const readDependencyStatus = (
+  packageDirectory,
+  packageName,
+  declaringDirectoryUrl = packageDirectory.url,
+) => {
+  const packageJSON = readPackageJSON(packageDirectory, declaringDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+  const declaredVersion = readDeclaredVersion(packageJSON, packageName);
+  if (!declaredVersion) {
+    return null;
+  }
+  return createStatus(packageDirectory, {
+    packageName,
+    declaredVersion,
+    declaringDirectoryUrl,
+    declaredBy: packageJSON.name,
+  });
+};
+
+const createStatus = (
+  packageDirectory,
+  { packageName, declaredVersion, declaringDirectoryUrl, declaredBy },
+) => {
+  const status = {
+    packageName,
+    declaredVersion,
+    declaredBy,
+    installedVersion: null,
+    state: "missing",
+  };
+  const installedDirectoryUrl = findInstalledDirectoryUrl(
+    declaringDirectoryUrl,
+    packageName,
+  );
+  if (!installedDirectoryUrl) {
+    return status;
+  }
+  const installedPackageJSON = readPackageJSON(
+    packageDirectory,
+    installedDirectoryUrl,
+  );
+  status.installedVersion = installedPackageJSON
+    ? installedPackageJSON.version
+    : null;
+  status.state =
+    isExactVersion(declaredVersion) &&
+    status.installedVersion !== declaredVersion
+      ? "outdated"
+      : "installed";
+  return status;
+};
+
+const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
+  let directoryUrl = declaringDirectoryUrl;
+  while (directoryUrl) {
+    const candidateUrl = `${directoryUrl}node_modules/${packageName}/`;
+    if (existsSync(new URL(`${candidateUrl}package.json`))) {
+      return candidateUrl;
+    }
+    const parentUrl = new URL("../", directoryUrl).href;
+    if (parentUrl === directoryUrl) {
+      return null;
+    }
+    directoryUrl = parentUrl;
+  }
+  return null;
+};
+
+const readDeclaredVersion = (packageJSON, packageName) => {
+  for (const field of DEPENDENCY_FIELDS) {
+    const dependencies = packageJSON[field];
+    if (dependencies && dependencies[packageName]) {
+      return dependencies[packageName];
+    }
+  }
+  return null;
+};
+
+// an install in progress can be caught halfway, with a package.json not written yet
+const readPackageJSON = (packageDirectory, directoryUrl) => {
+  if (!directoryUrl) {
+    return null;
+  }
+  try {
+    return packageDirectory.read(directoryUrl);
+  } catch {
+    return null;
+  }
+};
+
+const isExactVersion = (declaredVersion) => {
+  return /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(declaredVersion);
+};
+
 const createResolveUrlError = ({
   jsenvPluginsController,
   reference,
@@ -171,6 +301,18 @@ ${reason}`,
     });
   }
   if (error.code === "MODULE_NOT_FOUND") {
+    const notInstalledStatus = readNotInstalledStatus(reference);
+    if (notInstalledStatus) {
+      const { packageName, declaredVersion, declaredBy, isProjectDependency } =
+        notInstalledStatus;
+      return createFailedToResolveUrlError({
+        "reason": isProjectDependency
+          ? `"${packageName}" is declared in package.json but not installed`
+          : `"${packageName}" is declared by "${declaredBy}" but not installed`,
+        "declared version": declaredVersion,
+        "suggestion": `run npm install, the page will reload once "${packageName}" is installed`,
+      });
+    }
     const bareSpecifierError = createFailedToResolveUrlError({
       reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
     });
@@ -422,6 +564,32 @@ const getErrorTrace = (error, reference) => {
       column: error.column,
       content: urlInfo.content,
     }),
+  };
+};
+
+// a bare specifier is resolved against the dependencies of the package
+// containing the file that imports it, which is the project one for a source
+// file but an other one for a file inside node_modules
+const readNotInstalledStatus = (reference) => {
+  const { ownerUrlInfo } = reference;
+  const { packageDirectory } = ownerUrlInfo.context;
+  if (!packageDirectory) {
+    return null;
+  }
+  const declaringDirectoryUrl =
+    packageDirectory.find(ownerUrlInfo.url) || packageDirectory.url;
+  const packageName = packageNameFromSpecifier(reference.specifier);
+  const status = readDependencyStatus(
+    packageDirectory,
+    packageName,
+    declaringDirectoryUrl,
+  );
+  if (!status || status.state !== "missing") {
+    return null;
+  }
+  return {
+    ...status,
+    isProjectDependency: declaringDirectoryUrl === packageDirectory.url,
   };
 };
 
@@ -8288,6 +8456,7 @@ const jsenvPluginAutoreloadClient = () => {
 const jsenvPluginAutoreloadServer = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -8616,6 +8785,15 @@ const jsenvPluginAutoreloadServer = ({
             });
           },
         );
+        // something outside the url graph wants the page back from scratch,
+        // typically a dependency that just got installed into node_modules
+        reloadRequestEventEmitter.on(({ cause, reason }) => {
+          serverEventInfo.sendServerEvent({
+            cause,
+            type: "full",
+            typeReason: reason,
+          });
+        });
       },
     },
     serverRoutes: [
@@ -8726,6 +8904,7 @@ const jsenvPluginHotSearchParam = () => {
 const jsenvPluginAutoreload = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return [
     jsenvPluginHotSearchParam(),
@@ -8733,8 +8912,73 @@ const jsenvPluginAutoreload = ({
     jsenvPluginAutoreloadServer({
       clientFileChangeEventEmitter,
       clientFileDereferencedEventEmitter,
+      reloadRequestEventEmitter,
     }),
   ];
+};
+
+/*
+ * Tells the browser about the dependencies declared in package.json that
+ * node_modules does not match, so the page can say it is running with something
+ * else than what the project asks for.
+ *
+ * The state is sent on page load (it is known before any client connects) and
+ * again whenever it changes, so a page opened during an install is updated
+ * without being reloaded.
+ */
+
+
+const clientFileUrl = import.meta.resolve("../js/dependency_status.js");
+
+const jsenvPluginDependencyStatus = ({
+  dependencyProblemEventEmitter,
+  getDependencyProblems,
+}) => {
+  return {
+    name: "jsenv:dependency_status",
+    appliesDuring: "dev",
+    serverEvents: {
+      dependency_status: (serverEventInfo) => {
+        dependencyProblemEventEmitter.on((problems) => {
+          // the state is baked into the html by the injection below, so a page
+          // served from the graph as it is would come back with the previous
+          // state, which is exactly what a reload triggered by an install does
+          for (const urlInfo of serverEventInfo.kitchen.graph.urlInfoMap.values()) {
+            if (urlInfo.type === "html" && urlInfo.content !== undefined) {
+              urlInfo.onModified();
+            }
+          }
+          serverEventInfo.sendServerEvent({ problems });
+        });
+      },
+    },
+    transformUrlContent: {
+      html: (htmlUrlInfo) => {
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
+        const clientReference = htmlUrlInfo.dependencies.inject({
+          type: "script",
+          subtype: "js_module",
+          expectedType: "js_module",
+          specifier: clientFileUrl,
+        });
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: clientReference.generatedSpecifier,
+          initCall: {
+            callee: "initDependencyStatus",
+            params: { problems: getDependencyProblems() },
+          },
+          pluginName: "jsenv:dependency_status",
+        });
+        return {
+          content: stringifyHtmlAst(htmlAst),
+        };
+      },
+    },
+  };
 };
 
 const jsenvPluginCacheControl = ({
@@ -9273,6 +9517,7 @@ const getCorePlugins = ({
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
+  dependencyStatus,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -9370,6 +9615,9 @@ const getCorePlugins = ({
     jsenvPluginImportMetaHot(),
     ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
+      : []),
+    ...(dependencyStatus
+      ? [jsenvPluginDependencyStatus(dependencyStatus)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
