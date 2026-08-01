@@ -20,6 +20,7 @@ import { jsenvPluginImportMetaCss } from "./import_meta_css/jsenv_plugin_import_
 // autoreload
 import { jsenvPluginImportMetaHot } from "./import_meta_hot/jsenv_plugin_import_meta_hot.js";
 import { jsenvPluginAutoreload } from "./autoreload/jsenv_plugin_autoreload.js";
+import { jsenvPluginDependencyStatus } from "./dependency_status/jsenv_plugin_dependency_status.js";
 import { jsenvPluginCacheControl } from "./cache_control/jsenv_plugin_cache_control.js";
 import { jsenvPluginCustomElementsRedefine } from "./custom_elements_redefine/jsenv_plugin_custom_elements_redefine.js";
 // other
@@ -55,6 +56,7 @@ export const getCorePlugins = ({
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
+  dependencyStatus,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -152,6 +154,9 @@ export const getCorePlugins = ({
     jsenvPluginImportMetaHot(),
     ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
+      : []),
+    ...(dependencyStatus
+      ? [jsenvPluginDependencyStatus(dependencyStatus)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),

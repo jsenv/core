@@ -7,8 +7,20 @@
   </head>
   <body>
     <jsenv-scripts>
+      <script src="/@fs@jsenv/core/src/plugins/server_events/client/server_events_client.js" jsenv-injected-by="jsenv:server_events"></script>
+      <script jsenv-injected-by="jsenv:server_events" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+        window.__server_events__.setup({
+          "logs": true
+        });
+      </script>
+      <script src="/@fs@jsenv/core/src/plugins/client_monitoring/client/client_reporter.js" jsenv-injected-by="jsenv:client_monitoring"></script>
+      <script jsenv-injected-by="jsenv:client_monitoring" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+        window.__client_monitoring__.setup({
+          
+        });
+      </script>
       <script type="module" jsenv-injected-by="jsenv:custom_elements_redefine" content-indented="">
-        import { allowCustomElementsRedefine } from "/@fs@jsenv/core/packages/frontend/custom-elements-redefine/src/main.js?package_bundle";
+        import { allowCustomElementsRedefine } from "/@fs@jsenv/core/packages/frontend/custom-elements-redefine/src/main.js";
             
         allowCustomElementsRedefine();
       </script>

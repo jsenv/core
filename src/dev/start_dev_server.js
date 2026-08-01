@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 
 import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
+import { watchDependencies } from "../helpers/watch_dependencies.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
@@ -187,13 +188,36 @@ export const startDevServer = async ({
   const packageDirectory = createPackageDirectory({ sourceDirectoryUrl });
   const clientFileChangeEventEmitter = createEventEmitter();
   const clientFileDereferencedEventEmitter = createEventEmitter();
+  const reloadRequestEventEmitter = createEventEmitter();
   clientAutoreload = {
     enabled: true,
     clientServerEventsConfig: {},
     clientFileChangeEventEmitter,
     clientFileDereferencedEventEmitter,
+    reloadRequestEventEmitter,
     ...clientAutoreload,
   };
+  const dependencyProblemEventEmitter = createEventEmitter();
+  const dependencyWatcher = watchDependencies(packageDirectory, {
+    onChange: (problems) => {
+      dependencyProblemEventEmitter.emit(problems);
+    },
+    onProblem: ({ packageName, declaredVersion, installedVersion, state }) => {
+      logger.warn(
+        state === "missing"
+          ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
+          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
+      );
+    },
+    onInstalled: ({ packageName, declaredVersion }) => {
+      logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      reloadRequestEventEmitter.emit({
+        cause: `${packageName}@${declaredVersion} installed`,
+        reason: `a dependency became available in node_modules`,
+      });
+    },
+  });
+  serverStopCallbackSet.add(dependencyWatcher.stop);
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
@@ -228,6 +252,10 @@ export const startDevServer = async ({
 
       clientAutoreload,
       clientAutoreloadOnServerRestart,
+      dependencyStatus: {
+        dependencyProblemEventEmitter,
+        getDependencyProblems: dependencyWatcher.getProblems,
+      },
       cacheControl,
       ribbon,
       dropToOpen,

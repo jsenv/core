@@ -3,6 +3,7 @@ import { urlIsOrIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 export const jsenvPluginAutoreloadServer = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -331,6 +332,15 @@ export const jsenvPluginAutoreloadServer = ({
             });
           },
         );
+        // something outside the url graph wants the page back from scratch,
+        // typically a dependency that just got installed into node_modules
+        reloadRequestEventEmitter.on(({ cause, reason }) => {
+          serverEventInfo.sendServerEvent({
+            cause,
+            type: "full",
+            typeReason: reason,
+          });
+        });
       },
     },
     serverRoutes: [

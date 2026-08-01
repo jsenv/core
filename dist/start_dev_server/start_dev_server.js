@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, composeTwoResponses, fetchDirectory, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
-import { readFileSync, readdirSync, existsSync, lstatSync, realpathSync } from "node:fs";
-import { lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
+import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync } from "node:fs";
+import { registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
@@ -48,6 +48,274 @@ const createEventEmitter = () => {
     }
   };
   return { on, off, emit };
+};
+
+/*
+ * Compares what a package.json declares with what is actually inside
+ * node_modules, so the dev server can tell a dependency apart when it is
+ * missing (never installed) or outdated (installed at an other version).
+ *
+ * Only the dependencies declared by a package are looked at, never the
+ * transitive ones: a declared dependency is what pulls the rest, so it is
+ * enough to know whether an install is needed or over.
+ *
+ * Only exact declared versions ("1.2.3") are compared: a range ("^1.2.3"), a
+ * file/workspace protocol or a tag cannot be checked without resolving what npm
+ * would pick, which is way beyond what is needed here.
+ */
+
+
+const DEPENDENCY_FIELDS = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+];
+
+const packageNameFromSpecifier = (specifier) => {
+  const parts = specifier.split("/");
+  if (specifier[0] === "@") {
+    return parts.slice(0, 2).join("/");
+  }
+  return parts[0];
+};
+
+/*
+ * declaringDirectoryUrl is the package directory the importer belongs to, which
+ * is not always the project one: a file inside node_modules resolves its bare
+ * specifiers against the dependencies of the package containing it.
+ */
+const readDependencyStatus = (
+  packageDirectory,
+  packageName,
+  declaringDirectoryUrl = packageDirectory.url,
+) => {
+  const packageJSON = readPackageJSON(packageDirectory, declaringDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+  const declaredVersion = readDeclaredVersion(packageJSON, packageName);
+  if (!declaredVersion) {
+    return null;
+  }
+  return createStatus(packageDirectory, {
+    packageName,
+    declaredVersion,
+    declaringDirectoryUrl,
+    declaredBy: packageJSON.name,
+  });
+};
+
+const readDependencyStatuses = (packageDirectory) => {
+  const packageJSON = readPackageJSON(packageDirectory, packageDirectory.url);
+  if (!packageJSON) {
+    return [];
+  }
+  const statuses = [];
+  const packageNameSet = new Set();
+  for (const field of DEPENDENCY_FIELDS) {
+    const dependencies = packageJSON[field];
+    if (!dependencies) {
+      continue;
+    }
+    for (const packageName of Object.keys(dependencies)) {
+      if (packageNameSet.has(packageName)) {
+        continue;
+      }
+      packageNameSet.add(packageName);
+      statuses.push(
+        createStatus(packageDirectory, {
+          packageName,
+          declaredVersion: dependencies[packageName],
+          declaringDirectoryUrl: packageDirectory.url,
+          declaredBy: packageJSON.name,
+        }),
+      );
+    }
+  }
+  return statuses;
+};
+
+const createStatus = (
+  packageDirectory,
+  { packageName, declaredVersion, declaringDirectoryUrl, declaredBy },
+) => {
+  const status = {
+    packageName,
+    declaredVersion,
+    declaredBy,
+    installedVersion: null,
+    state: "missing",
+  };
+  const installedDirectoryUrl = findInstalledDirectoryUrl(
+    declaringDirectoryUrl,
+    packageName,
+  );
+  if (!installedDirectoryUrl) {
+    return status;
+  }
+  const installedPackageJSON = readPackageJSON(
+    packageDirectory,
+    installedDirectoryUrl,
+  );
+  status.installedVersion = installedPackageJSON
+    ? installedPackageJSON.version
+    : null;
+  status.state =
+    isExactVersion(declaredVersion) &&
+    status.installedVersion !== declaredVersion
+      ? "outdated"
+      : "installed";
+  return status;
+};
+
+const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
+  let directoryUrl = declaringDirectoryUrl;
+  while (directoryUrl) {
+    const candidateUrl = `${directoryUrl}node_modules/${packageName}/`;
+    if (existsSync(new URL(`${candidateUrl}package.json`))) {
+      return candidateUrl;
+    }
+    const parentUrl = new URL("../", directoryUrl).href;
+    if (parentUrl === directoryUrl) {
+      return null;
+    }
+    directoryUrl = parentUrl;
+  }
+  return null;
+};
+
+const readDeclaredVersion = (packageJSON, packageName) => {
+  for (const field of DEPENDENCY_FIELDS) {
+    const dependencies = packageJSON[field];
+    if (dependencies && dependencies[packageName]) {
+      return dependencies[packageName];
+    }
+  }
+  return null;
+};
+
+// an install in progress can be caught halfway, with a package.json not written yet
+const readPackageJSON = (packageDirectory, directoryUrl) => {
+  if (!directoryUrl) {
+    return null;
+  }
+  try {
+    return packageDirectory.read(directoryUrl);
+  } catch {
+    return null;
+  }
+};
+
+const isExactVersion = (declaredVersion) => {
+  return /^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(declaredVersion);
+};
+
+/*
+ * Detects when "npm install" makes a missing or outdated dependency match what
+ * the project package.json declares, so the browser can be reloaded at that
+ * moment.
+ *
+ * node_modules is deliberately not watched: it is far too big, and an install
+ * rewrites, dedupes and moves package directories around, so a watcher placed
+ * on one of them is unreliable. Instead the few packages known to be missing or
+ * outdated are polled, which costs a couple of readFileSync and stops as soon as
+ * they are all installed. The project package.json is watched though: it is a
+ * single file, and editing it is what puts a dependency out of date in the first
+ * place.
+ */
+
+
+const POLL_INTERVAL = 500;
+
+const watchDependencies = (
+  packageDirectory,
+  { onProblem, onInstalled, onChange, pollInterval = POLL_INTERVAL },
+) => {
+  let problemMap = new Map();
+  const watcher = {
+    getProblems: () => Array.from(problemMap.values()),
+    stop: () => {},
+  };
+  if (!packageDirectory.url) {
+    return watcher;
+  }
+  let timer = null;
+
+  const check = () => {
+    const nextProblemMap = new Map();
+    for (const status of readDependencyStatuses(packageDirectory)) {
+      if (status.state === "missing" || status.state === "outdated") {
+        nextProblemMap.set(status.packageName, status);
+      }
+    }
+    for (const [packageName, status] of nextProblemMap) {
+      const previousStatus = problemMap.get(packageName);
+      if (
+        !previousStatus ||
+        previousStatus.state !== status.state ||
+        previousStatus.declaredVersion !== status.declaredVersion
+      ) {
+        onProblem(status);
+      }
+    }
+    for (const [packageName, previousStatus] of problemMap) {
+      if (!nextProblemMap.has(packageName)) {
+        onInstalled(previousStatus);
+      }
+    }
+    const changed =
+      nextProblemMap.size !== problemMap.size ||
+      Array.from(nextProblemMap.keys()).some((packageName) => {
+        const previousStatus = problemMap.get(packageName);
+        const status = nextProblemMap.get(packageName);
+        return (
+          !previousStatus ||
+          previousStatus.state !== status.state ||
+          previousStatus.declaredVersion !== status.declaredVersion ||
+          previousStatus.installedVersion !== status.installedVersion
+        );
+      });
+    problemMap = nextProblemMap;
+    if (changed) {
+      onChange(watcher.getProblems());
+    }
+    if (problemMap.size === 0) {
+      stopPolling();
+    } else {
+      startPolling();
+    }
+  };
+
+  const startPolling = () => {
+    if (timer) {
+      return;
+    }
+    timer = setInterval(check, pollInterval);
+    timer.unref();
+  };
+  const stopPolling = () => {
+    if (!timer) {
+      return;
+    }
+    clearInterval(timer);
+    timer = null;
+  };
+
+  const unwatchPackageJson = registerFileLifecycle(
+    new URL("package.json", packageDirectory.url),
+    {
+      added: check,
+      updated: check,
+      keepProcessAlive: false,
+    },
+  );
+  check();
+
+  watcher.stop = () => {
+    stopPolling();
+    unwatchPackageJson();
+  };
+  return watcher;
 };
 
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
@@ -4050,6 +4318,18 @@ ${reason}`,
     });
   }
   if (error.code === "MODULE_NOT_FOUND") {
+    const notInstalledStatus = readNotInstalledStatus(reference);
+    if (notInstalledStatus) {
+      const { packageName, declaredVersion, declaredBy, isProjectDependency } =
+        notInstalledStatus;
+      return createFailedToResolveUrlError({
+        "reason": isProjectDependency
+          ? `"${packageName}" is declared in package.json but not installed`
+          : `"${packageName}" is declared by "${declaredBy}" but not installed`,
+        "declared version": declaredVersion,
+        "suggestion": `run npm install, the page will reload once "${packageName}" is installed`,
+      });
+    }
     const bareSpecifierError = createFailedToResolveUrlError({
       reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
     });
@@ -4301,6 +4581,32 @@ const getErrorTrace = (error, reference) => {
       column: error.column,
       content: urlInfo.content,
     }),
+  };
+};
+
+// a bare specifier is resolved against the dependencies of the package
+// containing the file that imports it, which is the project one for a source
+// file but an other one for a file inside node_modules
+const readNotInstalledStatus = (reference) => {
+  const { ownerUrlInfo } = reference;
+  const { packageDirectory } = ownerUrlInfo.context;
+  if (!packageDirectory) {
+    return null;
+  }
+  const declaringDirectoryUrl =
+    packageDirectory.find(ownerUrlInfo.url) || packageDirectory.url;
+  const packageName = packageNameFromSpecifier(reference.specifier);
+  const status = readDependencyStatus(
+    packageDirectory,
+    packageName,
+    declaringDirectoryUrl,
+  );
+  if (!status || status.state !== "missing") {
+    return null;
+  }
+  return {
+    ...status,
+    isProjectDependency: declaringDirectoryUrl === packageDirectory.url,
   };
 };
 
@@ -5928,6 +6234,7 @@ const jsenvPluginAutoreloadClient = () => {
 const jsenvPluginAutoreloadServer = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return {
     name: "jsenv:autoreload_server",
@@ -6256,6 +6563,15 @@ const jsenvPluginAutoreloadServer = ({
             });
           },
         );
+        // something outside the url graph wants the page back from scratch,
+        // typically a dependency that just got installed into node_modules
+        reloadRequestEventEmitter.on(({ cause, reason }) => {
+          serverEventInfo.sendServerEvent({
+            cause,
+            type: "full",
+            typeReason: reason,
+          });
+        });
       },
     },
     serverRoutes: [
@@ -6366,6 +6682,7 @@ const jsenvPluginHotSearchParam = () => {
 const jsenvPluginAutoreload = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return [
     jsenvPluginHotSearchParam(),
@@ -6373,8 +6690,73 @@ const jsenvPluginAutoreload = ({
     jsenvPluginAutoreloadServer({
       clientFileChangeEventEmitter,
       clientFileDereferencedEventEmitter,
+      reloadRequestEventEmitter,
     }),
   ];
+};
+
+/*
+ * Tells the browser about the dependencies declared in package.json that
+ * node_modules does not match, so the page can say it is running with something
+ * else than what the project asks for.
+ *
+ * The state is sent on page load (it is known before any client connects) and
+ * again whenever it changes, so a page opened during an install is updated
+ * without being reloaded.
+ */
+
+
+const clientFileUrl = import.meta.resolve("../js/dependency_status.js");
+
+const jsenvPluginDependencyStatus = ({
+  dependencyProblemEventEmitter,
+  getDependencyProblems,
+}) => {
+  return {
+    name: "jsenv:dependency_status",
+    appliesDuring: "dev",
+    serverEvents: {
+      dependency_status: (serverEventInfo) => {
+        dependencyProblemEventEmitter.on((problems) => {
+          // the state is baked into the html by the injection below, so a page
+          // served from the graph as it is would come back with the previous
+          // state, which is exactly what a reload triggered by an install does
+          for (const urlInfo of serverEventInfo.kitchen.graph.urlInfoMap.values()) {
+            if (urlInfo.type === "html" && urlInfo.content !== undefined) {
+              urlInfo.onModified();
+            }
+          }
+          serverEventInfo.sendServerEvent({ problems });
+        });
+      },
+    },
+    transformUrlContent: {
+      html: (htmlUrlInfo) => {
+        const htmlAst = parseHtml({
+          html: htmlUrlInfo.content,
+          url: htmlUrlInfo.url,
+        });
+        const clientReference = htmlUrlInfo.dependencies.inject({
+          type: "script",
+          subtype: "js_module",
+          expectedType: "js_module",
+          specifier: clientFileUrl,
+        });
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: clientReference.generatedSpecifier,
+          initCall: {
+            callee: "initDependencyStatus",
+            params: { problems: getDependencyProblems() },
+          },
+          pluginName: "jsenv:dependency_status",
+        });
+        return {
+          content: stringifyHtmlAst(htmlAst),
+        };
+      },
+    },
+  };
 };
 
 const jsenvPluginCacheControl = ({
@@ -6913,6 +7295,7 @@ const getCorePlugins = ({
 
   clientAutoreload,
   clientAutoreloadOnServerRestart,
+  dependencyStatus,
   cacheControl,
   scenarioPlaceholders = true,
   ribbon = true,
@@ -7010,6 +7393,9 @@ const getCorePlugins = ({
     jsenvPluginImportMetaHot(),
     ...(clientAutoreload && clientAutoreload.enabled
       ? [jsenvPluginAutoreload(clientAutoreload)]
+      : []),
+    ...(dependencyStatus
+      ? [jsenvPluginDependencyStatus(dependencyStatus)]
       : []),
     ...(cacheControl ? [jsenvPluginCacheControl(cacheControl)] : []),
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
@@ -10561,37 +10947,55 @@ const devServerPluginServeSourceFiles = ({
           }
           const urlInfo = reference.urlInfo;
           const ifNoneMatch = request.headers["if-none-match"];
-          const urlInfoTargetedByCache =
-            urlInfo.findParentIfInline() || urlInfo;
+          const inlineParentUrlInfo = urlInfo.findParentIfInline();
+          const urlInfoTargetedByCache = inlineParentUrlInfo || urlInfo;
+          const respondWithNotModified = () => {
+            const headers = {
+              "cache-control": `private,max-age=0,must-revalidate`,
+            };
+            Object.keys(urlInfo.headers).forEach((key) => {
+              if (key !== "content-length") {
+                headers[key] = urlInfo.headers[key];
+              }
+            });
+            return {
+              status: 304,
+              headers,
+            };
+          };
 
           try {
-            if (!urlInfo.error && ifNoneMatch) {
+            // an inline url info is cooked again every time the file containing it
+            // is cooked, so its content is only known after cooking; its etag is
+            // compared below, once cooked
+            if (!urlInfo.error && ifNoneMatch && !inlineParentUrlInfo) {
               const [clientOriginalContentEtag, clientContentEtag] =
                 ifNoneMatch.split("_");
               if (
-                urlInfoTargetedByCache.originalContentEtag ===
-                  clientOriginalContentEtag &&
-                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-                urlInfoTargetedByCache.isValid()
+                urlInfo.originalContentEtag === clientOriginalContentEtag &&
+                urlInfo.contentEtag === clientContentEtag &&
+                urlInfo.isValid()
               ) {
-                const headers = {
-                  "cache-control": `private,max-age=0,must-revalidate`,
-                };
-                Object.keys(urlInfo.headers).forEach((key) => {
-                  if (key !== "content-length") {
-                    headers[key] = urlInfo.headers[key];
-                  }
-                });
-                return {
-                  status: 304,
-                  headers,
-                };
+                return respondWithNotModified();
               }
             }
             await urlInfo.cook({ request, reference });
             let { response } = urlInfo;
             if (response) {
               return response;
+            }
+            // the original content of an inline url info is the one of the file
+            // containing it, but its cooked content is its own: it can change while
+            // the containing file stays identical (an import resolving to a new
+            // version of a package for instance)
+            const eTag = `${urlInfoTargetedByCache.originalContentEtag}_${urlInfo.contentEtag}`;
+            if (
+              !urlInfo.error &&
+              ifNoneMatch === eTag &&
+              inlineParentUrlInfo &&
+              !cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+            ) {
+              return respondWithNotModified();
             }
             response = {
               url: reference.url,
@@ -10609,7 +11013,7 @@ const devServerPluginServeSourceFiles = ({
                   : {
                       "cache-control": `private,max-age=0,must-revalidate`,
                       // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                      eTag,
                     }),
                 ...urlInfo.headers,
                 "content-type": urlInfo.contentType,
@@ -10688,7 +11092,10 @@ const devServerPluginServeSourceFiles = ({
                 statusText: originalError.reason,
               };
             }
-            if (code === "NOT_FOUND") {
+            // MODULE_NOT_FOUND: a specifier could not be resolved to a file,
+            // so something is missing on the filesystem; 500 is for the errors
+            // the server does not see coming
+            if (code === "NOT_FOUND" || code === "MODULE_NOT_FOUND") {
               return {
                 url: reference.url,
                 status: 404,
@@ -10883,13 +11290,36 @@ const startDevServer = async ({
   const packageDirectory = createPackageDirectory({ sourceDirectoryUrl });
   const clientFileChangeEventEmitter = createEventEmitter();
   const clientFileDereferencedEventEmitter = createEventEmitter();
+  const reloadRequestEventEmitter = createEventEmitter();
   clientAutoreload = {
     enabled: true,
     clientServerEventsConfig: {},
     clientFileChangeEventEmitter,
     clientFileDereferencedEventEmitter,
+    reloadRequestEventEmitter,
     ...clientAutoreload,
   };
+  const dependencyProblemEventEmitter = createEventEmitter();
+  const dependencyWatcher = watchDependencies(packageDirectory, {
+    onChange: (problems) => {
+      dependencyProblemEventEmitter.emit(problems);
+    },
+    onProblem: ({ packageName, declaredVersion, installedVersion, state }) => {
+      logger.warn(
+        state === "missing"
+          ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
+          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
+      );
+    },
+    onInstalled: ({ packageName, declaredVersion }) => {
+      logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      reloadRequestEventEmitter.emit({
+        cause: `${packageName}@${declaredVersion} installed`,
+        reason: `a dependency became available in node_modules`,
+      });
+    },
+  });
+  serverStopCallbackSet.add(dependencyWatcher.stop);
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
@@ -10924,6 +11354,10 @@ const startDevServer = async ({
 
       clientAutoreload,
       clientAutoreloadOnServerRestart,
+      dependencyStatus: {
+        dependencyProblemEventEmitter,
+        getDependencyProblems: dependencyWatcher.getProblems,
+      },
       cacheControl,
       ribbon,
       dropToOpen,

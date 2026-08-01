@@ -5,6 +5,7 @@ import { jsenvPluginHotSearchParam } from "./jsenv_plugin_hot_search_param.js";
 export const jsenvPluginAutoreload = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
+  reloadRequestEventEmitter,
 }) => {
   return [
     jsenvPluginHotSearchParam(),
@@ -12,6 +13,7 @@ export const jsenvPluginAutoreload = ({
     jsenvPluginAutoreloadServer({
       clientFileChangeEventEmitter,
       clientFileDereferencedEventEmitter,
+      reloadRequestEventEmitter,
     }),
   ];
 };

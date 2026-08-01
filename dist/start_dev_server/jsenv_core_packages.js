@@ -1,7 +1,7 @@
 import { createSupportsColor, isUnicodeSupported, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_core_node_modules.js";
 import { stripVTControlCharacters } from "node:util";
 import { readFileSync, existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, watch, realpathSync } from "node:fs";
-import { extname } from "node:path";
+import { extname, basename, dirname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
 
@@ -3382,6 +3382,21 @@ const writeFileSync = (destination, content = "", { force } = {}) => {
   }
 };
 
+const callOnceIdle = (callback, idleMs) => {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      callback(...args);
+    }, idleMs);
+    if (timeoutId.unref) {
+      timeoutId.unref();
+    }
+  };
+};
+
 const callOnceIdlePerFile = (callback, idleMs) => {
   const timeoutIdMap = new Map();
   return (fileEvent) => {
@@ -3433,6 +3448,25 @@ const createWatcher = (sourcePath, options) => {
   return watcher;
 };
 
+const guardTooFastSecondCall = (
+  callback,
+  cooldownBetweenFileEvents = 40,
+) => {
+  let previousCallMs;
+  return (...args) => {
+    const nowMs = Date.now();
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMs = null;
+        return;
+      }
+    }
+    previousCallMs = nowMs;
+    callback(...args);
+  };
+};
+
 const guardTooFastSecondCallPerFile = (
   callback,
   cooldownBetweenFileEvents = 40,
@@ -3476,8 +3510,8 @@ callback: ${callback}`);
   return { registerCleanupCallback, cleanup };
 };
 
-const isLinux = process.platform === "linux";
-const fsWatchSupportsRecursive = !isLinux;
+const isLinux$1 = process.platform === "linux";
+const fsWatchSupportsRecursive = !isLinux$1;
 
 const registerDirectoryLifecycle = (
   source,
@@ -3502,15 +3536,15 @@ const registerDirectoryLifecycle = (
   },
 ) => {
   const sourceUrl = assertAndNormalizeDirectoryUrl(source);
-  if (!undefinedOrFunction(added)) {
+  if (!undefinedOrFunction$1(added)) {
     throw new TypeError(`added must be a function or undefined, got ${added}`);
   }
-  if (!undefinedOrFunction(updated)) {
+  if (!undefinedOrFunction$1(updated)) {
     throw new TypeError(
       `updated must be a function or undefined, got ${updated}`,
     );
   }
-  if (!undefinedOrFunction(removed)) {
+  if (!undefinedOrFunction$1(removed)) {
     throw new TypeError(
       `removed must be a function or undefined, got ${removed}`,
     );
@@ -3805,7 +3839,7 @@ const registerDirectoryLifecycle = (
     }
   };
   const handleEntryUpdated = (entryInfo) => {
-    if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
+    if (updated && entryInfo.patternValue && shouldCallUpdated$1(entryInfo)) {
       infoMap.set(entryInfo.relativeUrl, entryInfo);
       updated({
         relativeUrl: entryInfo.relativeUrl,
@@ -3848,7 +3882,7 @@ ${relativeUrls.join("\n")}`,
   return tracker.cleanup;
 };
 
-const shouldCallUpdated = (entryInfo) => {
+const shouldCallUpdated$1 = (entryInfo) => {
   const { stat, previousInfo } = entryInfo;
   if (!stat.atimeMs) {
     return true;
@@ -3862,7 +3896,7 @@ const shouldCallUpdated = (entryInfo) => {
   return true;
 };
 
-const undefinedOrFunction = (value) => {
+const undefinedOrFunction$1 = (value) => {
   return typeof value === "undefined" || typeof value === "function";
 };
 
@@ -3889,6 +3923,224 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
     directoryRelativeUrl,
     filename,
   };
+};
+
+const isMacos = process.platform === "darwin";
+const isLinux = process.platform === "linux";
+const isFreeBSD = process.platform === "freebsd";
+
+const registerFileLifecycle = (
+  source,
+  {
+    added,
+    updated,
+    removed,
+    notifyExistent = false,
+    keepProcessAlive = true,
+    cooldownBetweenFileEvents = 0,
+    idleMs = 50,
+  },
+) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  if (!undefinedOrFunction(added)) {
+    throw new TypeError(`added must be a function or undefined, got ${added}`);
+  }
+  if (!undefinedOrFunction(updated)) {
+    throw new TypeError(
+      `updated must be a function or undefined, got ${updated}`,
+    );
+  }
+  if (!undefinedOrFunction(removed)) {
+    throw new TypeError(
+      `removed must be a function or undefined, got ${removed}`,
+    );
+  }
+  if (idleMs) {
+    if (updated) {
+      updated = callOnceIdle(updated, idleMs);
+    }
+  }
+  if (cooldownBetweenFileEvents) {
+    if (added) {
+      added = guardTooFastSecondCall(added, cooldownBetweenFileEvents);
+    }
+    if (updated) {
+      updated = guardTooFastSecondCall(updated, cooldownBetweenFileEvents);
+    }
+    if (removed) {
+      removed = guardTooFastSecondCall(removed, cooldownBetweenFileEvents);
+    }
+  }
+
+  const tracker = trackResources();
+
+  const handleFileFound = ({ stat, existent }) => {
+    const fileMutationStopWatching = watchFileMutation(sourceUrl, {
+      updated,
+      removed: () => {
+        fileMutationStopTracking();
+        watchFileAdded();
+        if (removed) {
+          removed();
+        }
+      },
+      keepProcessAlive,
+      stat,
+    });
+    const fileMutationStopTracking = tracker.registerCleanupCallback(
+      fileMutationStopWatching,
+    );
+
+    if (added) {
+      if (existent) {
+        if (notifyExistent) {
+          added({ existent: true });
+        }
+      } else {
+        added({});
+      }
+    }
+  };
+
+  const watchFileAdded = () => {
+    const fileCreationStopWatching = watchFileCreation(
+      sourceUrl,
+      (stat) => {
+        fileCreationgStopTracking();
+        handleFileFound({ stat, existent: false });
+      },
+      keepProcessAlive,
+    );
+    const fileCreationgStopTracking = tracker.registerCleanupCallback(
+      fileCreationStopWatching,
+    );
+  };
+
+  const { type, stat } = readFileInfo(sourceUrl);
+  if (type === null) {
+    if (added) {
+      watchFileAdded();
+    } else {
+      throw new Error(
+        `${urlToFileSystemPath(sourceUrl)} must lead to a file, found nothing`,
+      );
+    }
+  } else if (type === "file") {
+    handleFileFound({ stat, existent: true });
+  } else {
+    throw new Error(
+      `${urlToFileSystemPath(
+        sourceUrl,
+      )} must lead to a file, type found instead`,
+    );
+  }
+
+  return tracker.cleanup;
+};
+
+const readFileInfo = (url) => {
+  try {
+    const stat = readEntryStatSync(new URL(url));
+    return {
+      type: statsToType(stat),
+      stat,
+    };
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return {
+        type: null,
+        stat: null,
+      };
+    }
+    throw e;
+  }
+};
+
+const undefinedOrFunction = (value) =>
+  typeof value === "undefined" || typeof value === "function";
+
+const watchFileCreation = (source, callback, keepProcessAlive) => {
+  const sourcePath = urlToFileSystemPath(source);
+  const sourceFilename = basename(sourcePath);
+  const directoryPath = dirname(sourcePath);
+  let directoryWatcher = createWatcher(directoryPath, {
+    persistent: keepProcessAlive,
+  });
+  directoryWatcher.on("change", (eventType, filename) => {
+    if (filename && filename !== sourceFilename) return;
+
+    const { type, stat } = readFileInfo(source);
+    // ignore if something else with that name gets created
+    // we are only interested into files
+    if (type !== "file") {
+      return;
+    }
+    directoryWatcher.close();
+    directoryWatcher = undefined;
+    callback(stat);
+  });
+
+  return () => {
+    if (directoryWatcher) {
+      directoryWatcher.close();
+    }
+  };
+};
+
+const watchFileMutation = (
+  sourceUrl,
+  { updated, removed, keepProcessAlive, stat },
+) => {
+  let prevStat = stat;
+  let watcher;
+
+  const onChange = () => {
+    const { type, stat } = readFileInfo(sourceUrl);
+
+    if (type === null) {
+      stopWatching();
+      if (removed) {
+        removed();
+      }
+    } else if (type === "file") {
+      if (updated && shouldCallUpdated(stat, prevStat)) {
+        updated();
+      }
+      if ((isMacos || isLinux || isFreeBSD) && prevStat.ino !== stat.ino) {
+        stopWatching();
+        watch();
+      }
+    }
+    prevStat = stat;
+  };
+
+  const watch = () => {
+    watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+      persistent: keepProcessAlive,
+    });
+    watcher.on("change", onChange);
+  };
+  const stopWatching = () => {
+    if (watcher) {
+      watcher.close();
+      watcher = undefined;
+    }
+  };
+  watch();
+  return stopWatching;
+};
+
+const shouldCallUpdated = (stat, prevStat) => {
+  if (!stat.atimeMs) {
+    return true;
+  }
+  if (stat.atimeMs <= stat.mtimeMs) {
+    return true;
+  }
+  if (stat.mtimeMs !== prevStat.mtimeMs) {
+    return true;
+  }
+  return false;
 };
 
 /*
@@ -6419,4 +6671,4 @@ const isResponseEligibleForIntegrityValidation = (response) => {
   return ["basic", "cors", "default"].includes(response.type);
 };
 
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

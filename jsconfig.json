@@ -2,6 +2,8 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    // resolve @jsenv/* to src/ instead of dist/ so "go to definition" opens the sources
+    "customConditions": ["dev:jsenv"],
     "paths": {
       "@jsenv/core": [
         "./main.js"
