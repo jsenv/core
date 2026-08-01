@@ -391,7 +391,10 @@ export const devServerPluginServeSourceFiles = ({
                 statusText: originalError.reason,
               };
             }
-            if (code === "NOT_FOUND") {
+            // MODULE_NOT_FOUND: a specifier could not be resolved to a file,
+            // so something is missing on the filesystem; 500 is for the errors
+            // the server does not see coming
+            if (code === "NOT_FOUND" || code === "MODULE_NOT_FOUND") {
               return {
                 url: reference.url,
                 status: 404,

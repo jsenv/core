@@ -7,8 +7,8 @@ run()
 # 1/3 logs
 
 ```console
-chromium console.error > Failed to load resource: the server responded with a status of 500 ("foo" is declared in package.json but not installed)
-chromium console.error > Failed to load resource: the server responded with a status of 500 ("foo" is declared in package.json but not installed)
+chromium console.error > Failed to load resource: the server responded with a status of 404 ("foo" is declared in package.json but not installed)
+chromium console.error > Failed to load resource: the server responded with a status of 404 ("foo" is declared in package.json but not installed)
 ```
 
 # 2/3 write 2 files into "./output/"
