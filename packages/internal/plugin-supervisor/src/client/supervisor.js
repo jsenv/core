@@ -900,7 +900,9 @@ window.__supervisor__ = (() => {
     }
 
     const JSENV_ERROR_OVERLAY_TAGNAME = "jsenv-error-overlay";
+    const JSENV_WARNING_OVERLAY_TAGNAME = "jsenv-warning-overlay";
     let displayJsenvErrorOverlay;
+    let displayJsenvWarningOverlay;
     error_overlay: {
       displayJsenvErrorOverlay = (params) => {
         if (logs) {
@@ -908,7 +910,9 @@ window.__supervisor__ = (() => {
         }
         let jsenvErrorOverlay = new JsenvErrorOverlay(params);
         document
-          .querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME)
+          .querySelectorAll(
+            `${JSENV_ERROR_OVERLAY_TAGNAME},${JSENV_WARNING_OVERLAY_TAGNAME}`,
+          )
           .forEach((node) => {
             node.parentNode.removeChild(node);
           });
@@ -961,7 +965,8 @@ window.__supervisor__ = (() => {
   ${overlayCSS}
 </style>
 <div class="backdrop"></div>
-<div class="overlay" data-theme="dark">
+<div class="overlay" data-theme="dark" data-level="error">
+  <button class="copy" type="button">Copy</button>
   <h1 class="title">
     An error occured
   </h1>
@@ -970,6 +975,7 @@ window.__supervisor__ = (() => {
     ${tip}
   </div>
 </div>`;
+          enableCopyButton(root);
           root.querySelector(".backdrop").onclick = () => {
             if (!this.parentNode) {
               // not in document anymore
@@ -1095,6 +1101,95 @@ window.__supervisor__ = (() => {
           }
         }
       }
+      /*
+       * Same overlay, lower stakes: something the developer should act on but
+       * that does not prevent the page from running. An error always wins over
+       * a warning, never the other way around.
+       */
+      class JsenvWarningOverlay extends HTMLElement {
+        constructor({ title, text, details = [] }) {
+          super();
+          const root = this.attachShadow({ mode: "open" });
+          root.innerHTML = `
+<style>
+  ${overlayCSS}
+</style>
+<div class="backdrop"></div>
+<div class="overlay" data-theme="dark" data-level="warning">
+  <button class="copy" type="button">Copy</button>
+  <h1 class="title">
+    ${escapeHtml(title)}
+  </h1>
+  <pre class="text">${escapeHtml(text)}</pre>
+  <div class="details">
+    ${details.map((detail) => `<p>${escapeHtml(detail)}</p>`).join("\n    ")}
+  </div>
+  <div class="tip">
+    Click outside to close.
+  </div>
+</div>`;
+          enableCopyButton(root);
+          root.querySelector(".backdrop").onclick = () => {
+            if (!this.parentNode) {
+              // not in document anymore
+              return;
+            }
+            root.querySelector(".backdrop").onclick = null;
+            this.parentNode.removeChild(this);
+          };
+        }
+      }
+
+      // the text is meant to be pasted as-is in a chat: a title line, the
+      // location, then the raw text inside a fenced code block
+      const enableCopyButton = (root) => {
+        const button = root.querySelector(".copy");
+        const overlay = root.querySelector(".overlay");
+        let resetTimeout;
+        button.onclick = async () => {
+          const detailsNode = overlay.querySelector(".details");
+          const parts = [
+            `[jsenv] ${overlay.querySelector(".title").textContent.trim()}`,
+            `Page: ${window.location.href}`,
+            "```",
+            overlay.querySelector(".text").textContent.trim(),
+            "```",
+          ];
+          if (detailsNode) {
+            for (const paragraph of detailsNode.querySelectorAll("p")) {
+              parts.push(paragraph.textContent.trim());
+            }
+          }
+          const copied = await writeTextToClipboard(parts.join("\n"));
+          button.textContent = copied ? "Copied" : "Copy failed";
+          clearTimeout(resetTimeout);
+          resetTimeout = setTimeout(() => {
+            button.textContent = "Copy";
+          }, 2000);
+        };
+      };
+      const writeTextToClipboard = async (text) => {
+        try {
+          await window.navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // the clipboard API needs a secure context, fallback for plain http origins
+        }
+        try {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.style.position = "fixed";
+          textarea.style.opacity = "0";
+          document.body.appendChild(textarea);
+          textarea.select();
+          const copied = document.execCommand("copy");
+          document.body.removeChild(textarea);
+          return copied;
+        } catch {
+          return false;
+        }
+      };
+
       const generateClickableText = (text) => {
         const textWithHtmlLinks = makeLinksClickable(text, {
           createLink: ({ url, line, column }) => {
@@ -1158,8 +1253,39 @@ window.__supervisor__ = (() => {
       };
       const link = ({ href, text = href }) => `<a href="${href}">${text}</a>`;
 
+      displayJsenvWarningOverlay = (params) => {
+        if (logs) {
+          console.log("display jsenv warning overlay", params);
+        }
+        if (document.querySelector(JSENV_ERROR_OVERLAY_TAGNAME)) {
+          return () => {};
+        }
+        document
+          .querySelectorAll(JSENV_WARNING_OVERLAY_TAGNAME)
+          .forEach((node) => {
+            node.parentNode.removeChild(node);
+          });
+        let jsenvWarningOverlay = new JsenvWarningOverlay(params);
+        document.body.appendChild(jsenvWarningOverlay);
+        return () => {
+          if (jsenvWarningOverlay && jsenvWarningOverlay.parentNode) {
+            jsenvWarningOverlay.parentNode.removeChild(jsenvWarningOverlay);
+            jsenvWarningOverlay = null;
+          }
+        };
+      };
+
       if (customElements && !customElements.get(JSENV_ERROR_OVERLAY_TAGNAME)) {
         customElements.define(JSENV_ERROR_OVERLAY_TAGNAME, JsenvErrorOverlay);
+      }
+      if (
+        customElements &&
+        !customElements.get(JSENV_WARNING_OVERLAY_TAGNAME)
+      ) {
+        customElements.define(
+          JSENV_WARNING_OVERLAY_TAGNAME,
+          JsenvWarningOverlay,
+        );
       }
 
       const overlayCSS = /* css */ `
@@ -1206,6 +1332,39 @@ window.__supervisor__ = (() => {
           text-align: center;
         }
 
+        [data-level="warning"] h1 {
+          color: #ffab40;
+        }
+
+        .copy {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 4px 10px;
+          color: inherit;
+          font-size: 12px;
+          font-family: inherit;
+          background: transparent;
+          border: 1px solid currentColor;
+          border-radius: 4px;
+          opacity: 0.7;
+          cursor: pointer;
+        }
+        .copy:hover {
+          opacity: 1;
+        }
+
+        .details {
+          padding: 0 20px 16px;
+          line-height: 1.5;
+        }
+        .details p {
+          margin: 0 0 8px;
+        }
+        .details p:last-child {
+          margin-bottom: 0;
+        }
+
         pre {
           max-width: 100%;
           /* padding is nice + prevents scrollbar from hiding the text behind it */
@@ -1244,6 +1403,12 @@ window.__supervisor__ = (() => {
     }
 
     supervisor.createException = createException;
+    supervisor.reportWarning = ({ title, text, details }) => {
+      if (!errorOverlay) {
+        return () => {};
+      }
+      return displayJsenvWarningOverlay({ title, text, details });
+    };
     supervisor.reportException = (exception) => {
       if (errorOverlay) {
         const removeErrorOverlay = displayJsenvErrorOverlay(exception);

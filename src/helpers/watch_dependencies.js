@@ -20,12 +20,16 @@ const POLL_INTERVAL = 500;
 
 export const watchDependencies = (
   packageDirectory,
-  { onProblem, onInstalled, pollInterval = POLL_INTERVAL },
+  { onProblem, onInstalled, onChange, pollInterval = POLL_INTERVAL },
 ) => {
-  if (!packageDirectory.url) {
-    return () => {};
-  }
   let problemMap = new Map();
+  const watcher = {
+    getProblems: () => Array.from(problemMap.values()),
+    stop: () => {},
+  };
+  if (!packageDirectory.url) {
+    return watcher;
+  }
   let timer = null;
 
   const check = () => {
@@ -50,7 +54,22 @@ export const watchDependencies = (
         onInstalled(previousStatus);
       }
     }
+    const changed =
+      nextProblemMap.size !== problemMap.size ||
+      Array.from(nextProblemMap.keys()).some((packageName) => {
+        const previousStatus = problemMap.get(packageName);
+        const status = nextProblemMap.get(packageName);
+        return (
+          !previousStatus ||
+          previousStatus.state !== status.state ||
+          previousStatus.declaredVersion !== status.declaredVersion ||
+          previousStatus.installedVersion !== status.installedVersion
+        );
+      });
     problemMap = nextProblemMap;
+    if (changed) {
+      onChange(watcher.getProblems());
+    }
     if (problemMap.size === 0) {
       stopPolling();
     } else {
@@ -83,8 +102,9 @@ export const watchDependencies = (
   );
   check();
 
-  return () => {
+  watcher.stop = () => {
     stopPolling();
     unwatchPackageJson();
   };
+  return watcher;
 };

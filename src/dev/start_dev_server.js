@@ -197,29 +197,27 @@ export const startDevServer = async ({
     reloadRequestEventEmitter,
     ...clientAutoreload,
   };
-  serverStopCallbackSet.add(
-    watchDependencies(packageDirectory, {
-      onProblem: ({
-        packageName,
-        declaredVersion,
-        installedVersion,
-        state,
-      }) => {
-        logger.warn(
-          state === "missing"
-            ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
-            : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
-        );
-      },
-      onInstalled: ({ packageName, declaredVersion }) => {
-        logger.info(`"${packageName}@${declaredVersion}" is now installed`);
-        reloadRequestEventEmitter.emit({
-          cause: `${packageName}@${declaredVersion} installed`,
-          reason: `a dependency became available in node_modules`,
-        });
-      },
-    }),
-  );
+  const dependencyProblemEventEmitter = createEventEmitter();
+  const dependencyWatcher = watchDependencies(packageDirectory, {
+    onChange: (problems) => {
+      dependencyProblemEventEmitter.emit(problems);
+    },
+    onProblem: ({ packageName, declaredVersion, installedVersion, state }) => {
+      logger.warn(
+        state === "missing"
+          ? `"${packageName}@${declaredVersion}" is declared in package.json but not installed, run npm install`
+          : `"${packageName}" is installed in ${installedVersion} but package.json declares ${declaredVersion}, run npm install`,
+      );
+    },
+    onInstalled: ({ packageName, declaredVersion }) => {
+      logger.info(`"${packageName}@${declaredVersion}" is now installed`);
+      reloadRequestEventEmitter.emit({
+        cause: `${packageName}@${declaredVersion} installed`,
+        reason: `a dependency became available in node_modules`,
+      });
+    },
+  });
+  serverStopCallbackSet.add(dependencyWatcher.stop);
 
   const devServerJsenvPluginStore = await createJsenvPluginStore([
     jsenvPluginServerEvents({ clientAutoreload }),
@@ -254,6 +252,10 @@ export const startDevServer = async ({
 
       clientAutoreload,
       clientAutoreloadOnServerRestart,
+      dependencyStatus: {
+        dependencyProblemEventEmitter,
+        getDependencyProblems: dependencyWatcher.getProblems,
+      },
       cacheControl,
       ribbon,
       dropToOpen,
