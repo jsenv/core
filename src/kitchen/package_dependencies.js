@@ -1,7 +1,11 @@
 /*
- * Compares what the project package.json declares with what is actually inside
+ * Compares what a package.json declares with what is actually inside
  * node_modules, so the dev server can tell a dependency apart when it is
  * missing (never installed) or outdated (installed at an other version).
+ *
+ * Only the dependencies declared by a package are looked at, never the
+ * transitive ones: a declared dependency is what pulls the rest, so it is
+ * enough to know whether an install is needed or over.
  *
  * Only exact declared versions ("1.2.3") are compared: a range ("^1.2.3"), a
  * file/workspace protocol or a tag cannot be checked without resolving what npm
@@ -24,12 +28,30 @@ export const packageNameFromSpecifier = (specifier) => {
   return parts[0];
 };
 
-export const readDependencyStatus = (packageDirectory, packageName) => {
-  const declaredVersion = readDeclaredVersion(packageDirectory, packageName);
+/*
+ * declaringDirectoryUrl is the package directory the importer belongs to, which
+ * is not always the project one: a file inside node_modules resolves its bare
+ * specifiers against the dependencies of the package containing it.
+ */
+export const readDependencyStatus = (
+  packageDirectory,
+  packageName,
+  declaringDirectoryUrl = packageDirectory.url,
+) => {
+  const packageJSON = readPackageJSON(packageDirectory, declaringDirectoryUrl);
+  if (!packageJSON) {
+    return null;
+  }
+  const declaredVersion = readDeclaredVersion(packageJSON, packageName);
   if (!declaredVersion) {
     return null;
   }
-  return createStatus(packageDirectory, packageName, declaredVersion);
+  return createStatus(packageDirectory, {
+    packageName,
+    declaredVersion,
+    declaringDirectoryUrl,
+    declaredBy: packageJSON.name,
+  });
 };
 
 export const readDependencyStatuses = (packageDirectory) => {
@@ -50,42 +72,53 @@ export const readDependencyStatuses = (packageDirectory) => {
       }
       packageNameSet.add(packageName);
       statuses.push(
-        createStatus(packageDirectory, packageName, dependencies[packageName]),
+        createStatus(packageDirectory, {
+          packageName,
+          declaredVersion: dependencies[packageName],
+          declaringDirectoryUrl: packageDirectory.url,
+          declaredBy: packageJSON.name,
+        }),
       );
     }
   }
   return statuses;
 };
 
-const createStatus = (packageDirectory, packageName, declaredVersion) => {
+const createStatus = (
+  packageDirectory,
+  { packageName, declaredVersion, declaringDirectoryUrl, declaredBy },
+) => {
+  const status = {
+    packageName,
+    declaredVersion,
+    declaredBy,
+    installedVersion: null,
+    state: "missing",
+  };
   const installedDirectoryUrl = findInstalledDirectoryUrl(
-    packageDirectory,
+    declaringDirectoryUrl,
     packageName,
   );
   if (!installedDirectoryUrl) {
-    return {
-      packageName,
-      declaredVersion,
-      installedVersion: null,
-      state: "missing",
-    };
+    return status;
   }
   const installedPackageJSON = readPackageJSON(
     packageDirectory,
     installedDirectoryUrl,
   );
-  const installedVersion = installedPackageJSON
+  status.installedVersion = installedPackageJSON
     ? installedPackageJSON.version
     : null;
-  const state =
-    isExactVersion(declaredVersion) && installedVersion !== declaredVersion
+  status.state =
+    isExactVersion(declaredVersion) &&
+    status.installedVersion !== declaredVersion
       ? "outdated"
       : "installed";
-  return { packageName, declaredVersion, installedVersion, state };
+  return status;
 };
 
-const findInstalledDirectoryUrl = (packageDirectory, packageName) => {
-  let directoryUrl = packageDirectory.url;
+const findInstalledDirectoryUrl = (declaringDirectoryUrl, packageName) => {
+  let directoryUrl = declaringDirectoryUrl;
   while (directoryUrl) {
     const candidateUrl = `${directoryUrl}node_modules/${packageName}/`;
     if (existsSync(new URL(`${candidateUrl}package.json`))) {
@@ -100,11 +133,7 @@ const findInstalledDirectoryUrl = (packageDirectory, packageName) => {
   return null;
 };
 
-const readDeclaredVersion = (packageDirectory, packageName) => {
-  const packageJSON = readPackageJSON(packageDirectory, packageDirectory.url);
-  if (!packageJSON) {
-    return null;
-  }
+const readDeclaredVersion = (packageJSON, packageName) => {
   for (const field of DEPENDENCY_FIELDS) {
     const dependencies = packageJSON[field];
     if (dependencies && dependencies[packageName]) {

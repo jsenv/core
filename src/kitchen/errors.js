@@ -48,9 +48,12 @@ ${reason}`,
   if (error.code === "MODULE_NOT_FOUND") {
     const notInstalledStatus = readNotInstalledStatus(reference);
     if (notInstalledStatus) {
-      const { packageName, declaredVersion } = notInstalledStatus;
+      const { packageName, declaredVersion, declaredBy, isProjectDependency } =
+        notInstalledStatus;
       return createFailedToResolveUrlError({
-        "reason": `"${packageName}" is declared in package.json but not installed`,
+        "reason": isProjectDependency
+          ? `"${packageName}" is declared in package.json but not installed`
+          : `"${packageName}" is declared by "${declaredBy}" but not installed`,
         "declared version": declaredVersion,
         "suggestion": `run npm install, the page will reload once "${packageName}" is installed`,
       });
@@ -309,17 +312,30 @@ const getErrorTrace = (error, reference) => {
   };
 };
 
+// a bare specifier is resolved against the dependencies of the package
+// containing the file that imports it, which is the project one for a source
+// file but an other one for a file inside node_modules
 const readNotInstalledStatus = (reference) => {
-  const { packageDirectory } = reference.ownerUrlInfo.context;
+  const { ownerUrlInfo } = reference;
+  const { packageDirectory } = ownerUrlInfo.context;
   if (!packageDirectory) {
     return null;
   }
+  const declaringDirectoryUrl =
+    packageDirectory.find(ownerUrlInfo.url) || packageDirectory.url;
   const packageName = packageNameFromSpecifier(reference.specifier);
-  const status = readDependencyStatus(packageDirectory, packageName);
+  const status = readDependencyStatus(
+    packageDirectory,
+    packageName,
+    declaringDirectoryUrl,
+  );
   if (!status || status.state !== "missing") {
     return null;
   }
-  return status;
+  return {
+    ...status,
+    isProjectDependency: declaringDirectoryUrl === packageDirectory.url,
+  };
 };
 
 const detailsFromFirstReference = (reference) => {
