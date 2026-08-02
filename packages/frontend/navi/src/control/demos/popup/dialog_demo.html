@@ -995,6 +995,7 @@
         // Controlled from here so the demo can show what the dialog committed:
         // the log says when, this says what stuck.
         const [committed, setCommitted] = useState({ note: "" });
+        const [confirmed, setConfirmed] = useState({ note: "" });
 
         return (
           <section class="demo-section">
@@ -1005,14 +1006,16 @@
               <code>uiAction</code> fires while typing — it is the live state.{" "}
               <code>action</code> fires when the dialog <em>closes</em>, and
               only if something actually changed: closing a dialog nobody
-              touched is not an answer.
+              touched is not an answer. Cancelling commits nothing and puts back
+              what the dialog opened on.
             </p>
+
+            <Heading level={3} id="actions-default">
+              Default
+            </Heading>
             <p>
-              Cancelling (<kbd>Escape</kbd>, or an outside click when{" "}
-              <code>pointerInteractionOutsideEffect="cancel"</code>) commits
-              nothing <em>and</em> puts back what the dialog opened on — reopen
-              after a cancel and the field is as you left it committed, not as
-              you typed it.
+              <kbd>Escape</kbd> cancels; clicking outside closes, and closing
+              commits.
             </p>
             <div class="demo-row">
               <Button command="--navi-open" commandFor="actions_dialog">
@@ -1025,7 +1028,6 @@
             <Dialog
               id="actions_dialog"
               value={committed}
-              pointerInteractionOutsideEffect="cancel"
               uiAction={(value) => {
                 push("uiAction", value);
               }}
@@ -1039,15 +1041,41 @@
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-                <div class="demo-row">
-                  <Button command="--navi-close">Close (commits)</Button>
-                  <Button command="--navi-cancel" variant="discrete">
-                    Cancel (reverts)
-                  </Button>
-                </div>
               </Box>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="actions-cancel-outside">
+              pointerInteractionOutsideEffect="cancel"
+            </Heading>
+            <p>
+              Now both ways out are a cancel, so the dialog owes the user a way
+              to commit: a button that closes it.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="actions_cancel_dialog">
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(confirmed)}</code>
+              </span>
+            </div>
+            <Dialog
+              id="actions_cancel_dialog"
+              value={confirmed}
+              pointerInteractionOutsideEffect="cancel"
+              action={(value) => {
+                setConfirmed(value);
+              }}
+            >
+              <Box flex="y" spacing="m" padding="m">
+                <Field vertical>
+                  <Label>Note</Label>
+                  <Input name="note" placeholder="type something…" />
+                </Field>
+                <Button command="--navi-close">Close (commits)</Button>
+              </Box>
+            </Dialog>
           </section>
         );
       };
@@ -1114,6 +1142,16 @@
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>
+              <ul>
+                <li>
+                  <Link href="#actions-default">Default</Link>
+                </li>
+                <li>
+                  <Link href="#actions-cancel-outside">
+                    pointerInteractionOutsideEffect="cancel"
+                  </Link>
+                </li>
+              </ul>
             </li>
           </ol>
         </div>
