@@ -69,7 +69,7 @@
       /* The positioned ancestor a layer="local" popup is confined to */
       .frame {
         position: relative;
-        width: 380px;
+        width: 320px;
         height: 320px;
         margin: 0 auto 32px;
         border-radius: 12px;
@@ -174,6 +174,7 @@
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+      import { ChevronLeftSvg } from "@jsenv/navi/src/graphic/icons/chevron_left_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
@@ -187,6 +188,24 @@
 
       let idCounter = 0;
       const nextId = () => `e${++idCounter}`;
+
+      // Both surfaces open over the screen, so both need the same way out, in
+      // the same place. The padding is what makes it a comfortable target; the
+      // chevron itself stays at text size — the cramped "‹" was a glyph pushed
+      // around by the line it sat on, not an icon too small.
+      const BackButton = () => (
+        <Button
+          command="--navi-close"
+          icon
+          variant="discrete"
+          padding="s"
+          aria-label="Retour"
+        >
+          <Icon color="#4b5563">
+            <ChevronLeftSvg />
+          </Icon>
+        </Button>
+      );
 
       /*
        * The field is a real search input, readOnly: it looks and reads exactly
@@ -277,7 +296,6 @@
                 mode="dialog"
                 popupLayer={popupLayer}
                 positionArea="top"
-                marginWithContainer={0}
                 dialogExpand
                 expandX
                 action={(entryId) => {
@@ -292,15 +310,7 @@
                     before saying what can be done in it. The keyboard owns the
                     bottom of the screen, so nothing goes down there. */}
                   <Box flex="x" spacing="xs" alignY="center">
-                    <Button
-                      command="--navi-close"
-                      icon
-                      variant="discrete"
-                      paddingX="s"
-                      paddingY="xs"
-                    >
-                      ‹
-                    </Button>
+                    <BackButton />
                     <Text expandX>
                       <strong>{surfaceTitle}</strong>
                     </Text>
@@ -469,15 +479,7 @@
               <ControlGroup action={submitForm}>
                 <Box flex="y" spacing="m" padding="m" expand>
                   <Box flex="x" spacing="xs" alignY="center">
-                    <Button
-                      command="--navi-close"
-                      icon
-                      variant="discrete"
-                      paddingX="s"
-                      paddingY="xs"
-                    >
-                      ‹
-                    </Button>
+                    <BackButton />
                     <Text expandX>
                       <strong>{createTitle}</strong>
                     </Text>
@@ -491,6 +493,17 @@
                   />
                   <Button command="--navi-send" expandX paddingY="s">
                     {createTitle}
+                  </Button>
+                  {/* The same way out as the arrow above, where the thumb
+                      already is once the form is filled: giving up on a form
+                      should not mean reaching back to the top of the screen */}
+                  <Button
+                    command="--navi-close"
+                    variant="discrete"
+                    expandX
+                    paddingY="s"
+                  >
+                    Annuler
                   </Button>
                 </Box>
               </ControlGroup>

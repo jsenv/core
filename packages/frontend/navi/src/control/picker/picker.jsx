@@ -232,7 +232,11 @@ const css = /* css */ `
          it means "open the picker", which is what the input underneath does. */
       pointer-events: none;
 
-      .navi_icon {
+      /* :not(...) — the slot is one line tall, and an icon fills it rather than
+         stretching it. An icon that opted out of that cap (Icon's lineOverflow,
+         which the slot's own icons use) is asking to be bigger than the line,
+         so this must not put the cap back. */
+      .navi_icon:not([data-line-overflow="allow"]) {
         max-height: 100%;
       }
       /* The clear button is the exception — it is a real target with its own
@@ -551,12 +555,15 @@ const PickerButton = (props) => {
                   e.preventDefault();
                 }}
               >
-                <Icon size={iconSize}>
+                <Icon size={iconSize} lineOverflow="allow">
                   <CloseSvg />
                 </Icon>
               </Button>
             ) : (
-              <Icon size={iconSize}>
+              // lineOverflow: what sits in the slot is an affordance, not a
+              // character — a caller asking for a bigger one wants it bigger,
+              // not capped at the height of the line it sits on
+              <Icon size={iconSize} lineOverflow="allow">
                 {icon === undefined ? <ChevronDownSvg /> : icon}
               </Icon>
             )}

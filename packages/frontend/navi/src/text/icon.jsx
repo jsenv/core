@@ -12,7 +12,15 @@ const css = /* css */ `
       display: inline-flex;
       box-sizing: border-box;
       max-width: 100%;
+      /* An icon never grows past the box it sits in, so a glyph can never make
+         a line of text taller than the text itself. lineOverflow="allow" opts
+         out, for an icon that is an affordance rather than a character — a
+         control's chevron or clear button, sized to be touched, not read. */
       max-height: 100%;
+
+      &[data-line-overflow="allow"] {
+        max-height: none;
+      }
     }
   }
 
@@ -28,6 +36,15 @@ const css = /* css */ `
       flex-grow: 0 !important;
       align-items: center;
       justify-content: center;
+
+      /* fillLine: measured on the line box (1lh) instead of the character box
+         (1em). The icon still stays inside the line — it just uses all of it,
+         which is what an icon standing on its own in a control's slot wants,
+         where a glyph sitting among letters wants to match their size. */
+      &[data-fill-line] {
+        height: round(1lh, 1px);
+        max-height: round(1lh, 1px);
+      }
 
       svg,
       img {
@@ -118,6 +135,14 @@ const css = /* css */ `
  * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
  *   Any explicit size switches the icon to block (sized) mode.
  * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
+ * @param {"allow"} [props.lineOverflow] - `"allow"` lets the icon be taller
+ *   than the box it sits in (a line of text, a control's slot) instead of being
+ *   capped by it. For an icon that is an affordance sized for the finger rather
+ *   than a character sized for reading.
+ * @param {boolean} [props.fillLine] - Sizes the icon on the line box (1lh)
+ *   rather than on the character box (1em), so it uses the full height of the
+ *   line without leaving it. Unlike `lineOverflow`, the icon still never
+ *   exceeds the line.
  * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
  *   dimension it fixes the other too.
  * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
@@ -135,6 +160,8 @@ export const Icon = ({
   onClick,
   textAnchor = "center",
   lineLayout,
+  lineOverflow,
+  fillLine,
   ...props
 }) => {
   import.meta.css = css;
@@ -174,7 +201,13 @@ export const Icon = ({
 
   if (typeof children === "string") {
     return (
-      <Text {...props} {...ariaProps} data-icon-text="">
+      <Text
+        {...props}
+        {...ariaProps}
+        data-icon-text=""
+        data-line-overflow={lineOverflow}
+        data-fill-line={fillLine ? "" : undefined}
+      >
         {children}
       </Text>
     );
@@ -191,6 +224,8 @@ export const Icon = ({
         data-width-fixed={widthFixed ? "" : undefined}
         data-height-fixed={heightFixed ? "" : undefined}
         data-interactive={onClick ? "" : undefined}
+        data-line-overflow={lineOverflow}
+        data-fill-line={fillLine ? "" : undefined}
         onClick={onClick}
       >
         {innerChildren}
@@ -211,6 +246,8 @@ export const Icon = ({
         className={withPropsClassName("navi_icon", props.className)}
         spacing="pre"
         data-icon-char=""
+        data-line-overflow={lineOverflow}
+        data-fill-line={fillLine ? "" : undefined}
         data-width-fixed={widthFixed ? "" : undefined}
         data-height-fixed={heightFixed ? "" : undefined}
         data-interactive={onClick ? "" : undefined}
