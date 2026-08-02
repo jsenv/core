@@ -896,28 +896,28 @@
 
       const AdaptiveSection = () => (
         <section id="adaptive" class="demo-section">
-          <h2>6. Adaptive</h2>
+          <h2>6. sheetOnTouch</h2>
           <p>
-            <code>adaptive</code> says "this dialog is there to be interacted
-            with, give it the shape that suits the device in use": a centered
-            box under a mouse, a full-width sheet docked flush to the bottom
-            edge under a finger — where the keyboard owns the bottom of the
-            screen and a centered box would be both cramped and out of thumb
-            reach. It resolves from <code>(pointer: coarse)</code>, the input
-            device rather than a width breakpoint (a narrow desktop window is
-            still a mouse), and re-resolves live when that changes: toggle
-            device emulation in the devtools with the dialog open to watch it
-            switch. It only supplies defaults for <code>positionArea</code>,{" "}
+            <code>sheetOnTouch</code> turns the dialog into a bottom sheet
+            (docked flush to the bottom edge, full width) when the pointer is
+            coarse, and leaves it alone otherwise — under a finger the keyboard
+            owns the bottom of the screen and a centered box ends up both
+            cramped and out of thumb reach, while under a mouse the centered box
+            is already the right shape. Keyed off <code>(pointer: coarse)</code>
+            , the input device rather than a width breakpoint (a narrow desktop
+            window is still a mouse), and re-resolved live: toggle device
+            emulation in the devtools with the dialog open to watch it switch.
+            It only supplies defaults for <code>positionArea</code>,{" "}
             <code>marginWithContainer</code> and <code>expandX</code>, so any of
-            the three can still be pinned — the second button keeps the sheet
-            behaviour but forces the centered placement.
+            the three can still be pinned — the second button keeps the full
+            width but forces the centered placement.
           </p>
           <div class="demo-row">
             <div>
               <Button command="--navi-open" commandFor="adaptive_dialog">
-                adaptive
+                sheetOnTouch
               </Button>
-              <Dialog id="adaptive_dialog" adaptive animation>
+              <Dialog id="adaptive_dialog" sheetOnTouch animation>
                 <Box padding="m" flex="y" spacing="s">
                   <strong>Adaptive</strong>
                   <span>
@@ -932,11 +932,11 @@
                 command="--navi-open"
                 commandFor="adaptive_override_dialog"
               >
-                adaptive + positionArea="center"
+                sheetOnTouch + positionArea="center"
               </Button>
               <Dialog
                 id="adaptive_override_dialog"
-                adaptive
+                sheetOnTouch
                 positionArea="center"
                 animation
               >
@@ -981,7 +981,7 @@
               <a href="#open-from-start">Open from the start</a>
             </li>
             <li>
-              <a href="#adaptive">Adaptive</a>
+              <a href="#adaptive">sheetOnTouch</a>
             </li>
           </ol>
         </nav>

@@ -38,3 +38,19 @@ if (vv) {
   subscribeVisualViewportResizeSettled(update);
   vv.addEventListener("scroll", update);
 }
+
+// Whether the primary input is a finger rather than a mouse. A pointer type is
+// not a size: a narrow desktop window is still a mouse, and a large tablet is
+// still a finger — so anything sized for thumb reach or for the on-screen
+// keyboard must key off this, never off windowWidthSignal.
+const coarsePointerQuery = window.matchMedia
+  ? window.matchMedia("(pointer: coarse)")
+  : null;
+export const coarsePointerSignal = signal(
+  coarsePointerQuery ? coarsePointerQuery.matches : false,
+);
+if (coarsePointerQuery) {
+  coarsePointerQuery.addEventListener("change", () => {
+    coarsePointerSignal.value = coarsePointerQuery.matches;
+  });
+}

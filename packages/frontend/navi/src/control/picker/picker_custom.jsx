@@ -587,8 +587,6 @@ const PickerContentInsidePopup = (props) => {
     ...rest
   } = props;
   const isPopover = mode === "popover";
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
 
   return (
     <Next
@@ -649,8 +647,9 @@ const PickerContentInsidePopup = (props) => {
           pointerLock ? "capture" : pointerInteractionOutsideEffect
         }
         focusCapture={isPopover ? focusCapture : undefined}
-        expandX={!isPopover ? expandX : undefined}
-        expandY={!isPopover ? expandY : undefined}
+        expand={dialogExpand}
+        expandX={dialogExpandX}
+        expandY={dialogExpandY}
       >
         {/* Let the popup content branch on the mode via usePopupMode(). */}
         <PopupModeContext.Provider value={mode}>

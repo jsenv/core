@@ -56,12 +56,13 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
+import { coarsePointerSignal } from "../layout/responsive.js";
 import { onRequestInteraction } from "../control/rules/control_interaction.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import {
@@ -331,16 +332,17 @@ const css = /* css */ `
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
- * @param {boolean} [props.adaptive] - Declares that this dialog is there to be
- *   interacted with, and should take the shape that suits the device in use:
- *   a centered box under a mouse, a full-width sheet docked to the bottom
- *   edge under a finger (where the keyboard owns the bottom of the screen and
- *   a centered box would be both cramped and out of thumb reach). It only
- *   supplies defaults for `positionArea`, `marginWithContainer` and
- *   `expandX`, so any of the three can still be pinned explicitly. Resolved
- *   from `(pointer: coarse)` — the input device, not a width breakpoint: a
- *   narrow desktop window is still a mouse — and re-resolved live when that
- *   changes.
+ * @param {boolean} [props.sheetOnTouch] - Turns the dialog into a bottom sheet
+ *   (docked flush to the bottom edge, full width) when the pointer is coarse,
+ *   and leaves it alone otherwise. For a dialog meant to be interacted with
+ *   rather than merely read: under a finger the keyboard owns the bottom of
+ *   the screen and a centered box ends up both cramped and out of thumb
+ *   reach, while under a mouse the centered box is already the right shape —
+ *   hence a prop that only ever does something on touch. It supplies defaults
+ *   for `positionArea`, `marginWithContainer` and `expandX`, so any of the
+ *   three can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
+ *   input device, not a width breakpoint — a narrow desktop window is still a
+ *   mouse) via `coarsePointerSignal`, so it re-resolves live.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -351,9 +353,12 @@ const css = /* css */ `
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
- * @param {boolean} [props.expandX] - Stretches the dialog to the full width
- *   its container allows (`--dialog-maxmax-width`). Set by `adaptive` on a
+ * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
+ * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
+ *   container allows (`--dialog-maxmax-width`). Set by `sheetOnTouch` on a
  *   touch device.
+ * @param {boolean} [props.expandY] - Same, vertically
+ *   (`--dialog-maxmax-height`).
  * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
@@ -489,49 +494,13 @@ const DialogLocal = (props) => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
-/*
- * "(pointer: coarse)" rather than a width breakpoint: what makes a bottom
- * sheet the right shape is the finger and the keyboard it raises, not the
- * number of pixels — a narrow desktop window is still a mouse. Subscribed to
- * rather than read once so plugging a mouse, or toggling device emulation,
- * re-resolves on the spot.
- */
-const coarsePointerQuery =
-  typeof window !== "undefined" && window.matchMedia
-    ? window.matchMedia("(pointer: coarse)")
-    : null;
-const useCoarsePointer = () => {
-  const [coarsePointer, setCoarsePointer] = useState(() =>
-    coarsePointerQuery ? coarsePointerQuery.matches : false,
-  );
-  useEffect(() => {
-    if (!coarsePointerQuery) {
-      return undefined;
-    }
-    const onChange = () => {
-      setCoarsePointer(coarsePointerQuery.matches);
-    };
-    coarsePointerQuery.addEventListener("change", onChange);
-    onChange();
-    return () => {
-      coarsePointerQuery.removeEventListener("change", onChange);
-    };
-  }, []);
-  return coarsePointer;
-};
-
-// What "optimal for the device at hand" resolves to. Only defaults: an
-// explicitly passed prop always wins, so `adaptive` can be adjusted one axis
-// at a time instead of being all-or-nothing.
-const ADAPTIVE_TOUCH = {
+// What a dialog turns into under a finger: docked flush to the bottom edge,
+// full width. Only defaults — an explicitly passed prop still wins, so the
+// sheet can be adjusted one axis at a time instead of being all-or-nothing.
+const SHEET = {
   positionArea: "bottom",
   marginWithContainer: 0,
   expandX: true,
-};
-const ADAPTIVE_POINTER = {
-  positionArea: "center",
-  marginWithContainer: "3vvw",
-  expandX: false,
 };
 
 const useDialogProps = (props) => {
@@ -544,7 +513,7 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    adaptive,
+    sheetOnTouch,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -552,7 +521,9 @@ const useDialogProps = (props) => {
     // already guarantees a centered one — so this drives both (see
     // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
     marginWithContainer: marginWithContainerProp,
+    expand,
     expandX: expandXProp,
+    expandY: expandYProp,
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -581,16 +552,15 @@ const useDialogProps = (props) => {
   const isModal = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
-  const coarsePointer = useCoarsePointer();
-  const adaptiveDefaults = adaptive
-    ? coarsePointer
-      ? ADAPTIVE_TOUCH
-      : ADAPTIVE_POINTER
-    : ADAPTIVE_POINTER;
-  const positionArea = positionAreaProp ?? adaptiveDefaults.positionArea;
+  // Only touch changes anything: with a mouse a dialog already wants to be the
+  // centered box it is by default, so there is nothing to resolve there.
+  const isSheet = sheetOnTouch && coarsePointerSignal.value;
+  const positionArea =
+    positionAreaProp ?? (isSheet ? SHEET.positionArea : "center");
   const marginWithContainer =
-    marginWithContainerProp ?? adaptiveDefaults.marginWithContainer;
-  const expandX = expandXProp ?? adaptiveDefaults.expandX;
+    marginWithContainerProp ?? (isSheet ? SHEET.marginWithContainer : "3vvw");
+  const expandX = expand ?? expandXProp ?? (isSheet ? SHEET.expandX : false);
+  const expandY = expand ?? expandYProp ?? false;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
@@ -1059,6 +1029,7 @@ const useDialogProps = (props) => {
     // attribute needed at all.
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
+    "data-expand-y": expandY ? "" : undefined,
     "onnavi_command": (e) => {
       onNaviCommand(e);
     },

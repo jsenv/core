@@ -48,16 +48,6 @@ const css = /* css */ `
     }
   }
 
-  .navi_popup {
-    &.navi_dialog {
-      &[data-expand-x] {
-        width: var(--dialog-maxmax-width);
-      }
-      &[data-expand-y] {
-        height: var(--dialog-maxmax-height);
-      }
-    }
-  }
 `;
 
 /**
@@ -165,16 +155,15 @@ export const Popup = (props) => {
   );
 
   if (mode === "dialog") {
-    const expandXResolved = expand || expandX;
-    const expandYResolved = expand || expandY;
     return (
       <Dialog
         {...rest}
         maxWidth={maxWidth}
         pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
         className={withPropsClassName("navi_popup", className)}
-        data-expand-x={expandXResolved ? "" : undefined}
-        data-expand-y={expandYResolved ? "" : undefined}
+        expand={expand}
+        expandX={expandX}
+        expandY={expandY}
       >
         {childrenWithMode}
       </Dialog>
