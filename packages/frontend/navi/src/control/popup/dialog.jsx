@@ -285,47 +285,6 @@ const css = /* css */ `
       overflow: auto;
     }
 
-    /* header/footer/body — the layout roles a Box can claim inside a scrolling
-       container (see box.jsx). Two ways to keep a title and a call to action in
-       place while the rest moves:
-       - header/footer alone: the dialog itself scrolls, and they stick to its
-         edges;
-       - a body as well: the body is the only thing that scrolls, so the two
-         others simply sit outside it and need no stickiness at all. */
-    > [data-header] {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
-    > [data-footer] {
-      position: sticky;
-      bottom: 0;
-      z-index: 1;
-    }
-    &:has(> [data-body]) {
-      /* The padding moves inward, onto the three parts (see useDialogProps /
-         usePopoverProps, which hand it over as --popup-part-padding): a focus
-         outline is drawn OUTSIDE the control it belongs to, so an input sitting
-         flush against the edge of the scrolling area overflows it by those few
-         pixels and raises a scrollbar. Padding on the scroller itself is what
-         gives the outline room to exist. */
-      padding: 0;
-      overflow: hidden;
-
-      > [data-header],
-      > [data-footer] {
-        position: static;
-        padding: var(--popup-part-padding, 0);
-        flex-shrink: 0;
-      }
-      > [data-body] {
-        /* min-height: a flex child refuses to shrink below its content unless
-           told it may, and without that the body grows instead of scrolling */
-        min-height: 0;
-        padding: var(--popup-part-padding, 0);
-        flex: 1;
-        overflow: auto;
-      }
     }
 
     /* [open] above is already scoped (display only turns on while shown),
@@ -693,10 +652,10 @@ const useDialogProps = (props) => {
     children,
     ...rest
   } = props;
-  // A body means the padding belongs to the parts, not to the popup: see the
-  // :has(> [data-body]) rule above for why (a focus outline needs room INSIDE
-  // the scrolling area). Only the `padding` shorthand travels for now — the
-  // per-side props would each need the same treatment.
+  // A body means the padding belongs to the parts, not to the popup: see
+  // box.jsx's own [data-scrollable] rules for why (a focus outline needs room
+  // INSIDE the scrolling area). Only the `padding` shorthand travels for now —
+  // the per-side props would each need the same treatment.
   const hasBodyChild = toChildArray(children).some(
     (child) => child?.props?.body,
   );
@@ -1255,6 +1214,10 @@ const useDialogProps = (props) => {
     // vs. absolute) — positioning itself is entirely JS-driven now (see
     // openEffect's own positionDialog above), no data-position-area
     // attribute needed at all.
+    // A popup scrolls, and what it contains can claim header/footer/body —
+    // the same concept any Box can turn on, declared here once and for all
+    // because a popup is always one (see box.jsx).
+    "data-scrollable": "",
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,
@@ -1317,7 +1280,7 @@ const DIALOG_PSEUDO_CLASSES = [
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const DIALOG_STYLE_CSS_VARS = {
-  partPadding: "--popup-part-padding",
+  scrollablePadding: "--scrollable-padding",
 
   animationDuration: "--popup-animation-duration",
   minWidth: "--dialog-min-width",

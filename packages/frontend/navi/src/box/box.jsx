@@ -76,6 +76,54 @@ import { usePartiallyHidden } from "./use_partially_hidden.js";
 export const BoxForwardedPropsContext = createContext({});
 
 import.meta.css = /* css */ `
+  /* A scrolling area, and the three layout roles that live in one. Declared
+     here rather than in dialog.jsx/popover.jsx because it has nothing to do
+     with popups: anything that scrolls can want a title that stays put. Those
+     two just carry [data-scrollable] on their own root.
+
+     Two shapes:
+     - header/footer alone: the container itself scrolls and they stick to its
+       edges;
+     - a body as well: the body is the only thing that scrolls, so the other two
+       simply sit outside it and need no stickiness at all. The padding moves
+       inward with it (--scrollable-padding), because a focus outline is drawn
+       OUTSIDE the control it belongs to: a control flush against the edge of a
+       scrolling area overflows it by those few pixels and raises a scrollbar. */
+  [data-scrollable] {
+    overflow: auto;
+
+    > [data-header] {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    > [data-footer] {
+      position: sticky;
+      bottom: 0;
+      z-index: 1;
+    }
+
+    &:has(> [data-body]) {
+      padding: 0;
+      overflow: hidden;
+
+      > [data-header],
+      > [data-footer] {
+        position: static;
+        padding: var(--scrollable-padding, 0);
+        flex-shrink: 0;
+      }
+      > [data-body] {
+        /* min-height: a flex child refuses to shrink below its content unless
+           told it may, and without that the body grows instead of scrolling */
+        min-height: 0;
+        padding: var(--scrollable-padding, 0);
+        flex: 1;
+        overflow: auto;
+      }
+    }
+  }
+
   @layer navi {
     /*
     When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
@@ -236,6 +284,10 @@ export const Box = (props) => {
     // two others simply sit outside it. Carried as data attributes because the
     // container is the one that knows how to honour them, and it only has CSS
     // to reach its children with. Same words as List.Item's own header/footer.
+    // Makes this box a scrolling area, and gives header/footer/body their
+    // meaning inside it — Dialog and Popover are scrolling areas too, they just
+    // declare it on their own root.
+    scrollable,
     header,
     footer,
     body,
@@ -243,6 +295,9 @@ export const Box = (props) => {
   } = props;
   const TagName = as;
 
+  if (scrollable) {
+    rest["data-scrollable"] = "";
+  }
   if (header) {
     rest["data-header"] = "";
   }
