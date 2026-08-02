@@ -302,6 +302,7 @@
                 popupLayer={popupLayer}
                 positionArea="top"
                 dialogExpand
+                padding="m"
                 expandX
                 action={(entryId) => {
                   onChange(
@@ -433,11 +434,13 @@
                   placeholder="—"
                   borderRadius="s"
                   mode="popover"
+                  padding="m"
                   slotSpacing="xs"
                   // the width of its column, fixed: left free the field would
                   // resize with what is selected ("—" vs "Les 2") and the row
                   // would jiggle every time the side changes
                   minWidth={SIDE_COLUMN_WIDTH}
+                  maxWidth={SIDE_COLUMN_WIDTH}
                   action={onSideChange}
                 >
                   <List selectable command="--navi-send" separator>
@@ -605,7 +608,7 @@
 
       // One source for both the side field and the column label above it, so
       // the label stays over the column it names
-      const SIDE_COLUMN_WIDTH = "80px";
+      const SIDE_COLUMN_WIDTH = "100px";
 
       const SIDES = [
         { value: "left", label: "Gauche" },

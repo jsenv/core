@@ -554,6 +554,8 @@ const PickerButton = (props) => {
                 onMouseDown={(e) => {
                   e.preventDefault();
                 }}
+                flex
+                align="center"
               >
                 <Icon size={iconSize} lineOverflow="allow">
                   <CloseSvg />
