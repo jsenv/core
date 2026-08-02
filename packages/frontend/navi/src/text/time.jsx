@@ -52,6 +52,8 @@ import { Text } from "./text.jsx";
  *   - `"hour"`     → hours as duration (e.g. 1.5 → "1 heure 30 minutes")
  *   - `"minute"`   → minutes as duration (e.g. 90 → "1 heure 30 minutes")
  *   - `"second"`   → seconds as duration (e.g. 90 → "1 minute 30 secondes")
+ *     These three promote to the largest fitting unit, days included (36 hours
+ *     → "1 jour et 12 heures"); see `forceUnit` to stay in the given unit.
  *   - `"duration"` → duration string/object/number (seconds); `format="iso"` → ISO 8601
  *   - `"relative"` → "dans 1 heure 30" / "En cours" / "il y a 2 heures"
  *                    Handles past, present, and future.
@@ -71,6 +73,12 @@ import { Text } from "./text.jsx";
  *   - `"numeric"`    → numeric date, only for `type="date"` (e.g. "11/09/2026")
  *   - `"timestring"` → clock display for `type="time"`, `type="minute"`, `type="hour"`, and `type="second"` (e.g. "14:30", "01:30" for 90s)
  *   - `"iso"`        → ISO 8601 string, only for `type="duration"` (e.g. "PT2H15M")
+ * @param {boolean} [forceUnit=false]
+ *   Keeps the value in the unit named by `type` however big it gets, for
+ *   `type="hour"`, `"minute"` and `"second"`: 36 hours reads "36 heures"
+ *   instead of the default "1 jour et 12 heures". The default promotes to the
+ *   largest fitting unit because it reads better; force the unit when the unit
+ *   itself is the information (a quota, a counter).
  * @param {boolean} [dayLabel]
  *   When true and `type="date"`, appends the locale-aware relative label
  *   ("hier", "aujourd'hui", "demain") when the date is yesterday, today, or tomorrow.
@@ -252,8 +260,9 @@ const TimeTime = ({
     }
     return null;
   });
-  if (!date) {
-    return <TimeText {...props}>{children}</TimeText>;
+  // toDate turns a non-finite number into an Invalid Date, which is an object
+  if (!date || isNaN(date.getTime())) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
   const hh = String(date.getHours()).padStart(2, "0");
@@ -349,6 +358,7 @@ const TimeMinute = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -356,15 +366,9 @@ const TimeMinute = ({
       <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
     );
   }
-  let minutes;
-  if (typeof children === "number") {
-    minutes = children;
-  } else {
-    const childrenAsNumber = Number(children);
-    if (isNaN(childrenAsNumber)) {
-      return <TimeText {...props}>{children}</TimeText>;
-    }
-    minutes = childrenAsNumber;
+  const minutes = Number(children);
+  if (!Number.isFinite(minutes)) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
   const totalHours = Math.floor(minutes / 60);
@@ -377,7 +381,7 @@ const TimeMinute = ({
     const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
     text = formatTime(date, lang);
   } else {
-    text = formatMinuteDuration(minutes, { lang, format });
+    text = formatMinuteDuration(minutes, { lang, format, forceUnit });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -390,6 +394,7 @@ const TimeSecond = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -399,15 +404,9 @@ const TimeSecond = ({
       </TimeText>
     );
   }
-  let seconds;
-  if (typeof children === "number") {
-    seconds = children;
-  } else {
-    const n = Number(children);
-    if (isNaN(n)) {
-      return <TimeText {...props}>{children}</TimeText>;
-    }
-    seconds = n;
+  const seconds = Number(children);
+  if (!Number.isFinite(seconds)) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
   const h = Math.floor(seconds / 3600);
@@ -420,7 +419,7 @@ const TimeSecond = ({
     // Always HH:MM:SS to avoid ambiguity with HH:MM time-of-day format
     text = dateTime;
   } else {
-    text = formatSecondDuration(seconds, { lang, format });
+    text = formatSecondDuration(seconds, { lang, format, forceUnit });
   }
   return (
     <TimeText dateTime={dateTime} {...props}>
@@ -433,6 +432,7 @@ const TimeHour = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -440,15 +440,9 @@ const TimeHour = ({
       <TimeText {...props}>{format === "timestring" ? "--:--" : "--"}</TimeText>
     );
   }
-  let hours;
-  if (typeof children === "number") {
-    hours = children;
-  } else {
-    const childrenAsNumber = Number(children);
-    if (isNaN(childrenAsNumber)) {
-      return <TimeText {...props}>{children}</TimeText>;
-    }
-    hours = childrenAsNumber;
+  const hours = Number(children);
+  if (!Number.isFinite(hours)) {
+    return <TimeText {...props}>{String(children)}</TimeText>;
   }
 
   if (format === "timestring") {
@@ -463,7 +457,7 @@ const TimeHour = ({
     );
     return <TimeText {...props}>{formatTime(date, lang)}</TimeText>;
   }
-  const text = formatHourDuration(hours, { lang, format });
+  const text = formatHourDuration(hours, { lang, format, forceUnit });
   return <TimeText {...props}>{text}</TimeText>;
 };
 

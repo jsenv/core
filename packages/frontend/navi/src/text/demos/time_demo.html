@@ -902,6 +902,76 @@
                   </Time>
                 </GRow>
               </Grid>
+
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
+                Valeurs invalides
+              </Title>
+              <Grid
+                cols={["(default)", 'format="compact"', 'format="timestring"']}
+              >
+                <GRow label='"36:45"'>
+                  <Time type="time" lang={lang}>
+                    {"36:45"}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {"36:45"}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {"36:45"}
+                  </Time>
+                </GRow>
+                <GRow label='"25:00"'>
+                  <Time type="time" lang={lang}>
+                    {"25:00"}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {"25:00"}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {"25:00"}
+                  </Time>
+                </GRow>
+                <GRow label='""'>
+                  <Time type="time" lang={lang}>
+                    {""}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {""}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {""}
+                  </Time>
+                </GRow>
+                <GRow label="NaN">
+                  <Time type="time" lang={lang}>
+                    {NaN}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {NaN}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {NaN}
+                  </Time>
+                </GRow>
+                <GRow label='"abc"'>
+                  <Time type="time" lang={lang}>
+                    {"abc"}
+                  </Time>
+                  <Time type="time" format="compact" lang={lang}>
+                    {"abc"}
+                  </Time>
+                  <Time type="time" format="timestring" lang={lang}>
+                    {"abc"}
+                  </Time>
+                </GRow>
+              </Grid>
             </Section>
 
             {/* ── 7. hour ───────────────────────────────────────────────── */}
@@ -1017,6 +1087,23 @@
                     {-2}
                   </Time>
                 </GRow>
+                <GRow label="36">
+                  <Time type="hour" lang={lang}>
+                    {36}
+                  </Time>
+                  <Time type="hour" format="short" lang={lang}>
+                    {36}
+                  </Time>
+                  <Time type="hour" format="narrow" lang={lang}>
+                    {36}
+                  </Time>
+                  <Time type="hour" format="compact" lang={lang}>
+                    {36}
+                  </Time>
+                  <Time type="hour" format="timestring" lang={lang}>
+                    {36}
+                  </Time>
+                </GRow>
                 <GRow label="undefined">
                   <Time type="hour" lang={lang}>
                     {undefined}
@@ -1032,6 +1119,43 @@
                   </Time>
                   <Time type="hour" format="timestring" lang={lang}>
                     {undefined}
+                  </Time>
+                </GRow>
+              </Grid>
+
+              <Title
+                as="h3"
+                style={{
+                  margin: "24px 0 12px",
+                  fontSize: "0.9rem",
+                  color: "#555",
+                }}
+              >
+                forceUnit
+              </Title>
+              <Grid cols={["(default)", "forceUnit"]}>
+                <GRow label="hour 36">
+                  <Time type="hour" lang={lang}>
+                    {36}
+                  </Time>
+                  <Time type="hour" forceUnit lang={lang}>
+                    {36}
+                  </Time>
+                </GRow>
+                <GRow label="minute 2160">
+                  <Time type="minute" lang={lang}>
+                    {2160}
+                  </Time>
+                  <Time type="minute" forceUnit lang={lang}>
+                    {2160}
+                  </Time>
+                </GRow>
+                <GRow label="second 90000">
+                  <Time type="second" lang={lang}>
+                    {90000}
+                  </Time>
+                  <Time type="second" forceUnit lang={lang}>
+                    {90000}
                   </Time>
                 </GRow>
               </Grid>

@@ -6,6 +6,7 @@ import {
   formatHourDuration,
   formatMinuteDuration,
   formatMonth,
+  formatSecondDuration,
   formatTime,
   formatTimeRelative,
   getRelativeDay,
@@ -356,5 +357,98 @@ await snapshotTests(import.meta.url, ({ test }) => {
       ["time", "locale", "long", "short", "narrow", "compact"],
       rows,
     );
+  });
+
+  // the values that are not a plain "a few hours and minutes": past a day,
+  // zero, and negative
+  test("formatMinuteDuration — edge values", () => {
+    const run = (minutes, locale, format) =>
+      formatMinuteDuration(minutes, { lang: locale, format });
+    const rows = [];
+    for (const [label, minutes] of [
+      ["0", 0],
+      ["-90", -90],
+      ["1440 (1 day)", 1440],
+      ["1500 (25h)", 1500],
+      ["2160 (36h)", 2160],
+      ["-2160", -2160],
+    ]) {
+      for (const locale of ["fr", "en"]) {
+        rows.push([
+          label,
+          locale,
+          run(minutes, locale, "long"),
+          run(minutes, locale, "short"),
+          run(minutes, locale, "narrow"),
+          run(minutes, locale, "compact"),
+        ]);
+      }
+    }
+    return table(
+      ["minutes", "locale", "long", "short", "narrow", "compact"],
+      rows,
+    );
+  });
+
+  test("formatSecondDuration — edge values", () => {
+    const run = (seconds, locale, format) =>
+      formatSecondDuration(seconds, { lang: locale, format });
+    const rows = [];
+    for (const [label, seconds] of [
+      ["0", 0],
+      ["-45", -45],
+      ["3661", 3661],
+      ["86400 (1 day)", 86400],
+      ["90000 (25h)", 90000],
+    ]) {
+      for (const locale of ["fr", "en"]) {
+        rows.push([
+          label,
+          locale,
+          run(seconds, locale, "long"),
+          run(seconds, locale, "short"),
+          run(seconds, locale, "narrow"),
+          run(seconds, locale, "compact"),
+        ]);
+      }
+    }
+    return table(
+      ["seconds", "locale", "long", "short", "narrow", "compact"],
+      rows,
+    );
+  });
+
+  // forceUnit keeps the value in the unit it is expressed in instead of
+  // promoting it to days
+  test("forceUnit", () => {
+    const rows = [];
+    for (const [label, run] of [
+      [
+        "hour 36",
+        (f, o) => formatHourDuration(36, { lang: "fr", format: f, ...o }),
+      ],
+      [
+        "hour 1.5",
+        (f, o) => formatHourDuration(1.5, { lang: "fr", format: f, ...o }),
+      ],
+      [
+        "minute 2160",
+        (f, o) => formatMinuteDuration(2160, { lang: "fr", format: f, ...o }),
+      ],
+      [
+        "second 90000",
+        (f, o) => formatSecondDuration(90000, { lang: "fr", format: f, ...o }),
+      ],
+    ]) {
+      for (const format of ["long", "compact"]) {
+        rows.push([
+          label,
+          format,
+          run(format, {}),
+          run(format, { forceUnit: true }),
+        ]);
+      }
+    }
+    return table(["value", "format", "(default)", "forceUnit"], rows);
   });
 });

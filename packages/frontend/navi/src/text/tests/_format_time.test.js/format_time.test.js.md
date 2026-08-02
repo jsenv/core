@@ -12,6 +12,9 @@
 - [formatMinuteDuration — long](8_formatminuteduration_%E2%80%94_long/8_formatminuteduration_%E2%80%94_long.md)
 - [formatHourDuration](9_formathourduration/9_formathourduration.md)
 - [formatMinuteDuration — clockStyle](10_formatminuteduration_%E2%80%94_clockstyle/10_formatminuteduration_%E2%80%94_clockstyle.md)
+- [formatMinuteDuration — edge values](11_formatminuteduration_%E2%80%94_edge_values/11_formatminuteduration_%E2%80%94_edge_values.md)
+- [formatSecondDuration — edge values](12_formatsecondduration_%E2%80%94_edge_values/12_formatsecondduration_%E2%80%94_edge_values.md)
+- [forceUnit](13_forceunit/13_forceunit.md)
 
 ---
 
