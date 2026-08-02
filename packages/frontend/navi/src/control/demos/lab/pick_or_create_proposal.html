@@ -30,24 +30,29 @@
          layer, and a layer="local" one would be confined to the trigger's own
          box, which is the height of a single line. */
       .screen {
-        max-width: 420px;
+        max-width: 380px;
         min-height: 100%;
         margin: 0 auto;
         padding: 16px;
         background: #fff;
         box-shadow: 0 0 0 1px #d6dae0;
       }
+      /* A local popup stays in the normal flow, so a field declared after it
+         paints on top. The top layer variant below needs none of this. */
+      .frame dialog[open] {
+        z-index: 5;
+      }
       /* The positioned ancestor a layer="local" popup is confined to */
       .frame {
         position: relative;
-        width: 420px;
-        height: 720px;
+        width: 380px;
+        height: 620px;
         margin: 0 auto 32px;
         border-radius: 12px;
         overflow: hidden;
       }
       .variant-title {
-        max-width: 420px;
+        max-width: 380px;
         margin: 24px auto 8px;
         color: #444;
         font-size: 0.95rem;
@@ -128,17 +133,6 @@
   </head>
   <body>
     <h1>Picker « choisir ou créer »</h1>
-    <p class="intro">
-      La façade est un picker classique — chevron quand elle est vide, croix
-      pour la vider — pas un champ de recherche : elle dit ce qui est
-      sélectionné, celle de la surface dit ce qu'on cherche. Le toucher ouvre la
-      surface plein écran. Le
-      <strong>+</strong> et la dernière ligne de la liste ouvrent le même
-      formulaire de création — le second avec le nom déjà saisi. Les homonymes
-      sont permis : deux personnes peuvent porter le même nom, on les distingue
-      sur le nom de famille ou l'email, deux clubs sur l'adresse. Tape « Damien
-      » pour le voir.
-    </p>
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
@@ -184,6 +178,7 @@
       const PickOrCreateField = ({
         id,
         popupLayer,
+        popupContainer,
         label,
         placeholder,
         searchPlaceholder,
@@ -244,6 +239,7 @@
               clearable
               mode="dialog"
               popupLayer={popupLayer}
+              popupContainer={popupContainer}
               positionArea="top"
               marginWithContainer={0}
               dialogExpand
@@ -282,6 +278,7 @@
                     variant="discrete"
                     paddingX="s"
                     paddingY="xs"
+                    fontSize="1.6rem"
                     onClick={() => {
                       prefillSignal.value = "";
                     }}
@@ -298,7 +295,10 @@
                     searchSignal.value = next;
                   }}
                   autoComplete="off"
+                  // grey at rest, white once focused
+                  discrete
                   borderRadius="m"
+                  paddingX="s"
                   paddingY="s"
                   expandX
                 />
@@ -362,6 +362,7 @@
             <Dialog
               id={formId}
               layer={popupLayer}
+              container={popupContainer}
               positionArea="top"
               marginWithContainer={0}
               expand
@@ -434,11 +435,27 @@
         { id: nextId(), name: "Damien", detail: "d.martin@mail.com" },
       ];
 
-      const Screen = ({ idPrefix, popupLayer }) => {
+      const PLAYER_FIELDS = [
+        { key: "firstName", label: "Prénom", prefill: true },
+        { key: "lastName", label: "Nom" },
+        {
+          key: "email",
+          label: "Email",
+          placeholder: "prenom@mail.com",
+          optional: true,
+        },
+      ];
+      const playerToEntry = (values) => ({
+        name: `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
+        detail: values.email.trim(),
+      });
+
+      const Screen = ({ idPrefix, popupLayer, popupContainer }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
         const clubSignal = useSignal(null);
         const playerSignal = useSignal(null);
+        const player2Signal = useSignal(null);
 
         const addTo = (listSignal) => (entry) => {
           listSignal.value = [...listSignal.value, entry];
@@ -451,6 +468,7 @@
 
               <PickOrCreateField
                 popupLayer={popupLayer}
+                popupContainer={popupContainer}
                 id={`${idPrefix}club`}
                 label="Lieu"
                 placeholder="Choisir un club…"
@@ -481,27 +499,16 @@
 
               <PickOrCreateField
                 popupLayer={popupLayer}
+                popupContainer={popupContainer}
                 id={`${idPrefix}player`}
-                label="Joueur"
+                label="Joueur 1"
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
                 createLabel="Ajouter le joueur"
                 createTitle="Ajouter un joueur"
-                createFields={[
-                  { key: "firstName", label: "Prénom", prefill: true },
-                  { key: "lastName", label: "Nom" },
-                  {
-                    key: "email",
-                    label: "Email",
-                    placeholder: "prenom@mail.com",
-                    optional: true,
-                  },
-                ]}
-                toEntry={(values) => ({
-                  name: `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
-                  detail: values.email.trim(),
-                })}
+                createFields={PLAYER_FIELDS}
+                toEntry={playerToEntry}
                 entries={playersSignal.value}
                 recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
                 onCreate={addTo(playersSignal)}
@@ -511,24 +518,26 @@
                 }}
               />
 
-              {/* Untouched, just there to show the field in its real context:
-                    a few options and no keyboard stay chips */}
-              <div class="field-block">
-                <p class="field-title">Durée</p>
-                <div class="chips">
-                  <span class="chip">1h</span>
-                  <span class="chip">1h30</span>
-                  <span class="chip on">2h</span>
-                </div>
-              </div>
-              <div class="field-block">
-                <p class="field-title">Niveau</p>
-                <div class="chips">
-                  <span class="chip">4</span>
-                  <span class="chip on">5</span>
-                  <span class="chip">6</span>
-                </div>
-              </div>
+              <PickOrCreateField
+                popupLayer={popupLayer}
+                popupContainer={popupContainer}
+                id={`${idPrefix}player2`}
+                label="Joueur 2"
+                placeholder="Ajouter un joueur…"
+                searchPlaceholder="Rechercher un joueur…"
+                surfaceTitle="Choisir un joueur"
+                createLabel="Ajouter le joueur"
+                createTitle="Ajouter un joueur"
+                createFields={PLAYER_FIELDS}
+                toEntry={playerToEntry}
+                entries={playersSignal.value}
+                recentIds={[INITIAL_PLAYERS[2].id]}
+                onCreate={addTo(playersSignal)}
+                value={player2Signal.value}
+                onChange={(entry) => {
+                  player2Signal.value = entry;
+                }}
+              />
             </div>
             <div class="keyboard">clavier</div>
 
@@ -557,8 +566,12 @@
       const App = () => (
         <>
           <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
-          <div class="frame">
-            <Screen idPrefix="local_" popupLayer="local" />
+          <div class="frame" id="local_frame">
+            <Screen
+              idPrefix="local_"
+              popupLayer="local"
+              popupContainer="local_frame"
+            />
           </div>
           <h2 class="variant-title">
             2. top layer — lié au viewport (à voir en émulation d'appareil)
