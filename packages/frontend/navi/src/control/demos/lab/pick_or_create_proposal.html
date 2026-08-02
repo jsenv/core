@@ -243,167 +243,179 @@
             class={label ? "field-block" : "field-block field-block--grouped"}
           >
             {label && <p class="field-title">{label}</p>}
-            {/* Picker, not a hand-made trigger + Dialog: it already owns the
+            <Box flex="x" spacing="s" alignY="end">
+              {/* Picker, not a hand-made trigger + Dialog: it already owns the
                 open/close, the value, the façade (value or placeholder, chevron
                 or clear button) and the popup — mode="dialog" just pins the
                 shape we want on every device instead of letting it pick. */}
-            <Picker
-              name={id}
-              placeholder={placeholder}
-              value={value ? value.id : undefined}
-              ui={value ? value.name : undefined}
-              clearable
-              mode="dialog"
-              popupLayer={popupLayer}
-              positionArea="top"
-              marginWithContainer={0}
-              dialogExpand
-              expandX
-              action={(entryId) => {
-                onChange(
-                  entryId ? entries.find((e) => e.id === entryId) : null,
-                );
-                searchSignal.value = "";
-              }}
-            >
-              <Box flex="y" spacing="m" padding="m" expand>
-                {/* Header, search, then list — the surface says what it is
+              <Picker
+                name={id}
+                placeholder={placeholder}
+                value={value ? value.id : undefined}
+                ui={value ? value.name : undefined}
+                clearable
+                mode="dialog"
+                popupLayer={popupLayer}
+                positionArea="top"
+                marginWithContainer={0}
+                dialogExpand
+                expandX
+                action={(entryId) => {
+                  onChange(
+                    entryId ? entries.find((e) => e.id === entryId) : null,
+                  );
+                  searchSignal.value = "";
+                }}
+              >
+                <Box flex="y" spacing="m" padding="m" expand>
+                  {/* Header, search, then list — the surface says what it is
                     before saying what can be done in it. The keyboard owns the
                     bottom of the screen, so nothing goes down there. */}
-                <Box flex="x" spacing="xs" alignY="center">
-                  <Button
-                    command="--navi-close"
-                    icon
-                    variant="discrete"
-                    paddingX="s"
-                    paddingY="xs"
-                  >
-                    ‹
-                  </Button>
-                  <Text expandX>
-                    <strong>{surfaceTitle}</strong>
-                  </Text>
-                  {/* Always available, and never disabled: creating does not
+                  <Box flex="x" spacing="xs" alignY="center">
+                    <Button
+                      command="--navi-close"
+                      icon
+                      variant="discrete"
+                      paddingX="s"
+                      paddingY="xs"
+                    >
+                      ‹
+                    </Button>
+                    <Text expandX>
+                      <strong>{surfaceTitle}</strong>
+                    </Text>
+                    {/* Always available, and never disabled: creating does not
                       require having searched first, so the entry point must not
                       depend on the search box holding something */}
-                  <Button
-                    command="--navi-open"
-                    commandFor={formId}
-                    icon
-                    variant="discrete"
-                    paddingX="s"
-                    paddingY="xs"
-                    onClick={() => {
-                      prefillSignal.value = "";
-                    }}
-                  >
-                    <Icon size="1.4rem" color="#6b7280">
-                      <PlusSvg />
-                    </Icon>
-                  </Button>
-                </Box>
-                <Input
-                  navi-list={`${id}_list`}
-                  type="search"
-                  placeholder={searchPlaceholder}
-                  value={searchSignal.value}
-                  uiAction={(next) => {
-                    searchSignal.value = next;
-                  }}
-                  autoComplete="off"
-                  // grey at rest, white once focused
-                  discrete
-                  borderRadius="m"
-                  paddingX="m"
-                  paddingY="m"
-                  expandX
-                />
-
-                <List
-                  selectable
-                  id={`${id}_list`}
-                  command="--navi-send"
-                  searchText={searchSignal.value}
-                  separator
-                  searchFallback={null}
-                  expandY
-                >
-                  {matchingEntries.map((entry, i) => (
-                    <List.Item
-                      selectable
-                      key={entry.id}
-                      id={`${id}_${entry.id}`}
-                      index={i}
-                      value={entry.id}
-                      selected={value ? value.id === entry.id : false}
-                      matchInfo={getMatchInfo(entry)}
-                      padding="s"
+                    <Button
+                      command="--navi-open"
+                      commandFor={formId}
+                      icon
+                      variant="discrete"
+                      paddingX="s"
+                      paddingY="xs"
+                      onClick={() => {
+                        prefillSignal.value = "";
+                      }}
                     >
-                      <Box flex="y">
-                        <Text>
-                          <PlayerName entry={entry} />
-                        </Text>
-                        {entry.detail && (
-                          <Text className="detail">{entry.detail}</Text>
-                        )}
-                      </Box>
-                    </List.Item>
-                  ))}
-                  {/* Last row rather than a button below the list: it reads as
+                      <Icon size="1.4rem" color="#6b7280">
+                        <PlusSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                  <Input
+                    navi-list={`${id}_list`}
+                    type="search"
+                    placeholder={searchPlaceholder}
+                    value={searchSignal.value}
+                    uiAction={(next) => {
+                      searchSignal.value = next;
+                    }}
+                    autoComplete="off"
+                    // grey at rest, white once focused
+                    discrete
+                    borderRadius="m"
+                    paddingX="m"
+                    paddingY="m"
+                    expandX
+                  />
+
+                  <List
+                    selectable
+                    id={`${id}_list`}
+                    command="--navi-send"
+                    searchText={searchSignal.value}
+                    separator
+                    searchFallback={null}
+                    expandY
+                  >
+                    {matchingEntries.map((entry, i) => (
+                      <List.Item
+                        selectable
+                        key={entry.id}
+                        id={`${id}_${entry.id}`}
+                        index={i}
+                        value={entry.id}
+                        selected={value ? value.id === entry.id : false}
+                        matchInfo={getMatchInfo(entry)}
+                        padding="s"
+                      >
+                        <Box flex="y">
+                          <Text>
+                            <PlayerName entry={entry} />
+                          </Text>
+                          {entry.detail && (
+                            <Text className="detail">{entry.detail}</Text>
+                          )}
+                        </Box>
+                      </List.Item>
+                    ))}
+                    {/* Last row rather than a button below the list: it reads as
                       "and if none of these is the one", right where the eye
                       already is. Same form as the +, name prefilled. */}
-                  {typed !== "" && (
-                    <List.Item
-                      key="__create__"
-                      id={`${id}_create`}
-                      index={matchingEntries.length}
-                    >
-                      {/* A Button, not a command on the row itself: the list
+                    {typed !== "" && (
+                      <List.Item
+                        key="__create__"
+                        id={`${id}_create`}
+                        index={matchingEntries.length}
+                      >
+                        {/* A Button, not a command on the row itself: the list
                           carries --navi-send, and a row of a sending list is
                           claimed by it — the create row wants a different
                           command, so it needs its own control to carry it. */}
-                      <Button
-                        command="--navi-open"
-                        commandFor={formId}
-                        variant="discrete"
-                        padding="s"
-                        expandX
-                        alignX="start"
-                        onClick={() => {
-                          prefillSignal.value = typed;
-                        }}
-                      >
-                        « {typed} » : {createLabel}
-                      </Button>
-                    </List.Item>
-                  )}
-                </List>
-              </Box>
-            </Picker>
-            {/* Beside the selection rather than inside the entry: overriding
-                the side for tonight must not rewrite the player's own habit —
+                        <Button
+                          command="--navi-open"
+                          commandFor={formId}
+                          variant="discrete"
+                          padding="s"
+                          expandX
+                          alignX="start"
+                          onClick={() => {
+                            prefillSignal.value = typed;
+                          }}
+                        >
+                          « {typed} » : {createLabel}
+                        </Button>
+                      </List.Item>
+                    )}
+                  </List>
+                </Box>
+              </Picker>
+              {/* Always on the row, not conditional on a selection: it is part of
+                what the field is, and appearing later would shift the layout.
+                Beside the selection rather than inside the entry — overriding
+                the side for tonight must not rewrite the player's own habit, so
                 picking another player starts again from that player's default. */}
-            {value && sideOverride !== undefined && (
-              <Box flex="x" spacing="s" alignY="center" paddingTop="xs">
-                <Text className="detail">Côté</Text>
-                <RadioGroup
-                  name={`${id}_side`}
-                  flex
-                  spacing="s"
-                  value={sideOverride}
-                  uiAction={onSideChange}
-                >
-                  {SIDES.map((side) => (
-                    <Field key={side.value} spacing="xs">
-                      <Input type="radio" value={side.value} />
-                      <Label>
-                        <Text className="detail">{side.label}</Text>
-                      </Label>
-                    </Field>
-                  ))}
-                </RadioGroup>
-              </Box>
-            )}
+              {sideOverride !== undefined && (
+                <Box flex="y" spacing="xs">
+                  <Text className="detail">Côté :</Text>
+                  <Picker
+                    name={`${id}_side`}
+                    value={sideOverride || undefined}
+                    ui={sideLabel(sideOverride)}
+                    placeholder="—"
+                    slotSpacing="xs"
+                    action={onSideChange}
+                  >
+                    <List selectable command="--navi-send" separator>
+                      {SIDES.map((side, i) => (
+                        <List.Item
+                          selectable
+                          key={side.value}
+                          id={`${id}_side_${side.value}`}
+                          index={i}
+                          value={side.value}
+                          selected={sideOverride === side.value}
+                          padding="s"
+                        >
+                          {side.label}
+                        </List.Item>
+                      ))}
+                    </List>
+                  </Picker>
+                </Box>
+              )}
+            </Box>
 
             {/* Asked once, at creation: an entry is entered a single time in
                 its life, and the second field is what will tell homonyms apart
@@ -503,48 +515,66 @@
           entry.name
         );
 
+      // name is the single searchable/displayable string, firstName/lastName the
+      // parts the list emphasizes — kept in sync from one place
+      const player = ({ firstName, lastName, detail, side }) => ({
+        id: nextId(),
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        detail,
+        side,
+      });
       const INITIAL_PLAYERS = [
         {
-          id: nextId(),
-          firstName: "Flore",
-          lastName: "Giraudier",
-          detail: "flore@mail.com",
-          side: "left",
+          ...player({
+            firstName: "Flore",
+            lastName: "Giraudier",
+            detail: "flore@mail.com",
+            side: "left",
+          }),
         },
         {
-          id: nextId(),
-          firstName: "Karim",
-          lastName: "Benali",
-          detail: "karim@mail.com",
-          side: "right",
+          ...player({
+            firstName: "Karim",
+            lastName: "Benali",
+            detail: "karim@mail.com",
+            side: "right",
+          }),
         },
         {
-          id: nextId(),
-          firstName: "Damien",
-          lastName: "Maillard",
-          detail: "damien@mail.com",
-          side: "both",
+          ...player({
+            firstName: "Damien",
+            lastName: "Maillard",
+            detail: "damien@mail.com",
+            side: "both",
+          }),
         },
         {
-          id: nextId(),
-          firstName: "Damien",
-          lastName: "Martin",
-          detail: "d.martin@mail.com",
+          ...player({
+            firstName: "Damien",
+            lastName: "Martin",
+            detail: "d.martin@mail.com",
+          }),
         },
         {
-          id: nextId(),
-          firstName: "Marie-Ange",
-          lastName: "Da Silva",
-          detail: "ma.dasilva@mail.com",
-          side: "left",
+          ...player({
+            firstName: "Marie-Ange",
+            lastName: "Da Silva",
+            detail: "ma.dasilva@mail.com",
+            side: "left",
+          }),
         },
       ];
 
       const SIDES = [
         { value: "left", label: "Gauche" },
         { value: "right", label: "Droite" },
-        { value: "both", label: "Les deux" },
+        { value: "both", label: "Les 2" },
       ];
+
+      const sideLabel = (value) =>
+        SIDES.find((side) => side.value === value)?.label;
 
       const PLAYER_FIELDS = [
         { key: "firstName", label: "Prénom", prefill: true },

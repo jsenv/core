@@ -245,23 +245,12 @@ const css = /* css */ `
 
     &[data-discrete] {
       --x-background-color: transparent;
+      --x-background-color-hover: transparent;
       /* The border is part of what makes a field look like a field, so a
          discrete one does without it until it is interacted with — same idea
          as the background above, and the two come back together. */
-      --x-border-color: transparent;
+      --border-color: transparent;
 
-      /* Softened on purpose: the regular border colors are tuned against a
-         field that always has a border, whereas here one appears out of
-         nothing — at full strength that reads as the field jumping rather than
-         responding. Focus stays firmer than hover, it is the stronger state. */
-      &[data-hover] {
-        --x-background-color: white;
-        --x-border-color: color-mix(
-          in srgb,
-          var(--border-color-hover) 35%,
-          transparent
-        );
-      }
       &[data-focus] {
         --x-background-color: white;
         --x-border-color: color-mix(
