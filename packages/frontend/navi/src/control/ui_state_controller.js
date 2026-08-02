@@ -741,10 +741,11 @@ const GROUP_DEFAULTS = {
   // real form uses "object" (the default) instead.
   single: {
     // The same exclusions canRegisterAsFacadeChild already makes below (the
-    // picker façade asked the very same question: which child IS the value):
-    // buttons and links never hold one, and a control carrying navi-list is a
-    // navigator for some other list — the search box of a picker's popup —
-    // rather than the answer the popup was opened for.
+    // picker façade asked the very same question: which child IS the value).
+    // Buttons and links never hold one. And a control *carrying* navi-list is
+    // the search box driving some other list — not the list itself, which stays
+    // a perfectly good single value here (one item, or the array a multiple
+    // list exposes). Excluding the searcher is what leaves the list alone.
     childControlFilter: (child) => {
       if (child.controlType === "button" || child.controlType === "link") {
         return false;

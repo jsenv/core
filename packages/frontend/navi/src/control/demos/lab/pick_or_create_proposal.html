@@ -164,7 +164,6 @@
         Field,
         Icon,
         Input,
-        ControlGroup,
         Label,
         List,
         NaviDebug,
@@ -193,9 +192,9 @@
       // the same place. The padding is what makes it a comfortable target; the
       // chevron itself stays at text size — the cramped "‹" was a glyph pushed
       // around by the line it sat on, not an icon too small.
-      const BackButton = () => (
+      const BackButton = ({ command = "--navi-close" }) => (
         <Button
-          command="--navi-close"
+          command={command}
           icon
           variant="discrete"
           padding="s"
@@ -485,73 +484,72 @@
                 its life, and the second field is what will tell homonyms apart
                 afterwards. Cheaper here than as an after-the-fact chore nobody
                 comes back to do. */}
+            {/* The dialog IS the group: it aggregates the named fields it
+                contains and hands them to action when it closes — no
+                ControlGroup in between, and no per-field signal to wire.
+                Cancelling (the arrow, Annuler, Escape) commits nothing. */}
             <Dialog
               id={formId}
+              action={submitForm}
               layer={popupLayer}
               positionArea="top"
               expand
               animation
               padding="m"
+              spacing="m"
+              flex="y"
+              minHeight={0}
             >
-              {/* ControlGroup aggregates its children into one object and hands
-                  it to action — no per-field signal to wire, and `required`
-                  does the gating the disabled button used to do by hand */}
-              {/* flex + minHeight 0: the group is what stands between the
-                  dialog and the form, so it is what has to accept the dialog's
-                  height instead of growing past it — otherwise the scrolling
-                  area below never gets a height to work with */}
-              <ControlGroup
-                action={submitForm}
-                spacing="m"
-                flex="y"
-                expand
-                minHeight={0}
-              >
-                <Box flex="x" spacing="xs" alignY="center">
-                  <BackButton />
-                  <Text expandX>
-                    <strong>{createTitle}</strong>
-                  </Text>
-                </Box>
-                {/* The fields scroll, not the whole surface: the title stays
+              <Box flex="x" spacing="xs" alignY="center">
+                {/* cancels rather than closes: leaving a form by its back
+                      arrow is giving up on it, not answering it */}
+                <BackButton command="--navi-cancel" />
+                <Text expandX>
+                  <strong>{createTitle}</strong>
+                </Text>
+              </Box>
+              {/* The fields scroll, not the whole surface: the title stays
                       readable and the two buttons stay under the thumb even
                       when the form is taller than what is left of the screen
                       (the keyboard takes half of it). */}
-                <Box
-                  flex="y"
-                  spacing="m"
-                  expandY
-                  // a flex child refuses to shrink below its content unless
-                  // told it may — without this the fields push the dialog
-                  // taller instead of scrolling inside it
-                  minHeight={0}
-                  overflowY="auto"
-                >
-                  {/* keyed by the prefill: the fields are uncontrolled, so a
+              <Box
+                flex="y"
+                spacing="m"
+                expandY
+                // a flex child refuses to shrink below its content unless
+                // told it may — without this the fields push the dialog
+                // taller instead of scrolling inside it
+                minHeight={0}
+                overflowY="auto"
+              >
+                {/* keyed by the prefill: the fields are uncontrolled, so a
                         new name typed in the search must give them a fresh
                         defaultValue rather than keep the previous one */}
-                  <CreateForm
-                    key={prefillSignal.value}
-                    prefill={prefillSignal.value}
-                  />
-                </Box>
-                <Box flex="y" spacing="s">
-                  <Button command="--navi-send" expandX paddingY="s">
-                    {createTitle}
-                  </Button>
-                  {/* The same way out as the arrow above, where the thumb
-                      already is once the form is filled: giving up on a form
-                      should not mean reaching back to the top of the screen */}
-                  <Button
-                    command="--navi-close"
-                    variant="discrete"
-                    expandX
-                    paddingY="s"
-                  >
-                    Annuler
-                  </Button>
-                </Box>
-              </ControlGroup>
+                <CreateForm
+                  key={prefillSignal.value}
+                  prefill={prefillSignal.value}
+                />
+              </Box>
+              <Box flex="y" spacing="s">
+                {/* --navi-close, not --navi-send: closing IS the commit now,
+                      and the dialog only runs its action if something was
+                      actually filled in */}
+                <Button command="--navi-close" expandX paddingY="s">
+                  {createTitle}
+                </Button>
+                {/* --navi-cancel, the same way out as the arrow above, where
+                      the thumb already is once the form is filled: giving up on
+                      a form should not mean reaching back to the top of the
+                      screen — and it must not commit what was typed */}
+                <Button
+                  command="--navi-cancel"
+                  variant="discrete"
+                  expandX
+                  paddingY="s"
+                >
+                  Annuler
+                </Button>
+              </Box>
             </Dialog>
           </div>
         );
