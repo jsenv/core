@@ -1256,8 +1256,6 @@ const DIALOG_PSEUDO_CLASSES = [
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const DIALOG_STYLE_CSS_VARS = {
-  scrollablePadding: "--scrollable-padding",
-
   animationDuration: "--popup-animation-duration",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",

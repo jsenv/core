@@ -1401,8 +1401,6 @@ const POPOVER_PSEUDO_CLASSES = [
 // props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
 // handling).
 const POPUP_STYLE_CSS_VARS = {
-  scrollablePadding: "--scrollable-padding",
-
   animationDuration: "--popup-animation-duration",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",

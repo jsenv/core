@@ -62,7 +62,6 @@ import {
   getVisualChildStylePropStrategy,
   isStyleProp,
   prepareStyleValue,
-  resolveSpacingSize,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import {
@@ -86,18 +85,18 @@ import.meta.css = /* css */ `
      - header/footer alone: the container itself scrolls and they stick to its
        edges;
      - a body as well: the body is the only thing that scrolls, so the other two
-       simply sit outside it and need no stickiness at all. The padding moves
-       inward with it (--scrollable-padding), because a focus outline is drawn
-       OUTSIDE the control it belongs to: a control flush against the edge of a
-       scrolling area overflows it by those few pixels and raises a scrollbar. */
+       simply sit outside it and need no stickiness at all.
+
+     Padding belongs on the parts, not on the scrolling box: padding on a
+     scroller sits INSIDE the scrollbars, so the content ends up centered
+     between them — and a control flush against the edge of a scrolling area
+     overflows it (a focus outline is drawn outside the control it belongs to)
+     and raises a scrollbar of its own. */
   [data-scrollable] {
     overflow: var(--x-scrollable-overflow, auto);
 
     &[data-scrollable-overflow="scroll"] {
       --x-scrollable-overflow: scroll;
-    }
-    &[data-scrollable-padding] {
-      padding: var(--scrollable-padding, 0);
     }
 
     > [data-header] {
@@ -116,7 +115,6 @@ import.meta.css = /* css */ `
          parts only make sense stacked, and the body needs a flex context to be
          told "take what is left" below. */
       display: flex;
-      padding: 0;
       flex-direction: column;
       /* the body is the only thing that scrolls */
       --x-scrollable-overflow: hidden;
@@ -124,14 +122,12 @@ import.meta.css = /* css */ `
       > [data-header],
       > [data-footer] {
         position: static;
-        padding: var(--scrollable-padding, 0);
         flex-shrink: 0;
       }
       > [data-body] {
         /* min-height: a flex child refuses to shrink below its content unless
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
-        padding: var(--scrollable-padding, 0);
         flex: 1;
         overflow: auto;
       }
@@ -320,24 +316,6 @@ export const Box = (props) => {
       // would win over that rule — see [data-scrollable] in this file's CSS.
       rest["data-scrollable-overflow"] = rest.overflow;
       rest.overflow = undefined;
-    }
-    if (rest.padding !== undefined) {
-      // Same reason as the overflow above, and the same handover: with a body
-      // inside, the padding belongs to the three parts rather than to this box
-      // — a focus outline is drawn OUTSIDE the control it belongs to, so a
-      // control flush against the edge of a scrolling area overflows it by
-      // those few pixels and raises a scrollbar. Only the `padding` shorthand
-      // for now; the per-side props would each need the same treatment.
-      const resolvedPadding = resolveSpacingSize(rest.padding);
-      rest["data-scrollable-padding"] = "";
-      rest.style = {
-        ...rest.style,
-        "--scrollable-padding":
-          typeof resolvedPadding === "number"
-            ? `${resolvedPadding}px`
-            : resolvedPadding,
-      };
-      rest.padding = undefined;
     }
   }
   if (header) {

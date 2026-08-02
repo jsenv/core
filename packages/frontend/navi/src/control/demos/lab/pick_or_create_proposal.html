@@ -199,7 +199,6 @@
           icon
           variant="discrete"
           padding="s"
-          marginRight="-s"
           aria-label="Fermer"
         >
           <Icon color="#4b5563">
@@ -337,15 +336,15 @@
                       commandFor={formId}
                       icon
                       variant="discrete"
-                      padding="s"
+                      padding="xs"
                       // same as the back button on the other side, so the two
                       // ends of the header balance
-                      marginRight="-s"
                       onClick={() => {
                         prefillSignal.value = "";
                       }}
+                      size="xl"
                     >
-                      <Icon size="1.4rem" color="#6b7280">
+                      <Icon color="#6b7280">
                         <PlusSvg />
                       </Icon>
                     </Button>
@@ -496,12 +495,11 @@
               positionArea="top"
               expand
               animation
-              padding="m"
               spacing="m"
               flex="y"
               minHeight={0}
             >
-              <Box header flex="x" spacing="xs" alignY="center">
+              <Box header flex="x" spacing="xs" alignY="center" padding="m">
                 <Text expandX>
                   <strong>{createTitle}</strong>
                 </Text>
@@ -512,7 +510,7 @@
               {/* body: the fields are what scrolls, so the header above and
                   the footer below stay put — no sizing to arrange by hand, the
                   dialog knows what these three roles mean */}
-              <Box body flex="y" spacing="m">
+              <Box body flex="y" spacing="m" paddingX="m">
                 {/* keyed by the prefill: the fields are uncontrolled, so a
                         new name typed in the search must give them a fresh
                         defaultValue rather than keep the previous one */}
@@ -521,7 +519,7 @@
                   prefill={prefillSignal.value}
                 />
               </Box>
-              <Box footer flex="y" spacing="s">
+              <Box footer flex="y" spacing="s" padding="m">
                 {/* --navi-close, not --navi-send: closing IS the commit now,
                     and the dialog only runs its action if something was
                     actually filled in. "Confirmer" rather than the title again:

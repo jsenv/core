@@ -144,41 +144,41 @@
 
           <section class="demo-section">
             <h2>
-              <code>padding</code> on the scrolling box
+              <code>padding</code> on the parts
             </h2>
             <div class="demo-row">
               <div>
-                <h3>no body</h3>
+                <h3>on the scrolling box</h3>
                 <Box className="scroller" overflow="auto" padding="m">
                   <Filler />
                 </Box>
               </div>
               <div>
                 <h3>
-                  <code>header</code> + <code>footer</code>
+                  on <code>header</code> + <code>footer</code>
                 </h3>
-                <Box className="scroller" overflow="auto" padding="m">
-                  <Box header className="part" padding="s">
+                <Box className="scroller" overflow="auto">
+                  <Box header className="part" padding="m">
                     header
                   </Box>
                   <Filler />
-                  <Box footer className="part" padding="s">
+                  <Box footer className="part" padding="m">
                     footer
                   </Box>
                 </Box>
               </div>
               <div>
                 <h3>
-                  … + <code>body</code>
+                  on <code>body</code>
                 </h3>
-                <Box className="scroller" overflow="auto" padding="m">
-                  <Box header className="part" padding="s">
+                <Box className="scroller" overflow="auto">
+                  <Box header className="part" padding="m">
                     header
                   </Box>
-                  <Box body>
+                  <Box body padding="m">
                     <Filler />
                   </Box>
-                  <Box footer className="part" padding="s">
+                  <Box footer className="part" padding="m">
                     footer
                   </Box>
                 </Box>
@@ -213,11 +213,11 @@
                 <h3>
                   <code>body</code>
                 </h3>
-                <Box className="scroller" overflow="auto" padding="m">
+                <Box className="scroller" overflow="auto">
                   <Box header className="part" padding="s">
                     header
                   </Box>
-                  <Box body flex="y" spacing="s">
+                  <Box body flex="y" spacing="s" padding="m">
                     <Fields />
                   </Box>
                 </Box>
