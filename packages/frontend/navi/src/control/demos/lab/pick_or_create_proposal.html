@@ -173,7 +173,7 @@
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
-      import { ChevronLeftSvg } from "@jsenv/navi/src/graphic/icons/chevron_left_svg.jsx";
+      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
@@ -188,24 +188,22 @@
       let idCounter = 0;
       const nextId = () => `e${++idCounter}`;
 
-      // Both surfaces open over the screen, so both need the same way out, in
-      // the same place. The padding is what makes it a comfortable target; the
-      // chevron itself stays at text size — the cramped "‹" was a glyph pushed
-      // around by the line it sat on, not an icon too small.
-      const BackButton = ({ command = "--navi-close" }) => (
+      // An up arrow at the top RIGHT, not a back arrow at the left: this dialog
+      // is meant to arrive from the bottom and leave by going back up, so the
+      // gesture the icon names is the one that dismisses it. It also leaves the
+      // top left to the title, and leaves the left-pointing arrow to mean what
+      // it means everywhere else on the page — going back in the navigation.
+      const DismissButton = ({ command = "--navi-cancel" }) => (
         <Button
           command={command}
           icon
           variant="discrete"
           padding="s"
-          // reaches back into the surface's own padding: the button's box is
-          // mostly air, so aligning that box with the text below leaves the
-          // chevron itself looking pushed inward
-          marginLeft="-s"
-          aria-label="Retour"
+          marginRight="-s"
+          aria-label="Fermer"
         >
           <Icon color="#4b5563">
-            <ChevronLeftSvg />
+            <ChevronUpSvg />
           </Icon>
         </Button>
       );
@@ -504,14 +502,12 @@
               minHeight={0}
             >
               <Box header flex="x" spacing="xs" alignY="center">
-                {/* the back arrow belongs here: this dialog opened on top of
-                    the choosing surface, so leaving it means going back to
-                    something. It cancels rather than closes — giving up on a
-                    form is not answering it */}
-                <BackButton command="--navi-cancel" />
                 <Text expandX>
                   <strong>{createTitle}</strong>
                 </Text>
+                {/* cancels rather than closes: giving up on a form is not
+                    answering it */}
+                <DismissButton />
               </Box>
               {/* body: the fields are what scrolls, so the header above and
                   the footer below stay put — no sizing to arrange by hand, the

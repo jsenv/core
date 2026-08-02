@@ -1018,14 +1018,24 @@
           <Button command="--navi-open" commandFor={`${idPrefix}_bare`}>
             nothing
           </Button>
-          <Dialog id={`${idPrefix}_bare`} layer={layer} maxHeight="220px">
+          <Dialog
+            id={`${idPrefix}_bare`}
+            layer={layer}
+            maxHeight="220px"
+            padding="0"
+          >
             <OverflowFiller />
           </Dialog>
 
           <Button command="--navi-open" commandFor={`${idPrefix}_parts`}>
             header + footer
           </Button>
-          <Dialog id={`${idPrefix}_parts`} layer={layer} maxHeight="220px">
+          <Dialog
+            id={`${idPrefix}_parts`}
+            layer={layer}
+            maxHeight="220px"
+            padding="0"
+          >
             <Box header padding="s" className="demo-overflow-part">
               header
             </Box>
@@ -1042,7 +1052,7 @@
             id={`${idPrefix}_body`}
             layer={layer}
             maxHeight="220px"
-            padding="m"
+            padding="0"
           >
             <Box header padding="s" className="demo-overflow-part">
               header
