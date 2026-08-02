@@ -48,7 +48,6 @@ import {
   applyNewPosition,
   createPubSub,
   getElementSignature,
-  getPositionedParent,
   parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
@@ -73,11 +72,20 @@ import {
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
+  findPopupContainer,
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
   resolveDirectionValue,
   suppressPointerEventsDuringTransition,
 } from "./popup_shared.js";
+
+// Same need popover.jsx has for its own local renderer (see its
+// openLocalPopoverCount): a layer="local" dialog is a plain positioned element
+// in normal flow, so it gets none of the top layer's free "last shown wins" and
+// would paint under anything declared after it. A live count, not an
+// ever-growing counter, so the order stays small and resets once nothing is
+// open.
+let openLocalDialogCount = 0;
 
 const css = /* css */ `
   @layer navi {
@@ -157,6 +165,8 @@ const css = /* css */ `
        unlike an earlier version of this file. */
     position: absolute;
     inset: unset;
+    /* Custom renderer only — see openLocalDialogCount above */
+    z-index: calc(var(--navi-popup-z-index) + var(--dialog-stack-order, 0));
     min-width: min(
       max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
       var(--x-dialog-max-width)
@@ -678,10 +688,6 @@ const useDialogProps = (props) => {
     // from dialogEl.parentElement, which for DialogLocal is the
     // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
     // real, meaningful ancestor beyond it.
-    // getPositionedParent walks up from where the dialog happens to be
-    // rendered, which is not always the box it should be confined to: rendered
-    // inside a positioned trigger (a Picker), it would be trapped in a box the
-    // height of one line. `container` names the real one.
     const resolvedContainer =
       typeof container === "string"
         ? document.getElementById(container)
@@ -691,7 +697,7 @@ const useDialogProps = (props) => {
     const positionedAncestor = isModal
       ? document.documentElement
       : resolvedContainer ||
-        getPositionedParent(
+        findPopupContainer(
           dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
         );
 
@@ -716,6 +722,13 @@ const useDialogProps = (props) => {
       anchorElement = e.detail.anchor;
     }
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
+    if (!isModal) {
+      // see openLocalDialogCount's own comment
+      dialogEl.style.setProperty(
+        "--dialog-stack-order",
+        openLocalDialogCount++,
+      );
+    }
     if (anchorElement) {
       const { width, height } = anchorElement.getBoundingClientRect();
       dialogEl.style.setProperty("--anchor-width", `${snapToPixel(width)}px`);
@@ -975,6 +988,10 @@ const useDialogProps = (props) => {
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       dialogEl.setAttribute("aria-expanded", "false");
+      if (!isModal) {
+        openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
+        dialogEl.style.removeProperty("--dialog-stack-order");
+      }
       // See openEffect's own identical comment for why this is needed
       // regardless of isModal, not just when a stray authored display
       // property is actually present — harmless the rest of the time.

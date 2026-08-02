@@ -37,16 +37,11 @@
         background: #fff;
         box-shadow: 0 0 0 1px #d6dae0;
       }
-      /* A local popup stays in the normal flow, so a field declared after it
-         paints on top. The top layer variant below needs none of this. */
-      .frame dialog[open] {
-        z-index: 5;
-      }
       /* The positioned ancestor a layer="local" popup is confined to */
       .frame {
         position: relative;
         width: 380px;
-        height: 620px;
+        height: 320px;
         margin: 0 auto 32px;
         border-radius: 12px;
         overflow: hidden;
@@ -100,6 +95,11 @@
       .field-block {
         margin-bottom: 18px;
       }
+      /* Grouped under a shared title: they belong together, so they sit
+         together rather than reading as two unrelated fields */
+      .field-block--grouped {
+        margin-bottom: 8px;
+      }
       .chips {
         display: flex;
         gap: 8px;
@@ -119,16 +119,6 @@
         color: #6b7280;
         font-size: 12px;
       }
-      .state {
-        max-width: 660px;
-        margin: 16px auto 0;
-        padding: 10px 12px;
-        font-size: 12px;
-        font-family: ui-monospace, monospace;
-        background: #fff;
-        border: 1px solid #d6dae0;
-        border-radius: 8px;
-      }
     </style>
   </head>
   <body>
@@ -144,6 +134,7 @@
         createSearch,
         Dialog,
         Field,
+        Icon,
         Input,
         ControlGroup,
         Label,
@@ -153,6 +144,7 @@
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
       // Name and detail are both searchable: with homonyms allowed, the detail
       // is often the only thing telling two entries apart, so it has to be
@@ -178,7 +170,6 @@
       const PickOrCreateField = ({
         id,
         popupLayer,
-        popupContainer,
         label,
         placeholder,
         searchPlaceholder,
@@ -225,8 +216,10 @@
         };
 
         return (
-          <div class="field-block">
-            <p class="field-title">{label}</p>
+          <div
+            class={label ? "field-block" : "field-block field-block--grouped"}
+          >
+            {label && <p class="field-title">{label}</p>}
             {/* Picker, not a hand-made trigger + Dialog: it already owns the
                 open/close, the value, the façade (value or placeholder, chevron
                 or clear button) and the popup — mode="dialog" just pins the
@@ -239,7 +232,6 @@
               clearable
               mode="dialog"
               popupLayer={popupLayer}
-              popupContainer={popupContainer}
               positionArea="top"
               marginWithContainer={0}
               dialogExpand
@@ -278,12 +270,13 @@
                     variant="discrete"
                     paddingX="s"
                     paddingY="xs"
-                    fontSize="1.6rem"
                     onClick={() => {
                       prefillSignal.value = "";
                     }}
                   >
-                    +
+                    <Icon size="1.4rem">
+                      <PlusSvg />
+                    </Icon>
                   </Button>
                 </Box>
                 <Input
@@ -362,7 +355,6 @@
             <Dialog
               id={formId}
               layer={popupLayer}
-              container={popupContainer}
               positionArea="top"
               marginWithContainer={0}
               expand
@@ -450,7 +442,7 @@
         detail: values.email.trim(),
       });
 
-      const Screen = ({ idPrefix, popupLayer, popupContainer }) => {
+      const Screen = ({ idPrefix, popupLayer }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
         const clubSignal = useSignal(null);
@@ -468,7 +460,6 @@
 
               <PickOrCreateField
                 popupLayer={popupLayer}
-                popupContainer={popupContainer}
                 id={`${idPrefix}club`}
                 label="Lieu"
                 placeholder="Choisir un club…"
@@ -497,11 +488,10 @@
                 }}
               />
 
+              <p class="field-title">Joueurs</p>
               <PickOrCreateField
                 popupLayer={popupLayer}
-                popupContainer={popupContainer}
                 id={`${idPrefix}player`}
-                label="Joueur 1"
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
@@ -520,9 +510,7 @@
 
               <PickOrCreateField
                 popupLayer={popupLayer}
-                popupContainer={popupContainer}
                 id={`${idPrefix}player2`}
-                label="Joueur 2"
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
@@ -540,38 +528,15 @@
               />
             </div>
             <div class="keyboard">clavier</div>
-
-            <div class="state">
-              lieu : {clubSignal.value ? clubSignal.value.name : "—"}
-              {clubSignal.value && clubSignal.value.detail
-                ? ` (${clubSignal.value.detail})`
-                : ""}
-              <br />
-              joueur : {playerSignal.value ? playerSignal.value.name : "—"}
-              {playerSignal.value && playerSignal.value.detail
-                ? ` (${playerSignal.value.detail})`
-                : ""}
-            </div>
           </>
         );
       };
 
-      /*
-       * The same screen twice. layer="local" keeps the popup inside the framed
-       * column, which is what makes the fake phone readable on a desktop
-       * browser — but a local popup is confined to its positioned ancestor,
-       * so it is a demo staging device, not what the app ships. The second one
-       * runs on the real top layer: open it with device emulation on.
-       */
       const App = () => (
         <>
           <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
-          <div class="frame" id="local_frame">
-            <Screen
-              idPrefix="local_"
-              popupLayer="local"
-              popupContainer="local_frame"
-            />
+          <div class="frame">
+            <Screen idPrefix="local_" popupLayer="local" />
           </div>
           <h2 class="variant-title">
             2. top layer — lié au viewport (à voir en émulation d'appareil)
