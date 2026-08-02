@@ -561,8 +561,24 @@ const useDialogProps = (props) => {
   // exactly like a ControlGroup. That is also what makes it a form boundary —
   // ControlgroupChildrenWrapper below resets the field contexts, so what is
   // inside a dialog belongs to the dialog, not to the form around it.
+  // A curated object, not `props`: everything a dialog takes that a control
+  // group knows nothing about (openController, positionArea, animation…) would
+  // otherwise come back out as the group's leftover props and land on the
+  // element as stray attributes — which is exactly how navi-autofocus got
+  // overwritten and `opencontroller="[object Object]"` appeared on it.
   const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
-    props,
+    {
+      ref: props.ref,
+      id: props.id,
+      name: props.name,
+      action: props.action,
+      uiAction: props.uiAction,
+      value: props.value,
+      defaultValue: props.defaultValue,
+      required: props.required,
+      readOnly: props.readOnly,
+      disabled: props.disabled,
+    },
     {
       controlType: "dialog",
       stateType: "object",
@@ -614,6 +630,12 @@ const useDialogProps = (props) => {
     children,
     ...rest
   } = props;
+  // Consumed by the control group above, never forwarded: on a <dialog> element
+  // they would render as stray attributes (value="[object Object]" and friends).
+  delete rest.value;
+  delete rest.defaultValue;
+  delete rest.action;
+  delete rest.uiAction;
   const isModal = layer === "top";
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
@@ -1135,6 +1157,15 @@ const useDialogProps = (props) => {
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
+    // Right after ...rest, not last: what makes the dialog a control (its name,
+    // its state, its action, and the onnavi_command/onnavi_request_interaction
+    // pair this hook used to declare by hand) — but everything the dialog sets
+    // for itself below still wins over it.
+    ...groupRootProps,
+    ...groupProps,
+    // The group keeps the value in its own state; as a prop it would only
+    // reach the <dialog> element and render as value="[object Object]".
+    "value": undefined,
     ...autoFocusProps,
     "as": "dialog",
     ref,
@@ -1161,12 +1192,6 @@ const useDialogProps = (props) => {
       // onKeyDownShortcuts above instead.
       openController.requestClose(e, { isCancel: true });
     },
-    // The group's own onnavi_command/onnavi_request_interaction land here too
-    // (they replace the pair this hook used to declare by hand) along with
-    // everything that makes the dialog a control: its name, its state, its
-    // action.
-    ...groupRootProps,
-    ...groupProps,
     "children": (
       <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
         {children}

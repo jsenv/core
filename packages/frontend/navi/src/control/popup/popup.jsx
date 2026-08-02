@@ -141,6 +141,7 @@ export const Popup = (props) => {
     anchorCustomEventDetail,
     marginWithAnchor,
     focusCapture,
+    scrollCapture,
     positionAreaFixed,
     ...rest
   } = props;
@@ -163,6 +164,7 @@ export const Popup = (props) => {
         expand={expand}
         expandX={expandX}
         expandY={expandY}
+        scrollCapture={scrollCapture === "dialog" || scrollCapture}
       >
         {childrenWithMode}
       </Dialog>
@@ -176,6 +178,7 @@ export const Popup = (props) => {
       anchorCustomEventDetail={anchorCustomEventDetail}
       marginWithAnchor={marginWithAnchor}
       focusCapture={focusCapture}
+      scrollCapture={scrollCapture === "popover" || scrollCapture}
       positionAreaFixed={positionAreaFixed}
       className={withPropsClassName("navi_popup", className)}
     >

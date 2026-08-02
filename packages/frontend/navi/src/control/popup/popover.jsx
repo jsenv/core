@@ -520,8 +520,24 @@ const usePopoverProps = (props) => {
   // single object, and ControlgroupChildrenWrapper below makes it a form
   // boundary, so what is inside belongs to the popover rather than to the form
   // around it.
+  // A curated object, not `props`: everything a popover takes that a control
+  // group knows nothing about (openController, positionArea, animation…) would
+  // otherwise come back out as the group's leftover props and land on the
+  // element as stray attributes — which is exactly how navi-autofocus got
+  // overwritten and `opencontroller="[object Object]"` appeared on it.
   const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
-    props,
+    {
+      ref: props.ref,
+      id: props.id,
+      name: props.name,
+      action: props.action,
+      uiAction: props.uiAction,
+      value: props.value,
+      defaultValue: props.defaultValue,
+      required: props.required,
+      readOnly: props.readOnly,
+      disabled: props.disabled,
+    },
     {
       controlType: "popover",
       stateType: "object",
@@ -572,6 +588,12 @@ const usePopoverProps = (props) => {
     ...rest
   } = props;
   const isTopLayer = layer === "top";
+  // Consumed by the control group above, never forwarded: on a <popover> element
+  // they would render as stray attributes (value="[object Object]" and friends).
+  delete rest.value;
+  delete rest.defaultValue;
+  delete rest.action;
+  delete rest.uiAction;
   const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
@@ -1306,6 +1328,15 @@ const usePopoverProps = (props) => {
     "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
+    // Right after ...rest, not last: what makes the popover a control (its name,
+    // its state, its action, and the onnavi_command/onnavi_request_interaction
+    // pair this hook used to declare by hand) — but everything the popover sets
+    // for itself below still wins over it.
+    ...groupRootProps,
+    ...groupProps,
+    // The group keeps the value in its own state; as a prop it would only
+    // reach the <popover> element and render as value="[object Object]".
+    "value": undefined,
     ...autoFocusProps,
     ref,
     "baseClassName": "navi_popover",
@@ -1314,12 +1345,6 @@ const usePopoverProps = (props) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     },
-    // The group's own onnavi_command/onnavi_request_interaction land here too
-    // (they replace the pair this hook used to declare by hand) along with
-    // everything that makes the popover a control: its name, its state, its
-    // action.
-    ...groupRootProps,
-    ...groupProps,
     "children": (
       <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
         {children}
