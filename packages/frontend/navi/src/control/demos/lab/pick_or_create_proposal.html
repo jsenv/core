@@ -199,6 +199,10 @@
           icon
           variant="discrete"
           padding="s"
+          // reaches back into the surface's own padding: the button's box is
+          // mostly air, so aligning that box with the text below leaves the
+          // chevron itself looking pushed inward
+          marginLeft="-s"
           aria-label="Retour"
         >
           <Icon color="#4b5563">
@@ -293,6 +297,7 @@
                 value={value ? value.id : undefined}
                 ui={value ? value.name : undefined}
                 clearable
+                borderRadius="s"
                 mode="dialog"
                 popupLayer={popupLayer}
                 positionArea="top"
@@ -322,8 +327,10 @@
                       commandFor={formId}
                       icon
                       variant="discrete"
-                      paddingX="s"
-                      paddingY="xs"
+                      padding="s"
+                      // same as the back button on the other side, so the two
+                      // ends of the header balance
+                      marginRight="-s"
                       onClick={() => {
                         prefillSignal.value = "";
                       }}
@@ -424,6 +431,7 @@
                   value={sideOverride || undefined}
                   ui={sideLabel(sideOverride)}
                   placeholder="—"
+                  borderRadius="s"
                   mode="popover"
                   slotSpacing="xs"
                   // the width of its column, fixed: left free the field would

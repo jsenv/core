@@ -1515,22 +1515,34 @@ export const pickPositionRelativeTo = (
   // so the usable space includes the anchor dimension.
   // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
-  const effectiveSpaceAbove =
-    (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "top" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceBelow =
-    (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "bottom" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceLeft =
-    (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
-    (finalX === "left" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceRight =
-    (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
-    (finalX === "right" ? marginWithAnchor : 0) -
-    marginWithContainer;
+  const containerWidthAvailable = availableWidth - 2 * marginWithContainer;
+  const containerHeightAvailable = availableHeight - 2 * marginWithContainer;
+  // Docked to a container (no real anchor): the element is kept inside the
+  // container's margin on BOTH sides — that is what the !hasValidAnchor clamp
+  // above enforces — so what it has to work with is the container net of both.
+  // The anchor-relative formulas below count the margin once, which is right
+  // when the space really is bounded by the anchor on the other side, and
+  // wrong here: it would let the far edge grow flush against the container.
+  const effectiveSpaceAbove = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
+      (finalY === "top" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceBelow = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
+      (finalY === "bottom" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceLeft = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
+      (finalX === "left" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceRight = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
+      (finalX === "right" ? marginWithAnchor : 0) -
+      marginWithContainer;
 
   return {
     // Whether a real anchor actually ended up used — false when there's no
@@ -1557,8 +1569,8 @@ export const pickPositionRelativeTo = (
     // margin kept on both sides. spaceLeft/spaceRight can't answer that — they
     // are measured from the anchor, which for a container-docked element is
     // the container itself, so they collapse to -marginWithContainer.
-    containerWidthAvailable: availableWidth - 2 * marginWithContainer,
-    containerHeightAvailable: availableHeight - 2 * marginWithContainer,
+    containerWidthAvailable,
+    containerHeightAvailable,
   };
 };
 
