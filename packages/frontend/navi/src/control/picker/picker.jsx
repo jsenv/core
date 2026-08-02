@@ -213,12 +213,15 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: calc(var(--x-picker-padding-right) * 0.5);
-
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-right: var(--slot-spacing);
+      /* Half the horizontal padding by default, so the icon sits visually
+         inside the same gutter as the value; the iconSpacing prop overrides it */
+      margin-right: var(
+        --picker-icon-spacing,
+        calc(var(--x-picker-padding-right) * 0.5)
+      );
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
@@ -680,6 +683,7 @@ const PickerStyleCSSVars = {
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
+  "iconSpacing": "--picker-icon-spacing",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
@@ -757,6 +761,7 @@ const PickerFirstResolver = (props) => {
  *   variant?: "icon" | "headless",
  *   icon?: import("preact").ComponentChildren,
  *   maxLines?: number,
+ *   iconSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
@@ -784,6 +789,10 @@ const PickerFirstResolver = (props) => {
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
+ * @param {number|string} [iconSpacing] Gap kept between the right-slot icon
+ *   (chevron, or the clear button) and the picker's own edge. Accepts a
+ *   spacing token ("s", "m"…) like any other spacing prop, or a length.
+ *   Defaults to half the horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
  */

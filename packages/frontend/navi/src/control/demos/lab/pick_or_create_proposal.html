@@ -148,6 +148,7 @@
         Label,
         List,
         Picker,
+        RadioGroup,
         Text,
         useSearchText,
       } from "@jsenv/navi";
@@ -191,6 +192,10 @@
         onCreate,
         value,
         onChange,
+        // undefined when the entity has no such notion (a place); a string when
+        // it does, so the field knows to offer it
+        sideOverride,
+        onSideChange,
       }) => {
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
@@ -238,6 +243,7 @@
               value={value ? value.id : undefined}
               ui={value ? value.name : undefined}
               clearable
+              iconSpacing="s"
               mode="dialog"
               popupLayer={popupLayer}
               positionArea="top"
@@ -282,7 +288,7 @@
                       prefillSignal.value = "";
                     }}
                   >
-                    <Icon size="1.4rem">
+                    <Icon size="1.4rem" color="#6b7280">
                       <PlusSvg />
                     </Icon>
                   </Button>
@@ -355,6 +361,30 @@
                 </List>
               </Box>
             </Picker>
+            {/* Beside the selection rather than inside the entry: overriding
+                the side for tonight must not rewrite the player's own habit —
+                picking another player starts again from that player's default. */}
+            {value && sideOverride !== undefined && (
+              <Box flex="x" spacing="s" alignY="center" paddingTop="xs">
+                <Text className="detail">Côté</Text>
+                <RadioGroup
+                  name={`${id}_side`}
+                  horizontal
+                  spacing="s"
+                  value={sideOverride}
+                  uiAction={onSideChange}
+                >
+                  {SIDES.map((side) => (
+                    <Field key={side.value} spacing="xs">
+                      <Input type="radio" value={side.value} />
+                      <Label>
+                        <Text className="detail">{side.label}</Text>
+                      </Label>
+                    </Field>
+                  ))}
+                </RadioGroup>
+              </Box>
+            )}
 
             {/* Asked once, at creation: an entry is entered a single time in
                 its life, and the second field is what will tell homonyms apart
@@ -390,15 +420,28 @@
                   {createFields.map((field) => (
                     <Field vertical key={`${field.key}_${prefillSignal.value}`}>
                       <Label>{field.label}</Label>
-                      <Input
-                        name={field.key}
-                        defaultValue={field.prefill ? prefillSignal.value : ""}
-                        placeholder={field.placeholder}
-                        required={!field.optional}
-                        borderRadius="m"
-                        paddingY="s"
-                        expandX
-                      />
+                      {field.options ? (
+                        <RadioGroup name={field.key} horizontal spacing="s">
+                          {field.options.map((option) => (
+                            <Field key={option.value} spacing="xs">
+                              <Input type="radio" value={option.value} />
+                              <Label>{option.label}</Label>
+                            </Field>
+                          ))}
+                        </RadioGroup>
+                      ) : (
+                        <Input
+                          name={field.key}
+                          defaultValue={
+                            field.prefill ? prefillSignal.value : ""
+                          }
+                          placeholder={field.placeholder}
+                          required={!field.optional}
+                          borderRadius="m"
+                          paddingY="s"
+                          expandX
+                        />
+                      )}
                     </Field>
                   ))}
                   <Button command="--navi-send" expandX paddingY="s">
@@ -429,10 +472,26 @@
         },
       ];
       const INITIAL_PLAYERS = [
-        { id: nextId(), name: "Flore", detail: "flore@mail.com" },
-        { id: nextId(), name: "Karim", detail: "karim@mail.com" },
-        { id: nextId(), name: "Damien", detail: "damien@mail.com" },
+        { id: nextId(), name: "Flore", detail: "flore@mail.com", side: "left" },
+        {
+          id: nextId(),
+          name: "Karim",
+          detail: "karim@mail.com",
+          side: "right",
+        },
+        {
+          id: nextId(),
+          name: "Damien",
+          detail: "damien@mail.com",
+          side: "both",
+        },
         { id: nextId(), name: "Damien", detail: "d.martin@mail.com" },
+      ];
+
+      const SIDES = [
+        { value: "left", label: "Gauche" },
+        { value: "right", label: "Droite" },
+        { value: "both", label: "Les deux" },
       ];
 
       const PLAYER_FIELDS = [
@@ -444,10 +503,17 @@
           placeholder: "prenom@mail.com",
           optional: true,
         },
+        {
+          key: "side",
+          label: "Côté",
+          optional: true,
+          options: SIDES,
+        },
       ];
       const playerToEntry = (values) => ({
         name: `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
         detail: values.email.trim(),
+        side: values.side || "",
       });
 
       const Screen = ({ idPrefix, popupLayer }) => {
@@ -456,6 +522,15 @@
         const clubSignal = useSignal(null);
         const playerSignal = useSignal(null);
         const player2Signal = useSignal(null);
+        // Kept beside the selection, not inside the entry: overriding the side
+        // for tonight's match must not rewrite the player's own habit. Picking
+        // another player therefore starts again from that player's default.
+        const sideSignal = useSignal("");
+        const side2Signal = useSignal("");
+        const selectPlayer = (playerSignal, sideSignal) => (entry) => {
+          playerSignal.value = entry;
+          sideSignal.value = entry ? entry.side || "" : "";
+        };
 
         const addTo = (listSignal) => (entry) => {
           listSignal.value = [...listSignal.value, entry];
@@ -511,8 +586,10 @@
                 recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
                 onCreate={addTo(playersSignal)}
                 value={playerSignal.value}
-                onChange={(entry) => {
-                  playerSignal.value = entry;
+                onChange={selectPlayer(playerSignal, sideSignal)}
+                sideOverride={sideSignal.value}
+                onSideChange={(next) => {
+                  sideSignal.value = next;
                 }}
               />
 
@@ -530,8 +607,10 @@
                 recentIds={[INITIAL_PLAYERS[2].id]}
                 onCreate={addTo(playersSignal)}
                 value={player2Signal.value}
-                onChange={(entry) => {
-                  player2Signal.value = entry;
+                onChange={selectPlayer(player2Signal, side2Signal)}
+                sideOverride={side2Signal.value}
+                onSideChange={(next) => {
+                  side2Signal.value = next;
                 }}
               />
             </div>

@@ -252,13 +252,25 @@ const css = /* css */ `
          as the background above, and the two come back together. */
       --x-border-color: transparent;
 
+      /* Softened on purpose: the regular border colors are tuned against a
+         field that always has a border, whereas here one appears out of
+         nothing — at full strength that reads as the field jumping rather than
+         responding. Focus stays firmer than hover, it is the stronger state. */
       &[data-hover] {
         --x-background-color: white;
-        --x-border-color: var(--border-color-hover);
+        --x-border-color: color-mix(
+          in srgb,
+          var(--border-color-hover) 35%,
+          transparent
+        );
       }
       &[data-focus] {
         --x-background-color: white;
-        --x-border-color: var(--border-color);
+        --x-border-color: color-mix(
+          in srgb,
+          var(--border-color) 55%,
+          transparent
+        );
       }
       &[data-readonly] {
         --x-background-color: transparent;
