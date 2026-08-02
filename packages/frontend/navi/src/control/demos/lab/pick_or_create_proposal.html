@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROPAL: champ « choisir ou créer »</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        color: #1a1a2e;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #eef1f5;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      .intro {
+        max-width: 640px;
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      /* A phone-sized column: the constraint that drives every choice here */
+      .phone {
+        position: relative;
+        width: 380px;
+        max-width: 100%;
+        height: 640px;
+        margin: 0 auto;
+        background: #fff;
+        border: 1px solid #d6dae0;
+        border-radius: 16px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+      .phone-scroll {
+        height: 100%;
+        padding: 16px;
+        overflow-y: auto;
+      }
+      /* Stands in for the floating keyboard: the area nothing may use */
+      .keyboard {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 250px;
+        color: #6b7280;
+        font-size: 12px;
+        text-align: center;
+        line-height: 250px;
+        background: repeating-linear-gradient(
+          45deg,
+          #e5e7eb,
+          #e5e7eb 8px,
+          #dde0e4 8px,
+          #dde0e4 16px
+        );
+        border-top: 1px solid #cbd1d8;
+        pointer-events: none;
+      }
+      .screen-title {
+        margin: 0 0 18px;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      .field-title {
+        margin: 0 0 6px;
+        color: #444;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .field-block {
+        margin-bottom: 18px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+      }
+      .chip {
+        padding: 8px 14px;
+        font-size: 13px;
+        border: 1px solid #cbd1d8;
+        border-radius: 8px;
+      }
+      .chip.on {
+        color: #fff;
+        background: #1a1a2e;
+        border-color: #1a1a2e;
+      }
+      .state {
+        max-width: 640px;
+        margin: 16px auto 0;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-family: ui-monospace, monospace;
+        background: #fff;
+        border: 1px solid #d6dae0;
+        border-radius: 8px;
+      }
+      .hint {
+        color: #6b7280;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Champ « choisir ou créer »</h1>
+    <p class="intro">
+      Un seul motif, réutilisé pour le lieu et pour les joueurs. Tape
+      <code>Mourat</code> pour voir la recherche, <code>Mouratoglou</code> pour
+      voir le garde-fou anti-doublon, <code>Tennis Club</code> pour voir la
+      création. La zone hachurée figure le clavier.
+    </p>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Field,
+        Input,
+        List,
+        Text,
+        useSearchText,
+      } from "@jsenv/navi";
+
+      const normalize = (value) =>
+        value
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+
+      /*
+       * The proposal, in one component.
+       *
+       * The field promotes itself to a full screen surface on tap: search at the
+       * top, results below, create at the bottom. A picker anchored to the field
+       * would have to share the height with the keyboard and end up with a
+       * 150px list; here the surface owns everything the keyboard doesn't, so
+       * the room given to results no longer depends on where the field sits in
+       * the form.
+       *
+       * Creating is a first-class action, not a last resort: at the start of the
+       * app's life most entries don't exist yet, so the button is always in the
+       * same place rather than hidden behind an empty result list.
+       */
+      const PickOrCreateField = ({
+        id,
+        label,
+        placeholder,
+        searchPlaceholder,
+        createLabel,
+        items,
+        onCreate,
+        value,
+        onChange,
+      }) => {
+        const openSignal = useSignal(false);
+        const searchSignal = useSignal("");
+        const [matchingItems, getMatchInfo] = useSearchText(
+          searchSignal.value,
+          items,
+        );
+        const typed = searchSignal.value.trim();
+        const typedKey = normalize(typed);
+
+        const exact = items.find((item) => normalize(item) === typedKey);
+        // A name that contains, or is contained in, an existing one is almost
+        // always the same thing typed twice ("Mouratoglou" vs "Mouratoglou
+        // Country Club"). Offering it before the create button is what keeps
+        // the list clean during the months where everyone is creating.
+        const nearMatch =
+          !exact && typedKey.length >= 3
+            ? items.find((item) => {
+                const key = normalize(item);
+                return key.includes(typedKey) || typedKey.includes(key);
+              })
+            : undefined;
+        const canCreate = typed !== "" && !exact;
+
+        const choose = (item) => {
+          onChange(item);
+          openSignal.value = false;
+          searchSignal.value = "";
+        };
+
+        return (
+          <div class="field-block">
+            <p class="field-title">{label}</p>
+            <Field vertical>
+              <Input
+                type="search"
+                placeholder={placeholder}
+                value={value}
+                readOnly
+                expandX
+                onFocus={() => {
+                  openSignal.value = true;
+                }}
+                onClick={() => {
+                  openSignal.value = true;
+                }}
+              />
+            </Field>
+
+            <Dialog
+              layer="local"
+              positionArea="top"
+              marginWithContainer={0}
+              animation="slide-from-bottom"
+              open={openSignal.value}
+              onClose={() => {
+                openSignal.value = false;
+              }}
+              minWidth="100%"
+              minHeight="100%"
+            >
+              <Box flex="y" spacing="s" padding="s" expand>
+                {/* Search on top: the keyboard owns the bottom, anything
+                    docked there would be covered */}
+                <Box flex="x" spacing="xs" alignY="center">
+                  <Button
+                    discrete
+                    onClick={() => {
+                      openSignal.value = false;
+                    }}
+                  >
+                    ‹
+                  </Button>
+                  <Input
+                    navi-list={`${id}_list`}
+                    type="search"
+                    placeholder={searchPlaceholder}
+                    value={searchSignal.value}
+                    uiAction={(next) => {
+                      searchSignal.value = next;
+                    }}
+                    autoComplete="off"
+                    autoFocus
+                    expandX
+                  />
+                </Box>
+
+                <List
+                  selectable
+                  id={`${id}_list`}
+                  searchText={searchSignal.value}
+                  separator
+                  searchFallback={null}
+                  expandY
+                  action={choose}
+                >
+                  {matchingItems.map((item, i) => (
+                    <List.Item
+                      selectable
+                      key={item}
+                      id={`${id}_${normalize(item)}`}
+                      index={i}
+                      value={item}
+                      selected={value === item}
+                      matchInfo={getMatchInfo(item)}
+                      padding="s"
+                    >
+                      {item}
+                    </List.Item>
+                  ))}
+                </List>
+
+                {nearMatch && (
+                  <Box flex="y" spacing="xs">
+                    <Text>Vouliez-vous dire « {nearMatch} » ?</Text>
+                    <Button
+                      expandX
+                      onClick={() => {
+                        choose(nearMatch);
+                      }}
+                    >
+                      Oui, choisir « {nearMatch} »
+                    </Button>
+                  </Box>
+                )}
+                {canCreate && (
+                  <Button
+                    expandX
+                    discrete={Boolean(nearMatch)}
+                    onClick={() => {
+                      onCreate(typed);
+                      choose(typed);
+                    }}
+                  >
+                    {createLabel} « {typed} »
+                  </Button>
+                )}
+              </Box>
+            </Dialog>
+          </div>
+        );
+      };
+
+      const INITIAL_CLUBS = [
+        "Mouratoglou Country Club",
+        "Padel Attitude Antibes",
+        "Set Club Valbonne",
+      ];
+      const INITIAL_PLAYERS = ["Damien", "Flore", "Karim"];
+
+      const App = () => {
+        const clubsSignal = useSignal(INITIAL_CLUBS);
+        const playersSignal = useSignal(INITIAL_PLAYERS);
+        const clubSignal = useSignal("");
+        const playerSignal = useSignal("");
+        const createdSignal = useSignal([]);
+
+        const addTo = (listSignal) => (name) => {
+          if (!listSignal.value.includes(name)) {
+            listSignal.value = [...listSignal.value, name];
+            createdSignal.value = [...createdSignal.value, name];
+          }
+        };
+
+        return (
+          <>
+            <div class="phone">
+              <div class="phone-scroll">
+                <p class="screen-title">‹ Créer une partie</p>
+
+                <PickOrCreateField
+                  id="club"
+                  label="Lieu"
+                  placeholder="Choisir un club…"
+                  searchPlaceholder="Rechercher ou saisir un nom…"
+                  createLabel="Créer le club"
+                  items={clubsSignal.value}
+                  onCreate={addTo(clubsSignal)}
+                  value={clubSignal.value}
+                  onChange={(next) => {
+                    clubSignal.value = next;
+                  }}
+                />
+
+                <PickOrCreateField
+                  id="player"
+                  label="Joueur"
+                  placeholder="Ajouter un joueur…"
+                  searchPlaceholder="Rechercher ou saisir un nom…"
+                  createLabel="Inviter"
+                  items={playersSignal.value}
+                  onCreate={addTo(playersSignal)}
+                  value={playerSignal.value}
+                  onChange={(next) => {
+                    playerSignal.value = next;
+                  }}
+                />
+
+                {/* Untouched, just there to show the field in its real context:
+                    a few options and no keyboard stay chips, they don't need
+                    any of the above */}
+                <div class="field-block">
+                  <p class="field-title">Durée</p>
+                  <div class="chips">
+                    <span class="chip">1h</span>
+                    <span class="chip">1h30</span>
+                    <span class="chip on">2h</span>
+                  </div>
+                </div>
+                <div class="field-block">
+                  <p class="field-title">Niveau</p>
+                  <div class="chips">
+                    <span class="chip">3</span>
+                    <span class="chip">4</span>
+                    <span class="chip on">5</span>
+                    <span class="chip">6</span>
+                  </div>
+                </div>
+              </div>
+              <div class="keyboard">clavier</div>
+            </div>
+
+            <div class="state">
+              lieu : {clubSignal.value || "—"}
+              <br />
+              joueur : {playerSignal.value || "—"}
+              <br />
+              <span class="hint">
+                créés : {createdSignal.value.join(", ") || "aucun"}
+              </span>
+            </div>
+          </>
+        );
+      };
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
