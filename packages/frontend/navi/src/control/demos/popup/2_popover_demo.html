@@ -307,7 +307,18 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState, useEffect } from "preact/hooks";
-      import { Button, Popover, NaviDebug, Box, Link, Text } from "@jsenv/navi";
+      import {
+        Button,
+        Popover,
+        NaviDebug,
+        Box,
+        Field,
+        Input,
+        Label,
+        Link,
+        Text,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       // The full positionArea grammar (see popup_shared.js's own
       // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
@@ -462,8 +473,98 @@
           <OpenAtStartSection />
           <AnchorTooBigSection />
           <NestedPopoverSection />
+          <ActionsSection />
         </div>
       );
+
+      // ── uiAction / action ─────────────────────────────────────────────────
+
+      const ActionsSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [committed, setCommitted] = useState({ note: "" });
+        const [confirmed, setConfirmed] = useState({ note: "" });
+
+        return (
+          <section class="demo-section">
+            <Heading id="actions">uiAction / action</Heading>
+            <p>
+              A popover aggregates the named controls it contains, so it is
+              handed <code>{"{ note }"}</code>, not a bare string.{" "}
+              <code>uiAction</code> fires while typing — it is the live state.{" "}
+              <code>action</code> fires when the popover <em>closes</em>, and
+              only if something actually changed. Cancelling commits nothing and
+              puts back what the popover opened on.
+            </p>
+
+            <Heading level={3} id="actions-default">
+              Default
+            </Heading>
+            <p>
+              <kbd>Escape</kbd> cancels; clicking outside closes, and closing
+              commits.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="pop_actions">
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(committed)}</code>
+              </span>
+            </div>
+            <Popover
+              id="pop_actions"
+              value={committed}
+              uiAction={(value) => {
+                push("uiAction", value);
+              }}
+              action={(value) => {
+                push("action", value);
+                setCommitted(value);
+              }}
+            >
+              <Box flex="y" spacing="m" padding="m">
+                <Field vertical>
+                  <Label>Note</Label>
+                  <Input name="note" placeholder="type something…" />
+                </Field>
+              </Box>
+            </Popover>
+            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="actions-cancel-outside">
+              pointerInteractionOutsideEffect="cancel"
+            </Heading>
+            <p>
+              Now both ways out are a cancel, so the popover owes the user a way
+              to commit: a button that closes it.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="pop_actions_cancel">
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(confirmed)}</code>
+              </span>
+            </div>
+            <Popover
+              id="pop_actions_cancel"
+              value={confirmed}
+              pointerInteractionOutsideEffect="cancel"
+              action={(value) => {
+                setConfirmed(value);
+              }}
+            >
+              <Box flex="y" spacing="m" padding="m">
+                <Field vertical>
+                  <Label>Note</Label>
+                  <Input name="note" placeholder="type something…" />
+                </Field>
+                <Button command="--navi-close">Close (commits)</Button>
+              </Box>
+            </Popover>
+          </section>
+        );
+      };
 
       // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
       // anchor>` owns the id (derived from its href); the "#" child renders as
@@ -486,8 +587,8 @@
           <p>
             A surface opened next to an anchor. Like Dialog it is a control
             group — it aggregates the named controls it contains, it is a form
-            boundary, and closing commits while cancelling reverts (see the
-            dialog demo's own <code>uiAction / action</code> section).
+            boundary, and closing commits while cancelling reverts, see{" "}
+            <Link href="#actions">uiAction / action</Link>.
           </p>
           <ol className="toc">
             <li>
@@ -541,6 +642,19 @@
             </li>
             <li>
               <Link href="#nested-popovers">Nested popovers</Link>
+            </li>
+            <li>
+              <Link href="#actions">uiAction / action</Link>
+              <ul>
+                <li>
+                  <Link href="#actions-default">Default</Link>
+                </li>
+                <li>
+                  <Link href="#actions-cancel-outside">
+                    pointerInteractionOutsideEffect="cancel"
+                  </Link>
+                </li>
+              </ul>
             </li>
           </ol>
         </div>

@@ -179,8 +179,8 @@
         <div>
           <h1>Popup interop demo</h1>
           <p>
-            Individual demos (<code>popover_demo.html</code>,{" "}
-            <code>dialog_demo.html</code>, …) exercise one component at a time.
+            Individual demos (<code>2_popover_demo.html</code>,{" "}
+            <code>1_dialog_demo.html</code>, …) exercise one component at a time.
             This one is about the combinations — one popup nested inside
             another, unrelated one — to see whether they actually cooperate
             (anchor tracking, stacking, scroll, outside-click handling) once
@@ -409,7 +409,7 @@
       // anchor button sits after a filler block, so opening the popover
       // right away and then scrolling the dialog's own content is what
       // exercises anchor tracking. anchor is left to resolve automatically
-      // from the toggle button that opens it (same as popover_demo.html's
+      // from the toggle button that opens it (same as 2_popover_demo.html's
       // own AnchoredPopover), not passed explicitly.
       const DialogWithPopoverDemo = () => {
         const dialogId = useId();

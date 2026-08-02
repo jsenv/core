@@ -61,7 +61,7 @@
         gap: 12px;
       }
       .demo-position-grid {
-        /* Same visual idea as popover_demo.html's own .demo-area-grid — the
+        /* Same visual idea as 2_popover_demo.html's own .demo-area-grid — the
            full 5×5 Y×X grid Dialog's own positionArea grammar now shares
            with Popover (see dialog.jsx's own top comment for why several
            combinations still matter despite landing on the same final
@@ -216,7 +216,7 @@
 
       // Backs each section's own "Slow" checkbox/"Animation" select —
       // independent per section, so slowing/changing one doesn't affect the
-      // others while you're testing (same pattern as popover_demo.html).
+      // others while you're testing (same pattern as 2_popover_demo.html).
       const useStoredBoolean = (key, defaultValue) => {
         const [value, setValue] = useState(() => {
           const stored = localStorage.getItem(key);
@@ -381,7 +381,7 @@
       };
 
       // Mounts already open, with animation on — the entrance animation
-      // should NOT play (same idea as popover_demo.html's own "Open from
+      // should NOT play (same idea as 2_popover_demo.html's own "Open from
       // the start" section — see its comment there for why).
       const OpenFromStartDialog = ({ label, ...props }) => {
         const dialogId = useId();
@@ -841,7 +841,7 @@
       // container to find it (DialogLocal, a plain in-flow div — see
       // dialog.jsx's own top comment) — the trigger buttons don't, so they
       // live outside it, in their own grid below (same pattern as
-      // popover_demo.html's own "local layer" subsection).
+      // 2_popover_demo.html's own "local layer" subsection).
       const LocalLayerPositionSection = () => {
         const baseId = useId();
         const { animation, animationDuration, controlsProps } =
