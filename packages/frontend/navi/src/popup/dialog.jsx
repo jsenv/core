@@ -559,8 +559,13 @@ const useDialogProps = (props) => {
     positionAreaProp ?? (isSheet ? SHEET.positionArea : "center");
   const marginWithContainer =
     marginWithContainerProp ?? (isSheet ? SHEET.marginWithContainer : "3vvw");
-  const expandX = expand ?? expandXProp ?? (isSheet ? SHEET.expandX : false);
-  const expandY = expand ?? expandYProp ?? false;
+  // "expand || expandX", the shorthand semantics Popup used to apply before
+  // handing them over — the sheet default only applies when neither was said
+  const expandXUnset = expand === undefined && expandXProp === undefined;
+  const expandX = expandXUnset
+    ? isSheet && SHEET.expandX
+    : Boolean(expand) || Boolean(expandXProp);
+  const expandY = Boolean(expand) || Boolean(expandYProp);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
