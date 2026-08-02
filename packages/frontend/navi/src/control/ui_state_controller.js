@@ -735,6 +735,22 @@ const GROUP_DEFAULTS = {
       return undefined;
     },
   },
+  // One value, not an object: the group holds whatever its single meaningful
+  // child holds. What a picker's popup does — the list inside it IS the value,
+  // and naming it would only add a key nobody asked for. A popup containing a
+  // real form uses "object" (the default) instead.
+  single: {
+    aggregateChildStates: (children) => {
+      for (const child of children) {
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          return childUIState;
+        }
+      }
+      return undefined;
+    },
+    distributeChildUIState: (newUIState) => newUIState,
+  },
   object: {
     aggregateChildStates: (children) => {
       const groupValues = {};

@@ -57,7 +57,16 @@ const PickerText = (props) => {
 const PickerControlGroup = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
+  // popupStateType: this picker's popup really is a group of named controls,
+  // so its popup aggregates into an object like any other dialog would.
+  return (
+    <Next
+      ui={<PickerControlGroupUI />}
+      popupStateType="object"
+      {...props}
+      type="navi_js"
+    />
+  );
 };
 export const PickerControlGroupUI = () => {
   const { value, placeholder } = useContext(PickerContext);

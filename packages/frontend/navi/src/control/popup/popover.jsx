@@ -540,7 +540,10 @@ const usePopoverProps = (props) => {
     },
     {
       controlType: "popover",
-      stateType: "object",
+      // "object" by default — a popup holds a form and hands back named values.
+      // "single" for a popup that IS one value (a picker's list): see
+      // GROUP_DEFAULTS in ui_state_controller.js.
+      stateType: props.stateType || "object",
       allowCapture: true,
       wantRequesterButtonState: true,
       cascadeValidationToChildren: true,
@@ -1333,6 +1336,7 @@ const usePopoverProps = (props) => {
     // (value="[object Object]" and friends).
     "value": undefined,
     "defaultValue": undefined,
+    "stateType": undefined,
     "action": undefined,
     "uiAction": undefined,
     ...autoFocusProps,
