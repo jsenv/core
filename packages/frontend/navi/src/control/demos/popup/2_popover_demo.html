@@ -500,8 +500,10 @@
               Default
             </Heading>
             <p>
-              <kbd>Escape</kbd> cancels; clicking outside closes, and closing
-              commits.
+              A popover ignores outside clicks by default (
+              <code>pointerInteractionOutsideEffect="none"</code>, unlike
+              Dialog), so the two ways out are <kbd>Escape</kbd>, which cancels,
+              and a button that closes it, which commits.
             </p>
             <div class="demo-row">
               <Button command="--navi-toggle" commandFor="pop_actions">
@@ -527,19 +529,20 @@
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
+                <Button command="--navi-close">Close (commits)</Button>
               </Box>
             </Popover>
             <CallLog entries={entries} onClear={clear} />
 
-            <Heading level={3} id="actions-cancel-outside">
-              pointerInteractionOutsideEffect="cancel"
+            <Heading level={3} id="actions-close-outside">
+              pointerInteractionOutsideEffect="close"
             </Heading>
             <p>
-              Now both ways out are a cancel, so the popover owes the user a way
-              to commit: a button that closes it.
+              Clicking outside now closes the popover, and closing commits —
+              the way Dialog behaves out of the box.
             </p>
             <div class="demo-row">
-              <Button command="--navi-toggle" commandFor="pop_actions_cancel">
+              <Button command="--navi-toggle" commandFor="pop_actions_close">
                 Open
               </Button>
               <span>
@@ -547,9 +550,9 @@
               </span>
             </div>
             <Popover
-              id="pop_actions_cancel"
+              id="pop_actions_close"
               value={confirmed}
-              pointerInteractionOutsideEffect="cancel"
+              pointerInteractionOutsideEffect="close"
               action={(value) => {
                 setConfirmed(value);
               }}
@@ -559,7 +562,6 @@
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-                <Button command="--navi-close">Close (commits)</Button>
               </Box>
             </Popover>
           </section>
@@ -650,8 +652,8 @@
                   <Link href="#actions-default">Default</Link>
                 </li>
                 <li>
-                  <Link href="#actions-cancel-outside">
-                    pointerInteractionOutsideEffect="cancel"
+                  <Link href="#actions-close-outside">
+                    pointerInteractionOutsideEffect="close"
                   </Link>
                 </li>
               </ul>
