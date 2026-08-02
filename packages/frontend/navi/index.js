@@ -224,7 +224,10 @@ export { SidePanel } from "./src/popup/side_panel.jsx";
 export { createSlot } from "./src/popup/slot.jsx";
 
 // Responsivness
-export { windowWidthSignal } from "./src/layout/responsive.js";
+export {
+  windowWidthSignal,
+  coarsePointerSignal,
+} from "./src/layout/responsive.js";
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
