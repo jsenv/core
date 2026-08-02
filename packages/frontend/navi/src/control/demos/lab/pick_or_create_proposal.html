@@ -495,9 +495,9 @@
               positionArea="top"
               expand
               animation
-              spacing="m"
               flex="y"
               minHeight={0}
+              padding="0"
             >
               <Box header flex="x" spacing="xs" alignY="center" padding="m">
                 <Text expandX>
@@ -510,7 +510,7 @@
               {/* body: the fields are what scrolls, so the header above and
                   the footer below stay put — no sizing to arrange by hand, the
                   dialog knows what these three roles mean */}
-              <Box body flex="y" spacing="m" paddingX="m">
+              <Box body padding="m" paddingY="0">
                 {/* keyed by the prefill: the fields are uncontrolled, so a
                         new name typed in the search must give them a fresh
                         defaultValue rather than keep the previous one */}
@@ -660,13 +660,13 @@
       );
 
       const PlaceForm = ({ prefill }) => (
-        <>
+        <Box flex="y" spacing="m">
           {/* A place needs a name or an address to be recognizable again;
               demanding both would be a lie, and demanding "one of the two" is
               not something a form says well — so only the name is required */}
           <TextField label="Nom" name="name" required defaultValue={prefill} />
           <TextField label="Adresse" name="address" placeholder="Rue, ville…" />
-        </>
+        </Box>
       );
 
       const PlayerForm = ({ prefill }) => (
