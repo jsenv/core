@@ -151,6 +151,7 @@
         Input,
         Label,
         List,
+        Picker,
         Text,
         useSearchText,
       } from "@jsenv/navi";
@@ -193,7 +194,6 @@
         value,
         onChange,
       }) => {
-        const openSignal = useSignal(false);
         const searchSignal = useSignal("");
         const formOpenSignal = useSignal(false);
         const formValuesSignal = useSignal({});
@@ -215,11 +215,6 @@
         );
         const typed = searchSignal.value.trim();
 
-        const choose = (entry) => {
-          onChange(entry);
-          openSignal.value = false;
-          searchSignal.value = "";
-        };
         // The form is the single way in, whether it was reached from the + or
         // from the list: same fields, only the prefill differs
         const openForm = (prefill) => {
@@ -241,7 +236,8 @@
           };
           onCreate(entry);
           formOpenSignal.value = false;
-          choose(entry);
+          onChange(entry);
+          searchSignal.value = "";
         };
         const formIncomplete = createFields.some(
           (field) =>
@@ -252,47 +248,27 @@
         return (
           <div class="field-block">
             <p class="field-title">{label}</p>
-            {/* The handler sits on the wrapper, not on the input: the clear
-                button is a sibling of the <input> inside the field, so a
-                handler on the input itself never sees it. And readOnly stops
-                --navi-clear from reaching the value anyway (readOnly means
-                "not editable", and navi is right to hold that line), so the
-                façade unsets the selection itself. */}
-            <div
-              onClick={(e) => {
-                if (e.target.closest("button")) {
-                  onChange(null);
-                  return;
-                }
-                openSignal.value = true;
-              }}
-            >
-              <Field vertical>
-                <Input
-                  placeholder={placeholder}
-                  value={value ? value.name : ""}
-                  // Not a search box: this says what is selected, the one in
-                  // the surface says what is being looked for. Same widget for
-                  // both would read as one field that means two things.
-                  icon={<ChevronDownSvg />}
-                  clearable
-                  readOnly
-                  clearableWhenReadOnly
-                  expandX
-                />
-              </Field>
-            </div>
-            {value && value.detail && <p class="detail">{value.detail}</p>}
-
-            <Dialog
+            {/* Picker, not a hand-made trigger + Dialog: it already owns the
+                open/close, the value, the façade (value or placeholder, chevron
+                or clear button) and the popup — mode="dialog" just pins the
+                shape we want on every device instead of letting it pick. */}
+            <Picker
+              name={id}
+              placeholder={placeholder}
+              value={value ? value.id : undefined}
+              ui={value ? value.name : undefined}
+              clearable
+              mode="dialog"
               layer="local"
               positionArea="top"
               marginWithContainer={0}
-              expand
-              // animation
-              open={openSignal.value}
-              onClose={() => {
-                openSignal.value = false;
+              dialogExpand
+              expandX
+              action={(entryId) => {
+                onChange(
+                  entryId ? entries.find((e) => e.id === entryId) : null,
+                );
+                searchSignal.value = "";
               }}
             >
               <Box flex="y" spacing="s" padding="s" expand>
@@ -301,13 +277,11 @@
                     bottom of the screen, so nothing goes down there. */}
                 <Box flex="x" spacing="xs" alignY="center">
                   <Button
+                    command="--navi-close"
                     icon
                     variant="discrete"
                     paddingX="s"
                     paddingY="xs"
-                    onClick={() => {
-                      openSignal.value = false;
-                    }}
                   >
                     ‹
                   </Button>
@@ -344,13 +318,11 @@
                 <List
                   selectable
                   id={`${id}_list`}
+                  command="--navi-send"
                   searchText={searchSignal.value}
                   separator
                   searchFallback={null}
                   expandY
-                  uiAction={(entryId) => {
-                    choose(entries.find((e) => e.id === entryId));
-                  }}
                 >
                   {matchingEntries.map((entry, i) => (
                     <List.Item
@@ -362,9 +334,6 @@
                       selected={value ? value.id === entry.id : false}
                       matchInfo={getMatchInfo(entry)}
                       padding="s"
-                      onClick={() => {
-                        choose(entry);
-                      }}
                     >
                       <Box flex="y">
                         <Text>{entry.name}</Text>
@@ -394,7 +363,7 @@
                   )}
                 </List>
               </Box>
-            </Dialog>
+            </Picker>
 
             {/* Asked once, at creation: an entry is entered a single time in
                 its life, and the second field is what will tell homonyms apart
@@ -496,9 +465,9 @@
                   label="Lieu"
                   placeholder="Choisir un club…"
                   searchPlaceholder="Rechercher un lieu…"
-                  surfaceTitle="Lieux"
+                  surfaceTitle="Choisir un lieu"
                   createLabel="Créer le club"
-                  createTitle="Nouveau club"
+                  createTitle="Ajouter un club"
                   createFields={[
                     { key: "name", label: "Nom", prefill: true },
                     {
@@ -525,9 +494,9 @@
                   label="Joueur"
                   placeholder="Ajouter un joueur…"
                   searchPlaceholder="Rechercher un joueur…"
-                  surfaceTitle="Joueurs"
+                  surfaceTitle="Choisir un joueur"
                   createLabel="Ajouter le joueur"
-                  createTitle="Nouveau joueur"
+                  createTitle="Ajouter un joueur"
                   createFields={[
                     { key: "firstName", label: "Prénom", prefill: true },
                     { key: "lastName", label: "Nom" },
