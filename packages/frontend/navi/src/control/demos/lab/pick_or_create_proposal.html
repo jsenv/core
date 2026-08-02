@@ -127,6 +127,15 @@
         color: #6b7280;
         font-size: 12px;
       }
+      /* The family name is what separates two homonyms, so it is the part that
+         carries the weight; the given name is only there to disambiguate it */
+      .family-name {
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .given-name {
+        text-transform: capitalize;
+      }
     </style>
   </head>
   <body>
@@ -330,7 +339,9 @@
                       padding="s"
                     >
                       <Box flex="y">
-                        <Text>{entry.name}</Text>
+                        <Text>
+                          <PlayerName entry={entry} />
+                        </Text>
                         {entry.detail && (
                           <Text className="detail">{entry.detail}</Text>
                         )}
@@ -345,16 +356,24 @@
                       key="__create__"
                       id={`${id}_create`}
                       index={matchingEntries.length}
-                      padding="s"
-                      command="--navi-open"
-                      commandFor={formId}
-                      onClick={() => {
-                        prefillSignal.value = typed;
-                      }}
                     >
-                      <Text>
-                        {createLabel} « {typed} »
-                      </Text>
+                      {/* A Button, not a command on the row itself: the list
+                          carries --navi-send, and a row of a sending list is
+                          claimed by it — the create row wants a different
+                          command, so it needs its own control to carry it. */}
+                      <Button
+                        command="--navi-open"
+                        commandFor={formId}
+                        variant="discrete"
+                        padding="s"
+                        expandX
+                        alignX="start"
+                        onClick={() => {
+                          prefillSignal.value = typed;
+                        }}
+                      >
+                        « {typed} » : {createLabel}
+                      </Button>
                     </List.Item>
                   )}
                 </List>
@@ -444,7 +463,7 @@
                     </Field>
                   ))}
                   <Button command="--navi-send" expandX paddingY="s">
-                    {createLabel}
+                    {createTitle}
                   </Button>
                 </Box>
               </ControlGroup>
@@ -471,20 +490,40 @@
         },
       ];
       const INITIAL_PLAYERS = [
-        { id: nextId(), name: "Flore", detail: "flore@mail.com", side: "left" },
         {
           id: nextId(),
-          name: "Karim",
+          firstName: "Flore",
+          lastName: "Giraudier",
+          detail: "flore@mail.com",
+          side: "left",
+        },
+        {
+          id: nextId(),
+          firstName: "Karim",
+          lastName: "Benali",
           detail: "karim@mail.com",
           side: "right",
         },
         {
           id: nextId(),
-          name: "Damien",
+          firstName: "Damien",
+          lastName: "Maillard",
           detail: "damien@mail.com",
           side: "both",
         },
-        { id: nextId(), name: "Damien", detail: "d.martin@mail.com" },
+        {
+          id: nextId(),
+          firstName: "Damien",
+          lastName: "Martin",
+          detail: "d.martin@mail.com",
+        },
+        {
+          id: nextId(),
+          firstName: "Marie-Ange",
+          lastName: "Da Silva",
+          detail: "ma.dasilva@mail.com",
+          side: "left",
+        },
       ];
 
       const SIDES = [
@@ -509,11 +548,19 @@
           options: SIDES,
         },
       ];
-      const playerToEntry = (values) => ({
-        name: `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
-        detail: values.email.trim(),
-        side: values.side || "",
-      });
+      const playerToEntry = (values) => {
+        const firstName = values.firstName.trim();
+        const lastName = values.lastName.trim();
+        return {
+          firstName,
+          lastName,
+          // name stays the searchable/displayable single string; the parts are
+          // what let the list emphasize the family name
+          name: `${firstName} ${lastName}`.trim(),
+          detail: values.email.trim(),
+          side: values.side || "",
+        };
+      };
 
       const Screen = ({ idPrefix, popupLayer }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
@@ -547,7 +594,7 @@
                 placeholder="Choisir un lieu"
                 searchPlaceholder="Rechercher un lieu…"
                 surfaceTitle="Choisir un lieu"
-                createLabel="Ajouter ce lieu"
+                createLabel="ajouter ce lieu"
                 createTitle="Ajouter un lieu"
                 createFields={[
                   { key: "name", label: "Nom", prefill: true },
@@ -577,7 +624,7 @@
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
-                createLabel="Ajouter le joueur"
+                createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
                 createFields={PLAYER_FIELDS}
                 toEntry={playerToEntry}
@@ -598,7 +645,7 @@
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
-                createLabel="Ajouter le joueur"
+                createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
                 createFields={PLAYER_FIELDS}
                 toEntry={playerToEntry}

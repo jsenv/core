@@ -198,10 +198,8 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
-      --slot-spacing: calc(2px + 0.1em);
-
-      margin-right: var(--slot-spacing);
-      margin-left: var(--slot-spacing);
+      margin-right: var(--slot-spacing, calc(2px + 0.1em));
+      margin-left: var(--slot-spacing, calc(2px + 0.1em));
       color: #5e4e4e;
 
       &[data-left] {
@@ -475,6 +473,7 @@ const RealInput = ({ maxLength, ...domProps }) => {
 };
 
 const InputStyleCSSVars = {
+  "slotSpacing": "--slot-spacing",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
