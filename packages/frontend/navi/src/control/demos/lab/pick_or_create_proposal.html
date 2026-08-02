@@ -156,6 +156,7 @@
         ControlGroup,
         Label,
         List,
+        NaviDebug,
         Picker,
         RadioGroup,
         Text,
@@ -489,6 +490,19 @@
           detail: "Route de Grasse, Valbonne",
         },
       ];
+      // Rendered as "Prénom NOM": with homonyms allowed the family name is what
+      // separates two entries, so it is the part that carries the emphasis.
+      // Falls back to the plain name for an entity that has no such split.
+      const PlayerName = ({ entry }) =>
+        entry.lastName ? (
+          <>
+            <span class="given-name">{entry.firstName}</span>{" "}
+            <span class="family-name">{entry.lastName}</span>
+          </>
+        ) : (
+          entry.name
+        );
+
       const INITIAL_PLAYERS = [
         {
           id: nextId(),
@@ -665,8 +679,10 @@
         );
       };
 
+      // debugAll on purpose: this is a lab file, and the interaction logs are the
+      // fastest way to see why a click did or did not reach a control
       const App = () => (
-        <>
+        <NaviDebug debugAll>
           <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
           <div class="frame">
             <Screen idPrefix="local_" popupLayer="local" />
@@ -675,7 +691,7 @@
             2. top layer — lié au viewport (à voir en émulation d'appareil)
           </h2>
           <Screen idPrefix="top_" />
-        </>
+        </NaviDebug>
       );
 
       render(<App />, document.querySelector("#app"));
