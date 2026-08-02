@@ -54,6 +54,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
+import { toChildArray } from "preact";
 import { useEffect, useId, useRef } from "preact/hooks";
 
 import {
@@ -205,7 +206,6 @@ const css = /* css */ `
       z-index: 1;
     }
     &:has(> [data-body]) {
-      overflow: hidden;
       /* The padding moves inward, onto the three parts (see useDialogProps /
          usePopoverProps, which hand it over as --popup-part-padding): a focus
          outline is drawn OUTSIDE the control it belongs to, so an input sitting
@@ -213,6 +213,7 @@ const css = /* css */ `
          pixels and raises a scrollbar. Padding on the scroller itself is what
          gives the outline room to exist. */
       padding: 0;
+      overflow: hidden;
 
       > [data-header],
       > [data-footer] {
@@ -650,6 +651,24 @@ const usePopoverProps = (props) => {
     ...rest
   } = props;
   const isTopLayer = layer === "top";
+  // A body means the padding belongs to the parts, not to the popup: see the
+  // :has(> [data-body]) rule above for why (a focus outline needs room INSIDE
+  // the scrolling area). Only the `padding` shorthand travels for now — the
+  // per-side props would each need the same treatment.
+  const hasBodyChild = toChildArray(children).some(
+    (child) => child?.props?.body,
+  );
+  if (hasBodyChild && rest.padding !== undefined) {
+    // resolveSpacingSize answers a number for a token ("m") and a string for a
+    // length that is already one ("10px") — a CSS var needs a length either way
+    const resolvedPadding = resolveSpacingSize(rest.padding);
+    rest.partPadding =
+      typeof resolvedPadding === "number"
+        ? `${resolvedPadding}px`
+        : resolvedPadding;
+    rest.padding = undefined;
+  }
+
   const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
@@ -1438,6 +1457,8 @@ const POPOVER_PSEUDO_CLASSES = [
 // props; Box maps them to the CSS vars for us (see box.jsx's styleCSSVars
 // handling).
 const POPUP_STYLE_CSS_VARS = {
+  partPadding: "--popup-part-padding",
+
   animationDuration: "--popup-animation-duration",
   minWidth: "--popover-min-width",
   maxWidth: "--popover-max-width",

@@ -56,6 +56,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
+import { toChildArray } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 import {
@@ -302,7 +303,6 @@ const css = /* css */ `
       z-index: 1;
     }
     &:has(> [data-body]) {
-      overflow: hidden;
       /* The padding moves inward, onto the three parts (see useDialogProps /
          usePopoverProps, which hand it over as --popup-part-padding): a focus
          outline is drawn OUTSIDE the control it belongs to, so an input sitting
@@ -310,6 +310,7 @@ const css = /* css */ `
          pixels and raises a scrollbar. Padding on the scroller itself is what
          gives the outline room to exist. */
       padding: 0;
+      overflow: hidden;
 
       > [data-header],
       > [data-footer] {
@@ -692,6 +693,24 @@ const useDialogProps = (props) => {
     children,
     ...rest
   } = props;
+  // A body means the padding belongs to the parts, not to the popup: see the
+  // :has(> [data-body]) rule above for why (a focus outline needs room INSIDE
+  // the scrolling area). Only the `padding` shorthand travels for now — the
+  // per-side props would each need the same treatment.
+  const hasBodyChild = toChildArray(children).some(
+    (child) => child?.props?.body,
+  );
+  if (hasBodyChild && rest.padding !== undefined) {
+    // resolveSpacingSize answers a number for a token ("m") and a string for a
+    // length that is already one ("10px") — a CSS var needs a length either way
+    const resolvedPadding = resolveSpacingSize(rest.padding);
+    rest.partPadding =
+      typeof resolvedPadding === "number"
+        ? `${resolvedPadding}px`
+        : resolvedPadding;
+    rest.padding = undefined;
+  }
+
   const isModal = layer === "top";
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
@@ -1298,6 +1317,8 @@ const DIALOG_PSEUDO_CLASSES = [
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
 const DIALOG_STYLE_CSS_VARS = {
+  partPadding: "--popup-part-padding",
+
   animationDuration: "--popup-animation-duration",
   minWidth: "--dialog-min-width",
   maxWidth: "--dialog-max-width",
