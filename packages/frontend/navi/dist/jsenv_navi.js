@@ -19321,7 +19321,11 @@ const formatTime = (date, lang) => {
  * "compact" uses our own notation that omits the minute symbol when hours are present.
  *
  * @param {number} minutes
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", clockStyle?: boolean, forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in minutes
+ *   however big it gets ("2160 minutes" instead of "1 jour et 12 heures").
+ *   Past 24 hours the default promotes to days, which reads better but hides
+ *   the unit the caller works in.
  * @param {boolean} [options.clockStyle=false] - Set this when `minutes`
  *   represents a time-of-day rather than a real duration (used by
  *   `<Time type="time">`, see time.jsx's own TimeTime) — affects two
@@ -19333,7 +19337,10 @@ const formatTime = (date, lang) => {
  *     doesn't collapse to something indistinguishable from an actual
  *     5-minute duration.
  *   - `format: "compact"` also zero-pads a single-digit hour to 2 digits
- *     (e.g. "5h30" → "05h30"), so it reads closer to a "05:30" clock.
+ *     (e.g. "5h30" → "05h30") and keeps a zero-valued minute (e.g. "10h" →
+ *     "10h00"), so it reads closer to a "05:30"/"10:00" clock. The other
+ *     formats spell out their units, so "10 heures"/"10h" reads fine there
+ *     and only "compact" needs the clock shape.
  *   Must not be set for plain duration formatting.
  *
  * @example
@@ -19344,39 +19351,85 @@ const formatTime = (date, lang) => {
  * formatMinuteDuration(45, { lang: "en", format: "compact" })   // "45min"
  * formatMinuteDuration(5, { lang: "fr", format: "narrow", clockStyle: true }) // "0h 5min"
  * formatMinuteDuration(330, { lang: "fr", format: "compact", clockStyle: true }) // "05h30"
+ * formatMinuteDuration(600, { lang: "fr", format: "compact", clockStyle: true }) // "10h00"
+ * formatMinuteDuration(2160, { lang: "fr" })                     // "1 jour et 12 heures"
+ * formatMinuteDuration(2160, { lang: "fr", forceUnit: true })    // "2 160 minutes"
  */
 const formatMinuteDuration = (
   minutes,
-  { lang = languagesSignal.value, format = "long", clockStyle = false } = {},
+  {
+    lang = languagesSignal.value,
+    format = "long",
+    clockStyle = false,
+    forceUnit = false,
+  } = {},
 ) => {
-  const h = Math.floor(minutes / 60);
+  if (minutes < 0) {
+    // the d/h/m split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
+  }
+  if (forceUnit || (minutes === 0 && !clockStyle)) {
+    // a zero has nothing to promote to, and rendering it as an empty string
+    // would be indistinguishable from a missing value
+    return formatSingleUnit(minutes, "minute", { lang, format });
+  }
+  const totalHours = Math.floor(minutes / 60);
   const m = minutes % 60;
+  // a time of day never goes past 24h, and its hour part is the clock hour
+  const d = clockStyle ? 0 : Math.floor(totalHours / 24);
+  const h = clockStyle ? totalHours : totalHours % 24;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const fmt = new Intl.DurationFormat(lang, {
       style: format, // "long", "short", or "narrow"
       ...(clockStyle ? { hoursDisplay: "always" } : {}),
     });
-    if (h === 0 && !clockStyle) {
-      return fmt.format({ minutes: m });
+    const duration = {};
+    if (d > 0) {
+      duration.days = d;
     }
-    if (m === 0) {
-      return fmt.format({ hours: h });
+    if (h > 0 || clockStyle || d > 0) {
+      duration.hours = h;
     }
-    return fmt.format({ hours: h, minutes: m });
+    if (m > 0 || (d === 0 && h === 0)) {
+      duration.minutes = m;
+    }
+    return fmt.format(duration);
   }
-  // format="compact": "1h30", "45min", "2h" — no minute symbol when hours are present
+  // format="compact": "1j12h", "1h30", "45min", "2h" — no minute symbol when hours are present
+  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
+  const dStr = d > 0 ? `${formatCompactNumber(d, lang)}${dSym}` : "";
   const hStr = clockStyle
     ? String(h).padStart(2, "0")
     : formatCompactNumber(h, lang);
-  if (h === 0 && !clockStyle) {
+  if (d === 0 && h === 0 && !clockStyle) {
     return `${m}${mSym}`;
   }
   if (m === 0) {
-    return `${hStr}${hSym}`;
+    if (clockStyle) {
+      // "10h00" on a clock, "2h" for a real 2 hours duration
+      return `${hStr}${hSym}00`;
+    }
+    return h === 0 ? dStr : `${dStr}${hStr}${hSym}`;
   }
-  return `${hStr}${hSym}${String(m).padStart(2, "0")}`;
+  return `${dStr}${hStr}${hSym}${String(m).padStart(2, "0")}`;
+};
+
+// "forceUnit": stay in the unit the value is expressed in, however big it gets
+const formatSingleUnit = (value, unit, { lang, format }) => {
+  if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
+    return new Intl.DurationFormat(lang, {
+      style: format,
+      // Intl drops a zero-valued unit, and "0 minute" is the whole point here
+      [`${unit}sDisplay`]: "always",
+    }).format({
+      [`${unit}s`]: value,
+    });
+  }
+  const symbol = naviI18n(`time.duration.${unit}_symbol`, undefined, { lang });
+  return `${formatCompactNumber(value, lang)}${symbol}`;
 };
 
 /**
@@ -19384,16 +19437,26 @@ const formatMinuteDuration = (
  * Delegates to {@link formatMinuteDuration} after converting hours to minutes.
  *
  * @param {number} hours
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in hours however
+ *   big it gets ("36 heures" instead of "1 jour et 12 heures"). Ignored for a
+ *   fractional value, which has no single-unit spelling.
  *
  * @example
  * formatHourDuration(1.5, { lang: "fr" })                       // "1 heure 30 minutes" (long, default)
  * formatHourDuration(1.5, { lang: "fr", format: "compact" })   // "1h30"
  * formatHourDuration(2, { lang: "en", format: "compact" })     // "2h"
+ * formatHourDuration(36, { lang: "fr" })                        // "1 jour et 12 heures"
+ * formatHourDuration(36, { lang: "fr", forceUnit: true })      // "36 heures"
  */
-const formatHourDuration = (hours, options) => {
+const formatHourDuration = (hours, options = {}) => {
+  const { lang = languagesSignal.value, format = "long", forceUnit } = options;
+  if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
+    return formatSingleUnit(hours, "hour", { lang, format });
+  }
+  // a fractional value has no single-unit spelling, it needs its minutes
   const totalMinutes = Math.round(hours * 60);
-  return formatMinuteDuration(totalMinutes, options);
+  return formatMinuteDuration(totalMinutes, { ...options, forceUnit: false });
 };
 
 /**
@@ -19402,7 +19465,9 @@ const formatHourDuration = (hours, options) => {
  * "compact" uses our own symbol-based notation.
  *
  * @param {number} seconds
- * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact" }} [options]
+ * @param {{ lang?: string, format?: "long"|"short"|"narrow"|"compact", forceUnit?: boolean }} [options]
+ * @param {boolean} [options.forceUnit=false] - Keep the value in seconds
+ *   however big it gets ("90 000 secondes" instead of "1 jour et 1 heure").
  *
  * @example
  * formatSecondDuration(90, { lang: "fr" })                       // "1 minute 30 secondes" (long, default)
@@ -19413,27 +19478,40 @@ const formatHourDuration = (hours, options) => {
  */
 const formatSecondDuration = (
   seconds,
-  { lang = languagesSignal.value, format = "long" } = {},
+  { lang = languagesSignal.value, format = "long", forceUnit = false } = {},
 ) => {
-  const h = Math.floor(seconds / 3600);
+  if (seconds < 0) {
+    // the d/h/m/s split below only holds for a positive value; formatting the
+    // magnitude and putting the sign back is the only reading that works
+    return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
+  }
+  if (forceUnit || seconds === 0) {
+    return formatSingleUnit(seconds, "second", { lang, format });
+  }
+  const totalHours = Math.floor(seconds / 3600);
+  const d = Math.floor(totalHours / 24);
+  const h = totalHours % 24;
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
     const fmt = new Intl.DurationFormat(lang, { style: format });
     const duration = {};
+    if (d > 0) duration.days = d;
     if (h > 0) duration.hours = h;
     if (m > 0) duration.minutes = m;
-    if (s > 0 || (h === 0 && m === 0)) duration.seconds = s;
+    if (s > 0 || (d === 0 && h === 0 && m === 0)) duration.seconds = s;
     return fmt.format(duration);
   }
-  // compact: "1h30m45s", "1m30s", "45s"
+  // compact: "1d1h30m45s", "1h30m45s", "1m30s", "45s"
+  const dSym = naviI18n("time.duration.day_symbol", undefined, { lang });
   const hSym = naviI18n("time.duration.hour_symbol", undefined, { lang });
   const mSym = naviI18n("time.duration.minute_symbol", undefined, { lang });
   const sSym = naviI18n("time.duration.second_symbol", undefined, { lang });
   const parts = [];
-  // m/s are always 0-59 by construction (never need grouping); h can be
+  // h/m/s are bounded by construction (never need grouping); d can be
   // arbitrarily large for a long duration.
-  if (h > 0) parts.push(`${formatCompactNumber(h, lang)}${hSym}`);
+  if (d > 0) parts.push(`${formatCompactNumber(d, lang)}${dSym}`);
+  if (h > 0) parts.push(`${h}${hSym}`);
   if (m > 0) parts.push(`${m}${mSym}`);
   if (s > 0 || parts.length === 0) parts.push(`${s}${sSym}`);
   return parts.join("");
@@ -19455,6 +19533,7 @@ const formatSecondDuration = (
  * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
  * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
  * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
+ * formatDuration({ hours: 0, minutes: 0 }, { lang: "fr" })                        // "0 minute"
  * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
  */
 const formatDuration = (
@@ -19512,6 +19591,12 @@ const formatDuration = (
       Object.keys(intlDuration).length > 0 &&
       !(hasNegative && hasPositive)
     ) {
+      if (!hasNegative && !hasPositive) {
+        return formatSingleUnit(0, smallestUnitOf(intlDuration), {
+          lang,
+          format,
+        });
+      }
       return new Intl.DurationFormat(lang, { style: format }).format(
         intlDuration,
       );
@@ -19526,7 +19611,8 @@ const formatDuration = (
   // it's dropped here too, regardless of whether the caller included the
   // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
   // present — Number("2a") is NaN, never === 0 — so those keep rendering
-  // as-is with their own unit symbol.
+  // as-is with their own unit symbol. When every component is zero there is
+  // nothing left to drop, so the zero itself is rendered — see below.
   const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
 
   const sym = (key) =>
@@ -19562,14 +19648,41 @@ const formatDuration = (
   }
 
   if (hasNonZero("seconds")) {
-    parts.push(`${formatCompactNumber(duration.seconds, lang)}${sym("second")}`);
+    parts.push(
+      `${formatCompactNumber(duration.seconds, lang)}${sym("second")}`,
+    );
   }
   if (hasNonZero("milliseconds")) {
     parts.push(
       `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
     );
   }
-  return parts.join("") || "0";
+  if (parts.length > 0) {
+    return parts.join("");
+  }
+  // everything was zero: say so in the smallest unit the caller mentioned,
+  // rather than a bare "0" whose unit the reader has to guess
+  const smallestUnit = smallestUnitOf(duration);
+  return smallestUnit ? `0${sym(smallestUnit)}` : "0";
+};
+
+const UNIT_KEYS = [
+  "years",
+  "months",
+  "weeks",
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+  "milliseconds",
+];
+const smallestUnitOf = (duration) => {
+  for (const key of [...UNIT_KEYS].reverse()) {
+    if (duration[key] !== undefined && duration[key] !== null) {
+      return key.slice(0, -1); // "seconds" -> "second"
+    }
+  }
+  return null;
 };
 
 /**
@@ -40322,10 +40435,11 @@ const TimeTime = ({
     }
     return null;
   });
-  if (!date) {
+  // toDate turns a non-finite number into an Invalid Date, which is an object
+  if (!date || isNaN(date.getTime())) {
     return jsx(TimeText, {
       ...props,
-      children: children
+      children: String(children)
     });
   }
   const hh = String(date.getHours()).padStart(2, "0");
@@ -40423,6 +40537,7 @@ const TimeMinute = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -40431,18 +40546,12 @@ const TimeMinute = ({
       children: format === "timestring" ? "--:--" : "--"
     });
   }
-  let minutes;
-  if (typeof children === "number") {
-    minutes = children;
-  } else {
-    const childrenAsNumber = Number(children);
-    if (isNaN(childrenAsNumber)) {
-      return jsx(TimeText, {
-        ...props,
-        children: children
-      });
-    }
-    minutes = childrenAsNumber;
+  const minutes = Number(children);
+  if (!Number.isFinite(minutes)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
   }
   const totalHours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
@@ -40456,7 +40565,8 @@ const TimeMinute = ({
   } else {
     text = formatMinuteDuration(minutes, {
       lang,
-      format
+      format,
+      forceUnit
     });
   }
   return jsx(TimeText, {
@@ -40469,6 +40579,7 @@ const TimeSecond = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -40477,18 +40588,12 @@ const TimeSecond = ({
       children: format === "timestring" ? "--:--:--" : "--"
     });
   }
-  let seconds;
-  if (typeof children === "number") {
-    seconds = children;
-  } else {
-    const n = Number(children);
-    if (isNaN(n)) {
-      return jsx(TimeText, {
-        ...props,
-        children: children
-      });
-    }
-    seconds = n;
+  const seconds = Number(children);
+  if (!Number.isFinite(seconds)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
   }
   const h = Math.floor(seconds / 3600);
   const m = Math.floor(seconds % 3600 / 60);
@@ -40501,7 +40606,8 @@ const TimeSecond = ({
   } else {
     text = formatSecondDuration(seconds, {
       lang,
-      format
+      format,
+      forceUnit
     });
   }
   return jsx(TimeText, {
@@ -40514,6 +40620,7 @@ const TimeHour = ({
   children,
   lang = languagesSignal.value,
   format = "long",
+  forceUnit = false,
   ...props
 }) => {
   if (children === undefined) {
@@ -40522,18 +40629,12 @@ const TimeHour = ({
       children: format === "timestring" ? "--:--" : "--"
     });
   }
-  let hours;
-  if (typeof children === "number") {
-    hours = children;
-  } else {
-    const childrenAsNumber = Number(children);
-    if (isNaN(childrenAsNumber)) {
-      return jsx(TimeText, {
-        ...props,
-        children: children
-      });
-    }
-    hours = childrenAsNumber;
+  const hours = Number(children);
+  if (!Number.isFinite(hours)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
   }
   if (format === "timestring") {
     const totalMinutes = Math.round(hours * 60);
@@ -40545,7 +40646,8 @@ const TimeHour = ({
   }
   const text = formatHourDuration(hours, {
     lang,
-    format
+    format,
+    forceUnit
   });
   return jsx(TimeText, {
     ...props,
@@ -44648,6 +44750,7 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
       flex-grow: 1;
       justify-content: inherit;
       pointer-events: none;
+      user-select: none;
 
       &[navi-placeholder] {
         color: var(--picker-placeholder-color);
@@ -44686,7 +44789,6 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
       outline: none;
       cursor: inherit;
       pointer-events: auto;
-      user-select: all;
 
       &::-webkit-calendar-picker-indicator {
         cursor: inherit;
