@@ -3,6 +3,7 @@ import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
@@ -16,6 +17,7 @@ import {
   useControlFacadeProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
 import { createOpenToken } from "../rules/control_callout.js";
@@ -328,6 +330,10 @@ const PickerButton = (props) => {
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
     popupWidthFitContent,
+    // Adds a clear button to the right slot, the same one type="search" puts at
+    // the end of an input: a picker holds a value the user chose, and unsetting
+    // it should not require reopening the popup to hunt for a "none" entry.
+    clearable,
     error,
   } = props;
   const isSingleLine = maxLines === 1;
@@ -489,9 +495,24 @@ const PickerButton = (props) => {
       )}
       {variant === "headless" || ui === "default" ? null : (
         <span className="navi_picker_right_slot">
-          <Icon size={iconSize}>
-            {icon === undefined ? <ChevronDownSvg /> : icon}
-          </Icon>
+          {clearable && value !== undefined && value !== "" ? (
+            <Button
+              command="--navi-clear"
+              commandFor={inputProps.id}
+              tabIndex="-1"
+              navi-focus-delegate={inputProps.id}
+              icon
+              variant="discrete"
+            >
+              <Icon size={iconSize}>
+                <CloseSvg />
+              </Icon>
+            </Button>
+          ) : (
+            <Icon size={iconSize}>
+              {icon === undefined ? <ChevronDownSvg /> : icon}
+            </Icon>
+          )}
         </span>
       )}
       <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
@@ -699,6 +720,7 @@ const PickerFirstResolver = (props) => {
  *   popoverMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
+ *   clearable?: boolean,
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,

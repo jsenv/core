@@ -182,6 +182,7 @@
         label,
         placeholder,
         searchPlaceholder,
+        surfaceTitle,
         createLabel,
         createTitle,
         createFields,
@@ -295,8 +296,9 @@
               }}
             >
               <Box flex="y" spacing="s" padding="s" expand>
-                {/* Search on top: the keyboard owns the bottom, anything
-                    docked there would end up covered */}
+                {/* Header, search, then list — the surface says what it is
+                    before saying what can be done in it. The keyboard owns the
+                    bottom of the screen, so nothing goes down there. */}
                 <Box flex="x" spacing="xs" alignY="center">
                   <Button
                     icon
@@ -309,17 +311,9 @@
                   >
                     ‹
                   </Button>
-                  <Input
-                    navi-list={`${id}_list`}
-                    type="search"
-                    placeholder={searchPlaceholder}
-                    value={searchSignal.value}
-                    uiAction={(next) => {
-                      searchSignal.value = next;
-                    }}
-                    autoComplete="off"
-                    expandX
-                  />
+                  <Text expandX>
+                    <strong>{surfaceTitle}</strong>
+                  </Text>
                   {/* Always available, and never disabled: creating does not
                       require having searched first, so the entry point must not
                       depend on the search box holding something */}
@@ -335,6 +329,17 @@
                     +
                   </Button>
                 </Box>
+                <Input
+                  navi-list={`${id}_list`}
+                  type="search"
+                  placeholder={searchPlaceholder}
+                  value={searchSignal.value}
+                  uiAction={(next) => {
+                    searchSignal.value = next;
+                  }}
+                  autoComplete="off"
+                  expandX
+                />
 
                 <List
                   selectable
@@ -490,7 +495,8 @@
                   id="club"
                   label="Lieu"
                   placeholder="Choisir un club…"
-                  searchPlaceholder="Rechercher un club…"
+                  searchPlaceholder="Rechercher un lieu…"
+                  surfaceTitle="Lieux"
                   createLabel="Créer le club"
                   createTitle="Nouveau club"
                   createFields={[
@@ -519,6 +525,7 @@
                   label="Joueur"
                   placeholder="Ajouter un joueur…"
                   searchPlaceholder="Rechercher un joueur…"
+                  surfaceTitle="Joueurs"
                   createLabel="Ajouter le joueur"
                   createTitle="Nouveau joueur"
                   createFields={[
