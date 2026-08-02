@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PROPAL: champ « choisir ou créer »</title>
+    <title>PROPAL: picker « choisir ou créer »</title>
     <style>
       body {
         margin: 0;
@@ -19,7 +19,7 @@
         font-size: 1.25rem;
       }
       .intro {
-        max-width: 640px;
+        max-width: 660px;
         margin: 0 0 20px;
         color: #555;
         font-size: 13px;
@@ -42,6 +42,13 @@
         height: 100%;
         padding: 16px;
         overflow-y: auto;
+      }
+      /* layer="local" keeps the dialog in the normal flow, so a field declared
+         after it would paint on top. The real app uses layer="top" (the
+         browser's own top layer) and needs none of this — it is only here
+         because the surface has to stay inside the fake phone */
+      .phone dialog[open] {
+        z-index: 5;
       }
       /* Stands in for the floating keyboard. It only shows while a real text
          input has focus, which is the whole point being demonstrated: opening
@@ -72,13 +79,6 @@
       .keyboard.up {
         transform: none;
       }
-      /* layer="local" keeps the dialog in the normal flow, so a field declared
-         after it would paint on top. The real app uses layer="top" (the
-         browser's own top layer) and needs none of this — it is only here
-         because the surface has to stay inside the fake phone */
-      .phone dialog[open] {
-        z-index: 5;
-      }
       .screen-title {
         margin: 0 0 18px;
         font-weight: 600;
@@ -108,8 +108,12 @@
         background: #1a1a2e;
         border-color: #1a1a2e;
       }
+      .detail {
+        color: #6b7280;
+        font-size: 12px;
+      }
       .state {
-        max-width: 640px;
+        max-width: 660px;
         margin: 16px auto 0;
         padding: 10px 12px;
         font-size: 12px;
@@ -118,28 +122,28 @@
         border: 1px solid #d6dae0;
         border-radius: 8px;
       }
-      .hint {
-        color: #6b7280;
-        font-size: 12px;
-      }
     </style>
   </head>
   <body>
-    <h1>Champ « choisir ou créer »</h1>
+    <h1>Picker « choisir ou créer »</h1>
     <p class="intro">
-      Un seul motif, réutilisé pour le lieu et pour les joueurs. Tape
-      <code>Mourat</code> pour voir la recherche, <code>Mouratoglou</code> pour
-      voir le garde-fou anti-doublon, <code>Tennis Club</code> pour voir la
-      création. La zone hachurée figure le clavier.
+      La façade du picker est le champ de recherche lui-même. Le toucher ouvre
+      la surface plein écran, qui contient la vraie recherche. Le
+      <strong>+</strong> déclare l'intention d'ajouter sans avoir à deviner que
+      la barre de recherche crée aussi. Les homonymes sont permis : deux
+      personnes peuvent porter le même nom, on les distingue sur l'email — deux
+      clubs sur l'adresse.
     </p>
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
+        createSearch,
         Dialog,
         Field,
         Input,
@@ -148,31 +152,26 @@
         useSearchText,
       } from "@jsenv/navi";
 
-      const normalize = (value) =>
-        value
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "");
+      // Name and detail are both searchable: with homonyms allowed, the detail
+      // is often the only thing telling two entries apart, so it has to be
+      // reachable from the search box too
+      const searchEntry = createSearch({
+        name: { getter: (entry) => entry.name, priority: 2 },
+        detail: { getter: (entry) => entry.detail || "", priority: 1 },
+      });
+
+      let idCounter = 0;
+      const nextId = () => `e${++idCounter}`;
 
       /*
-       * The proposal, in one component.
+       * The field is a real search input, readOnly: it looks and reads exactly
+       * like the search box it opens, but the typing happens in the surface,
+       * never here. Its clear button still works — that is the one edit it is
+       * allowed to receive, and the only way to unset a choice.
        *
-       * The field promotes itself to a full screen surface on tap: search at the
-       * top, results below, create at the bottom. A picker anchored to the field
-       * would have to share the height with the keyboard and end up with a
-       * 150px list; here the surface owns everything the keyboard doesn't, so
-       * the room given to results no longer depends on where the field sits in
-       * the form.
-       *
-       * Creating is a first-class action, not a last resort: at the start of the
-       * app's life most entries don't exist yet, so the button is always in the
-       * same place rather than hidden behind an empty result list.
-       *
-       * The search input is deliberately NOT focused on open. Once the app has
-       * lived a while, the people someone plays with are already in the list
-       * and picking is a single tap; raising the keyboard would cover the very
-       * list they came for. Typing stays one tap away for the rarer case.
+       * The surface opens on the list, keyboard down: once the app has lived a
+       * while, the people someone plays with are already there and picking is a
+       * single tap. Typing, and creating, stay one tap away for the rest.
        */
       const PickOrCreateField = ({
         id,
@@ -180,48 +179,47 @@
         placeholder,
         searchPlaceholder,
         createLabel,
-        items,
-        recentItems = [],
+        detailLabel,
+        detailPlaceholder,
+        entries,
+        recentIds = [],
         onCreate,
+        onDetail,
         value,
         onChange,
       }) => {
         const openSignal = useSignal(false);
         const searchSignal = useSignal("");
-        // Without a search, the ones played with recently come first: that is
-        // the tap the mature app is optimized for, and it must land above the
-        // fold without scrolling
-        const orderedItems = searchSignal.value
-          ? items
+        const detailOpenSignal = useSignal(false);
+        const detailSignal = useSignal("");
+        const searchInputRef = useRef(null);
+
+        // Without a search, the ones used recently come first: that is the tap
+        // the mature app is optimized for, and it must land above the fold
+        const orderedEntries = searchSignal.value
+          ? entries
           : [
-              ...recentItems.filter((item) => items.includes(item)),
-              ...items.filter((item) => !recentItems.includes(item)),
+              ...recentIds
+                .map((recentId) => entries.find((e) => e.id === recentId))
+                .filter(Boolean),
+              ...entries.filter((e) => !recentIds.includes(e.id)),
             ];
-        const [matchingItems, getMatchInfo] = useSearchText(
+        const [matchingEntries, getMatchInfo] = useSearchText(
           searchSignal.value,
-          orderedItems,
+          orderedEntries,
+          searchEntry,
         );
         const typed = searchSignal.value.trim();
-        const typedKey = normalize(typed);
 
-        const exact = items.find((item) => normalize(item) === typedKey);
-        // A name that contains, or is contained in, an existing one is almost
-        // always the same thing typed twice ("Mouratoglou" vs "Mouratoglou
-        // Country Club"). Offering it before the create button is what keeps
-        // the list clean during the months where everyone is creating.
-        const nearMatch =
-          !exact && typedKey.length >= 3
-            ? items.find((item) => {
-                const key = normalize(item);
-                return key.includes(typedKey) || typedKey.includes(key);
-              })
-            : undefined;
-        const canCreate = typed !== "" && !exact;
-
-        const choose = (item) => {
-          onChange(item);
+        const choose = (entry) => {
+          onChange(entry);
           openSignal.value = false;
           searchSignal.value = "";
+        };
+        const create = () => {
+          const entry = { id: nextId(), name: typed, detail: "" };
+          onCreate(entry);
+          choose(entry);
         };
 
         return (
@@ -231,26 +229,43 @@
               <Input
                 type="search"
                 placeholder={placeholder}
-                value={value}
-                // readOnly so that focusing the field cannot start an edit
-                // outside the full screen surface, which owns all the typing
+                value={value ? value.name : ""}
+                // readOnly so the façade can never start an edit of its own —
+                // the surface owns the typing. The clear button still reaches
+                // it, which is what uiAction below picks up.
                 readOnly
                 expandX
-                onFocus={() => {
-                  openSignal.value = true;
+                uiAction={() => {
+                  onChange(null);
                 }}
-                onClick={() => {
+                onClick={(e) => {
+                  // let the clear button clear instead of opening the surface
+                  if (e.target.closest("button")) {
+                    return;
+                  }
                   openSignal.value = true;
                 }}
               />
             </Field>
+            {value && value.detail && <p class="detail">{value.detail}</p>}
+            {value && !value.detail && (
+              <Button
+                discrete
+                onClick={() => {
+                  detailSignal.value = "";
+                  detailOpenSignal.value = true;
+                }}
+              >
+                Renseigner plus d'infos
+              </Button>
+            )}
 
             <Dialog
               layer="local"
               positionArea="top"
               marginWithContainer={0}
-              animation
               expand
+              animation
               open={openSignal.value}
               onClose={() => {
                 openSignal.value = false;
@@ -258,7 +273,7 @@
             >
               <Box flex="y" spacing="s" padding="s" expand>
                 {/* Search on top: the keyboard owns the bottom, anything
-                    docked there would be covered */}
+                    docked there would end up covered */}
                 <Box flex="x" spacing="xs" alignY="center">
                   <Button
                     discrete
@@ -269,6 +284,7 @@
                     ‹
                   </Button>
                   <Input
+                    ref={searchInputRef}
                     navi-list={`${id}_list`}
                     type="search"
                     placeholder={searchPlaceholder}
@@ -279,11 +295,18 @@
                     autoComplete="off"
                     expandX
                   />
+                  {/* Declares "I already know it is not in there" instead of
+                      making the user guess that the search box creates too */}
+                  <Button
+                    discrete
+                    onClick={() => {
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    +
+                  </Button>
                 </Box>
 
-                {!searchSignal.value && recentItems.length > 0 && (
-                  <Text>Récents</Text>
-                )}
                 <List
                   selectable
                   id={`${id}_list`}
@@ -291,49 +314,74 @@
                   separator
                   searchFallback={null}
                   expandY
-                  action={choose}
+                  action={(entryId) => {
+                    choose(entries.find((e) => e.id === entryId));
+                  }}
                 >
-                  {matchingItems.map((item, i) => (
+                  {matchingEntries.map((entry, i) => (
                     <List.Item
                       selectable
-                      key={item}
-                      id={`${id}_${normalize(item)}`}
+                      key={entry.id}
+                      id={`${id}_${entry.id}`}
                       index={i}
-                      value={item}
-                      selected={value === item}
-                      matchInfo={getMatchInfo(item)}
+                      value={entry.id}
+                      selected={value ? value.id === entry.id : false}
+                      matchInfo={getMatchInfo(entry)}
                       padding="s"
                     >
-                      {item}
+                      <Box flex="y">
+                        <Text>{entry.name}</Text>
+                        {entry.detail && (
+                          <Text className="detail">{entry.detail}</Text>
+                        )}
+                      </Box>
                     </List.Item>
                   ))}
                 </List>
 
-                {nearMatch && (
-                  <Box flex="y" spacing="xs">
-                    <Text>Vouliez-vous dire « {nearMatch} » ?</Text>
-                    <Button
-                      expandX
-                      onClick={() => {
-                        choose(nearMatch);
-                      }}
-                    >
-                      Oui, choisir « {nearMatch} »
-                    </Button>
-                  </Box>
-                )}
-                {canCreate && (
-                  <Button
-                    expandX
-                    discrete={Boolean(nearMatch)}
-                    onClick={() => {
-                      onCreate(typed);
-                      choose(typed);
-                    }}
-                  >
+                {/* No duplicate guard: two people really can share a name, two
+                    clubs really can share one. What tells them apart is the
+                    detail, not the name — so creating is never second-guessed,
+                    and nothing more is asked at this point */}
+                {typed !== "" && (
+                  <Button expandX onClick={create}>
                     {createLabel} « {typed} »
                   </Button>
                 )}
+              </Box>
+            </Dialog>
+
+            {/* Opt-in, after the fact: the detail is what will tell homonyms
+                apart later, but asking for it up front would tax the very
+                person who is in a hurry to create */}
+            <Dialog
+              layer="local"
+              positionArea="center"
+              animation
+              open={detailOpenSignal.value}
+              onClose={() => {
+                detailOpenSignal.value = false;
+              }}
+            >
+              <Box flex="y" spacing="s" padding="m">
+                <Text>{detailLabel}</Text>
+                <Input
+                  placeholder={detailPlaceholder}
+                  value={detailSignal.value}
+                  uiAction={(next) => {
+                    detailSignal.value = next;
+                  }}
+                  expandX
+                />
+                <Button
+                  expandX
+                  onClick={() => {
+                    onDetail(value, detailSignal.value.trim());
+                    detailOpenSignal.value = false;
+                  }}
+                >
+                  Enregistrer
+                </Button>
               </Box>
             </Dialog>
           </div>
@@ -341,24 +389,44 @@
       };
 
       const INITIAL_CLUBS = [
-        "Mouratoglou Country Club",
-        "Padel Attitude Antibes",
-        "Set Club Valbonne",
+        {
+          id: nextId(),
+          name: "Mouratoglou Country Club",
+          detail: "3550 route des Dolines, Biot",
+        },
+        {
+          id: nextId(),
+          name: "Padel Attitude",
+          detail: "Chemin de Saint-Claude, Antibes",
+        },
+        {
+          id: nextId(),
+          name: "Padel Attitude",
+          detail: "Route de Grasse, Valbonne",
+        },
       ];
-      const INITIAL_PLAYERS = ["Damien", "Flore", "Karim"];
+      const INITIAL_PLAYERS = [
+        { id: nextId(), name: "Flore", detail: "flore@mail.com" },
+        { id: nextId(), name: "Karim", detail: "karim@mail.com" },
+        { id: nextId(), name: "Damien", detail: "damien@mail.com" },
+        { id: nextId(), name: "Damien", detail: "d.martin@mail.com" },
+      ];
 
       const App = () => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
-        const clubSignal = useSignal("");
-        const playerSignal = useSignal("");
-        const createdSignal = useSignal([]);
+        const clubSignal = useSignal(null);
+        const playerSignal = useSignal(null);
 
-        const addTo = (listSignal) => (name) => {
-          if (!listSignal.value.includes(name)) {
-            listSignal.value = [...listSignal.value, name];
-            createdSignal.value = [...createdSignal.value, name];
-          }
+        const addTo = (listSignal) => (entry) => {
+          listSignal.value = [...listSignal.value, entry];
+        };
+        const setDetailOn = (listSignal, selectedSignal) => (entry, detail) => {
+          const updated = { ...entry, detail };
+          listSignal.value = listSignal.value.map((e) =>
+            e.id === entry.id ? updated : e,
+          );
+          selectedSignal.value = updated;
         };
 
         return (
@@ -371,14 +439,17 @@
                   id="club"
                   label="Lieu"
                   placeholder="Choisir un club…"
-                  searchPlaceholder="Rechercher ou saisir un nom…"
+                  searchPlaceholder="Rechercher un club…"
                   createLabel="Créer le club"
-                  items={clubsSignal.value}
-                  recentItems={["Mouratoglou Country Club"]}
+                  detailLabel="Adresse du club"
+                  detailPlaceholder="Rue, ville…"
+                  entries={clubsSignal.value}
+                  recentIds={[INITIAL_CLUBS[0].id]}
                   onCreate={addTo(clubsSignal)}
+                  onDetail={setDetailOn(clubsSignal, clubSignal)}
                   value={clubSignal.value}
-                  onChange={(next) => {
-                    clubSignal.value = next;
+                  onChange={(entry) => {
+                    clubSignal.value = entry;
                   }}
                 />
 
@@ -386,20 +457,22 @@
                   id="player"
                   label="Joueur"
                   placeholder="Ajouter un joueur…"
-                  searchPlaceholder="Rechercher ou saisir un nom…"
+                  searchPlaceholder="Rechercher un joueur…"
                   createLabel="Inviter"
-                  items={playersSignal.value}
-                  recentItems={["Flore", "Karim"]}
+                  detailLabel="Email du joueur"
+                  detailPlaceholder="prenom@mail.com"
+                  entries={playersSignal.value}
+                  recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
                   onCreate={addTo(playersSignal)}
+                  onDetail={setDetailOn(playersSignal, playerSignal)}
                   value={playerSignal.value}
-                  onChange={(next) => {
-                    playerSignal.value = next;
+                  onChange={(entry) => {
+                    playerSignal.value = entry;
                   }}
                 />
 
                 {/* Untouched, just there to show the field in its real context:
-                    a few options and no keyboard stay chips, they don't need
-                    any of the above */}
+                    a few options and no keyboard stay chips */}
                 <div class="field-block">
                   <p class="field-title">Durée</p>
                   <div class="chips">
@@ -411,7 +484,6 @@
                 <div class="field-block">
                   <p class="field-title">Niveau</p>
                   <div class="chips">
-                    <span class="chip">3</span>
                     <span class="chip">4</span>
                     <span class="chip on">5</span>
                     <span class="chip">6</span>
@@ -422,13 +494,15 @@
             </div>
 
             <div class="state">
-              lieu : {clubSignal.value || "—"}
+              lieu : {clubSignal.value ? clubSignal.value.name : "—"}
+              {clubSignal.value && clubSignal.value.detail
+                ? ` (${clubSignal.value.detail})`
+                : ""}
               <br />
-              joueur : {playerSignal.value || "—"}
-              <br />
-              <span class="hint">
-                créés : {createdSignal.value.join(", ") || "aucun"}
-              </span>
+              joueur : {playerSignal.value ? playerSignal.value.name : "—"}
+              {playerSignal.value && playerSignal.value.detail
+                ? ` (${playerSignal.value.detail})`
+                : ""}
             </div>
           </>
         );
