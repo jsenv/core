@@ -896,9 +896,9 @@
 
       const AdaptiveSection = () => (
         <section id="adaptive" class="demo-section">
-          <h2>6. sheetOnTouch</h2>
+          <h2>6. dockedOnTouch</h2>
           <p>
-            <code>sheetOnTouch</code> turns the dialog into a bottom sheet
+            <code>dockedOnTouch</code> turns the dialog into a bottom sheet
             (docked flush to the bottom edge, full width) when the pointer is
             coarse, and leaves it alone otherwise — under a finger the keyboard
             owns the bottom of the screen and a centered box ends up both
@@ -915,9 +915,9 @@
           <div class="demo-row">
             <div>
               <Button command="--navi-open" commandFor="adaptive_dialog">
-                sheetOnTouch
+                dockedOnTouch
               </Button>
-              <Dialog id="adaptive_dialog" sheetOnTouch animation>
+              <Dialog id="adaptive_dialog" dockedOnTouch animation>
                 <Box padding="m" flex="y" spacing="s">
                   <strong>Adaptive</strong>
                   <span>
@@ -932,11 +932,11 @@
                 command="--navi-open"
                 commandFor="adaptive_override_dialog"
               >
-                sheetOnTouch + positionArea="center"
+                dockedOnTouch + positionArea="center"
               </Button>
               <Dialog
                 id="adaptive_override_dialog"
-                sheetOnTouch
+                dockedOnTouch
                 positionArea="center"
                 animation
               >
@@ -981,7 +981,7 @@
               <a href="#open-from-start">Open from the start</a>
             </li>
             <li>
-              <a href="#adaptive">sheetOnTouch</a>
+              <a href="#adaptive">dockedOnTouch</a>
             </li>
           </ol>
         </nav>

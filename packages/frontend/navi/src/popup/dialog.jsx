@@ -180,13 +180,26 @@ const css = /* css */ `
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
 
-    /* Popup sets the same attribute on the dialog it renders, but its own
-       rule is scoped to .navi_popup — a Dialog used directly needs its own */
     &[data-expand-x] {
       width: var(--dialog-maxmax-width);
     }
     &[data-expand-y] {
       height: var(--dialog-maxmax-height);
+    }
+
+    /* Square off the corners that land on the container's own corners — see
+       the flushEdges computation in useDialogProps for when that happens */
+    &[data-flush-top][data-flush-left] {
+      border-top-left-radius: 0;
+    }
+    &[data-flush-top][data-flush-right] {
+      border-top-right-radius: 0;
+    }
+    &[data-flush-bottom][data-flush-right] {
+      border-bottom-right-radius: 0;
+    }
+    &[data-flush-bottom][data-flush-left] {
+      border-bottom-left-radius: 0;
     }
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
@@ -332,7 +345,7 @@ const css = /* css */ `
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
- * @param {boolean} [props.sheetOnTouch] - Turns the dialog into a bottom sheet
+ * @param {boolean} [props.dockedOnTouch] - Turns the dialog into a bottom sheet
  *   (docked flush to the bottom edge, full width) when the pointer is coarse,
  *   and leaves it alone otherwise. For a dialog meant to be interacted with
  *   rather than merely read: under a finger the keyboard owns the bottom of
@@ -355,7 +368,7 @@ const css = /* css */ `
  *   `inset(top)`) for the overlapping variant.
  * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
  * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
- *   container allows (`--dialog-maxmax-width`). Set by `sheetOnTouch` on a
+ *   container allows (`--dialog-maxmax-width`). Set by `dockedOnTouch` on a
  *   touch device.
  * @param {boolean} [props.expandY] - Same, vertically
  *   (`--dialog-maxmax-height`).
@@ -494,10 +507,13 @@ const DialogLocal = (props) => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
-// What a dialog turns into under a finger: docked flush to the bottom edge,
-// full width. Only defaults — an explicitly passed prop still wins, so the
-// sheet can be adjusted one axis at a time instead of being all-or-nothing.
-const SHEET = {
+// What a dialog turns into under a finger. "bottom" is not a taste: it puts
+// the dialog in the zone a handheld device is actually operated from — where
+// the thumbs rest and where the virtual keyboard comes up — instead of the
+// middle of the screen, which is the farthest point from both.
+// Only defaults: an explicitly passed prop still wins, so the docked shape can
+// be adjusted one axis at a time instead of being all-or-nothing.
+const DOCKED = {
   positionArea: "bottom",
   marginWithContainer: 0,
   expandX: true,
@@ -513,7 +529,7 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    sheetOnTouch,
+    dockedOnTouch,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -554,16 +570,16 @@ const useDialogProps = (props) => {
   const ref = rest.ref || defaultRef;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
-  const isSheet = sheetOnTouch && coarsePointerSignal.value;
+  const isDocked = dockedOnTouch && coarsePointerSignal.value;
   const positionArea =
-    positionAreaProp ?? (isSheet ? SHEET.positionArea : "center");
+    positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
   const marginWithContainer =
-    marginWithContainerProp ?? (isSheet ? SHEET.marginWithContainer : "3vvw");
+    marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer : "3vvw");
   // "expand || expandX", the shorthand semantics Popup used to apply before
-  // handing them over — the sheet default only applies when neither was said
+  // handing them over — the docked default only applies when neither was said
   const expandXUnset = expand === undefined && expandXProp === undefined;
   const expandX = expandXUnset
-    ? isSheet && SHEET.expandX
+    ? isDocked && DOCKED.expandX
     : Boolean(expand) || Boolean(expandXProp);
   const expandY = Boolean(expand) || Boolean(expandYProp);
   const backdropRef = useRef();
@@ -594,6 +610,20 @@ const useDialogProps = (props) => {
     y: "center",
     x: "center",
   };
+  // A corner sitting exactly on the container's own corner must not be
+  // rounded: the gap a radius carves out would show the container through it,
+  // reading as a rendering glitch rather than as a rounded box. A corner is on
+  // the container's corner when both of its edges are — which only happens
+  // with no margin, hence the gate.
+  const flushEdges = { top: false, right: false, bottom: false, left: false };
+  if (resolveSpacingSize(marginWithContainer) === 0) {
+    const { y, x } = parsedPositionArea;
+    flushEdges.top = expandY || y === "top" || y === "inset-top";
+    flushEdges.bottom = expandY || y === "bottom" || y === "inset-bottom";
+    flushEdges.left = expandX || x === "left" || x === "inset-left";
+    flushEdges.right = expandX || x === "right" || x === "inset-right";
+  }
+
   const isAutoAnimation = animation === true || animation === "auto";
   // Dialog never has a real anchor (see this file's top comment), so this
   // is always the "no anchor" path — the same one Popover's own custom
@@ -1035,6 +1065,10 @@ const useDialogProps = (props) => {
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,
+    "data-flush-top": flushEdges.top ? "" : undefined,
+    "data-flush-right": flushEdges.right ? "" : undefined,
+    "data-flush-bottom": flushEdges.bottom ? "" : undefined,
+    "data-flush-left": flushEdges.left ? "" : undefined,
     "onnavi_command": (e) => {
       onNaviCommand(e);
     },
