@@ -500,9 +500,17 @@ const PickerButton = (props) => {
               command="--navi-clear"
               commandFor={inputProps.id}
               tabIndex="-1"
-              navi-focus-delegate={inputProps.id}
+              // No navi-focus-delegate, unlike the identical button inside an
+              // input: handing focus back to the picker's own input is what
+              // opens the popup, and clearing is the opposite intention.
               icon
               variant="discrete"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
             >
               <Icon size={iconSize}>
                 <CloseSvg />
