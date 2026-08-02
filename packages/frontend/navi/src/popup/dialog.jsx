@@ -56,7 +56,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
@@ -168,6 +168,7 @@ const css = /* css */ `
     max-height: var(--x-dialog-max-height);
     margin: 0;
     flex-direction: column;
+
     background-color: var(--dialog-background-color);
     border-width: var(--dialog-border-width);
     border-style: solid;
@@ -177,6 +178,15 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+
+    /* Popup sets the same attribute on the dialog it renders, but its own
+       rule is scoped to .navi_popup — a Dialog used directly needs its own */
+    &[data-expand-x] {
+      width: var(--dialog-maxmax-width);
+    }
+    &[data-expand-y] {
+      height: var(--dialog-maxmax-height);
+    }
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
        stays independent from navi-animation's own opacity/scale/display
@@ -321,6 +331,16 @@ const css = /* css */ `
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
+ * @param {boolean} [props.adaptive] - Declares that this dialog is there to be
+ *   interacted with, and should take the shape that suits the device in use:
+ *   a centered box under a mouse, a full-width sheet docked to the bottom
+ *   edge under a finger (where the keyboard owns the bottom of the screen and
+ *   a centered box would be both cramped and out of thumb reach). It only
+ *   supplies defaults for `positionArea`, `marginWithContainer` and
+ *   `expandX`, so any of the three can still be pinned explicitly. Resolved
+ *   from `(pointer: coarse)` — the input device, not a width breakpoint: a
+ *   narrow desktop window is still a mouse — and re-resolved live when that
+ *   changes.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -331,6 +351,9 @@ const css = /* css */ `
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
+ * @param {boolean} [props.expandX] - Stretches the dialog to the full width
+ *   its container allows (`--dialog-maxmax-width`). Set by `adaptive` on a
+ *   touch device.
  * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
@@ -466,6 +489,51 @@ const DialogLocal = (props) => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
+/*
+ * "(pointer: coarse)" rather than a width breakpoint: what makes a bottom
+ * sheet the right shape is the finger and the keyboard it raises, not the
+ * number of pixels — a narrow desktop window is still a mouse. Subscribed to
+ * rather than read once so plugging a mouse, or toggling device emulation,
+ * re-resolves on the spot.
+ */
+const coarsePointerQuery =
+  typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia("(pointer: coarse)")
+    : null;
+const useCoarsePointer = () => {
+  const [coarsePointer, setCoarsePointer] = useState(() =>
+    coarsePointerQuery ? coarsePointerQuery.matches : false,
+  );
+  useEffect(() => {
+    if (!coarsePointerQuery) {
+      return undefined;
+    }
+    const onChange = () => {
+      setCoarsePointer(coarsePointerQuery.matches);
+    };
+    coarsePointerQuery.addEventListener("change", onChange);
+    onChange();
+    return () => {
+      coarsePointerQuery.removeEventListener("change", onChange);
+    };
+  }, []);
+  return coarsePointer;
+};
+
+// What "optimal for the device at hand" resolves to. Only defaults: an
+// explicitly passed prop always wins, so `adaptive` can be adjusted one axis
+// at a time instead of being all-or-nothing.
+const ADAPTIVE_TOUCH = {
+  positionArea: "bottom",
+  marginWithContainer: 0,
+  expandX: true,
+};
+const ADAPTIVE_POINTER = {
+  positionArea: "center",
+  marginWithContainer: "3vvw",
+  expandX: false,
+};
+
 const useDialogProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
@@ -476,13 +544,15 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
+    adaptive,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
-    positionArea = "center",
+    positionArea: positionAreaProp,
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
     // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
-    marginWithContainer = "3vvw",
+    marginWithContainer: marginWithContainerProp,
+    expandX: expandXProp,
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -511,6 +581,16 @@ const useDialogProps = (props) => {
   const isModal = layer === "top";
   const defaultRef = useRef();
   const ref = rest.ref || defaultRef;
+  const coarsePointer = useCoarsePointer();
+  const adaptiveDefaults = adaptive
+    ? coarsePointer
+      ? ADAPTIVE_TOUCH
+      : ADAPTIVE_POINTER
+    : ADAPTIVE_POINTER;
+  const positionArea = positionAreaProp ?? adaptiveDefaults.positionArea;
+  const marginWithContainer =
+    marginWithContainerProp ?? adaptiveDefaults.marginWithContainer;
+  const expandX = expandXProp ?? adaptiveDefaults.expandX;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
@@ -978,6 +1058,7 @@ const useDialogProps = (props) => {
     // openEffect's own positionDialog above), no data-position-area
     // attribute needed at all.
     "data-layer": layer,
+    "data-expand-x": expandX ? "" : undefined,
     "onnavi_command": (e) => {
       onNaviCommand(e);
     },
