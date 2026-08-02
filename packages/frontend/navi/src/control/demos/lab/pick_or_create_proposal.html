@@ -31,11 +31,26 @@
          box, which is the height of a single line. */
       .screen {
         max-width: 420px;
-        min-height: 100dvh;
+        min-height: 100%;
         margin: 0 auto;
         padding: 16px;
         background: #fff;
         box-shadow: 0 0 0 1px #d6dae0;
+      }
+      /* The positioned ancestor a layer="local" popup is confined to */
+      .frame {
+        position: relative;
+        width: 420px;
+        height: 720px;
+        margin: 0 auto 32px;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .variant-title {
+        max-width: 420px;
+        margin: 24px auto 8px;
+        color: #444;
+        font-size: 0.95rem;
       }
       /* Stands in for the floating keyboard. It only shows while a real text
          input has focus, which is the whole point being demonstrated: opening
@@ -419,7 +434,7 @@
         { id: nextId(), name: "Damien", detail: "d.martin@mail.com" },
       ];
 
-      const App = () => {
+      const Screen = ({ idPrefix, popupLayer }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
         const clubSignal = useSignal(null);
@@ -435,7 +450,8 @@
               <p class="screen-title">‹ Créer une partie</p>
 
               <PickOrCreateField
-                id="club"
+                popupLayer={popupLayer}
+                id={`${idPrefix}club`}
                 label="Lieu"
                 placeholder="Choisir un club…"
                 searchPlaceholder="Rechercher un lieu…"
@@ -464,7 +480,8 @@
               />
 
               <PickOrCreateField
-                id="player"
+                popupLayer={popupLayer}
+                id={`${idPrefix}player`}
                 label="Joueur"
                 placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
@@ -529,6 +546,26 @@
           </>
         );
       };
+
+      /*
+       * The same screen twice. layer="local" keeps the popup inside the framed
+       * column, which is what makes the fake phone readable on a desktop
+       * browser — but a local popup is confined to its positioned ancestor,
+       * so it is a demo staging device, not what the app ships. The second one
+       * runs on the real top layer: open it with device emulation on.
+       */
+      const App = () => (
+        <>
+          <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
+          <div class="frame">
+            <Screen idPrefix="local_" popupLayer="local" />
+          </div>
+          <h2 class="variant-title">
+            2. top layer — lié au viewport (à voir en émulation d'appareil)
+          </h2>
+          <Screen idPrefix="top_" />
+        </>
+      );
 
       render(<App />, document.querySelector("#app"));
 
