@@ -505,6 +505,13 @@ const PickerButton = (props) => {
               // opens the popup, and clearing is the opposite intention.
               icon
               variant="discrete"
+              // preventDefault, not just tabIndex="-1": a mousedown focuses
+              // its target before any click happens, and this button should
+              // never hold focus at all — the field keeps it.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               onPointerDown={(e) => {
                 e.stopPropagation();
               }}
@@ -729,6 +736,7 @@ const PickerFirstResolver = (props) => {
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
  *   clearable?: boolean,
+ *   popupLayer?: "top" | "local",
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,

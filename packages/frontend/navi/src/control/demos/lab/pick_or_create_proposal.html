@@ -136,6 +136,7 @@
         Dialog,
         Field,
         Input,
+        ControlGroup,
         Label,
         List,
         Picker,
@@ -167,6 +168,7 @@
        */
       const PickOrCreateField = ({
         id,
+        popupLayer,
         label,
         placeholder,
         searchPlaceholder,
@@ -182,8 +184,8 @@
         onChange,
       }) => {
         const searchSignal = useSignal("");
-        const formOpenSignal = useSignal(false);
-        const formValuesSignal = useSignal({});
+        const prefillSignal = useSignal("");
+        const formId = `${id}_form`;
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -202,35 +204,15 @@
         );
         const typed = searchSignal.value.trim();
 
-        // The form is the single way in, whether it was reached from the + or
-        // from the list: same fields, only the prefill differs
-        const openForm = (prefill) => {
-          const values = {};
-          for (const field of createFields) {
-            values[field.key] = field.prefill ? prefill : "";
-          }
-          formValuesSignal.value = values;
-          formOpenSignal.value = true;
-        };
-        const submitForm = () => {
-          // isNew rather than a save round-trip: the backend sees an entry with
-          // no id of its own when the match is finally submitted, and registers
-          // it then. Nothing to await here, nothing to undo if the user quits.
-          const entry = {
-            id: nextId(),
-            isNew: true,
-            ...toEntry(formValuesSignal.value),
-          };
+        // isNew rather than a save round-trip: the backend sees an entry with no
+        // id of its own when the match is finally submitted, and registers it
+        // then. Nothing to await here, nothing to undo if the user quits.
+        const submitForm = (values) => {
+          const entry = { id: nextId(), isNew: true, ...toEntry(values) };
           onCreate(entry);
-          formOpenSignal.value = false;
           onChange(entry);
           searchSignal.value = "";
         };
-        const formIncomplete = createFields.some(
-          (field) =>
-            !field.optional &&
-            !(formValuesSignal.value[field.key] || "").trim(),
-        );
 
         return (
           <div class="field-block">
@@ -246,6 +228,7 @@
               ui={value ? value.name : undefined}
               clearable
               mode="dialog"
+              popupLayer={popupLayer}
               positionArea="top"
               marginWithContainer={0}
               dialogExpand
@@ -257,7 +240,7 @@
                 searchSignal.value = "";
               }}
             >
-              <Box flex="y" spacing="s" padding="s" expand>
+              <Box flex="y" spacing="m" padding="m" expand>
                 {/* Header, search, then list — the surface says what it is
                     before saying what can be done in it. The keyboard owns the
                     bottom of the screen, so nothing goes down there. */}
@@ -278,12 +261,14 @@
                       require having searched first, so the entry point must not
                       depend on the search box holding something */}
                   <Button
+                    command="--navi-open"
+                    commandFor={formId}
                     icon
                     variant="discrete"
                     paddingX="s"
                     paddingY="xs"
                     onClick={() => {
-                      openForm("");
+                      prefillSignal.value = "";
                     }}
                   >
                     +
@@ -298,6 +283,8 @@
                     searchSignal.value = next;
                   }}
                   autoComplete="off"
+                  borderRadius="m"
+                  paddingY="s"
                   expandX
                 />
 
@@ -338,8 +325,10 @@
                       id={`${id}_create`}
                       index={matchingEntries.length}
                       padding="s"
+                      command="--navi-open"
+                      commandFor={formId}
                       onClick={() => {
-                        openForm(typed);
+                        prefillSignal.value = typed;
                       }}
                     >
                       <Text>
@@ -356,50 +345,51 @@
                 afterwards. Cheaper here than as an after-the-fact chore nobody
                 comes back to do. */}
             <Dialog
+              id={formId}
+              layer={popupLayer}
               positionArea="top"
               marginWithContainer={0}
               expand
               animation
-              open={formOpenSignal.value}
-              onClose={() => {
-                formOpenSignal.value = false;
-              }}
             >
-              <Box flex="y" spacing="s" padding="s" expand>
-                <Box flex="x" spacing="xs" alignY="center">
-                  <Button
-                    icon
-                    variant="discrete"
-                    paddingX="s"
-                    paddingY="xs"
-                    onClick={() => {
-                      formOpenSignal.value = false;
-                    }}
-                  >
-                    ‹
+              {/* ControlGroup aggregates its children into one object and hands
+                  it to action — no per-field signal to wire, and `required`
+                  does the gating the disabled button used to do by hand */}
+              <ControlGroup action={submitForm}>
+                <Box flex="y" spacing="m" padding="m" expand>
+                  <Box flex="x" spacing="xs" alignY="center">
+                    <Button
+                      command="--navi-close"
+                      icon
+                      variant="discrete"
+                      paddingX="s"
+                      paddingY="xs"
+                    >
+                      ‹
+                    </Button>
+                    <Text expandX>
+                      <strong>{createTitle}</strong>
+                    </Text>
+                  </Box>
+                  {createFields.map((field) => (
+                    <Field vertical key={`${field.key}_${prefillSignal.value}`}>
+                      <Label>{field.label}</Label>
+                      <Input
+                        name={field.key}
+                        defaultValue={field.prefill ? prefillSignal.value : ""}
+                        placeholder={field.placeholder}
+                        required={!field.optional}
+                        borderRadius="m"
+                        paddingY="s"
+                        expandX
+                      />
+                    </Field>
+                  ))}
+                  <Button command="--navi-send" expandX paddingY="s">
+                    {createLabel}
                   </Button>
-                  <Text>{createTitle}</Text>
                 </Box>
-                {createFields.map((field) => (
-                  <Field vertical key={field.key}>
-                    <Label>{field.label}</Label>
-                    <Input
-                      placeholder={field.placeholder}
-                      value={formValuesSignal.value[field.key] || ""}
-                      uiAction={(next) => {
-                        formValuesSignal.value = {
-                          ...formValuesSignal.value,
-                          [field.key]: next,
-                        };
-                      }}
-                      expandX
-                    />
-                  </Field>
-                ))}
-                <Button expandX disabled={formIncomplete} onClick={submitForm}>
-                  {createLabel}
-                </Button>
-              </Box>
+              </ControlGroup>
             </Dialog>
           </div>
         );

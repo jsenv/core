@@ -571,9 +571,10 @@ const PickerContentInsidePopup = (props) => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
-    // Popup documents it as forwarded as-is to Dialog/Popover, but popupProps
-    // is built explicitly here, so it only travels if named
-    layer,
+    // Popup documents its own `layer` as forwarded as-is to Dialog/Popover,
+    // but popupProps is built explicitly here, so it only travels if named.
+    // "popupLayer" rather than "layer": the picker itself is not the popup.
+    popupLayer,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -624,7 +625,7 @@ const PickerContentInsidePopup = (props) => {
       <Popup
         {...popupProps}
         mode={mode}
-        layer={layer}
+        layer={popupLayer}
         animation={animation}
         positionArea={
           isPopover
