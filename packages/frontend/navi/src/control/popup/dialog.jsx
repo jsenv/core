@@ -548,6 +548,33 @@ const DOCKED = {
   expandX: true,
 };
 
+// Only the keys actually present, never the whole props object: everything a
+// dialog takes that a control group knows nothing about (openController,
+// positionArea, animation…) would otherwise come back out as the group's
+// leftover props and land on the element as stray attributes. Copied key by key
+// rather than spread with undefined defaults because the group reads presence,
+// not value — an always-there `value: undefined` reads as "controlled with no
+// handler" and makes the whole popup read-only.
+const CONTROL_GROUP_PROP_NAMES = [
+  "name",
+  "action",
+  "uiAction",
+  "value",
+  "defaultValue",
+  "required",
+  "readOnly",
+  "disabled",
+];
+const pickControlGroupProps = (props) => {
+  const controlGroupProps = { ref: props.ref, id: props.id };
+  for (const name of CONTROL_GROUP_PROP_NAMES) {
+    if (Object.hasOwn(props, name)) {
+      controlGroupProps[name] = props[name];
+    }
+  }
+  return controlGroupProps;
+};
+
 const useDialogProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
@@ -567,18 +594,7 @@ const useDialogProps = (props) => {
   // element as stray attributes — which is exactly how navi-autofocus got
   // overwritten and `opencontroller="[object Object]"` appeared on it.
   const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
-    {
-      ref: props.ref,
-      id: props.id,
-      name: props.name,
-      action: props.action,
-      uiAction: props.uiAction,
-      value: props.value,
-      defaultValue: props.defaultValue,
-      required: props.required,
-      readOnly: props.readOnly,
-      disabled: props.disabled,
-    },
+    pickControlGroupProps(props),
     {
       controlType: "dialog",
       // "object" by default — a popup holds a form and hands back named values.
