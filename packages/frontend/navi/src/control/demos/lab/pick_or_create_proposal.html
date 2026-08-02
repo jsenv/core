@@ -127,8 +127,10 @@
   <body>
     <h1>Picker « choisir ou créer »</h1>
     <p class="intro">
-      La façade du picker est le champ de recherche lui-même. Le toucher ouvre
-      la surface plein écran, qui contient la vraie recherche. Le
+      La façade est un picker classique — chevron quand elle est vide, croix
+      pour la vider — pas un champ de recherche : elle dit ce qui est
+      sélectionné, celle de la surface dit ce qu'on cherche. Le toucher ouvre la
+      surface plein écran. Le
       <strong>+</strong> et la dernière ligne de la liste ouvrent le même
       formulaire de création — le second avec le nom déjà saisi. Les homonymes
       sont permis : deux personnes peuvent porter le même nom, on les distingue
@@ -152,6 +154,7 @@
         Text,
         useSearchText,
       } from "@jsenv/navi";
+      import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 
       // Name and detail are both searchable: with homonyms allowed, the detail
       // is often the only thing telling two entries apart, so it has to be
@@ -265,12 +268,15 @@
             >
               <Field vertical>
                 <Input
-                  type="search"
                   placeholder={placeholder}
                   value={value ? value.name : ""}
-                  // readOnly so the façade can never start an edit of its own:
-                  // the surface owns all the typing
+                  // Not a search box: this says what is selected, the one in
+                  // the surface says what is being looked for. Same widget for
+                  // both would read as one field that means two things.
+                  icon={<ChevronDownSvg />}
+                  clearable
                   readOnly
+                  clearableWhenReadOnly
                   expandX
                 />
               </Field>
@@ -391,15 +397,30 @@
                 comes back to do. */}
             <Dialog
               layer="local"
-              positionArea="center"
+              positionArea="top"
+              marginWithContainer={0}
+              expand
               animation
               open={formOpenSignal.value}
               onClose={() => {
                 formOpenSignal.value = false;
               }}
             >
-              <Box flex="y" spacing="s" padding="m">
-                <Text>{createTitle}</Text>
+              <Box flex="y" spacing="s" padding="s" expand>
+                <Box flex="x" spacing="xs" alignY="center">
+                  <Button
+                    icon
+                    variant="discrete"
+                    paddingX="s"
+                    paddingY="xs"
+                    onClick={() => {
+                      formOpenSignal.value = false;
+                    }}
+                  >
+                    ‹
+                  </Button>
+                  <Text>{createTitle}</Text>
+                </Box>
                 {createFields.map((field) => (
                   <Field vertical key={field.key}>
                     <Label>{field.label}</Label>
