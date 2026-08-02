@@ -182,6 +182,11 @@ const css = /* css */ `
     );
     max-height: var(--x-dialog-max-height);
     margin: 0;
+
+    /* The UA gives <dialog> a padding of its own (1em in Chrome). A popup is a
+       surface, not a box with an opinion about its content — Popover has none
+       either, and what is inside declares its own spacing. */
+    padding: 0;
     flex-direction: column;
 
     background-color: var(--dialog-background-color);
@@ -193,6 +198,22 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+    /* Pushed out of the way by another dialog opening on top of it (see the
+       "pushes" prop): it stays open — it is still the surface the user will
+       come back to — but it leaves the screen upward while the new one arrives
+       from the bottom, so the two read as one movement rather than as a stack.
+       Its own transition list is declared here because a dialog with no
+       animation of its own must still travel. */
+    &[data-pushed] {
+      transition-property: translate, opacity;
+      transition-duration: var(--popup-animation-duration);
+      transition-timing-function: ease;
+      pointer-events: none;
+    }
+    &[data-pushed="up"] {
+      opacity: 0;
+      translate: 0 -100%;
+    }
 
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local
@@ -611,6 +632,11 @@ const useDialogProps = (props) => {
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
     dockedOnTouch,
+    // Id of another dialog this one pushes out of the way while it is open —
+    // it slides up and fades, this one arrives from wherever positionArea says.
+    // The two stay two dialogs: each keeps its own state, its own validation
+    // and its own way out; only the movement is shared.
+    pushes,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -730,6 +756,10 @@ const useDialogProps = (props) => {
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
+    const pushedEl = pushes ? document.getElementById(pushes) : null;
+    if (pushedEl) {
+      pushedEl.setAttribute("data-pushed", "up");
+    }
     // What the dialog held when it opened: the answer to compare against when
     // it closes (nothing changed → nothing to commit) and the state to put
     // back when it is cancelled — a cancelled dialog must leave no trace, the
@@ -1060,6 +1090,9 @@ const useDialogProps = (props) => {
           event: closeEvent,
           name: "close",
         });
+      }
+      if (pushedEl) {
+        pushedEl.removeAttribute("data-pushed");
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {

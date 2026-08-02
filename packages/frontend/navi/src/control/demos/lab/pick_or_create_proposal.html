@@ -494,12 +494,14 @@
               id={formId}
               action={submitForm}
               layer={popupLayer}
-              positionArea="top"
+              // one movement, not a stack: the surface this form opened from
+              // leaves upward while the form arrives from the bottom
+              pushes={`${id}_picker_popup`}
+              positionArea="bottom"
+              animation="sliding"
               expand
-              animation
               flex="y"
               minHeight={0}
-              padding="0"
             >
               <Box header flex="x" spacing="xs" alignY="center" padding="m">
                 <Text expandX>
