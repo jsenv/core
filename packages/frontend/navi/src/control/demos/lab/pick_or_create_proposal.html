@@ -193,13 +193,15 @@
       // gesture the icon names is the one that dismisses it. It also leaves the
       // top left to the title, and leaves the left-pointing arrow to mean what
       // it means everywhere else on the page — going back in the navigation.
-      const DismissButton = ({ command = "--navi-cancel" }) => (
+      const DismissButton = (props) => (
         <Button
-          command={command}
+          command="--navi-cancel"
           icon
           variant="discrete"
           padding="s"
           aria-label="Fermer"
+          marginRight="-s"
+          {...props}
         >
           <Icon color="#4b5563">
             <ChevronUpSvg />
