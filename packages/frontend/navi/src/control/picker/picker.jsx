@@ -16,6 +16,7 @@ import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
+import { triggerNaviCommand } from "../commands.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
@@ -544,6 +545,22 @@ const PickerButton = (props) => {
                 // never hold focus at all — the field keeps it.
                 onMouseDown={(e) => {
                   e.preventDefault();
+                }}
+                onClick={(e) => {
+                  const clearButton = e.currentTarget;
+                  // A picker commits as soon as a value is chosen — its list
+                  // sends on select — so unsetting one has to commit too, or
+                  // the field would go empty while the caller still holds the
+                  // value it was given, and render it right back.
+                  // Deferred because the clear lands after this handler (the
+                  // command runs on the same click) and the action is bound to
+                  // the value at render time: sending any earlier would send
+                  // the value being cleared.
+                  setTimeout(() => {
+                    triggerNaviCommand(clearButton, "--navi-send", e, {
+                      optional: true,
+                    });
+                  });
                 }}
               >
                 <Icon size={iconSize}>

@@ -168,7 +168,14 @@ const css = /* css */ `
         flex: 1;
       }
     }
-    &[navi-nothing-to-display] {
+    /* :not(:has(...)) — a header or a footer is content of its own (a title, a
+       count, an "add" call to action) and is often most useful exactly when the
+       items are gone, so a list carrying one is never "nothing to display".
+       nothingToDisplay only ever counts items, which is right for it: this is
+       the one place that knows the chrome is there too. */
+    &[navi-nothing-to-display]:not(
+        :has(.navi_list_item_header, .navi_list_item_footer)
+      ) {
       display: none;
     }
     &[popover] {
