@@ -15,6 +15,16 @@
       /* Same shape as the dialog and wheel demos: each section is a card,
          headings own their anchor link, and the table of contents is a plain
          nested list of <Link href="#…">. */
+      .demo-overflow-filler {
+        padding: 6px 10px;
+        text-align: center;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      .demo-overflow-part {
+        color: white;
+        background: #1a237e;
+      }
       .demo-section h2 {
         position: relative;
         margin: 0 0 12px;
@@ -473,8 +483,62 @@
           <OpenAtStartSection />
           <AnchorTooBigSection />
           <NestedPopoverSection />
+          <OverflowSection />
           <ActionsSection />
         </div>
+      );
+
+      // ── Overflow ──────────────────────────────────────────────────────────
+
+      const OverflowFiller = ({ count = 12 }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="demo-overflow-filler">
+            {i + 1}
+          </div>
+        ));
+
+      // The same three shapes as the box demo (8_scrollable_demo.html) and the
+      // dialog one: what scrolls, and what stays.
+      const OverflowSection = () => (
+        <section class="demo-section">
+          <Heading id="overflow">Overflow</Heading>
+          <div class="demo-row">
+            <Button command="--navi-toggle" commandFor="pop_overflow_bare">
+              nothing
+            </Button>
+            <Popover id="pop_overflow_bare" maxHeight="220px">
+              <OverflowFiller />
+            </Popover>
+
+            <Button command="--navi-toggle" commandFor="pop_overflow_parts">
+              header + footer
+            </Button>
+            <Popover id="pop_overflow_parts" maxHeight="220px">
+              <Box header padding="s" className="demo-overflow-part">
+                header
+              </Box>
+              <OverflowFiller />
+              <Box footer padding="s" className="demo-overflow-part">
+                footer
+              </Box>
+            </Popover>
+
+            <Button command="--navi-toggle" commandFor="pop_overflow_body">
+              … + body
+            </Button>
+            <Popover id="pop_overflow_body" maxHeight="220px" padding="m">
+              <Box header padding="s" className="demo-overflow-part">
+                header
+              </Box>
+              <Box body>
+                <OverflowFiller />
+              </Box>
+              <Box footer padding="s" className="demo-overflow-part">
+                footer
+              </Box>
+            </Popover>
+          </div>
+        </section>
       );
 
       // ── uiAction / action ─────────────────────────────────────────────────
@@ -644,6 +708,9 @@
             </li>
             <li>
               <Link href="#nested-popovers">Nested popovers</Link>
+            </li>
+            <li>
+              <Link href="#overflow">Overflow</Link>
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>

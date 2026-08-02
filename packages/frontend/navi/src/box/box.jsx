@@ -112,7 +112,12 @@ import.meta.css = /* css */ `
     }
 
     &:has(> [data-body]) {
+      /* A column, declared here rather than expected from the caller: the three
+         parts only make sense stacked, and the body needs a flex context to be
+         told "take what is left" below. */
+      display: flex;
       padding: 0;
+      flex-direction: column;
       /* the body is the only thing that scrolls */
       --x-scrollable-overflow: hidden;
 

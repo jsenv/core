@@ -15,6 +15,20 @@
       /* Same shape as the wheel demo: each section is a card, headings own
          their anchor link, and the table of contents is a plain nested list of
          <Link href="#…">. */
+      .demo-overflow-filler {
+        padding: 6px 10px;
+        text-align: center;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      .demo-overflow-part {
+        color: white;
+        background: #1a237e;
+      }
+      /* Tall enough for a local dialog to have somewhere to overflow */
+      .demo-overflow-container {
+        height: 280px;
+      }
       .demo-section {
         margin-bottom: 40px;
         padding: 20px;
@@ -988,6 +1002,77 @@
         </section>
       );
 
+      // ── Overflow ──────────────────────────────────────────────────────────
+
+      const OverflowFiller = ({ count = 12 }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="demo-overflow-filler">
+            {i + 1}
+          </div>
+        ));
+
+      // The same three shapes as the box demo (8_scrollable_demo.html), in a
+      // dialog: what scrolls, and what stays.
+      const OverflowDialogs = ({ idPrefix, layer }) => (
+        <div class="demo-row">
+          <Button command="--navi-open" commandFor={`${idPrefix}_bare`}>
+            nothing
+          </Button>
+          <Dialog id={`${idPrefix}_bare`} layer={layer} maxHeight="220px">
+            <OverflowFiller />
+          </Dialog>
+
+          <Button command="--navi-open" commandFor={`${idPrefix}_parts`}>
+            header + footer
+          </Button>
+          <Dialog id={`${idPrefix}_parts`} layer={layer} maxHeight="220px">
+            <Box header padding="s" className="demo-overflow-part">
+              header
+            </Box>
+            <OverflowFiller />
+            <Box footer padding="s" className="demo-overflow-part">
+              footer
+            </Box>
+          </Dialog>
+
+          <Button command="--navi-open" commandFor={`${idPrefix}_body`}>
+            … + body
+          </Button>
+          <Dialog
+            id={`${idPrefix}_body`}
+            layer={layer}
+            maxHeight="220px"
+            padding="m"
+          >
+            <Box header padding="s" className="demo-overflow-part">
+              header
+            </Box>
+            <Box body>
+              <OverflowFiller />
+            </Box>
+            <Box footer padding="s" className="demo-overflow-part">
+              footer
+            </Box>
+          </Dialog>
+        </div>
+      );
+
+      const OverflowSection = () => (
+        <section class="demo-section">
+          <Heading id="overflow">Overflow</Heading>
+          <Heading level={3} id="overflow-top-layer">
+            top layer
+          </Heading>
+          <OverflowDialogs idPrefix="overflow_top" />
+          <Heading level={3} id="overflow-local-layer">
+            local layer
+          </Heading>
+          <div class="demo-container demo-overflow-container">
+            <OverflowDialogs idPrefix="overflow_local" layer="local" />
+          </div>
+        </section>
+      );
+
       // ── uiAction / action ─────────────────────────────────────────────────
 
       const ActionsSection = () => {
@@ -1141,6 +1226,17 @@
               <Link href="#adaptive">dockedOnTouch</Link>
             </li>
             <li>
+              <Link href="#overflow">Overflow</Link>
+              <ul>
+                <li>
+                  <Link href="#overflow-top-layer">top layer</Link>
+                </li>
+                <li>
+                  <Link href="#overflow-local-layer">local layer</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
               <Link href="#actions">uiAction / action</Link>
               <ul>
                 <li>
@@ -1169,6 +1265,7 @@
           <PointerInteractionOutsideSection />
           <OpenFromStartSection />
           <AdaptiveSection />
+          <OverflowSection />
           <ActionsSection />
         </div>
       );
