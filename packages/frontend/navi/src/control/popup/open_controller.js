@@ -5,8 +5,8 @@ import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   prepareFocusTransfer,
   markAutofocusRestoreOnClose,
-} from "../utils/focus/focus_transfer.js";
-import { useStableCallback } from "../utils/use_stable_callback.js";
+} from "../../utils/focus/focus_transfer.js";
+import { useStableCallback } from "../../utils/use_stable_callback.js";
 
 /**
  * Owns open/close decision-making for a popup (Dialog or Popover): guards

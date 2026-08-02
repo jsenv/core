@@ -13,7 +13,7 @@
 import { createContext } from "preact";
 import { useContext, useRef } from "preact/hooks";
 
-import { windowWidthSignal } from "../layout/responsive.js";
+import { windowWidthSignal } from "../../layout/responsive.js";
 
 export const PopupModeContext = createContext(undefined);
 

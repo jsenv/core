@@ -58,15 +58,15 @@ import { useEffect, useId, useRef } from "preact/hooks";
 
 import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { Box } from "../box/box.jsx";
-import { resolveSpacingSize } from "../box/box_style_util.js";
-import { onRequestInteraction } from "../control/rules/control_interaction.js";
-import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { Box } from "../../box/box.jsx";
+import { resolveSpacingSize } from "../../box/box_style_util.js";
+import { onRequestInteraction } from "../rules/control_interaction.js";
+import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import {
   useDebugFocus,
   useDebugInteraction,
   useDebugPopup,
-} from "../navi_debug.jsx";
+} from "../../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {

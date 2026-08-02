@@ -58,18 +58,17 @@ import {
 } from "@jsenv/dom";
 import { useEffect, useRef } from "preact/hooks";
 
-import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
-import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { Box } from "../box/box.jsx";
-import { resolveSpacingSize } from "../box/box_style_util.js";
-import { coarsePointerSignal } from "../layout/responsive.js";
-import { onRequestInteraction } from "../control/rules/control_interaction.js";
-import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import {
-  useDebugFocus,
-  useDebugInteraction,
-  useDebugPopup,
-} from "../navi_debug.jsx";
+  ControlgroupChildrenWrapper,
+  useControlgroupProps,
+} from "../control_hooks.jsx";
+import { dispatchRequestAction } from "../rules/control_action.js";
+import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
+import { Box } from "../../box/box.jsx";
+import { resolveSpacingSize } from "../../box/box_style_util.js";
+import { coarsePointerSignal } from "../../layout/responsive.js";
+import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
+import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
@@ -547,6 +546,26 @@ const DOCKED = {
 const useDialogProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
+  // Resolved before the group hook below rather than with the rest of the
+  // props: the group needs the dialog's own element to hang its state and its
+  // events on, and that is this ref.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // A dialog holds controls, so it IS one: it aggregates whatever named
+  // controls it contains into a single object and owns their joint state,
+  // exactly like a ControlGroup. That is also what makes it a form boundary —
+  // ControlgroupChildrenWrapper below resets the field contexts, so what is
+  // inside a dialog belongs to the dialog, not to the form around it.
+  const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
+    props,
+    {
+      controlType: "dialog",
+      stateType: "object",
+      allowCapture: true,
+      wantRequesterButtonState: true,
+      cascadeValidationToChildren: true,
+    },
+  );
   const {
     openController,
     // "top" (default) → real <dialog>, showModal(), the browser's own top
@@ -591,8 +610,7 @@ const useDialogProps = (props) => {
     ...rest
   } = props;
   const isModal = layer === "top";
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
   const isDocked = dockedOnTouch && coarsePointerSignal.value;
@@ -613,7 +631,6 @@ const useDialogProps = (props) => {
   const disarmBackdropHideRef = useRef(null);
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // positionDialog lives in openEffect's closure — created once, when the
   // dialog opens. Reading the placement props through a ref instead of that
@@ -983,6 +1000,16 @@ const useDialogProps = (props) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
+      // Closing is what commits — a dialog is asked a question and answers it
+      // when it goes away, the way a picker commits the value it was opened to
+      // choose. Cancelling (Escape, an outside click when asked to cancel) is
+      // the user saying "forget it", so nothing is committed then.
+      if (!closeEvent.detail?.isCancel) {
+        dispatchRequestAction(dialogEl, {
+          event: closeEvent,
+          name: "close",
+        });
+      }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
@@ -1105,12 +1132,6 @@ const useDialogProps = (props) => {
     "data-flush-right": flushEdges.right ? "" : undefined,
     "data-flush-bottom": flushEdges.bottom ? "" : undefined,
     "data-flush-left": flushEdges.left ? "" : undefined,
-    "onnavi_command": (e) => {
-      onNaviCommand(e);
-    },
-    "onnavi_request_interaction": (e) => {
-      onRequestInteraction(e, { debugInteraction });
-    },
     "onKeyDown": (e) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
@@ -1121,7 +1142,17 @@ const useDialogProps = (props) => {
       // onKeyDownShortcuts above instead.
       openController.requestClose(e, { isCancel: true });
     },
-    children,
+    // The group's own onnavi_command/onnavi_request_interaction land here too
+    // (they replace the pair this hook used to declare by hand) along with
+    // everything that makes the dialog a control: its name, its state, its
+    // action.
+    ...groupRootProps,
+    ...groupProps,
+    "children": (
+      <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
+        {children}
+      </ControlgroupChildrenWrapper>
+    ),
   });
 
   // Outside-click handling for layer="local" only — the via-attribute

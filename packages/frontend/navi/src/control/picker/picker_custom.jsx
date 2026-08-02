@@ -7,12 +7,12 @@ import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
-} from "@jsenv/navi/src/popup/open_controller.js";
+} from "@jsenv/navi/src/control/popup/open_controller.js";
 import {
   PopupModeContext,
   useResolvedPopupMode,
-} from "@jsenv/navi/src/popup/popup_mode.jsx";
-import { Popup } from "@jsenv/navi/src/popup/popup.jsx";
+} from "@jsenv/navi/src/control/popup/popup_mode.jsx";
+import { Popup } from "@jsenv/navi/src/control/popup/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";

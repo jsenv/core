@@ -216,12 +216,12 @@ export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
 // Popup (popover, dialog, tooltip, side panel ...)
-export { Dialog } from "./src/popup/dialog.jsx";
-export { Popover } from "./src/popup/popover.jsx";
-export { Popup } from "./src/popup/popup.jsx";
-export { usePopupMode } from "./src/popup/popup_mode.jsx";
-export { SidePanel } from "./src/popup/side_panel.jsx";
-export { createSlot } from "./src/popup/slot.jsx";
+export { Dialog } from "./src/control/popup/dialog.jsx";
+export { Popover } from "./src/control/popup/popover.jsx";
+export { Popup } from "./src/control/popup/popup.jsx";
+export { usePopupMode } from "./src/control/popup/popup_mode.jsx";
+export { SidePanel } from "./src/control/popup/side_panel.jsx";
+export { createSlot } from "./src/control/popup/slot.jsx";
 
 // Responsivness
 export {

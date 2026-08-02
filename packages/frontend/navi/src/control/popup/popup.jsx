@@ -21,7 +21,7 @@
  * actually renders.
  */
 
-import { withPropsClassName } from "../utils/with_props_class_name.js";
+import { withPropsClassName } from "../../utils/with_props_class_name.js";
 import { Dialog } from "./dialog.jsx";
 import { Popover } from "./popover.jsx";
 import { PopupModeContext, useResolvedPopupMode } from "./popup_mode.jsx";
