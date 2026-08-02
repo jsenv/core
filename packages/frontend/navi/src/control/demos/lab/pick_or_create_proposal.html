@@ -276,7 +276,6 @@
         // then. Nothing to await here, nothing to undo if the user quits.
         const submitForm = (values) => {
           const entry = { id: nextId(), isNew: true, ...toEntry(values) };
-          console.log("DEBUG submitForm", JSON.stringify(entry));
           onCreate(entry);
           onChange(entry);
           searchSignal.value = "";
@@ -318,7 +317,12 @@
                     bottom of the screen, so nothing goes down there. */}
                   <Box flex="x" spacing="xs" alignY="center">
                     <BackButton />
-                    <Text expandX>
+                    {/* 1rem, not the inherited size: this content lives inside
+                        the picker, so it would otherwise be sized for a control
+                        (13px) while the create form next to it — a plain dialog
+                        — sits at the page's own size. Two screens of the same
+                        flow, one size. */}
+                    <Text expandX fontSize="1rem">
                       <strong>{surfaceTitle}</strong>
                     </Text>
                     {/* Always available, and never disabled: creating does not
