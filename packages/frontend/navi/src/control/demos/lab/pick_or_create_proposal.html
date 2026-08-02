@@ -292,6 +292,10 @@
                 or clear button) and the popup — mode="dialog" just pins the
                 shape we want on every device instead of letting it pick. */}
               <Picker
+                // explicit id: the popup's history entry is keyed by it, and a
+                // generated one neither survives a reload nor stays clear of
+                // another component's own
+                id={id}
                 name={id}
                 placeholder={placeholder}
                 value={value ? value.id : undefined}
