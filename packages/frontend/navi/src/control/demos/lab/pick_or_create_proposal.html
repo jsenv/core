@@ -645,16 +645,21 @@
           </Field>
         </>
       );
+      // A field nobody filled has no ui state at all — undefined, not "" — so
+      // reading one always goes through here. navi is right to tell the two
+      // apart; a form that only wants text is the one that has to say so.
+      const text = (value) => (value || "").trim();
+
       const playerToEntry = (values) => {
-        const firstName = values.firstName.trim();
-        const lastName = values.lastName.trim();
+        const firstName = text(values.firstName);
+        const lastName = text(values.lastName);
         return {
           firstName,
           lastName,
           // name stays the searchable/displayable single string; the parts are
           // what let the list emphasize the family name
           name: `${firstName} ${lastName}`.trim(),
-          detail: values.email.trim(),
+          detail: text(values.email),
           side: values.side || "",
         };
       };
@@ -695,8 +700,8 @@
                 createTitle="Ajouter un lieu"
                 createForm={PlaceForm}
                 toEntry={(values) => ({
-                  name: values.name.trim(),
-                  detail: values.address.trim(),
+                  name: text(values.name),
+                  detail: text(values.address),
                 })}
                 entries={clubsSignal.value}
                 recentIds={[INITIAL_CLUBS[0].id]}
