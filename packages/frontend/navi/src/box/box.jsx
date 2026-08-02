@@ -91,7 +91,14 @@ import.meta.css = /* css */ `
        OUTSIDE the control it belongs to: a control flush against the edge of a
        scrolling area overflows it by those few pixels and raises a scrollbar. */
   [data-scrollable] {
-    overflow: auto;
+    overflow: var(--x-scrollable-overflow, auto);
+
+    &[data-scrollable-overflow="scroll"] {
+      --x-scrollable-overflow: scroll;
+    }
+    &[data-scrollable-padding] {
+      padding: var(--scrollable-padding, 0);
+    }
 
     > [data-header] {
       position: sticky;
@@ -106,7 +113,8 @@ import.meta.css = /* css */ `
 
     &:has(> [data-body]) {
       padding: 0;
-      overflow: hidden;
+      /* the body is the only thing that scrolls */
+      --x-scrollable-overflow: hidden;
 
       > [data-header],
       > [data-footer] {
@@ -301,29 +309,30 @@ export const Box = (props) => {
   });
   if (scrolls) {
     rest["data-scrollable"] = "";
-    const bodyChild = toChildArray(children).some(
-      (child) => child?.props?.body,
-    );
-    if (bodyChild) {
-      // The body is the only thing that scrolls, so this box must not: an
-      // inline overflow would win over the [data-body] rules in CSS.
-      rest.overflow = "hidden";
-      rest.overflowX = undefined;
-      rest.overflowY = undefined;
-      if (rest.padding !== undefined) {
-        // The padding follows the scrolling inward: a focus outline is drawn
-        // OUTSIDE the control it belongs to, so a control flush against the
-        // edge of a scrolling area overflows it and raises a scrollbar.
-        const resolvedPadding = resolveSpacingSize(rest.padding);
-        rest.style = {
-          ...rest.style,
-          "--scrollable-padding":
-            typeof resolvedPadding === "number"
-              ? `${resolvedPadding}px`
-              : resolvedPadding,
-        };
-        rest.padding = undefined;
-      }
+    if (rest.overflow === "auto" || rest.overflow === "scroll") {
+      // Handed over to CSS rather than kept as an inline style: a body inside
+      // makes the body the only thing that scrolls, and an inline overflow
+      // would win over that rule — see [data-scrollable] in this file's CSS.
+      rest["data-scrollable-overflow"] = rest.overflow;
+      rest.overflow = undefined;
+    }
+    if (rest.padding !== undefined) {
+      // Same reason as the overflow above, and the same handover: with a body
+      // inside, the padding belongs to the three parts rather than to this box
+      // — a focus outline is drawn OUTSIDE the control it belongs to, so a
+      // control flush against the edge of a scrolling area overflows it by
+      // those few pixels and raises a scrollbar. Only the `padding` shorthand
+      // for now; the per-side props would each need the same treatment.
+      const resolvedPadding = resolveSpacingSize(rest.padding);
+      rest["data-scrollable-padding"] = "";
+      rest.style = {
+        ...rest.style,
+        "--scrollable-padding":
+          typeof resolvedPadding === "number"
+            ? `${resolvedPadding}px`
+            : resolvedPadding,
+      };
+      rest.padding = undefined;
     }
   }
   if (header) {
