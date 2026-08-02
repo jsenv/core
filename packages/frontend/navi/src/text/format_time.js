@@ -320,7 +320,9 @@ export const formatMinuteDuration = (
     // magnitude and putting the sign back is the only reading that works
     return `-${formatMinuteDuration(-minutes, { lang, format, clockStyle, forceUnit })}`;
   }
-  if (forceUnit) {
+  if (forceUnit || (minutes === 0 && !clockStyle)) {
+    // a zero has nothing to promote to, and rendering it as an empty string
+    // would be indistinguishable from a missing value
     return formatSingleUnit(minutes, "minute", { lang, format });
   }
   const totalHours = Math.floor(minutes / 60);
@@ -369,7 +371,11 @@ export const formatMinuteDuration = (
 // "forceUnit": stay in the unit the value is expressed in, however big it gets
 const formatSingleUnit = (value, unit, { lang, format }) => {
   if (format !== "compact" && typeof Intl.DurationFormat !== "undefined") {
-    return new Intl.DurationFormat(lang, { style: format }).format({
+    return new Intl.DurationFormat(lang, {
+      style: format,
+      // Intl drops a zero-valued unit, and "0 minute" is the whole point here
+      [`${unit}sDisplay`]: "always",
+    }).format({
       [`${unit}s`]: value,
     });
   }
@@ -396,7 +402,7 @@ const formatSingleUnit = (value, unit, { lang, format }) => {
  */
 export const formatHourDuration = (hours, options = {}) => {
   const { lang = languagesSignal.value, format = "long", forceUnit } = options;
-  if (forceUnit && Number.isInteger(hours)) {
+  if (hours === 0 || (forceUnit && Number.isInteger(hours))) {
     return formatSingleUnit(hours, "hour", { lang, format });
   }
   // a fractional value has no single-unit spelling, it needs its minutes
@@ -430,7 +436,7 @@ export const formatSecondDuration = (
     // magnitude and putting the sign back is the only reading that works
     return `-${formatSecondDuration(-seconds, { lang, format, forceUnit })}`;
   }
-  if (forceUnit) {
+  if (forceUnit || seconds === 0) {
     return formatSingleUnit(seconds, "second", { lang, format });
   }
   const totalHours = Math.floor(seconds / 3600);
@@ -478,6 +484,7 @@ export const formatSecondDuration = (
  * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "narrow" })    // "2h 15min" (Intl narrow)
  * formatDuration({ hours: 2, minutes: 15 }, { lang: "fr", format: "compact" })   // "2h15" (custom, no minute symbol)
  * formatDuration({ minutes: 45 }, { lang: "fr", format: "compact" })             // "45min"
+ * formatDuration({ hours: 0, minutes: 0 }, { lang: "fr" })                        // "0 minute"
  * formatDuration({ hours: "2a", minutes: "15" }, { lang: "fr", format: "compact" }) // "2ah15"
  */
 export const formatDuration = (
@@ -535,6 +542,12 @@ export const formatDuration = (
       Object.keys(intlDuration).length > 0 &&
       !(hasNegative && hasPositive)
     ) {
+      if (!hasNegative && !hasPositive) {
+        return formatSingleUnit(0, smallestUnitOf(intlDuration), {
+          lang,
+          format,
+        });
+      }
       return new Intl.DurationFormat(lang, { style: format }).format(
         intlDuration,
       );
@@ -549,7 +562,8 @@ export const formatDuration = (
   // it's dropped here too, regardless of whether the caller included the
   // key at all. Non-numeric mid-edit values (e.g. "2a") still count as
   // present — Number("2a") is NaN, never === 0 — so those keep rendering
-  // as-is with their own unit symbol.
+  // as-is with their own unit symbol. When every component is zero there is
+  // nothing left to drop, so the zero itself is rendered — see below.
   const hasNonZero = (key) => has(key) && Number(duration[key]) !== 0;
 
   const sym = (key) =>
@@ -594,7 +608,32 @@ export const formatDuration = (
       `${formatCompactNumber(duration.milliseconds, lang)}${sym("millisecond")}`,
     );
   }
-  return parts.join("") || "0";
+  if (parts.length > 0) {
+    return parts.join("");
+  }
+  // everything was zero: say so in the smallest unit the caller mentioned,
+  // rather than a bare "0" whose unit the reader has to guess
+  const smallestUnit = smallestUnitOf(duration);
+  return smallestUnit ? `0${sym(smallestUnit)}` : "0";
+};
+
+const UNIT_KEYS = [
+  "years",
+  "months",
+  "weeks",
+  "days",
+  "hours",
+  "minutes",
+  "seconds",
+  "milliseconds",
+];
+const smallestUnitOf = (duration) => {
+  for (const key of [...UNIT_KEYS].reverse()) {
+    if (duration[key] !== undefined && duration[key] !== null) {
+      return key.slice(0, -1); // "seconds" -> "second"
+    }
+  }
+  return null;
 };
 
 /**
