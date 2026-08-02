@@ -37,21 +37,6 @@
         background: #fff;
         box-shadow: 0 0 0 1px #d6dae0;
       }
-      /* The positioned ancestor a layer="local" popup is confined to */
-      .frame {
-        position: relative;
-        width: 380px;
-        height: 320px;
-        margin: 0 auto 32px;
-        border-radius: 12px;
-        overflow: hidden;
-      }
-      .variant-title {
-        max-width: 380px;
-        margin: 24px auto 8px;
-        color: #444;
-        font-size: 0.95rem;
-      }
       /* Stands in for the floating keyboard. It only shows while a real text
          input has focus, which is the whole point being demonstrated: opening
          the surface must not raise it */
@@ -80,6 +65,29 @@
       }
       .keyboard.up {
         transform: none;
+      }
+      /* The positioned ancestor a layer="local" popup is confined to */
+      .frame {
+        position: relative;
+        width: 380px;
+        height: 320px;
+        margin: 0 auto 32px;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .variant-title {
+        max-width: 380px;
+        margin: 24px auto 8px;
+        color: #444;
+        font-size: 0.95rem;
+      }
+      /* navi's own `discrete` resolves to a transparent background, which reads
+         as plain white on a white surface. Same mechanism, grey at rest. */
+      .navi_dialog .navi_input[data-discrete] {
+        --x-background-color: #f1f3f5;
+      }
+      .navi_dialog .navi_input[data-discrete][data-focus] {
+        --x-background-color: #fff;
       }
       .screen-title {
         margin: 0 0 18px;
@@ -462,11 +470,11 @@
                 popupLayer={popupLayer}
                 id={`${idPrefix}club`}
                 label="Lieu"
-                placeholder="Choisir un club…"
+                placeholder="Choisir un un lieu"
                 searchPlaceholder="Rechercher un lieu…"
                 surfaceTitle="Choisir un lieu"
-                createLabel="Créer le club"
-                createTitle="Ajouter un club"
+                createLabel="Ajouter ce lieu"
+                createTitle="Ajouter un lieu"
                 createFields={[
                   { key: "name", label: "Nom", prefill: true },
                   {

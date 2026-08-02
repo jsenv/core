@@ -247,12 +247,18 @@ const css = /* css */ `
 
     &[data-discrete] {
       --x-background-color: transparent;
+      /* The border is part of what makes a field look like a field, so a
+         discrete one does without it until it is interacted with — same idea
+         as the background above, and the two come back together. */
+      --x-border-color: transparent;
 
       &[data-hover] {
         --x-background-color: white;
+        --x-border-color: var(--border-color-hover);
       }
       &[data-focus] {
         --x-background-color: white;
+        --x-border-color: var(--border-color);
       }
       &[data-readonly] {
         --x-background-color: transparent;

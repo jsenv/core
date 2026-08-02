@@ -44,6 +44,7 @@ import {
   applyNewPosition,
   createPubSub,
   findSelfOrAncestorFixedPosition,
+  getPositionedParent,
   getBorderSizes,
   onAncestorReopen,
   parsePositionArea,
@@ -69,7 +70,6 @@ import {
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
-  findPopupContainer,
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
   resolveDirectionValue,
@@ -665,7 +665,7 @@ const usePopoverProps = (props) => {
     // attribute, present from render regardless of whether it's actually
     // open yet — see offset_parent.js's own doc) — no isTopLayer branch
     // needed here.
-    const positionedAncestor = findPopupContainer(popoverEl);
+    const positionedAncestor = getPositionedParent(popoverEl);
     // Drives the via-attribute renderer's own position: fixed/absolute
     // switch (see this file's top comment) — set here, well before any
     // positioning/measurement runs, so there's no ordering subtlety to get

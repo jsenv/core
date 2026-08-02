@@ -4,7 +4,7 @@
  * of which of the two owns it.
  */
 
-import { findEvent, getPositionedParent } from "@jsenv/dom";
+import { findEvent } from "@jsenv/dom";
 
 /**
  * Disables pointer-events on `el` until its current CSS transition settles
@@ -141,25 +141,4 @@ export const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
   const xIsOverlapping =
     parsedPositionArea.x !== "left" && parsedPositionArea.x !== "right";
   return anchor || (yIsOverlapping && xIsOverlapping) ? "scaling" : "sliding";
-};
-
-/*
- * The box a layer="local" popup must be confined to.
- *
- * getPositionedParent stops at the first positioned ancestor, which inside a
- * Picker is the picker itself (picker.jsx sets position: relative on it, for
- * its own loading outline and right slot). Its popup is rendered in its
- * content, so that would cap the popup at the height of a single line of
- * trigger. A picker is never a meaningful container for its own popup, so it
- * is skipped — and so is any picker above it, for a picker inside a picker.
- */
-export const findPopupContainer = (element) => {
-  let container = getPositionedParent(element);
-  while (
-    container !== document.documentElement &&
-    container.classList.contains("navi_picker")
-  ) {
-    container = getPositionedParent(container);
-  }
-  return container;
 };

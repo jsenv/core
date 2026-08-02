@@ -48,6 +48,7 @@ import {
   applyNewPosition,
   createPubSub,
   getElementSignature,
+  getPositionedParent,
   parsePositionArea,
   pickPositionRelativeTo,
   snapToPixel,
@@ -72,7 +73,6 @@ import {
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
-  findPopupContainer,
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
   resolveDirectionValue,
@@ -360,12 +360,6 @@ const css = /* css */ `
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
- * @param {Element|{current: Element}|string} [props.container] - Only for
- *   `layer="local"`: the box the dialog is confined to, when the element it is
- *   rendered inside is not it (a Picker positions its own trigger, so a local
- *   popup rendered in its content would otherwise be capped at the trigger's
- *   own height). A string is resolved via `document.getElementById` when the
- *   dialog opens, same as `anchor`.
  * @param {boolean} [props.dockedOnTouch] - Turns the dialog into a bottom sheet
  *   (docked flush to the bottom edge, full width) when the pointer is coarse,
  *   and leaves it alone otherwise. For a dialog meant to be interacted with
@@ -550,7 +544,6 @@ const useDialogProps = (props) => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
-    container,
     dockedOnTouch,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
@@ -688,16 +681,9 @@ const useDialogProps = (props) => {
     // from dialogEl.parentElement, which for DialogLocal is the
     // .navi_dialog_clip_wrapper (itself position: absolute) rather than the
     // real, meaningful ancestor beyond it.
-    const resolvedContainer =
-      typeof container === "string"
-        ? document.getElementById(container)
-        : container && container.current !== undefined
-          ? container.current
-          : container;
     const positionedAncestor = isModal
       ? document.documentElement
-      : resolvedContainer ||
-        findPopupContainer(
+      : getPositionedParent(
           dialogEl.parentElement /* dialogEl is inside the clip_wrapper */,
         );
 

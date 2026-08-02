@@ -575,9 +575,6 @@ const PickerContentInsidePopup = (props) => {
     // but popupProps is built explicitly here, so it only travels if named.
     // "popupLayer" rather than "layer": the picker itself is not the popup.
     popupLayer,
-    // The box a local popup is confined to: the picker positions itself, so
-    // without this the popup would be capped at the trigger's own height
-    popupContainer,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -629,7 +626,6 @@ const PickerContentInsidePopup = (props) => {
         {...popupProps}
         mode={mode}
         layer={popupLayer}
-        container={popupContainer}
         animation={animation}
         positionArea={
           isPopover
