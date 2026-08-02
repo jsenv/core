@@ -45,6 +45,7 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
@@ -348,6 +349,10 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes the
+  // declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const { ui, discrete, variant, width = "maxLength" } = props;
   const [
     inputControlRootProps,

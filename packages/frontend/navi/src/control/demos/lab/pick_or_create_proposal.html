@@ -174,6 +174,7 @@
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+      import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
       // Name and detail are both searchable: with homonyms allowed, the detail
@@ -206,7 +207,12 @@
         surfaceTitle,
         createLabel,
         createTitle,
-        createFields,
+        // The form itself, as a component: what a place or a player asks for
+        // has nothing generic about it, and a list of field descriptors would
+        // hide behind an abstraction the very thing this demo is about. It
+        // receives the name already typed, and renders navi controls whose
+        // names are what submitForm reads.
+        createForm,
         toEntry,
         entries,
         recentIds = [],
@@ -218,6 +224,9 @@
         sideOverride,
         onSideChange,
       }) => {
+        // capitalized: JSX reads a lowercase name as an html tag, and props are
+        // camelCase — so the prop is createForm and the element is <CreateForm>
+        const CreateForm = createForm;
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
         const formId = `${id}_form`;
@@ -424,7 +433,17 @@
                         selected={sideOverride === side.value}
                         padding="s"
                       >
-                        {side.label}
+                        <Box flex="x" spacing="xs" alignY="center">
+                          <Text expandX>{side.label}</Text>
+                          {/* The player's own side, marked: it says whether
+                              tonight is an override, and it is the way back to
+                              the habit once you have left it */}
+                          {value && value.side === side.value && (
+                            <Icon size="0.9em" color="#b42318">
+                              <HeartSvg />
+                            </Icon>
+                          )}
+                        </Box>
                       </List.Item>
                     ))}
                   </List>
@@ -463,39 +482,13 @@
                       <strong>{createTitle}</strong>
                     </Text>
                   </Box>
-                  {createFields.map((field) => (
-                    <Field vertical key={`${field.key}_${prefillSignal.value}`}>
-                      <Label>
-                        {field.label}
-                        {/* Only the mandatory ones are marked: most of this
-                            form is optional, so marking those instead would
-                            put an asterisk almost everywhere */}
-                        {!field.optional && <span class="required"> *</span>}
-                      </Label>
-                      {field.options ? (
-                        <RadioGroup name={field.key} flex spacing="s">
-                          {field.options.map((option) => (
-                            <Field key={option.value} spacing="xs">
-                              <Input type="radio" value={option.value} />
-                              <Label>{option.label}</Label>
-                            </Field>
-                          ))}
-                        </RadioGroup>
-                      ) : (
-                        <Input
-                          name={field.key}
-                          defaultValue={
-                            field.prefill ? prefillSignal.value : ""
-                          }
-                          placeholder={field.placeholder}
-                          required={!field.optional}
-                          borderRadius="m"
-                          paddingY="s"
-                          expandX
-                        />
-                      )}
-                    </Field>
-                  ))}
+                  {/* keyed by the prefill: the fields are uncontrolled, so a
+                      new name typed in the search must give them a fresh
+                      defaultValue rather than keep the previous one */}
+                  <CreateForm
+                    key={prefillSignal.value}
+                    prefill={prefillSignal.value}
+                  />
                   <Button command="--navi-send" expandX paddingY="s">
                     {createTitle}
                   </Button>
@@ -601,22 +594,57 @@
       const sideLabel = (value) =>
         SIDES.find((side) => side.value === value)?.label;
 
-      const PLAYER_FIELDS = [
-        { key: "firstName", label: "Prénom", prefill: true },
-        { key: "lastName", label: "Nom" },
-        {
-          key: "email",
-          label: "Email",
-          placeholder: "prenom@mail.com",
-          optional: true,
-        },
-        {
-          key: "side",
-          label: "Côté",
-          optional: true,
-          options: SIDES,
-        },
-      ];
+      // The two forms, written out: this is the part of "create what is not
+      // there" that differs per entity, so it is the part worth seeing. The
+      // asterisk comes from Label's requiredIndicator, which reads the required
+      // state off the control itself — nothing to keep in sync by hand.
+      const TextField = ({ label, name, required, ...rest }) => (
+        <Field flex="y" spacingWithControl="s">
+          <Label requiredIndicator>{label}</Label>
+          <Input
+            name={name}
+            required={required}
+            borderRadius="m"
+            paddingY="s"
+            expandX
+            {...rest}
+          />
+        </Field>
+      );
+
+      const PlaceForm = ({ prefill }) => (
+        <>
+          {/* A place needs a name or an address to be recognizable again;
+              demanding both would be a lie, and demanding "one of the two" is
+              not something a form says well — so only the name is required */}
+          <TextField label="Nom" name="name" required defaultValue={prefill} />
+          <TextField label="Adresse" name="address" placeholder="Rue, ville…" />
+        </>
+      );
+
+      const PlayerForm = ({ prefill }) => (
+        <>
+          <TextField
+            label="Prénom"
+            name="firstName"
+            required
+            defaultValue={prefill}
+          />
+          <TextField label="Nom" name="lastName" required />
+          <TextField label="Email" name="email" placeholder="prenom@mail.com" />
+          <Field flex="y" spacingWithControl="s">
+            <Label>Côté</Label>
+            <RadioGroup name="side" flex="y" spacing="s">
+              {SIDES.map((side) => (
+                <Field key={side.value} spacing="xs">
+                  <Input type="radio" value={side.value} />
+                  <Label>{side.label}</Label>
+                </Field>
+              ))}
+            </RadioGroup>
+          </Field>
+        </>
+      );
       const playerToEntry = (values) => {
         const firstName = values.firstName.trim();
         const lastName = values.lastName.trim();
@@ -665,15 +693,7 @@
                 surfaceTitle="Choisir un lieu"
                 createLabel="ajouter ce lieu"
                 createTitle="Ajouter un lieu"
-                createFields={[
-                  { key: "name", label: "Nom", prefill: true },
-                  {
-                    key: "address",
-                    label: "Adresse",
-                    placeholder: "Rue, ville…",
-                    optional: true,
-                  },
-                ]}
+                createForm={PlaceForm}
                 toEntry={(values) => ({
                   name: values.name.trim(),
                   detail: values.address.trim(),
@@ -703,7 +723,7 @@
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
-                createFields={PLAYER_FIELDS}
+                createForm={PlayerForm}
                 toEntry={playerToEntry}
                 entries={playersSignal.value}
                 recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
@@ -723,7 +743,7 @@
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
-                createFields={PLAYER_FIELDS}
+                createForm={PlayerForm}
                 toEntry={playerToEntry}
                 entries={playersSignal.value}
                 recentIds={[INITIAL_PLAYERS[2].id]}

@@ -123,6 +123,18 @@ const resolveCommandProxySource = (element) => {
 const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
+// Both can enclose the send's source: a form inside a dialog is a control with
+// an action, inside an expandable. The nearer one owns the send — a button
+// inside that form means "submit this form", not "confirm the dialog around
+// it", and the same button placed directly in the dialog means the opposite.
+const resolveClosestSendTarget = (expandable, controlWithAction) => {
+  if (!expandable || !controlWithAction) {
+    return expandable || controlWithAction;
+  }
+  return expandable.contains(controlWithAction)
+    ? controlWithAction
+    : expandable;
+};
 
 const resolveCommandValue = (source, event) => {
   if (
@@ -246,6 +258,13 @@ registerNaviCommand("--navi-clear", (source, event) => {
   const clearableWhenReadOnly = Boolean(
     target.closest?.("[data-clearable-when-readonly]"),
   );
+  // A control that commits on an explicit send — a picker, whose list sends the
+  // moment a value is chosen — has nothing that would commit a clear: its
+  // action never runs on a ui state change. Left alone, the field goes empty
+  // while the caller still holds the value it gave, and renders it right back.
+  const fromSendOnlyControl = Boolean(
+    source.closest?.(`[navi-control=picker]`),
+  );
 
   return {
     target,
@@ -258,7 +277,16 @@ registerNaviCommand("--navi-clear", (source, event) => {
         // like any other interaction — it just isn't vetoed by readOnly.
         bypassInteractivity: clearableWhenReadOnly,
         prevented: () => event.preventDefault(),
-        allowed: () => dispatchRequestClearUIState(target, event),
+        allowed: () => {
+          dispatchRequestClearUIState(target, event);
+          if (fromSendOnlyControl) {
+            // After the clear, never before: the action is bound to the ui
+            // state signal, so this sends the value the control now holds.
+            triggerNaviCommand(source, "--navi-send", event, {
+              optional: true,
+            });
+          }
+        },
       });
 
       if (fromInput) {
@@ -292,8 +320,10 @@ registerNaviCommand("--navi-reset", (source, event) => {
 registerNaviCommand("--navi-send", (source, event) => {
   const target =
     resolveExplicitTarget(source) ||
-    resolveClosestExpandable(source) ||
-    resolveClosestControlWithAction(source);
+    resolveClosestSendTarget(
+      resolveClosestExpandable(source),
+      resolveClosestControlWithAction(source),
+    );
   if (!target) {
     return undefined;
   }

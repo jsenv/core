@@ -2,6 +2,7 @@ import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
 import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
@@ -16,7 +17,6 @@ import {
   ControlFacadeChildrenWrapper,
   useControlFacadeProps,
 } from "../control_hooks.jsx";
-import { triggerNaviCommand } from "../commands.js";
 import { getUIStateControllerById } from "../controller_registry.js";
 import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
@@ -351,6 +351,10 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes
+  // the declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const {
     ref,
     variant,
@@ -545,22 +549,6 @@ const PickerButton = (props) => {
                 // never hold focus at all — the field keeps it.
                 onMouseDown={(e) => {
                   e.preventDefault();
-                }}
-                onClick={(e) => {
-                  const clearButton = e.currentTarget;
-                  // A picker commits as soon as a value is chosen — its list
-                  // sends on select — so unsetting one has to commit too, or
-                  // the field would go empty while the caller still holds the
-                  // value it was given, and render it right back.
-                  // Deferred because the clear lands after this handler (the
-                  // command runs on the same click) and the action is bound to
-                  // the value at render time: sending any earlier would send
-                  // the value being cleared.
-                  setTimeout(() => {
-                    triggerNaviCommand(clearButton, "--navi-send", e, {
-                      optional: true,
-                    });
-                  });
                 }}
               >
                 <Icon size={iconSize}>

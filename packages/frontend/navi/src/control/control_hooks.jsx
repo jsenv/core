@@ -995,6 +995,7 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action } = props;
+
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
@@ -1212,7 +1213,9 @@ const useInteractiveProps = (
         controlHostProps["inert"] = "";
       }
     }
-    // inform any associated label of our state (connected, disabled, readOnly)
+    // inform any associated label of our state (connected, disabled, readOnly,
+    // required — a Label with requiredIndicator marks itself from it rather
+    // than being told twice what the control already knows)
     // dispatched directly on the label — works whether the label wraps the control
     // (Field as label) or is a separate element linked via htmlFor (Label component)
     useLayoutEffect(() => {
@@ -1229,11 +1232,12 @@ const useInteractiveProps = (
             detail: {
               disabled: disabledResolved,
               readOnly,
+              required: requiredResolved,
             },
           }),
         );
       }
-    }, [disabledResolved, readOnlyResolved, ref]);
+    }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
