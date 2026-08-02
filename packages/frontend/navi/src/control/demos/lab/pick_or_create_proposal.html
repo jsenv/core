@@ -128,17 +128,15 @@
     <h1>Picker « choisir ou créer »</h1>
     <p class="intro">
       La façade du picker est le champ de recherche lui-même. Le toucher ouvre
-      la surface plein écran, qui contient la vraie recherche. Le
-      <strong>+</strong> déclare l'intention d'ajouter sans avoir à deviner que
-      la barre de recherche crée aussi. Les homonymes sont permis : deux
-      personnes peuvent porter le même nom, on les distingue sur l'email — deux
-      clubs sur l'adresse.
+      la surface plein écran, qui contient la vraie recherche. Dès qu'on tape
+      quelque chose, créer est proposé en bas — même si le nom existe déjà :
+      deux personnes peuvent porter le même nom, on les distingue sur l'email,
+      deux clubs sur l'adresse. Tape « Damien » pour le voir.
     </p>
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -192,7 +190,6 @@
         const searchSignal = useSignal("");
         const detailOpenSignal = useSignal(false);
         const detailSignal = useSignal("");
-        const searchInputRef = useRef(null);
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -225,28 +222,33 @@
         return (
           <div class="field-block">
             <p class="field-title">{label}</p>
-            <Field vertical>
-              <Input
-                type="search"
-                placeholder={placeholder}
-                value={value ? value.name : ""}
-                // readOnly so the façade can never start an edit of its own —
-                // the surface owns the typing. The clear button still reaches
-                // it, which is what uiAction below picks up.
-                readOnly
-                expandX
-                uiAction={() => {
+            {/* The handler sits on the wrapper, not on the input: the clear
+                button is a sibling of the <input> inside the field, so a
+                handler on the input itself never sees it. And readOnly stops
+                --navi-clear from reaching the value anyway (readOnly means
+                "not editable", and navi is right to hold that line), so the
+                façade unsets the selection itself. */}
+            <div
+              onClick={(e) => {
+                if (e.target.closest("button")) {
                   onChange(null);
-                }}
-                onClick={(e) => {
-                  // let the clear button clear instead of opening the surface
-                  if (e.target.closest("button")) {
-                    return;
-                  }
-                  openSignal.value = true;
-                }}
-              />
-            </Field>
+                  return;
+                }
+                openSignal.value = true;
+              }}
+            >
+              <Field vertical>
+                <Input
+                  type="search"
+                  placeholder={placeholder}
+                  value={value ? value.name : ""}
+                  // readOnly so the façade can never start an edit of its own:
+                  // the surface owns all the typing
+                  readOnly
+                  expandX
+                />
+              </Field>
+            </div>
             {value && value.detail && <p class="detail">{value.detail}</p>}
             {value && !value.detail && (
               <Button
@@ -265,7 +267,7 @@
               positionArea="top"
               marginWithContainer={0}
               expand
-              animation
+              // animation
               open={openSignal.value}
               onClose={() => {
                 openSignal.value = false;
@@ -284,7 +286,6 @@
                     ‹
                   </Button>
                   <Input
-                    ref={searchInputRef}
                     navi-list={`${id}_list`}
                     type="search"
                     placeholder={searchPlaceholder}
@@ -295,16 +296,6 @@
                     autoComplete="off"
                     expandX
                   />
-                  {/* Declares "I already know it is not in there" instead of
-                      making the user guess that the search box creates too */}
-                  <Button
-                    discrete
-                    onClick={() => {
-                      searchInputRef.current?.focus();
-                    }}
-                  >
-                    +
-                  </Button>
                 </Box>
 
                 <List
@@ -314,7 +305,7 @@
                   separator
                   searchFallback={null}
                   expandY
-                  action={(entryId) => {
+                  uiAction={(entryId) => {
                     choose(entries.find((e) => e.id === entryId));
                   }}
                 >
@@ -328,6 +319,9 @@
                       selected={value ? value.id === entry.id : false}
                       matchInfo={getMatchInfo(entry)}
                       padding="s"
+                      onClick={() => {
+                        choose(entry);
+                      }}
                     >
                       <Box flex="y">
                         <Text>{entry.name}</Text>
@@ -339,9 +333,10 @@
                   ))}
                 </List>
 
-                {/* No duplicate guard: two people really can share a name, two
-                    clubs really can share one. What tells them apart is the
-                    detail, not the name — so creating is never second-guessed,
+                {/* Offered as soon as anything is typed, exact match included:
+                    two people really can share a name, two clubs really can
+                    share one. The matching entry is right there in the list for
+                    whoever meant that one — creating is never second-guessed,
                     and nothing more is asked at this point */}
                 {typed !== "" && (
                   <Button expandX onClick={create}>
