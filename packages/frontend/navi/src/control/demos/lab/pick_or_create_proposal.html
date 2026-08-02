@@ -128,10 +128,11 @@
     <h1>Picker « choisir ou créer »</h1>
     <p class="intro">
       La façade du picker est le champ de recherche lui-même. Le toucher ouvre
-      la surface plein écran, qui contient la vraie recherche. Dès qu'on tape
-      quelque chose, créer est proposé en bas — même si le nom existe déjà :
-      deux personnes peuvent porter le même nom, on les distingue sur l'email,
-      deux clubs sur l'adresse. Tape « Damien » pour le voir.
+      la surface plein écran, qui contient la vraie recherche. L'action de
+      création est juste sous la recherche, toujours présente et inerte tant que
+      rien n'est saisi — même si le nom existe déjà : deux personnes peuvent
+      porter le même nom, on les distingue sur l'email, deux clubs sur
+      l'adresse. Tape « Damien » pour le voir.
     </p>
     <div id="app"></div>
 
@@ -278,7 +279,8 @@
                     docked there would end up covered */}
                 <Box flex="x" spacing="xs" alignY="center">
                   <Button
-                    discrete
+                    icon
+                    variant="discrete"
                     onClick={() => {
                       openSignal.value = false;
                     }}
@@ -297,6 +299,15 @@
                     expandX
                   />
                 </Box>
+
+                {/* Right under the search and always present: at the bottom
+                    of a full height surface it sat too far from the text that
+                    enables it to be noticed, and showing it only once something
+                    is typed shifted the whole list down on the first keystroke.
+                    Kept inert rather than hidden, so nothing moves. */}
+                <Button expandX disabled={typed === ""} onClick={create}>
+                  {typed === "" ? createLabel : `${createLabel} « ${typed} »`}
+                </Button>
 
                 <List
                   selectable
@@ -332,17 +343,6 @@
                     </List.Item>
                   ))}
                 </List>
-
-                {/* Offered as soon as anything is typed, exact match included:
-                    two people really can share a name, two clubs really can
-                    share one. The matching entry is right there in the list for
-                    whoever meant that one — creating is never second-guessed,
-                    and nothing more is asked at this point */}
-                {typed !== "" && (
-                  <Button expandX onClick={create}>
-                    {createLabel} « {typed} »
-                  </Button>
-                )}
               </Box>
             </Dialog>
 
@@ -453,7 +453,7 @@
                   label="Joueur"
                   placeholder="Ajouter un joueur…"
                   searchPlaceholder="Rechercher un joueur…"
-                  createLabel="Inviter"
+                  createLabel="Ajouter le joueur"
                   detailLabel="Email du joueur"
                   detailPlaceholder="prenom@mail.com"
                   entries={playersSignal.value}
