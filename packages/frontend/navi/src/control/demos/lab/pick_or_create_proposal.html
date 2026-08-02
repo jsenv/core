@@ -243,7 +243,6 @@
               value={value ? value.id : undefined}
               ui={value ? value.name : undefined}
               clearable
-              iconSpacing="s"
               mode="dialog"
               popupLayer={popupLayer}
               positionArea="top"
@@ -369,7 +368,7 @@
                 <Text className="detail">Côté</Text>
                 <RadioGroup
                   name={`${id}_side`}
-                  horizontal
+                  flex
                   spacing="s"
                   value={sideOverride}
                   uiAction={onSideChange}
@@ -421,7 +420,7 @@
                     <Field vertical key={`${field.key}_${prefillSignal.value}`}>
                       <Label>{field.label}</Label>
                       {field.options ? (
-                        <RadioGroup name={field.key} horizontal spacing="s">
+                        <RadioGroup name={field.key} flex spacing="s">
                           {field.options.map((option) => (
                             <Field key={option.value} spacing="xs">
                               <Input type="radio" value={option.value} />
@@ -545,7 +544,7 @@
                 popupLayer={popupLayer}
                 id={`${idPrefix}club`}
                 label="Lieu"
-                placeholder="Choisir un un lieu"
+                placeholder="Choisir un lieu"
                 searchPlaceholder="Rechercher un lieu…"
                 surfaceTitle="Choisir un lieu"
                 createLabel="Ajouter ce lieu"
