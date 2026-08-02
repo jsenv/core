@@ -230,9 +230,28 @@ export const Box = (props) => {
 
     children,
     separator,
+    // Layout roles inside a scrolling container (a Dialog, a Popover): the
+    // header stays at the top and the footer at the bottom while the rest
+    // scrolls, or — when a body is present — the body is what scrolls and the
+    // two others simply sit outside it. Carried as data attributes because the
+    // container is the one that knows how to honour them, and it only has CSS
+    // to reach its children with. Same words as List.Item's own header/footer.
+    header,
+    footer,
+    body,
     ...rest
   } = props;
   const TagName = as;
+
+  if (header) {
+    rest["data-header"] = "";
+  }
+  if (footer) {
+    rest["data-footer"] = "";
+  }
+  if (body) {
+    rest["data-body"] = "";
+  }
 
   const defaultDisplay = getDefaultDisplay(TagName);
   // Read the parent flow early so we can use it when display="inherit" is requested.

@@ -318,8 +318,11 @@
                   {/* Header, search, then list — the surface says what it is
                     before saying what can be done in it. The keyboard owns the
                     bottom of the screen, so nothing goes down there. */}
-                  <Box flex="x" spacing="xs" alignY="center">
-                    <BackButton />
+                  {/* No way back in it on purpose: this surface is closed by
+                      clicking outside. A back arrow is for a surface opened ON
+                      TOP of another one — the create form below — where leaving
+                      means returning somewhere. */}
+                  <Box header flex="x" spacing="xs" alignY="center">
                     {/* 1rem, not the inherited size: this content lives inside
                         the picker, so it would otherwise be sized for a control
                         (13px) while the create form next to it — a plain dialog
@@ -500,28 +503,20 @@
               flex="y"
               minHeight={0}
             >
-              <Box flex="x" spacing="xs" alignY="center">
-                {/* cancels rather than closes: leaving a form by its back
-                      arrow is giving up on it, not answering it */}
+              <Box header flex="x" spacing="xs" alignY="center">
+                {/* the back arrow belongs here: this dialog opened on top of
+                    the choosing surface, so leaving it means going back to
+                    something. It cancels rather than closes — giving up on a
+                    form is not answering it */}
                 <BackButton command="--navi-cancel" />
                 <Text expandX>
                   <strong>{createTitle}</strong>
                 </Text>
               </Box>
-              {/* The fields scroll, not the whole surface: the title stays
-                      readable and the two buttons stay under the thumb even
-                      when the form is taller than what is left of the screen
-                      (the keyboard takes half of it). */}
-              <Box
-                flex="y"
-                spacing="m"
-                expandY
-                // a flex child refuses to shrink below its content unless
-                // told it may — without this the fields push the dialog
-                // taller instead of scrolling inside it
-                minHeight={0}
-                overflowY="auto"
-              >
+              {/* body: the fields are what scrolls, so the header above and
+                  the footer below stay put — no sizing to arrange by hand, the
+                  dialog knows what these three roles mean */}
+              <Box body flex="y" spacing="m">
                 {/* keyed by the prefill: the fields are uncontrolled, so a
                         new name typed in the search must give them a fresh
                         defaultValue rather than keep the previous one */}
@@ -530,12 +525,14 @@
                   prefill={prefillSignal.value}
                 />
               </Box>
-              <Box flex="y" spacing="s">
+              <Box footer flex="y" spacing="s">
                 {/* --navi-close, not --navi-send: closing IS the commit now,
-                      and the dialog only runs its action if something was
-                      actually filled in */}
+                    and the dialog only runs its action if something was
+                    actually filled in. "Confirmer" rather than the title again:
+                    the header already says what is being added, and the same
+                    act deserves the same word wherever it appears */}
                 <Button command="--navi-close" expandX paddingY="s">
-                  {createTitle}
+                  Confirmer
                 </Button>
                 {/* --navi-cancel, the same way out as the arrow above, where
                       the thumb already is once the form is filled: giving up on
