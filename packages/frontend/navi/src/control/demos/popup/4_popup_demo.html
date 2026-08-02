@@ -25,7 +25,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState } from "preact/hooks";
-      import { Box, Button, Field, Input, Label, Popup } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        Field,
+        Input,
+        Label,
+        NaviDebug,
+        Popup,
+      } from "@jsenv/navi";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       const TriggeredPopup = ({ label, ...rest }) => {
@@ -86,8 +94,10 @@
         );
       };
 
+      // debugAll on purpose: this demo is where the two modes meet, and the
+      // interaction/focus logs are the fastest way to see which one answered.
       const App = () => (
-        <div>
+        <NaviDebug debugAll>
           <h1>Popup demo</h1>
           <div class="demo-row">
             <TriggeredPopup label="auto (wide screen -> popover)" />
@@ -106,7 +116,7 @@
           <ActionsPopup label="auto" />
           <ActionsPopup label="mode=dialog forced" mode="dialog" />
           <ActionsPopup label="mode=popover forced" mode="popover" />
-        </div>
+        </NaviDebug>
       );
 
       render(<App />, document.querySelector("#root"));
