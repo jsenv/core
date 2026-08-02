@@ -131,7 +131,12 @@ export const visibleRectEffect = (
     resizeWatchingPaused = false;
     publishResizeWatchingPausedChange(false);
   };
-  const check = (event) => {
+  // A caller with nothing to describe (a callout re-measuring after its own
+  // content changed, say) passes no event. Treat it like the synthetic
+  // size-change below: something moved, re-measure and notify unconditionally
+  // rather than let the dedup decide from a rect that has not moved.
+  const FORCED_CHECK_EVENT = { type: OBSERVED_ELEMENT_SIZE_CHANGE };
+  const check = (event = FORCED_CHECK_EVENT) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }

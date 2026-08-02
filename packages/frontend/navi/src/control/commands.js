@@ -237,6 +237,15 @@ registerNaviCommand("--navi-clear", (source, event) => {
     return undefined;
   }
   const fromInput = source.closest(`[navi-control="input"]`);
+  // See resolveInputProps' own clearableWhenReadOnly: the interaction gate
+  // refuses everything on a readOnly control, clearing included, which is right
+  // for a control the user types in and wrong for a façade whose value comes
+  // from elsewhere. Opting out skips the gate for this one interaction only.
+  // closest, not hasAttribute: the flag lands on the control's wrapper element,
+  // while the command target is the inner control itself
+  const clearableWhenReadOnly = Boolean(
+    target.closest?.("[data-clearable-when-readonly]"),
+  );
 
   return {
     target,
@@ -244,6 +253,10 @@ registerNaviCommand("--navi-clear", (source, event) => {
       dispatchRequestInteraction(target, {
         event,
         name: "--navi-clear",
+        // Skips the interactivity check only, not the interaction itself: the
+        // callout/event plumbing still runs, so the control keeps behaving
+        // like any other interaction — it just isn't vetoed by readOnly.
+        bypassInteractivity: clearableWhenReadOnly,
         prevented: () => event.preventDefault(),
         allowed: () => dispatchRequestClearUIState(target, event),
       });
