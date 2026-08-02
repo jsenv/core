@@ -574,7 +574,7 @@ const PickerContentInsidePopup = (props) => {
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    marginWithContainer = 10,
+    marginWithContainer,
     closeOnFocusOut = false,
     // Clicking outside the popup closes it and COMMITS by default (fires the
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
@@ -631,7 +631,13 @@ const PickerContentInsidePopup = (props) => {
             : positionArea
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
-        marginWithContainer={isPopover ? marginWithContainer : undefined}
+        marginWithContainer={
+          marginWithContainer === undefined && isPopover
+            ? popoverSpacing
+            : marginWithContainer
+              ? 10
+              : marginWithContainer
+        }
         scrollCapture={
           scrollCapture === "dialog"
             ? !isPopover

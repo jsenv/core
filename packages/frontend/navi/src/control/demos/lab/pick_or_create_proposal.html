@@ -153,6 +153,11 @@
        * Creating is a first-class action, not a last resort: at the start of the
        * app's life most entries don't exist yet, so the button is always in the
        * same place rather than hidden behind an empty result list.
+       *
+       * The search input is deliberately NOT focused on open. Once the app has
+       * lived a while, the people someone plays with are already in the list
+       * and picking is a single tap; raising the keyboard would cover the very
+       * list they came for. Typing stays one tap away for the rarer case.
        */
       const PickOrCreateField = ({
         id,
@@ -161,15 +166,25 @@
         searchPlaceholder,
         createLabel,
         items,
+        recentItems = [],
         onCreate,
         value,
         onChange,
       }) => {
         const openSignal = useSignal(false);
         const searchSignal = useSignal("");
+        // Without a search, the ones played with recently come first: that is
+        // the tap the mature app is optimized for, and it must land above the
+        // fold without scrolling
+        const orderedItems = searchSignal.value
+          ? items
+          : [
+              ...recentItems.filter((item) => items.includes(item)),
+              ...items.filter((item) => !recentItems.includes(item)),
+            ];
         const [matchingItems, getMatchInfo] = useSearchText(
           searchSignal.value,
-          items,
+          orderedItems,
         );
         const typed = searchSignal.value.trim();
         const typedKey = normalize(typed);
@@ -202,12 +217,17 @@
                 type="search"
                 placeholder={placeholder}
                 value={value}
-                readOnly
                 expandX
-                onFocus={() => {
-                  openSignal.value = true;
+                uiAction={(next) => {
+                  // the only edit reaching this input is its own clear button:
+                  // typing here would open the surface below on the first key
+                  onChange(next);
                 }}
-                onClick={() => {
+                onClick={(e) => {
+                  // let the clear button do its job instead of opening
+                  if (e.target.closest("button")) {
+                    return;
+                  }
                   openSignal.value = true;
                 }}
               />
@@ -217,13 +237,12 @@
               layer="local"
               positionArea="top"
               marginWithContainer={0}
-              animation="slide-from-bottom"
+              animation
+              expand
               open={openSignal.value}
               onClose={() => {
                 openSignal.value = false;
               }}
-              minWidth="100%"
-              minHeight="100%"
             >
               <Box flex="y" spacing="s" padding="s" expand>
                 {/* Search on top: the keyboard owns the bottom, anything
@@ -246,11 +265,13 @@
                       searchSignal.value = next;
                     }}
                     autoComplete="off"
-                    autoFocus
                     expandX
                   />
                 </Box>
 
+                {!searchSignal.value && recentItems.length > 0 && (
+                  <Text>Récents</Text>
+                )}
                 <List
                   selectable
                   id={`${id}_list`}
@@ -341,6 +362,7 @@
                   searchPlaceholder="Rechercher ou saisir un nom…"
                   createLabel="Créer le club"
                   items={clubsSignal.value}
+                  recentItems={["Mouratoglou Country Club"]}
                   onCreate={addTo(clubsSignal)}
                   value={clubSignal.value}
                   onChange={(next) => {
@@ -355,6 +377,7 @@
                   searchPlaceholder="Rechercher ou saisir un nom…"
                   createLabel="Inviter"
                   items={playersSignal.value}
+                  recentItems={["Flore", "Karim"]}
                   onCreate={addTo(playersSignal)}
                   value={playerSignal.value}
                   onChange={(next) => {

@@ -486,7 +486,8 @@ const showClientToast = ({ client, reason }) => {
   const link = document.createElement("a");
   link.href = `/.internal/client?id=${encodeURIComponent(client.id)}`;
   link.target = "_blank";
-  link.textContent = "Monitor →";
+  link.rel = "noopener";
+  link.textContent = "Monitor ↗";
   link.style.cssText = "color:#93c5fd;text-decoration:none;font-weight:600";
   el.appendChild(link);
   const close = document.createElement("button");
