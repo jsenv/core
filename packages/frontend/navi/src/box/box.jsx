@@ -62,6 +62,7 @@ import {
   getVisualChildStylePropStrategy,
   isStyleProp,
   prepareStyleValue,
+  resolveSpacingSize,
 } from "./box_style_util.js";
 import { getDefaultDisplay } from "./display_defaults.js";
 import {
@@ -284,10 +285,6 @@ export const Box = (props) => {
     // two others simply sit outside it. Carried as data attributes because the
     // container is the one that knows how to honour them, and it only has CSS
     // to reach its children with. Same words as List.Item's own header/footer.
-    // Makes this box a scrolling area, and gives header/footer/body their
-    // meaning inside it — Dialog and Popover are scrolling areas too, they just
-    // declare it on their own root.
-    scrollable,
     header,
     footer,
     body,
@@ -295,8 +292,39 @@ export const Box = (props) => {
   } = props;
   const TagName = as;
 
-  if (scrollable) {
+  // A box that scrolls is what gives header/footer/body their meaning, and
+  // saying overflow="auto" is already saying it — no second prop for the same
+  // fact. Dialog and Popover get it the same way, by asking for that overflow.
+  const scrolls = ["overflow", "overflowX", "overflowY"].some((name) => {
+    const value = rest[name];
+    return value === "auto" || value === "scroll";
+  });
+  if (scrolls) {
     rest["data-scrollable"] = "";
+    const bodyChild = toChildArray(children).some(
+      (child) => child?.props?.body,
+    );
+    if (bodyChild) {
+      // The body is the only thing that scrolls, so this box must not: an
+      // inline overflow would win over the [data-body] rules in CSS.
+      rest.overflow = "hidden";
+      rest.overflowX = undefined;
+      rest.overflowY = undefined;
+      if (rest.padding !== undefined) {
+        // The padding follows the scrolling inward: a focus outline is drawn
+        // OUTSIDE the control it belongs to, so a control flush against the
+        // edge of a scrolling area overflows it and raises a scrollbar.
+        const resolvedPadding = resolveSpacingSize(rest.padding);
+        rest.style = {
+          ...rest.style,
+          "--scrollable-padding":
+            typeof resolvedPadding === "number"
+              ? `${resolvedPadding}px`
+              : resolvedPadding,
+        };
+        rest.padding = undefined;
+      }
+    }
   }
   if (header) {
     rest["data-header"] = "";

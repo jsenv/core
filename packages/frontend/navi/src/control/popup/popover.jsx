@@ -54,7 +54,6 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { toChildArray } from "preact";
 import { useEffect, useId, useRef } from "preact/hooks";
 
 import {
@@ -185,10 +184,10 @@ const css = /* css */ `
        stays independent from navi-animation's own opacity/scale/display
        transition list below (no shared transition-property to clobber, no
        propertyName to filter). */
-    overflow: auto;
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
     overscroll-behavior: none;
-
-    }
 
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
@@ -610,24 +609,6 @@ const usePopoverProps = (props) => {
     ...rest
   } = props;
   const isTopLayer = layer === "top";
-  // A body means the padding belongs to the parts, not to the popup: see
-  // box.jsx's own [data-scrollable] rules for why (a focus outline needs room
-  // INSIDE the scrolling area). Only the `padding` shorthand travels for now —
-  // the per-side props would each need the same treatment.
-  const hasBodyChild = toChildArray(children).some(
-    (child) => child?.props?.body,
-  );
-  if (hasBodyChild && rest.padding !== undefined) {
-    // resolveSpacingSize answers a number for a token ("m") and a string for a
-    // length that is already one ("10px") — a CSS var needs a length either way
-    const resolvedPadding = resolveSpacingSize(rest.padding);
-    rest.partPadding =
-      typeof resolvedPadding === "number"
-        ? `${resolvedPadding}px`
-        : resolvedPadding;
-    rest.padding = undefined;
-  }
-
   const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
@@ -1378,10 +1359,10 @@ const usePopoverProps = (props) => {
     "uiAction": undefined,
     ...autoFocusProps,
     ref,
-    // A popup scrolls, and what it contains can claim header/footer/body —
-    // the same concept any Box can turn on, declared here once and for all
-    // because a popup is always one (see box.jsx).
-    "data-scrollable": "",
+    // A popup scrolls, and asking Box for that overflow is also what lets what
+    // it contains claim header/footer/body (see box.jsx) — a popup is always a
+    // scrolling area, so it says so once, here.
+    "overflow": "auto",
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": (e) => {

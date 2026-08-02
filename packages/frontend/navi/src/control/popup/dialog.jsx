@@ -56,7 +56,6 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { toChildArray } from "preact";
 import { useEffect, useRef } from "preact/hooks";
 
 import {
@@ -275,17 +274,12 @@ const css = /* css */ `
       position: fixed;
     }
 
-    /* A modal dialog gets overflow:auto from the UA stylesheet, so its
-       max-height above actually keeps it inside the viewport. A local one is
-       not modal and gets nothing: without this, the cap would only decide how
-       big the box looks while the content kept painting straight through it.
-       Scoped to the local renderer so a top-layer dialog keeps whatever the UA
-       (and any consumer) already agreed on. */
-    &[data-layer="local"] {
-      overflow: auto;
-    }
-
-    }
+    /* overflow is not declared here: the dialog carries [data-scrollable] (see
+       box.jsx), which is what makes it scroll — and what a header/footer/body
+       inside it then rearranges. A modal dialog would get overflow:auto from
+       the UA stylesheet anyway; a local one is not modal and gets nothing, so
+       without a scrolling rule its max-height would only decide how big the box
+       looks while the content kept painting straight through it. */
 
     /* [open] above is already scoped (display only turns on while shown),
        but that alone isn't enough: a consumer whose own CSS also sets an
@@ -652,24 +646,6 @@ const useDialogProps = (props) => {
     children,
     ...rest
   } = props;
-  // A body means the padding belongs to the parts, not to the popup: see
-  // box.jsx's own [data-scrollable] rules for why (a focus outline needs room
-  // INSIDE the scrolling area). Only the `padding` shorthand travels for now —
-  // the per-side props would each need the same treatment.
-  const hasBodyChild = toChildArray(children).some(
-    (child) => child?.props?.body,
-  );
-  if (hasBodyChild && rest.padding !== undefined) {
-    // resolveSpacingSize answers a number for a token ("m") and a string for a
-    // length that is already one ("10px") — a CSS var needs a length either way
-    const resolvedPadding = resolveSpacingSize(rest.padding);
-    rest.partPadding =
-      typeof resolvedPadding === "number"
-        ? `${resolvedPadding}px`
-        : resolvedPadding;
-    rest.padding = undefined;
-  }
-
   const isModal = layer === "top";
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
@@ -1214,10 +1190,10 @@ const useDialogProps = (props) => {
     // vs. absolute) — positioning itself is entirely JS-driven now (see
     // openEffect's own positionDialog above), no data-position-area
     // attribute needed at all.
-    // A popup scrolls, and what it contains can claim header/footer/body —
-    // the same concept any Box can turn on, declared here once and for all
-    // because a popup is always one (see box.jsx).
-    "data-scrollable": "",
+    // A popup scrolls, and asking Box for that overflow is also what lets what
+    // it contains claim header/footer/body (see box.jsx) — a popup is always a
+    // scrolling area, so it says so once, here.
+    "overflow": "auto",
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,
