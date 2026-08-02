@@ -624,10 +624,6 @@ const PickerInput = (props) => {
       {...props}
       readOnly={readOnlyForced ? true : readOnly}
       data-readonly-forced={readOnlyForced ? "" : undefined}
-      // Forced readOnly only means "not typeable" — the value comes from the
-      // popup, so the clear button must keep working. An explicitly readOnly
-      // picker is a different intent (inert) and keeps the veto.
-      data-clearable-when-readonly={readOnlyForced ? "" : undefined}
       // A forced-readonly picker trigger is button-like — it can't be typed
       // into, so it shouldn't get the browser's eager text-input focus ring on
       // mouse. Gate the ring on keyboard use instead (see pseudo_styles.js). An

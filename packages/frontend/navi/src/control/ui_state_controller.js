@@ -740,6 +740,20 @@ const GROUP_DEFAULTS = {
   // and naming it would only add a key nobody asked for. A popup containing a
   // real form uses "object" (the default) instead.
   single: {
+    // The same exclusions canRegisterAsFacadeChild already makes below (the
+    // picker façade asked the very same question: which child IS the value):
+    // buttons and links never hold one, and a control carrying navi-list is a
+    // navigator for some other list — the search box of a picker's popup —
+    // rather than the answer the popup was opened for.
+    childControlFilter: (child) => {
+      if (child.controlType === "button" || child.controlType === "link") {
+        return false;
+      }
+      if (child.props?.["navi-list"]) {
+        return false;
+      }
+      return true;
+    },
     aggregateChildStates: (children) => {
       for (const child of children) {
         const childUIState = child.uiState;
