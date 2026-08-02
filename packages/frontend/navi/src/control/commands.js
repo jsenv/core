@@ -318,15 +318,27 @@ registerNaviCommand("--navi-reset", (source, event) => {
   };
 });
 registerNaviCommand("--navi-send", (source, event) => {
+  const expandable = resolveClosestExpandable(source);
   const target =
     resolveExplicitTarget(source) ||
     resolveClosestSendTarget(
-      resolveClosestExpandable(source),
+      expandable,
       resolveClosestControlWithAction(source),
     );
   if (!target) {
     return undefined;
   }
+  // A send that commits a control nested inside an open popup dismisses that
+  // popup too: the popup is there for the duration of one decision, which the
+  // send just made. It is what a picker already does when the send targets the
+  // popup itself (executeNaviDefine below closes it) — a form in a dialog is
+  // the same act, one level down.
+  const popupToCloseAfterSend =
+    expandable &&
+    expandable !== target &&
+    expandable.getAttribute("aria-expanded") === "true"
+      ? expandable
+      : undefined;
 
   // send inside expandable
   if (target.getAttribute("aria-expanded") === "true") {
@@ -351,7 +363,14 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      return dispatchRequestAction(target, {
+      // Nothing is committed when a constraint fails, so nothing is decided
+      // and the popup must stay open — with the form still in front of the
+      // user, showing what it is waiting for.
+      let invalid = false;
+      const sent = dispatchRequestAction(target, {
+        onInvalid: () => {
+          invalid = true;
+        },
         event,
         name: "--navi-send",
         always: () => {
@@ -374,6 +393,10 @@ registerNaviCommand("--navi-send", (source, event) => {
         },
         requester,
       });
+      if (sent !== false && !invalid && popupToCloseAfterSend) {
+        triggerNaviCommand(source, "--navi-close", event, { optional: true });
+      }
+      return sent;
     },
   };
 });

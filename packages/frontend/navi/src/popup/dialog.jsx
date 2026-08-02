@@ -270,6 +270,16 @@ const css = /* css */ `
       position: fixed;
     }
 
+    /* A modal dialog gets overflow:auto from the UA stylesheet, so its
+       max-height above actually keeps it inside the viewport. A local one is
+       not modal and gets nothing: without this, the cap would only decide how
+       big the box looks while the content kept painting straight through it.
+       Scoped to the local renderer so a top-layer dialog keeps whatever the UA
+       (and any consumer) already agreed on. */
+    &[data-layer="local"] {
+      overflow: auto;
+    }
+
     /* [open] above is already scoped (display only turns on while shown),
        but that alone isn't enough: a consumer whose own CSS also sets an
        *unconditional* display (e.g. Popup's own flex prop, needed so

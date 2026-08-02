@@ -252,15 +252,7 @@
         const CreateForm = createForm;
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
-        // Owned here rather than left to --navi-open/--navi-close: the form has
-        // to close itself once the entry is created, and the submit button
-        // already carries the one command it can carry.
-        const formOpenSignal = useSignal(false);
         const formId = `${id}_form`;
-        const openForm = (prefill) => {
-          prefillSignal.value = prefill;
-          formOpenSignal.value = true;
-        };
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -284,10 +276,10 @@
         // then. Nothing to await here, nothing to undo if the user quits.
         const submitForm = (values) => {
           const entry = { id: nextId(), isNew: true, ...toEntry(values) };
+          console.log("DEBUG submitForm", JSON.stringify(entry));
           onCreate(entry);
           onChange(entry);
           searchSignal.value = "";
-          formOpenSignal.value = false;
         };
 
         return (
@@ -333,6 +325,8 @@
                       require having searched first, so the entry point must not
                       depend on the search box holding something */}
                     <Button
+                      command="--navi-open"
+                      commandFor={formId}
                       icon
                       variant="discrete"
                       padding="s"
@@ -340,7 +334,7 @@
                       // ends of the header balance
                       marginRight="-s"
                       onClick={() => {
-                        openForm("");
+                        prefillSignal.value = "";
                       }}
                     >
                       <Icon size="1.4rem" color="#6b7280">
@@ -410,12 +404,14 @@
                           claimed by it — the create row wants a different
                           command, so it needs its own control to carry it. */}
                         <Button
+                          command="--navi-open"
+                          commandFor={formId}
                           variant="discrete"
                           padding="s"
                           expandX
                           alignX="start"
                           onClick={() => {
-                            openForm(typed);
+                            prefillSignal.value = typed;
                           }}
                         >
                           « {typed} » : {createLabel}
@@ -483,14 +479,11 @@
                 comes back to do. */}
             <Dialog
               id={formId}
-              open={formOpenSignal.value}
-              onClose={() => {
-                formOpenSignal.value = false;
-              }}
               layer={popupLayer}
               positionArea="top"
               expand
               animation
+              padding="m"
             >
               {/* ControlGroup aggregates its children into one object and hands
                   it to action — no per-field signal to wire, and `required`
@@ -499,55 +492,56 @@
                   dialog and the form, so it is what has to accept the dialog's
                   height instead of growing past it — otherwise the scrolling
                   area below never gets a height to work with */}
-              <ControlGroup action={submitForm} flex="y" expand minHeight={0}>
-                {/* minHeight 0 for the same reason as the group above: every
-                    box between the dialog and the scrolling area has to agree
-                    to be as short as the dialog */}
-                <Box flex="y" spacing="m" padding="m" expand minHeight={0}>
-                  <Box flex="x" spacing="xs" alignY="center">
-                    <BackButton />
-                    <Text expandX>
-                      <strong>{createTitle}</strong>
-                    </Text>
-                  </Box>
-                  {/* The fields scroll, not the whole surface: the title stays
+              <ControlGroup
+                action={submitForm}
+                spacing="m"
+                flex="y"
+                expand
+                minHeight={0}
+              >
+                <Box flex="x" spacing="xs" alignY="center">
+                  <BackButton />
+                  <Text expandX>
+                    <strong>{createTitle}</strong>
+                  </Text>
+                </Box>
+                {/* The fields scroll, not the whole surface: the title stays
                       readable and the two buttons stay under the thumb even
                       when the form is taller than what is left of the screen
                       (the keyboard takes half of it). */}
-                  <Box
-                    flex="y"
-                    spacing="m"
-                    expandY
-                    // a flex child refuses to shrink below its content unless
-                    // told it may — without this the fields push the dialog
-                    // taller instead of scrolling inside it
-                    minHeight={0}
-                    overflowY="auto"
-                  >
-                    {/* keyed by the prefill: the fields are uncontrolled, so a
+                <Box
+                  flex="y"
+                  spacing="m"
+                  expandY
+                  // a flex child refuses to shrink below its content unless
+                  // told it may — without this the fields push the dialog
+                  // taller instead of scrolling inside it
+                  minHeight={0}
+                  overflowY="auto"
+                >
+                  {/* keyed by the prefill: the fields are uncontrolled, so a
                         new name typed in the search must give them a fresh
                         defaultValue rather than keep the previous one */}
-                    <CreateForm
-                      key={prefillSignal.value}
-                      prefill={prefillSignal.value}
-                    />
-                  </Box>
-                  <Box flex="y" spacing="s">
-                    <Button command="--navi-send" expandX paddingY="s">
-                      {createTitle}
-                    </Button>
-                    {/* The same way out as the arrow above, where the thumb
+                  <CreateForm
+                    key={prefillSignal.value}
+                    prefill={prefillSignal.value}
+                  />
+                </Box>
+                <Box flex="y" spacing="s">
+                  <Button command="--navi-send" expandX paddingY="s">
+                    {createTitle}
+                  </Button>
+                  {/* The same way out as the arrow above, where the thumb
                       already is once the form is filled: giving up on a form
                       should not mean reaching back to the top of the screen */}
-                    <Button
-                      command="--navi-close"
-                      variant="discrete"
-                      expandX
-                      paddingY="s"
-                    >
-                      Annuler
-                    </Button>
-                  </Box>
+                  <Button
+                    command="--navi-close"
+                    variant="discrete"
+                    expandX
+                    paddingY="s"
+                  >
+                    Annuler
+                  </Button>
                 </Box>
               </ControlGroup>
             </Dialog>
