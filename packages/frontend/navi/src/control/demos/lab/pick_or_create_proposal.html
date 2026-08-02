@@ -313,6 +313,7 @@
                     autoComplete="off"
                     // grey at rest, white once focused
                     discrete
+                    slotSpacing="s"
                     borderRadius="m"
                     paddingX="m"
                     paddingY="m"
@@ -349,15 +350,15 @@
                         </Box>
                       </List.Item>
                     ))}
-                    {/* Last row rather than a button below the list: it reads as
-                      "and if none of these is the one", right where the eye
-                      already is. Same form as the +, name prefilled. */}
+                    {/* At the bottom of the list rather than below it: it reads
+                      as "and if none of these is the one", right where the eye
+                      already is. Same form as the +, name prefilled.
+                      A footer, not a regular row: it is not one of the
+                      candidates — it never takes the selection, never answers
+                      to the arrow keys, and stays visible while the matches
+                      scroll behind it. */}
                     {typed !== "" && (
-                      <List.Item
-                        key="__create__"
-                        id={`${id}_create`}
-                        index={matchingEntries.length}
-                      >
+                      <List.Item footer key="__create__" id={`${id}_create`}>
                         {/* A Button, not a command on the row itself: the list
                           carries --navi-send, and a row of a sending list is
                           claimed by it — the create row wants a different
@@ -394,6 +395,10 @@
                     ui={sideLabel(sideOverride)}
                     placeholder="—"
                     slotSpacing="xs"
+                    // wide enough for the longest side: without it the field
+                    // resizes with what is selected ("—" vs "Les 2") and the
+                    // player row jiggles every time the side changes
+                    minWidth="80px"
                     action={onSideChange}
                   >
                     <List selectable command="--navi-send" separator>

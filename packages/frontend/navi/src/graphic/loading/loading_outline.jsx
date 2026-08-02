@@ -7,10 +7,29 @@ import { LoadingIndicatorFluid } from "./loading_indicator_fluid.jsx";
 const css = /* css */ `
   .navi_loading_outline_wrapper {
     position: absolute;
-    top: var(--loading-rectangle-top, 0);
-    right: var(--loading-rectangle-right, 0);
-    bottom: var(--loading-rectangle-bottom, 0);
-    left: var(--loading-rectangle-left, 0);
+    /* Controls place the outline slightly outside their box, right on top of
+       their border. Inside something that scrolls that bleed is enough to make
+       the area scrollable, so such a container sets --loading-outline-min-inset
+       to 0px to keep the outline within the control: a scrollbar appearing
+       just because something started loading is worse than an outline drawn a
+       couple pixels inward. The var is only ever read here (never set on this
+       element) so it keeps inheriting from whichever container declared it. */
+    top: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-top, 0px)
+    );
+    right: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-right, 0px)
+    );
+    bottom: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-bottom, 0px)
+    );
+    left: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-left, 0px)
+    );
     z-index: 1;
     border-radius: inherit;
     pointer-events: none;
