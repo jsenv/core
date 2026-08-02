@@ -12,19 +12,35 @@
           -apple-system,
           sans-serif;
       }
-      .demo-toc {
-        margin-bottom: 32px;
-        padding: 12px 16px;
-        background: #f6f6f6;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+      /* Same shape as the dialog and wheel demos: each section is a card,
+         headings own their anchor link, and the table of contents is a plain
+         nested list of <Link href="#…">. */
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
       }
-      .demo-toc ol {
-        margin: 8px 0 0;
+      .demo-section h3 {
+        position: relative;
+        margin: 28px 0 10px;
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 1.08rem;
+        scroll-margin-top: 12px;
+      }
+      .toc {
+        margin: 0;
         padding-left: 20px;
+        line-height: 1.9;
       }
-      .demo-toc li {
-        margin-bottom: 4px;
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
       }
       .demo-section {
         margin-bottom: 32px;
@@ -291,7 +307,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState, useEffect } from "preact/hooks";
-      import { Button, Popover, NaviDebug, Box, Text } from "@jsenv/navi";
+      import { Button, Popover, NaviDebug, Box, Link, Text } from "@jsenv/navi";
 
       // The full positionArea grammar (see popup_shared.js's own
       // parsePositionArea) laid out as a 5×5 grid: rows go from fully above
@@ -449,55 +465,85 @@
         </div>
       );
 
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
       const TableOfContents = () => (
-        <nav class="demo-toc">
-          <strong>Contents</strong>
-          <ol>
+        <div className="demo-section">
+          <Heading id="popover">Popover</Heading>
+          <p>
+            A surface opened next to an anchor. Like Dialog it is a control
+            group — it aggregates the named controls it contains, it is a form
+            boundary, and closing commits while cancelling reverts (see the
+            dialog demo's own <code>uiAction / action</code> section).
+          </p>
+          <ol className="toc">
             <li>
-              <a href="#anchor">Controlled by button</a>
+              <Link href="#anchor">Controlled by button</Link>
             </li>
             <li>
-              <a href="#content-size">Content dimensions</a>
-            </li>
-            <li>
-              <a href="#anchor-area">Position</a>
-              <ol>
+              <Link href="#content-size">Content dimensions</Link>
+              <ul>
                 <li>
-                  <a href="#anchor-area-with-anchor">With anchor</a>
+                  <Link href="#content-size-expanding">
+                    Expanding/collapsing content while open
+                  </Link>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <Link href="#anchor-area">Position</Link>
+              <ul>
+                <li>
+                  <Link href="#anchor-area-with-anchor">With anchor</Link>
                 </li>
                 <li>
-                  <a href="#anchor-area-without-anchor">Without anchor</a>
+                  <Link href="#anchor-area-without-anchor">Without anchor</Link>
                 </li>
                 <li>
-                  <a href="#anchor-area-local-layer">local layer</a>
+                  <Link href="#anchor-area-local-layer">local layer</Link>
                 </li>
-              </ol>
+              </ul>
             </li>
             <li>
-              <a href="#anchor-spacing">marginWithAnchor</a>
+              <Link href="#anchor-spacing">marginWithAnchor</Link>
             </li>
             <li>
-              <a href="#layer-spacing">marginWithContainer</a>
+              <Link href="#layer-spacing">marginWithContainer</Link>
             </li>
             <li>
-              <a href="#pointer-interaction-outside">
+              <Link href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#customization">Customization</a>
+              <Link href="#customization">Customization</Link>
             </li>
             <li>
-              <a href="#open-from-start">Open from the start</a>
+              <Link href="#open-from-start">Open from the start</Link>
             </li>
             <li>
-              <a href="#anchor-too-big">Anchor too big (isAnchorTooBig)</a>
+              <Link href="#anchor-too-big">
+                Anchor too big (isAnchorTooBig)
+              </Link>
             </li>
             <li>
-              <a href="#nested-popovers">Nested popovers</a>
+              <Link href="#nested-popovers">Nested popovers</Link>
             </li>
           </ol>
-        </nav>
+        </div>
       );
 
       // No fixed size on the popover itself (see .demo_popover_flex_box) —
@@ -558,8 +604,8 @@
       };
 
       const ContentSizeSection = () => (
-        <section id="content-size" class="demo-section">
-          <h2>2. Content dimensions</h2>
+        <section class="demo-section">
+          <Heading id="content-size">Content dimensions</Heading>
           <p>
             Popover's dimensions follow its content. When it can better fit on
             another side, it flips to that side.
@@ -626,7 +672,9 @@
             />
           </div>
 
-          <h3>Expanding/collapsing content while open</h3>
+          <Heading level={3} id="content-size-expanding">
+            Expanding/collapsing content while open
+          </Heading>
           <div class="demo-row">
             <ExpandCollapsePopover label="expand/collapse" />
           </div>
@@ -637,8 +685,8 @@
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_anchor");
         return (
-          <section id="anchor" class="demo-section">
-            <h2>1. Controlled by button</h2>
+          <section class="demo-section">
+            <Heading id="anchor">Controlled by button</Heading>
             <div class="demo-row">
               <AnchoredPopover
                 maxWidth="260"
@@ -669,11 +717,13 @@
       // relative to the container instead (viewport for 3.2, the
       // positioned ancestor for 3.3's own layer="local").
       const AnchorAreaSection = () => (
-        <section id="anchor-area" class="demo-section">
-          <h2>3. Position</h2>
+        <section class="demo-section">
+          <Heading id="anchor-area">Position</Heading>
 
-          <div id="anchor-area-with-anchor" class="demo-subsection">
-            <h3>3.1 With anchor</h3>
+          <div class="demo-subsection">
+            <Heading level={3} id="anchor-area-with-anchor">
+              With anchor
+            </Heading>
             <AnchorAreaDefaultDemo />
             <p class="demo-important-note">
               In this section the popover appears on the anchor, not the button.
@@ -683,13 +733,17 @@
             </p>
           </div>
 
-          <div id="anchor-area-without-anchor" class="demo-subsection">
-            <h3>3.2 Without anchor</h3>
+          <div class="demo-subsection">
+            <Heading level={3} id="anchor-area-without-anchor">
+              Without anchor
+            </Heading>
             <AnchorAreaViewportDemo />
           </div>
 
-          <div id="anchor-area-local-layer" class="demo-subsection">
-            <h3>3.3 local layer</h3>
+          <div class="demo-subsection">
+            <Heading level={3} id="anchor-area-local-layer">
+              local layer
+            </Heading>
             <p>
               Renders where it is instead of the top layer, respecting the
               positioned parent's own dimensions and clipping (
@@ -703,8 +757,8 @@
       );
 
       const AnchorSpacingSection = () => (
-        <section id="anchor-spacing" class="demo-section">
-          <h2>4. marginWithAnchor</h2>
+        <section class="demo-section">
+          <Heading id="anchor-spacing">marginWithAnchor</Heading>
           <div class="demo-row">
             <AnchoredPopover label="marginWithAnchor={0} (default)" />
             <AnchoredPopover
@@ -748,8 +802,8 @@
       };
 
       const MarginWithContainerSection = () => (
-        <section id="layer-spacing" class="demo-section">
-          <h2>5. marginWithContainer</h2>
+        <section class="demo-section">
+          <Heading id="layer-spacing">marginWithContainer</Heading>
           <div class="demo-row">
             <MarginWithContainerPopover label="marginWithContainer={0} (default)" />
             <MarginWithContainerPopover
@@ -764,8 +818,10 @@
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("popover_demo_pointer_interaction_outside");
         return (
-          <section id="pointer-interaction-outside" class="demo-section">
-            <h2>6. pointerInteractionOutsideEffect</h2>
+          <section class="demo-section">
+            <Heading id="pointer-interaction-outside">
+              pointerInteractionOutsideEffect
+            </Heading>
             <div class="demo-row">
               <PointerInteractionOutsideDemo
                 label="none (default)"
@@ -811,8 +867,8 @@
       };
 
       const CustomizationSection = () => (
-        <section id="customization" class="demo-section">
-          <h2>7. Customization</h2>
+        <section class="demo-section">
+          <Heading id="customization">Customization</Heading>
           <div class="demo-row">
             <CustomizationPopover label="default" borderRadius="8px" />
             <CustomizationPopover
@@ -880,8 +936,8 @@
       };
 
       const OpenAtStartSection = () => (
-        <section id="open-from-start" class="demo-section">
-          <h2>8. Open from the start</h2>
+        <section class="demo-section">
+          <Heading id="open-from-start">Open from the start</Heading>
           <div class="demo-row">
             <LazyMount
               label={"open={true}"}

@@ -63,6 +63,11 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../rules/control_action.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../../box/box.jsx";
 import { resolveSpacingSize } from "../../box/box_style_util.js";
@@ -693,6 +698,11 @@ const useDialogProps = (props) => {
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
+    // What the dialog held when it opened: the answer to compare against when
+    // it closes (nothing changed → nothing to commit) and the state to put
+    // back when it is cancelled — a cancelled dialog must leave no trace, the
+    // same way a cancelled picker restores the value it was opened on.
+    const uiStateAtOpen = getUIStateFromElement(dialogEl);
     if (!dialogEl) {
       return undefined;
     }
@@ -1003,8 +1013,17 @@ const useDialogProps = (props) => {
       // Closing is what commits — a dialog is asked a question and answers it
       // when it goes away, the way a picker commits the value it was opened to
       // choose. Cancelling (Escape, an outside click when asked to cancel) is
-      // the user saying "forget it", so nothing is committed then.
-      if (!closeEvent.detail?.isCancel) {
+      // the user saying "forget it": nothing is committed, and what was typed
+      // is rolled back to what the dialog opened on.
+      if (closeEvent.detail?.isCancel) {
+        dispatchRequestSetUIState(dialogEl, uiStateAtOpen, {
+          event: closeEvent,
+        });
+      } else if (
+        !compareTwoJsValues(getUIStateFromElement(dialogEl), uiStateAtOpen)
+      ) {
+        // Unchanged means undecided: closing a dialog nobody touched is not an
+        // answer, so it must not look like one.
         dispatchRequestAction(dialogEl, {
           event: closeEvent,
           name: "close",

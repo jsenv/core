@@ -61,6 +61,11 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../rules/control_action.js";
+import {
+  dispatchRequestSetUIState,
+  getUIStateFromElement,
+} from "../ui_state_dom.js";
+import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../../box/box.jsx";
 import { resolveSpacingSize } from "../../box/box_style_util.js";
@@ -632,6 +637,9 @@ const usePopoverProps = (props) => {
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
+    // See Dialog's own openEffect: what the popover held when it opened is
+    // both what a close is compared against and what a cancel puts back.
+    const uiStateAtOpen = getUIStateFromElement(popoverEl);
     // backdropEl is null when pointerInteractionOutsideEffect is "none" —
     // the backdrop isn't rendered at all in that case.
     const backdropEl = backdropRef.current;
@@ -1124,9 +1132,15 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
-      // Closing is what commits, cancelling commits nothing — see Dialog's own
-      // identical close, and open_controller.js for who passes isCancel.
-      if (!closeEvent.detail?.isCancel) {
+      // Closing commits, cancelling rolls back — see Dialog's own identical
+      // close, and open_controller.js for who passes isCancel.
+      if (closeEvent.detail?.isCancel) {
+        dispatchRequestSetUIState(popoverEl, uiStateAtOpen, {
+          event: closeEvent,
+        });
+      } else if (
+        !compareTwoJsValues(getUIStateFromElement(popoverEl), uiStateAtOpen)
+      ) {
         dispatchRequestAction(popoverEl, {
           event: closeEvent,
           name: "close",

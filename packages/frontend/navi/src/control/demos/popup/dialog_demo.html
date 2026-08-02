@@ -12,27 +12,47 @@
           -apple-system,
           sans-serif;
       }
-      .demo-toc {
-        margin-bottom: 32px;
-        padding: 12px 16px;
-        background: #f6f6f6;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-      }
-      .demo-toc ol {
-        margin: 8px 0 0;
-        padding-left: 20px;
-      }
-      .demo-toc li {
-        margin-bottom: 4px;
-      }
+      /* Same shape as the wheel demo: each section is a card, headings own
+         their anchor link, and the table of contents is a plain nested list of
+         <Link href="#…">. */
       .demo-section {
-        margin-bottom: 32px;
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         scroll-margin-top: 16px;
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 28px 0 10px;
+        color: #1a1a1a;
+        font-weight: 700;
+        font-size: 1.08rem;
+        scroll-margin-top: 12px;
+      }
+      .toc {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
       }
       .demo-subsection {
         margin-top: 20px;
-        margin-left: 8px;
+        scroll-margin-top: 16px;
       }
       .demo-row {
         display: flex;
@@ -183,7 +203,16 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useId, useState, useEffect } from "preact/hooks";
-      import { Box, Button, Dialog } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Field,
+        Input,
+        Label,
+        Link,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       // Backs each section's own "Slow" checkbox/"Animation" select —
       // independent per section, so slowing/changing one doesn't affect the
@@ -300,8 +329,10 @@
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_pointer_interaction_outside");
         return (
-          <section id="pointer-interaction-outside" class="demo-section">
-            <h2>4. pointerInteractionOutsideEffect</h2>
+          <section class="demo-section">
+            <Heading id="pointer-interaction-outside">
+              pointerInteractionOutsideEffect
+            </Heading>
             <p>
               <code>"close"</code> (default) closes on an outside click.{" "}
               <code>"capture"</code>/<code>"none"</code> both just absorb it —
@@ -374,8 +405,8 @@
       };
 
       const OpenFromStartSection = () => (
-        <section id="open-from-start" class="demo-section">
-          <h2>5. Open from the start</h2>
+        <section class="demo-section">
+          <Heading id="open-from-start">Open from the start</Heading>
           <p>
             <code>open={"{true}"}</code> (controlled) or{" "}
             <code>defaultOpen</code> (uncontrolled, mount-only) mount the dialog
@@ -411,8 +442,8 @@
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_controlled_by_button");
         return (
-          <section id="controlled-by-button" class="demo-section">
-            <h2>1. Controlled by button</h2>
+          <section class="demo-section">
+            <Heading id="controlled-by-button">Controlled by button</Heading>
             <p>
               A button commanding <code>--navi-toggle</code> opens/closes the
               dialog.
@@ -570,8 +601,8 @@
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_content_size");
         return (
-          <section id="content-size" class="demo-section">
-            <h2>2. Content dimensions</h2>
+          <section class="demo-section">
+            <Heading id="content-size">Content dimensions</Heading>
             <p>
               Dialog has no fixed size of its own either — centered by default,
               it sizes to whatever's inside it, from a short line of text to
@@ -640,7 +671,9 @@
               />
             </div>
 
-            <h3>Expanding/collapsing content while open</h3>
+            <Heading level={3} id="content-size-expanding">
+              Expanding/collapsing content while open
+            </Heading>
             <div class="demo-row">
               <ExpandCollapseDialog
                 label="expand/collapse"
@@ -782,8 +815,10 @@
           useAnimateControls("dialog_demo_position_top_layer");
         const [marginWithContainer, marginControl] = useMarginWithContainer();
         return (
-          <div id="position-top-layer" class="demo-subsection">
-            <h3>3.1 top layer</h3>
+          <div class="demo-subsection">
+            <Heading level={3} id="position-top-layer">
+              top layer
+            </Heading>
             {marginControl}
             <AreaGrid
               renderCell={(token) => (
@@ -813,8 +848,10 @@
           useAnimateControls("dialog_demo_position_local_layer");
         const [marginWithContainer, marginControl] = useMarginWithContainer();
         return (
-          <div id="position-local-layer" class="demo-subsection">
-            <h3>3.2 local layer</h3>
+          <div class="demo-subsection">
+            <Heading level={3} id="position-local-layer">
+              local layer
+            </Heading>
             <p>
               Confined to the container below instead of the whole viewport —
               genuinely clipped by its <code>overflow: hidden</code>. Focus trap
@@ -871,8 +908,8 @@
       };
 
       const PositionSection = () => (
-        <section id="position" class="demo-section">
-          <h2>3. Position</h2>
+        <section class="demo-section">
+          <Heading id="position">Position</Heading>
           <p>
             The full <code>positionArea</code> grammar Dialog now shares with
             Popover — a single compass token (<code>top</code>/
@@ -895,8 +932,8 @@
       );
 
       const AdaptiveSection = () => (
-        <section id="adaptive" class="demo-section">
-          <h2>6. dockedOnTouch</h2>
+        <section class="demo-section">
+          <Heading id="adaptive">dockedOnTouch</Heading>
           <p>
             <code>dockedOnTouch</code> turns the dialog into a bottom sheet
             (docked flush to the bottom edge, full width) when the pointer is
@@ -951,40 +988,135 @@
         </section>
       );
 
+      // ── uiAction / action ─────────────────────────────────────────────────
+
+      const ActionsSection = () => {
+        const [entries, push, clear] = useCallLog();
+        // Controlled from here so the demo can show what the dialog committed:
+        // the log says when, this says what stuck.
+        const [committed, setCommitted] = useState({ note: "" });
+
+        return (
+          <section class="demo-section">
+            <Heading id="actions">uiAction / action</Heading>
+            <p>
+              A dialog aggregates the named controls it contains, so it is
+              handed <code>{"{ note }"}</code>, not a bare string.{" "}
+              <code>uiAction</code> fires while typing — it is the live state.{" "}
+              <code>action</code> fires when the dialog <em>closes</em>, and
+              only if something actually changed: closing a dialog nobody
+              touched is not an answer.
+            </p>
+            <p>
+              Cancelling (<kbd>Escape</kbd>, or an outside click when{" "}
+              <code>pointerInteractionOutsideEffect="cancel"</code>) commits
+              nothing <em>and</em> puts back what the dialog opened on — reopen
+              after a cancel and the field is as you left it committed, not as
+              you typed it.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="actions_dialog">
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(committed)}</code>
+              </span>
+            </div>
+            <Dialog
+              id="actions_dialog"
+              value={committed}
+              pointerInteractionOutsideEffect="cancel"
+              uiAction={(value) => {
+                push("uiAction", value);
+              }}
+              action={(value) => {
+                push("action", value);
+                setCommitted(value);
+              }}
+            >
+              <Box flex="y" spacing="m" padding="m">
+                <Field vertical>
+                  <Label>Note</Label>
+                  <Input name="note" placeholder="type something…" />
+                </Field>
+                <div class="demo-row">
+                  <Button command="--navi-close">Close (commits)</Button>
+                  <Button command="--navi-cancel" variant="discrete">
+                    Cancel (reverts)
+                  </Button>
+                </div>
+              </Box>
+            </Dialog>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // Section (h2) / subsection (h3) heading with a hover anchor link. `<Link
+      // anchor>` owns the id (derived from its href); the "#" child renders as
+      // the visible affordance (shown on hover via revealOnInteraction).
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
       const TableOfContents = () => (
-        <nav class="demo-toc">
-          <strong>Contents</strong>
-          <ol>
+        <div className="demo-section">
+          <Heading id="dialog">Dialog</Heading>
+          <p>
+            A surface opened over the page for one decision. It is a control
+            group: whatever named controls it contains are aggregated into a
+            single value, it is a form boundary, and it commits that value when
+            it closes — see <Link href="#actions">uiAction / action</Link>.
+          </p>
+          <ol className="toc">
             <li>
-              <a href="#controlled-by-button">Controlled by button</a>
+              <Link href="#controlled-by-button">Controlled by button</Link>
             </li>
             <li>
-              <a href="#content-size">Content dimensions</a>
-            </li>
-            <li>
-              <a href="#position">Position</a>
-              <ol>
+              <Link href="#content-size">Content dimensions</Link>
+              <ul>
                 <li>
-                  <a href="#position-top-layer">top layer</a>
+                  <Link href="#content-size-expanding">
+                    Expanding/collapsing content while open
+                  </Link>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <Link href="#position">Position</Link>
+              <ul>
+                <li>
+                  <Link href="#position-top-layer">top layer</Link>
                 </li>
                 <li>
-                  <a href="#position-local-layer">local layer</a>
+                  <Link href="#position-local-layer">local layer</Link>
                 </li>
-              </ol>
+              </ul>
             </li>
             <li>
-              <a href="#pointer-interaction-outside">
+              <Link href="#pointer-interaction-outside">
                 pointerInteractionOutsideEffect
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#open-from-start">Open from the start</a>
+              <Link href="#open-from-start">Open from the start</Link>
             </li>
             <li>
-              <a href="#adaptive">dockedOnTouch</a>
+              <Link href="#adaptive">dockedOnTouch</Link>
+            </li>
+            <li>
+              <Link href="#actions">uiAction / action</Link>
             </li>
           </ol>
-        </nav>
+        </div>
       );
 
       const App = () => (
@@ -999,6 +1131,7 @@
           <PointerInteractionOutsideSection />
           <OpenFromStartSection />
           <AdaptiveSection />
+          <ActionsSection />
         </div>
       );
 
