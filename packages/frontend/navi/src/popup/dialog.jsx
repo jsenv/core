@@ -180,11 +180,16 @@ const css = /* css */ `
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
 
+    /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
+       the spacing, which is only the real ceiling for layer="top". A local
+       dialog is confined to its positioned ancestor, whose size reaches here
+       through --container-position-remaining-* (see applyNewPosition) — the
+       min() in --x-dialog-max-* is what accounts for both. */
     &[data-expand-x] {
-      width: var(--dialog-maxmax-width);
+      width: var(--x-dialog-max-width);
     }
     &[data-expand-y] {
-      height: var(--dialog-maxmax-height);
+      height: var(--x-dialog-max-height);
     }
 
     /* Square off the corners that land on the container's own corners — see

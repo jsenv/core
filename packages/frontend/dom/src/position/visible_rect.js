@@ -994,7 +994,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -1545,6 +1545,12 @@ export const pickPositionRelativeTo = (
     spaceRight: effectiveSpaceRight,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
+    // What a centered axis has to work with: the whole container, net of the
+    // margin kept on both sides. spaceLeft/spaceRight can't answer that — they
+    // are measured from the anchor, which for a container-docked element is
+    // the container itself, so they collapse to -marginWithContainer.
+    containerWidthAvailable: availableWidth - 2 * marginWithContainer,
+    containerHeightAvailable: availableHeight - 2 * marginWithContainer,
   };
 };
 
@@ -1665,8 +1671,16 @@ export const applyNewPosition = (
     spaceRight,
     spaceAbove,
     spaceBelow,
+    containerWidthAvailable,
+    containerHeightAvailable,
   },
 ) => {
+  // A centered axis is published too, from the container's own extent: leaving
+  // the property unset lets the consumer's size cap fall back to its viewport
+  // default, which overflows any container smaller than the viewport (a
+  // dialog/popover confined to a positioned ancestor). It stays a "remaining
+  // space" either way — docked: what is left on that side, centered: the whole
+  // container minus its margins.
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(
       "--container-position-remaining-height",
@@ -1677,8 +1691,13 @@ export const applyNewPosition = (
       "--container-position-remaining-height",
       `${spaceBelow}px`,
     );
-  } else {
+  } else if (containerHeightAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-height");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${containerHeightAvailable}px`,
+    );
   }
   if (positionX === "left" || positionX === "inset-right") {
     element.style.setProperty(
@@ -1690,8 +1709,13 @@ export const applyNewPosition = (
       "--container-position-remaining-width",
       `${spaceRight}px`,
     );
-  } else {
+  } else if (containerWidthAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-width");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${containerWidthAvailable}px`,
+    );
   }
 
   // A single implicit keyframe turned out not to work here: the WAAPI
