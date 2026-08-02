@@ -144,36 +144,54 @@ const css = /* css */ `
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
 
-    position: relative;
+    /* Deliberately NOT positioned: the popup children live in here, and a
+       layer="local" Popover/Dialog takes its nearest positioned ancestor as
+       containing block — the trigger would cap it at the height of one line and
+       clip it. Everything that needs a containing block (the custom-UI input
+       overlay, the loading outline) lives in .navi_picker_box below instead.
+       This element stays a real box so the sizing props a caller puts on the
+       picker (minWidth, expandX…) still apply; the box just fills it. */
     display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
-    min-height: calc(
-      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-    );
-    padding-top: var(--x-picker-padding-top);
-    padding-right: 0;
-    padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: 0;
-    flex-direction: row;
-    align-items: center;
+    /* Inherited properties stay here: a caller's own size/color lands on this
+       element, and re-declaring them on the box below would override what it
+       would otherwise inherit. */
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    background-color: var(--x-picker-background-color);
-    border-width: var(--picker-border-width);
-    border-style: solid;
-    border-color: var(--x-picker-border-color);
-    border-radius: var(--picker-border-radius);
-    outline-width: var(--picker-outline-width);
-    outline-style: none;
-    outline-color: var(--picker-outline-color);
-    outline-offset: var(--picker-outline-offset);
-    cursor: var(--x-picker-cursor, pointer);
-    pointer-events: auto;
-    /* user-select: none; */
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+
+    .navi_picker_box {
+      position: relative;
+      display: inline-flex;
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+      min-height: calc(
+        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+      );
+      padding-top: var(--x-picker-padding-top);
+      padding-right: 0;
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: 0;
+      flex: 1 1 auto;
+      flex-direction: row;
+      align-items: center;
+      background-color: var(--x-picker-background-color);
+      border-width: var(--picker-border-width);
+      border-style: solid;
+      border-color: var(--x-picker-border-color);
+      border-radius: var(--picker-border-radius);
+      outline-width: var(--picker-outline-width);
+      outline-style: none;
+      outline-color: var(--picker-outline-color);
+      outline-offset: var(--picker-outline-offset);
+      cursor: var(--x-picker-cursor, pointer);
+      pointer-events: auto;
+      /* user-select: none; */
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    }
 
     .navi_picker_value {
       display: inline-block;
@@ -270,7 +288,10 @@ const css = /* css */ `
     /* Focus */
     &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
       --x-picker-border-color: transparent;
-      outline-style: solid;
+
+      .navi_picker_box {
+        outline-style: solid;
+      }
     }
     /* Disabled */
     &[data-disabled] {
@@ -305,9 +326,11 @@ const css = /* css */ `
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
 
-      position: absolute;
-      inset: 0;
-      z-index: -1;
+      .navi_picker_box {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+      }
     }
   }
 `;
@@ -384,152 +407,154 @@ const PickerButton = (props) => {
       onnavi_request_open={inputProps.onnavi_request_open}
       onnavi_request_close={inputProps.onnavi_request_close}
     >
-      {variant === "headless" ? null : (
-        <LoadingOutline
-          loading={loading}
-          color="var(--picker-loader-color)"
-          inset={-2}
-        />
-      )}
-      <PickerInput
-        tabIndex={variant === "headless" ? -1 : undefined}
-        aria-hidden={variant === "headless" ? "true" : undefined}
-        {...inputProps}
-        // eslint-disable-next-line react/no-children-prop
-        children={undefined} // we will render children into the div
-        ui={ui}
-        onFocus={(e) => {
-          inputProps.onFocus?.(e);
-          e.target.select();
-        }}
-        onCopy={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          e.preventDefault();
-          const displayText =
-            pickerEl.querySelector(".navi_picker_value")?.textContent ??
-            String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
-        }}
-        onCut={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          // the copy part don't need control to be interactable
-          const displayText =
-            pickerEl.querySelector(".navi_picker_value")?.textContent ??
-            String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
-          // the clear ui state part need control to be interactable
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "cut",
-            allowed: () => {
-              dispatchRequestClearUIState(inputRef.current, e);
-            },
-          });
-          e.preventDefault();
-        }}
-        onPaste={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            // Don't intercept inside the picker popup content.
-            return;
-          }
-          const naviData = e.clipboardData.getData("application/x-navi");
-          let pasteValue;
-          if (naviData) {
-            try {
-              pasteValue = JSON.parse(naviData);
-            } catch {
-              pasteValue = naviData;
+      <span className="navi_picker_box">
+        {variant === "headless" ? null : (
+          <LoadingOutline
+            loading={loading}
+            color="var(--picker-loader-color)"
+            inset={-2}
+          />
+        )}
+        <PickerInput
+          tabIndex={variant === "headless" ? -1 : undefined}
+          aria-hidden={variant === "headless" ? "true" : undefined}
+          {...inputProps}
+          // eslint-disable-next-line react/no-children-prop
+          children={undefined} // we will render children into the div
+          ui={ui}
+          onFocus={(e) => {
+            inputProps.onFocus?.(e);
+            e.target.select();
+          }}
+          onCopy={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              return;
             }
-          } else {
-            pasteValue = e.clipboardData.getData("text/plain");
-          }
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "paste",
-            allowed: () => {
-              dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                event: e,
-              });
-            },
-          });
-          e.preventDefault();
-        }}
-      />
-      {variant === "icon" ||
-      variant === "headless" ||
-      ui === "default" ? null : (
-        <Text
-          className="navi_picker_value"
-          navi-placeholder={
-            value === undefined || value === "" ? "" : undefined
-          }
-          maxLines={maxLines}
-        >
-          <PickerContext.Provider value={{ value, placeholder, maxLines }}>
-            {ui === undefined ? <PickerDefaultUI /> : ui}
-          </PickerContext.Provider>
-        </Text>
-      )}
-      {variant === "headless" || ui === "default" ? null : (
-        <span className="navi_picker_right_slot">
-          {clearable && value !== undefined && value !== "" ? (
-            <Button
-              command="--navi-clear"
-              commandFor={inputProps.id}
-              tabIndex="-1"
-              // No navi-focus-delegate, unlike the identical button inside an
-              // input: handing focus back to the picker's own input is what
-              // opens the popup, and clearing is the opposite intention.
-              icon
-              variant="discrete"
-              // preventDefault, not just tabIndex="-1": a mousedown focuses
-              // its target before any click happens, and this button should
-              // never hold focus at all — the field keeps it.
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
+            const uiState = uiStateController.uiState;
+            if (uiState === undefined) {
+              return;
+            }
+            e.preventDefault();
+            const displayText =
+              pickerEl.querySelector(".navi_picker_value")?.textContent ??
+              String(uiState);
+            e.clipboardData.setData("text/plain", displayText);
+            e.clipboardData.setData(
+              "application/x-navi",
+              JSON.stringify(uiState),
+            );
+          }}
+          onCut={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              return;
+            }
+            const uiState = uiStateController.uiState;
+            if (uiState === undefined) {
+              return;
+            }
+            // the copy part don't need control to be interactable
+            const displayText =
+              pickerEl.querySelector(".navi_picker_value")?.textContent ??
+              String(uiState);
+            e.clipboardData.setData("text/plain", displayText);
+            e.clipboardData.setData(
+              "application/x-navi",
+              JSON.stringify(uiState),
+            );
+            // the clear ui state part need control to be interactable
+            dispatchRequestInteraction(pickerEl, {
+              event: e,
+              name: "cut",
+              allowed: () => {
+                dispatchRequestClearUIState(inputRef.current, e);
+              },
+            });
+            e.preventDefault();
+          }}
+          onPaste={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              // Don't intercept inside the picker popup content.
+              return;
+            }
+            const naviData = e.clipboardData.getData("application/x-navi");
+            let pasteValue;
+            if (naviData) {
+              try {
+                pasteValue = JSON.parse(naviData);
+              } catch {
+                pasteValue = naviData;
+              }
+            } else {
+              pasteValue = e.clipboardData.getData("text/plain");
+            }
+            dispatchRequestInteraction(pickerEl, {
+              event: e,
+              name: "paste",
+              allowed: () => {
+                dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                  event: e,
+                });
+              },
+            });
+            e.preventDefault();
+          }}
+        />
+        {variant === "icon" ||
+        variant === "headless" ||
+        ui === "default" ? null : (
+          <Text
+            className="navi_picker_value"
+            navi-placeholder={
+              value === undefined || value === "" ? "" : undefined
+            }
+            maxLines={maxLines}
+          >
+            <PickerContext.Provider value={{ value, placeholder, maxLines }}>
+              {ui === undefined ? <PickerDefaultUI /> : ui}
+            </PickerContext.Provider>
+          </Text>
+        )}
+        {variant === "headless" || ui === "default" ? null : (
+          <span className="navi_picker_right_slot">
+            {clearable && value !== undefined && value !== "" ? (
+              <Button
+                command="--navi-clear"
+                commandFor={inputProps.id}
+                tabIndex="-1"
+                // No navi-focus-delegate, unlike the identical button inside an
+                // input: handing focus back to the picker's own input is what
+                // opens the popup, and clearing is the opposite intention.
+                icon
+                variant="discrete"
+                // preventDefault, not just tabIndex="-1": a mousedown focuses
+                // its target before any click happens, and this button should
+                // never hold focus at all — the field keeps it.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <Icon size={iconSize}>
+                  <CloseSvg />
+                </Icon>
+              </Button>
+            ) : (
               <Icon size={iconSize}>
-                <CloseSvg />
+                {icon === undefined ? <ChevronDownSvg /> : icon}
               </Icon>
-            </Button>
-          ) : (
-            <Icon size={iconSize}>
-              {icon === undefined ? <ChevronDownSvg /> : icon}
-            </Icon>
-          )}
-        </span>
-      )}
+            )}
+          </span>
+        )}
+      </span>
       <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
         <div className="navi_picker_content">{children}</div>
       </ControlFacadeChildrenWrapper>
