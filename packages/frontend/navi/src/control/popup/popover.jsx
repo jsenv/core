@@ -56,17 +56,16 @@ import {
 } from "@jsenv/dom";
 import { useEffect, useId, useRef } from "preact/hooks";
 
-import { onNaviCommand } from "@jsenv/navi/src/control/commands.js";
+import {
+  ControlgroupChildrenWrapper,
+  useControlgroupProps,
+} from "../control_hooks.jsx";
+import { dispatchRequestAction } from "../rules/control_action.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../../box/box.jsx";
 import { resolveSpacingSize } from "../../box/box_style_util.js";
-import { onRequestInteraction } from "../rules/control_interaction.js";
 import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import {
-  useDebugFocus,
-  useDebugInteraction,
-  useDebugPopup,
-} from "../../navi_debug.jsx";
+import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
 import { useOpenControllerByProps } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
@@ -506,6 +505,26 @@ const PopoverCustom = (props) => {
 const usePopoverProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
+  // Resolved before the group hook below rather than with the rest of the
+  // props: the group needs the popover's own element to hang its state and its
+  // events on, and that is this ref.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // Same as Dialog (see its own useDialogProps): a popover holds controls, so
+  // it is one — it aggregates whatever named controls it contains into a
+  // single object, and ControlgroupChildrenWrapper below makes it a form
+  // boundary, so what is inside belongs to the popover rather than to the form
+  // around it.
+  const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
+    props,
+    {
+      controlType: "popover",
+      stateType: "object",
+      allowCapture: true,
+      wantRequesterButtonState: true,
+      cascadeValidationToChildren: true,
+    },
+  );
   const {
     openController,
     // "top" (default) → via-attribute, in the browser's own top layer;
@@ -548,8 +567,7 @@ const usePopoverProps = (props) => {
     ...rest
   } = props;
   const isTopLayer = layer === "top";
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — set at close time, read at the next
@@ -561,7 +579,6 @@ const usePopoverProps = (props) => {
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see resolveAutoAnimationKind).
@@ -1107,6 +1124,14 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
+      // Closing is what commits, cancelling commits nothing — see Dialog's own
+      // identical close, and open_controller.js for who passes isCancel.
+      if (!closeEvent.detail?.isCancel) {
+        dispatchRequestAction(popoverEl, {
+          event: closeEvent,
+          name: "close",
+        });
+      }
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
       // comment (openEffect above) for why hidePopover() alone isn't
@@ -1271,17 +1296,21 @@ const usePopoverProps = (props) => {
     ref,
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
-    "onnavi_command": (e) => {
-      onNaviCommand(e);
-    },
-    "onnavi_request_interaction": (e) => {
-      onRequestInteraction(e, { debugInteraction });
-    },
     "onKeyDown": (e) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     },
-    children,
+    // The group's own onnavi_command/onnavi_request_interaction land here too
+    // (they replace the pair this hook used to declare by hand) along with
+    // everything that makes the popover a control: its name, its state, its
+    // action.
+    ...groupRootProps,
+    ...groupProps,
+    "children": (
+      <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
+        {children}
+      </ControlgroupChildrenWrapper>
+    ),
     // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
     // already arrive here as plain props via ...rest (wired by
     // UncontrolledPopover above, forwarded through ControlledPopover's own
