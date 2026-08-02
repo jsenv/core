@@ -68,17 +68,6 @@ const NAVI_TYPE_DEFAULTS = {
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
 export const resolveInputProps = (props) => {
-  // readOnly means "the user cannot type in it", which the interaction gate
-  // enforces for every interaction alike — including clearing. A control whose
-  // value was never typed in the first place (a picker façade: the value comes
-  // from the popup it opens) still needs its clear button to work, hence the
-  // opt-out. Carried as an attribute because the --navi-clear command reads it
-  // off the DOM target, having no access to props.
-  if (props.clearableWhenReadOnly) {
-    props["data-clearable-when-readonly"] = "";
-  }
-  delete props.clearableWhenReadOnly;
-
   // `signal` carries a bound state signal. It is left on `props` on purpose:
   // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
   // `onUIAction` (ui_state_controller.js) writes user interactions back into

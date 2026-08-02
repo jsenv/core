@@ -588,12 +588,6 @@ const usePopoverProps = (props) => {
     ...rest
   } = props;
   const isTopLayer = layer === "top";
-  // Consumed by the control group above, never forwarded: on a <popover> element
-  // they would render as stray attributes (value="[object Object]" and friends).
-  delete rest.value;
-  delete rest.defaultValue;
-  delete rest.action;
-  delete rest.uiAction;
   const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
@@ -1334,9 +1328,13 @@ const usePopoverProps = (props) => {
     // for itself below still wins over it.
     ...groupRootProps,
     ...groupProps,
-    // The group keeps the value in its own state; as a prop it would only
-    // reach the <popover> element and render as value="[object Object]".
+    // The control-group props are consumed by the hook above, never forwarded:
+    // on a <popover> element they would only render as stray attributes
+    // (value="[object Object]" and friends).
     "value": undefined,
+    "defaultValue": undefined,
+    "action": undefined,
+    "uiAction": undefined,
     ...autoFocusProps,
     ref,
     "baseClassName": "navi_popover",

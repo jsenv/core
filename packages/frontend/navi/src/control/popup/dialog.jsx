@@ -630,12 +630,6 @@ const useDialogProps = (props) => {
     children,
     ...rest
   } = props;
-  // Consumed by the control group above, never forwarded: on a <dialog> element
-  // they would render as stray attributes (value="[object Object]" and friends).
-  delete rest.value;
-  delete rest.defaultValue;
-  delete rest.action;
-  delete rest.uiAction;
   const isModal = layer === "top";
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
@@ -1163,9 +1157,13 @@ const useDialogProps = (props) => {
     // for itself below still wins over it.
     ...groupRootProps,
     ...groupProps,
-    // The group keeps the value in its own state; as a prop it would only
-    // reach the <dialog> element and render as value="[object Object]".
+    // The control-group props are consumed by the hook above, never forwarded:
+    // on a <dialog> element they would only render as stray attributes
+    // (value="[object Object]" and friends).
     "value": undefined,
+    "defaultValue": undefined,
+    "action": undefined,
+    "uiAction": undefined,
     ...autoFocusProps,
     "as": "dialog",
     ref,

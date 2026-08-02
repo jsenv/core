@@ -249,7 +249,7 @@ registerNaviCommand("--navi-clear", (source, event) => {
     return undefined;
   }
   const fromInput = source.closest(`[navi-control="input"]`);
-  // See resolveInputProps' own clearableWhenReadOnly: the interaction gate
+  // See picker.jsx, the only thing setting this attribute: the interaction gate
   // refuses everything on a readOnly control, clearing included, which is right
   // for a control the user types in and wrong for a façade whose value comes
   // from elsewhere. Opting out skips the gate for this one interaction only.
