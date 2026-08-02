@@ -61,7 +61,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  */
 // The event type observeSize() reports with — recognized by check() as "the
 // change is in another element, not in the tracked rect".
-const OBSERVED_ELEMENT_SIZE_CHANGE = "observed_element_size_change";
+// Exported: a caller that resized the element itself (a callout whose message
+// just changed, say) has to re-check with this rather than with nothing — its
+// own rect may not have moved at all, and the dedup would drop the check.
+export const ELEMENT_SIZE_CHANGE = "observed_element_size_change";
 
 export const visibleRectEffect = (
   element,
@@ -131,12 +134,12 @@ export const visibleRectEffect = (
     resizeWatchingPaused = false;
     publishResizeWatchingPausedChange(false);
   };
-  // A caller with nothing to describe (a callout re-measuring after its own
-  // content changed, say) passes no event. Treat it like the synthetic
-  // size-change below: something moved, re-measure and notify unconditionally
-  // rather than let the dedup decide from a rect that has not moved.
-  const FORCED_CHECK_EVENT = { type: OBSERVED_ELEMENT_SIZE_CHANGE };
-  const check = (event = FORCED_CHECK_EVENT) => {
+  // Only so the reads below have something to read: a caller that describes
+  // nothing gets no special treatment, it goes through the same dedup as any
+  // other check. A caller that needs the dedup bypassed says so by passing the
+  // event that means it (ELEMENT_SIZE_CHANGE).
+  const UNSET_EVENT = { type: "unset" };
+  const check = (event = UNSET_EVENT) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }
@@ -323,7 +326,7 @@ export const visibleRectEffect = (
     // defeating the whole point of observeSize (a popover reconsidering its
     // placement once its own content shrinks/grows, a callout re-measuring
     // against its message body).
-    if (event.type === OBSERVED_ELEMENT_SIZE_CHANGE) {
+    if (event.type === ELEMENT_SIZE_CHANGE) {
       lastVisibleRect = visibleRect;
       lastViewportRect = viewportRect;
       notify("observed element size changed");
@@ -737,7 +740,7 @@ export const visibleRectEffect = (
       pendingFrame = requestAnimationFrame(() => {
         pendingFrame = null;
         check(
-          new CustomEvent(OBSERVED_ELEMENT_SIZE_CHANGE, {
+          new CustomEvent(ELEMENT_SIZE_CHANGE, {
             detail: { width, height },
           }),
         );

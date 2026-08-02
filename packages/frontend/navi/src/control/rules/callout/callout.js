@@ -15,6 +15,7 @@ import {
   createValueEffect,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
+  ELEMENT_SIZE_CHANGE,
   findEvent,
   findFocusable,
   findFocusDelegateTarget,
@@ -793,7 +794,10 @@ export const openCallout = (
   addTeardown(() => {
     positioner.stop();
   });
-  callout.updatePosition = () => positioner.update();
+  // The content it just rendered changed its own size, so the check must not be
+  // deduped away on the grounds that the anchor did not move.
+  callout.updatePosition = () =>
+    positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
 
   return callout;
 };

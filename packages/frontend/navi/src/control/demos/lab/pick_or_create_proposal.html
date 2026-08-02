@@ -128,11 +128,12 @@
     <h1>Picker « choisir ou créer »</h1>
     <p class="intro">
       La façade du picker est le champ de recherche lui-même. Le toucher ouvre
-      la surface plein écran, qui contient la vraie recherche. L'action de
-      création est juste sous la recherche, toujours présente et inerte tant que
-      rien n'est saisi — même si le nom existe déjà : deux personnes peuvent
-      porter le même nom, on les distingue sur l'email, deux clubs sur
-      l'adresse. Tape « Damien » pour le voir.
+      la surface plein écran, qui contient la vraie recherche. Le
+      <strong>+</strong> et la dernière ligne de la liste ouvrent le même
+      formulaire de création — le second avec le nom déjà saisi. Les homonymes
+      sont permis : deux personnes peuvent porter le même nom, on les distingue
+      sur le nom de famille ou l'email, deux clubs sur l'adresse. Tape « Damien
+      » pour le voir.
     </p>
     <div id="app"></div>
 
@@ -146,6 +147,7 @@
         Dialog,
         Field,
         Input,
+        Label,
         List,
         Text,
         useSearchText,
@@ -178,19 +180,19 @@
         placeholder,
         searchPlaceholder,
         createLabel,
-        detailLabel,
-        detailPlaceholder,
+        createTitle,
+        createFields,
+        toEntry,
         entries,
         recentIds = [],
         onCreate,
-        onDetail,
         value,
         onChange,
       }) => {
         const openSignal = useSignal(false);
         const searchSignal = useSignal("");
-        const detailOpenSignal = useSignal(false);
-        const detailSignal = useSignal("");
+        const formOpenSignal = useSignal(false);
+        const formValuesSignal = useSignal({});
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -214,11 +216,34 @@
           openSignal.value = false;
           searchSignal.value = "";
         };
-        const create = () => {
-          const entry = { id: nextId(), name: typed, detail: "" };
+        // The form is the single way in, whether it was reached from the + or
+        // from the list: same fields, only the prefill differs
+        const openForm = (prefill) => {
+          const values = {};
+          for (const field of createFields) {
+            values[field.key] = field.prefill ? prefill : "";
+          }
+          formValuesSignal.value = values;
+          formOpenSignal.value = true;
+        };
+        const submitForm = () => {
+          // isNew rather than a save round-trip: the backend sees an entry with
+          // no id of its own when the match is finally submitted, and registers
+          // it then. Nothing to await here, nothing to undo if the user quits.
+          const entry = {
+            id: nextId(),
+            isNew: true,
+            ...toEntry(formValuesSignal.value),
+          };
           onCreate(entry);
+          formOpenSignal.value = false;
           choose(entry);
         };
+        const formIncomplete = createFields.some(
+          (field) =>
+            !field.optional &&
+            !(formValuesSignal.value[field.key] || "").trim(),
+        );
 
         return (
           <div class="field-block">
@@ -251,17 +276,6 @@
               </Field>
             </div>
             {value && value.detail && <p class="detail">{value.detail}</p>}
-            {value && !value.detail && (
-              <Button
-                discrete
-                onClick={() => {
-                  detailSignal.value = "";
-                  detailOpenSignal.value = true;
-                }}
-              >
-                Renseigner plus d'infos
-              </Button>
-            )}
 
             <Dialog
               layer="local"
@@ -300,16 +314,21 @@
                     autoComplete="off"
                     expandX
                   />
+                  {/* Always available, and never disabled: creating does not
+                      require having searched first, so the entry point must not
+                      depend on the search box holding something */}
+                  <Button
+                    icon
+                    variant="discrete"
+                    paddingX="s"
+                    paddingY="xs"
+                    onClick={() => {
+                      openForm("");
+                    }}
+                  >
+                    +
+                  </Button>
                 </Box>
-
-                {/* Right under the search and always present: at the bottom
-                    of a full height surface it sat too far from the text that
-                    enables it to be noticed, and showing it only once something
-                    is typed shifted the whole list down on the first keystroke.
-                    Kept inert rather than hidden, so nothing moves. */}
-                <Button expandX disabled={typed === ""} onClick={create}>
-                  {typed === "" ? createLabel : `${createLabel} « ${typed} »`}
-                </Button>
 
                 <List
                   selectable
@@ -344,40 +363,61 @@
                       </Box>
                     </List.Item>
                   ))}
+                  {/* Last row rather than a button below the list: it reads as
+                      "and if none of these is the one", right where the eye
+                      already is. Same form as the +, name prefilled. */}
+                  {typed !== "" && (
+                    <List.Item
+                      key="__create__"
+                      id={`${id}_create`}
+                      index={matchingEntries.length}
+                      padding="s"
+                      onClick={() => {
+                        openForm(typed);
+                      }}
+                    >
+                      <Text>
+                        {createLabel} « {typed} »
+                      </Text>
+                    </List.Item>
+                  )}
                 </List>
               </Box>
             </Dialog>
 
-            {/* Opt-in, after the fact: the detail is what will tell homonyms
-                apart later, but asking for it up front would tax the very
-                person who is in a hurry to create */}
+            {/* Asked once, at creation: an entry is entered a single time in
+                its life, and the second field is what will tell homonyms apart
+                afterwards. Cheaper here than as an after-the-fact chore nobody
+                comes back to do. */}
             <Dialog
               layer="local"
               positionArea="center"
               animation
-              open={detailOpenSignal.value}
+              open={formOpenSignal.value}
               onClose={() => {
-                detailOpenSignal.value = false;
+                formOpenSignal.value = false;
               }}
             >
               <Box flex="y" spacing="s" padding="m">
-                <Text>{detailLabel}</Text>
-                <Input
-                  placeholder={detailPlaceholder}
-                  value={detailSignal.value}
-                  uiAction={(next) => {
-                    detailSignal.value = next;
-                  }}
-                  expandX
-                />
-                <Button
-                  expandX
-                  onClick={() => {
-                    onDetail(value, detailSignal.value.trim());
-                    detailOpenSignal.value = false;
-                  }}
-                >
-                  Enregistrer
+                <Text>{createTitle}</Text>
+                {createFields.map((field) => (
+                  <Field vertical key={field.key}>
+                    <Label>{field.label}</Label>
+                    <Input
+                      placeholder={field.placeholder}
+                      value={formValuesSignal.value[field.key] || ""}
+                      uiAction={(next) => {
+                        formValuesSignal.value = {
+                          ...formValuesSignal.value,
+                          [field.key]: next,
+                        };
+                      }}
+                      expandX
+                    />
+                  </Field>
+                ))}
+                <Button expandX disabled={formIncomplete} onClick={submitForm}>
+                  {createLabel}
                 </Button>
               </Box>
             </Dialog>
@@ -418,13 +458,6 @@
         const addTo = (listSignal) => (entry) => {
           listSignal.value = [...listSignal.value, entry];
         };
-        const setDetailOn = (listSignal, selectedSignal) => (entry, detail) => {
-          const updated = { ...entry, detail };
-          listSignal.value = listSignal.value.map((e) =>
-            e.id === entry.id ? updated : e,
-          );
-          selectedSignal.value = updated;
-        };
 
         return (
           <>
@@ -438,12 +471,22 @@
                   placeholder="Choisir un club…"
                   searchPlaceholder="Rechercher un club…"
                   createLabel="Créer le club"
-                  detailLabel="Adresse du club"
-                  detailPlaceholder="Rue, ville…"
+                  createTitle="Nouveau club"
+                  createFields={[
+                    { key: "name", label: "Nom", prefill: true },
+                    {
+                      key: "address",
+                      label: "Adresse",
+                      placeholder: "Rue, ville…",
+                    },
+                  ]}
+                  toEntry={(values) => ({
+                    name: values.name.trim(),
+                    detail: values.address.trim(),
+                  })}
                   entries={clubsSignal.value}
                   recentIds={[INITIAL_CLUBS[0].id]}
                   onCreate={addTo(clubsSignal)}
-                  onDetail={setDetailOn(clubsSignal, clubSignal)}
                   value={clubSignal.value}
                   onChange={(entry) => {
                     clubSignal.value = entry;
@@ -456,12 +499,24 @@
                   placeholder="Ajouter un joueur…"
                   searchPlaceholder="Rechercher un joueur…"
                   createLabel="Ajouter le joueur"
-                  detailLabel="Email du joueur"
-                  detailPlaceholder="prenom@mail.com"
+                  createTitle="Nouveau joueur"
+                  createFields={[
+                    { key: "firstName", label: "Prénom", prefill: true },
+                    { key: "lastName", label: "Nom" },
+                    {
+                      key: "email",
+                      label: "Email",
+                      placeholder: "prenom@mail.com",
+                      optional: true,
+                    },
+                  ]}
+                  toEntry={(values) => ({
+                    name: `${values.firstName.trim()} ${values.lastName.trim()}`.trim(),
+                    detail: values.email.trim(),
+                  })}
                   entries={playersSignal.value}
                   recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
                   onCreate={addTo(playersSignal)}
-                  onDetail={setDetailOn(playersSignal, playerSignal)}
                   value={playerSignal.value}
                   onChange={(entry) => {
                     playerSignal.value = entry;
