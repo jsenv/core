@@ -148,11 +148,6 @@ const css = /* css */ `
       max-height: var(--list-max-height, inherit);
       flex-wrap: inherit;
       overflow: auto;
-      /* A control inside the list (a button in an item) must keep its loading
-         outline within its own box: overflow:auto turns the few pixels the
-         outline normally draws outside the control into a scrollbar, which
-         would appear and disappear as things load. */
-      --loading-outline-min-inset: 0px;
       overscroll-behavior: inherit; /* inherit select behavior */
       scrollbar-width: inherit;
     }
@@ -432,6 +427,17 @@ const css = /* css */ `
      after the list items */
     order: 1;
   }
+  /* A control that IS the row — a direct child of the item, so it spans it —
+     must keep its loading outline within its own box: the scroll container is
+     overflow:auto, and the couple pixels the outline normally draws outside
+     the control are enough to make it scrollable, so a scrollbar would appear
+     and disappear as things load. Targeted on the outline itself rather than
+     inherited from the item, so a control nested deeper (which has room around
+     it, and does not reach the edges) keeps the outline it asked for. */
+  .navi_list_item > * > .navi_loading_outline_wrapper {
+    --loading-outline-min-inset: 0px;
+  }
+
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;

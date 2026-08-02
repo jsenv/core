@@ -227,10 +227,17 @@ const css = /* css */ `
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      /* Transparent to the pointer: the chevron is decoration, and a click on
+         it means "open the picker", which is what the input underneath does. */
       pointer-events: none;
 
       .navi_icon {
         max-height: 100%;
+      }
+      /* The clear button is the exception — it is a real target with its own
+         intention (clear, the opposite of open), so it takes its clicks back. */
+      .navi_button {
+        pointer-events: auto;
       }
     }
     &[navi-single-line] {
@@ -537,13 +544,6 @@ const PickerButton = (props) => {
                 // never hold focus at all — the field keeps it.
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
                 }}
               >
                 <Icon size={iconSize}>

@@ -100,6 +100,15 @@
         font-weight: 600;
         font-size: 13px;
       }
+      /* The title of a row of fields: the last span sits over the last column
+         (same width as the field under it), the first takes the rest */
+      .field-title--row {
+        display: flex;
+        gap: 8px;
+      }
+      .field-title--row span:first-child {
+        flex: 1;
+      }
       .field-block {
         margin-bottom: 18px;
       }
@@ -122,6 +131,9 @@
         color: #fff;
         background: #1a1a2e;
         border-color: #1a1a2e;
+      }
+      .required {
+        color: #b42318;
       }
       .detail {
         color: #6b7280;
@@ -387,37 +399,36 @@
                 the side for tonight must not rewrite the player's own habit, so
                 picking another player starts again from that player's default. */}
               {sideOverride !== undefined && (
-                <Box flex="y" spacing="xs">
-                  <Text className="detail">Côté :</Text>
-                  <Picker
-                    name={`${id}_side`}
-                    value={sideOverride || undefined}
-                    ui={sideLabel(sideOverride)}
-                    placeholder="—"
-                    slotSpacing="xs"
-                    // wide enough for the longest side: without it the field
-                    // resizes with what is selected ("—" vs "Les 2") and the
-                    // player row jiggles every time the side changes
-                    minWidth="80px"
-                    action={onSideChange}
-                  >
-                    <List selectable command="--navi-send" separator>
-                      {SIDES.map((side, i) => (
-                        <List.Item
-                          selectable
-                          key={side.value}
-                          id={`${id}_side_${side.value}`}
-                          index={i}
-                          value={side.value}
-                          selected={sideOverride === side.value}
-                          padding="s"
-                        >
-                          {side.label}
-                        </List.Item>
-                      ))}
-                    </List>
-                  </Picker>
-                </Box>
+                <Picker
+                  id={`${id}_side`}
+                  name={`${id}_side`}
+                  value={sideOverride || undefined}
+                  ui={sideLabel(sideOverride)}
+                  placeholder="—"
+                  mode="popover"
+                  slotSpacing="xs"
+                  // the width of its column, fixed: left free the field would
+                  // resize with what is selected ("—" vs "Les 2") and the row
+                  // would jiggle every time the side changes
+                  minWidth={SIDE_COLUMN_WIDTH}
+                  action={onSideChange}
+                >
+                  <List selectable command="--navi-send" separator>
+                    {SIDES.map((side, i) => (
+                      <List.Item
+                        selectable
+                        key={side.value}
+                        id={`${id}_side_${side.value}`}
+                        index={i}
+                        value={side.value}
+                        selected={sideOverride === side.value}
+                        padding="s"
+                      >
+                        {side.label}
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
               )}
             </Box>
 
@@ -454,7 +465,13 @@
                   </Box>
                   {createFields.map((field) => (
                     <Field vertical key={`${field.key}_${prefillSignal.value}`}>
-                      <Label>{field.label}</Label>
+                      <Label>
+                        {field.label}
+                        {/* Only the mandatory ones are marked: most of this
+                            form is optional, so marking those instead would
+                            put an asterisk almost everywhere */}
+                        {!field.optional && <span class="required"> *</span>}
+                      </Label>
                       {field.options ? (
                         <RadioGroup name={field.key} flex spacing="s">
                           {field.options.map((option) => (
@@ -571,6 +588,10 @@
         },
       ];
 
+      // One source for both the side field and the column label above it, so
+      // the label stays over the column it names
+      const SIDE_COLUMN_WIDTH = "80px";
+
       const SIDES = [
         { value: "left", label: "Gauche" },
         { value: "right", label: "Droite" },
@@ -650,6 +671,7 @@
                     key: "address",
                     label: "Adresse",
                     placeholder: "Rue, ville…",
+                    optional: true,
                   },
                 ]}
                 toEntry={(values) => ({
@@ -665,11 +687,18 @@
                 }}
               />
 
-              <p class="field-title">Joueurs</p>
+              {/* "Côté" is said once, at the head of the column it names: the
+                  rows below are all the same shape, so repeating it on each of
+                  them would be three times the words for one meaning */}
+              <p class="field-title field-title--row">
+                <span>Joueurs</span>
+                <span style={{ width: SIDE_COLUMN_WIDTH }}>Côté</span>
+              </p>
               <PickOrCreateField
                 popupLayer={popupLayer}
                 id={`${idPrefix}player`}
-                placeholder="Ajouter un joueur…"
+                // no placeholder on purpose: an empty row reads as empty, which
+                // is exactly what it is — a player slot nobody has to fill
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
@@ -690,7 +719,6 @@
               <PickOrCreateField
                 popupLayer={popupLayer}
                 id={`${idPrefix}player2`}
-                placeholder="Ajouter un joueur…"
                 searchPlaceholder="Rechercher un joueur…"
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
