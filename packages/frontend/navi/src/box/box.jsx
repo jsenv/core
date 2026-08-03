@@ -99,15 +99,20 @@ import.meta.css = /* css */ `
       --x-scrollable-overflow: scroll;
     }
 
+    /* box-shadow rather than a border: it draws the separation without taking
+       part in the layout, so a header keeps the exact height its content asks
+       for and nothing shifts by a pixel when the line appears. */
     > [data-header] {
       position: sticky;
       top: 0;
       z-index: 1;
+      box-shadow: 0 1px 0 var(--navi-separator-color-default);
     }
     > [data-footer] {
       position: sticky;
       bottom: 0;
       z-index: 1;
+      box-shadow: 0 -1px 0 var(--navi-separator-color-default);
     }
 
     &:has(> [data-body]) {
@@ -259,7 +264,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 export const Box = (props) => {
   const {
     ref,
-    as = "div",
+    as: asProp = "div",
     baseClassName,
     className,
     baseStyle,
@@ -302,7 +307,7 @@ export const Box = (props) => {
     body,
     ...rest
   } = props;
-  const TagName = as;
+  let as = asProp;
 
   // A box that scrolls is what gives header/footer/body their meaning, and
   // saying overflow="auto" is already saying it — no second prop for the same
@@ -311,6 +316,16 @@ export const Box = (props) => {
     const value = rest[name];
     return value === "auto" || value === "scroll";
   });
+  // <header>/<footer> rather than a div: the role is exactly what those tags
+  // mean, and a screen reader gets it for free. The body stays a div — <main>
+  // means "the main content of the document", which a popup's body is not.
+  if (header && as === "div") {
+    as = "header";
+  }
+  if (footer && as === "div") {
+    as = "footer";
+  }
+  const TagName = as;
   if (scrolls) {
     rest["data-scrollable"] = "";
     if (rest.overflow === "auto" || rest.overflow === "scroll") {

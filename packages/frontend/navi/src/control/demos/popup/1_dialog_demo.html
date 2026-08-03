@@ -230,6 +230,7 @@
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
+      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       // Backs each section's own "Slow" checkbox/"Animation" select —
@@ -1100,14 +1101,30 @@
           {/* expandY: the push only reads if the first dialog fills the
               height it is pushed out of */}
           <Dialog id={`${idPrefix}_first`} layer={layer} expandY>
-            <Box header padding="m" className="demo-overflow-part">
-              first
-            </Box>
-            <Box body padding="m" flex="y" spacing="m">
-              <OverflowFiller count={4} />
-              <Button command="--navi-open" commandFor={`${idPrefix}_second`}>
-                Open the second
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="demo-overflow-part"
+            >
+              <Text expandX>first</Text>
+              {/* top right, like the chevron of the second one: what opens the
+                  next surface and what leaves it live in the same corner */}
+              <Button
+                command="--navi-open"
+                commandFor={`${idPrefix}_second`}
+                icon
+                variant="discrete"
+                aria-label="Open the second"
+              >
+                <Icon>
+                  <PlusSvg />
+                </Icon>
               </Button>
+            </Box>
+            <Box body padding="m">
+              <OverflowFiller count={4} />
             </Box>
           </Dialog>
           <Dialog
@@ -1189,6 +1206,10 @@
             <Dialog
               id="required_dialog"
               value={committed}
+              // a form with a submit button: the button is where committing
+              // happens, so leaving by clicking outside means giving up — the
+              // opposite default from a dialog the user edits in place
+              pointerInteractionOutsideEffect="cancel"
               action={(value) => {
                 push("action", value);
                 setCommitted(value);
@@ -1199,7 +1220,7 @@
                   <Label requiredIndicator>Name</Label>
                   <Input name="name" required />
                 </Field>
-                <Button command="--navi-close">Send</Button>
+                <Button command="--navi-close">Submit</Button>
               </Box>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
@@ -1292,7 +1313,7 @@
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-                <Button command="--navi-close">Send</Button>
+                <Button command="--navi-close">Submit</Button>
               </Box>
             </Dialog>
           </section>

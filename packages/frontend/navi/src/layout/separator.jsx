@@ -4,7 +4,7 @@ const css = /* css */ `
   @layer navi {
     .navi_separator {
       --size: 1px;
-      --color: #e4e4e7;
+      --color: var(--navi-separator-color-default);
       --spacing: 0.5em;
       --spacing-start: 0.5em;
       --spacing-end: 0.5em;
@@ -34,11 +34,9 @@ const css = /* css */ `
   }
 `;
 
-const SeparatorStyleCSSVars = {
-  color: "--color",
-};
 export const Separator = ({ vertical, ...props }) => {
   import.meta.css = css;
+
   return (
     <Box
       as={vertical ? "span" : "hr"}
@@ -48,4 +46,7 @@ export const Separator = ({ vertical, ...props }) => {
       styleCSSVars={SeparatorStyleCSSVars}
     />
   );
+};
+const SeparatorStyleCSSVars = {
+  color: "--color",
 };
