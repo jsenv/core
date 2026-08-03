@@ -125,10 +125,13 @@ import.meta.css = /* css */ `
         flex-shrink: 0;
       }
       > [data-body] {
-        /* min-height: a flex child refuses to shrink below its content unless
+        /* Shrinks when there is not enough room (and then scrolls), but never
+           grows: a short body leaves the footer right under it rather than
+           pushed to the bottom of a container it does not fill.
+           min-height: a flex child refuses to shrink below its content unless
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
-        flex: 1;
+        flex: 0 1 auto;
         overflow: auto;
       }
     }

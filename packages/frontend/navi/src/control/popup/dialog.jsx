@@ -205,13 +205,15 @@ const css = /* css */ `
        Its own transition list is declared here because a dialog with no
        animation of its own must still travel. */
     &[data-pushed] {
-      transition-property: translate, opacity;
+      transition-property: translate;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
       pointer-events: none;
     }
     &[data-pushed="up"] {
-      opacity: 0;
+      /* No fade, same reason as the sliding animation it travels with: the
+         movement is the whole effect, and fading on top of it would read as
+         two things happening rather than one. */
       translate: 0 -100%;
     }
 
@@ -758,6 +760,14 @@ const useDialogProps = (props) => {
     const backdropEl = backdropRef.current;
     const pushedEl = pushes ? document.getElementById(pushes) : null;
     if (pushedEl) {
+      // Both halves of one movement, so both last the same time: the pushed
+      // dialog borrows the duration of the one pushing it.
+      pushedEl.style.setProperty(
+        "--popup-animation-duration",
+        getComputedStyle(dialogEl).getPropertyValue(
+          "--popup-animation-duration",
+        ),
+      );
       pushedEl.setAttribute("data-pushed", "up");
     }
     // What the dialog held when it opened: the answer to compare against when

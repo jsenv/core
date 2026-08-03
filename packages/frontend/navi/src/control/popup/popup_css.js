@@ -179,8 +179,10 @@ export const popupCss = /* css */ `
       opacity: 1;
       translate: 0 0;
 
+      /* No fade: the travel is the whole effect. Fading it out on top would
+         make the popup disappear before it has finished leaving, which reads as
+         two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        opacity: 0;
         translate: calc(var(--x-popup-slide-x, 0) * 100%)
           calc(var(--x-popup-slide-y, -1) * 100%);
       }

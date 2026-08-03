@@ -499,7 +499,13 @@
               pushes={`${id}_picker_popup`}
               positionArea="bottom"
               animation="sliding"
-              expand
+              // slow on purpose in this lab: the point is to watch the two
+              // dialogs cross
+              animationDuration="2s"
+              // expandX only: the form takes the width of the surface it comes
+              // from, but its own height — a short form has no reason to fill
+              // the screen
+              expandX
               flex="y"
               minHeight={0}
             >
