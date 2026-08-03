@@ -607,18 +607,7 @@
                 <SlideShow.Item id="first" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
-                    <Button
-                      command="--navi-next"
-                      icon
-                      variant="discrete"
-                      size="xl"
-                      padding="xs"
-                      aria-label="Open the second"
-                    >
-                      <Icon>
-                        <PlusSvg />
-                      </Icon>
-                    </Button>
+                    <SlideShow.Next size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={3} />
@@ -627,18 +616,7 @@
                 <SlideShow.Item id="second" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>second</Text>
-                    <Button
-                      command="--navi-previous"
-                      icon
-                      variant="discrete"
-                      size="xl"
-                      padding="xs"
-                      aria-label="Close"
-                    >
-                      <Icon>
-                        <ChevronUpSvg />
-                      </Icon>
-                    </Button>
+                    <SlideShow.Previous size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={6} />

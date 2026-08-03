@@ -111,24 +111,17 @@
         ));
 
       // One page: a header that stays and a body that scrolls, plus the button
-      // that leaves it. "next"/"previous", not "show the page called second":
-      // the buttons say where to go, the slideshow knows where that is.
+      // that leaves it. SlideShow.Next/.Previous say where to go — which page
+      // that is, and which way the chevron points, is the slideshow's business.
       const Page = ({ id, title, direction, children }) => (
         <SlideShow.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
             <Text expandX>{title}</Text>
-            <Button
-              command={direction === "next" ? "--navi-next" : "--navi-previous"}
-              icon
-              variant="discrete"
-              size="xl"
-              padding="xs"
-              aria-label={direction === "next" ? "Next page" : "Previous page"}
-            >
-              <Icon>
-                {direction === "next" ? <PlusSvg /> : <ChevronUpSvg />}
-              </Icon>
-            </Button>
+            {direction === "next" ? (
+              <SlideShow.Next size="xl" padding="xs" />
+            ) : (
+              <SlideShow.Previous size="xl" padding="xs" />
+            )}
           </Box>
           <Box body padding="m">
             {children}
