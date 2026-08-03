@@ -306,7 +306,7 @@
                     moments of the same decision, so they share a box and the
                     second arrives from the side rather than opening on top —
                     see slide_list.jsx */}
-                <SlideList expandY>
+                <SlideList vertical>
                   <Slide id={`${id}_pick`} overflow="auto">
                     {/* No way back in it on purpose: this slide is the first
                         one, and the surface is closed by clicking outside. */}
@@ -465,7 +465,11 @@
                         {/* Back to the list, not out of the surface: this slide
                             was reached from the one behind it, so leaving it
                             means returning there */}
-                        <SlideList.Previous padding="s" marginRight="-s" />
+                        <SlideList.Previous
+                          size="xl"
+                          padding="xs"
+                          marginRight="-xs"
+                        />
                       </Box>
                       {/* body: the fields are what scrolls, so the header above
                           and the footer below stay put */}
@@ -484,12 +488,7 @@
                           where the thumb ends up; too narrow, they wrap — and
                           because the row is reversed, confirm takes the first
                           line, on top */}
-                      <Box
-                        footer
-                        padding="m"
-                        paddingY="s"
-                        className="form-actions"
-                      >
+                      <Box footer padding="m" className="form-actions">
                         {/* --navi-send: it submits the form and, once that is
                             valid, closes the surface it is in — the entry is
                             created and chosen in one move */}
@@ -689,7 +688,7 @@
       );
 
       const PlayerForm = ({ prefill }) => (
-        <>
+        <Box flex="y" spacing="s">
           <TextField
             label="Prénom"
             name="firstName"
@@ -711,7 +710,7 @@
               ))}
             </RadioGroup>
           </Field>
-        </>
+        </Box>
       );
       // A field nobody filled has no ui state at all — undefined, not "" — so
       // reading one always goes through here. navi is right to tell the two
