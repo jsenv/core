@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slideshow demo</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        font-size: 1.3rem;
+        border-bottom: 2px solid #ddd;
+      }
+      .demo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .part {
+        color: white;
+        background: #1a237e;
+      }
+      .filler {
+        padding: 8px 12px;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      /* In the document: the slideshow has no popup to take its size from, so
+         it is given one here — same as any box would be. */
+      .in-document {
+        width: 320px;
+        border: 1px solid #90caf9;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Icon,
+        Popover,
+        SlideShowContent,
+        Text,
+      } from "@jsenv/navi";
+      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
+      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
+
+      const Filler = ({ count }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="filler">
+            {i + 1}
+          </div>
+        ));
+
+      // The same two pages everywhere below: what changes between the three
+      // sections is only what holds them.
+      const Pages = () => (
+        <SlideShowContent duration="400ms">
+          <Box id="first" flex="y" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>first</Text>
+              {/* "next", not "show the page called second": the buttons say
+                  where to go, the slideshow knows where that is */}
+              <Button
+                command="--navi-next"
+                icon
+                variant="discrete"
+                size="xl"
+                padding="xs"
+                aria-label="Next page"
+              >
+                <Icon>
+                  <PlusSvg />
+                </Icon>
+              </Button>
+            </Box>
+            <Box body padding="m">
+              <Filler count={3} />
+            </Box>
+          </Box>
+          <Box id="second" flex="y" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>second</Text>
+              <Button
+                command="--navi-previous"
+                icon
+                variant="discrete"
+                size="xl"
+                padding="xs"
+                aria-label="Previous page"
+              >
+                <Icon>
+                  <ChevronUpSvg />
+                </Icon>
+              </Button>
+            </Box>
+            {/* Taller than the first on purpose: the box keeps the height it
+                took at the start, so this one scrolls its own body instead of
+                making everything grow */}
+            <Box body padding="m">
+              <Filler count={12} />
+            </Box>
+          </Box>
+        </SlideShowContent>
+      );
+
+      const App = () => (
+        <div>
+          <h1>Slideshow</h1>
+          <p>
+            Pages that replace one another inside one box. The box takes its
+            height once, from the first page; a page travels by exactly one box,
+            so a short one and a tall one move the same distance.
+          </p>
+
+          <section class="demo-section">
+            <h2>In the document</h2>
+            <div class="in-document">
+              <Pages />
+            </div>
+          </section>
+
+          <section class="demo-section">
+            <h2>In a dialog</h2>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="slideshow_dialog">
+                Open
+              </Button>
+            </div>
+            <Dialog id="slideshow_dialog" minWidth="320px">
+              <Pages />
+            </Dialog>
+          </section>
+
+          <section class="demo-section">
+            <h2>In a popover</h2>
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="slideshow_popover">
+                Open
+              </Button>
+            </div>
+            <Popover id="slideshow_popover" minWidth="320px">
+              <Pages />
+            </Popover>
+          </section>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

@@ -227,7 +227,7 @@
         Label,
         Link,
         NaviDebug,
-        SlideShow,
+        SlideShowContent,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -1089,198 +1089,108 @@
         </section>
       );
 
-      // ── Sub dialog ────────────────────────────────────────────────────────
+      // ── Slideshow ─────────────────────────────────────────────────────────
 
-      // Two dialogs, not one: each keeps its own state and its own way out.
-      // Only the movement is shared — the second arrives from the bottom and
-      // pushes the first up, and on the way back only the second moves.
-      // The default is navi's own — named here so the demo can say which one it
-      // is rather than leaving the reader to guess.
-      const SPEEDS = {
-        "fast": { duration: "300ms", label: "fast (300ms, default)" },
-        "slow": { duration: "700ms", label: "slow (700ms)" },
-        "very slow": { duration: "3s", label: "very slow (3000ms)" },
-      };
-
-      const SubDialogs = ({
-        idPrefix,
-        layer,
-        marginWithContainer,
-        animation,
-        animationDuration,
-        slideshowDuration,
-      }) => (
-        <div class="demo-row">
-          <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
-            Open
-          </Button>
-          {/* Taking part is declared by being in here — nothing to name, and a
-              dialog outside is simply not part of the movement */}
-          <SlideShow
-            // top even for the local dialogs here: a material container has to
-            // BE the box its pages live in, and this one sits in a row next to
-            // the buttons. The popover demo shows the material one.
-            layer="top"
-            duration={slideshowDuration}
-          >
-            {/* Both take part in the same slideshow: when the second opens, the
-                first steps back by one slot — see slideshow.jsx */}
-            {/* Its own animation, kept: a first page does not travel, so the
-                slideshow leaves it alone — it is only a page change that
-                replaces the animation by the slide */}
-            <Dialog
-              id={`${idPrefix}_first`}
-              minWidth="200"
-              layer={layer}
-              marginWithContainer={marginWithContainer}
-              animation={animation}
-              animationDuration={animationDuration}
-              expand
+      // One dialog holding two pages, rather than two dialogs pushing each
+      // other: the pages are ordinary contents, so they share a box and the
+      // arithmetic is the box's — see slideshow.jsx. The buttons say "next" and
+      // "previous"; nothing here knows which page that is.
+      const SlideshowPages = () => (
+        <SlideShowContent duration="500ms">
+          <Box id="first" flex="y" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="demo-overflow-part"
             >
-              <Box
-                header
-                padding="m"
-                flex="x"
-                alignY="center"
-                className="demo-overflow-part"
+              <Text expandX>first</Text>
+              <Button
+                command="--navi-next"
+                icon
+                variant="discrete"
+                size="xl"
+                padding="xs"
+                aria-label="Next page"
               >
-                <Text expandX>first</Text>
-                {/* top right, like the chevron of the second one: what opens the
-                    next surface and what leaves it live in the same corner */}
-                <Button
-                  command="--navi-open"
-                  commandFor={`${idPrefix}_second`}
-                  icon
-                  variant="discrete"
-                  size="xl"
-                  padding="xs"
-                  aria-label="Open the second"
-                  selfAlignX="end"
-                >
-                  <Icon>
-                    <PlusSvg />
-                  </Icon>
-                </Button>
-              </Box>
-              <Box body padding="m">
-                <OverflowFiller count={4} />
-              </Box>
-            </Dialog>
-            <Dialog
-              id={`${idPrefix}_second`}
-              layer={layer}
-              marginWithContainer={marginWithContainer}
-              positionArea="top"
-              expandX
+                <Icon>
+                  <PlusSvg />
+                </Icon>
+              </Button>
+            </Box>
+            <Box body padding="m">
+              <OverflowFiller count={4} />
+            </Box>
+          </Box>
+          <Box id="second" flex="y" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="demo-overflow-part"
             >
-              <Box
-                header
-                padding="m"
-                flex="x"
-                alignY="center"
-                className="demo-overflow-part"
+              <Text expandX>second</Text>
+              <Button
+                command="--navi-previous"
+                icon
+                variant="discrete"
+                size="xl"
+                padding="xs"
+                aria-label="Previous page"
               >
-                <Text expandX>second</Text>
-                {/* an up arrow, not a back arrow: this dialog came from the
-                    bottom and leaves the same way */}
-                <Button
-                  command="--navi-cancel"
-                  icon
-                  variant="discrete"
-                  size="xl"
-                  padding="xs"
-                  padding="xs"
-                  aria-label="Close"
-                >
-                  <Icon size="1.4rem">
-                    <ChevronUpSvg />
-                  </Icon>
-                </Button>
-              </Box>
-              <Box body padding="m">
-                <OverflowFiller count={3} />
-              </Box>
-              <Box footer padding="m">
-                <Button command="--navi-close" expandX>
-                  Close
-                </Button>
-              </Box>
-            </Dialog>
-          </SlideShow>
-        </div>
+                <Icon>
+                  <ChevronUpSvg />
+                </Icon>
+              </Button>
+            </Box>
+            <Box body padding="m">
+              <OverflowFiller count={14} />
+            </Box>
+          </Box>
+        </SlideShowContent>
       );
 
-      const SubDialogSection = () => {
-        // Remembered like everything else here: a setting one has to tick
-        // again on every reload stops being used.
-        const [flush, setFlush] = useStoredBoolean(
-          "dialog_demo_sub_dialog_flush",
-          false,
-        );
-        // The dialogs' own animation, the same control every other section has:
-        // it plays when the first page opens, and a page change overrides it —
-        // the first dialog stays open, so it has nothing to transition.
+      const SlideshowSection = () => {
         const { animation, animationDuration, controlsProps } =
-          useAnimateControls("dialog_demo_sub_dialog");
-        // Slow enough to watch the two surfaces cross — the whole point of this
-        // section is the movement, not the result.
-        // Slow by default and remembered: the whole point of this section is
-        // the movement, and having to pick the speed again on every reload is
-        // exactly what makes one stop looking at it.
-        // The slideshow's own duration — a different thing from the dialogs'
-        // animation above, hence its own control.
-        const [speed, setSpeed] = useStoredString(
-          "dialog_demo_sub_dialog_speed",
-          "slow",
-        );
-        const slideshowDuration = SPEEDS[speed].duration;
-        // Flush against the container: the two dialogs then fill it edge to
-        // edge, which is what the movement looks like on a phone.
-        const marginWithContainer = flush ? 0 : undefined;
+          useAnimateControls("dialog_demo_slideshow");
         return (
           <section class="demo-section">
-            <Heading id="sub-dialog">Sub dialog</Heading>
+            <Heading id="slideshow">Slideshow</Heading>
             <AnimateControls {...controlsProps} />
-            <label style={{ fontSize: "13px" }}>
-              <input
-                type="checkbox"
-                checked={flush}
-                onChange={(e) => setFlush(e.target.checked)}
-              />{" "}
-              marginWithContainer=0
-            </label>{" "}
-            <label style={{ fontSize: "13px" }}>
-              slideshow{" "}
-              <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
-                {Object.keys(SPEEDS).map((name) => (
-                  <option key={name} value={name}>
-                    {SPEEDS[name].label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Heading level={3} id="sub-dialog-top-layer">
+            <Heading level={3} id="slideshow-top-layer">
               top layer
             </Heading>
-            <SubDialogs
-              idPrefix="nested_top"
-              marginWithContainer={marginWithContainer}
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="slideshow_top">
+                Open
+              </Button>
+            </div>
+            <Dialog
+              id="slideshow_top"
+              minWidth="320px"
               animation={animation}
               animationDuration={animationDuration}
-              slideshowDuration={slideshowDuration}
-            />
-            <Heading level={3} id="sub-dialog-local-layer">
+            >
+              <SlideshowPages />
+            </Dialog>
+            <Heading level={3} id="slideshow-local-layer">
               local layer
             </Heading>
             <div class="demo-container demo-overflow-container">
-              <SubDialogs
-                idPrefix="nested_local"
+              <Button command="--navi-open" commandFor="slideshow_local">
+                Open
+              </Button>
+              <Dialog
+                id="slideshow_local"
                 layer="local"
-                marginWithContainer={marginWithContainer}
+                minWidth="320px"
                 animation={animation}
                 animationDuration={animationDuration}
-                slideshowDuration={slideshowDuration}
-              />
+              >
+                <SlideshowPages />
+              </Dialog>
             </div>
           </section>
         );
@@ -1496,13 +1406,13 @@
               <Link href="#required">Required field</Link>
             </li>
             <li>
-              <Link href="#sub-dialog">Sub dialog</Link>
+              <Link href="#slideshow">Slideshow</Link>
               <ul>
                 <li>
-                  <Link href="#sub-dialog-top-layer">top layer</Link>
+                  <Link href="#slideshow-top-layer">top layer</Link>
                 </li>
                 <li>
-                  <Link href="#sub-dialog-local-layer">local layer</Link>
+                  <Link href="#slideshow-local-layer">local layer</Link>
                 </li>
               </ul>
             </li>
@@ -1540,7 +1450,7 @@
           <AdaptiveSection />
           <OverflowSection />
           <RequiredSection />
-          <SubDialogSection />
+          <SlideshowSection />
           <ActionsSection />
         </NaviDebug>
       );

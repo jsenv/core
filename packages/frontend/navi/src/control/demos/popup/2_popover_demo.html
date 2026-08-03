@@ -489,7 +489,7 @@
           <NestedPopoverSection />
           <OverflowSection />
           <RequiredSection />
-          <SubPopoverSection />
+          <SlideshowSection />
           <ActionsSection />
         </div>
       );
@@ -584,15 +584,15 @@
         );
       };
 
-      // ── Sub popover ───────────────────────────────────────────────────────
+      // ── Slideshow ───────────────────────────────────────────────────────
 
       // The slideshow INSIDE the popover: two popovers could never share a box
       // (each is promoted to the top layer), but two contents can — and the
       // popover keeps sizing itself to whichever page is showing.
-      const SubPopoverSection = () => {
+      const SlideshowSection = () => {
         return (
           <section class="demo-section">
-            <Heading id="sub-popover">Sub popover</Heading>
+            <Heading id="slideshow">Slideshow</Heading>
             <div class="demo-row">
               <Button command="--navi-toggle" commandFor="pop_pages">
                 Open
@@ -825,7 +825,7 @@
               <Link href="#required">Required field</Link>
             </li>
             <li>
-              <Link href="#sub-popover">Sub popover</Link>
+              <Link href="#slideshow">Slideshow</Link>
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>
