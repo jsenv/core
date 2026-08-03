@@ -36,23 +36,45 @@ const css = /* css */ `
     display: grid;
     overflow: hidden;
 
-    > [data-slide] {
-      /* So a slide shorter than the box still fills it: the box is as big as
-         its largest slide, and the others stretch to it rather than floating
-         in a corner of it. */
+    /* ONE thing moves: the track. The slides are laid out once and for all,
+       each a whole box further than the one before it, and never transition —
+       so two neighbours cannot end up a pixel apart mid-travel the way two
+       transitions running side by side can. It also means one transitionend,
+       one duration, one easing, whatever the number of slides. */
+    > [data-slide-track] {
       display: grid;
       min-width: 0;
       min-height: 0;
       grid-area: 1 / 1;
-      translate: var(--slide-offset, 0);
+      translate: var(--slide-list-offset, 0);
       transition: translate var(--slide-list-duration, 300ms) ease;
-    }
-    /* Parked: not shown, and not in the way of what is. */
-    > [data-slide][data-slide-displaced] {
-      pointer-events: none;
+
+      > [data-slide] {
+        /* So a slide shorter than the box still fills it: the box is as big as
+           its largest slide, and the others stretch to it rather than floating
+           in a corner of it. */
+        display: grid;
+        min-width: 0;
+        min-height: 0;
+        grid-area: 1 / 1;
+        /* Its place in the row, not a movement: same percentage reference as
+           the track's own (both are the size of the box), so the distance the
+           track travels is exactly the distance between two slides. */
+        translate: var(--slide-offset, 0);
+      }
+      /* Parked: not shown, and not in the way of what is. */
+      > [data-slide][data-slide-displaced] {
+        pointer-events: none;
+      }
     }
   }
 `;
+
+// A distance in boxes, written on the axis the list travels along.
+const offsetAlongAxis = (boxes, vertical) => {
+  const distance = `${boxes * 100}%`;
+  return vertical ? `0 ${distance}` : `${distance} 0`;
+};
 
 // What the slides tell the buttons inside them: only which way they travel, so
 // a button can point the right way without being told twice.
@@ -120,24 +142,28 @@ export const SlideList = ({
       style={{ "--slide-list-duration": duration, ...rest.style }}
     >
       <SlideListContext.Provider value={{ vertical }}>
-        {slides.map((slide, index) => {
-          const isCurrent = index === currentIndex;
-          const distance = `${(index - currentIndex) * 100}%`;
-          return (
-            <div
-              key={slideIds[index]}
-              data-slide=""
-              data-current={isCurrent ? "" : undefined}
-              data-slide-displaced={isCurrent ? undefined : ""}
-              style={{
-                "--slide-offset": vertical ? `0 ${distance}` : `${distance} 0`,
-              }}
-              aria-hidden={isCurrent ? undefined : "true"}
-            >
-              {slide}
-            </div>
-          );
-        })}
+        <div
+          data-slide-track=""
+          style={{
+            "--slide-list-offset": offsetAlongAxis(-currentIndex, vertical),
+          }}
+        >
+          {slides.map((slide, index) => {
+            const isCurrent = index === currentIndex;
+            return (
+              <div
+                key={slideIds[index]}
+                data-slide=""
+                data-current={isCurrent ? "" : undefined}
+                data-slide-displaced={isCurrent ? undefined : ""}
+                style={{ "--slide-offset": offsetAlongAxis(index, vertical) }}
+                aria-hidden={isCurrent ? undefined : "true"}
+              >
+                {slide}
+              </div>
+            );
+          })}
+        </div>
       </SlideListContext.Provider>
     </Box>
   );
