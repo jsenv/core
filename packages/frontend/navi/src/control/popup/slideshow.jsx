@@ -44,10 +44,15 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
       // in distance or in duration.
       element.setAttribute("data-slideshow-instant", "");
       element.style.setProperty("--slideshow-offset", `${slotSize()}px`);
-      element.getBoundingClientRect(); // flush before the transition is allowed
-      element.removeAttribute("data-slideshow-instant");
       members.push(element);
-      slideshow.apply();
+      // The travel starts on the NEXT frame, not on the next line: the browser
+      // has to paint the slide at its starting place before it can transition
+      // away from it — a dialog is displayed on the very frame it opens, so
+      // doing both in one go simply shows it at its final place.
+      requestAnimationFrame(() => {
+        element.removeAttribute("data-slideshow-instant");
+        slideshow.apply();
+      });
     },
     remove: (element) => {
       const index = members.indexOf(element);

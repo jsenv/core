@@ -822,9 +822,6 @@ const useDialogProps = (props) => {
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
-    if (slideshow) {
-      slideshow.add(dialogEl);
-    }
     // What the dialog held when it opened: the answer to compare against when
     // it closes (nothing changed → nothing to commit) and the state to put
     // back when it is cancelled — a cancelled dialog must leave no trace, the
@@ -929,6 +926,13 @@ const useDialogProps = (props) => {
     // property (e.g. Popup's own flex prop) defeats the UA stylesheet's own
     // dialog:not([open]) default the same way it can for Popover.
     dialogEl.removeAttribute("navi-hidden");
+    if (slideshow) {
+      // Here, not at the top of this effect: the dialog is displayed only from
+      // this line on, and a transition needs a start value the browser has
+      // actually seen. Placed one slot away while it was display:none, it would
+      // simply appear at its final place.
+      slideshow.add(dialogEl);
+    }
 
     if (isModal) {
       // Native focus trap — the browser's own top-layer modal already
