@@ -207,7 +207,11 @@ const css = /* css */ `
        what keeps the gap between two of them from drifting. The transition is
        declared here rather than under an attribute, so a member that is not
        animated at all still travels. */
-    &[data-slideshow] {
+    /* Doubled attribute to outrank the member's own animation rules
+       (popup_css.js), which also write translate: while it is in a slideshow,
+       the slideshow says where it stands. Its animation keeps everything else —
+       a "scaling" first page still scales, it just does not move itself. */
+    &[data-slideshow][data-slideshow] {
       translate: 0 var(--slideshow-offset, 0px);
       /* display and overlay ride along (allow-discrete below): a slide leaving
          must stay on screen for the length of its travel, and hiding it the
