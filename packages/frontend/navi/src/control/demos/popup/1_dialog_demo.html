@@ -29,6 +29,28 @@
       .demo-overflow-container {
         height: 280px;
       }
+      /* Where this demo sits among the others: a demo is rarely read alone,
+         and the next one is usually the answer to "and if it were a popover
+         instead?" */
+      .demo-nav {
+        display: flex;
+        margin-bottom: 24px;
+        padding: 10px 14px;
+        align-items: baseline;
+        gap: 16px;
+        font-size: 0.9rem;
+        background: #eaf2fd;
+        border-radius: 8px;
+      }
+      .demo-nav a {
+        color: #1a237e;
+      }
+      .demo-nav-none {
+        color: #8a94a6;
+      }
+      .demo-nav-next {
+        margin-left: auto;
+      }
       .demo-section {
         margin-bottom: 40px;
         padding: 20px;
@@ -1417,6 +1439,13 @@
       const App = () => (
         <NaviDebug debugAll>
           <h1>Dialog demo</h1>
+
+          <nav class="demo-nav">
+            <span class="demo-nav-none">← nothing before this one</span>
+            <a class="demo-nav-next" href="./2_popover_demo.html">
+              Next: popover demo →
+            </a>
+          </nav>
 
           <TableOfContents />
 
