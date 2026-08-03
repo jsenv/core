@@ -32,6 +32,30 @@
         color: #444;
         font-size: 0.95rem;
       }
+      .demo-toc {
+        margin-bottom: 24px;
+        padding: 12px 16px;
+        font-size: 0.9rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      .demo-toc ol {
+        margin: 8px 0 0;
+        padding-left: 20px;
+      }
+      .demo-toc li {
+        margin-bottom: 2px;
+      }
+      .demo-section {
+        scroll-margin-top: 16px;
+      }
+      .demo-note {
+        max-width: 300px;
+        margin: 0;
+        color: #666;
+        font-size: 0.85rem;
+      }
       .demo-links {
         display: flex;
         margin-bottom: 16px;
@@ -112,7 +136,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -308,6 +332,117 @@
         </SlideList>
       );
 
+      // Two slides one can always walk out of: press → on the first and you are
+      // on the second, whether or not you did anything there.
+      const FreeSlides = () => {
+        const [agreed, setAgreed] = useState(false);
+        return (
+          <SlideList duration="400ms">
+            <Slide id="terms" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>terms</Text>
+                <SlideList.Next size="xl" padding="xs" />
+              </Box>
+              <Box body padding="m">
+                <label class="demo-option">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  I agree
+                </label>
+              </Box>
+            </Slide>
+            <Slide id="signed" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>signed</Text>
+                <SlideList.Previous size="xl" padding="xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>
+                  {agreed ? "…and you agreed." : "…without agreeing."}
+                </Text>
+              </Box>
+            </Slide>
+          </SlideList>
+        );
+      };
+
+      // The same two, with the first one holding on to the user until the box
+      // is ticked: preventNavNext is read wherever a travel is asked for, so
+      // the chevron goes read-only and → does nothing.
+      const LockedSlides = () => {
+        const [agreed, setAgreed] = useState(false);
+        return (
+          <SlideList duration="400ms">
+            <Slide id="terms" preventNavNext={!agreed} overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>terms</Text>
+                <SlideList.Next size="xl" padding="xs" />
+              </Box>
+              <Box body padding="m">
+                <label class="demo-option">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  I agree
+                </label>
+              </Box>
+            </Slide>
+            <Slide id="signed" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>signed</Text>
+                <SlideList.Previous size="xl" padding="xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>…and you agreed.</Text>
+              </Box>
+            </Slide>
+          </SlideList>
+        );
+      };
+
+      // Same lock, no chevron at all: the action itself moves the list on, by
+      // dispatching the event a --navi-next command would have dispatched.
+      // In an effect, not in the change handler: the lock lifts with the
+      // render, and a travel asked for before that would be refused by it.
+      const ActionThenNextSlides = () => {
+        const [signed, setSigned] = useState(false);
+        const listRef = useRef();
+        useEffect(() => {
+          if (!signed) {
+            return;
+          }
+          listRef.current.dispatchEvent(
+            new CustomEvent("navi_slide_list_next", { bubbles: true }),
+          );
+        }, [signed]);
+        return (
+          <SlideList duration="400ms" ref={listRef}>
+            <Slide id="sign" preventNav={!signed} overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>sign</Text>
+              </Box>
+              <Box body padding="m">
+                <Button onClick={() => setSigned(true)}>Sign</Button>
+              </Box>
+            </Slide>
+            <Slide id="done" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>done</Text>
+                <SlideList.Previous size="xl" padding="xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>Signed — and the list moved on by itself.</Text>
+              </Box>
+            </Slide>
+          </SlideList>
+        );
+      };
+
       // The dialog case of its own: the dialog is the only popup that can be
       // asked to take the whole document, so it is the only one where the list
       // is given room rather than taking it from its slides.
@@ -315,7 +450,7 @@
         const [flush, setFlush] = useState(false);
         const [vertical, setVertical] = useState(false);
         return (
-          <section class="demo-section">
+          <section class="demo-section" id="dialog">
             <h2>Specific to dialog: filling the document</h2>
             <p>
               A dialog with <code>expand</code> takes the whole screen, so the
@@ -379,6 +514,35 @@
             </a>
             <a href="./slide_list_perf.html">Slide list — perf</a>
           </nav>
+          <nav class="demo-toc">
+            <strong>On this page</strong>
+            <ol>
+              <li>
+                <a href="#two-slides">Two slides</a>
+              </li>
+              <li>
+                <a href="#taller">Content taller than the box</a>
+              </li>
+              <li>
+                <a href="#vertical">Vertical</a>
+              </li>
+              <li>
+                <a href="#wider">Content wider than the box (vertical)</a>
+              </li>
+              <li>
+                <a href="#dialog">Specific to dialog: filling the document</a>
+              </li>
+              <li>
+                <a href="#focus">Focus</a>
+              </li>
+              <li>
+                <a href="#locking">Locking the way out</a>
+              </li>
+              <li>
+                <a href="#three-slides">Three slides</a>
+              </li>
+            </ol>
+          </nav>
           <p>
             Slides that replace one another inside one box. The box takes the
             size of its largest slide, so nothing grows or shrinks as one moves
@@ -386,7 +550,7 @@
             default.
           </p>
 
-          <section class="demo-section">
+          <section class="demo-section" id="two-slides">
             <h2>Two slides</h2>
             <p>
               The plain case: a slide arrives from the right, the one it
@@ -396,7 +560,7 @@
             <ThreeWays id="basic" Content={TwoSlides} />
           </section>
 
-          <section class="demo-section">
+          <section class="demo-section" id="taller">
             <h2>Content taller than the box</h2>
             <p>
               Nothing special happens: a slide is a box, so it scrolls its own
@@ -412,7 +576,7 @@
             />
           </section>
 
-          <section class="demo-section">
+          <section class="demo-section" id="vertical">
             <h2>Vertical</h2>
             <p>
               The same two slides with <code>vertical</code>: they arrive from
@@ -422,7 +586,7 @@
             <ThreeWays id="vertical" Content={TwoSlidesVertical} />
           </section>
 
-          <section class="demo-section">
+          <section class="demo-section" id="wider">
             <h2>Content wider than the box (vertical)</h2>
             <p>
               Sideways now belongs to the content, not to the travel: the slides
@@ -435,7 +599,7 @@
 
           <ExpandDialogSection />
 
-          <section class="demo-section">
+          <section class="demo-section" id="focus">
             <h2>Focus</h2>
             <p>
               Travelling moves the keyboard with the eye. Click a chevron (or
@@ -457,7 +621,51 @@
             <ThreeWays id="focus" Content={FocusSlides} />
           </section>
 
-          <section class="demo-section">
+          <section class="demo-section" id="locking">
+            <h2>Locking the way out</h2>
+            <p>
+              A step one must not skip: <code>preventNavNext</code> (and{" "}
+              <code>preventNavPrevious</code>, or <code>preventNav</code> for
+              both) on a <code>Slide</code> holds the user there. It is read
+              where the travel is decided, so it holds against every way of
+              asking — the chevron, the keyboard, a <code>--navi-next</code>
+              command, an event dispatched by hand.
+            </p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>Without a lock</h3>
+                <p class="demo-note">
+                  Press → (or the chevron): you are on the second slide, box
+                  ticked or not.
+                </p>
+                <div class="in-document">
+                  <FreeSlides />
+                </div>
+              </div>
+              <div class="demo-way">
+                <h3>preventNavNext</h3>
+                <p class="demo-note">
+                  The chevron is read-only and → does nothing until the box is
+                  ticked.
+                </p>
+                <div class="in-document">
+                  <LockedSlides />
+                </div>
+              </div>
+              <div class="demo-way">
+                <h3>The action moves on</h3>
+                <p class="demo-note">
+                  No chevron at all: signing dispatches{" "}
+                  <code>navi_slide_list_next</code>.
+                </p>
+                <div class="in-document">
+                  <ActionThenNextSlides />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="demo-section" id="three-slides">
             <h2>Three slides</h2>
             <p>
               Nothing changes past two: the middle slide simply carries both

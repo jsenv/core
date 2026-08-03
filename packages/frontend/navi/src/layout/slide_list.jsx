@@ -17,7 +17,13 @@ import { findFocusable } from "@jsenv/dom";
 import { createContext } from "preact";
 import { isMatchingFocusVisible } from "../box/pseudo_styles.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
-import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
+import {
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
 import { Icon } from "../text/icon.jsx";
@@ -61,7 +67,6 @@ const css = /* css */ `
       min-width: 0;
       min-height: 0;
       grid-area: 1 / 1;
-      border-radius: inherit;
       translate: var(--slide-list-offset, 0);
       transition: translate var(--slide-list-duration, 300ms) ease;
 
@@ -73,7 +78,12 @@ const css = /* css */ `
         min-width: 0;
         min-height: 0;
         grid-area: 1 / 1;
-        border-radius: inherit;
+        /* Square, deliberately: two rounded slides passing each other leave a
+           pinched gap between their curves where the page shows through. The
+           corners belong to the LIST, which clips them (overflow: hidden
+           above) — so what one sees is rounded at rest and butt-jointed in
+           motion, with nothing between two slides at any point of the travel. */
+        border-radius: 0;
         /* Its place in the row, not a movement: same percentage reference as
            the track's own (both are the size of the box), so the distance the
            track travels is exactly the distance between two slides. */
@@ -96,6 +106,9 @@ const offsetAlongAxis = (boxes, vertical) => {
 // What the list tells what is inside it: which way it travels, so a button can
 // point the right way without being told twice.
 const SlideListContext = createContext(null);
+// What a slide tells what is inside IT: whether leaving it is allowed right
+// now, so its own prev/next buttons say so instead of failing when pressed.
+const SlideContext = createContext(null);
 
 // What each slide had under the keyboard when it gave it up. Per slide, not one
 // per list: coming back from the third slide to the first must land where the
@@ -281,6 +294,19 @@ export const SlideList = ({
     if (!nextElement || nextIndex === currentIndex) {
       return false;
     }
+    // The one gate every way out goes through — a key, a command, a button, an
+    // event dispatched by hand: a slide that holds on to the user holds them
+    // whatever they press. Read off the slide being LEFT, because that is what
+    // has a reason to keep them (an answer still missing, a step not taken).
+    const slideBeingLeft = slideElements[currentIndex];
+    const forward = nextIndex > currentIndex;
+    if (
+      slideBeingLeft?.hasAttribute(
+        forward ? "data-prevent-nav-next" : "data-prevent-nav-previous",
+      )
+    ) {
+      return false;
+    }
     // An id is how a slide is named from outside; without one it can still be
     // travelled to, it just cannot be asked for by name.
     setCurrentState(nextElement.id || undefined);
@@ -314,9 +340,15 @@ export const SlideList = ({
       {...rest}
       baseClassName="navi_slide_list"
       data-slide-list=""
-      // The event a --navi-next/--navi-previous command ends up dispatching…
-      onnavi_slide_list_go={(e) => {
-        goBy(e.detail.step);
+      // One event per direction, no step to read: "next" is what a button, a
+      // command and a line of code all mean, and it is all any of them has to
+      // say. Dispatch it (bubbling) from anywhere inside to move the list on —
+      // an action finishing, a field becoming valid…
+      onnavi_slide_list_next={() => {
+        goBy(1);
+      }}
+      onnavi_slide_list_previous={() => {
+        goBy(-1);
       }}
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
@@ -358,11 +390,31 @@ export const SlideList = ({
  * It is both SlideList.Item and an export of its own: <Slide> where the list is
  * far above, SlideList.Item where the two sit side by side.
  */
-export const Slide = ({ children, ...rest }) => (
-  <Box flex="y" {...rest} data-slide="">
-    {children}
-  </Box>
-);
+export const Slide = ({
+  preventNav,
+  preventNavNext = preventNav,
+  preventNavPrevious = preventNav,
+  children,
+  ...rest
+}) => {
+  const locks = useMemo(
+    () => ({ preventNavNext, preventNavPrevious }),
+    [preventNavNext, preventNavPrevious],
+  );
+  return (
+    <SlideContext.Provider value={locks}>
+      <Box
+        flex="y"
+        {...rest}
+        data-slide=""
+        data-prevent-nav-next={preventNavNext ? "" : undefined}
+        data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
+      >
+        {children}
+      </Box>
+    </SlideContext.Provider>
+  );
+};
 
 /**
  * The way out of a slide, and the way into the next one. Nothing but the
@@ -372,8 +424,13 @@ export const Slide = ({ children, ...rest }) => (
  */
 const SlideListStep = ({ step, ...rest }) => {
   const context = useContext(SlideListContext);
+  const locks = useContext(SlideContext);
   const vertical = context?.vertical;
   const isNext = step === "next";
+  // Read-only, not disabled and not hidden: the way out stays visible and
+  // explainable (it can still be reached, hovered, described) — it just does
+  // nothing while the slide is holding on to the user.
+  const locked = isNext ? locks?.preventNavNext : locks?.preventNavPrevious;
   const ChevronSvg = vertical
     ? isNext
       ? ChevronDownSvg
@@ -384,6 +441,7 @@ const SlideListStep = ({ step, ...rest }) => {
   return (
     <Button
       command={isNext ? "--navi-next" : "--navi-previous"}
+      readOnly={Boolean(locked)}
       // The way OUT of a slide: marked so the focus arriving in a slide can
       // prefer anything else (see findFocusTargetInSlide).
       data-slide-nav=""

@@ -384,7 +384,7 @@ registerNaviCommand("--navi-send", (source, event) => {
 // Which slide is shown is the slide list's own business: a button says "next", not
 // "show the slide with that id" — which is what lets them be rearranged
 // without touching what drives them.
-const registerSlideListCommand = (command, step) => {
+const registerSlideListCommand = (command, eventName) => {
   registerNaviCommand(command, (source, event) => {
     const target =
       resolveExplicitTarget(source) || source.closest("[data-slide-list]");
@@ -393,13 +393,12 @@ const registerSlideListCommand = (command, step) => {
     }
     return {
       target,
-      implementation: () =>
-        dispatchCustomEvent(target, "navi_slide_list_go", { event, step }),
+      implementation: () => dispatchCustomEvent(target, eventName, { event }),
     };
   });
 };
-registerSlideListCommand("--navi-next", 1);
-registerSlideListCommand("--navi-previous", -1);
+registerSlideListCommand("--navi-next", "navi_slide_list_next");
+registerSlideListCommand("--navi-previous", "navi_slide_list_previous");
 
 registerNaviCommand("--navi-toggle", (source, event) => {
   const target =
