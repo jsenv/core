@@ -80,7 +80,9 @@
       /* In the document there is no popup to take a size from, so the list
          is given one here — same as any box would be. */
       .in-document {
+        display: flex;
         width: 300px;
+        flex-direction: column;
         border: 1px solid #90caf9;
         border-radius: 8px;
       }
@@ -89,12 +91,6 @@
          that also has other sections. */
       .in-document-capped {
         height: 260px;
-      }
-      /* The list takes the height it is given rather than the one its slides
-         would like: this is the "what holds it decides" of the section next to
-         it, written out. */
-      .in-document-capped > .navi_slide_list {
-        height: 100%;
       }
     </style>
   </head>
@@ -189,7 +185,7 @@
       );
 
       const TallSlides = () => (
-        <SlideList duration="400ms" expandY>
+        <SlideList duration="400ms">
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={40} />
           </DemoSlide>

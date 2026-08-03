@@ -34,6 +34,14 @@ const css = /* css */ `
      same distance. */
   .navi_slide_list {
     display: grid;
+    min-width: 0;
+    min-height: 0;
+    /* Never bigger than what holds it: a list is as big as its largest slide,
+       but a slide scrolls its own body, so the room it would need is not room
+       it must be given. Shrinking is enough for that (the slides then scroll);
+       GROWING is a decision the caller makes with expandY, for a list that
+       must fill a container it does not need — see the dialog demo. */
+    flex: 0 1 auto;
     overflow: hidden;
 
     /* ONE thing moves: the track. The slides are laid out once and for all,
