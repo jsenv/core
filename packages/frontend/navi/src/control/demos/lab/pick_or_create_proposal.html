@@ -186,6 +186,8 @@
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
+      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
+      import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
       // Name and detail are both searchable: with homonyms allowed, the detail
@@ -228,6 +230,8 @@
         entries,
         recentIds = [],
         onCreate,
+        onUpdate,
+        onDelete,
         value,
         onChange,
         // undefined when the entity has no such notion (a place); a string when
@@ -240,6 +244,10 @@
         const CreateForm = createForm;
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
+        // Which entry the edit slide is about, and which slide is on screen:
+        // the pencil jumps straight to the third one, which no "next" would do
+        const editingSignal = useSignal(null);
+        const slideSignal = useSignal(`${id}_pick`);
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -266,6 +274,29 @@
           onCreate(entry);
           onChange(entry);
           searchSignal.value = "";
+        };
+
+        // Only what this user typed in can be edited: an entry that came from
+        // the backend is shared with everyone else, and renaming it here would
+        // rename it under them.
+        const submitEdit = (values) => {
+          const entry = { ...editingSignal.value, ...toEntry(values) };
+          onUpdate(entry);
+          if (value && value.id === entry.id) {
+            // the selection is a copy of the entry, so it goes stale otherwise
+            onChange(entry);
+          }
+          // Back to the list, which is where this slide was entered from — and
+          // not "the slide before it", which would be the create form.
+          slideSignal.value = `${id}_pick`;
+        };
+        const deleteEntry = () => {
+          const entry = editingSignal.value;
+          onDelete(entry);
+          if (value && value.id === entry.id) {
+            onChange(null);
+          }
+          slideSignal.value = `${id}_pick`;
         };
 
         return (
@@ -306,7 +337,13 @@
                     moments of the same decision, so they share a box and the
                     second arrives from the side rather than opening on top —
                     see slide_list.jsx */}
-                <SlideList vertical>
+                <SlideList
+                  vertical
+                  current={slideSignal.value}
+                  onCurrentChange={(slideId) => {
+                    slideSignal.value = slideId;
+                  }}
+                >
                   <Slide id={`${id}_pick`} overflow="auto">
                     {/* No way back in it on purpose: this slide is the first
                         one, and the surface is closed by clicking outside. */}
@@ -383,12 +420,35 @@
                             matchInfo={getMatchInfo(entry)}
                             padding="s"
                           >
-                            <Box flex="y">
-                              <Text>
-                                <PlayerName entry={entry} />
-                              </Text>
-                              {entry.detail && (
-                                <Text className="detail">{entry.detail}</Text>
+                            <Box flex="x" alignY="center" spacing="xs" expandX>
+                              <Box flex="y" expandX>
+                                <Text>
+                                  <PlayerName entry={entry} />
+                                </Text>
+                                {entry.detail && (
+                                  <Text className="detail">{entry.detail}</Text>
+                                )}
+                              </Box>
+                              {/* Only on what this user added, and carrying a
+                                  command of its own: a row of a sending list is
+                                  claimed by that send, so a plain click here
+                                  would choose the entry instead of editing it */}
+                              {entry.isNew && (
+                                <Button
+                                  command="--navi-void"
+                                  icon
+                                  variant="discrete"
+                                  padding="xs"
+                                  aria-label={`Modifier ${entry.name}`}
+                                  onClick={() => {
+                                    editingSignal.value = entry;
+                                    slideSignal.value = `${id}_edit`;
+                                  }}
+                                >
+                                  <Icon color="#6b7280">
+                                    <PencilSvg />
+                                  </Icon>
+                                </Button>
                               )}
                             </Box>
                           </List.Item>
@@ -446,12 +506,10 @@
                         object */}
                     <Form
                       standalone
-                      // Created and chosen in one move, so the whole surface
-                      // has answered: it closes rather than going back to the
-                      // list, and what one sees on reopening is where one left
-                      // off — handy for adding two players in a row. The way
-                      // back to the list stays one chevron away.
-                      command="--navi-close"
+                      // Back to the list rather than closing: the entry shows
+                      // up there, already selected, so what just happened is
+                      // visible — and one more tap chooses it or another.
+                      command="--navi-previous"
                       action={submitForm}
                       flex="y"
                       overflow="auto"
@@ -509,6 +567,80 @@
                           paddingY="s"
                         >
                           Annuler
+                        </Button>
+                      </Box>
+                    </Form>
+                  </Slide>
+
+                  {/* Third slide, reached only by a pencil: editing is about
+                      one entry, so it is not somewhere one walks into */}
+                  <Slide id={`${id}_edit`} flex="y">
+                    <Form
+                      standalone
+                      // The way back is not "one slide back" here: this slide
+                      // is entered from the list, over the create form, so
+                      // where to return is decided in submitEdit.
+                      command="--navi-void"
+                      action={submitEdit}
+                      flex="y"
+                      overflow="auto"
+                      expandY
+                    >
+                      <Box
+                        header
+                        flex="x"
+                        spacing="xs"
+                        alignY="center"
+                        padding="m"
+                      >
+                        <Text expandX fontSize="1rem">
+                          <strong>Modifier</strong>
+                        </Text>
+                        {/* same reason: the way out of this slide is the list,
+                            whatever sits between them */}
+                        <Button
+                          command="--navi-void"
+                          icon
+                          variant="discrete"
+                          padding="s"
+                          marginRight="-s"
+                          aria-label="Retour à la liste"
+                          onClick={() => {
+                            slideSignal.value = `${id}_pick`;
+                          }}
+                        >
+                          <Icon color="#4b5563">
+                            <ChevronUpSvg />
+                          </Icon>
+                        </Button>
+                      </Box>
+                      <Box body padding="m">
+                        {/* keyed by the entry: the fields are uncontrolled, so
+                            editing another one must give them fresh defaults */}
+                        <CreateForm
+                          key={editingSignal.value?.id}
+                          entry={editingSignal.value}
+                        />
+                      </Box>
+                      <Box
+                        footer
+                        padding="m"
+                        paddingY="s"
+                        className="form-actions"
+                      >
+                        <Button command="--navi-send" paddingY="s">
+                          Enregistrer
+                        </Button>
+                        {/* --navi-void: removing is not leaving, so nothing
+                            follows from the command — where to go afterwards is
+                            decided here, once the entry is gone */}
+                        <Button
+                          command="--navi-void"
+                          variant="discrete"
+                          paddingY="s"
+                          onClick={deleteEntry}
+                        >
+                          Supprimer
                         </Button>
                       </Box>
                     </Form>
@@ -683,31 +815,58 @@
         </Field>
       );
 
-      const PlaceForm = ({ prefill }) => (
+      // One component for both moments: creating starts from what was typed in
+      // the search, editing from the entry itself. Same fields either way —
+      // only where the defaults come from changes.
+      const PlaceForm = ({ prefill, entry }) => (
         <Box flex="y" spacing="m">
           {/* A place needs a name or an address to be recognizable again;
               demanding both would be a lie, and demanding "one of the two" is
               not something a form says well — so only the name is required */}
-          <TextField label="Nom" name="name" required defaultValue={prefill} />
-          <TextField label="Adresse" name="address" placeholder="Rue, ville…" />
+          <TextField
+            label="Nom"
+            name="name"
+            required
+            defaultValue={entry ? entry.name : prefill}
+          />
+          <TextField
+            label="Adresse"
+            name="address"
+            placeholder="Rue, ville…"
+            defaultValue={entry?.detail}
+          />
         </Box>
       );
 
-      const PlayerForm = ({ prefill }) => (
+      const PlayerForm = ({ prefill, entry }) => (
         <Box flex="y" spacing="s">
           <TextField
             label="Prénom"
             name="firstName"
             required
-            defaultValue={prefill}
+            defaultValue={entry ? entry.firstName : prefill}
           />
           {/* Not required: a first name is enough to name someone, and the
               rest is what tells two of them apart when it happens */}
-          <TextField label="Nom" name="lastName" />
-          <TextField label="Email" name="email" placeholder="prenom@mail.com" />
+          <TextField
+            label="Nom"
+            name="lastName"
+            defaultValue={entry?.lastName}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            placeholder="prenom@mail.com"
+            defaultValue={entry?.detail}
+          />
           <Field flex="y" spacingWithControl="s">
             <Label>Côté</Label>
-            <RadioGroup name="side" flex="y" spacing="s">
+            <RadioGroup
+              name="side"
+              flex="y"
+              spacing="s"
+              defaultValue={entry?.side}
+            >
               {SIDES.map((side) => (
                 <Field key={side.value} spacing="xs">
                   <Input type="radio" value={side.value} />
@@ -756,6 +915,16 @@
         const addTo = (listSignal) => (entry) => {
           listSignal.value = [...listSignal.value, entry];
         };
+        const updateIn = (listSignal) => (entry) => {
+          listSignal.value = listSignal.value.map((candidate) =>
+            candidate.id === entry.id ? entry : candidate,
+          );
+        };
+        const removeFrom = (listSignal) => (entry) => {
+          listSignal.value = listSignal.value.filter(
+            (candidate) => candidate.id !== entry.id,
+          );
+        };
 
         return (
           <>
@@ -779,6 +948,8 @@
                 entries={clubsSignal.value}
                 recentIds={[INITIAL_CLUBS[0].id]}
                 onCreate={addTo(clubsSignal)}
+                onUpdate={updateIn(clubsSignal)}
+                onDelete={removeFrom(clubsSignal)}
                 value={clubSignal.value}
                 onChange={(entry) => {
                   clubSignal.value = entry;
@@ -806,6 +977,8 @@
                 entries={playersSignal.value}
                 recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
                 onCreate={addTo(playersSignal)}
+                onUpdate={updateIn(playersSignal)}
+                onDelete={removeFrom(playersSignal)}
                 value={playerSignal.value}
                 onChange={selectPlayer(playerSignal, sideSignal)}
                 sideOverride={sideSignal.value}
@@ -826,6 +999,8 @@
                 entries={playersSignal.value}
                 recentIds={[INITIAL_PLAYERS[2].id]}
                 onCreate={addTo(playersSignal)}
+                onUpdate={updateIn(playersSignal)}
+                onDelete={removeFrom(playersSignal)}
                 value={player2Signal.value}
                 onChange={selectPlayer(player2Signal, side2Signal)}
                 sideOverride={side2Signal.value}
