@@ -65,6 +65,24 @@
       .demo-section {
         scroll-margin-top: 16px;
       }
+      /* Focus shown by what the element becomes, not by a ring around it */
+      .focus-pad {
+        display: grid;
+        padding: 14px 10px;
+        place-items: center;
+        color: #4a5568;
+        font-size: 0.9rem;
+        background: #eef3fb;
+        border: 2px dashed #b9cdea;
+        border-radius: 8px;
+      }
+      .focus-pad:focus {
+        color: white;
+        background: #1a237e;
+        border-style: solid;
+        border-color: #1a237e;
+        outline: none;
+      }
       .demo-note {
         max-width: 300px;
         margin: 0;
@@ -143,9 +161,7 @@
         Box,
         Button,
         Dialog,
-        Field,
         Input,
-        Label,
         Link,
         Popover,
         Slide,
@@ -348,6 +364,15 @@
       // Focus, shown rather than described: each slide holds something to do,
       // so one can watch where the keyboard lands, what it does NOT land on,
       // and where it is put back.
+      // A zone that says what to do and shows, by filling up, that it holds
+      // the keyboard: where the focus is and where it comes back is then read
+      // off the slides themselves.
+      const FocusPad = ({ children, ...rest }) => (
+        <div class="focus-pad" tabIndex={0} {...rest}>
+          {children}
+        </div>
+      );
+
       const FocusSlides = () => (
         <SlideList duration={useSlideDuration()}>
           <Slide id="who" overflow="auto">
@@ -356,19 +381,8 @@
               <SlideList.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
-              <Field vertical>
-                <Label>First name</Label>
-                <Input name="firstName" placeholder="type something…" />
-              </Field>
-              <Field vertical>
-                <Label>Last name</Label>
-                <Input name="lastName" />
-              </Field>
-              {/* Focusable but not a text field: → travels from here (an arrow
-                  means nothing to a button), and coming back to this slide
-                  lands on it again — it is what the keyboard was on when the
-                  slide was left */}
-              <Button variant="discrete">Say hello</Button>
+              <FocusPad>press → </FocusPad>
+              <Input name="note" placeholder="→ moves the caret in here" />
             </Box>
           </Slide>
           <Slide id="where" overflow="auto">
@@ -378,17 +392,8 @@
               <SlideList.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
-              {/* Asked for by name: navi-autofocus wins over "the first
-                  focusable", so the keyboard lands on City — the field one
-                  actually comes here to fill */}
-              <Field vertical>
-                <Label>City</Label>
-                <Input name="city" navi-autofocus />
-              </Field>
-              <Field vertical>
-                <Label>Country</Label>
-                <Input name="country" />
-              </Field>
+              <FocusPad>press → or ←</FocusPad>
+              <FocusPad navi-autofocus>navi-autofocus</FocusPad>
             </Box>
           </Slide>
           <Slide id="done" overflow="auto">
@@ -396,10 +401,8 @@
               <Text expandX>done</Text>
               <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
             </Box>
-            {/* Nothing to do here but leave: the keyboard then goes to the way
-                out, because there is nothing else to offer */}
             <Box body padding="m">
-              <Text>Nothing to fill here.</Text>
+              <Text>(nothing focusable here)</Text>
             </Box>
           </Slide>
         </SlideList>
@@ -717,21 +720,8 @@
           <section class="demo-section" id="focus">
             <Heading id="focus">Focus</Heading>
             <p>
-              Travelling moves the keyboard with the eye. Click a chevron (or
-              press Tab to it and Enter) and watch: the arriving slide takes
-              focus on something to <em>do</em>, never on its own way out —
-              unless it has nothing else, like the last one here. A slide asks
-              for a precise landing with <code>navi-autofocus</code> (“where”
-              lands on City). Come back and the keyboard returns exactly where
-              you left that slide, each slide remembering its own.
-            </p>
-            <p>
-              <strong>Keys:</strong> ← and → walk the list (↑/↓ when it is
-              vertical), Home and End jump to its ends — but only where the key
-              means nothing else: inside these text fields the arrows still move
-              the caret, and Home/End still go to the ends of the line. The ring
-              follows the modality: it shows when you travelled by keyboard, and
-              stays hidden when you clicked.
+              Travel with the chevrons, ← and →, Home and End. The zone holding
+              the keyboard is filled in.
             </p>
             <ThreeWays id="focus" Content={FocusSlides} />
           </section>

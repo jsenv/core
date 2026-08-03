@@ -89,6 +89,15 @@ const css = /* css */ `
            track travels is exactly the distance between two slides. */
         translate: var(--slide-offset, 0);
       }
+      /* A way out never makes the row taller: its box is capped to the text
+         line it sits on and the chevron (lineOverflow="allow", so nothing caps
+         the glyph itself) simply overflows it. Without this a header carrying
+         a chevron is taller than one without, and the top of the box visibly
+         jumps as one travels from a slide with a way out to a slide without. */
+      [data-slide-nav] {
+        max-height: 1em;
+      }
+
       /* Nothing here for a slide walked past: [inert] (set from JS) already
          takes it out of reach of the pointer, of Tab and of a screen reader —
          one attribute instead of pointer-events plus aria-hidden, and the only
