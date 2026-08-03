@@ -1100,7 +1100,7 @@
           </Button>
           {/* expandY: the push only reads if the first dialog fills the
               height it is pushed out of */}
-          <Dialog id={`${idPrefix}_first`} minWidth="200" layer={layer} expandY>
+          <Dialog id={`${idPrefix}_first`} minWidth="200" layer={layer} expand>
             <Box
               header
               padding="m"
@@ -1116,6 +1116,8 @@
                 commandFor={`${idPrefix}_second`}
                 icon
                 variant="discrete"
+                size="xl"
+                padding="xs"
                 aria-label="Open the second"
                 selfAlignX="end"
               >
@@ -1154,9 +1156,10 @@
                 variant="discrete"
                 size="xl"
                 padding="xs"
+                padding="xs"
                 aria-label="Close"
               >
-                <Icon>
+                <Icon size="1.4rem">
                   <ChevronUpSvg />
                 </Icon>
               </Button>
