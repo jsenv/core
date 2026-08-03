@@ -220,6 +220,7 @@
         surfaceTitle,
         createLabel,
         createTitle,
+        editTitle,
         // The form itself, as a component: what a place or a player asks for
         // has nothing generic about it, and a list of field descriptors would
         // hide behind an abstraction the very thing this demo is about. It
@@ -594,7 +595,7 @@
                         padding="m"
                       >
                         <Text expandX fontSize="1rem">
-                          <strong>Modifier</strong>
+                          <strong>{editTitle}</strong>
                         </Text>
                         {/* same reason: the way out of this slide is the list,
                             whatever sits between them */}
@@ -940,6 +941,7 @@
                 surfaceTitle="Choisir un lieu"
                 createLabel="ajouter ce lieu"
                 createTitle="Ajouter un lieu"
+                editTitle="Modifier un lieu"
                 createForm={PlaceForm}
                 toEntry={(values) => ({
                   name: text(values.name),
@@ -972,6 +974,7 @@
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
+                editTitle="Modifier un joueur"
                 createForm={PlayerForm}
                 toEntry={playerToEntry}
                 entries={playersSignal.value}
@@ -994,6 +997,7 @@
                 surfaceTitle="Choisir un joueur"
                 createLabel="ajouter ce joueur"
                 createTitle="Ajouter un joueur"
+                editTitle="Modifier un joueur"
                 createForm={PlayerForm}
                 toEntry={playerToEntry}
                 entries={playersSignal.value}
