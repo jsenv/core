@@ -38,7 +38,7 @@
   <body>
     <h1>Slide list — perf</h1>
     <p>
-      The same two pages as the dialog demo's own “Slides” section, alone on a
+      The same two slides as the dialog demo's own “Slides” section, alone on a
       page: no NaviDebug, no other section, nothing else running. Click the
       chevrons as fast as you can and watch the frame times below.
     </p>
@@ -128,7 +128,7 @@
 
             <Dialog id="first" expand animation="scaling">
               <SlideList duration={duration} expandY>
-                <SlideList.Item id="page1" overflow="auto">
+                <SlideList.Item id="first" overflow="auto">
                   <Box
                     header
                     padding="m"
@@ -143,7 +143,7 @@
                     <Filler />
                   </Box>
                 </SlideList.Item>
-                <SlideList.Item id="page2" overflow="auto">
+                <SlideList.Item id="second" overflow="auto">
                   <Box
                     header
                     padding="m"

@@ -32,6 +32,17 @@
         color: #444;
         font-size: 0.95rem;
       }
+      .demo-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-option {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+      }
       .demo-ways {
         display: flex;
         flex-wrap: wrap;
@@ -91,6 +102,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -143,7 +155,11 @@
             <Button command="--navi-open" commandFor={`${id}_dialog`}>
               Open the dialog
             </Button>
-            <Dialog id={`${id}_dialog`} minWidth="300px">
+            {/* flex="y" on the popup, so a list asking for the leftover
+                room (expandY) can be given it: without a column to grow in,
+                a tall list simply overflows the popup and the popup itself
+                becomes what scrolls — header included */}
+            <Dialog id={`${id}_dialog`} minWidth="300px" flex="y">
               <Content />
             </Dialog>
           </div>
@@ -152,7 +168,7 @@
             <Button command="--navi-toggle" commandFor={`${id}_popover`}>
               Open the popover
             </Button>
-            <Popover id={`${id}_popover`} minWidth="300px">
+            <Popover id={`${id}_popover`} minWidth="300px" flex="y">
               <Content />
             </Popover>
           </div>
@@ -173,7 +189,7 @@
       );
 
       const TallSlides = () => (
-        <SlideList duration="400ms">
+        <SlideList duration="400ms" expandY>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={40} />
           </DemoSlide>
@@ -204,6 +220,64 @@
           </DemoSlide>
         </SlideList>
       );
+
+      // The dialog case of its own: the dialog is the only popup that can be
+      // asked to take the whole document, so it is the only one where the list
+      // is given room rather than taking it from its slides.
+      const ExpandDialogSection = () => {
+        const [flush, setFlush] = useState(false);
+        const [vertical, setVertical] = useState(false);
+        return (
+          <section class="demo-section">
+            <h2>Specific to dialog: filling the document</h2>
+            <p>
+              A dialog with <code>expand</code> takes the whole screen, so the
+              list has room given to it rather than taken from its slides:{" "}
+              <code>expandY</code> makes it fill the dialog, and each slide then
+              fills the list whatever it contains.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="expand_dialog">
+                Open the dialog
+              </Button>
+              {/* marginWithContainer 0: the dialog then reaches the edges of
+                  the document, which is the shape a full-screen flow wants —
+                  and the one where a travelling slide has nothing to peek
+                  through beside it */}
+              <label class="demo-option">
+                <input
+                  type="checkbox"
+                  checked={flush}
+                  onChange={(e) => setFlush(e.target.checked)}
+                />
+                marginWithContainer=0
+              </label>
+              <label class="demo-option">
+                <input
+                  type="checkbox"
+                  checked={vertical}
+                  onChange={(e) => setVertical(e.target.checked)}
+                />
+                vertical
+              </label>
+            </div>
+            <Dialog
+              id="expand_dialog"
+              expand
+              marginWithContainer={flush ? 0 : undefined}
+            >
+              <SlideList duration="400ms" expandY vertical={vertical}>
+                <DemoSlide id="first" title="first" direction="next">
+                  <Filler count={3} />
+                </DemoSlide>
+                <DemoSlide id="second" title="second" direction="previous">
+                  <Filler count={8} />
+                </DemoSlide>
+              </SlideList>
+            </Dialog>
+          </section>
+        );
+      };
 
       const App = () => (
         <div>
@@ -262,30 +336,7 @@
             <ThreeWays id="wide" Content={WideSlidesVertical} />
           </section>
 
-          <section class="demo-section">
-            <h2>Specific to dialog: filling the document</h2>
-            <p>
-              A dialog with <code>expand</code> takes the whole screen, so the
-              list has room given to it rather than taken from its slides:{" "}
-              <code>expandY</code> makes it fill the dialog, and each slide then
-              fills the list whatever it contains.
-            </p>
-            <div class="demo-row">
-              <Button command="--navi-open" commandFor="expand_dialog">
-                Open the dialog
-              </Button>
-            </div>
-            <Dialog id="expand_dialog" expand>
-              <SlideList duration="400ms" expandY>
-                <DemoSlide id="first" title="first" direction="next">
-                  <Filler count={3} />
-                </DemoSlide>
-                <DemoSlide id="second" title="second" direction="previous">
-                  <Filler count={8} />
-                </DemoSlide>
-              </SlideList>
-            </Dialog>
-          </section>
+          <ExpandDialogSection />
         </div>
       );
 
