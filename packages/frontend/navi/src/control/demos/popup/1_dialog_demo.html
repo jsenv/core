@@ -223,10 +223,13 @@
         Dialog,
         Field,
         Input,
+        Icon,
         Label,
         Link,
         NaviDebug,
+        Text,
       } from "@jsenv/navi";
+      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       // Backs each section's own "Slow" checkbox/"Animation" select —
@@ -1094,7 +1097,9 @@
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
             Open
           </Button>
-          <Dialog id={`${idPrefix}_first`} layer={layer}>
+          {/* expandY: the push only reads if the first dialog fills the
+              height it is pushed out of */}
+          <Dialog id={`${idPrefix}_first`} layer={layer} expandY>
             <Box header padding="m" className="demo-overflow-part">
               first
             </Box>
@@ -1114,8 +1119,26 @@
             animationDuration="700ms"
             expandX
           >
-            <Box header padding="m" className="demo-overflow-part">
-              second
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="demo-overflow-part"
+            >
+              <Text expandX>second</Text>
+              {/* an up arrow, not a back arrow: this dialog came from the
+                  bottom and leaves the same way */}
+              <Button
+                command="--navi-cancel"
+                icon
+                variant="discrete"
+                aria-label="Close"
+              >
+                <Icon>
+                  <ChevronUpSvg />
+                </Icon>
+              </Button>
             </Box>
             <Box body padding="m">
               <OverflowFiller count={3} />
@@ -1176,7 +1199,7 @@
                   <Label requiredIndicator>Name</Label>
                   <Input name="name" required />
                 </Field>
-                <Button command="--navi-close">Close (commits)</Button>
+                <Button command="--navi-close">Send</Button>
               </Box>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
@@ -1269,7 +1292,7 @@
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-                <Button command="--navi-close">Close (commits)</Button>
+                <Button command="--navi-close">Send</Button>
               </Box>
             </Dialog>
           </section>
