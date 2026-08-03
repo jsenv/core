@@ -18,6 +18,7 @@
  */
 
 import { createContext, toChildArray } from "preact";
+import { Box } from "../../box/box.jsx";
 import { onNaviCommand } from "../commands.js";
 import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
@@ -312,30 +313,6 @@ export const SlideShowContent = ({
     onCurrentChange?.(id);
   };
 
-  // The command comes as a DOM event so anything inside can send it without
-  // knowing this component — listened here rather than declared as a prop
-  // because the name is not one preact knows.
-  useLayoutEffect(() => {
-    const container = ref.current;
-    if (!container) {
-      return undefined;
-    }
-    const onGo = (e) => {
-      goTo(currentIndex + e.detail.step);
-    };
-    // navi_command is the protocol every command target answers: without it the
-    // command resolves, finds this element, and nothing runs.
-    const onCommand = (e) => {
-      onNaviCommand(e);
-    };
-    container.addEventListener("navi_slideshow_go", onGo);
-    container.addEventListener("navi_command", onCommand);
-    return () => {
-      container.removeEventListener("navi_slideshow_go", onGo);
-      container.removeEventListener("navi_command", onCommand);
-    };
-  });
-
   // Measured once, when there is something to measure: the box then keeps that
   // height for good (see the CSS above for why it must not follow the pages).
   useLayoutEffect(() => {
@@ -352,10 +329,15 @@ export const SlideShowContent = ({
     }
     const observer = new ResizeObserver(() => {
       const pageHeight = firstPage.scrollHeight;
-      if (pageHeight) {
-        setHeight(pageHeight);
-        observer.disconnect();
+      if (!pageHeight) {
+        return;
       }
+      // Disconnected first: writing the height resizes the box, which resizes
+      // the page (it is height: 100%), which the observer would report — the
+      // loop the browser complains about ("ResizeObserver loop completed with
+      // undelivered notifications"). Nothing left to observe once measured.
+      observer.disconnect();
+      setHeight(pageHeight);
     });
     observer.observe(firstPage);
     return () => {
@@ -364,11 +346,22 @@ export const SlideShowContent = ({
   }, [height]);
 
   return (
-    <div
+    // Box rather than a plain div: the onnavi_* handlers below are navi's own
+    // event names, and a component is what carries them onto the element.
+    <Box
       {...rest}
       ref={ref}
-      className="navi_slideshow_content"
+      baseClassName="navi_slideshow_content"
       data-slideshow-content=""
+      // The event a --navi-next/--navi-previous command ends up dispatching…
+      onnavi_slideshow_go={(e) => {
+        goTo(currentIndex + e.detail.step);
+      }}
+      // …and the protocol every command target answers: without this the
+      // command resolves, finds this element, and nothing runs.
+      onnavi_command={(e) => {
+        onNaviCommand(e);
+      }}
       style={{
         "--slideshow-duration": duration,
         "height": height === null ? undefined : `${height}px`,
@@ -392,6 +385,6 @@ export const SlideShowContent = ({
           </div>
         );
       })}
-    </div>
+    </Box>
   );
 };
