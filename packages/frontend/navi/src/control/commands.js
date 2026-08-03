@@ -397,8 +397,8 @@ const registerSlideListCommand = (command, eventName) => {
     };
   });
 };
-registerSlideListCommand("--navi-next", "navi_slide_list_next");
-registerSlideListCommand("--navi-previous", "navi_slide_list_previous");
+registerSlideListCommand("--navi-next", "navi_next");
+registerSlideListCommand("--navi-previous", "navi_previous");
 
 registerNaviCommand("--navi-toggle", (source, event) => {
   const target =

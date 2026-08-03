@@ -32,20 +32,35 @@
         color: #444;
         font-size: 0.95rem;
       }
-      .demo-toc {
-        margin-bottom: 24px;
-        padding: 12px 16px;
-        font-size: 0.9rem;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      }
-      .demo-toc ol {
+      .toc {
         margin: 8px 0 0;
         padding-left: 20px;
+        line-height: 1.9;
       }
-      .demo-toc li {
-        margin-bottom: 2px;
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
+      }
+      .toc ul a {
+        color: #555;
+        font-size: 0.9rem;
+      }
+      .demo-see-also {
+        margin: 16px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid #eee;
+      }
+      .demo-settings {
+        display: flex;
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.9rem;
+        background: #f4f7fc;
+        border-radius: 8px;
       }
       .demo-section {
         scroll-margin-top: 16px;
@@ -55,20 +70,6 @@
         margin: 0;
         color: #666;
         font-size: 0.85rem;
-      }
-      .demo-links {
-        display: flex;
-        margin-bottom: 16px;
-        padding: 10px 14px;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 12px;
-        font-size: 0.9rem;
-        background: #eaf2fd;
-        border-radius: 8px;
-      }
-      .demo-links a {
-        color: #1a237e;
       }
       .demo-row {
         display: flex;
@@ -136,7 +137,8 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useEffect, useRef, useState } from "preact/hooks";
+      import { createContext } from "preact";
+      import { useContext, useEffect, useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -144,11 +146,91 @@
         Field,
         Input,
         Label,
+        Link,
         Popover,
         Slide,
         SlideList,
         Text,
       } from "@jsenv/navi";
+
+      // Section heading with a hover anchor link, same shape as the wheel
+      // demo's: <Link anchor> owns the id, the "#" is the visible affordance.
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+      const useStoredString = (key, defaultValue) => {
+        const [value, setValue] = useState(
+          () => localStorage.getItem(key) ?? defaultValue,
+        );
+        useEffect(() => {
+          localStorage.setItem(key, value);
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // One setting for every list on the page, kept across reloads: comparing
+      // sections is only fair when they all travel at the same speed.
+      const SPEEDS = [
+        { label: "fast (150ms)", value: "150ms" },
+        { label: "normal (300ms — default)", value: "300ms" },
+        { label: "slow (1s)", value: "1s" },
+      ];
+      const SettingsContext = createContext(null);
+      const useSlideDuration = () => {
+        const settings = useContext(SettingsContext);
+        // No animation is a travel that takes no time — the same code path, so
+        // nothing else has to know about the setting.
+        return settings.animated ? settings.speed : "0s";
+      };
+      const SlideSettings = () => {
+        const { animated, setAnimated, speed, setSpeed } =
+          useContext(SettingsContext);
+        return (
+          <div class="demo-settings">
+            <label class="demo-option">
+              <input
+                type="checkbox"
+                checked={animated}
+                onChange={(e) => setAnimated(e.target.checked)}
+              />
+              Animate the travel
+            </label>
+            <label class="demo-option">
+              Speed{" "}
+              <select
+                value={speed}
+                disabled={!animated}
+                onChange={(e) => setSpeed(e.target.value)}
+              >
+                {SPEEDS.map(({ label, value }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        );
+      };
 
       const Filler = ({ count, className = "filler" }) =>
         Array.from({ length: count }, (_, i) => (
@@ -218,7 +300,7 @@
       );
 
       const TwoSlides = () => (
-        <SlideList duration="400ms">
+        <SlideList duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
@@ -231,7 +313,7 @@
       );
 
       const TallSlides = () => (
-        <SlideList duration="400ms">
+        <SlideList duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={40} />
           </DemoSlide>
@@ -242,7 +324,7 @@
       );
 
       const TwoSlidesVertical = () => (
-        <SlideList duration="400ms" vertical>
+        <SlideList duration={useSlideDuration()} vertical>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
@@ -253,7 +335,7 @@
       );
 
       const WideSlidesVertical = () => (
-        <SlideList duration="400ms" vertical>
+        <SlideList duration={useSlideDuration()} vertical>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} className="wide" />
           </DemoSlide>
@@ -267,7 +349,7 @@
       // so one can watch where the keyboard lands, what it does NOT land on,
       // and where it is put back.
       const FocusSlides = () => (
-        <SlideList duration="400ms">
+        <SlideList duration={useSlideDuration()}>
           <Slide id="who" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>who</Text>
@@ -282,6 +364,11 @@
                 <Label>Last name</Label>
                 <Input name="lastName" />
               </Field>
+              {/* Focusable but not a text field: → travels from here (an arrow
+                  means nothing to a button), and coming back to this slide
+                  lands on it again — it is what the keyboard was on when the
+                  slide was left */}
+              <Button variant="discrete">Say hello</Button>
             </Box>
           </Slide>
           <Slide id="where" overflow="auto">
@@ -319,7 +406,7 @@
       );
 
       const ThreeSlides = () => (
-        <SlideList duration="400ms">
+        <SlideList duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
@@ -337,7 +424,7 @@
       const FreeSlides = () => {
         const [agreed, setAgreed] = useState(false);
         return (
-          <SlideList duration="400ms">
+          <SlideList duration={useSlideDuration()}>
             <Slide id="terms" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
@@ -375,7 +462,7 @@
       const LockedSlides = () => {
         const [agreed, setAgreed] = useState(false);
         return (
-          <SlideList duration="400ms">
+          <SlideList duration={useSlideDuration()}>
             <Slide id="terms" preventNavNext={!agreed} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
@@ -417,11 +504,11 @@
             return;
           }
           listRef.current.dispatchEvent(
-            new CustomEvent("navi_slide_list_next", { bubbles: true }),
+            new CustomEvent("navi_next", { bubbles: true }),
           );
         }, [signed]);
         return (
-          <SlideList duration="400ms" ref={listRef}>
+          <SlideList duration={useSlideDuration()} ref={listRef}>
             <Slide id="sign" preventNav={!signed} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>sign</Text>
@@ -451,7 +538,9 @@
         const [vertical, setVertical] = useState(false);
         return (
           <section class="demo-section" id="dialog">
-            <h2>Specific to dialog: filling the document</h2>
+            <Heading id="dialog">
+              Specific to dialog: filling the document
+            </Heading>
             <p>
               A dialog with <code>expand</code> takes the whole screen, so the
               list has room given to it rather than taken from its slides:{" "}
@@ -488,7 +577,11 @@
               expand
               marginWithContainer={flush ? 0 : undefined}
             >
-              <SlideList duration="400ms" expandY vertical={vertical}>
+              <SlideList
+                duration={useSlideDuration()}
+                expandY
+                vertical={vertical}
+              >
                 <DemoSlide id="first" title="first" direction="next">
                   <Filler count={3} />
                 </DemoSlide>
@@ -501,57 +594,79 @@
         );
       };
 
-      const App = () => (
+      const App = () => {
+        const [animated, setAnimated] = useStoredBoolean(
+          "slide_list_demo_animated",
+          true,
+        );
+        const [speed, setSpeed] = useStoredString(
+          "slide_list_demo_speed",
+          "300ms",
+        );
+        const settings = { animated, setAnimated, speed, setSpeed };
+        return (
+          <SettingsContext.Provider value={settings}>
+            <AppContent />
+          </SettingsContext.Provider>
+        );
+      };
+
+      const AppContent = () => (
         <div>
           <h1>Slide list</h1>
-          <nav class="demo-links">
-            <strong>See also:</strong>
-            <a href="../../control/demos/popup/1_dialog_demo.html#slides">
-              Dialog demo — Slides
-            </a>
-            <a href="../../control/demos/popup/2_popover_demo.html#slides">
-              Popover demo — Slides
-            </a>
-            <a href="./slide_list_perf.html">Slide list — perf</a>
-          </nav>
-          <nav class="demo-toc">
+
+          <div class="demo-section">
+            <p>
+              Slides that replace one another inside one box. The box takes the
+              size of its largest slide, so nothing grows or shrinks as one
+              moves through them; a slide travels by exactly one box, sideways
+              by default.
+            </p>
+            <SlideSettings />
             <strong>On this page</strong>
-            <ol>
+            <ol className="toc">
               <li>
-                <a href="#two-slides">Two slides</a>
+                <Link href="#two-slides">Two slides</Link>
+                <ul>
+                  <li>
+                    <Link href="#taller">Content taller than the box</Link>
+                  </li>
+                  <li>
+                    <Link href="#wider">Content wider than the box</Link>
+                  </li>
+                </ul>
               </li>
               <li>
-                <a href="#taller">Content taller than the box</a>
+                <Link href="#vertical">Vertical</Link>
               </li>
               <li>
-                <a href="#vertical">Vertical</a>
+                <Link href="#three-slides">Three slides</Link>
               </li>
               <li>
-                <a href="#wider">Content wider than the box (vertical)</a>
+                <Link href="#focus">Focus</Link>
               </li>
               <li>
-                <a href="#dialog">Specific to dialog: filling the document</a>
+                <Link href="#locking">Locking the way out</Link>
               </li>
               <li>
-                <a href="#focus">Focus</a>
-              </li>
-              <li>
-                <a href="#locking">Locking the way out</a>
-              </li>
-              <li>
-                <a href="#three-slides">Three slides</a>
+                <Link href="#dialog">Specific to dialog</Link>
               </li>
             </ol>
-          </nav>
-          <p>
-            Slides that replace one another inside one box. The box takes the
-            size of its largest slide, so nothing grows or shrinks as one moves
-            through them; a slide travels by exactly one box, sideways by
-            default.
-          </p>
+            <p class="demo-see-also">
+              <strong>See also:</strong>{" "}
+              <Link href="../../control/demos/popup/1_dialog_demo.html#slides">
+                Dialog demo — Slides
+              </Link>{" "}
+              ·{" "}
+              <Link href="../../control/demos/popup/2_popover_demo.html#slides">
+                Popover demo — Slides
+              </Link>{" "}
+              · <Link href="./slide_list_perf.html">Slide list — perf</Link>
+            </p>
+          </div>
 
           <section class="demo-section" id="two-slides">
-            <h2>Two slides</h2>
+            <Heading id="two-slides">Two slides</Heading>
             <p>
               The plain case: a slide arrives from the right, the one it
               replaces leaves to the left. The second slide is taller than the
@@ -561,7 +676,7 @@
           </section>
 
           <section class="demo-section" id="taller">
-            <h2>Content taller than the box</h2>
+            <Heading id="taller">Content taller than the box</Heading>
             <p>
               Nothing special happens: a slide is a box, so it scrolls its own
               body (<code>overflow="auto"</code> plus a <code>body</code>, see
@@ -577,7 +692,7 @@
           </section>
 
           <section class="demo-section" id="vertical">
-            <h2>Vertical</h2>
+            <Heading id="vertical">Vertical</Heading>
             <p>
               The same two slides with <code>vertical</code>: they arrive from
               below instead of from the side. The travel is the only difference
@@ -587,7 +702,7 @@
           </section>
 
           <section class="demo-section" id="wider">
-            <h2>Content wider than the box (vertical)</h2>
+            <Heading id="wider">Content wider than the box (vertical)</Heading>
             <p>
               Sideways now belongs to the content, not to the travel: the slides
               go up and down while what they hold scrolls left and right. Their
@@ -600,7 +715,7 @@
           <ExpandDialogSection />
 
           <section class="demo-section" id="focus">
-            <h2>Focus</h2>
+            <Heading id="focus">Focus</Heading>
             <p>
               Travelling moves the keyboard with the eye. Click a chevron (or
               press Tab to it and Enter) and watch: the arriving slide takes
@@ -622,13 +737,13 @@
           </section>
 
           <section class="demo-section" id="locking">
-            <h2>Locking the way out</h2>
+            <Heading id="locking">Locking the way out</Heading>
             <p>
               A step one must not skip: <code>preventNavNext</code> (and{" "}
               <code>preventNavPrevious</code>, or <code>preventNav</code> for
               both) on a <code>Slide</code> holds the user there. It is read
               where the travel is decided, so it holds against every way of
-              asking — the chevron, the keyboard, a <code>--navi-next</code>
+              asking — the chevron, the keyboard, a <code>--navi-next</code>{" "}
               command, an event dispatched by hand.
             </p>
             <div class="demo-ways">
@@ -655,8 +770,7 @@
               <div class="demo-way">
                 <h3>The action moves on</h3>
                 <p class="demo-note">
-                  No chevron at all: signing dispatches{" "}
-                  <code>navi_slide_list_next</code>.
+                  No chevron at all: signing dispatches <code>navi_next</code>.
                 </p>
                 <div class="in-document">
                   <ActionThenNextSlides />
@@ -666,7 +780,7 @@
           </section>
 
           <section class="demo-section" id="three-slides">
-            <h2>Three slides</h2>
+            <Heading id="three-slides">Three slides</Heading>
             <p>
               Nothing changes past two: the middle slide simply carries both
               buttons, each still saying one word. The list walks the DOM to

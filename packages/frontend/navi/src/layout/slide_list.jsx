@@ -116,10 +116,12 @@ const SlideContext = createContext(null);
 const focusMemory = new WeakMap();
 
 /**
- * Where the keyboard goes when a slide arrives. Not on the way out of it: a
- * slide is opened to do something in it, and its prev/next buttons are how one
- * LEAVES — landing on them means the first thing offered is going away again.
- * So they come last, only if the slide holds nothing else.
+ * Where the keyboard goes when a slide arrives. What this slide last had wins
+ * over everything: coming back is coming back to where one was, chevron
+ * included. Failing a memory, a slide is opened to DO something in it, and its
+ * prev/next buttons are how one leaves — landing there means the first thing
+ * offered is going away again, so they come last, only if nothing else is
+ * offered at all.
  */
 const findFocusTargetInSlide = (slideElement) => {
   const remembered = focusMemory.get(slideElement);
@@ -344,10 +346,10 @@ export const SlideList = ({
       // command and a line of code all mean, and it is all any of them has to
       // say. Dispatch it (bubbling) from anywhere inside to move the list on —
       // an action finishing, a field becoming valid…
-      onnavi_slide_list_next={() => {
+      onnavi_next={() => {
         goBy(1);
       }}
-      onnavi_slide_list_previous={() => {
+      onnavi_previous={() => {
         goBy(-1);
       }}
       // …and the protocol every command target answers: without this the
@@ -359,14 +361,12 @@ export const SlideList = ({
         onKeyDownShortcuts(e);
         rest.onKeyDown?.(e);
       }}
-      // Written down as it happens, not when the slide is left: what one was
-      // doing is the last place the keyboard REALLY was, and by the time a
-      // slide is left the focus is usually on the chevron that leaves it —
-      // which is why the way out is not recorded (see findFocusTargetInSlide
-      // for the other half of that reasoning).
+      // Written down as it happens rather than when the slide is left: what
+      // the keyboard was on IS what it was on, chevron included — one leaves a
+      // slide by pressing its "next", so that is where coming back belongs.
       onfocusin={(e) => {
         const slideElement = e.target.closest?.("[data-slide]");
-        if (slideElement && !e.target.closest("[data-slide-nav]")) {
+        if (slideElement) {
           focusMemory.set(slideElement, e.target);
         }
         rest.onfocusin?.(e);
