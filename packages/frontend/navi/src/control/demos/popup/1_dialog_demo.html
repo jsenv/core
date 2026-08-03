@@ -1097,7 +1097,7 @@
       // The default is navi's own — named here so the demo can say which one it
       // is rather than leaving the reader to guess.
       const SPEEDS = {
-        "fast": { duration: undefined, label: "fast (200ms, default)" },
+        "fast": { duration: "300ms", label: "fast (300ms, default)" },
         "slow": { duration: "700ms", label: "slow (700ms)" },
         "very slow": { duration: "3s", label: "very slow (3000ms)" },
       };
@@ -1114,7 +1114,11 @@
           </Button>
           {/* Taking part is declared by being in here — nothing to name, and a
               dialog outside is simply not part of the movement */}
-          <SlideShow layer={layer === "local" ? "local" : "top"} gap={16}>
+          <SlideShow
+            layer={layer === "local" ? "local" : "top"}
+            gap={16}
+            duration={animationDuration}
+          >
             {/* Both take part in the same slideshow: when the second opens, the
                 first steps back by one slot — see slideshow.js */}
             <Dialog

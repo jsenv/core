@@ -207,11 +207,25 @@ const css = /* css */ `
        what keeps the gap between two of them from drifting. The transition is
        declared here rather than under an attribute, so a member that is not
        animated at all still travels. */
-    &[data-slideshow] {
+    /* Doubled attribute to raise specificity: a member's own animation rules
+       (popup_css.js) also set translate, and while it is in a slideshow the
+       slideshow is what decides where it stands. */
+    &[data-slideshow][data-slideshow] {
       translate: 0 var(--slideshow-offset, 0px);
       transition-property: translate;
-      transition-duration: var(--popup-animation-duration);
+      /* The slideshow's own duration, not the dialog's: what moves here is the
+         slideshow, and one movement has one speed. */
+      transition-duration: var(
+        --slideshow-duration,
+        var(--popup-animation-duration)
+      );
       transition-timing-function: ease;
+
+      /* Placed, not moved — see slideshow.jsx's add(): a slide arriving is put
+         one slot away before it is allowed to travel. */
+      &[data-slideshow-instant] {
+        transition-property: none;
+      }
     }
 
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
@@ -875,7 +889,9 @@ const useDialogProps = (props) => {
       dialogEl.style.removeProperty("--anchor-width");
       dialogEl.style.removeProperty("--anchor-height");
     }
-    if (resolvedAnimation) {
+    // A member of a slideshow does not animate itself: the slideshow moves it,
+    // and two rules setting translate on the same element can only fight.
+    if (resolvedAnimation && !slideshow) {
       dialogEl.setAttribute("navi-animation", resolvedAnimation);
       backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {

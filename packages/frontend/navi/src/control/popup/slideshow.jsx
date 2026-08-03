@@ -20,8 +20,9 @@
 import { createContext } from "preact";
 import { useMemo, useRef } from "preact/hooks";
 
-const createSlideshow = ({ axis, gap, getSlotSize }) => {
+const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
   const members = [];
+  const slotSize = () => getSlotSize() + gap;
   const slideshow = {
     axis,
     members,
@@ -37,6 +38,14 @@ const createSlideshow = ({ axis, gap, getSlotSize }) => {
       if (members.includes(element)) {
         return;
       }
+      // Placed one slot ahead first, with no transition: that is where a new
+      // slide comes FROM. Everything then moves by exactly one slot — the
+      // arrival and the departure are the same movement, so they cannot differ
+      // in distance or in duration.
+      element.setAttribute("data-slideshow-instant", "");
+      element.style.setProperty("--slideshow-offset", `${slotSize()}px`);
+      element.getBoundingClientRect(); // flush before the transition is allowed
+      element.removeAttribute("data-slideshow-instant");
       members.push(element);
       slideshow.apply();
     },
@@ -52,7 +61,7 @@ const createSlideshow = ({ axis, gap, getSlotSize }) => {
       slideshow.apply();
     },
     apply: () => {
-      const slot = getSlotSize() + gap;
+      const slot = slotSize();
       const lastIndex = members.length - 1;
       let index = 0;
       while (index < members.length) {
@@ -62,6 +71,11 @@ const createSlideshow = ({ axis, gap, getSlotSize }) => {
         // one slot apart, whatever their own sizes.
         const offset = (index - lastIndex) * slot;
         member.style.setProperty("--slideshow-offset", `${offset}px`);
+        // The duration belongs to the slideshow, not to each member: one
+        // movement, one speed, whatever animation a member has of its own.
+        if (duration) {
+          member.style.setProperty("--slideshow-duration", duration);
+        }
         index++;
       }
     },
@@ -93,14 +107,23 @@ export const SlideShowContext = createContext(null);
  *   same distinction Dialog and Popover make about where they live).
  * @param {"y"|"x"} [props.axis="y"] - how the slides are laid out.
  * @param {number} [props.gap=0] - kept between two slides.
+ * @param {string} [props.duration="300ms"] - how long one slide takes; the
+ *   slideshow owns it so every member travels at the same speed.
  */
-export const SlideShow = ({ layer = "top", axis = "y", gap = 0, children }) => {
+export const SlideShow = ({
+  layer = "top",
+  axis = "y",
+  gap = 0,
+  duration = "300ms",
+  children,
+}) => {
   const ref = useRef();
   const slideshow = useMemo(
     () =>
       createSlideshow({
         axis,
         gap,
+        duration,
         getSlotSize: () => {
           if (layer === "top") {
             return axis === "x" ? window.innerWidth : window.innerHeight;
@@ -116,7 +139,7 @@ export const SlideShow = ({ layer = "top", axis = "y", gap = 0, children }) => {
           return axis === "x" ? container.clientWidth : container.clientHeight;
         },
       }),
-    [layer, axis, gap],
+    [layer, axis, gap, duration],
   );
 
   return (
