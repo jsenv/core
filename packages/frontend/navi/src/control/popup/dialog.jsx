@@ -74,7 +74,10 @@ import { resolveSpacingSize } from "../../box/box_style_util.js";
 import { coarsePointerSignal } from "../../layout/responsive.js";
 import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
-import { useOpenControllerByProps } from "./open_controller.js";
+import {
+  useOpenController,
+  useOpenPropsEffectOnOpenController,
+} from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
@@ -490,13 +493,61 @@ export const Dialog = (props) => {
 // by --navi-toggle/--navi-open/--navi-close commands, the `open` prop, or
 // `defaultOpen`) rather than owned by a parent component.
 const UncontrolledDialog = (props) => {
-  // The dialog itself decides whether a close may proceed (a failing form must
-  // not be committed by closing) — useDialogProps fills this ref, which only
-  // exists once the props are resolved.
-  const requestCloseRef = useRef();
-  const openController = useOpenControllerByProps(props, {
-    onRequestClose: (e) => requestCloseRef.current?.(e),
+  const debugPopup = useDebugPopup();
+  // Resolved here rather than left to useDialogProps: the open handler below
+  // needs the dialog element to read what it holds.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // Same shape as picker_custom's own controller, for the same reason: what the
+  // dialog held when it opened is what a close is compared against, and what a
+  // cancel puts back — so it lives in the closure of one opening.
+  const openController = useOpenController((openEvent) => {
+    const dialogEl = props.ref.current;
+    const uiStateAtOpen = getUIStateFromElement(dialogEl);
+    debugPopup(openEvent, `dialog opened, store value at open`, uiStateAtOpen);
+
+    return {
+      onRequestClose: (requestCloseEvent) => {
+        if (requestCloseEvent.detail.isCancel) {
+          // Giving up is always allowed — nothing to validate, nothing to
+          // commit.
+          return;
+        }
+        // Closing IS committing, so a close that cannot commit must not
+        // happen: the failing constraint reports itself and the dialog stays
+        // open, with the form still in front of the user.
+        const unchanged = compareTwoJsValues(
+          getUIStateFromElement(dialogEl),
+          uiStateAtOpen,
+        );
+        dispatchRequestAction(dialogEl, {
+          event: requestCloseEvent,
+          name: "dialog request close",
+          // action: null when nothing was touched — the constraints are still
+          // checked (an empty required field must report even if the user
+          // typed nothing at all), but there is no answer to commit.
+          action: unchanged ? null : "auto",
+          // Reported even when the dialog has no action of its own: what the
+          // user needs to see is the constraint, not whether someone listens.
+          reportOnInvalid: true,
+          onInvalid: () => {
+            requestCloseEvent.preventDefault();
+          },
+        });
+      },
+      onClose: (closeEvent) => {
+        if (closeEvent.detail.isCancel) {
+          // A cancelled dialog leaves no trace: what was typed goes back to
+          // what it opened on.
+          dispatchRequestSetUIState(dialogEl, uiStateAtOpen, {
+            event: closeEvent,
+          });
+        }
+        props.onClose?.(closeEvent);
+      },
+    };
   });
+  useOpenPropsEffectOnOpenController(openController, props);
 
   return (
     <ControlledDialog
@@ -513,7 +564,6 @@ const UncontrolledDialog = (props) => {
       onnavi_request_close={(e) => {
         openController.requestClose(e, { isCancel: e.detail?.isCancel });
       }}
-      requestCloseRef={requestCloseRef}
     />
   );
 };
@@ -682,42 +732,6 @@ const useDialogProps = (props) => {
     ...rest
   } = props;
   const isModal = layer === "top";
-  // What the dialog held when it opened: what a close is compared against
-  // (nothing changed → nothing to commit) and what a cancel puts back.
-  const uiStateAtOpenRef = useRef();
-  // Closing IS committing, so a close that cannot commit must not happen: the
-  // failing constraint reports itself and the dialog stays open, with the form
-  // still in front of the user. Only a cancel leaves it in that state — giving
-  // up is always allowed. Same rule picker_custom.jsx applies to its own popup.
-  if (props.requestCloseRef) {
-    props.requestCloseRef.current = (requestCloseEvent) => {
-      if (requestCloseEvent.detail?.isCancel) {
-        return;
-      }
-      const dialogEl = props.ref.current;
-      if (!dialogEl) {
-        return;
-      }
-      const unchanged = compareTwoJsValues(
-        getUIStateFromElement(dialogEl),
-        uiStateAtOpenRef.current,
-      );
-      dispatchRequestAction(dialogEl, {
-        event: requestCloseEvent,
-        name: "dialog request close",
-        // action: null when nothing was touched — the constraints are still
-        // checked (an empty required field must report even if the user typed
-        // nothing at all), but there is no answer to commit.
-        action: unchanged ? null : "auto",
-        // Reported even when the dialog has no action of its own: what the user
-        // needs to see is the constraint, not whether someone listens.
-        reportOnInvalid: true,
-        onInvalid: () => {
-          requestCloseEvent.preventDefault();
-        },
-      });
-    };
-  }
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
@@ -817,7 +831,6 @@ const useDialogProps = (props) => {
     // it closes (nothing changed → nothing to commit) and the state to put
     // back when it is cancelled — a cancelled dialog must leave no trace, the
     // same way a cancelled picker restores the value it was opened on.
-    uiStateAtOpenRef.current = getUIStateFromElement(dialogEl);
     if (!dialogEl) {
       return undefined;
     }
@@ -1141,15 +1154,6 @@ const useDialogProps = (props) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
-      // Cancelling (Escape, an outside click when asked to cancel) is the user
-      // saying "forget it": what was typed is rolled back to what the dialog
-      // opened on. Committing already happened in the requestClose above — by
-      // the time we get here the close is settled.
-      if (closeEvent.detail?.isCancel) {
-        dispatchRequestSetUIState(dialogEl, uiStateAtOpenRef.current, {
-          event: closeEvent,
-        });
-      }
       if (pushedEl) {
         // Only the leaving dialog moves. The one underneath is simply revealed
         // where it always was — pushing it back down would make the departure
@@ -1280,7 +1284,6 @@ const useDialogProps = (props) => {
     // (value="[object Object]" and friends).
     "value": undefined,
     "defaultValue": undefined,
-    "requestCloseRef": undefined,
     "stateType": undefined,
     "action": undefined,
     "uiAction": undefined,

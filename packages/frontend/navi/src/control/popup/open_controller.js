@@ -368,17 +368,15 @@ export const useOpenPropsEffectOnOpenController = (openController, props) => {
   }, [open]);
 };
 
-export const useOpenControllerByProps = (props, { onRequestClose } = {}) => {
+export const useOpenControllerByProps = (props) => {
   const { onClose } = props;
   // Lets an uncontrolled consumer (no openController of its own) still react
   // to a self-initiated close (Escape, backdrop click, its own close button)
   // without having to own a controller just to observe it — onClose is
   // called on every real close, matching createOpenController's own
   // { onRequestClose, onClose } contract (never denies the close itself).
-  // onRequestClose comes from the component itself (Dialog/Popover use it to
-  // refuse a close that would commit a failing form), onClose from its caller.
   const openController = useOpenController(() =>
-    onClose || onRequestClose ? { onClose, onRequestClose } : undefined,
+    onClose ? { onClose } : undefined,
   );
   useOpenPropsEffectOnOpenController(openController, props);
   return openController;
