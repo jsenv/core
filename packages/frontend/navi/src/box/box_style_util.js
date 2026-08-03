@@ -1,4 +1,4 @@
-import { mergeOneStyle, normalizeStyle } from "@jsenv/dom";
+import { getPositionedParent, mergeOneStyle, normalizeStyle } from "@jsenv/dom";
 
 import {
   visualViewportHeightSignal,
@@ -757,10 +757,13 @@ const resolveViewportLength = (size) => {
   return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
 };
 
-// "3cqw"/"2cqh" — a share of the element given as second argument, the way
-// vvw/vvh are a share of the viewport. Resolved here rather than left to CSS
-// because a caller asking for a number (a placement, a slot) cannot wait for
-// the cascade, and a container query unit means nothing to getComputedStyle.
+// "3cqw"/"2cqh" — a share of the container the given element lives in, the way
+// vvw/vvh are a share of the viewport. The caller passes the element, not the
+// container: which box actually contains it is a question with one answer
+// (getPositionedParent), and asking every caller to answer it themselves is how
+// two of them end up disagreeing. Resolved here rather than left to CSS because
+// a caller asking for a number (a placement, a slot) cannot wait for the
+// cascade, and a container query unit means nothing to getComputedStyle.
 const CONTAINER_LENGTH_REGEX = /^(-?[0-9.]+)cq([wh])$/;
 const resolveContainerLength = (size, element) => {
   if (typeof size !== "string") {
@@ -771,7 +774,9 @@ const resolveContainerLength = (size, element) => {
     return null;
   }
   const [, amount, axis] = match;
-  const container = element || document.documentElement;
+  const container = element
+    ? getPositionedParent(element)
+    : document.documentElement;
   const containerSize =
     axis === "w" ? container.clientWidth : container.clientHeight;
   return (parseFloat(amount) / 100) * containerSize;

@@ -967,7 +967,7 @@ const useDialogProps = (props) => {
       // one movement keep the same distance from the edges as they keep from
       // each other, and nobody has to repeat the number.
       const travelled = slideshow.add(dialogEl, {
-        gap: resolveSpacingSize(marginWithContainer, positionedAncestor),
+        gap: resolveSpacingSize(marginWithContainer, dialogEl.parentElement),
       });
       if (travelled) {
         // The slideshow moves it, so it must not also move itself: two rules
@@ -1007,11 +1007,13 @@ const useDialogProps = (props) => {
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
       const { positionArea, marginWithContainer } = positionPropsRef.current;
-      // The container is given: that is what makes "3cqw" resolvable — a share
-      // of what confines this dialog rather than of the viewport.
+      // The dialog's PARENT, not the dialog: a modal one is promoted to the
+      // top layer and would answer "the viewport" about itself, when what a
+      // "3cqw" margin means here is a share of the box it was declared in.
+      // resolveSpacingSize walks up from there to find that container.
       let marginWithContainerInPixels = resolveSpacingSize(
         marginWithContainer,
-        positionedAncestor,
+        dialogEl.parentElement,
       );
       if (typeof marginWithContainerInPixels !== "number") {
         // A value only CSS could evaluate (a spacing token resolving to a var(),
