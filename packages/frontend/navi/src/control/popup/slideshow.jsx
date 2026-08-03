@@ -22,7 +22,12 @@ import { useMemo, useRef } from "preact/hooks";
 
 const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
   const members = [];
-  const slotSize = () => getSlotSize() + gap;
+  // A member can say what gap it keeps with its container (a dialog knows its
+  // own marginWithContainer): it is the same distance, so the slideshow uses it
+  // rather than a number repeated at the call site. The prop stays as the
+  // fallback for members that have nothing to say.
+  let gapFromMembers;
+  const slotSize = () => getSlotSize() + (gapFromMembers ?? gap);
   const slideshow = {
     axis,
     members,
@@ -36,7 +41,10 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
      * @param {number} [options.gap=0] - kept between two members, so they never
      *   travel edge to edge.
      */
-    add: (element) => {
+    add: (element, { gap: gapFromMember } = {}) => {
+      if (typeof gapFromMember === "number") {
+        gapFromMembers = gapFromMember;
+      }
       if (members.includes(element)) {
         return false;
       }
@@ -135,17 +143,15 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
   return slideshow;
 };
 
-const findPositionedAncestor = (element) => {
-  let ancestor = element?.parentElement;
-  while (ancestor) {
-    const { position } = getComputedStyle(ancestor);
-    if (position !== "static") {
-      return ancestor;
-    }
-    ancestor = ancestor.parentElement;
+const css = /* css */ `
+  /* Positioned, because that is the whole point of the material container: a
+     layer="local" popup resolves its own placement against its nearest
+     positioned ancestor, and here that ancestor is the slideshow. relative
+     rather than anything else so it keeps its place in the flow. */
+  .navi_slideshow {
+    position: relative;
   }
-  return null;
-};
+`;
 
 export const SlideShowContext = createContext(null);
 
@@ -158,7 +164,8 @@ export const SlideShowContext = createContext(null);
  *   against: the viewport, or the positioned ancestor this renders into (the
  *   same distinction Dialog and Popover make about where they live).
  * @param {"y"|"x"} [props.axis="y"] - how the slides are laid out.
- * @param {number} [props.gap=0] - kept between two slides.
+ * @param {number} [props.gap=0] - kept between two slides, when the members
+ *   themselves say nothing (a Dialog passes its own marginWithContainer).
  * @param {string} [props.duration="300ms"] - how long one slide takes; the
  *   slideshow owns it so every member travels at the same speed.
  */
@@ -168,7 +175,11 @@ export const SlideShow = ({
   gap = 0,
   duration = "300ms",
   children,
+  // Only the material container can wear them — a top-layer slideshow has no
+  // box of its own to style.
+  ...rest
 }) => {
+  import.meta.css = css;
   const ref = useRef();
   const slideshow = useMemo(
     () =>
@@ -180,11 +191,8 @@ export const SlideShow = ({
           if (layer === "top") {
             return axis === "x" ? window.innerWidth : window.innerHeight;
           }
-          // Local: the container is the positioned ancestor this element sits
-          // in — the very one a layer="local" Dialog resolves for itself.
-          // Walked by hand rather than read from offsetParent: this element is
-          // display:contents, so it has no box and no offsetParent at all.
-          const container = findPositionedAncestor(ref.current);
+          // Local: this element IS the container its pages live in.
+          const container = ref.current;
           if (!container) {
             return 0;
           }
@@ -194,10 +202,24 @@ export const SlideShow = ({
     [layer, axis, gap, duration],
   );
 
+  if (layer === "local") {
+    // A real box, because a local popup needs one: it is the positioned
+    // ancestor its pages are confined to and measured against — a slot is the
+    // container's own size, not the viewport's, which is what makes the whole
+    // thing work for surfaces that size to their content (a popover) rather
+    // than to the screen (a dialog).
+    return (
+      <div {...rest} ref={ref} className="navi_slideshow">
+        <SlideShowContext.Provider value={slideshow}>
+          {children}
+        </SlideShowContext.Provider>
+      </div>
+    );
+  }
   return (
-    // display: contents — it must not disturb the layout of what surrounds it.
-    // It exists to find the container in layer="local"; top-layer children are
-    // out of the flow anyway.
+    // display: contents — nothing to contain here: top-layer pages are out of
+    // the flow, and this must not disturb the layout around it. It stays an
+    // element only so the arithmetic has somewhere to live.
     <span ref={ref} style="display: contents">
       <SlideShowContext.Provider value={slideshow}>
         {children}
