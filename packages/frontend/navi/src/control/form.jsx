@@ -13,7 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useMemo, useRef } from "preact/hooks";
+import { useContext, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
@@ -22,18 +22,48 @@ import {
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestAction } from "./rules/control_action.js";
+import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
+/**
+ * @param {object} props
+ * @param {boolean} [props.standalone] - Its value is its own: the form does not
+ *   register with the control group around it (a Picker, another form…), so
+ *   what is typed in it never becomes part of that group's value. For a form
+ *   that lives INSIDE something else while answering a different question —
+ *   "create the thing I am about to pick" inside a picker, say.
+ */
 export const Form = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const form = <FormControl {...props} />;
-
+  // A <form> cannot contain a <form> — the parser closes the first one at the
+  // second's opening tag, so the inner fields would silently belong to the
+  // outer form. Rather than forbidding the shape (a form inside a picker
+  // inside a form is a legitimate thing to want), the inner one renders as a
+  // <div>: everything navi does — grouping, validation, action — is ours, and
+  // only the browser's own submit machinery needs a real <form>.
+  const isNested = Boolean(useContext(FormContext));
+  const form = <FormControl {...props} nested={isNested} />;
+  if (props.standalone) {
+    // Nothing above to register with: the group hooks read the parent from
+    // this context, so emptying it here is the whole opt-out.
+    return (
+      <ParentUIStateControllerContext.Provider value={undefined}>
+        {form}
+      </ParentUIStateControllerContext.Provider>
+    );
+  }
   return form;
 };
 
 const FormControl = (props) => {
-  const { ref, method = "GET" } = props;
+  const { ref, method = "GET", nested } = props;
+  // nested/standalone are ours, not the DOM's: standalone was already consumed
+  // by Form above, and nested only decides what is rendered here.
+  const propsForGroup = { ...props };
+  delete propsForGroup.nested;
+  delete propsForGroup.standalone;
+  props = propsForGroup;
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
     props,
     {
@@ -56,28 +86,41 @@ const FormControl = (props) => {
     <Box
       {...formRootProps}
       {...formProps}
-      as="form"
-      data-method={method}
-      novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
+      as={nested ? "div" : "form"}
+      data-method={nested ? undefined : method}
+      // make sure browser don't prevent "submit" when invalid, nor display messages
+      novalidate={nested ? undefined : ""}
       pseudoClasses={FormPseudoClasses}
-      onSubmit={(e) => {
-        const form = e.currentTarget;
-        dispatchRequestAction(form, {
-          event: e,
-          name: "form_submit",
-          always: () => {
-            e.preventDefault();
-          },
-          requester: e.submitter || form,
-        });
-      }}
-      onReset={(e) => {
-        const form = ref.current;
-        dispatchRequestResetUIState(form, e);
-        // browser would empty all fields to their default values (likely empty/unchecked)
-        // we want to reset to the last known external state instead
-        e.preventDefault();
-      }}
+      // Nothing native to intercept on a <div>: there is no submit event and no
+      // requestSubmit() to go through, so a nested form is driven the way every
+      // other group is — a command, or an action requested on it.
+      onSubmit={
+        nested
+          ? undefined
+          : (e) => {
+              const form = e.currentTarget;
+              dispatchRequestAction(form, {
+                event: e,
+                name: "form_submit",
+                always: () => {
+                  e.preventDefault();
+                },
+                requester: e.submitter || form,
+              });
+            }
+      }
+      onReset={
+        nested
+          ? undefined
+          : (e) => {
+              const form = ref.current;
+              dispatchRequestResetUIState(form, e);
+              // browser would empty all fields to their default values (likely
+              // empty/unchecked) we want to reset to the last known external
+              // state instead
+              e.preventDefault();
+            }
+      }
     >
       <FormContext.Provider value={formContextValue}>
         <ControlgroupChildrenWrapper

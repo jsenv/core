@@ -438,7 +438,18 @@
                         contains and hands them to action when it is sent — no
                         per-field signal to wire, and nothing committed if one
                         goes back to the list instead. */}
-                    <Form action={submitForm} flex="y" overflow="auto" expandY>
+                    {/* standalone: what is typed here answers "create the
+                        thing I am about to pick", not "what is the picker's
+                        value" — without it the form registers with the picker
+                        around it and the field ends up showing the form's own
+                        object */}
+                    <Form
+                      standalone
+                      action={submitForm}
+                      flex="y"
+                      overflow="auto"
+                      expandY
+                    >
                       <Box
                         header
                         flex="x"
