@@ -119,6 +119,7 @@
         Dialog,
         Field,
         Input,
+        Label,
         Popover,
         Slide,
         SlideList,
@@ -249,10 +250,12 @@
               <SlideList.Next size="xl" padding="xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
-              <Field label="First name">
+              <Field vertical>
+                <Label>First name</Label>
                 <Input name="firstName" placeholder="type something…" />
               </Field>
-              <Field label="Last name">
+              <Field vertical>
+                <Label>Last name</Label>
                 <Input name="lastName" />
               </Field>
             </Box>
@@ -265,12 +268,14 @@
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               {/* Asked for by name: navi-autofocus wins over "the first
-                  focusable", so the keyboard lands here and not on the
-                  checkbox above it */}
-              <Field label="City">
+                  focusable", so the keyboard lands on City — the field one
+                  actually comes here to fill */}
+              <Field vertical>
+                <Label>City</Label>
                 <Input name="city" navi-autofocus />
               </Field>
-              <Field label="Country">
+              <Field vertical>
+                <Label>Country</Label>
                 <Input name="country" />
               </Field>
             </Box>

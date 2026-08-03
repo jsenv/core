@@ -213,9 +213,6 @@ export const SlideList = ({
     const focusWasLeaving = Boolean(slideLosingFocus);
     let focusVisible = false;
     if (slideLosingFocus) {
-      // Remembered before it is taken away, so this slide knows where to put
-      // the keyboard back when it is walked into again.
-      focusMemory.set(slideLosingFocus, document.activeElement);
       focusVisible = isMatchingFocusVisible(document.activeElement);
     }
     let index = 0;
@@ -329,6 +326,18 @@ export const SlideList = ({
       onKeyDown={(e) => {
         onKeyDownShortcuts(e);
         rest.onKeyDown?.(e);
+      }}
+      // Written down as it happens, not when the slide is left: what one was
+      // doing is the last place the keyboard REALLY was, and by the time a
+      // slide is left the focus is usually on the chevron that leaves it —
+      // which is why the way out is not recorded (see findFocusTargetInSlide
+      // for the other half of that reasoning).
+      onfocusin={(e) => {
+        const slideElement = e.target.closest?.("[data-slide]");
+        if (slideElement && !e.target.closest("[data-slide-nav]")) {
+          focusMemory.set(slideElement, e.target);
+        }
+        rest.onfocusin?.(e);
       }}
       style={{ "--slide-list-duration": duration, ...rest.style }}
     >
