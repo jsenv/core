@@ -89,15 +89,6 @@ const css = /* css */ `
            track travels is exactly the distance between two slides. */
         translate: var(--slide-offset, 0);
       }
-      /* A way out never makes the row taller: its box is capped to the text
-         line it sits on and the chevron (lineOverflow="allow", so nothing caps
-         the glyph itself) simply overflows it. Without this a header carrying
-         a chevron is taller than one without, and the top of the box visibly
-         jumps as one travels from a slide with a way out to a slide without. */
-      [data-slide-nav] {
-        max-height: 1em;
-      }
-
       /* Nothing here for a slide walked past: [inert] (set from JS) already
          takes it out of reach of the pointer, of Tab and of a screen reader —
          one attribute instead of pointer-events plus aria-hidden, and the only
@@ -459,10 +450,10 @@ const SlideListStep = ({ step, ...rest }) => {
       aria-label={isNext ? "Next slide" : "Previous slide"}
       {...rest}
     >
-      {/* lineOverflow: the chevron may be drawn bigger than the text it sits
-          next to, but it must not make the line taller — a header with a way
-          out and one without have to be the same height, or a slide travelling
-          would visibly change the top of the box. */}
+      {/* An affordance, not a character: it is sized to be aimed at, so it may
+          be drawn bigger than the text it sits next to. A slide with no way out
+          reserves the room one would take (visibility + inert) rather than the
+          chevron shrinking to fit the line. */}
       <Icon lineOverflow="allow">
         <ChevronSvg />
       </Icon>

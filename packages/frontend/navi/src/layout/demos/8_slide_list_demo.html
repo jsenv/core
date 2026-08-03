@@ -77,11 +77,10 @@
         border-radius: 8px;
       }
       .focus-pad:focus {
-        color: white;
-        background: #1a237e;
+        color: black;
+        background: yellow;
         border-style: solid;
-        border-color: #1a237e;
-        outline: none;
+        border-color: yellow;
       }
       .demo-note {
         max-width: 300px;
@@ -518,6 +517,16 @@
             <Slide id="sign" preventNav={signCount === 0} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>sign</Text>
+                {/* No way out here, but its room is kept: inert + hidden, so
+                    the header is the same height as the next slide's and the
+                    top of the box does not jump as one travels */}
+                <SlideList.Next
+                  size="xl"
+                  padding="xs"
+                  marginY="-xs"
+                  style={{ visibility: "hidden" }}
+                  inert
+                />
               </Box>
               <Box body padding="m">
                 <Button onClick={() => setSignCount((count) => count + 1)}>
