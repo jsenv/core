@@ -390,10 +390,22 @@ export const SlideList = ({
  * It is both SlideList.Item and an export of its own: <Slide> where the list is
  * far above, SlideList.Item where the two sit side by side.
  */
+/**
+ * @param {object} props
+ * @param {boolean} [props.preventNav] - hold the user here, both ways.
+ * @param {boolean} [props.preventNavNext]
+ * @param {boolean} [props.preventNavPrevious]
+ * @param {"previous"|"next"} [props.afterSend] - where a --navi-send that went
+ *   through leaves this slide: back where it was opened from, or on to the next
+ *   step. Omit and the slide stays — travelling on a send it never asked to
+ *   travel on would move the ground under the user (see resolveAfterSend in
+ *   commands.js).
+ */
 export const Slide = ({
   preventNav,
   preventNavNext = preventNav,
   preventNavPrevious = preventNav,
+  afterSend,
   children,
   ...rest
 }) => {
@@ -409,6 +421,7 @@ export const Slide = ({
         data-slide=""
         data-prevent-nav-next={preventNavNext ? "" : undefined}
         data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
+        data-slide-after-send={afterSend}
       >
         {children}
       </Box>

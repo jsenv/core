@@ -434,7 +434,12 @@
                       in its life, and the second field is what will tell
                       homonyms apart afterwards. Cheaper here than as an
                       after-the-fact chore nobody comes back to do. */}
-                  <Slide id={`${id}_create`} flex="y">
+                  {/* afterSend: the entry is created and chosen, so this
+                      slide has answered — back to the list it was opened from,
+                      with the new entry now selected in it. The surface stays:
+                      closing it is the picker's own business, and choosing
+                      from the list is what does that. */}
+                  <Slide id={`${id}_create`} afterSend="previous" flex="y">
                     {/* The form IS the group: it aggregates the named fields it
                         contains and hands them to action when it is sent — no
                         per-field signal to wire, and nothing committed if one

@@ -297,6 +297,45 @@ registerNaviCommand("--navi-reset", (source, event) => {
     },
   };
 });
+/**
+ * What a successful send does once the value is committed, read off the first
+ * surface above the control:
+ * - a slide: whatever that slide says leaving it means (afterSend on Slide) —
+ *   a step answered usually goes back where it was opened from, or on to the
+ *   next one;
+ * - an open popup: it closes. The popup was there for the duration of one
+ *   decision, and the send just made it. A picker already does this when the
+ *   send targets the popup itself (executeNaviDefine); a form inside one is
+ *   the same act, a level down;
+ * - the document: nothing. A form on a page stays where it is.
+ */
+const resolveAfterSend = (target) => {
+  // From above the target: a popup that IS the send target is handled on its
+  // own (see the aria-expanded branch below), and must not answer twice.
+  const surface = target.parentElement?.closest(
+    `[data-slide], [aria-expanded]`,
+  );
+  if (!surface) {
+    return undefined;
+  }
+  if (surface.hasAttribute("data-slide")) {
+    const afterSend = surface.getAttribute("data-slide-after-send");
+    if (afterSend === "previous") {
+      return "--navi-previous";
+    }
+    if (afterSend === "next") {
+      return "--navi-next";
+    }
+    // Nothing said: the slide stays. Travelling on a send the slide never asked
+    // to travel on would move the ground under the user.
+    return undefined;
+  }
+  if (surface.getAttribute("aria-expanded") === "true") {
+    return "--navi-close";
+  }
+  return undefined;
+};
+
 registerNaviCommand("--navi-send", (source, event) => {
   const expandable = resolveClosestExpandable(source);
   const target =
@@ -308,17 +347,12 @@ registerNaviCommand("--navi-send", (source, event) => {
   if (!target) {
     return undefined;
   }
-  // A send that commits a control nested inside an open popup dismisses that
-  // popup too: the popup is there for the duration of one decision, which the
-  // send just made. It is what a picker already does when the send targets the
-  // popup itself (executeNaviDefine below closes it) — a form in a dialog is
-  // the same act, one level down.
-  const popupToCloseAfterSend =
-    expandable &&
-    expandable !== target &&
-    expandable.getAttribute("aria-expanded") === "true"
-      ? expandable
-      : undefined;
+  // What follows a send that went through, decided by where the control lives
+  // rather than by what it is: the surface holding it is what the user is
+  // looking at, and a decision just taken there is a reason to leave it. The
+  // NEAREST surface answers, and only that one — a form inside a slide inside a
+  // dialog goes back a slide, it does not also close the dialog.
+  const afterSend = resolveAfterSend(target);
 
   // send inside expandable
   if (target.getAttribute("aria-expanded") === "true") {
@@ -373,8 +407,8 @@ registerNaviCommand("--navi-send", (source, event) => {
         },
         requester,
       });
-      if (sent !== false && !invalid && popupToCloseAfterSend) {
-        triggerNaviCommand(source, "--navi-close", event, { optional: true });
+      if (sent !== false && !invalid && afterSend) {
+        triggerNaviCommand(source, afterSend, event, { optional: true });
       }
       return sent;
     },
