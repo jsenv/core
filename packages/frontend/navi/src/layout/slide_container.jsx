@@ -105,6 +105,13 @@ const css = /* css */ `
            slides. */
         translate: var(--slide-offset, 0);
       }
+      /* No ring around a whole screen: a slide takes the focus only so the
+         arrows have somewhere to be heard (tabindex -1, see Slide), never
+         because the user aimed at it — it is not a control and not a Tab stop,
+         and what it holds draws its own ring when it takes over. */
+      > [data-slide]:focus {
+        outline: none;
+      }
       /* Nothing here for a slide not on screen: [inert] (set from JS) already
          takes it out of reach of the pointer, of Tab and of a screen reader —
          one attribute instead of pointer-events plus aria-hidden, and the only
@@ -200,13 +207,16 @@ const findFocusTargetInSlide = (slideElement) => {
     }
   }
   const focusableButNav = findFocusable(slideElement, {
-    exclude: (element) => Boolean(element.closest("[data-slide-nav]")),
+    // The slide itself is focusable (it is where the arrows are heard), so it
+    // would answer first and the field inside would never be reached.
+    exclude: (element) =>
+      element === slideElement || Boolean(element.closest("[data-slide-nav]")),
   });
   if (focusableButNav) {
     return focusableButNav;
   }
-  // Nothing to do in this slide but leave it: the way out is the only thing
-  // left to offer.
+  // Nothing to do in this slide but leave it: the way out, or the slide itself
+  // — which at least gives the keyboard somewhere to be.
   return findFocusable(slideElement);
 };
 
@@ -518,6 +528,13 @@ export const Slide = ({
     <SlideContext.Provider value={locks}>
       <Box
         flex="y"
+        // Focusable, but never by Tab: the arrows and Home/End belong to the
+        // slides, and a keyboard shortcut only reaches what has the focus — so
+        // pressing anywhere on a slide (the browser focuses the nearest
+        // focusable ancestor) is enough to be able to walk the map afterwards.
+        // -1 because it is not a stop on the way through the page: what one
+        // Tabs to is what is IN the slide.
+        tabIndex={-1}
         {...rest}
         data-slide=""
         data-slide-area={area ?? rest.id}
@@ -548,16 +565,14 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     data-slide-nav=""
     icon
     variant="discrete"
-    // Acts on the press, and never takes the focus: a chevron pressed with the
-    // mouse would be focused for the length of one travel and then lose it to
-    // the slide arriving — leaving behind the impression that the keyboard
-    // moved, and, worse, a slide REMEMBERING the chevron as the last thing it
-    // had (see focusMemory). Preventing the mousedown default keeps the focus
-    // where the user put it, which is what makes the next arrival predictable;
-    // the same trick a callout uses to stay out of the way of its input.
-    // Nothing is lost by acting one event earlier — there is nothing to change
-    // one's mind about between mousedown and click.
-    actionOnMouseDown
+    // Never takes the focus: a chevron pressed with the mouse would hold it for
+    // the length of one travel and then lose it to the slide arriving — and,
+    // worse, the slide left behind would REMEMBER the chevron as the last thing
+    // it had (see focusMemory), so the next arrival would land on a way out
+    // instead of on what one was doing. Preventing the mousedown default leaves
+    // the focus where the user put it, which is what makes arrivals
+    // predictable — the same trick a callout uses to stay out of the way of its
+    // input.
     {...rest}
     onMouseDown={(e) => {
       e.preventDefault();
@@ -623,16 +638,14 @@ const SlideMove = ({ direction, ...rest }) => {
       ChevronSvg={Svg}
       aria-label={label}
       {...rest}
-      onMouseDown={(e) => {
-        // preventDefault (and the travel itself) is SlideNavButton's; this only
-        // says where to go.
+      onClick={(e) => {
         e.currentTarget.dispatchEvent(
           new CustomEvent("navi_slide_move", {
             detail: { dx, dy },
             bubbles: true,
           }),
         );
-        rest.onMouseDown?.(e);
+        rest.onClick?.(e);
       }}
     />
   );
