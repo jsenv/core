@@ -1,5 +1,5 @@
 /**
- * Slides that replace one another inside one box.
+ * A list of slides that replace one another inside one box.
  *
  * Every slide sits in the same grid cell, so the box measures itself on the
  * LARGEST of them and nothing resizes as one moves through them; a slide
@@ -15,16 +15,16 @@
 
 import { createContext, toChildArray } from "preact";
 import { useContext, useState } from "preact/hooks";
-import { Box } from "../../box/box.jsx";
-import { Button } from "../input/button.jsx";
-import { Icon } from "../../text/icon.jsx";
+import { Box } from "../box/box.jsx";
+import { Button } from "../control/input/button.jsx";
+import { Icon } from "../text/icon.jsx";
 import {
   ChevronDownSvg,
   ChevronLeftSvg,
   ChevronRightSvg,
   ChevronUpSvg,
-} from "../../graphic/icons/chevron_stroke_svg.jsx";
-import { onNaviCommand } from "../commands.js";
+} from "../graphic/icons/chevron_stroke_svg.jsx";
+import { onNaviCommand } from "../control/commands.js";
 
 const css = /* css */ `
   /* Every slide in the same grid cell: the box then measures itself on the
@@ -32,7 +32,7 @@ const css = /* css */ `
      hand — which is also why nothing here resizes as the slides change. Each
      slide travels by exactly one box, so a short one and a tall one move the
      same distance. */
-  .navi_slides {
+  .navi_slide_list {
     display: grid;
     overflow: hidden;
 
@@ -44,8 +44,8 @@ const css = /* css */ `
       min-width: 0;
       min-height: 0;
       grid-area: 1 / 1;
-      translate: var(--slides-offset, 0);
-      transition: translate var(--slides-duration, 300ms) ease;
+      translate: var(--slide-offset, 0);
+      transition: translate var(--slide-list-duration, 300ms) ease;
     }
     /* Parked: not shown, and not in the way of what is. */
     > [data-slide][data-slide-displaced] {
@@ -56,7 +56,7 @@ const css = /* css */ `
 
 // What the slides tell the buttons inside them: only which way they travel, so
 // a button can point the right way without being told twice.
-const SlidesContext = createContext(null);
+const SlideListContext = createContext(null);
 
 /**
  * Horizontal by default — a slide arrives from the side, the way one walks
@@ -74,7 +74,7 @@ const SlidesContext = createContext(null);
  *   sideways.
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
  */
-export const Slides = ({
+export const SlideList = ({
   current: currentProp,
   onCurrentChange,
   vertical,
@@ -106,10 +106,10 @@ export const Slides = ({
     // what carries them onto the element.
     <Box
       {...rest}
-      baseClassName="navi_slides"
-      data-slides=""
+      baseClassName="navi_slide_list"
+      data-slide-list=""
       // The event a --navi-next/--navi-previous command ends up dispatching…
-      onnavi_slides_go={(e) => {
+      onnavi_slide_list_go={(e) => {
         goTo(currentIndex + e.detail.step);
       }}
       // …and the protocol every command target answers: without this the
@@ -117,9 +117,9 @@ export const Slides = ({
       onnavi_command={(e) => {
         onNaviCommand(e);
       }}
-      style={{ "--slides-duration": duration, ...rest.style }}
+      style={{ "--slide-list-duration": duration, ...rest.style }}
     >
-      <SlidesContext.Provider value={{ vertical }}>
+      <SlideListContext.Provider value={{ vertical }}>
         {slides.map((slide, index) => {
           const isCurrent = index === currentIndex;
           const distance = `${(index - currentIndex) * 100}%`;
@@ -130,7 +130,7 @@ export const Slides = ({
               data-current={isCurrent ? "" : undefined}
               data-slide-displaced={isCurrent ? undefined : ""}
               style={{
-                "--slides-offset": vertical ? `0 ${distance}` : `${distance} 0`,
+                "--slide-offset": vertical ? `0 ${distance}` : `${distance} 0`,
               }}
               aria-hidden={isCurrent ? undefined : "true"}
             >
@@ -138,16 +138,18 @@ export const Slides = ({
             </div>
           );
         })}
-      </SlidesContext.Provider>
+      </SlideListContext.Provider>
     </Box>
   );
 };
 
 /**
  * One slide. Nothing but a Box with the id it is moved by — it exists so a
- * slide reads as a slide rather than as a box that happens to carry an id.
+ * slide reads as a slide rather than as a box that happens to carry an id. It
+ * is both SlideList.Item and an export of its own: <Slide> where the list is
+ * far above, SlideList.Item where the two sit side by side.
  */
-const SlidesItem = ({ children, ...rest }) => (
+export const Slide = ({ children, ...rest }) => (
   <Box flex="y" {...rest}>
     {children}
   </Box>
@@ -159,8 +161,8 @@ const SlidesItem = ({ children, ...rest }) => (
  * left/right, vertical ones up/down — so the button points where the slide
  * actually goes without the caller having to keep the two in sync.
  */
-const SlidesStep = ({ step, ...rest }) => {
-  const context = useContext(SlidesContext);
+const SlideListStep = ({ step, ...rest }) => {
+  const context = useContext(SlideListContext);
   const vertical = context?.vertical;
   const isNext = step === "next";
   const ChevronSvg = vertical
@@ -185,9 +187,11 @@ const SlidesStep = ({ step, ...rest }) => {
   );
 };
 
-const SlidesNext = (props) => <SlidesStep {...props} step="next" />;
-const SlidesPrevious = (props) => <SlidesStep {...props} step="previous" />;
+const SlideListNext = (props) => <SlideListStep {...props} step="next" />;
+const SlideListPrevious = (props) => (
+  <SlideListStep {...props} step="previous" />
+);
 
-Slides.Item = SlidesItem;
-Slides.Next = SlidesNext;
-Slides.Previous = SlidesPrevious;
+SlideList.Item = Slide;
+SlideList.Next = SlideListNext;
+SlideList.Previous = SlideListPrevious;

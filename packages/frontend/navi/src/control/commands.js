@@ -381,25 +381,25 @@ registerNaviCommand("--navi-send", (source, event) => {
   };
 });
 
-// Which slide is shown is the slides' own business: a button says "next", not
+// Which slide is shown is the slide list's own business: a button says "next", not
 // "show the slide with that id" — which is what lets them be rearranged
 // without touching what drives them.
-const registerSlidesCommand = (command, step) => {
+const registerSlideListCommand = (command, step) => {
   registerNaviCommand(command, (source, event) => {
     const target =
-      resolveExplicitTarget(source) || source.closest("[data-slides]");
+      resolveExplicitTarget(source) || source.closest("[data-slide-list]");
     if (!target) {
       return undefined;
     }
     return {
       target,
       implementation: () =>
-        dispatchCustomEvent(target, "navi_slides_go", { event, step }),
+        dispatchCustomEvent(target, "navi_slide_list_go", { event, step }),
     };
   });
 };
-registerSlidesCommand("--navi-next", 1);
-registerSlidesCommand("--navi-previous", -1);
+registerSlideListCommand("--navi-next", 1);
+registerSlideListCommand("--navi-previous", -1);
 
 registerNaviCommand("--navi-toggle", (source, event) => {
   const target =

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Slides demo</title>
+    <title>Slide list demo</title>
     <style>
       body {
         margin: 0;
@@ -66,7 +66,7 @@
         background: #fdf1e0;
         border-bottom: 1px solid #f0d7ae;
       }
-      /* In the document there is no popup to take a size from, so the slides
+      /* In the document there is no popup to take a size from, so the list
          is given one here — same as any box would be. */
       .in-document {
         width: 300px;
@@ -74,15 +74,15 @@
         border-radius: 8px;
       }
       /* Very tall content: without a height the box would be as tall as its
-         tallest page, which is exactly what we do NOT want to see in a page
+         tallest slide, which is exactly what we do NOT want to see in a page
          that also has other sections. */
       .in-document-capped {
         height: 260px;
       }
-      /* The slides takes the height it is given rather than the one its
-         pages would like: this is the "what holds it decides" of the section
-         next to it, written out. */
-      .in-document-capped > .navi_slides_content {
+      /* The list takes the height it is given rather than the one its slides
+         would like: this is the "what holds it decides" of the section next to
+         it, written out. */
+      .in-document-capped > .navi_slide_list {
         height: 100%;
       }
     </style>
@@ -95,13 +95,10 @@
         Box,
         Button,
         Dialog,
-        Icon,
         Popover,
-        Slides,
+        SlideList,
         Text,
       } from "@jsenv/navi";
-      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
-      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
       const Filler = ({ count, className = "filler" }) =>
         Array.from({ length: count }, (_, i) => (
@@ -110,23 +107,23 @@
           </div>
         ));
 
-      // One page: a header that stays and a body that scrolls, plus the button
-      // that leaves it. Slides.Next/.Previous say where to go — which page
-      // that is, and which way the chevron points, is the slides's business.
-      const Page = ({ id, title, direction, children }) => (
-        <Slides.Item id={id} overflow="auto">
+      // One slide: a header that stays and a body that scrolls, plus the button
+      // that leaves it. SlideList.Next/.Previous say where to go — which slide
+      // that is, and which way the chevron points, is the list's business.
+      const DemoSlide = ({ id, title, direction, children }) => (
+        <SlideList.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
             <Text expandX>{title}</Text>
             {direction === "next" ? (
-              <Slides.Next size="xl" padding="xs" />
+              <SlideList.Next size="xl" padding="xs" />
             ) : (
-              <Slides.Previous size="xl" padding="xs" />
+              <SlideList.Previous size="xl" padding="xs" />
             )}
           </Box>
           <Box body padding="m">
             {children}
           </Box>
-        </Slides.Item>
+        </SlideList.Item>
       );
 
       // Every section shows the same thing three times: in the document, in a
@@ -162,116 +159,116 @@
         </div>
       );
 
-      const TwoPages = () => (
-        <Slides duration="400ms">
-          <Page id="first" title="first" direction="next">
+      const TwoSlides = () => (
+        <SlideList duration="400ms">
+          <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
-          </Page>
+          </DemoSlide>
           {/* Taller than the first on purpose: the box is as tall as this one,
               and the first simply leaves room under itself */}
-          <Page id="second" title="second" direction="previous">
+          <DemoSlide id="second" title="second" direction="previous">
             <Filler count={8} />
-          </Page>
-        </Slides>
+          </DemoSlide>
+        </SlideList>
       );
 
-      const TwoPagesVertical = () => (
-        <Slides duration="400ms" vertical>
-          <Page id="first" title="first" direction="next">
-            <Filler count={3} />
-          </Page>
-          <Page id="second" title="second" direction="previous">
-            <Filler count={8} />
-          </Page>
-        </Slides>
-      );
-
-      const TallPages = () => (
-        <Slides duration="400ms">
-          <Page id="first" title="first" direction="next">
+      const TallSlides = () => (
+        <SlideList duration="400ms">
+          <DemoSlide id="first" title="first" direction="next">
             <Filler count={40} />
-          </Page>
-          <Page id="second" title="second" direction="previous">
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
             <Filler count={60} />
-          </Page>
-        </Slides>
+          </DemoSlide>
+        </SlideList>
       );
 
-      const WidePages = () => (
-        <Slides duration="400ms">
-          <Page id="first" title="first" direction="next">
+      const TwoSlidesVertical = () => (
+        <SlideList duration="400ms" vertical>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={3} />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
+            <Filler count={8} />
+          </DemoSlide>
+        </SlideList>
+      );
+
+      const WideSlidesVertical = () => (
+        <SlideList duration="400ms" vertical>
+          <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} className="wide" />
-          </Page>
-          <Page id="second" title="second" direction="previous">
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
             <Filler count={5} className="wide" />
-          </Page>
-        </Slides>
+          </DemoSlide>
+        </SlideList>
       );
 
       const App = () => (
         <div>
-          <h1>Slides</h1>
+          <h1>Slide list</h1>
           <p>
-            Pages that replace one another inside one box. The box takes the
-            size of its largest page, so nothing grows or shrinks as one moves
-            through them; a page travels by exactly one box, sideways by
+            Slides that replace one another inside one box. The box takes the
+            size of its largest slide, so nothing grows or shrinks as one moves
+            through them; a slide travels by exactly one box, sideways by
             default.
           </p>
 
           <section class="demo-section">
-            <h2>Two pages</h2>
+            <h2>Two slides</h2>
             <p>
-              The plain case: a page arrives from the right, the one it replaces
-              leaves to the left. The second page is taller than the first, and
-              the box is as tall as it from the start.
+              The plain case: a slide arrives from the right, the one it
+              replaces leaves to the left. The second slide is taller than the
+              first, and the box is as tall as it from the start.
             </p>
-            <ThreeWays id="basic" Content={TwoPages} />
-          </section>
-
-          <section class="demo-section">
-            <h2>Vertical</h2>
-            <p>
-              Same pages with <code>vertical</code>: they arrive from below
-              instead of from the side. The travel is the only difference — the
-              box is still sized on its largest page, in both directions.
-            </p>
-            <ThreeWays id="vertical" Content={TwoPagesVertical} />
+            <ThreeWays id="basic" Content={TwoSlides} />
           </section>
 
           <section class="demo-section">
             <h2>Content taller than the box</h2>
             <p>
-              Nothing special happens: a page is a box, so it scrolls its own
+              Nothing special happens: a slide is a box, so it scrolls its own
               body (<code>overflow="auto"</code> plus a <code>body</code>, see
-              box.jsx). What decides the height is what holds the slides — a
+              box.jsx). What decides the height is what holds the list — a
               height here, the screen for a dialog, the space left under the
               anchor for a popover — never the slides themselves.
             </p>
             <ThreeWays
               id="tall"
-              Content={TallPages}
+              Content={TallSlides}
               documentClassName="in-document-capped"
             />
           </section>
 
           <section class="demo-section">
-            <h2>Content wider than the box</h2>
+            <h2>Vertical</h2>
             <p>
-              The same sideways, and the reason the box hides its overflow: a
-              page wider than the box would otherwise show through next to the
-              one being read. It is the page's own body that scrolls, not the
-              slides, whose only movement is the travel.
+              The same two slides with <code>vertical</code>: they arrive from
+              below instead of from the side. The travel is the only difference
+              — the box is still sized on its largest slide, in both directions.
             </p>
-            <ThreeWays id="wide" Content={WidePages} />
+            <ThreeWays id="vertical" Content={TwoSlidesVertical} />
+          </section>
+
+          <section class="demo-section">
+            <h2>Content wider than the box (vertical)</h2>
+            <p>
+              Sideways now belongs to the content, not to the travel: the slides
+              go up and down while what they hold scrolls left and right. Their
+              own body is what scrolls, and the box hides its overflow so the
+              slide waiting below never shows through.
+            </p>
+            <ThreeWays id="wide" Content={WideSlidesVertical} />
           </section>
 
           <section class="demo-section">
             <h2>Specific to dialog: filling the document</h2>
             <p>
               A dialog with <code>expand</code> takes the whole screen, so the
-              slides has room given to it rather than taken from its pages:{" "}
-              <code>expandY</code> makes it fill the dialog, and each page then
-              fills the slides whatever it contains.
+              list has room given to it rather than taken from its slides:{" "}
+              <code>expandY</code> makes it fill the dialog, and each slide then
+              fills the list whatever it contains.
             </p>
             <div class="demo-row">
               <Button command="--navi-open" commandFor="expand_dialog">
@@ -279,14 +276,14 @@
               </Button>
             </div>
             <Dialog id="expand_dialog" expand>
-              <Slides duration="400ms" expandY>
-                <Page id="first" title="first" direction="next">
+              <SlideList duration="400ms" expandY>
+                <DemoSlide id="first" title="first" direction="next">
                   <Filler count={3} />
-                </Page>
-                <Page id="second" title="second" direction="previous">
+                </DemoSlide>
+                <DemoSlide id="second" title="second" direction="previous">
                   <Filler count={8} />
-                </Page>
-              </Slides>
+                </DemoSlide>
+              </SlideList>
             </Dialog>
           </section>
         </div>

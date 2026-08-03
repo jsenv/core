@@ -212,12 +212,13 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 // Layout
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
+export { Slide, SlideList } from "./src/layout/slide_list.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
 // Popup (popover, dialog, tooltip, side panel ...)
 export { Dialog } from "./src/control/popup/dialog.jsx";
-export { Slides } from "./src/control/popup/slides.jsx";
+
 export { Popover } from "./src/control/popup/popover.jsx";
 export { Popup } from "./src/control/popup/popup.jsx";
 export { usePopupMode } from "./src/control/popup/popup_mode.jsx";
