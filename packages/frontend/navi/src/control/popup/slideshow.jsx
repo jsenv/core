@@ -249,10 +249,29 @@ const contentCss = /* css */ `
     position: relative;
     overflow: hidden;
 
+    /* Before the first measure the current page lays itself out normally, so
+       the box takes the height it asks for. Only then do the pages become
+       absolute — a page that scrolls its own body cannot say how tall it wants
+       to be once it has already been bounded. */
+    &[data-slideshow-measuring] {
+      > [data-slideshow-page] {
+        position: static;
+        height: auto;
+      }
+      > [data-slideshow-page]:not([data-current]) {
+        display: none;
+      }
+    }
+
     > [data-slideshow-page] {
       position: absolute;
       top: 0;
       left: 0;
+      /* grid, so what a caller puts in a page fills the page: a page that
+         scrolls its own body needs a bounded height to bound it with. And no
+         overflow of its own — the scrollbar belongs to whatever inside asked
+         for it, not to the frame carrying it. */
+      display: grid;
       /* Full height on purpose: it is what makes translate: 100% mean "one box"
          rather than "my own height", which is the whole trick — a short page
          and a tall one then travel the same distance. */
@@ -323,12 +342,14 @@ export const SlideShowContent = ({
     if (!container) {
       return undefined;
     }
-    const firstPage = container.querySelector("[data-slideshow-page]");
+    const firstPage = container.querySelector(
+      "[data-slideshow-page][data-current]",
+    );
     if (!firstPage) {
       return undefined;
     }
     const observer = new ResizeObserver(() => {
-      const pageHeight = firstPage.scrollHeight;
+      const pageHeight = firstPage.getBoundingClientRect().height;
       if (!pageHeight) {
         return;
       }
@@ -346,13 +367,15 @@ export const SlideShowContent = ({
   }, [height]);
 
   return (
-    // Box rather than a plain div: the onnavi_* handlers below are navi's own
-    // event names, and a component is what carries them onto the element.
+    // Box rather than a plain div: it is how every navi component takes the
+    // onnavi_* handlers below — they are navi's own event names, and Box is
+    // what carries them onto the element.
     <Box
       {...rest}
       ref={ref}
       baseClassName="navi_slideshow_content"
       data-slideshow-content=""
+      data-slideshow-measuring={height === null ? "" : undefined}
       // The event a --navi-next/--navi-previous command ends up dispatching…
       onnavi_slideshow_go={(e) => {
         goTo(currentIndex + e.detail.step);

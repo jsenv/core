@@ -602,7 +602,9 @@
               {/* No page state here: the buttons say "next"/"previous" and
                   the slideshow keeps its own place */}
               <SlideShowContent duration="500ms">
-                <Box id="first" flex="y">
+                {/* The page scrolls its BODY, not itself: header stays, the
+                    content under it moves — see box.jsx's header/body/footer */}
+                <Box id="first" flex="y" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
                     <Button
@@ -618,7 +620,7 @@
                       </Icon>
                     </Button>
                   </Box>
-                  <Box padding="m">
+                  <Box body padding="m">
                     <OverflowFiller count={3} />
                   </Box>
                 </Box>
