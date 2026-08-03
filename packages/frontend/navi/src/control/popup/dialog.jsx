@@ -1038,11 +1038,20 @@ const useDialogProps = (props) => {
         if (mouseDownEvent.button !== 0) {
           return;
         }
-        // Another dialog stands on top of this one (see the "pushes" prop):
-        // a click over there is not an outside click, it is a click on what is
-        // in front. Without this, dismissing the second dialog also dismisses
-        // the one it came from, and the user is left with nothing.
-        if (dialogEl.hasAttribute("data-pushed")) {
+        // The click landed inside another popup: that is a click on what is in
+        // front of this dialog, not outside it. Asking the target where it
+        // lives rather than asking this dialog whether it was pushed — a popup
+        // in front does not have to be one this dialog knows about. Excludes a
+        // popup nested inside this one, which the containment check below
+        // handles as the inside click it is.
+        const popupUnderPointer = mouseDownEvent.target.closest?.(
+          `[navi-control="dialog"], [navi-control="popover"]`,
+        );
+        if (
+          popupUnderPointer &&
+          popupUnderPointer !== dialogEl &&
+          !dialogEl.contains(popupUnderPointer)
+        ) {
           return;
         }
         // Real DOM containment wins over the coordinate check below — an
@@ -1288,9 +1297,17 @@ const useDialogProps = (props) => {
       if (mouseDownEvent.button !== 0) {
         return;
       }
-      // See the custom renderer's own onDocumentMouseDown: while another
-      // dialog stands on top of this one, nothing out there is "outside".
-      if (ref.current?.hasAttribute("data-pushed")) {
+      // See the custom renderer's own onDocumentMouseDown: a click inside
+      // another popup is a click on what is in front, not an outside click.
+      const dialogEl = ref.current;
+      const popupUnderPointer = mouseDownEvent.target.closest?.(
+        `[navi-control="dialog"], [navi-control="popover"]`,
+      );
+      if (
+        popupUnderPointer &&
+        popupUnderPointer !== dialogEl &&
+        !dialogEl?.contains(popupUnderPointer)
+      ) {
         return;
       }
       if (

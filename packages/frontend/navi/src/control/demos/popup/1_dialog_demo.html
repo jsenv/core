@@ -225,6 +225,7 @@
         Input,
         Label,
         Link,
+        NaviDebug,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
@@ -1377,8 +1378,11 @@
         </div>
       );
 
+      // debugAll on purpose: a dialog is made of interactions that answer each
+      // other (open, push, commit, cancel), and the logs are the fastest way to
+      // see which one answered.
       const App = () => (
-        <div>
+        <NaviDebug debugAll>
           <h1>Dialog demo</h1>
 
           <TableOfContents />
@@ -1393,7 +1397,7 @@
           <RequiredSection />
           <NestedSection />
           <ActionsSection />
-        </div>
+        </NaviDebug>
       );
 
       render(<App />, document.querySelector("#root"));
