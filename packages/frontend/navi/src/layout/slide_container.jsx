@@ -548,7 +548,21 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     data-slide-nav=""
     icon
     variant="discrete"
+    // Acts on the press, and never takes the focus: a chevron pressed with the
+    // mouse would be focused for the length of one travel and then lose it to
+    // the slide arriving — leaving behind the impression that the keyboard
+    // moved, and, worse, a slide REMEMBERING the chevron as the last thing it
+    // had (see focusMemory). Preventing the mousedown default keeps the focus
+    // where the user put it, which is what makes the next arrival predictable;
+    // the same trick a callout uses to stay out of the way of its input.
+    // Nothing is lost by acting one event earlier — there is nothing to change
+    // one's mind about between mousedown and click.
+    actionOnMouseDown
     {...rest}
+    onMouseDown={(e) => {
+      e.preventDefault();
+      rest.onMouseDown?.(e);
+    }}
   >
     {/* An affordance, not a character: it is sized to be aimed at, so it may be
         drawn bigger than the text it sits next to. A slide with no way out
@@ -609,14 +623,16 @@ const SlideMove = ({ direction, ...rest }) => {
       ChevronSvg={Svg}
       aria-label={label}
       {...rest}
-      onClick={(e) => {
+      onMouseDown={(e) => {
+        // preventDefault (and the travel itself) is SlideNavButton's; this only
+        // says where to go.
         e.currentTarget.dispatchEvent(
           new CustomEvent("navi_slide_move", {
             detail: { dx, dy },
             bubbles: true,
           }),
         );
-        rest.onClick?.(e);
+        rest.onMouseDown?.(e);
       }}
     />
   );
