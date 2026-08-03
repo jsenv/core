@@ -79,6 +79,7 @@ import {
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
+import { getSlideshow } from "./slideshow.js";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -201,30 +202,16 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Pushed out of the way by another dialog opening on top of it (see the
-       "pushes" prop): it stays open — it is still the surface the user will
-       come back to — but it leaves the screen upward while the new one arrives
-       from the bottom, so the two read as one movement rather than as a stack.
-       Its own transition list is declared here because a dialog with no
-       animation of its own must still travel. */
-    /* The attribute stays for the whole round trip — set to "up" while pushed,
-       emptied on the way back — because it is what carries the transition:
-       removing it outright would drop the rule mid-movement and the dialog
-       would snap into place instead of sliding back. */
-    &[data-pushed] {
+    /* Its place in the slideshow it takes part in (see slideshow.js): every
+       member steps back by the same amount when a new one arrives, which is
+       what keeps the gap between two of them from drifting. The transition is
+       declared here rather than under an attribute, so a member that is not
+       animated at all still travels. */
+    &[data-slideshow] {
+      translate: 0 var(--slideshow-offset, 0px);
       transition-property: translate;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
-    }
-    &[data-pushed="up"] {
-      /* No fade, same reason as the sliding animation it travels with: the
-         movement is the whole effect, and fading on top of it would read as
-         two things happening rather than one. */
-      /* Its own height PLUS the gap it keeps with the container: without that
-         extra the two dialogs end up edge to edge, touching, which reads as one
-         torn surface rather than two. */
-      translate: 0 calc(-100% - var(--x-dialog-viewport-spacing, 0px));
-      pointer-events: none;
     }
 
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
@@ -698,11 +685,13 @@ const useDialogProps = (props) => {
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
     dockedOnTouch,
-    // Id of another dialog this one pushes out of the way while it is open —
-    // it slides up and fades, this one arrives from wherever positionArea says.
-    // The two stay two dialogs: each keeps its own state, its own validation
-    // and its own way out; only the movement is shared.
-    pushes,
+    // Name of the slideshow this dialog takes part in (see slideshow.js): the
+    // dialogs of one slideshow move as one, each stepping back a slot when the
+    // next one arrives. They stay separate dialogs — each keeps its own state,
+    // its own validation and its own way out; only the arithmetic is shared,
+    // and none of them knows about the others.
+    slideshow: slideshowName,
+    slideshowGap = 0,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -739,6 +728,9 @@ const useDialogProps = (props) => {
     ...rest
   } = props;
   const isModal = layer === "top";
+  // Only meaningful for a top-layer dialog: a local one lives in the flow and
+  // could be moved by a real container instead (see slideshow.js).
+  const slideshow = slideshowName ? getSlideshow(slideshowName) : null;
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
@@ -822,17 +814,8 @@ const useDialogProps = (props) => {
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
-    const pushedEl = pushes ? document.getElementById(pushes) : null;
-    if (pushedEl) {
-      // Both halves of one movement, so both last the same time: the pushed
-      // dialog borrows the duration of the one pushing it.
-      pushedEl.style.setProperty(
-        "--popup-animation-duration",
-        getComputedStyle(dialogEl).getPropertyValue(
-          "--popup-animation-duration",
-        ),
-      );
-      pushedEl.setAttribute("data-pushed", "up");
+    if (slideshow) {
+      slideshow.add(dialogEl, { gap: slideshowGap });
     }
     // What the dialog held when it opened: the answer to compare against when
     // it closes (nothing changed → nothing to commit) and the state to put
@@ -1161,21 +1144,8 @@ const useDialogProps = (props) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
-      if (pushedEl) {
-        // It travels back the way it came: the two dialogs are one drawer, so
-        // the one underneath slides down into place while the one on top
-        // leaves. Its duration is the one it borrowed when it was pushed, so
-        // both halves of the movement stay in step. Emptied rather than
-        // removed (see the CSS above), and cleaned up once it has arrived.
-        pushedEl.setAttribute("data-pushed", "");
-        pushedEl.addEventListener(
-          "transitionend",
-          () => {
-            pushedEl.removeAttribute("data-pushed");
-            pushedEl.style.removeProperty("--popup-animation-duration");
-          },
-          { once: true },
-        );
+      if (slideshow) {
+        slideshow.remove(dialogEl, { gap: slideshowGap });
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
@@ -1310,6 +1280,7 @@ const useDialogProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    "data-slideshow": slideshowName,
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,

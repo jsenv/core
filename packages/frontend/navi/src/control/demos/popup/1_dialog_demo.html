@@ -1093,6 +1093,14 @@
       // Two dialogs, not one: each keeps its own state and its own way out.
       // Only the movement is shared — the second arrives from the bottom and
       // pushes the first up, and on the way back only the second moves.
+      // The default is navi's own — named here so the demo can say which one it
+      // is rather than leaving the reader to guess.
+      const SPEEDS = {
+        "fast": { duration: undefined, label: "fast (200ms, default)" },
+        "slow": { duration: "700ms", label: "slow (700ms)" },
+        "very slow": { duration: "3s", label: "very slow (3000ms)" },
+      };
+
       const SubDialogs = ({
         idPrefix,
         layer,
@@ -1103,9 +1111,16 @@
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
             Open
           </Button>
-          {/* expandY: the push only reads if the first dialog fills the
-              height it is pushed out of */}
-          <Dialog id={`${idPrefix}_first`} minWidth="200" layer={layer} expand>
+          {/* Both take part in the same slideshow: when the second opens, the
+              first steps back by one slot — see slideshow.js */}
+          <Dialog
+            id={`${idPrefix}_first`}
+            minWidth="200"
+            layer={layer}
+            slideshow={layer === "local" ? undefined : idPrefix}
+            slideshowGap={16}
+            expand
+          >
             <Box
               header
               padding="m"
@@ -1138,7 +1153,8 @@
           <Dialog
             id={`${idPrefix}_second`}
             layer={layer}
-            pushes={`${idPrefix}_first`}
+            slideshow={layer === "local" ? undefined : idPrefix}
+            slideshowGap={16}
             marginWithContainer={marginWithContainer}
             positionArea="top"
             animation="slide-from-bottom"
@@ -1185,12 +1201,13 @@
         const [flush, setFlush] = useState(false);
         // Slow enough to watch the two surfaces cross — the whole point of this
         // section is the movement, not the result.
-        const [speed, setSpeed] = useState("fast");
-        const animationDuration = {
-          "fast": undefined,
-          "slow": "700ms",
-          "very slow": "3s",
-        }[speed];
+        // Slow by default and remembered: the whole point of this section is
+        // the movement, and having to pick the speed again on every reload is
+        // exactly what makes one stop looking at it.
+        const [speed, setSpeed] = useState(
+          () => localStorage.getItem("dialog_demo_sub_dialog_speed") || "slow",
+        );
+        const animationDuration = SPEEDS[speed].duration;
         // Flush against the container: the two dialogs then fill it edge to
         // edge, which is what the movement looks like on a phone.
         const marginWithContainer = flush ? 0 : undefined;
@@ -1207,10 +1224,19 @@
             </label>{" "}
             <label style={{ fontSize: "13px" }}>
               speed{" "}
-              <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
-                {["fast", "slow", "very slow"].map((name) => (
+              <select
+                value={speed}
+                onChange={(e) => {
+                  setSpeed(e.target.value);
+                  localStorage.setItem(
+                    "dialog_demo_sub_dialog_speed",
+                    e.target.value,
+                  );
+                }}
+              >
+                {Object.keys(SPEEDS).map((name) => (
                   <option key={name} value={name}>
-                    {name}
+                    {SPEEDS[name].label}
                   </option>
                 ))}
               </select>
