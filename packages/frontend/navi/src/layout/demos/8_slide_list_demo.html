@@ -117,7 +117,10 @@
         Box,
         Button,
         Dialog,
+        Field,
+        Input,
         Popover,
+        Slide,
         SlideList,
         Text,
       } from "@jsenv/navi";
@@ -135,12 +138,13 @@
       const DemoSlide = ({ id, title, direction, children }) => (
         <SlideList.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
-            {/* A slide in the middle needs both, and neither button needs to
-                know it is in the middle: each says one word */}
+            {/* Title first, then the ways out of it, side by side: a slide in
+                the middle needs both, and neither button needs to know it is
+                in the middle — each says one word */}
+            <Text expandX>{title}</Text>
             {direction !== "next" && (
               <SlideList.Previous size="xl" padding="xs" />
             )}
-            <Text expandX>{title}</Text>
             {direction !== "previous" && (
               <SlideList.Next size="xl" padding="xs" />
             )}
@@ -231,6 +235,57 @@
           <DemoSlide id="second" title="second" direction="previous">
             <Filler count={5} className="wide" />
           </DemoSlide>
+        </SlideList>
+      );
+
+      // Focus, shown rather than described: each slide holds something to do,
+      // so one can watch where the keyboard lands, what it does NOT land on,
+      // and where it is put back.
+      const FocusSlides = () => (
+        <SlideList duration="400ms">
+          <Slide id="who" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>who</Text>
+              <SlideList.Next size="xl" padding="xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              <Field label="First name">
+                <Input name="firstName" placeholder="type something…" />
+              </Field>
+              <Field label="Last name">
+                <Input name="lastName" />
+              </Field>
+            </Box>
+          </Slide>
+          <Slide id="where" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>where</Text>
+              <SlideList.Previous size="xl" padding="xs" />
+              <SlideList.Next size="xl" padding="xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              {/* Asked for by name: navi-autofocus wins over "the first
+                  focusable", so the keyboard lands here and not on the
+                  checkbox above it */}
+              <Field label="City">
+                <Input name="city" navi-autofocus />
+              </Field>
+              <Field label="Country">
+                <Input name="country" />
+              </Field>
+            </Box>
+          </Slide>
+          <Slide id="done" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>done</Text>
+              <SlideList.Previous size="xl" padding="xs" />
+            </Box>
+            {/* Nothing to do here but leave: the keyboard then goes to the way
+                out, because there is nothing else to offer */}
+            <Box body padding="m">
+              <Text>Nothing to fill here.</Text>
+            </Box>
+          </Slide>
         </SlideList>
       );
 
@@ -374,6 +429,28 @@
           </section>
 
           <ExpandDialogSection />
+
+          <section class="demo-section">
+            <h2>Focus</h2>
+            <p>
+              Travelling moves the keyboard with the eye. Click a chevron (or
+              press Tab to it and Enter) and watch: the arriving slide takes
+              focus on something to <em>do</em>, never on its own way out —
+              unless it has nothing else, like the last one here. A slide asks
+              for a precise landing with <code>navi-autofocus</code> (“where”
+              lands on City). Come back and the keyboard returns exactly where
+              you left that slide, each slide remembering its own.
+            </p>
+            <p>
+              <strong>Keys:</strong> ← and → walk the list (↑/↓ when it is
+              vertical), Home and End jump to its ends — but only where the key
+              means nothing else: inside these text fields the arrows still move
+              the caret, and Home/End still go to the ends of the line. The ring
+              follows the modality: it shows when you travelled by keyboard, and
+              stays hidden when you clicked.
+            </p>
+            <ThreeWays id="focus" Content={FocusSlides} />
+          </section>
 
           <section class="demo-section">
             <h2>Three slides</h2>

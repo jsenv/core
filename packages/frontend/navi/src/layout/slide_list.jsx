@@ -15,6 +15,8 @@
 
 import { findFocusable } from "@jsenv/dom";
 import { createContext } from "preact";
+import { isMatchingFocusVisible } from "../box/pseudo_styles.js";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
@@ -95,6 +97,51 @@ const offsetAlongAxis = (boxes, vertical) => {
 // point the right way without being told twice.
 const SlideListContext = createContext(null);
 
+// What each slide had under the keyboard when it gave it up. Per slide, not one
+// per list: coming back from the third slide to the first must land where the
+// first was left, which a single "previous focus" could not remember.
+const focusMemory = new WeakMap();
+
+/**
+ * Where the keyboard goes when a slide arrives. Not on the way out of it: a
+ * slide is opened to do something in it, and its prev/next buttons are how one
+ * LEAVES — landing on them means the first thing offered is going away again.
+ * So they come last, only if the slide holds nothing else.
+ */
+const findFocusTargetInSlide = (slideElement) => {
+  const remembered = focusMemory.get(slideElement);
+  if (remembered && slideElement.contains(remembered)) {
+    // Where the keyboard was when this slide was left: coming back is coming
+    // back to what one was doing, not to the top of the slide. Through
+    // findFocusable, because what was focused may have become a wrapper since
+    // (or stopped taking focus at all).
+    const stillFocusable = findFocusable(remembered);
+    if (stillFocusable) {
+      return stillFocusable;
+    }
+  }
+  const asked = slideElement.querySelector(
+    `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
+  );
+  if (asked) {
+    // The mark is not always ON the focusable itself — a control puts it on the
+    // box it renders, the field inside being what takes the keyboard.
+    const askedFocusable = findFocusable(asked);
+    if (askedFocusable) {
+      return askedFocusable;
+    }
+  }
+  const focusableButNav = findFocusable(slideElement, {
+    exclude: (element) => Boolean(element.closest("[data-slide-nav]")),
+  });
+  if (focusableButNav) {
+    return focusableButNav;
+  }
+  // Nothing to do in this slide but leave it: the way out is the only thing
+  // left to offer.
+  return findFocusable(slideElement);
+};
+
 /**
  * Horizontal by default — a slide arrives from the side, the way one walks
  * through a form — and vertical with `vertical`, where it arrives from below.
@@ -157,7 +204,20 @@ export const SlideList = ({
         slideIndex !== currentIndex &&
         slideElement.contains(document.activeElement),
     );
+    // Walked past, or not reached yet: out of reach for the pointer, for Tab
+    // and for a screen reader, so only the slide on screen answers. inert
+    // rather than aria-hidden + pointer-events: aria-hidden over something
+    // focused is refused by the browser (and rightly — it would hide from
+    // assistive technology the very thing the keyboard is on), while inert
+    // takes the focus away instead of lying about it.
     const focusWasLeaving = Boolean(slideLosingFocus);
+    let focusVisible = false;
+    if (slideLosingFocus) {
+      // Remembered before it is taken away, so this slide knows where to put
+      // the keyboard back when it is walked into again.
+      focusMemory.set(slideLosingFocus, document.activeElement);
+      focusVisible = isMatchingFocusVisible(document.activeElement);
+    }
     let index = 0;
     for (const slideElement of slideElements) {
       slideElement.style.setProperty(
@@ -165,15 +225,13 @@ export const SlideList = ({
         offsetAlongAxis(index, vertical),
       );
       const isCurrent = index === currentIndex;
-      // Walked past, or not reached yet: out of reach for the pointer, for Tab
-      // and for a screen reader, so only the slide on screen answers. inert
-      // rather than aria-hidden + pointer-events: aria-hidden over something
-      // focused is refused by the browser (and rightly — it would hide from
-      // assistive technology the very thing the keyboard is on), while inert
-      // takes the focus away instead of lying about it.
       slideElement.toggleAttribute("data-current", isCurrent);
       slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
-      slideElement.toggleAttribute("inert", !isCurrent);
+      if (isCurrent) {
+        // Reachable again first, so the focus below has somewhere to land: an
+        // inert element cannot take it.
+        slideElement.removeAttribute("inert");
+      }
       index++;
     }
     track.style.setProperty(
@@ -181,35 +239,50 @@ export const SlideList = ({
       offsetAlongAxis(-currentIndex, vertical),
     );
     // The keyboard was on the slide leaving — usually on the very button that
-    // asked to leave it. inert has just dropped that focus on the floor
-    // (document.body), so it is handed to the slide arriving instead: the next
-    // Tab starts where the eye is, and the button that answers Enter is one of
-    // the buttons now on screen.
-    if (
-      focusWasLeaving &&
-      (document.activeElement === document.body || !document.activeElement)
-    ) {
+    // asked to leave it. inert drops that focus on the floor (document.body),
+    // so it is handed to the slide arriving instead: the next Tab starts where
+    // the eye is, and the button that answers Enter is one of those on screen.
+    // Not conditioned on the focus having already left: inert takes it away on
+    // its own schedule, and waiting for that would leave a frame where the
+    // keyboard is nowhere.
+    if (focusWasLeaving) {
       const slideArriving = slideElements[currentIndex];
-      const focusable = findFocusable(slideArriving);
-      if (focusable) {
-        focusable.focus({ preventScroll: true });
+      const target = findFocusTargetInSlide(slideArriving);
+      if (target) {
+        // The ring follows the modality, not the transfer: arriving by keyboard
+        // shows it, arriving by click does not — same reading as a popup
+        // handing focus to its content (see focus_transfer.js).
+        target.focus({ preventScroll: true, focusVisible });
       }
+    }
+    // Out of reach LAST, once the keyboard has already moved on: a browser
+    // takes the focus off an element the moment it becomes inert, and on its
+    // own schedule — doing this first would let that undo the landing above
+    // and leave the focus on nothing.
+    index = 0;
+    for (const slideElement of slideElements) {
+      slideElement.toggleAttribute("inert", index !== currentIndex);
+      index++;
     }
   });
 
-  const goBy = (step) => {
+  /**
+   * @param {(currentIndex: number, lastIndex: number) => number} pickIndex
+   * @returns {boolean} whether it moved — false is "there was nowhere to go",
+   *   which is what lets a key that changes nothing keep its own meaning.
+   */
+  const goTo = (pickIndex) => {
     const track = trackRef.current;
     const slideElements = Array.from(track.children);
     const currentIndex = slideElements.findIndex((slideElement) =>
       slideElement.hasAttribute("data-current"),
     );
-    const nextIndex = Math.max(
-      0,
-      Math.min(currentIndex + step, slideElements.length - 1),
-    );
+    const lastIndex = slideElements.length - 1;
+    const wantedIndex = pickIndex(currentIndex, lastIndex);
+    const nextIndex = Math.max(0, Math.min(wantedIndex, lastIndex));
     const nextElement = slideElements[nextIndex];
     if (!nextElement || nextIndex === currentIndex) {
-      return;
+      return false;
     }
     // An id is how a slide is named from outside; without one it can still be
     // travelled to, it just cannot be asked for by name.
@@ -217,7 +290,24 @@ export const SlideList = ({
     if (nextElement.id) {
       onCurrentChange?.(nextElement.id);
     }
+    return true;
   };
+  const goBy = (step) => goTo((currentIndex) => currentIndex + step);
+
+  // Arrows walk the list, Home/End jump to its ends — but only where those keys
+  // mean nothing else: applyKeyboardShortcuts refuses to intercept a key the
+  // focused element has a native use for, so an arrow inside a text field still
+  // moves the caret and only a press with nothing else to do travels. Along the
+  // axis only: a horizontal list answers left/right, a vertical one up/down, so
+  // the key always matches what one sees move. A shortcut that moved nothing
+  // returns null and the key goes back to the page (scrolling, most likely).
+  const travelled = (moved) => (moved ? false : null);
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    [vertical ? "arrowdown" : "arrowright"]: () => travelled(goBy(1)),
+    [vertical ? "arrowup" : "arrowleft"]: () => travelled(goBy(-1)),
+    home: () => travelled(goTo(() => 0)),
+    end: () => travelled(goTo((currentIndex, lastIndex) => lastIndex)),
+  });
 
   return (
     // Box rather than a plain div: it is how every navi component takes the
@@ -235,6 +325,10 @@ export const SlideList = ({
       // command resolves, finds this element, and nothing runs.
       onnavi_command={(e) => {
         onNaviCommand(e);
+      }}
+      onKeyDown={(e) => {
+        onKeyDownShortcuts(e);
+        rest.onKeyDown?.(e);
       }}
       style={{ "--slide-list-duration": duration, ...rest.style }}
     >
@@ -281,6 +375,9 @@ const SlideListStep = ({ step, ...rest }) => {
   return (
     <Button
       command={isNext ? "--navi-next" : "--navi-previous"}
+      // The way OUT of a slide: marked so the focus arriving in a slide can
+      // prefer anything else (see findFocusTargetInSlide).
+      data-slide-nav=""
       icon
       variant="discrete"
       aria-label={isNext ? "Next slide" : "Previous slide"}
