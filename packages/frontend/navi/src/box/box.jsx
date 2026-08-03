@@ -102,16 +102,24 @@ import.meta.css = /* css */ `
     /* box-shadow rather than a border: it draws the separation without taking
        part in the layout, so a header keeps the exact height its content asks
        for and nothing shifts by a pixel when the line appears. */
+    /* The corners are the container's, not the part's: a header sitting at the
+       top of a rounded box has to follow that curve or it paints square over
+       it (a dark header in a rounded popup is where this shows). inherit and
+       not a value of its own, so whoever rounds the box rounds these too. */
     > [data-header] {
       position: sticky;
       top: 0;
       z-index: 1;
+      border-top-left-radius: inherit;
+      border-top-right-radius: inherit;
       box-shadow: 0 1px 0 var(--navi-separator-color-default);
     }
     > [data-footer] {
       position: sticky;
       bottom: 0;
       z-index: 1;
+      border-bottom-right-radius: inherit;
+      border-bottom-left-radius: inherit;
       box-shadow: 0 -1px 0 var(--navi-separator-color-default);
     }
 
@@ -129,6 +137,7 @@ import.meta.css = /* css */ `
         position: static;
         flex-shrink: 0;
       }
+
       > [data-body] {
         /* Shrinks when there is not enough room (and then scrolls), but never
            grows: a short body leaves the footer right under it rather than

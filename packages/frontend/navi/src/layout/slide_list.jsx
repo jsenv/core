@@ -13,6 +13,7 @@
  * it is the same component in the document, in a dialog or in a popover.
  */
 
+import { findFocusable } from "@jsenv/dom";
 import { createContext } from "preact";
 import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
@@ -42,6 +43,10 @@ const css = /* css */ `
        GROWING is a decision the caller makes with expandY, for a list that
        must fill a container it does not need — see the dialog demo. */
     flex: 0 1 auto;
+    /* Passed down rather than owned: the list is usually the whole content of
+       a rounded popup, and a slide (with its header) has to follow that curve
+       — nothing between them may flatten it on the way. */
+    border-radius: inherit;
     overflow: hidden;
 
     /* ONE thing moves: the track. The slides are laid out once and for all,
@@ -54,6 +59,7 @@ const css = /* css */ `
       min-width: 0;
       min-height: 0;
       grid-area: 1 / 1;
+      border-radius: inherit;
       translate: var(--slide-list-offset, 0);
       transition: translate var(--slide-list-duration, 300ms) ease;
 
@@ -65,15 +71,16 @@ const css = /* css */ `
         min-width: 0;
         min-height: 0;
         grid-area: 1 / 1;
+        border-radius: inherit;
         /* Its place in the row, not a movement: same percentage reference as
            the track's own (both are the size of the box), so the distance the
            track travels is exactly the distance between two slides. */
         translate: var(--slide-offset, 0);
       }
-      /* Parked: not shown, and not in the way of what is. */
-      > [data-slide][data-slide-displaced] {
-        pointer-events: none;
-      }
+      /* Nothing here for a slide walked past: [inert] (set from JS) already
+         takes it out of reach of the pointer, of Tab and of a screen reader —
+         one attribute instead of pointer-events plus aria-hidden, and the only
+         one the browser does not argue with about a focused descendant. */
     }
   }
 `;
@@ -143,6 +150,14 @@ export const SlideList = ({
       // shown, the way a stack of pages opens on its first page.
       currentIndex = 0;
     }
+    // Read before anything is marked: setting inert below moves the focus out
+    // by itself, so afterwards there is no way to tell whether it was inside.
+    const slideLosingFocus = slideElements.find(
+      (slideElement, slideIndex) =>
+        slideIndex !== currentIndex &&
+        slideElement.contains(document.activeElement),
+    );
+    const focusWasLeaving = Boolean(slideLosingFocus);
     let index = 0;
     for (const slideElement of slideElements) {
       slideElement.style.setProperty(
@@ -150,21 +165,36 @@ export const SlideList = ({
         offsetAlongAxis(index, vertical),
       );
       const isCurrent = index === currentIndex;
-      // Walked past, or not reached yet: out of reach for the pointer and out
-      // of the way for a screen reader, so only the slide on screen answers.
+      // Walked past, or not reached yet: out of reach for the pointer, for Tab
+      // and for a screen reader, so only the slide on screen answers. inert
+      // rather than aria-hidden + pointer-events: aria-hidden over something
+      // focused is refused by the browser (and rightly — it would hide from
+      // assistive technology the very thing the keyboard is on), while inert
+      // takes the focus away instead of lying about it.
       slideElement.toggleAttribute("data-current", isCurrent);
       slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
-      if (isCurrent) {
-        slideElement.removeAttribute("aria-hidden");
-      } else {
-        slideElement.setAttribute("aria-hidden", "true");
-      }
+      slideElement.toggleAttribute("inert", !isCurrent);
       index++;
     }
     track.style.setProperty(
       "--slide-list-offset",
       offsetAlongAxis(-currentIndex, vertical),
     );
+    // The keyboard was on the slide leaving — usually on the very button that
+    // asked to leave it. inert has just dropped that focus on the floor
+    // (document.body), so it is handed to the slide arriving instead: the next
+    // Tab starts where the eye is, and the button that answers Enter is one of
+    // the buttons now on screen.
+    if (
+      focusWasLeaving &&
+      (document.activeElement === document.body || !document.activeElement)
+    ) {
+      const slideArriving = slideElements[currentIndex];
+      const focusable = findFocusable(slideArriving);
+      if (focusable) {
+        focusable.focus({ preventScroll: true });
+      }
+    }
   });
 
   const goBy = (step) => {

@@ -102,19 +102,21 @@ const css = /* css */ `
          to set from CSS — so the size caps here and the placement can never
          disagree. The literal is only what a dialog painted before that ever
          runs falls back to. Not named "margin" because it isn't implemented
-         with margins (those are needed for centering).
+         with margins (those are needed for centering), and not "viewport"
+         because the container is only the viewport for a top-layer dialog —
+         a local one answers to the box it was declared in (see below).
 
          Capping the *size* here rather than only offsetting the position is
          what makes a centered dialog follow the mobile virtual keyboard for
          free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
          reflows the dialog itself as the keyboard opens. */
-      --x-dialog-viewport-spacing: 3vvw;
+      --x-dialog-container-spacing: 3vvw;
 
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--x-dialog-viewport-spacing)
+        var(--navi-vvw) - 2 * var(--x-dialog-container-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--x-dialog-viewport-spacing)
+        var(--navi-vvh) - 2 * var(--x-dialog-container-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
@@ -136,13 +138,13 @@ const css = /* css */ `
          back in pixels (see positionDialog), so the caps and the placement
          cannot say two different things. */
       &[data-layer="local"] {
-        --x-dialog-viewport-spacing: 3%;
+        --x-dialog-container-spacing: 3%;
 
         --dialog-maxmax-width: calc(
-          100% - 2 * var(--x-dialog-viewport-spacing)
+          100% - 2 * var(--x-dialog-container-spacing)
         );
         --dialog-maxmax-height: calc(
-          100% - 2 * var(--x-dialog-viewport-spacing)
+          100% - 2 * var(--x-dialog-container-spacing)
         );
       }
     }
@@ -429,7 +431,7 @@ const css = /* css */ `
  * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
- *   `--x-dialog-viewport-spacing`, written from this prop) and offsets a docked
+ *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
  *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
  *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
@@ -699,7 +701,7 @@ const useDialogProps = (props) => {
     positionArea: positionAreaProp,
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
-    // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
+    // --x-dialog-container-spacing above). Pass 0 to sit flush (side_panel.jsx).
     marginWithContainer: marginWithContainerProp,
     expand,
     expandX: expandXProp,
@@ -976,7 +978,7 @@ const useDialogProps = (props) => {
       // distance from the edges. Written resolved (not as the raw prop) so a
       // spacing token stays valid inside the caps' own calc().
       dialogEl.style.setProperty(
-        "--x-dialog-viewport-spacing",
+        "--x-dialog-container-spacing",
         `${marginWithContainerInPixels}px`,
       );
       const pickOptions = {
