@@ -1088,12 +1088,17 @@
         </section>
       );
 
-      // ── Nested dialogs ────────────────────────────────────────────────────
+      // ── Sub dialog ────────────────────────────────────────────────────────
 
       // Two dialogs, not one: each keeps its own state and its own way out.
       // Only the movement is shared — the second arrives from the bottom and
       // pushes the first up, and on the way back only the second moves.
-      const NestedDialogs = ({ idPrefix, layer, marginWithContainer }) => (
+      const SubDialogs = ({
+        idPrefix,
+        layer,
+        marginWithContainer,
+        animationDuration,
+      }) => (
         <div class="demo-row">
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
             Open
@@ -1137,7 +1142,7 @@
             marginWithContainer={marginWithContainer}
             positionArea="top"
             animation="slide-from-bottom"
-            animationDuration="700ms"
+            animationDuration={animationDuration}
             expandX
           >
             <Box
@@ -1176,14 +1181,22 @@
         </div>
       );
 
-      const NestedSection = () => {
+      const SubDialogSection = () => {
         const [flush, setFlush] = useState(false);
+        // Slow enough to watch the two surfaces cross — the whole point of this
+        // section is the movement, not the result.
+        const [speed, setSpeed] = useState("fast");
+        const animationDuration = {
+          "fast": undefined,
+          "slow": "700ms",
+          "very slow": "3s",
+        }[speed];
         // Flush against the container: the two dialogs then fill it edge to
         // edge, which is what the movement looks like on a phone.
         const marginWithContainer = flush ? 0 : undefined;
         return (
           <section class="demo-section">
-            <Heading id="nested">Nested</Heading>
+            <Heading id="sub-dialog">Sub dialog</Heading>
             <label style={{ fontSize: "13px" }}>
               <input
                 type="checkbox"
@@ -1191,22 +1204,34 @@
                 onChange={(e) => setFlush(e.target.checked)}
               />{" "}
               marginWithContainer=0
+            </label>{" "}
+            <label style={{ fontSize: "13px" }}>
+              speed{" "}
+              <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
+                {["fast", "slow", "very slow"].map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
             </label>
-            <Heading level={3} id="nested-top-layer">
+            <Heading level={3} id="sub-dialog-top-layer">
               top layer
             </Heading>
-            <NestedDialogs
+            <SubDialogs
               idPrefix="nested_top"
               marginWithContainer={marginWithContainer}
+              animationDuration={animationDuration}
             />
-            <Heading level={3} id="nested-local-layer">
+            <Heading level={3} id="sub-dialog-local-layer">
               local layer
             </Heading>
             <div class="demo-container demo-overflow-container">
-              <NestedDialogs
+              <SubDialogs
                 idPrefix="nested_local"
                 layer="local"
                 marginWithContainer={marginWithContainer}
+                animationDuration={animationDuration}
               />
             </div>
           </section>
@@ -1423,13 +1448,13 @@
               <Link href="#required">Required field</Link>
             </li>
             <li>
-              <Link href="#nested">Nested</Link>
+              <Link href="#sub-dialog">Sub dialog</Link>
               <ul>
                 <li>
-                  <Link href="#nested-top-layer">top layer</Link>
+                  <Link href="#sub-dialog-top-layer">top layer</Link>
                 </li>
                 <li>
-                  <Link href="#nested-local-layer">local layer</Link>
+                  <Link href="#sub-dialog-local-layer">local layer</Link>
                 </li>
               </ul>
             </li>
@@ -1467,7 +1492,7 @@
           <AdaptiveSection />
           <OverflowSection />
           <RequiredSection />
-          <NestedSection />
+          <SubDialogSection />
           <ActionsSection />
         </NaviDebug>
       );

@@ -220,7 +220,10 @@ const css = /* css */ `
       /* No fade, same reason as the sliding animation it travels with: the
          movement is the whole effect, and fading on top of it would read as
          two things happening rather than one. */
-      translate: 0 -100%;
+      /* Its own height PLUS the gap it keeps with the container: without that
+         extra the two dialogs end up edge to edge, touching, which reads as one
+         torn surface rather than two. */
+      translate: 0 calc(-100% - var(--x-dialog-viewport-spacing, 0px));
       pointer-events: none;
     }
 
