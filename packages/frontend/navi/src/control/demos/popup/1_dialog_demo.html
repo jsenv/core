@@ -1106,7 +1106,9 @@
         idPrefix,
         layer,
         marginWithContainer,
+        animation,
         animationDuration,
+        slideshowDuration,
       }) => (
         <div class="demo-row">
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
@@ -1117,7 +1119,7 @@
           <SlideShow
             layer={layer === "local" ? "local" : "top"}
             gap={16}
-            duration={animationDuration}
+            duration={slideshowDuration}
           >
             {/* Both take part in the same slideshow: when the second opens, the
                 first steps back by one slot — see slideshow.jsx */}
@@ -1129,7 +1131,7 @@
               minWidth="200"
               layer={layer}
               marginWithContainer={marginWithContainer}
-              animation="scaling"
+              animation={animation}
               animationDuration={animationDuration}
               expand
             >
@@ -1207,48 +1209,47 @@
       );
 
       const SubDialogSection = () => {
-        // Remembered like the speed next to it: a setting one has to tick
+        // Remembered like everything else here: a setting one has to tick
         // again on every reload stops being used.
-        const [flushStored, setFlushStored] = useStoredString(
+        const [flush, setFlush] = useStoredBoolean(
           "dialog_demo_sub_dialog_flush",
-          "0",
+          false,
         );
-        const flush = flushStored === "1";
+        // The dialogs' own animation, the same control every other section has:
+        // it plays when the first page opens, and a page change overrides it —
+        // the first dialog stays open, so it has nothing to transition.
+        const { animation, animationDuration, controlsProps } =
+          useAnimateControls("dialog_demo_sub_dialog");
         // Slow enough to watch the two surfaces cross — the whole point of this
         // section is the movement, not the result.
         // Slow by default and remembered: the whole point of this section is
         // the movement, and having to pick the speed again on every reload is
         // exactly what makes one stop looking at it.
-        const [speed, setSpeed] = useState(
-          () => localStorage.getItem("dialog_demo_sub_dialog_speed") || "slow",
+        // The slideshow's own duration — a different thing from the dialogs'
+        // animation above, hence its own control.
+        const [speed, setSpeed] = useStoredString(
+          "dialog_demo_sub_dialog_speed",
+          "slow",
         );
-        const animationDuration = SPEEDS[speed].duration;
+        const slideshowDuration = SPEEDS[speed].duration;
         // Flush against the container: the two dialogs then fill it edge to
         // edge, which is what the movement looks like on a phone.
         const marginWithContainer = flush ? 0 : undefined;
         return (
           <section class="demo-section">
             <Heading id="sub-dialog">Sub dialog</Heading>
+            <AnimateControls {...controlsProps} />
             <label style={{ fontSize: "13px" }}>
               <input
                 type="checkbox"
                 checked={flush}
-                onChange={(e) => setFlushStored(e.target.checked ? "1" : "0")}
+                onChange={(e) => setFlush(e.target.checked)}
               />{" "}
               marginWithContainer=0
             </label>{" "}
             <label style={{ fontSize: "13px" }}>
-              speed{" "}
-              <select
-                value={speed}
-                onChange={(e) => {
-                  setSpeed(e.target.value);
-                  localStorage.setItem(
-                    "dialog_demo_sub_dialog_speed",
-                    e.target.value,
-                  );
-                }}
-              >
+              slideshow{" "}
+              <select value={speed} onChange={(e) => setSpeed(e.target.value)}>
                 {Object.keys(SPEEDS).map((name) => (
                   <option key={name} value={name}>
                     {SPEEDS[name].label}
@@ -1262,7 +1263,9 @@
             <SubDialogs
               idPrefix="nested_top"
               marginWithContainer={marginWithContainer}
+              animation={animation}
               animationDuration={animationDuration}
+              slideshowDuration={slideshowDuration}
             />
             <Heading level={3} id="sub-dialog-local-layer">
               local layer
@@ -1272,7 +1275,9 @@
                 idPrefix="nested_local"
                 layer="local"
                 marginWithContainer={marginWithContainer}
+                animation={animation}
                 animationDuration={animationDuration}
+                slideshowDuration={slideshowDuration}
               />
             </div>
           </section>
