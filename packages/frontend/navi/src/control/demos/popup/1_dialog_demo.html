@@ -1121,11 +1121,16 @@
           >
             {/* Both take part in the same slideshow: when the second opens, the
                 first steps back by one slot — see slideshow.jsx */}
+            {/* Its own animation, kept: a first page does not travel, so the
+                slideshow leaves it alone — it is only a page change that
+                replaces the animation by the slide */}
             <Dialog
               id={`${idPrefix}_first`}
               minWidth="200"
               layer={layer}
               marginWithContainer={marginWithContainer}
+              animation="scaling"
+              animationDuration={animationDuration}
               expand
             >
               <Box

@@ -29,6 +29,8 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
     /**
      * @param {HTMLElement} element - the member arriving on screen; it becomes
      *   the current one, everything already registered shifts back by a slot.
+     * @returns {boolean} whether it travelled — false for the very first slide,
+     *   which is simply there and keeps its own animation.
      * @param {object} [options]
      * @param {"y"|"x"} [options.axis="y"] - how the members are laid out.
      * @param {number} [options.gap=0] - kept between two members, so they never
@@ -36,14 +38,15 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
      */
     add: (element) => {
       if (members.includes(element)) {
-        return;
+        return false;
       }
       if (members.length === 0) {
         // The first slide is not a page change: there is nothing to come from,
-        // so it is simply there.
+        // so it is simply there — and it keeps whatever animation of its own it
+        // has, which is why this answers whether it travelled.
         members.push(element);
         slideshow.apply();
-        return;
+        return false;
       }
       // Placed one slot ahead first, with no transition: that is where a new
       // slide comes FROM. Everything then moves by exactly one slot — the
@@ -60,13 +63,22 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
         element.removeAttribute("data-slideshow-instant");
         slideshow.apply();
       });
+      return true;
     },
     remove: (element) => {
       const index = members.indexOf(element);
       if (index === -1) {
-        return;
+        return false;
       }
       members.splice(index, 1);
+      if (members.length === 0) {
+        // The first page leaving is not a page change either: nothing stays
+        // behind for it to make room for, so it goes the way it came — by its
+        // own animation, not by a slot.
+        element.style.removeProperty("--slideshow-offset");
+        element.style.removeProperty("--slideshow-duration");
+        return false;
+      }
       // It leaves the way the next one arrived: one slot forward. Out of the
       // arithmetic already, so the others take their new places at the same
       // time, and its own variables are dropped once it has arrived — leaving
@@ -85,6 +97,7 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
       };
       element.addEventListener("transitionend", onTravelEnd);
       slideshow.apply();
+      return true;
     },
     apply: () => {
       const slot = slotSize();

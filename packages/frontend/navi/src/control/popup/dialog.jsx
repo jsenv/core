@@ -887,9 +887,7 @@ const useDialogProps = (props) => {
       dialogEl.style.removeProperty("--anchor-width");
       dialogEl.style.removeProperty("--anchor-height");
     }
-    // A member of a slideshow does not animate itself: the slideshow moves it,
-    // and two rules setting translate on the same element can only fight.
-    if (resolvedAnimation && !slideshow) {
+    if (resolvedAnimation) {
       dialogEl.setAttribute("navi-animation", resolvedAnimation);
       backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {
@@ -935,7 +933,13 @@ const useDialogProps = (props) => {
       // this line on, and a transition needs a start value the browser has
       // actually seen. Placed one slot away while it was display:none, it would
       // simply appear at its final place.
-      slideshow.add(dialogEl);
+      const travelled = slideshow.add(dialogEl);
+      if (travelled) {
+        // The slideshow moves it, so it must not also move itself: two rules
+        // setting translate on the same element can only fight. A first page
+        // does not travel and keeps its own animation.
+        dialogEl.removeAttribute("navi-animation");
+      }
     }
 
     if (isModal) {
