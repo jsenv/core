@@ -227,7 +227,7 @@
         Label,
         Link,
         NaviDebug,
-        SlideShow,
+        Slides,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -1089,15 +1089,15 @@
         </section>
       );
 
-      // ── Slideshow ─────────────────────────────────────────────────────────
+      // ── Slides ─────────────────────────────────────────────────────────
 
       // One dialog holding two pages, rather than two dialogs pushing each
-      // other: the pages are ordinary contents, so they share a box and the
-      // arithmetic is the box's — see slideshow.jsx. The buttons say "next" and
+      // other: the slides are ordinary contents, so they share a box and the
+      // arithmetic is the box's — see slides.jsx. The buttons say "next" and
       // "previous"; nothing here knows which page that is.
-      const SlideshowPages = () => (
-        <SlideShow duration="500ms">
-          <SlideShow.Item id="first" overflow="auto">
+      const SlidesContent = () => (
+        <Slides duration="500ms">
+          <Slides.Item id="first" overflow="auto">
             <Box
               header
               padding="m"
@@ -1106,13 +1106,13 @@
               className="demo-overflow-part"
             >
               <Text expandX>first</Text>
-              <SlideShow.Next size="xl" padding="xs" />
+              <Slides.Next size="xl" padding="xs" />
             </Box>
             <Box body padding="m">
               <OverflowFiller count={4} />
             </Box>
-          </SlideShow.Item>
-          <SlideShow.Item id="second" overflow="auto">
+          </Slides.Item>
+          <Slides.Item id="second" overflow="auto">
             <Box
               header
               padding="m"
@@ -1121,53 +1121,53 @@
               className="demo-overflow-part"
             >
               <Text expandX>second</Text>
-              <SlideShow.Previous size="xl" padding="xs" />
+              <Slides.Previous size="xl" padding="xs" />
             </Box>
             <Box body padding="m">
               <OverflowFiller count={14} />
             </Box>
-          </SlideShow.Item>
-        </SlideShow>
+          </Slides.Item>
+        </Slides>
       );
 
-      const SlideshowSection = () => {
+      const SlidesSection = () => {
         const { animation, animationDuration, controlsProps } =
-          useAnimateControls("dialog_demo_slideshow");
+          useAnimateControls("dialog_demo_slides");
         return (
           <section class="demo-section">
-            <Heading id="slideshow">Slideshow</Heading>
+            <Heading id="slides">Slides</Heading>
             <AnimateControls {...controlsProps} />
-            <Heading level={3} id="slideshow-top-layer">
+            <Heading level={3} id="slides-top-layer">
               top layer
             </Heading>
             <div class="demo-row">
-              <Button command="--navi-open" commandFor="slideshow_top">
+              <Button command="--navi-open" commandFor="slides_top">
                 Open
               </Button>
             </div>
             <Dialog
-              id="slideshow_top"
+              id="slides_top"
               minWidth="320px"
               animation={animation}
               animationDuration={animationDuration}
             >
-              <SlideshowPages />
+              <SlidesContent />
             </Dialog>
-            <Heading level={3} id="slideshow-local-layer">
+            <Heading level={3} id="slides-local-layer">
               local layer
             </Heading>
             <div class="demo-container demo-overflow-container">
-              <Button command="--navi-open" commandFor="slideshow_local">
+              <Button command="--navi-open" commandFor="slides_local">
                 Open
               </Button>
               <Dialog
-                id="slideshow_local"
+                id="slides_local"
                 layer="local"
                 minWidth="320px"
                 animation={animation}
                 animationDuration={animationDuration}
               >
-                <SlideshowPages />
+                <SlidesContent />
               </Dialog>
             </div>
           </section>
@@ -1384,13 +1384,13 @@
               <Link href="#required">Required field</Link>
             </li>
             <li>
-              <Link href="#slideshow">Slideshow</Link>
+              <Link href="#slides">Slides</Link>
               <ul>
                 <li>
-                  <Link href="#slideshow-top-layer">top layer</Link>
+                  <Link href="#slides-top-layer">top layer</Link>
                 </li>
                 <li>
-                  <Link href="#slideshow-local-layer">local layer</Link>
+                  <Link href="#slides-local-layer">local layer</Link>
                 </li>
               </ul>
             </li>
@@ -1428,7 +1428,7 @@
           <AdaptiveSection />
           <OverflowSection />
           <RequiredSection />
-          <SlideshowSection />
+          <SlidesSection />
           <ActionsSection />
         </NaviDebug>
       );

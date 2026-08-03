@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Slideshow demo</title>
+    <title>Slides demo</title>
     <style>
       body {
         margin: 0;
@@ -66,7 +66,7 @@
         background: #fdf1e0;
         border-bottom: 1px solid #f0d7ae;
       }
-      /* In the document there is no popup to take a size from, so the slideshow
+      /* In the document there is no popup to take a size from, so the slides
          is given one here — same as any box would be. */
       .in-document {
         width: 300px;
@@ -79,10 +79,10 @@
       .in-document-capped {
         height: 260px;
       }
-      /* The slideshow takes the height it is given rather than the one its
+      /* The slides takes the height it is given rather than the one its
          pages would like: this is the "what holds it decides" of the section
          next to it, written out. */
-      .in-document-capped > .navi_slideshow_content {
+      .in-document-capped > .navi_slides_content {
         height: 100%;
       }
     </style>
@@ -97,7 +97,7 @@
         Dialog,
         Icon,
         Popover,
-        SlideShow,
+        Slides,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -111,26 +111,26 @@
         ));
 
       // One page: a header that stays and a body that scrolls, plus the button
-      // that leaves it. SlideShow.Next/.Previous say where to go — which page
-      // that is, and which way the chevron points, is the slideshow's business.
+      // that leaves it. Slides.Next/.Previous say where to go — which page
+      // that is, and which way the chevron points, is the slides's business.
       const Page = ({ id, title, direction, children }) => (
-        <SlideShow.Item id={id} overflow="auto">
+        <Slides.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
             <Text expandX>{title}</Text>
             {direction === "next" ? (
-              <SlideShow.Next size="xl" padding="xs" />
+              <Slides.Next size="xl" padding="xs" />
             ) : (
-              <SlideShow.Previous size="xl" padding="xs" />
+              <Slides.Previous size="xl" padding="xs" />
             )}
           </Box>
           <Box body padding="m">
             {children}
           </Box>
-        </SlideShow.Item>
+        </Slides.Item>
       );
 
       // Every section shows the same thing three times: in the document, in a
-      // dialog, in a popover. Taking a component rather than the pages
+      // dialog, in a popover. Taking a component rather than the slides
       // themselves, because each of the three needs its own copy of them.
       // eslint-disable-next-line no-unused-vars -- Content IS used, as <Content />
       const ThreeWays = ({ id, Content, documentClassName = "" }) => (
@@ -163,7 +163,7 @@
       );
 
       const TwoPages = () => (
-        <SlideShow duration="400ms">
+        <Slides duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={3} />
           </Page>
@@ -172,45 +172,45 @@
           <Page id="second" title="second" direction="previous">
             <Filler count={8} />
           </Page>
-        </SlideShow>
+        </Slides>
       );
 
       const TwoPagesVertical = () => (
-        <SlideShow duration="400ms" vertical>
+        <Slides duration="400ms" vertical>
           <Page id="first" title="first" direction="next">
             <Filler count={3} />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={8} />
           </Page>
-        </SlideShow>
+        </Slides>
       );
 
       const TallPages = () => (
-        <SlideShow duration="400ms">
+        <Slides duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={40} />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={60} />
           </Page>
-        </SlideShow>
+        </Slides>
       );
 
       const WidePages = () => (
-        <SlideShow duration="400ms">
+        <Slides duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={3} className="wide" />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={5} className="wide" />
           </Page>
-        </SlideShow>
+        </Slides>
       );
 
       const App = () => (
         <div>
-          <h1>Slideshow</h1>
+          <h1>Slides</h1>
           <p>
             Pages that replace one another inside one box. The box takes the
             size of its largest page, so nothing grows or shrinks as one moves
@@ -243,9 +243,9 @@
             <p>
               Nothing special happens: a page is a box, so it scrolls its own
               body (<code>overflow="auto"</code> plus a <code>body</code>, see
-              box.jsx). What decides the height is what holds the slideshow — a
+              box.jsx). What decides the height is what holds the slides — a
               height here, the screen for a dialog, the space left under the
-              anchor for a popover — never the pages themselves.
+              anchor for a popover — never the slides themselves.
             </p>
             <ThreeWays
               id="tall"
@@ -260,7 +260,7 @@
               The same sideways, and the reason the box hides its overflow: a
               page wider than the box would otherwise show through next to the
               one being read. It is the page's own body that scrolls, not the
-              slideshow, whose only movement is the travel.
+              slides, whose only movement is the travel.
             </p>
             <ThreeWays id="wide" Content={WidePages} />
           </section>
@@ -269,9 +269,9 @@
             <h2>Specific to dialog: filling the document</h2>
             <p>
               A dialog with <code>expand</code> takes the whole screen, so the
-              slideshow has room given to it rather than taken from its pages:{" "}
+              slides has room given to it rather than taken from its pages:{" "}
               <code>expandY</code> makes it fill the dialog, and each page then
-              fills the slideshow whatever it contains.
+              fills the slides whatever it contains.
             </p>
             <div class="demo-row">
               <Button command="--navi-open" commandFor="expand_dialog">
@@ -279,14 +279,14 @@
               </Button>
             </div>
             <Dialog id="expand_dialog" expand>
-              <SlideShow duration="400ms" expandY>
+              <Slides duration="400ms" expandY>
                 <Page id="first" title="first" direction="next">
                   <Filler count={3} />
                 </Page>
                 <Page id="second" title="second" direction="previous">
                   <Filler count={8} />
                 </Page>
-              </SlideShow>
+              </Slides>
             </Dialog>
           </section>
         </div>

@@ -217,7 +217,7 @@ export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effec
 
 // Popup (popover, dialog, tooltip, side panel ...)
 export { Dialog } from "./src/control/popup/dialog.jsx";
-export { SlideShow } from "./src/control/popup/slideshow.jsx";
+export { Slides } from "./src/control/popup/slides.jsx";
 export { Popover } from "./src/control/popup/popover.jsx";
 export { Popup } from "./src/control/popup/popup.jsx";
 export { usePopupMode } from "./src/control/popup/popup_mode.jsx";

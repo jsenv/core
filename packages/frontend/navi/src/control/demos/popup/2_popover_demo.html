@@ -327,7 +327,7 @@
         Input,
         Label,
         Link,
-        SlideShow,
+        Slides,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -489,7 +489,7 @@
           <NestedPopoverSection />
           <OverflowSection />
           <RequiredSection />
-          <SlideshowSection />
+          <SlidesSection />
           <ActionsSection />
         </div>
       );
@@ -584,15 +584,15 @@
         );
       };
 
-      // ── Slideshow ───────────────────────────────────────────────────────
+      // ── Slides ───────────────────────────────────────────────────────
 
-      // The slideshow INSIDE the popover: two popovers could never share a box
+      // The slides INSIDE the popover: two popovers could never share a box
       // (each is promoted to the top layer), but two contents can — and the
       // popover keeps sizing itself to whichever page is showing.
-      const SlideshowSection = () => {
+      const SlidesSection = () => {
         return (
           <section class="demo-section">
-            <Heading id="slideshow">Slideshow</Heading>
+            <Heading id="slides">Slides</Heading>
             <div class="demo-row">
               <Button command="--navi-toggle" commandFor="pop_pages">
                 Open
@@ -600,29 +600,29 @@
             </div>
             <Popover id="pop_pages" minWidth="260px">
               {/* No page state here: the buttons say "next"/"previous" and
-                  the slideshow keeps its own place */}
-              <SlideShow duration="500ms">
+                  the slides keeps its own place */}
+              <Slides duration="500ms">
                 {/* The page scrolls its BODY, not itself: header stays, the
                     content under it moves — see box.jsx's header/body/footer */}
-                <SlideShow.Item id="first" overflow="auto">
+                <Slides.Item id="first" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
-                    <SlideShow.Next size="xl" padding="xs" />
+                    <Slides.Next size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={3} />
                   </Box>
-                </SlideShow.Item>
-                <SlideShow.Item id="second" overflow="auto">
+                </Slides.Item>
+                <Slides.Item id="second" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>second</Text>
-                    <SlideShow.Previous size="xl" padding="xs" />
+                    <Slides.Previous size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={6} />
                   </Box>
-                </SlideShow.Item>
-              </SlideShow>
+                </Slides.Item>
+              </Slides>
             </Popover>
           </section>
         );
@@ -803,7 +803,7 @@
               <Link href="#required">Required field</Link>
             </li>
             <li>
-              <Link href="#slideshow">Slideshow</Link>
+              <Link href="#slides">Slides</Link>
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>
