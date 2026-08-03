@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sub dialog — perf</title>
+    <title>Slideshow — perf</title>
     <style>
       body {
         margin: 0;
@@ -36,20 +36,18 @@
     </style>
   </head>
   <body>
-    <h1>Sub dialog — perf</h1>
+    <h1>Slideshow — perf</h1>
     <p>
-      The same two pages as the dialog demo's own “Sub dialog” section, alone on
-      a page: no NaviDebug, no other section, nothing else running. Click + and
-      the chevron as fast as you can and watch the frame times below.
+      The same two pages as the dialog demo's own “Slideshow” section, alone on
+      a page: no NaviDebug, no other section, nothing else running. Click the
+      chevrons as fast as you can and watch the frame times below.
     </p>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useEffect, useState } from "preact/hooks";
-      import { Box, Button, Dialog, Icon, SlideShow, Text } from "@jsenv/navi";
-      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
-      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
+      import { Box, Button, Dialog, SlideShow, Text } from "@jsenv/navi";
 
       // Tells whatever watches this page to stay out of the way — see
       // window.__navi_client_monitoring__ (client_monitoring). The measurement
@@ -128,62 +126,40 @@
             </div>
             <FrameTimes />
 
-            <SlideShow duration={duration}>
-              <Dialog id="first" expand animation="scaling">
-                <Box
-                  header
-                  padding="m"
-                  flex="x"
-                  alignY="center"
-                  className="part"
-                >
-                  <Text expandX>first</Text>
-                  <Button
-                    command="--navi-open"
-                    commandFor="second"
-                    icon
-                    variant="discrete"
-                    size="xl"
-                    padding="xs"
-                    aria-label="Open the second"
+            <Dialog id="first" expand animation="scaling">
+              <SlideShow duration={duration} expandY>
+                <SlideShow.Item id="page1" overflow="auto">
+                  <Box
+                    header
+                    padding="m"
+                    flex="x"
+                    alignY="center"
+                    className="part"
                   >
-                    <Icon>
-                      <PlusSvg />
-                    </Icon>
-                  </Button>
-                </Box>
-                <Box body padding="m">
-                  <Filler />
-                </Box>
-              </Dialog>
-
-              <Dialog id="second" expandX positionArea="top">
-                <Box
-                  header
-                  padding="m"
-                  flex="x"
-                  alignY="center"
-                  className="part"
-                >
-                  <Text expandX>second</Text>
-                  <Button
-                    command="--navi-cancel"
-                    icon
-                    variant="discrete"
-                    size="xl"
-                    padding="xs"
-                    aria-label="Close"
+                    <Text expandX>first</Text>
+                    <SlideShow.Next size="xl" padding="xs" />
+                  </Box>
+                  <Box body padding="m">
+                    <Filler />
+                  </Box>
+                </SlideShow.Item>
+                <SlideShow.Item id="page2" overflow="auto">
+                  <Box
+                    header
+                    padding="m"
+                    flex="x"
+                    alignY="center"
+                    className="part"
                   >
-                    <Icon>
-                      <ChevronUpSvg />
-                    </Icon>
-                  </Button>
-                </Box>
-                <Box body padding="m">
-                  <Filler count={4} />
-                </Box>
-              </Dialog>
-            </SlideShow>
+                    <Text expandX>second</Text>
+                    <SlideShow.Previous size="xl" padding="xs" />
+                  </Box>
+                  <Box body padding="m">
+                    <Filler count={4} />
+                  </Box>
+                </SlideShow.Item>
+              </SlideShow>
+            </Dialog>
           </div>
         );
       };

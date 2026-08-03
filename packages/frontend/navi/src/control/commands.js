@@ -387,8 +387,7 @@ registerNaviCommand("--navi-send", (source, event) => {
 const registerSlideshowCommand = (command, step) => {
   registerNaviCommand(command, (source, event) => {
     const target =
-      resolveExplicitTarget(source) ||
-      source.closest("[data-slideshow-content]");
+      resolveExplicitTarget(source) || source.closest("[data-slideshow]");
     if (!target) {
       return undefined;
     }

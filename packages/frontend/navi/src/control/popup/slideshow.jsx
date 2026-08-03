@@ -37,13 +37,13 @@ const css = /* css */ `
     overflow: hidden;
 
     > [data-slideshow-page] {
-      min-width: 0;
-      min-height: 0;
-      grid-area: 1 / 1;
       /* So a page shorter than the box still fills it: the box is as big as its
          largest page, and the others stretch to it rather than floating in a
          corner of it. */
       display: grid;
+      min-width: 0;
+      min-height: 0;
+      grid-area: 1 / 1;
       translate: var(--slideshow-offset, 0);
       transition: translate var(--slideshow-duration, 300ms) ease;
     }
@@ -105,7 +105,7 @@ export const SlideShow = ({
     <Box
       {...rest}
       baseClassName="navi_slideshow"
-      data-slideshow-content=""
+      data-slideshow=""
       // The event a --navi-next/--navi-previous command ends up dispatching…
       onnavi_slideshow_go={(e) => {
         goTo(currentIndex + e.detail.step);

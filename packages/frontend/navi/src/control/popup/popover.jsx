@@ -211,51 +211,11 @@ const css = /* css */ `
        header/footer/body inside it then rearranges. */
     overscroll-behavior: none;
 
-    /* Its place in the slideshow it takes part in — same rules as Dialog's own
-       (see its own copy for what each entry of the transition list is for). */
-    &[data-slideshow][data-slideshow] {
-      translate: 0 var(--slideshow-offset, 0px);
-      transition-property:
-        translate, opacity, scale, box-shadow, display, overlay;
-      transition-duration:
-        var(--slideshow-duration, var(--popup-animation-duration)),
-        var(--popup-opacity-duration), var(--popup-scale-duration),
-        var(--popup-animation-duration), var(--popup-animation-duration),
-        var(--popup-animation-duration);
-      transition-timing-function: ease;
-      transition-behavior: allow-discrete;
-
-      &[data-slideshow-instant] {
-        transition-property: none;
-      }
-      &[data-slideshow-displaced] {
-        pointer-events: none;
-      }
-    }
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
        stays independent from navi-animation's own opacity/scale/display
        transition list below (no shared transition-property to clobber, no
        propertyName to filter). */
-    /* Its place in the slideshow it takes part in (see slideshow.jsx) — same
-       rules as Dialog's own, and the same reason for display/overlay riding
-       along: a slide leaving must stay on screen for the length of its
-       travel. */
-    &[data-slideshow] {
-      translate: 0 var(--slideshow-offset, 0px);
-      transition-property: translate, display, overlay;
-      transition-duration: var(
-        --slideshow-duration,
-        var(--popup-animation-duration)
-      );
-      transition-timing-function: ease;
-      transition-behavior: allow-discrete;
-
-      &[data-slideshow-instant] {
-        transition-property: none;
-      }
-    }
-
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
