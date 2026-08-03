@@ -216,13 +216,23 @@ const css = /* css */ `
       /* display and overlay ride along (allow-discrete below): a slide leaving
          must stay on screen for the length of its travel, and hiding it the
          moment it is closed would cut the movement short. */
-      transition-property: translate, display, overlay;
+      /* Everything that has to move here, and why, in one list: the slide
+         itself (translate), whatever animation the member plays on top of it
+         (opacity/scale/box-shadow — a first page still fades or scales in),
+         and display/overlay so a slide leaving stays on screen for the length
+         of its travel. Replacing this list by translate alone is what stopped
+         the open/close effect from playing at all. */
+      transition-property:
+        translate, opacity, scale, box-shadow, display, overlay;
       /* The slideshow's own duration, not the dialog's: what moves here is the
          slideshow, and one movement has one speed. */
-      transition-duration: var(
-        --slideshow-duration,
-        var(--popup-animation-duration)
-      );
+      /* One duration per property, in the same order: the travel belongs to
+         the slideshow, the rest to the member's own animation. */
+      transition-duration:
+        var(--slideshow-duration, var(--popup-animation-duration)),
+        var(--popup-opacity-duration), var(--popup-scale-duration),
+        var(--popup-animation-duration), var(--popup-animation-duration),
+        var(--popup-animation-duration);
       transition-timing-function: ease;
       transition-behavior: allow-discrete;
 
