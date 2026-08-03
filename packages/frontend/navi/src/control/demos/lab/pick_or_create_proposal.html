@@ -497,8 +497,12 @@
               // one movement, not a stack: the surface this form opened from
               // leaves upward while the form arrives from the bottom
               pushes={`${id}_picker_popup`}
-              positionArea="bottom"
-              animation="sliding"
+              // docked at the top like the surface it replaces — a short form
+              // must line up with it, not hang from the bottom of the screen.
+              // The slide direction is said separately: it comes FROM the
+              // bottom, it does not live there.
+              positionArea="top"
+              animation="slide-from-bottom"
               // slow on purpose in this lab: the point is to watch the two
               // dialogs cross
               animationDuration="2s"

@@ -1102,7 +1102,17 @@ const useDialogProps = (props) => {
         });
       }
       if (pushedEl) {
+        // Only the leaving dialog moves. The one underneath is simply revealed
+        // where it always was — pushing it back down would make the departure
+        // read as two surfaces sliding at once, when what happens is one going
+        // away. Transition off, attribute removed, layout flushed, transition
+        // back: it snaps into place within the same frame.
+        pushedEl.style.transitionProperty = "none";
         pushedEl.removeAttribute("data-pushed");
+        // reading a layout property is what flushes the change above
+        pushedEl.getBoundingClientRect();
+        pushedEl.style.removeProperty("transition-property");
+        pushedEl.style.removeProperty("--popup-animation-duration");
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
