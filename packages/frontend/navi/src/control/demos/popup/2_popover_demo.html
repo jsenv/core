@@ -327,7 +327,7 @@
         Input,
         Label,
         Link,
-        SlideShow,
+        SlideShowContent,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -586,72 +586,67 @@
 
       // ── Sub popover ───────────────────────────────────────────────────────
 
-      // A slideshow with a material container (layer="local"): a popover sizes
-      // itself to its content, so a slot has to be the container's own size —
-      // measuring the viewport, as the top-layer slideshow does, would send it
-      // far past where it belongs.
-      const SubPopoverSection = () => (
-        <section class="demo-section">
-          <Heading id="sub-popover">Sub popover</Heading>
-          {/* The trigger lives inside the container too: a layer="local"
-              popover resolves its placement against its positioned ancestor,
-              and its anchor has to be in the same one */}
-          <SlideShow layer="local" duration="700ms" style={{ height: "260px" }}>
-            <Button command="--navi-toggle" commandFor="pop_slide_first">
-              Open
-            </Button>
-            <Popover
-              id="pop_slide_first"
-              layer="local"
-              positionArea="inset(top)"
-            >
-              <Box header padding="m" className="demo-overflow-part">
-                <Text expandX>first</Text>
-                <Button
-                  command="--navi-open"
-                  commandFor="pop_slide_second"
-                  icon
-                  variant="discrete"
-                  size="xl"
-                  padding="xs"
-                  aria-label="Open the second"
-                >
-                  <Icon>
-                    <PlusSvg />
-                  </Icon>
-                </Button>
-              </Box>
-              <Box body padding="m">
-                <OverflowFiller count={3} />
-              </Box>
+      // The slideshow INSIDE the popover: two popovers could never share a box
+      // (each is promoted to the top layer), but two contents can — and the
+      // popover keeps sizing itself to whichever page is showing.
+      const SubPopoverSection = () => {
+        return (
+          <section class="demo-section">
+            <Heading id="sub-popover">Sub popover</Heading>
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="pop_pages">
+                Open
+              </Button>
+            </div>
+            <Popover id="pop_pages" minWidth="260px">
+              {/* No page state here: the buttons say "next"/"previous" and
+                  the slideshow keeps its own place */}
+              <SlideShowContent duration="500ms">
+                <Box id="first" flex="y">
+                  <Box header padding="m" className="demo-overflow-part">
+                    <Text expandX>first</Text>
+                    <Button
+                      command="--navi-next"
+                      icon
+                      variant="discrete"
+                      size="xl"
+                      padding="xs"
+                      aria-label="Open the second"
+                    >
+                      <Icon>
+                        <PlusSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                  <Box padding="m">
+                    <OverflowFiller count={3} />
+                  </Box>
+                </Box>
+                <Box id="second" flex="y">
+                  <Box header padding="m" className="demo-overflow-part">
+                    <Text expandX>second</Text>
+                    <Button
+                      command="--navi-previous"
+                      icon
+                      variant="discrete"
+                      size="xl"
+                      padding="xs"
+                      aria-label="Close"
+                    >
+                      <Icon>
+                        <ChevronUpSvg />
+                      </Icon>
+                    </Button>
+                  </Box>
+                  <Box padding="m">
+                    <OverflowFiller count={6} />
+                  </Box>
+                </Box>
+              </SlideShowContent>
             </Popover>
-            <Popover
-              id="pop_slide_second"
-              layer="local"
-              positionArea="inset(top)"
-            >
-              <Box header padding="m" className="demo-overflow-part">
-                <Text expandX>second</Text>
-                <Button
-                  command="--navi-cancel"
-                  icon
-                  variant="discrete"
-                  size="xl"
-                  padding="xs"
-                  aria-label="Close"
-                >
-                  <Icon>
-                    <ChevronUpSvg />
-                  </Icon>
-                </Button>
-              </Box>
-              <Box body padding="m">
-                <OverflowFiller count={2} />
-              </Box>
-            </Popover>
-          </SlideShow>
-        </section>
-      );
+          </section>
+        );
+      };
 
       // ── uiAction / action ─────────────────────────────────────────────────
 

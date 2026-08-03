@@ -17,8 +17,9 @@
  * comes from the tree, and the arithmetic stays here.
  */
 
-import { createContext } from "preact";
-import { useMemo, useRef } from "preact/hooks";
+import { createContext, toChildArray } from "preact";
+import { onNaviCommand } from "../commands.js";
+import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 
 const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
   const members = [];
@@ -166,9 +167,11 @@ export const SlideShowContext = createContext(null);
  * nothing has to be named, and a surface outside it is simply not part of it.
  *
  * @param {object} props
- * @param {"top"|"local"} [props.layer="top"] - what one slide is measured
- *   against: the viewport, or the positioned ancestor this renders into (the
- *   same distinction Dialog and Popover make about where they live).
+ * @param {"top"} [props.layer="top"] - what one slide is measured against.
+ *   Only "top" for now: a popup is promoted to the browser's top layer, so no
+ *   container of ours can hold two of them side by side — a slideshow of
+ *   CONTENTS inside a single popup is the shape that case needs, and it is not
+ *   built yet.
  * @param {"y"|"x"} [props.axis="y"] - how the slides are laid out.
  * @param {number} [props.gap=0] - kept between two slides, when the members
  *   themselves say nothing (a Dialog passes its own marginWithContainer).
@@ -231,5 +234,164 @@ export const SlideShow = ({
         {children}
       </SlideShowContext.Provider>
     </span>
+  );
+};
+
+const contentCss = /* css */ `
+  /* The content variant: the pages are stacked in one box and only the current
+     one is in place, the others parked exactly one box away. The box takes its
+     height once, from the first page — a popup that resized itself at every
+     page change would make the movement about its own growth rather than about
+     the pages, and a page could never clear it cleanly since it would be
+     leaving a box of a different size than the one it travels by. */
+  .navi_slideshow_content {
+    position: relative;
+    overflow: hidden;
+
+    > [data-slideshow-page] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      /* Full height on purpose: it is what makes translate: 100% mean "one box"
+         rather than "my own height", which is the whole trick — a short page
+         and a tall one then travel the same distance. */
+      width: 100%;
+      height: 100%;
+      translate: 0 var(--slideshow-offset, 0%);
+      transition: translate var(--slideshow-duration, 300ms) ease;
+      overflow: auto;
+    }
+    /* Parked: not shown, and not in the way of what is. */
+    > [data-slideshow-page][data-slideshow-displaced] {
+      pointer-events: none;
+    }
+  }
+`;
+
+/**
+ * The same carousel, for CONTENTS rather than popups.
+ *
+ * A popup is promoted to the browser's top layer, so two of them can never sit
+ * in one box — hence the container-less variant above. Inside a single popup
+ * the opposite is true: the pages are ordinary elements, they do have a common
+ * box, and that box is what a slot is measured against.
+ *
+ * The page shown can be driven from outside (`current` + `onCurrentChange`) or
+ * left to the slideshow, which then answers the --navi-next/--navi-previous
+ * commands from anything inside it.
+ *
+ * @param {object} props
+ * @param {string} [props.current] - id of the page being shown; omit to let the
+ *   slideshow keep it and drive it by command.
+ * @param {(id: string) => void} [props.onCurrentChange]
+ * @param {string} [props.duration="300ms"] - how long a page change takes.
+ *   Vertical only for now: the pages travel by one box, upward.
+ */
+export const SlideShowContent = ({
+  current: currentProp,
+  onCurrentChange,
+  duration = "300ms",
+  children,
+  ...rest
+}) => {
+  import.meta.css = contentCss;
+  const ref = useRef();
+  const [height, setHeight] = useState(null);
+  const pages = toChildArray(children);
+  const pageIds = pages.map((page, index) => page.props?.id ?? String(index));
+  const [currentState, setCurrentState] = useState(pageIds[0]);
+  const current = currentProp ?? currentState;
+  const currentIndex = Math.max(0, pageIds.indexOf(current));
+
+  const goTo = (index) => {
+    const id = pageIds[Math.max(0, Math.min(index, pageIds.length - 1))];
+    if (id === current) {
+      return;
+    }
+    setCurrentState(id);
+    onCurrentChange?.(id);
+  };
+
+  // The command comes as a DOM event so anything inside can send it without
+  // knowing this component — listened here rather than declared as a prop
+  // because the name is not one preact knows.
+  useLayoutEffect(() => {
+    const container = ref.current;
+    if (!container) {
+      return undefined;
+    }
+    const onGo = (e) => {
+      goTo(currentIndex + e.detail.step);
+    };
+    // navi_command is the protocol every command target answers: without it the
+    // command resolves, finds this element, and nothing runs.
+    const onCommand = (e) => {
+      onNaviCommand(e);
+    };
+    container.addEventListener("navi_slideshow_go", onGo);
+    container.addEventListener("navi_command", onCommand);
+    return () => {
+      container.removeEventListener("navi_slideshow_go", onGo);
+      container.removeEventListener("navi_command", onCommand);
+    };
+  });
+
+  // Measured once, when there is something to measure: the box then keeps that
+  // height for good (see the CSS above for why it must not follow the pages).
+  useLayoutEffect(() => {
+    if (height !== null) {
+      return undefined;
+    }
+    const container = ref.current;
+    if (!container) {
+      return undefined;
+    }
+    const firstPage = container.querySelector("[data-slideshow-page]");
+    if (!firstPage) {
+      return undefined;
+    }
+    const observer = new ResizeObserver(() => {
+      const pageHeight = firstPage.scrollHeight;
+      if (pageHeight) {
+        setHeight(pageHeight);
+        observer.disconnect();
+      }
+    });
+    observer.observe(firstPage);
+    return () => {
+      observer.disconnect();
+    };
+  }, [height]);
+
+  return (
+    <div
+      {...rest}
+      ref={ref}
+      className="navi_slideshow_content"
+      data-slideshow-content=""
+      style={{
+        "--slideshow-duration": duration,
+        "height": height === null ? undefined : `${height}px`,
+        ...rest.style,
+      }}
+    >
+      {pages.map((page, index) => {
+        const isCurrent = index === currentIndex;
+        return (
+          <div
+            key={pageIds[index]}
+            data-slideshow-page=""
+            data-current={isCurrent ? "" : undefined}
+            data-slideshow-displaced={isCurrent ? undefined : ""}
+            style={{
+              "--slideshow-offset": `${(index - currentIndex) * 100}%`,
+            }}
+            aria-hidden={isCurrent ? undefined : "true"}
+          >
+            {page}
+          </div>
+        );
+      })}
+    </div>
   );
 };
