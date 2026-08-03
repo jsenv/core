@@ -593,16 +593,17 @@
       const SubPopoverSection = () => (
         <section class="demo-section">
           <Heading id="sub-popover">Sub popover</Heading>
-          <div class="demo-row">
+          {/* The trigger lives inside the container too: a layer="local"
+              popover resolves its placement against its positioned ancestor,
+              and its anchor has to be in the same one */}
+          <SlideShow layer="local" duration="700ms" style={{ height: "260px" }}>
             <Button command="--navi-toggle" commandFor="pop_slide_first">
               Open
             </Button>
-          </div>
-          <SlideShow layer="local" duration="700ms" style={{ height: "260px" }}>
             <Popover
               id="pop_slide_first"
               layer="local"
-              positionArea="inset-top"
+              positionArea="inset(top)"
             >
               <Box header padding="m" className="demo-overflow-part">
                 <Text expandX>first</Text>
@@ -627,7 +628,7 @@
             <Popover
               id="pop_slide_second"
               layer="local"
-              positionArea="inset-top"
+              positionArea="inset(top)"
             >
               <Box header padding="m" className="demo-overflow-part">
                 <Text expandX>second</Text>

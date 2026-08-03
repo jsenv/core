@@ -717,7 +717,9 @@
             required
             defaultValue={prefill}
           />
-          <TextField label="Nom" name="lastName" required />
+          {/* Not required: a first name is enough to name someone, and the
+              rest is what tells two of them apart when it happens */}
+          <TextField label="Nom" name="lastName" />
           <TextField label="Email" name="email" placeholder="prenom@mail.com" />
           <Field flex="y" spacingWithControl="s">
             <Label>Côté</Label>

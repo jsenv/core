@@ -1117,7 +1117,10 @@
           {/* Taking part is declared by being in here — nothing to name, and a
               dialog outside is simply not part of the movement */}
           <SlideShow
-            layer={layer === "local" ? "local" : "top"}
+            // top even for the local dialogs here: a material container has to
+            // BE the box its pages live in, and this one sits in a row next to
+            // the buttons. The popover demo shows the material one.
+            layer="top"
             duration={slideshowDuration}
           >
             {/* Both take part in the same slideshow: when the second opens, the

@@ -150,6 +150,12 @@ const css = /* css */ `
      rather than anything else so it keeps its place in the flow. */
   .navi_slideshow {
     position: relative;
+    /* Fills what holds it: its pages are absolutely positioned, so it has no
+       content to take a size from — left alone it would measure 0 and a slot
+       with it. A caller wanting another size sets one; this is only what makes
+       "as big as where I am" the default. */
+    width: 100%;
+    height: 100%;
   }
 `;
 

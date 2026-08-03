@@ -967,9 +967,7 @@ const useDialogProps = (props) => {
       // one movement keep the same distance from the edges as they keep from
       // each other, and nobody has to repeat the number.
       const travelled = slideshow.add(dialogEl, {
-        gap:
-          resolveContainerLength(marginWithContainer, positionedAncestor) ??
-          resolveSpacingSize(marginWithContainer),
+        gap: resolveSpacingSize(marginWithContainer, positionedAncestor),
       });
       if (travelled) {
         // The slideshow moves it, so it must not also move itself: two rules
@@ -1009,13 +1007,12 @@ const useDialogProps = (props) => {
     // from the result, same as popover.jsx.
     const positionDialog = (triggerEvent) => {
       const { positionArea, marginWithContainer } = positionPropsRef.current;
-      let marginWithContainerInPixels = resolveContainerLength(
+      // The container is given: that is what makes "3cqw" resolvable — a share
+      // of what confines this dialog rather than of the viewport.
+      let marginWithContainerInPixels = resolveSpacingSize(
         marginWithContainer,
         positionedAncestor,
       );
-      if (marginWithContainerInPixels === null) {
-        marginWithContainerInPixels = resolveSpacingSize(marginWithContainer);
-      }
       if (typeof marginWithContainerInPixels !== "number") {
         // A value only CSS could evaluate (a spacing token resolving to a var(),
         // a percentage…) — the placement below needs a real number, and letting
@@ -1420,30 +1417,6 @@ const DIALOG_PSEUDO_CLASSES = [
 
 // Lets consumers pass animationDuration="0.5s" as a regular prop; Box maps
 // it to the CSS var for us (see box.jsx's styleCSSVars handling).
-// "3cqw"/"2cqh" — a share of the container the dialog is confined to, the way
-// vvw/vvh are a share of the viewport. Written by hand rather than left to CSS
-// because the placement below needs a number, and a container query unit means
-// nothing to getComputedStyle here.
-const CONTAINER_LENGTH_REGEX = /^(-?[0-9.]+)cq([wh])$/;
-const resolveContainerLength = (value, container) => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const match = CONTAINER_LENGTH_REGEX.exec(value.trim());
-  if (!match) {
-    return null;
-  }
-  const [, amount, axis] = match;
-  const size = container
-    ? axis === "w"
-      ? container.clientWidth
-      : container.clientHeight
-    : axis === "w"
-      ? window.innerWidth
-      : window.innerHeight;
-  return (parseFloat(amount) / 100) * size;
-};
-
 const DIALOG_STYLE_CSS_VARS = {
   animationDuration: "--popup-animation-duration",
   minWidth: "--dialog-min-width",
