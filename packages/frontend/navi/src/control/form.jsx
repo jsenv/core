@@ -32,6 +32,20 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   what is typed in it never becomes part of that group's value. For a form
  *   that lives INSIDE something else while answering a different question —
  *   "create the thing I am about to pick" inside a picker, say.
+ * @param {string} [props.command] - What follows a submission that went
+ *   through: the form has answered its question, and this says what the screen
+ *   does about it. Nothing runs when the submission is refused — the form then
+ *   stays in front of the user, showing what it is waiting for.
+ *
+ *   `"--navi-close"` dismisses the popup the form is in, `"--navi-previous"` /
+ *   `"--navi-next"` walk the slide list it is in, `"--navi-void"` stays put.
+ *   Any navi command, really: it is triggered from the form, so it finds its
+ *   target the way that command always does.
+ *
+ *   Left out, the surface the form sits in decides (see resolveAfterSend in
+ *   commands.js): a popup closes, a slide goes on to the next one — or back to
+ *   the one it came from when there is no next — and a form on a page does
+ *   nothing.
  */
 export const Form = (props) => {
   const defaultRef = useRef();
@@ -66,6 +80,12 @@ export const Form = (props) => {
 const useFormGroup = (props) => {
   const propsForGroup = { ...props };
   delete propsForGroup.standalone;
+  // Not the generic control `command`, which a control triggers on its own ui
+  // actions — here it is what follows a SUCCESSFUL submission. So it is kept
+  // out of the control machinery and left in the DOM for the send to read
+  // (resolveAfterSend in commands.js).
+  delete propsForGroup.command;
+  propsForGroup["data-after-send"] = props.command;
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
     propsForGroup,
     {

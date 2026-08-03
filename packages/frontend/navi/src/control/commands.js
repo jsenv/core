@@ -298,18 +298,22 @@ registerNaviCommand("--navi-reset", (source, event) => {
   };
 });
 /**
- * What a successful send does once the value is committed, read off the first
- * surface above the control:
- * - a slide: whatever that slide says leaving it means (afterSend on Slide) —
- *   a step answered usually goes back where it was opened from, or on to the
- *   next one;
+ * What a successful send does once the value is committed. The control says it
+ * (`command` on a Form, kept in the DOM as data-after-send), and when it says
+ * nothing the surface above it decides:
+ * - a slide: on to the next step, or back to the one it came from when there is
+ *   no next — a step that has been answered is not a step to stay on;
  * - an open popup: it closes. The popup was there for the duration of one
  *   decision, and the send just made it. A picker already does this when the
- *   send targets the popup itself (executeNaviDefine); a form inside one is
- *   the same act, a level down;
+ *   send targets the popup itself (executeNaviDefine); a form inside one is the
+ *   same act, a level down;
  * - the document: nothing. A form on a page stays where it is.
  */
 const resolveAfterSend = (target) => {
+  const askedFor = target.getAttribute?.("data-after-send");
+  if (askedFor) {
+    return askedFor;
+  }
   // From above the target: a popup that IS the send target is handled on its
   // own (see the aria-expanded branch below), and must not answer twice.
   const surface = target.parentElement?.closest(
@@ -319,16 +323,10 @@ const resolveAfterSend = (target) => {
     return undefined;
   }
   if (surface.hasAttribute("data-slide")) {
-    const afterSend = surface.getAttribute("data-slide-after-send");
-    if (afterSend === "previous") {
-      return "--navi-previous";
-    }
-    if (afterSend === "next") {
-      return "--navi-next";
-    }
-    // Nothing said: the slide stays. Travelling on a send the slide never asked
-    // to travel on would move the ground under the user.
-    return undefined;
+    const nextSlide = surface.nextElementSibling;
+    return nextSlide?.hasAttribute("data-slide")
+      ? "--navi-next"
+      : "--navi-previous";
   }
   if (surface.getAttribute("aria-expanded") === "true") {
     return "--navi-close";
