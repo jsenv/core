@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sub dialog — perf</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .part {
+        color: white;
+        background: #1a237e;
+      }
+      .filler {
+        padding: 8px 12px;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      .fps {
+        margin-top: 12px;
+        font-family: ui-monospace, monospace;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Sub dialog — perf</h1>
+    <p>
+      The same two pages as the dialog demo's own “Sub dialog” section, alone on
+      a page: no NaviDebug, no other section, nothing else running. Click + and
+      the chevron as fast as you can and watch the frame times below.
+    </p>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useEffect, useState } from "preact/hooks";
+      import { Box, Button, Dialog, Icon, SlideShow, Text } from "@jsenv/navi";
+      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
+      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
+
+      // Tells whatever watches this page to stay out of the way — see
+      // window.__navi_client_monitoring__ (client_monitoring). The measurement
+      // below is about the slideshow, so nothing else may steal a frame.
+      window.__jsenv_perf_critical__?.();
+
+      const Filler = ({ count = 6 }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="filler">
+            {i + 1}
+          </div>
+        ));
+
+      // Frame times, sampled continuously: a transition that stutters shows up
+      // here as frames far above 16ms, whereas one that is merely slow does not.
+      const FrameTimes = () => {
+        const [worst, setWorst] = useState(0);
+        const [long, setLong] = useState(0);
+        useEffect(() => {
+          let previous = performance.now();
+          let running = true;
+          const tick = (now) => {
+            if (!running) {
+              return;
+            }
+            const elapsed = now - previous;
+            previous = now;
+            if (elapsed > 50) {
+              setWorst((w) => Math.max(w, Math.round(elapsed)));
+              setLong((l) => l + 1);
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          return () => {
+            running = false;
+          };
+        }, []);
+        return (
+          <div class="fps">
+            frames over 50ms: {long} — worst: {worst}ms{" "}
+            <button
+              type="button"
+              onClick={() => {
+                setWorst(0);
+                setLong(0);
+              }}
+            >
+              reset
+            </button>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [duration, setDuration] = useState("700ms");
+        return (
+          <div>
+            <div class="row">
+              <Button command="--navi-open" commandFor="first">
+                Open
+              </Button>
+              <label style={{ fontSize: "13px" }}>
+                slideshow{" "}
+                <select
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
+                >
+                  {["300ms", "700ms", "3s"].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <FrameTimes />
+
+            <SlideShow gap={16} duration={duration}>
+              <Dialog id="first" expand animation="scaling">
+                <Box
+                  header
+                  padding="m"
+                  flex="x"
+                  alignY="center"
+                  className="part"
+                >
+                  <Text expandX>first</Text>
+                  <Button
+                    command="--navi-open"
+                    commandFor="second"
+                    icon
+                    variant="discrete"
+                    size="xl"
+                    padding="xs"
+                    aria-label="Open the second"
+                  >
+                    <Icon>
+                      <PlusSvg />
+                    </Icon>
+                  </Button>
+                </Box>
+                <Box body padding="m">
+                  <Filler />
+                </Box>
+              </Dialog>
+
+              <Dialog id="second" expandX positionArea="top">
+                <Box
+                  header
+                  padding="m"
+                  flex="x"
+                  alignY="center"
+                  className="part"
+                >
+                  <Text expandX>second</Text>
+                  <Button
+                    command="--navi-cancel"
+                    icon
+                    variant="discrete"
+                    size="xl"
+                    padding="xs"
+                    aria-label="Close"
+                  >
+                    <Icon>
+                      <ChevronUpSvg />
+                    </Icon>
+                  </Button>
+                </Box>
+                <Box body padding="m">
+                  <Filler count={4} />
+                </Box>
+              </Dialog>
+            </SlideShow>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

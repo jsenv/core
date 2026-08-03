@@ -191,19 +191,45 @@ const setup = () => {
     }
   };
 
+  // A page can declare itself perf critical (window.__jsenv_perf_critical__()):
+  // measuring an animation means nothing if the thing measuring it steals a
+  // frame. Monitoring then holds everything back until the page has been
+  // genuinely idle — no interaction for a while — instead of flushing on its
+  // own schedule.
+  let perfCritical = false;
+  let lastInteractionMs = 0;
+  const PERF_CRITICAL_QUIET_MS = 2000;
+  const isQuiet = () =>
+    !perfCritical || Date.now() - lastInteractionMs > PERF_CRITICAL_QUIET_MS;
+  const onInteraction = () => {
+    lastInteractionMs = Date.now();
+  };
+  for (const eventName of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+    window.addEventListener(eventName, onInteraction, {
+      capture: true,
+      passive: true,
+    });
+  }
+
   let flushScheduled = false;
   const scheduleFlush = () => {
     if (flushScheduled) {
       return;
     }
     flushScheduled = true;
-    setTimeout(() => {
+    const attempt = () => {
+      if (!isQuiet()) {
+        // Still being used: come back later rather than take the frame now.
+        setTimeout(attempt, PERF_CRITICAL_QUIET_MS);
+        return;
+      }
       flushScheduled = false;
       if (!pendingLogs.length && !pendingActivities.length) {
         return;
       }
       post();
-    }, FLUSH_INTERVAL_MS);
+    };
+    setTimeout(attempt, FLUSH_INTERVAL_MS);
   };
 
   const pushLog = (entry) => {
@@ -224,6 +250,12 @@ const setup = () => {
   let consoleProcessScheduled = false;
   // requestIdleCallback is missing on Safari/iOS (our main mobile target), so
   // fall back to setTimeout there; either way each run is time-boxed below.
+  // Named on window rather than exported: the page that needs it is a plain
+  // html file, and it must be able to ask before anything else has loaded.
+  window.__jsenv_perf_critical__ = () => {
+    perfCritical = true;
+  };
+
   const scheduleIdle =
     typeof requestIdleCallback === "function"
       ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
