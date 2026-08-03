@@ -13,8 +13,8 @@
  * it is the same component in the document, in a dialog or in a popover.
  */
 
-import { createContext, toChildArray } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Box } from "../box/box.jsx";
 import { Button } from "../control/input/button.jsx";
 import { Icon } from "../text/icon.jsx";
@@ -58,10 +58,10 @@ const css = /* css */ `
       transition: translate var(--slide-list-duration, 300ms) ease;
 
       > [data-slide] {
-        /* So a slide shorter than the box still fills it: the box is as big as
-           its largest slide, and the others stretch to it rather than floating
-           in a corner of it. */
-        display: grid;
+        /* All in the one cell, so the list is as big as its largest slide and
+           the others stretch to it (grid stretches by default) rather than
+           floating in a corner of it. No display of its own here: a slide is a
+           Box and keeps whatever it was given. */
         min-width: 0;
         min-height: 0;
         grid-area: 1 / 1;
@@ -84,8 +84,8 @@ const offsetAlongAxis = (boxes, vertical) => {
   return vertical ? `0 ${distance}` : `${distance} 0`;
 };
 
-// What the slides tell the buttons inside them: only which way they travel, so
-// a button can point the right way without being told twice.
+// What the list tells what is inside it: which way it travels, so a button can
+// point the right way without being told twice.
 const SlideListContext = createContext(null);
 
 /**
@@ -93,8 +93,13 @@ const SlideListContext = createContext(null);
  * through a form — and vertical with `vertical`, where it arrives from below.
  *
  * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
- * left to the slides themselves, which then answer the
- * --navi-next/--navi-previous commands sent from anything inside them.
+ * left to the list, which then answers the --navi-next/--navi-previous commands
+ * sent from anything inside it.
+ *
+ * Which slides there are is read from the DOM, not from the children: a slide
+ * is whatever <Slide> put there, wherever it came from — a fragment, a .map(),
+ * a component of your own wrapping one. Nothing here assumes the children ARE
+ * the slides, so nothing breaks when they are not.
  *
  * @param {object} props
  * @param {string} [props.current] - id of the slide being shown; omit to keep
@@ -113,21 +118,75 @@ export const SlideList = ({
   ...rest
 }) => {
   import.meta.css = css;
-  const slides = toChildArray(children);
-  const slideIds = slides.map(
-    (slide, index) => slide.props?.id ?? String(index),
-  );
-  const [currentState, setCurrentState] = useState(slideIds[0]);
+  const trackRef = useRef();
+  // The id of the slide being shown, not its rank: a rank would be wrong the
+  // moment a slide appears before it, and there is nothing to renumber here.
+  const [currentState, setCurrentState] = useState(undefined);
   const current = currentProp ?? currentState;
-  const currentIndex = Math.max(0, slideIds.indexOf(current));
 
-  const goTo = (index) => {
-    const id = slideIds[Math.max(0, Math.min(index, slides.length - 1))];
-    if (id === current) {
+  // Everything positional is decided here, from the DOM, once per render: where
+  // each slide stands in the line, which one is current, and how far the track
+  // must be for that one to be the one on screen. Reading the DOM is what makes
+  // the children free — their shape says nothing about the order, the elements
+  // do — and it is also the only place that has to agree with itself.
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    const slideElements = Array.from(track.children);
+    if (slideElements.length === 0) {
       return;
     }
-    setCurrentState(id);
-    onCurrentChange?.(id);
+    let currentIndex = slideElements.findIndex(
+      (slideElement) => slideElement.id === current,
+    );
+    if (currentIndex === -1) {
+      // Nothing named, or a name nothing answers to: the first slide is the one
+      // shown, the way a stack of pages opens on its first page.
+      currentIndex = 0;
+    }
+    let index = 0;
+    for (const slideElement of slideElements) {
+      slideElement.style.setProperty(
+        "--slide-offset",
+        offsetAlongAxis(index, vertical),
+      );
+      const isCurrent = index === currentIndex;
+      // Walked past, or not reached yet: out of reach for the pointer and out
+      // of the way for a screen reader, so only the slide on screen answers.
+      slideElement.toggleAttribute("data-current", isCurrent);
+      slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
+      if (isCurrent) {
+        slideElement.removeAttribute("aria-hidden");
+      } else {
+        slideElement.setAttribute("aria-hidden", "true");
+      }
+      index++;
+    }
+    track.style.setProperty(
+      "--slide-list-offset",
+      offsetAlongAxis(-currentIndex, vertical),
+    );
+  });
+
+  const goBy = (step) => {
+    const track = trackRef.current;
+    const slideElements = Array.from(track.children);
+    const currentIndex = slideElements.findIndex((slideElement) =>
+      slideElement.hasAttribute("data-current"),
+    );
+    const nextIndex = Math.max(
+      0,
+      Math.min(currentIndex + step, slideElements.length - 1),
+    );
+    const nextElement = slideElements[nextIndex];
+    if (!nextElement || nextIndex === currentIndex) {
+      return;
+    }
+    // An id is how a slide is named from outside; without one it can still be
+    // travelled to, it just cannot be asked for by name.
+    setCurrentState(nextElement.id || undefined);
+    if (nextElement.id) {
+      onCurrentChange?.(nextElement.id);
+    }
   };
 
   return (
@@ -140,7 +199,7 @@ export const SlideList = ({
       data-slide-list=""
       // The event a --navi-next/--navi-previous command ends up dispatching…
       onnavi_slide_list_go={(e) => {
-        goTo(currentIndex + e.detail.step);
+        goBy(e.detail.step);
       }}
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
@@ -149,42 +208,25 @@ export const SlideList = ({
       }}
       style={{ "--slide-list-duration": duration, ...rest.style }}
     >
-      <SlideListContext.Provider value={{ vertical }}>
-        <div
-          data-slide-track=""
-          style={{
-            "--slide-list-offset": offsetAlongAxis(-currentIndex, vertical),
-          }}
-        >
-          {slides.map((slide, index) => {
-            const isCurrent = index === currentIndex;
-            return (
-              <div
-                key={slideIds[index]}
-                data-slide=""
-                data-current={isCurrent ? "" : undefined}
-                data-slide-displaced={isCurrent ? undefined : ""}
-                style={{ "--slide-offset": offsetAlongAxis(index, vertical) }}
-                aria-hidden={isCurrent ? undefined : "true"}
-              >
-                {slide}
-              </div>
-            );
-          })}
-        </div>
-      </SlideListContext.Provider>
+      <div data-slide-track="" ref={trackRef}>
+        <SlideListContext.Provider value={{ vertical }}>
+          {children}
+        </SlideListContext.Provider>
+      </div>
     </Box>
   );
 };
 
 /**
- * One slide. Nothing but a Box with the id it is moved by — it exists so a
- * slide reads as a slide rather than as a box that happens to carry an id. It
- * is both SlideList.Item and an export of its own: <Slide> where the list is
+ * One slide, and its own place in the line: it renders the element the list
+ * moves, so anything can put one there — a fragment, a .map(), a component of
+ * your own — without the list having to recognise it.
+ *
+ * It is both SlideList.Item and an export of its own: <Slide> where the list is
  * far above, SlideList.Item where the two sit side by side.
  */
 export const Slide = ({ children, ...rest }) => (
-  <Box flex="y" {...rest}>
+  <Box flex="y" {...rest} data-slide="">
     {children}
   </Box>
 );
