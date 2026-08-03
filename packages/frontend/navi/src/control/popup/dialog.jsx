@@ -241,6 +241,13 @@ const css = /* css */ `
       &[data-slideshow-instant] {
         transition-property: none;
       }
+
+      /* Stepped back, or on its way out: it is no longer the page being
+         answered, so it must not catch what is aimed at the one in front — nor
+         make the user wait for the end of a travel to click. */
+      &[data-slideshow-displaced] {
+        pointer-events: none;
+      }
     }
 
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus

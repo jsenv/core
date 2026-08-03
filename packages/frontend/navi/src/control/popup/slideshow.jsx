@@ -84,6 +84,9 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
       // time, and its own variables are dropped once it has arrived — leaving
       // them would put it back a slot the next time it opens.
       element.style.setProperty("--slideshow-offset", `${slotSize()}px`);
+      // Leaving, so out of reach too — the page coming back is the one the
+      // pointer is aiming at, from the very first frame of the travel.
+      element.setAttribute("data-slideshow-displaced", "");
       const onTravelEnd = (transitionEvent) => {
         // Only the travel: display and overlay ride the same transition list
         // and end at once, and cleaning up on those would put the slide back
@@ -94,6 +97,7 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
         element.removeEventListener("transitionend", onTravelEnd);
         element.style.removeProperty("--slideshow-offset");
         element.style.removeProperty("--slideshow-duration");
+        element.removeAttribute("data-slideshow-displaced");
       };
       element.addEventListener("transitionend", onTravelEnd);
       slideshow.apply();
@@ -110,6 +114,15 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
         // one slot apart, whatever their own sizes.
         const offset = (index - lastIndex) * slot;
         member.style.setProperty("--slideshow-offset", `${offset}px`);
+        // Walked past, so not there for the pointer: only the current page
+        // answers. Set as soon as it steps back — waiting for the travel to end
+        // would leave a surface on its way out catching clicks meant for the
+        // one coming back.
+        if (offset === 0) {
+          member.removeAttribute("data-slideshow-displaced");
+        } else {
+          member.setAttribute("data-slideshow-displaced", "");
+        }
         // The duration belongs to the slideshow, not to each member: one
         // movement, one speed, whatever animation a member has of its own.
         if (duration) {
