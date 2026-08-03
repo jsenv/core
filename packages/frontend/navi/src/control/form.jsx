@@ -38,12 +38,16 @@ export const Form = (props) => {
   props.ref = props.ref || defaultRef;
   // A <form> cannot contain a <form> — the parser closes the first one at the
   // second's opening tag, so the inner fields would silently belong to the
-  // outer form. Rather than forbidding the shape (a form inside a picker
-  // inside a form is a legitimate thing to want), the inner one renders as a
-  // <div>: everything navi does — grouping, validation, action — is ours, and
-  // only the browser's own submit machinery needs a real <form>.
+  // outer form. Rather than forbidding the shape (a form inside a picker inside
+  // a form is a legitimate thing to want), a form that finds itself inside one
+  // is a different component: same group, no <form> element and none of the
+  // browser machinery that comes with it.
   const isNested = Boolean(useContext(FormContext));
-  const form = <FormControl {...props} nested={isNested} />;
+  const form = isNested ? (
+    <FormNested {...props} />
+  ) : (
+    <FormControl {...props} />
+  );
   if (props.standalone) {
     // Nothing above to register with: the group hooks read the parent from
     // this context, so emptying it here is the whole opt-out.
@@ -56,16 +60,14 @@ export const Form = (props) => {
   return form;
 };
 
-const FormControl = (props) => {
-  const { ref, method = "GET", nested } = props;
-  // nested/standalone are ours, not the DOM's: standalone was already consumed
-  // by Form above, and nested only decides what is rendered here.
+// What both forms are made of: one group, one context for what is inside it.
+// standalone is read by Form above and never goes further — least of all to the
+// DOM.
+const useFormGroup = (props) => {
   const propsForGroup = { ...props };
-  delete propsForGroup.nested;
   delete propsForGroup.standalone;
-  props = propsForGroup;
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
-    props,
+    propsForGroup,
     {
       allowCapture: true,
       wantRequesterButtonState: true,
@@ -82,46 +84,10 @@ const FormControl = (props) => {
     return { loading };
   }, [loading]);
 
-  return (
-    <Box
-      {...formRootProps}
-      {...formProps}
-      as={nested ? "div" : "form"}
-      data-method={nested ? undefined : method}
-      // make sure browser don't prevent "submit" when invalid, nor display messages
-      novalidate={nested ? undefined : ""}
-      pseudoClasses={FormPseudoClasses}
-      // Nothing native to intercept on a <div>: there is no submit event and no
-      // requestSubmit() to go through, so a nested form is driven the way every
-      // other group is — a command, or an action requested on it.
-      onSubmit={
-        nested
-          ? undefined
-          : (e) => {
-              const form = e.currentTarget;
-              dispatchRequestAction(form, {
-                event: e,
-                name: "form_submit",
-                always: () => {
-                  e.preventDefault();
-                },
-                requester: e.submitter || form,
-              });
-            }
-      }
-      onReset={
-        nested
-          ? undefined
-          : (e) => {
-              const form = ref.current;
-              dispatchRequestResetUIState(form, e);
-              // browser would empty all fields to their default values (likely
-              // empty/unchecked) we want to reset to the last known external
-              // state instead
-              e.preventDefault();
-            }
-      }
-    >
+  return {
+    formRootProps,
+    formProps,
+    inside: (
       <FormContext.Provider value={formContextValue}>
         <ControlgroupChildrenWrapper
           {...childrenWrapperProps}
@@ -132,9 +98,60 @@ const FormControl = (props) => {
           {children}
         </ControlgroupChildrenWrapper>
       </FormContext.Provider>
+    ),
+  };
+};
+
+const FormControl = (props) => {
+  const { ref, method = "GET" } = props;
+  const { formRootProps, formProps, inside } = useFormGroup(props);
+
+  return (
+    <Box
+      {...formRootProps}
+      {...formProps}
+      as="form"
+      data-method={method}
+      novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
+      pseudoClasses={FormPseudoClasses}
+      onSubmit={(e) => {
+        const form = e.currentTarget;
+        dispatchRequestAction(form, {
+          event: e,
+          name: "form_submit",
+          always: () => {
+            e.preventDefault();
+          },
+          requester: e.submitter || form,
+        });
+      }}
+      onReset={(e) => {
+        const form = ref.current;
+        dispatchRequestResetUIState(form, e);
+        // browser would empty all fields to their default values (likely empty/unchecked)
+        // we want to reset to the last known external state instead
+        e.preventDefault();
+      }}
+    >
+      {inside}
     </Box>
   );
 };
+
+// A form inside a form: the group, without the element. There is no submit
+// event to intercept and no requestSubmit() to go through, so it is driven the
+// way every other group is — a command, or an action requested on it. method
+// belongs to the browser's own submission, so it means nothing here either.
+const FormNested = (props) => {
+  const { formRootProps, formProps, inside } = useFormGroup(props);
+
+  return (
+    <Box {...formRootProps} {...formProps} pseudoClasses={FormPseudoClasses}>
+      {inside}
+    </Box>
+  );
+};
+
 const FormPseudoClasses = [
   ":hover",
   ":active",
