@@ -180,13 +180,12 @@
         Picker,
         RadioGroup,
         Slide,
-        SlideList,
+        SlideContainer,
         Text,
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
-      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
@@ -334,12 +333,12 @@
                   searchSignal.value = "";
                 }}
               >
-                {/* One surface, two slides: choosing and creating are two
-                    moments of the same decision, so they share a box and the
-                    second arrives from the side rather than opening on top —
-                    see slide_list.jsx */}
-                <SlideList
-                  vertical
+                {/* One surface, three screens placed rather than ordered:
+                    creating is a step further into the same decision, so it
+                    comes from below; editing is about one entry of the list, so
+                    it comes from its side — see slide_container.jsx */}
+                <SlideContainer
+                  layout={[`${id}_pick ${id}_edit`, `${id}_create`]}
                   current={slideSignal.value}
                   onCurrentChange={(slideId) => {
                     slideSignal.value = slideId;
@@ -367,7 +366,7 @@
                           not require having searched first, so the entry point
                           must not depend on the search box holding something */}
                       <Button
-                        command="--navi-next"
+                        command="--navi-void"
                         icon
                         variant="discrete"
                         padding="xs"
@@ -375,6 +374,7 @@
                         aria-label={createTitle}
                         onClick={() => {
                           prefillSignal.value = "";
+                          slideSignal.value = `${id}_create`;
                         }}
                       >
                         <Icon color="#6b7280">
@@ -475,13 +475,14 @@
                                 different command, so it needs its own control
                                 to carry it. */}
                             <Button
-                              command="--navi-next"
+                              command="--navi-void"
                               variant="discrete"
                               padding="s"
                               expandX
                               alignX="start"
                               onClick={() => {
                                 prefillSignal.value = typed;
+                                slideSignal.value = `${id}_create`;
                               }}
                             >
                               « {typed} » : {createLabel}
@@ -510,7 +511,9 @@
                       standalone
                       // Back to the list rather than closing: the entry shows
                       // up there, already selected, so what just happened is
-                      // visible — and one more tap chooses it or another.
+                      // visible — and one more tap chooses it or another. The
+                      // list is above this screen, and "previous" walks the map
+                      // that way once there is nothing to the left.
                       command="--navi-previous"
                       action={submitForm}
                       flex="y"
@@ -528,10 +531,10 @@
                         <Text expandX fontSize="1rem">
                           <strong>{createTitle}</strong>
                         </Text>
-                        {/* Back to the list, not out of the surface: this slide
-                            was reached from the one behind it, so leaving it
-                            means returning there */}
-                        <SlideList.Previous
+                        {/* Back to the list, not out of the surface: this
+                            screen sits below it, so the way out points up */}
+                        <SlideContainer.Move
+                          direction="up"
                           size="xl"
                           padding="xs"
                           marginRight="-xs"
@@ -598,23 +601,14 @@
                         <Text expandX fontSize="1rem">
                           <strong>{editTitle}</strong>
                         </Text>
-                        {/* same reason: the way out of this slide is the list,
-                            whatever sits between them */}
-                        <Button
-                          command="--navi-void"
-                          icon
-                          variant="discrete"
-                          padding="s"
-                          marginRight="-s"
-                          aria-label="Retour à la liste"
-                          onClick={() => {
-                            slideSignal.value = `${id}_pick`;
-                          }}
-                        >
-                          <Icon color="#4b5563">
-                            <ChevronUpSvg />
-                          </Icon>
-                        </Button>
+                        {/* This screen is beside the list, so the way out
+                            points at it */}
+                        <SlideContainer.Move
+                          direction="left"
+                          size="xl"
+                          padding="xs"
+                          marginRight="-xs"
+                        />
                       </Box>
                       <Box body padding="m">
                         {/* keyed by the entry: the fields are uncontrolled, so
@@ -647,7 +641,7 @@
                       </Box>
                     </Form>
                   </Slide>
-                </SlideList>
+                </SlideContainer>
               </Picker>
               {/* Always on the row, not conditional on a selection: it is part of
                 what the field is, and appearing later would shift the layout.

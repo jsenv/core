@@ -212,7 +212,7 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 // Layout
 export { DialogLayout } from "./src/layout/dialog_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
-export { Slide, SlideList } from "./src/layout/slide_list.jsx";
+export { Slide, SlideContainer } from "./src/layout/slide_container.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 

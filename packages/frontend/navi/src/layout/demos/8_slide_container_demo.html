@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Slide list demo</title>
+    <title>Slide container demo</title>
     <style>
       body {
         margin: 0;
@@ -122,6 +122,12 @@
         color: white;
         background: #1a237e;
       }
+      .part-create {
+        background: #4527a0;
+      }
+      .part-edit {
+        background: #00695c;
+      }
       .filler {
         padding: 8px 12px;
         background: #eef3fb;
@@ -164,7 +170,7 @@
         Link,
         Popover,
         Slide,
-        SlideList,
+        SlideContainer,
         Text,
       } from "@jsenv/navi";
 
@@ -255,26 +261,26 @@
         ));
 
       // One slide: a header that stays and a body that scrolls, plus the button
-      // that leaves it. SlideList.Next/.Previous say where to go — which slide
+      // that leaves it. SlideContainer.Next/.Previous say where to go — which slide
       // that is, and which way the chevron points, is the list's business.
       const DemoSlide = ({ id, title, direction, children }) => (
-        <SlideList.Item id={id} overflow="auto">
+        <SlideContainer.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
             {/* Title first, then the ways out of it, side by side: a slide in
                 the middle needs both, and neither button needs to know it is
                 in the middle — each says one word */}
             <Text expandX>{title}</Text>
             {direction !== "next" && (
-              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
             )}
             {direction !== "previous" && (
-              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
             )}
           </Box>
           <Box body padding="m">
             {children}
           </Box>
-        </SlideList.Item>
+        </SlideContainer.Item>
       );
 
       // Every section shows the same thing three times: in the document, in a
@@ -315,7 +321,7 @@
       );
 
       const TwoSlides = () => (
-        <SlideList duration={useSlideDuration()}>
+        <SlideContainer duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
@@ -324,40 +330,40 @@
           <DemoSlide id="second" title="second" direction="previous">
             <Filler count={8} />
           </DemoSlide>
-        </SlideList>
+        </SlideContainer>
       );
 
       const TallSlides = () => (
-        <SlideList duration={useSlideDuration()}>
+        <SlideContainer duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={40} />
           </DemoSlide>
           <DemoSlide id="second" title="second" direction="previous">
             <Filler count={60} />
           </DemoSlide>
-        </SlideList>
+        </SlideContainer>
       );
 
       const TwoSlidesVertical = () => (
-        <SlideList duration={useSlideDuration()} vertical>
+        <SlideContainer duration={useSlideDuration()} layout="column">
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
           <DemoSlide id="second" title="second" direction="previous">
             <Filler count={8} />
           </DemoSlide>
-        </SlideList>
+        </SlideContainer>
       );
 
       const WideSlidesVertical = () => (
-        <SlideList duration={useSlideDuration()} vertical>
+        <SlideContainer duration={useSlideDuration()} layout="column">
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} className="wide" />
           </DemoSlide>
           <DemoSlide id="second" title="second" direction="previous">
             <Filler count={5} className="wide" />
           </DemoSlide>
-        </SlideList>
+        </SlideContainer>
       );
 
       // Focus, shown rather than described: each slide holds something to do,
@@ -373,11 +379,11 @@
       );
 
       const FocusSlides = () => (
-        <SlideList duration={useSlideDuration()}>
+        <SlideContainer duration={useSlideDuration()}>
           <Slide id="who" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>who</Text>
-              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               <FocusPad>press → </FocusPad>
@@ -387,8 +393,8 @@
           <Slide id="where" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>where</Text>
-              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
-              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               <FocusPad>press → or ←</FocusPad>
@@ -398,17 +404,17 @@
           <Slide id="done" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>done</Text>
-              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Text>(nothing focusable here)</Text>
             </Box>
           </Slide>
-        </SlideList>
+        </SlideContainer>
       );
 
       const ThreeSlides = () => (
-        <SlideList duration={useSlideDuration()}>
+        <SlideContainer duration={useSlideDuration()}>
           <DemoSlide id="first" title="first" direction="next">
             <Filler count={3} />
           </DemoSlide>
@@ -418,7 +424,7 @@
           <DemoSlide id="last" title="last" direction="previous">
             <Filler count={3} />
           </DemoSlide>
-        </SlideList>
+        </SlideContainer>
       );
 
       // Two slides one can always walk out of: press → on the first and you are
@@ -426,11 +432,11 @@
       const FreeSlides = () => {
         const [agreed, setAgreed] = useState(false);
         return (
-          <SlideList duration={useSlideDuration()}>
+          <SlideContainer duration={useSlideDuration()}>
             <Slide id="terms" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideList.Next size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -446,7 +452,7 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>
@@ -454,7 +460,7 @@
                 </Text>
               </Box>
             </Slide>
-          </SlideList>
+          </SlideContainer>
         );
       };
 
@@ -464,11 +470,11 @@
       const LockedSlides = () => {
         const [agreed, setAgreed] = useState(false);
         return (
-          <SlideList duration={useSlideDuration()}>
+          <SlideContainer duration={useSlideDuration()}>
             <Slide id="terms" preventNavNext={!agreed} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideList.Next size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -484,13 +490,13 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>…and you agreed.</Text>
               </Box>
             </Slide>
-          </SlideList>
+          </SlideContainer>
         );
       };
 
@@ -513,14 +519,14 @@
           );
         }, [signCount]);
         return (
-          <SlideList duration={useSlideDuration()} ref={listRef}>
+          <SlideContainer duration={useSlideDuration()} ref={listRef}>
             <Slide id="sign" preventNav={signCount === 0} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>sign</Text>
                 {/* No way out here, but its room is kept: inert + hidden, so
                     the header is the same height as the next slide's and the
                     top of the box does not jump as one travels */}
-                <SlideList.Next
+                <SlideContainer.Next
                   size="xl"
                   padding="xs"
                   marginY="-xs"
@@ -537,15 +543,92 @@
             <Slide id="done" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>done</Text>
-                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>Signed — and the list moved on by itself.</Text>
               </Box>
             </Slide>
-          </SlideList>
+          </SlideContainer>
         );
       };
+
+      // A map instead of a line: "create" is a step further into the decision
+      // so it sits below, "edit" is about one entry of the list so it sits
+      // beside it. Same component, same travel — only where the slides are
+      // changes.
+      const MAP = ["pick   edit", "create"];
+      const MapSlides = () => (
+        <SlideContainer layout={MAP} duration={useSlideDuration()}>
+          <Slide id="pick" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              spacing="xs"
+              className="part"
+            >
+              <Text expandX>pick</Text>
+              <SlideContainer.Move
+                direction="right"
+                size="xl"
+                padding="xs"
+                marginY="-xs"
+              />
+              <SlideContainer.Move
+                direction="down"
+                size="xl"
+                padding="xs"
+                marginY="-xs"
+              />
+            </Box>
+            <Box body padding="m">
+              <Filler count={6} />
+            </Box>
+          </Slide>
+          <Slide id="create" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="part part-create"
+            >
+              <Text expandX>create (below)</Text>
+              <SlideContainer.Move
+                direction="up"
+                size="xl"
+                padding="xs"
+                marginY="-xs"
+              />
+            </Box>
+            <Box body padding="m">
+              <Filler count={3} />
+            </Box>
+          </Slide>
+          <Slide id="edit" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="part part-edit"
+            >
+              <Text expandX>edit (on the right)</Text>
+              <SlideContainer.Move
+                direction="left"
+                size="xl"
+                padding="xs"
+                marginY="-xs"
+              />
+            </Box>
+            <Box body padding="m">
+              <Filler count={4} />
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
 
       // The dialog case of its own: the dialog is the only popup that can be
       // asked to take the whole document, so it is the only one where the list
@@ -594,10 +677,10 @@
               expand
               marginWithContainer={flush ? 0 : undefined}
             >
-              <SlideList
+              <SlideContainer
                 duration={useSlideDuration()}
                 expandY
-                vertical={vertical}
+                layout={vertical ? "column" : "row"}
               >
                 <DemoSlide id="first" title="first" direction="next">
                   <Filler count={3} />
@@ -605,7 +688,7 @@
                 <DemoSlide id="second" title="second" direction="previous">
                   <Filler count={8} />
                 </DemoSlide>
-              </SlideList>
+              </SlideContainer>
             </Dialog>
           </section>
         );
@@ -613,11 +696,11 @@
 
       const App = () => {
         const [animated, setAnimated] = useStoredBoolean(
-          "slide_list_demo_animated",
+          "slide_container_demo_animated",
           true,
         );
         const [speed, setSpeed] = useStoredString(
-          "slide_list_demo_speed",
+          "slide_container_demo_speed",
           "300ms",
         );
         const settings = { animated, setAnimated, speed, setSpeed };
@@ -630,14 +713,15 @@
 
       const AppContent = () => (
         <div>
-          <h1>Slide list</h1>
+          <h1>Slide container</h1>
 
           <div class="demo-section">
             <p>
               Slides that replace one another inside one box. The box takes the
               size of its largest slide, so nothing grows or shrinks as one
-              moves through them; a slide travels by exactly one box, sideways
-              by default.
+              moves through them; a slide travels by exactly one box. Where the
+              slides are is said by <code>layout</code>: <code>"row"</code> (the
+              default), <code>"column"</code>, or a map of named areas.
             </p>
             <SlideSettings />
             <strong>On this page</strong>
@@ -660,6 +744,9 @@
                 <Link href="#three-slides">Three slides</Link>
               </li>
               <li>
+                <Link href="#map">A map instead of a line</Link>
+              </li>
+              <li>
                 <Link href="#focus">Focus</Link>
               </li>
               <li>
@@ -678,7 +765,8 @@
               <Link href="../../control/demos/popup/2_popover_demo.html#slides">
                 Popover demo — Slides
               </Link>{" "}
-              · <Link href="./slide_list_perf.html">Slide list — perf</Link>
+              ·{" "}
+              <Link href="./slide_container_perf.html">Slide container — perf</Link>
             </p>
           </div>
 
@@ -697,7 +785,7 @@
             <p>
               Nothing special happens: a slide is a box, so it scrolls its own
               body (<code>overflow="auto"</code> plus a <code>body</code>, see
-              box.jsx). What decides the height is what holds the list — a
+              box.jsx). What decides the height is what holds the container — a
               height here, the screen for a dialog, the space left under the
               anchor for a popover — never the slides themselves.
             </p>
@@ -711,11 +799,24 @@
           <section class="demo-section" id="vertical">
             <Heading id="vertical">Vertical</Heading>
             <p>
-              The same two slides with <code>vertical</code>: they arrive from
-              below instead of from the side. The travel is the only difference
-              — the box is still sized on its largest slide, in both directions.
+              The same two slides with <code>layout="column"</code>: they arrive
+              from below instead of from the side. The travel is the only
+              difference — the box is still sized on its largest slide, in both
+              directions.
             </p>
             <ThreeWays id="vertical" Content={TwoSlidesVertical} />
+          </section>
+
+          <section class="demo-section" id="map">
+            <Heading id="map">A map instead of a line</Heading>
+            <p>
+              <code>layout={JSON.stringify(MAP)}</code> — one string per row,
+              spelled like <code>grid-template-areas</code>: “.” is a hole, a
+              name repeated spans. Each slide says which area it is, so moving a
+              screen is an edit to the map and nothing else. A direction with
+              nothing there is simply not offered — try ← → ↑ ↓.
+            </p>
+            <ThreeWays id="map" Content={MapSlides} />
           </section>
 
           <section class="demo-section" id="wider">

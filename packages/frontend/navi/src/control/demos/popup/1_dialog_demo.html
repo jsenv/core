@@ -264,7 +264,7 @@
         Label,
         Link,
         NaviDebug,
-        SlideList,
+        SlideContainer,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -1133,11 +1133,11 @@
 
       // One dialog holding two pages, rather than two dialogs pushing each
       // other: the slides are ordinary contents, so they share a box and the
-      // arithmetic is the box's — see slide_list.jsx. The buttons say "next" and
+      // arithmetic is the box's — see slide_container.jsx. The buttons say "next" and
       // "previous"; nothing here knows which page that is.
-      const SlideListContent = () => (
-        <SlideList duration="500ms">
-          <SlideList.Item id="first" overflow="auto">
+      const SlideContainerContent = () => (
+        <SlideContainer duration="500ms">
+          <SlideContainer.Item id="first" overflow="auto">
             <Box
               header
               padding="m"
@@ -1146,13 +1146,13 @@
               className="demo-overflow-part"
             >
               <Text expandX>first</Text>
-              <SlideList.Next size="xl" padding="xs" />
+              <SlideContainer.Next size="xl" padding="xs" />
             </Box>
             <Box body padding="m">
               <OverflowFiller count={4} />
             </Box>
-          </SlideList.Item>
-          <SlideList.Item id="second" overflow="auto">
+          </SlideContainer.Item>
+          <SlideContainer.Item id="second" overflow="auto">
             <Box
               header
               padding="m"
@@ -1161,16 +1161,16 @@
               className="demo-overflow-part"
             >
               <Text expandX>second</Text>
-              <SlideList.Previous size="xl" padding="xs" />
+              <SlideContainer.Previous size="xl" padding="xs" />
             </Box>
             <Box body padding="m">
               <OverflowFiller count={14} />
             </Box>
-          </SlideList.Item>
-        </SlideList>
+          </SlideContainer.Item>
+        </SlideContainer>
       );
 
-      const SlideListSection = () => {
+      const SlideContainerSection = () => {
         const { animation, animationDuration, controlsProps } =
           useAnimateControls("dialog_demo_slides");
         return (
@@ -1191,7 +1191,7 @@
               animation={animation}
               animationDuration={animationDuration}
             >
-              <SlideListContent />
+              <SlideContainerContent />
             </Dialog>
             <Heading level={3} id="slides-local-layer">
               local layer
@@ -1207,7 +1207,7 @@
                 animation={animation}
                 animationDuration={animationDuration}
               >
-                <SlideListContent />
+                <SlideContainerContent />
               </Dialog>
             </div>
           </section>
@@ -1480,7 +1480,7 @@
           <AdaptiveSection />
           <OverflowSection />
           <RequiredSection />
-          <SlideListSection />
+          <SlideContainerSection />
           <ActionsSection />
         </NaviDebug>
       );

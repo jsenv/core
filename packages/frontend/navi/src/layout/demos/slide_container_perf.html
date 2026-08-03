@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Slide list — perf</title>
+    <title>Slide container — perf</title>
     <style>
       body {
         margin: 0;
@@ -36,7 +36,7 @@
     </style>
   </head>
   <body>
-    <h1>Slide list — perf</h1>
+    <h1>Slide container — perf</h1>
     <p>
       The same two slides as the dialog demo's own “Slides” section, alone on a
       page: no NaviDebug, no other section, nothing else running. Click the
@@ -47,7 +47,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useEffect, useState } from "preact/hooks";
-      import { Box, Button, Dialog, SlideList, Text } from "@jsenv/navi";
+      import { Box, Button, Dialog, SlideContainer, Text } from "@jsenv/navi";
 
       // Tells whatever watches this page to stay out of the way — see
       // window.__navi_client_monitoring__ (client_monitoring). The measurement
@@ -127,8 +127,8 @@
             <FrameTimes />
 
             <Dialog id="first" expand animation="scaling">
-              <SlideList duration={duration} expandY>
-                <SlideList.Item id="first" overflow="auto">
+              <SlideContainer duration={duration} expandY>
+                <SlideContainer.Item id="first" overflow="auto">
                   <Box
                     header
                     padding="m"
@@ -137,13 +137,13 @@
                     className="part"
                   >
                     <Text expandX>first</Text>
-                    <SlideList.Next size="xl" padding="xs" />
+                    <SlideContainer.Next size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <Filler />
                   </Box>
-                </SlideList.Item>
-                <SlideList.Item id="second" overflow="auto">
+                </SlideContainer.Item>
+                <SlideContainer.Item id="second" overflow="auto">
                   <Box
                     header
                     padding="m"
@@ -152,13 +152,13 @@
                     className="part"
                   >
                     <Text expandX>second</Text>
-                    <SlideList.Previous size="xl" padding="xs" />
+                    <SlideContainer.Previous size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <Filler count={4} />
                   </Box>
-                </SlideList.Item>
-              </SlideList>
+                </SlideContainer.Item>
+              </SlideContainer>
             </Dialog>
           </div>
         );

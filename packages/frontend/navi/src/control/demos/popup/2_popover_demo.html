@@ -358,7 +358,7 @@
         Input,
         Label,
         Link,
-        SlideList,
+        SlideContainer,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -530,7 +530,7 @@
           <NestedPopoverSection />
           <OverflowSection />
           <RequiredSection />
-          <SlideListSection />
+          <SlideContainerSection />
           <ActionsSection />
         </div>
       );
@@ -630,7 +630,7 @@
       // The slides INSIDE the popover: two popovers could never share a box
       // (each is promoted to the top layer), but two contents can — and the
       // popover keeps sizing itself to whichever page is showing.
-      const SlideListSection = () => {
+      const SlideContainerSection = () => {
         return (
           <section class="demo-section">
             <Heading id="slides">Slides</Heading>
@@ -642,28 +642,28 @@
             <Popover id="pop_pages" minWidth="260px">
               {/* No page state here: the buttons say "next"/"previous" and
                   the slides keeps its own place */}
-              <SlideList duration="500ms">
+              <SlideContainer duration="500ms">
                 {/* The page scrolls its BODY, not itself: header stays, the
                     content under it moves — see box.jsx's header/body/footer */}
-                <SlideList.Item id="first" overflow="auto">
+                <SlideContainer.Item id="first" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
-                    <SlideList.Next size="xl" padding="xs" />
+                    <SlideContainer.Next size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={3} />
                   </Box>
-                </SlideList.Item>
-                <SlideList.Item id="second" overflow="auto">
+                </SlideContainer.Item>
+                <SlideContainer.Item id="second" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>second</Text>
-                    <SlideList.Previous size="xl" padding="xs" />
+                    <SlideContainer.Previous size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={6} />
                   </Box>
-                </SlideList.Item>
-              </SlideList>
+                </SlideContainer.Item>
+              </SlideContainer>
             </Popover>
           </section>
         );
