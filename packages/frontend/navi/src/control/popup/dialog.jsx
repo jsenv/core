@@ -209,7 +209,10 @@ const css = /* css */ `
        animated at all still travels. */
     &[data-slideshow] {
       translate: 0 var(--slideshow-offset, 0px);
-      transition-property: translate;
+      /* display and overlay ride along (allow-discrete below): a slide leaving
+         must stay on screen for the length of its travel, and hiding it the
+         moment it is closed would cut the movement short. */
+      transition-property: translate, display, overlay;
       /* The slideshow's own duration, not the dialog's: what moves here is the
          slideshow, and one movement has one speed. */
       transition-duration: var(
@@ -217,6 +220,7 @@ const css = /* css */ `
         var(--popup-animation-duration)
       );
       transition-timing-function: ease;
+      transition-behavior: allow-discrete;
 
       /* Placed, not moved — see slideshow.jsx's add(): a slide arriving is put
          one slot away before it is allowed to travel. */

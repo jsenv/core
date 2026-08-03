@@ -38,6 +38,13 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
       if (members.includes(element)) {
         return;
       }
+      if (members.length === 0) {
+        // The first slide is not a page change: there is nothing to come from,
+        // so it is simply there.
+        members.push(element);
+        slideshow.apply();
+        return;
+      }
       // Placed one slot ahead first, with no transition: that is where a new
       // slide comes FROM. Everything then moves by exactly one slot — the
       // arrival and the departure are the same movement, so they cannot differ
@@ -60,9 +67,23 @@ const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
         return;
       }
       members.splice(index, 1);
-      // The element that leaves goes back to its own place: it is no longer
-      // part of the arithmetic, and its own exit animation takes over.
-      element.style.removeProperty("--slideshow-offset");
+      // It leaves the way the next one arrived: one slot forward. Out of the
+      // arithmetic already, so the others take their new places at the same
+      // time, and its own variables are dropped once it has arrived — leaving
+      // them would put it back a slot the next time it opens.
+      element.style.setProperty("--slideshow-offset", `${slotSize()}px`);
+      const onTravelEnd = (transitionEvent) => {
+        // Only the travel: display and overlay ride the same transition list
+        // and end at once, and cleaning up on those would put the slide back
+        // at zero before it has moved an inch.
+        if (transitionEvent.propertyName !== "translate") {
+          return;
+        }
+        element.removeEventListener("transitionend", onTravelEnd);
+        element.style.removeProperty("--slideshow-offset");
+        element.style.removeProperty("--slideshow-duration");
+      };
+      element.addEventListener("transitionend", onTravelEnd);
       slideshow.apply();
     },
     apply: () => {
