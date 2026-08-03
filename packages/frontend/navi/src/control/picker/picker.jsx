@@ -31,12 +31,6 @@ import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
-  CalendarSvg,
-  ClockSvg,
-  ColorSvg,
-  DurationSvg,
-  FileSvg,
-  PencilSvg,
   PickerArrayUI,
   PickerColorUI,
   PickerControlGroupUI,
@@ -48,6 +42,12 @@ import {
   PickerTypeResolver,
   PickerWeekUI,
 } from "./picker_types.jsx";
+import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
+import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
+import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
+import { DurationSvg } from "../../graphic/icons/duration_svg.jsx";
+import { FileSvg } from "../../graphic/icons/file_svg.jsx";
+import { PencilSvg } from "../../graphic/icons/pencil_svg.jsx";
 
 const css = /* css */ `
   @layer navi {
