@@ -19,10 +19,8 @@ labelled, replaces paragraphs of prose. See
 - Never narrate what the reader is about to see ("press Load to watch it swap"),
   restate a prop's semantics that the label already carries, or explain machinery
   the demo doesn't exercise.
-- Behaviour that only exists _while interacting_ (focus, hover, drag, a key press)
-  needs an element that reacts visibly, not a description: a zone reading "press →"
-  that fills up when it holds the keyboard demonstrates focus handling on its own,
-  and replaces every sentence about where focus lands and comes back.
+- Interactive behaviour (focus, hover, drag, keys) is shown by something that
+  reacts, never described. Reading a paragraph costs as much as trying it.
 
 ## Overview
 
