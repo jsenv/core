@@ -54,7 +54,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useContext, useEffect, useId, useRef } from "preact/hooks";
+import { useEffect, useId, useRef } from "preact/hooks";
 
 import {
   ControlgroupChildrenWrapper,
@@ -75,7 +75,6 @@ import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
-import { SlideShowContext } from "./slideshow.jsx";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
@@ -184,6 +183,15 @@ const css = /* css */ `
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
 
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
+    overscroll-behavior: none;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
     /* overflow is not declared here: the popover carries [data-scrollable]
        (see box.jsx), which is what makes it scroll — and what a
        header/footer/body inside it then rearranges. */
@@ -675,8 +683,6 @@ const usePopoverProps = (props) => {
   } = props;
   const isTopLayer = layer === "top";
   const ref = props.ref;
-  // Same as Dialog: taking part is declared by being inside a <SlideShow>.
-  const slideshow = useContext(SlideShowContext);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — set at close time, read at the next
@@ -901,11 +907,6 @@ const usePopoverProps = (props) => {
       // needed even in the native/top-layer case, not just the custom
       // renderer's own branch below.
       popoverEl.removeAttribute("navi-hidden");
-      if (slideshow) {
-        // Here, not earlier: a transition needs a start value the browser has
-        // actually painted, and the popover is displayed only from this line on.
-        slideshow.add(popoverEl);
-      }
       // aria-expanded stays "false" here — transitions are still
       // suppressed, so this doesn't matter yet — and only flips once
       // positioned below. Shown *after* the backdrop above so it stacks on
@@ -1174,9 +1175,7 @@ const usePopoverProps = (props) => {
           { prefix: "expand" },
         ) ?? "expand-up";
     }
-    // A member of a slideshow does not animate itself: the slideshow moves it,
-    // and two rules setting translate on the same element can only fight.
-    if (resolvedAnimation && !slideshow) {
+    if (resolvedAnimation) {
       popoverEl.setAttribute("navi-animation", resolvedAnimation);
       backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {
@@ -1243,9 +1242,6 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
-      if (slideshow) {
-        slideshow.remove(popoverEl);
-      }
       // Closing commits, cancelling rolls back — see Dialog's own identical
       // close, and open_controller.js for who passes isCancel.
       if (closeEvent.detail?.isCancel) {
@@ -1440,7 +1436,6 @@ const usePopoverProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
-    "data-slideshow": slideshow ? "" : undefined,
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": (e) => {

@@ -323,15 +323,11 @@
         NaviDebug,
         Box,
         Field,
-        Icon,
         Input,
         Label,
         Link,
-        SlideShow,
         Text,
       } from "@jsenv/navi";
-      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
-      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
 
       // The full positionArea grammar (see popup_shared.js's own
@@ -489,7 +485,6 @@
           <NestedPopoverSection />
           <OverflowSection />
           <RequiredSection />
-          <SubPopoverSection />
           <ActionsSection />
         </div>
       );
@@ -583,61 +578,6 @@
           </section>
         );
       };
-
-      const SubPopoverSection = () => (
-        <section class="demo-section">
-          <Heading id="sub-popover">Sub popover</Heading>
-          <div class="demo-row">
-            <Button command="--navi-toggle" commandFor="pop_slide_first">
-              Open
-            </Button>
-            {/* Taking part is declared by being in here — see slideshow.jsx */}
-            <SlideShow gap={16} duration="700ms">
-              <Popover id="pop_slide_first" maxHeight="220px">
-                <Box header padding="m" className="demo-overflow-part">
-                  <Text expandX>first</Text>
-                  <Button
-                    command="--navi-open"
-                    commandFor="pop_slide_second"
-                    icon
-                    variant="discrete"
-                    size="xl"
-                    padding="xs"
-                    aria-label="Open the second"
-                  >
-                    <Icon>
-                      <PlusSvg />
-                    </Icon>
-                  </Button>
-                </Box>
-                <Box body padding="m">
-                  <OverflowFiller count={4} />
-                </Box>
-              </Popover>
-              <Popover id="pop_slide_second" maxHeight="220px">
-                <Box header padding="m" className="demo-overflow-part">
-                  <Text expandX>second</Text>
-                  <Button
-                    command="--navi-cancel"
-                    icon
-                    variant="discrete"
-                    size="xl"
-                    padding="xs"
-                    aria-label="Close"
-                  >
-                    <Icon>
-                      <ChevronUpSvg />
-                    </Icon>
-                  </Button>
-                </Box>
-                <Box body padding="m">
-                  <OverflowFiller count={3} />
-                </Box>
-              </Popover>
-            </SlideShow>
-          </div>
-        </section>
-      );
 
       // ── uiAction / action ─────────────────────────────────────────────────
 
@@ -812,9 +752,6 @@
             </li>
             <li>
               <Link href="#required">Required field</Link>
-            </li>
-            <li>
-              <Link href="#sub-popover">Sub popover</Link>
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>

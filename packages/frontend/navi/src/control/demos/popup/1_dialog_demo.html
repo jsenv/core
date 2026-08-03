@@ -1120,11 +1120,12 @@
             duration={animationDuration}
           >
             {/* Both take part in the same slideshow: when the second opens, the
-                first steps back by one slot — see slideshow.js */}
+                first steps back by one slot — see slideshow.jsx */}
             <Dialog
               id={`${idPrefix}_first`}
               minWidth="200"
               layer={layer}
+              marginWithContainer={marginWithContainer}
               expand
             >
               <Box
@@ -1201,7 +1202,13 @@
       );
 
       const SubDialogSection = () => {
-        const [flush, setFlush] = useState(false);
+        // Remembered like the speed next to it: a setting one has to tick
+        // again on every reload stops being used.
+        const [flushStored, setFlushStored] = useStoredString(
+          "dialog_demo_sub_dialog_flush",
+          "0",
+        );
+        const flush = flushStored === "1";
         // Slow enough to watch the two surfaces cross — the whole point of this
         // section is the movement, not the result.
         // Slow by default and remembered: the whole point of this section is
@@ -1221,7 +1228,7 @@
               <input
                 type="checkbox"
                 checked={flush}
-                onChange={(e) => setFlush(e.target.checked)}
+                onChange={(e) => setFlushStored(e.target.checked ? "1" : "0")}
               />{" "}
               marginWithContainer=0
             </label>{" "}

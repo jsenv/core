@@ -521,15 +521,12 @@
                 // The slide direction is said separately: it comes FROM the
                 // bottom, it does not live there.
                 positionArea="top"
-                animation="slide-from-bottom"
-                // slow on purpose in this lab: the point is to watch the two
-                // dialogs cross
-                animationDuration="2s"
                 // expandX only: the form takes the width of the surface it comes
                 // from, but its own height — a short form has no reason to fill
                 // the screen
                 expandX
                 flex="y"
+                pointerInteractionOutsideEffect="cancel"
                 minHeight={0}
               >
                 <Box
