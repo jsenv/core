@@ -1100,7 +1100,7 @@
           </Button>
           {/* expandY: the push only reads if the first dialog fills the
               height it is pushed out of */}
-          <Dialog id={`${idPrefix}_first`} layer={layer} expandY>
+          <Dialog id={`${idPrefix}_first`} minWidth="200" layer={layer} expandY>
             <Box
               header
               padding="m"
@@ -1117,6 +1117,7 @@
                 icon
                 variant="discrete"
                 aria-label="Open the second"
+                selfAlignX="end"
               >
                 <Icon>
                   <PlusSvg />
