@@ -207,10 +207,7 @@ const css = /* css */ `
        what keeps the gap between two of them from drifting. The transition is
        declared here rather than under an attribute, so a member that is not
        animated at all still travels. */
-    /* Doubled attribute to raise specificity: a member's own animation rules
-       (popup_css.js) also set translate, and while it is in a slideshow the
-       slideshow is what decides where it stands. */
-    &[data-slideshow][data-slideshow] {
+    &[data-slideshow] {
       translate: 0 var(--slideshow-offset, 0px);
       transition-property: translate;
       /* The slideshow's own duration, not the dialog's: what moves here is the
