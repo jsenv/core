@@ -1155,17 +1155,11 @@ const useDialogProps = (props) => {
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       if (pushedEl) {
-        // Only the leaving dialog moves. The one underneath is simply revealed
-        // where it always was — pushing it back down would make the departure
-        // read as two surfaces sliding at once, when what happens is one going
-        // away. Transition off, attribute removed, layout flushed, transition
-        // back: it snaps into place within the same frame.
-        pushedEl.style.transitionProperty = "none";
+        // It travels back the way it came: the two dialogs are one drawer, so
+        // the one underneath slides down into place while the one on top
+        // leaves. Its duration is the one it borrowed when it was pushed, so
+        // both halves of the movement stay in step.
         pushedEl.removeAttribute("data-pushed");
-        // reading a layout property is what flushes the change above
-        pushedEl.getBoundingClientRect();
-        pushedEl.style.removeProperty("transition-property");
-        pushedEl.style.removeProperty("--popup-animation-duration");
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {

@@ -1093,7 +1093,7 @@
       // Two dialogs, not one: each keeps its own state and its own way out.
       // Only the movement is shared — the second arrives from the bottom and
       // pushes the first up, and on the way back only the second moves.
-      const NestedDialogs = ({ idPrefix, layer }) => (
+      const NestedDialogs = ({ idPrefix, layer, marginWithContainer }) => (
         <div class="demo-row">
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
             Open
@@ -1132,6 +1132,7 @@
             id={`${idPrefix}_second`}
             layer={layer}
             pushes={`${idPrefix}_first`}
+            marginWithContainer={marginWithContainer}
             positionArea="top"
             animation="slide-from-bottom"
             animationDuration="700ms"
@@ -1151,9 +1152,10 @@
                 command="--navi-cancel"
                 icon
                 variant="discrete"
+                padding="xs"
                 aria-label="Close"
               >
-                <Icon>
+                <Icon size="xl">
                   <ChevronUpSvg />
                 </Icon>
               </Button>
@@ -1170,21 +1172,42 @@
         </div>
       );
 
-      const NestedSection = () => (
-        <section class="demo-section">
-          <Heading id="nested">Nested</Heading>
-          <Heading level={3} id="nested-top-layer">
-            top layer
-          </Heading>
-          <NestedDialogs idPrefix="nested_top" />
-          <Heading level={3} id="nested-local-layer">
-            local layer
-          </Heading>
-          <div class="demo-container demo-overflow-container">
-            <NestedDialogs idPrefix="nested_local" layer="local" />
-          </div>
-        </section>
-      );
+      const NestedSection = () => {
+        const [flush, setFlush] = useState(false);
+        // Flush against the container: the two dialogs then fill it edge to
+        // edge, which is what the movement looks like on a phone.
+        const marginWithContainer = flush ? 0 : undefined;
+        return (
+          <section class="demo-section">
+            <Heading id="nested">Nested</Heading>
+            <label style={{ fontSize: "13px" }}>
+              <input
+                type="checkbox"
+                checked={flush}
+                onChange={(e) => setFlush(e.target.checked)}
+              />{" "}
+              marginWithContainer=0
+            </label>
+            <Heading level={3} id="nested-top-layer">
+              top layer
+            </Heading>
+            <NestedDialogs
+              idPrefix="nested_top"
+              marginWithContainer={marginWithContainer}
+            />
+            <Heading level={3} id="nested-local-layer">
+              local layer
+            </Heading>
+            <div class="demo-container demo-overflow-container">
+              <NestedDialogs
+                idPrefix="nested_local"
+                layer="local"
+                marginWithContainer={marginWithContainer}
+              />
+            </div>
+          </section>
+        );
+      };
 
       // ── Required ──────────────────────────────────────────────────────────
 
