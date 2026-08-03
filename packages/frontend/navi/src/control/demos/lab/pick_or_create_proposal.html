@@ -170,8 +170,8 @@
         Box,
         Button,
         createSearch,
-        Dialog,
         Field,
+        Form,
         Icon,
         Input,
         Label,
@@ -179,11 +179,12 @@
         NaviDebug,
         Picker,
         RadioGroup,
+        Slide,
+        SlideList,
         Text,
         useSearchText,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
-      import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
@@ -197,27 +198,6 @@
 
       let idCounter = 0;
       const nextId = () => `e${++idCounter}`;
-
-      // An up arrow at the top RIGHT, not a back arrow at the left: this dialog
-      // is meant to arrive from the bottom and leave by going back up, so the
-      // gesture the icon names is the one that dismisses it. It also leaves the
-      // top left to the title, and leaves the left-pointing arrow to mean what
-      // it means everywhere else on the page — going back in the navigation.
-      const DismissButton = (props) => (
-        <Button
-          command="--navi-cancel"
-          icon
-          variant="discrete"
-          padding="s"
-          aria-label="Fermer"
-          marginRight="-s"
-          {...props}
-        >
-          <Icon color="#4b5563">
-            <ChevronUpSvg />
-          </Icon>
-        </Button>
-      );
 
       /*
        * The field is a real search input, readOnly: it looks and reads exactly
@@ -260,7 +240,6 @@
         const CreateForm = createForm;
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
-        const formId = `${id}_form`;
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -323,122 +302,200 @@
                   searchSignal.value = "";
                 }}
               >
-                <Box flex="y" spacing="m" padding="m" expand>
-                  {/* Header, search, then list — the surface says what it is
-                    before saying what can be done in it. The keyboard owns the
-                    bottom of the screen, so nothing goes down there. */}
-                  {/* No way back in it on purpose: this surface is closed by
-                      clicking outside. A back arrow is for a surface opened ON
-                      TOP of another one — the create form below — where leaving
-                      means returning somewhere. */}
-                  <Box header flex="x" spacing="xs" alignY="center">
-                    {/* 1rem, not the inherited size: this content lives inside
-                        the picker, so it would otherwise be sized for a control
-                        (13px) while the create form next to it — a plain dialog
-                        — sits at the page's own size. Two screens of the same
-                        flow, one size. */}
-                    <Text expandX fontSize="1rem">
-                      <strong>{surfaceTitle}</strong>
-                    </Text>
-                    {/* Always available, and never disabled: creating does not
-                      require having searched first, so the entry point must not
-                      depend on the search box holding something */}
-                    <Button
-                      command="--navi-open"
-                      commandFor={formId}
-                      icon
-                      variant="discrete"
-                      padding="xs"
-                      // same as the back button on the other side, so the two
-                      // ends of the header balance
-                      onClick={() => {
-                        prefillSignal.value = "";
-                      }}
-                      size="xl"
+                {/* One surface, two slides: choosing and creating are two
+                    moments of the same decision, so they share a box and the
+                    second arrives from the side rather than opening on top —
+                    see slide_list.jsx */}
+                <SlideList expandY>
+                  <Slide id={`${id}_pick`} overflow="auto">
+                    {/* No way back in it on purpose: this slide is the first
+                        one, and the surface is closed by clicking outside. */}
+                    <Box
+                      header
+                      flex="x"
+                      spacing="xs"
+                      alignY="center"
+                      padding="m"
                     >
-                      <Icon color="#6b7280">
-                        <PlusSvg />
-                      </Icon>
-                    </Button>
-                  </Box>
-                  <Input
-                    navi-list={`${id}_list`}
-                    type="search"
-                    placeholder={searchPlaceholder}
-                    value={searchSignal.value}
-                    uiAction={(next) => {
-                      searchSignal.value = next;
-                    }}
-                    autoComplete="off"
-                    // grey at rest, white once focused
-                    discrete
-                    slotSpacing="s"
-                    borderRadius="m"
-                    paddingX="m"
-                    paddingY="m"
-                    expandX
-                  />
-
-                  <List
-                    selectable
-                    id={`${id}_list`}
-                    command="--navi-send"
-                    searchText={searchSignal.value}
-                    separator
-                    searchFallback={null}
-                    expandY
-                  >
-                    {matchingEntries.map((entry, i) => (
-                      <List.Item
-                        selectable
-                        key={entry.id}
-                        id={`${id}_${entry.id}`}
-                        index={i}
-                        value={entry.id}
-                        selected={value ? value.id === entry.id : false}
-                        matchInfo={getMatchInfo(entry)}
-                        padding="s"
+                      {/* 1rem, not the inherited size: this content lives
+                          inside the picker, so it would otherwise be sized for
+                          a control (13px) while reading as a screen of its
+                          own. */}
+                      <Text expandX fontSize="1rem">
+                        <strong>{surfaceTitle}</strong>
+                      </Text>
+                      {/* Always available, and never disabled: creating does
+                          not require having searched first, so the entry point
+                          must not depend on the search box holding something */}
+                      <Button
+                        command="--navi-next"
+                        icon
+                        variant="discrete"
+                        padding="xs"
+                        size="xl"
+                        aria-label={createTitle}
+                        onClick={() => {
+                          prefillSignal.value = "";
+                        }}
                       >
-                        <Box flex="y">
-                          <Text>
-                            <PlayerName entry={entry} />
-                          </Text>
-                          {entry.detail && (
-                            <Text className="detail">{entry.detail}</Text>
-                          )}
-                        </Box>
-                      </List.Item>
-                    ))}
-                    {/* At the bottom of the list rather than below it: it reads
-                      as "and if none of these is the one", right where the eye
-                      already is. Same form as the +, name prefilled.
-                      A footer, not a regular row: it is not one of the
-                      candidates — it never takes the selection, never answers
-                      to the arrow keys, and stays visible while the matches
-                      scroll behind it. */}
-                    {typed !== "" && (
-                      <List.Item footer key="__create__" id={`${id}_create`}>
-                        {/* A Button, not a command on the row itself: the list
-                          carries --navi-send, and a row of a sending list is
-                          claimed by it — the create row wants a different
-                          command, so it needs its own control to carry it. */}
-                        <Button
-                          command="--navi-open"
-                          commandFor={formId}
-                          variant="discrete"
-                          padding="s"
-                          expandX
-                          alignX="start"
-                          onClick={() => {
-                            prefillSignal.value = typed;
-                          }}
-                        >
-                          « {typed} » : {createLabel}
+                        <Icon color="#6b7280">
+                          <PlusSvg />
+                        </Icon>
+                      </Button>
+                    </Box>
+                    <Box body flex="y" spacing="m" padding="m" paddingTop="0">
+                      <Input
+                        navi-list={`${id}_list`}
+                        type="search"
+                        placeholder={searchPlaceholder}
+                        value={searchSignal.value}
+                        uiAction={(next) => {
+                          searchSignal.value = next;
+                        }}
+                        autoComplete="off"
+                        // grey at rest, white once focused
+                        discrete
+                        slotSpacing="s"
+                        borderRadius="m"
+                        paddingX="m"
+                        paddingY="m"
+                        expandX
+                      />
+
+                      <List
+                        selectable
+                        id={`${id}_list`}
+                        command="--navi-send"
+                        searchText={searchSignal.value}
+                        separator
+                        searchFallback={null}
+                        expandY
+                      >
+                        {matchingEntries.map((entry, i) => (
+                          <List.Item
+                            selectable
+                            key={entry.id}
+                            id={`${id}_${entry.id}`}
+                            index={i}
+                            value={entry.id}
+                            selected={value ? value.id === entry.id : false}
+                            matchInfo={getMatchInfo(entry)}
+                            padding="s"
+                          >
+                            <Box flex="y">
+                              <Text>
+                                <PlayerName entry={entry} />
+                              </Text>
+                              {entry.detail && (
+                                <Text className="detail">{entry.detail}</Text>
+                              )}
+                            </Box>
+                          </List.Item>
+                        ))}
+                        {/* At the bottom of the list rather than below it: it
+                            reads as "and if none of these is the one", right
+                            where the eye already is. Same slide as the +, name
+                            prefilled.
+                            A footer, not a regular row: it is not one of the
+                            candidates — it never takes the selection, never
+                            answers to the arrow keys, and stays visible while
+                            the matches scroll behind it. */}
+                        {typed !== "" && (
+                          <List.Item
+                            footer
+                            key="__create__"
+                            id={`${id}_create_row`}
+                          >
+                            {/* A Button, not a command on the row itself: the
+                                list carries --navi-send, and a row of a sending
+                                list is claimed by it — this row wants a
+                                different command, so it needs its own control
+                                to carry it. */}
+                            <Button
+                              command="--navi-next"
+                              variant="discrete"
+                              padding="s"
+                              expandX
+                              alignX="start"
+                              onClick={() => {
+                                prefillSignal.value = typed;
+                              }}
+                            >
+                              « {typed} » : {createLabel}
+                            </Button>
+                          </List.Item>
+                        )}
+                      </List>
+                    </Box>
+                  </Slide>
+
+                  {/* Asked once, at creation: an entry is entered a single time
+                      in its life, and the second field is what will tell
+                      homonyms apart afterwards. Cheaper here than as an
+                      after-the-fact chore nobody comes back to do. */}
+                  <Slide id={`${id}_create`} flex="y">
+                    {/* The form IS the group: it aggregates the named fields it
+                        contains and hands them to action when it is sent — no
+                        per-field signal to wire, and nothing committed if one
+                        goes back to the list instead. */}
+                    <Form action={submitForm} flex="y" overflow="auto" expandY>
+                      <Box
+                        header
+                        flex="x"
+                        spacing="xs"
+                        alignY="center"
+                        padding="m"
+                      >
+                        <Text expandX fontSize="1rem">
+                          <strong>{createTitle}</strong>
+                        </Text>
+                        {/* Back to the list, not out of the surface: this slide
+                            was reached from the one behind it, so leaving it
+                            means returning there */}
+                        <SlideList.Previous padding="s" marginRight="-s" />
+                      </Box>
+                      {/* body: the fields are what scrolls, so the header above
+                          and the footer below stay put */}
+                      <Box body padding="m">
+                        {/* keyed by the prefill: the fields are uncontrolled,
+                            so a new name typed in the search must give them a
+                            fresh defaultValue rather than keep the previous
+                            one */}
+                        <CreateForm
+                          key={prefillSignal.value}
+                          prefill={prefillSignal.value}
+                        />
+                      </Box>
+                      {/* row-reverse + wrap: with enough width the two sit side
+                          by side, cancel on the left and confirm on the right
+                          where the thumb ends up; too narrow, they wrap — and
+                          because the row is reversed, confirm takes the first
+                          line, on top */}
+                      <Box
+                        footer
+                        padding="m"
+                        paddingY="s"
+                        className="form-actions"
+                      >
+                        {/* --navi-send: it submits the form and, once that is
+                            valid, closes the surface it is in — the entry is
+                            created and chosen in one move */}
+                        <Button command="--navi-send" paddingY="s">
+                          Confirmer
                         </Button>
-                      </List.Item>
-                    )}
-                  </List>
-                </Box>
+                        {/* the same way back as the arrow above, where the
+                            thumb already is once the form is filled */}
+                        <Button
+                          command="--navi-previous"
+                          variant="discrete"
+                          paddingY="s"
+                        >
+                          Annuler
+                        </Button>
+                      </Box>
+                    </Form>
+                  </Slide>
+                </SlideList>
               </Picker>
               {/* Always on the row, not conditional on a selection: it is part of
                 what the field is, and appearing later would shift the layout.
@@ -491,84 +548,6 @@
                 </Picker>
               )}
             </Box>
-
-            {/* Asked once, at creation: an entry is entered a single time in
-                its life, and the second field is what will tell homonyms apart
-                afterwards. Cheaper here than as an after-the-fact chore nobody
-                comes back to do. */}
-            {/* The dialog IS the group: it aggregates the named fields it
-                contains and hands them to action when it closes — no
-                ControlGroup in between, and no per-field signal to wire.
-                Cancelling (the arrow, Annuler, Escape) commits nothing. */}
-            <Dialog
-              id={formId}
-              action={submitForm}
-              layer={popupLayer}
-              // one movement, not a stack: the surface this form opened from
-              // leaves upward while the form arrives from the bottom
-              pushes={`${id}_picker_popup`}
-              // docked at the top like the surface it replaces — a short form
-              // must line up with it, not hang from the bottom of the screen.
-              // The slide direction is said separately: it comes FROM the
-              // bottom, it does not live there.
-              positionArea="top"
-              // expandX only: the form takes the width of the surface it comes
-              // from, but its own height — a short form has no reason to fill
-              // the screen
-              expandX
-              flex="y"
-              pointerInteractionOutsideEffect="cancel"
-              minHeight={0}
-            >
-              <Box
-                header
-                flex="x"
-                spacing="xs"
-                alignY="center"
-                padding="m"
-                paddingY="s"
-              >
-                <Text expandX>
-                  <strong>{createTitle}</strong>
-                </Text>
-                {/* cancels rather than closes: giving up on a form is not
-                    answering it */}
-                <DismissButton />
-              </Box>
-              {/* body: the fields are what scrolls, so the header above and
-                  the footer below stay put — no sizing to arrange by hand, the
-                  dialog knows what these three roles mean */}
-              <Box body padding="m" paddingY="m">
-                {/* keyed by the prefill: the fields are uncontrolled, so a
-                        new name typed in the search must give them a fresh
-                        defaultValue rather than keep the previous one */}
-                <CreateForm
-                  key={prefillSignal.value}
-                  prefill={prefillSignal.value}
-                />
-              </Box>
-              {/* row-reverse + wrap: with enough width the two sit side by
-                  side, cancel on the left and confirm on the right where the
-                  thumb ends up; too narrow, they wrap — and because the row is
-                  reversed, confirm takes the first line, on top */}
-              <Box footer padding="m" paddingY="s" className="form-actions">
-                {/* --navi-close, not --navi-send: closing IS the commit now,
-                    and the dialog only runs its action if something was
-                    actually filled in. "Confirmer" rather than the title again:
-                    the header already says what is being added, and the same
-                    act deserves the same word wherever it appears */}
-                <Button command="--navi-close" paddingY="s">
-                  Confirmer
-                </Button>
-                {/* --navi-cancel, the same way out as the arrow above, where
-                      the thumb already is once the form is filled: giving up on
-                      a form should not mean reaching back to the top of the
-                      screen — and it must not commit what was typed */}
-                <Button command="--navi-cancel" variant="discrete" paddingY="s">
-                  Annuler
-                </Button>
-              </Box>
-            </Dialog>
           </div>
         );
       };
