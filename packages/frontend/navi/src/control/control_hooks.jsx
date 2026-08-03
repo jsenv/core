@@ -311,10 +311,23 @@ export const useControlProps = (
         return null;
       };
 
+      // Space activates a control — unless the key already means something
+      // where it was pressed. Typing a space into a text field is not an
+      // interaction anything else may claim: the field is what the user is
+      // aiming at, and a control ABOVE it (a picker holding a search box, a
+      // link wrapping one) stealing that key would swallow the character.
+      const isSpaceToActivate = (e) => {
+        if (e.key !== " ") {
+          return false;
+        }
+        const defaultAction = getKeyboardEventDefaultAction(e);
+        return defaultAction !== "type" && defaultAction !== "value_change";
+      };
+
       if (controlType === "link") {
         return {
           keyDown: (e) => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
@@ -375,7 +388,7 @@ export const useControlProps = (
       if (controlType === "picker") {
         return {
           keyDown: (e) => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
