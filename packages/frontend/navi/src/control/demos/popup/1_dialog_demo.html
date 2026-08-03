@@ -227,6 +227,7 @@
         Label,
         Link,
         NaviDebug,
+        SlideShow,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -1111,89 +1112,89 @@
           <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
             Open
           </Button>
-          {/* Both take part in the same slideshow: when the second opens, the
-              first steps back by one slot — see slideshow.js */}
-          <Dialog
-            id={`${idPrefix}_first`}
-            minWidth="200"
-            layer={layer}
-            slideshow={layer === "local" ? undefined : idPrefix}
-            slideshowGap={16}
-            expand
-          >
-            <Box
-              header
-              padding="m"
-              flex="x"
-              alignY="center"
-              className="demo-overflow-part"
+          {/* Taking part is declared by being in here — nothing to name, and a
+              dialog outside is simply not part of the movement */}
+          <SlideShow layer={layer === "local" ? "local" : "top"} gap={16}>
+            {/* Both take part in the same slideshow: when the second opens, the
+                first steps back by one slot — see slideshow.js */}
+            <Dialog
+              id={`${idPrefix}_first`}
+              minWidth="200"
+              layer={layer}
+              expand
             >
-              <Text expandX>first</Text>
-              {/* top right, like the chevron of the second one: what opens the
-                  next surface and what leaves it live in the same corner */}
-              <Button
-                command="--navi-open"
-                commandFor={`${idPrefix}_second`}
-                icon
-                variant="discrete"
-                size="xl"
-                padding="xs"
-                aria-label="Open the second"
-                selfAlignX="end"
+              <Box
+                header
+                padding="m"
+                flex="x"
+                alignY="center"
+                className="demo-overflow-part"
               >
-                <Icon>
-                  <PlusSvg />
-                </Icon>
-              </Button>
-            </Box>
-            <Box body padding="m">
-              <OverflowFiller count={4} />
-            </Box>
-          </Dialog>
-          <Dialog
-            id={`${idPrefix}_second`}
-            layer={layer}
-            slideshow={layer === "local" ? undefined : idPrefix}
-            slideshowGap={16}
-            marginWithContainer={marginWithContainer}
-            positionArea="top"
-            animation="slide-from-bottom"
-            animationDuration={animationDuration}
-            expandX
-          >
-            <Box
-              header
-              padding="m"
-              flex="x"
-              alignY="center"
-              className="demo-overflow-part"
+                <Text expandX>first</Text>
+                {/* top right, like the chevron of the second one: what opens the
+                    next surface and what leaves it live in the same corner */}
+                <Button
+                  command="--navi-open"
+                  commandFor={`${idPrefix}_second`}
+                  icon
+                  variant="discrete"
+                  size="xl"
+                  padding="xs"
+                  aria-label="Open the second"
+                  selfAlignX="end"
+                >
+                  <Icon>
+                    <PlusSvg />
+                  </Icon>
+                </Button>
+              </Box>
+              <Box body padding="m">
+                <OverflowFiller count={4} />
+              </Box>
+            </Dialog>
+            <Dialog
+              id={`${idPrefix}_second`}
+              layer={layer}
+              marginWithContainer={marginWithContainer}
+              positionArea="top"
+              animation="slide-from-bottom"
+              animationDuration={animationDuration}
+              expandX
             >
-              <Text expandX>second</Text>
-              {/* an up arrow, not a back arrow: this dialog came from the
-                  bottom and leaves the same way */}
-              <Button
-                command="--navi-cancel"
-                icon
-                variant="discrete"
-                size="xl"
-                padding="xs"
-                padding="xs"
-                aria-label="Close"
+              <Box
+                header
+                padding="m"
+                flex="x"
+                alignY="center"
+                className="demo-overflow-part"
               >
-                <Icon size="1.4rem">
-                  <ChevronUpSvg />
-                </Icon>
-              </Button>
-            </Box>
-            <Box body padding="m">
-              <OverflowFiller count={3} />
-            </Box>
-            <Box footer padding="m">
-              <Button command="--navi-close" expandX>
-                Close
-              </Button>
-            </Box>
-          </Dialog>
+                <Text expandX>second</Text>
+                {/* an up arrow, not a back arrow: this dialog came from the
+                    bottom and leaves the same way */}
+                <Button
+                  command="--navi-cancel"
+                  icon
+                  variant="discrete"
+                  size="xl"
+                  padding="xs"
+                  padding="xs"
+                  aria-label="Close"
+                >
+                  <Icon size="1.4rem">
+                    <ChevronUpSvg />
+                  </Icon>
+                </Button>
+              </Box>
+              <Box body padding="m">
+                <OverflowFiller count={3} />
+              </Box>
+              <Box footer padding="m">
+                <Button command="--navi-close" expandX>
+                  Close
+                </Button>
+              </Box>
+            </Dialog>
+          </SlideShow>
         </div>
       );
 

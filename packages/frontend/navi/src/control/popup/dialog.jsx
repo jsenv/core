@@ -56,7 +56,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useRef } from "preact/hooks";
+import { useContext, useEffect, useRef } from "preact/hooks";
 
 import {
   ControlgroupChildrenWrapper,
@@ -79,7 +79,7 @@ import {
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
-import { getSlideshow } from "./slideshow.js";
+import { SlideShowContext } from "./slideshow.jsx";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -202,7 +202,7 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Its place in the slideshow it takes part in (see slideshow.js): every
+    /* Its place in the slideshow it takes part in (see slideshow.jsx): every
        member steps back by the same amount when a new one arrives, which is
        what keeps the gap between two of them from drifting. The transition is
        declared here rather than under an attribute, so a member that is not
@@ -685,13 +685,7 @@ const useDialogProps = (props) => {
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
     dockedOnTouch,
-    // Name of the slideshow this dialog takes part in (see slideshow.js): the
-    // dialogs of one slideshow move as one, each stepping back a slot when the
-    // next one arrives. They stay separate dialogs — each keeps its own state,
-    // its own validation and its own way out; only the arithmetic is shared,
-    // and none of them knows about the others.
-    slideshow: slideshowName,
-    slideshowGap = 0,
+
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
     positionArea: positionAreaProp,
@@ -728,9 +722,12 @@ const useDialogProps = (props) => {
     ...rest
   } = props;
   const isModal = layer === "top";
-  // Only meaningful for a top-layer dialog: a local one lives in the flow and
-  // could be moved by a real container instead (see slideshow.js).
-  const slideshow = slideshowName ? getSlideshow(slideshowName) : null;
+  // Taking part in a slideshow is declared by being inside one (see
+  // slideshow.jsx): the dialogs of one slideshow move as one, each stepping
+  // back a slot when the next arrives. They stay separate dialogs — each keeps
+  // its own state, its own validation and its own way out; only the arithmetic
+  // is shared, and none of them knows about the others.
+  const slideshow = useContext(SlideShowContext);
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
@@ -815,7 +812,7 @@ const useDialogProps = (props) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
     if (slideshow) {
-      slideshow.add(dialogEl, { gap: slideshowGap });
+      slideshow.add(dialogEl);
     }
     // What the dialog held when it opened: the answer to compare against when
     // it closes (nothing changed → nothing to commit) and the state to put
@@ -1145,7 +1142,7 @@ const useDialogProps = (props) => {
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
       if (slideshow) {
-        slideshow.remove(dialogEl, { gap: slideshowGap });
+        slideshow.remove(dialogEl);
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
@@ -1280,7 +1277,7 @@ const useDialogProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
-    "data-slideshow": slideshowName,
+    "data-slideshow": slideshow ? "" : undefined,
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,
