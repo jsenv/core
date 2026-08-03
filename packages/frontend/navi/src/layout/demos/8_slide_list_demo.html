@@ -250,10 +250,10 @@
                 in the middle — each says one word */}
             <Text expandX>{title}</Text>
             {direction !== "next" && (
-              <SlideList.Previous size="xl" padding="xs" />
+              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
             )}
             {direction !== "previous" && (
-              <SlideList.Next size="xl" padding="xs" />
+              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
             )}
           </Box>
           <Box body padding="m">
@@ -353,7 +353,7 @@
           <Slide id="who" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>who</Text>
-              <SlideList.Next size="xl" padding="xs" />
+              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               <Field vertical>
@@ -374,8 +374,8 @@
           <Slide id="where" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>where</Text>
-              <SlideList.Previous size="xl" padding="xs" />
-              <SlideList.Next size="xl" padding="xs" />
+              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
+              <SlideList.Next size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               {/* Asked for by name: navi-autofocus wins over "the first
@@ -394,7 +394,7 @@
           <Slide id="done" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>done</Text>
-              <SlideList.Previous size="xl" padding="xs" />
+              <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
             </Box>
             {/* Nothing to do here but leave: the keyboard then goes to the way
                 out, because there is nothing else to offer */}
@@ -428,7 +428,7 @@
             <Slide id="terms" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideList.Next size="xl" padding="xs" />
+                <SlideList.Next size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -444,7 +444,7 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideList.Previous size="xl" padding="xs" />
+                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>
@@ -466,7 +466,7 @@
             <Slide id="terms" preventNavNext={!agreed} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideList.Next size="xl" padding="xs" />
+                <SlideList.Next size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -482,7 +482,7 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideList.Previous size="xl" padding="xs" />
+                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>…and you agreed.</Text>
@@ -520,7 +520,7 @@
             <Slide id="done" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>done</Text>
-                <SlideList.Previous size="xl" padding="xs" />
+                <SlideList.Previous size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>Signed — and the list moved on by itself.</Text>

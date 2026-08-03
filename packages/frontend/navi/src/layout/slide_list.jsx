@@ -450,7 +450,11 @@ const SlideListStep = ({ step, ...rest }) => {
       aria-label={isNext ? "Next slide" : "Previous slide"}
       {...rest}
     >
-      <Icon>
+      {/* lineOverflow: the chevron may be drawn bigger than the text it sits
+          next to, but it must not make the line taller — a header with a way
+          out and one without have to be the same height, or a slide travelling
+          would visibly change the top of the box. */}
+      <Icon lineOverflow="allow">
         <ChevronSvg />
       </Icon>
     </Button>

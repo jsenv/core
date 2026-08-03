@@ -281,16 +281,7 @@ const css = /* css */ `
       }
     }
 
-    .navi_icon > svg {
-      /* icon.jsx forces backface-visibility: hidden, which composites the
-           SVG onto its own GPU layer. On focus the generic z-index:1 rule adds
-           a stacking context that lands that layer on a sub-pixel origin, so it
-           rasterizes blurry. Not compositing lets it paint with its parent,
-           pixel-snapped and crisp — and it can still sit above via z-index. */
-      backface-visibility: visible;
-    }
-
-    .anchor_icon {å
+    .anchor_icon {
       margin-left: -0.1em;
     }
 
