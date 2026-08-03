@@ -1038,6 +1038,13 @@ const useDialogProps = (props) => {
         if (mouseDownEvent.button !== 0) {
           return;
         }
+        // Another dialog stands on top of this one (see the "pushes" prop):
+        // a click over there is not an outside click, it is a click on what is
+        // in front. Without this, dismissing the second dialog also dismisses
+        // the one it came from, and the user is left with nothing.
+        if (dialogEl.hasAttribute("data-pushed")) {
+          return;
+        }
         // Real DOM containment wins over the coordinate check below — an
         // element genuinely inside the dialog (e.g. one with `overflow:
         // visible`, a negative margin, or an absolutely-positioned child)
@@ -1279,6 +1286,11 @@ const useDialogProps = (props) => {
   if (!isModal) {
     backdropProps.onMouseDown = (mouseDownEvent) => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // See the custom renderer's own onDocumentMouseDown: while another
+      // dialog stands on top of this one, nothing out there is "outside".
+      if (ref.current?.hasAttribute("data-pushed")) {
         return;
       }
       if (

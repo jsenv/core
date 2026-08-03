@@ -1083,6 +1083,106 @@
         </section>
       );
 
+      // ── Nested dialogs ────────────────────────────────────────────────────
+
+      // Two dialogs, not one: each keeps its own state and its own way out.
+      // Only the movement is shared — the second arrives from the bottom and
+      // pushes the first up, and on the way back only the second moves.
+      const NestedDialogs = ({ idPrefix, layer }) => (
+        <div class="demo-row">
+          <Button command="--navi-open" commandFor={`${idPrefix}_first`}>
+            Open
+          </Button>
+          <Dialog id={`${idPrefix}_first`} layer={layer}>
+            <Box header padding="m" className="demo-overflow-part">
+              first
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              <OverflowFiller count={4} />
+              <Button command="--navi-open" commandFor={`${idPrefix}_second`}>
+                Open the second
+              </Button>
+            </Box>
+          </Dialog>
+          <Dialog
+            id={`${idPrefix}_second`}
+            layer={layer}
+            pushes={`${idPrefix}_first`}
+            positionArea="top"
+            animation="slide-from-bottom"
+            animationDuration="700ms"
+            expandX
+          >
+            <Box header padding="m" className="demo-overflow-part">
+              second
+            </Box>
+            <Box body padding="m">
+              <OverflowFiller count={3} />
+            </Box>
+            <Box footer padding="m">
+              <Button command="--navi-close" expandX>
+                Close
+              </Button>
+            </Box>
+          </Dialog>
+        </div>
+      );
+
+      const NestedSection = () => (
+        <section class="demo-section">
+          <Heading id="nested">Nested</Heading>
+          <Heading level={3} id="nested-top-layer">
+            top layer
+          </Heading>
+          <NestedDialogs idPrefix="nested_top" />
+          <Heading level={3} id="nested-local-layer">
+            local layer
+          </Heading>
+          <div class="demo-container demo-overflow-container">
+            <NestedDialogs idPrefix="nested_local" layer="local" />
+          </div>
+        </section>
+      );
+
+      // ── Required ──────────────────────────────────────────────────────────
+
+      // What a dialog does when it is asked to commit while a constraint fails:
+      // the field reports, and nothing is committed.
+      const RequiredSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [committed, setCommitted] = useState({ name: "" });
+        return (
+          <section class="demo-section">
+            <Heading id="required">Required field</Heading>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="required_dialog">
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(committed)}</code>
+              </span>
+            </div>
+            <Dialog
+              id="required_dialog"
+              value={committed}
+              action={(value) => {
+                push("action", value);
+                setCommitted(value);
+              }}
+            >
+              <Box body padding="m" flex="y" spacing="m">
+                <Field vertical>
+                  <Label requiredIndicator>Name</Label>
+                  <Input name="name" required />
+                </Field>
+                <Button command="--navi-close">Close (commits)</Button>
+              </Box>
+            </Dialog>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
       // ── uiAction / action ─────────────────────────────────────────────────
 
       const ActionsSection = () => {
@@ -1247,6 +1347,20 @@
               </ul>
             </li>
             <li>
+              <Link href="#required">Required field</Link>
+            </li>
+            <li>
+              <Link href="#nested">Nested</Link>
+              <ul>
+                <li>
+                  <Link href="#nested-top-layer">top layer</Link>
+                </li>
+                <li>
+                  <Link href="#nested-local-layer">local layer</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
               <Link href="#actions">uiAction / action</Link>
               <ul>
                 <li>
@@ -1276,6 +1390,8 @@
           <OpenFromStartSection />
           <AdaptiveSection />
           <OverflowSection />
+          <RequiredSection />
+          <NestedSection />
           <ActionsSection />
         </div>
       );
