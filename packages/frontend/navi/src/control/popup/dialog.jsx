@@ -207,17 +207,21 @@ const css = /* css */ `
        from the bottom, so the two read as one movement rather than as a stack.
        Its own transition list is declared here because a dialog with no
        animation of its own must still travel. */
+    /* The attribute stays for the whole round trip — set to "up" while pushed,
+       emptied on the way back — because it is what carries the transition:
+       removing it outright would drop the rule mid-movement and the dialog
+       would snap into place instead of sliding back. */
     &[data-pushed] {
       transition-property: translate;
       transition-duration: var(--popup-animation-duration);
       transition-timing-function: ease;
-      pointer-events: none;
     }
     &[data-pushed="up"] {
       /* No fade, same reason as the sliding animation it travels with: the
          movement is the whole effect, and fading on top of it would read as
          two things happening rather than one. */
       translate: 0 -100%;
+      pointer-events: none;
     }
 
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
@@ -1158,8 +1162,17 @@ const useDialogProps = (props) => {
         // It travels back the way it came: the two dialogs are one drawer, so
         // the one underneath slides down into place while the one on top
         // leaves. Its duration is the one it borrowed when it was pushed, so
-        // both halves of the movement stay in step.
-        pushedEl.removeAttribute("data-pushed");
+        // both halves of the movement stay in step. Emptied rather than
+        // removed (see the CSS above), and cleaned up once it has arrived.
+        pushedEl.setAttribute("data-pushed", "");
+        pushedEl.addEventListener(
+          "transitionend",
+          () => {
+            pushedEl.removeAttribute("data-pushed");
+            pushedEl.style.removeProperty("--popup-animation-duration");
+          },
+          { once: true },
+        );
       }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
