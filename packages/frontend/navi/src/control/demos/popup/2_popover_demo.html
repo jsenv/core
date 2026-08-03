@@ -55,21 +55,33 @@
       /* Where this demo sits among the others — same bar as the dialog demo's
          own, so the row of them can be walked through without going back to a
          file listing. */
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
       .demo-nav {
         display: flex;
-        margin-bottom: 24px;
-        padding: 10px 14px;
-        align-items: baseline;
-        gap: 16px;
-        font-size: 0.9rem;
-        background: #eaf2fd;
-        border-radius: 8px;
+        align-items: center;
+        gap: 4px;
       }
-      .demo-nav a {
+      .demo-nav > a {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
         color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
       }
-      .demo-nav-next {
-        margin-left: auto;
+      .demo-nav > a:hover {
+        background: #d3e5fb;
       }
       .demo-section {
         margin-bottom: 32px;
@@ -484,14 +496,17 @@
 
       const App = () => (
         <div>
-          <h1>Popover demo</h1>
-
-          <nav class="demo-nav">
-            <a href="./1_dialog_demo.html">← Previous: dialog demo</a>
-            <a class="demo-nav-next" href="./3_interop_demo.html">
-              Next: interop demo →
-            </a>
-          </nav>
+          <div class="demo-header">
+            <h1>Popover demo</h1>
+            <nav class="demo-nav">
+              <a href="./1_dialog_demo.html" title="Previous: dialog demo">
+                ←
+              </a>
+              <a href="./3_interop_demo.html" title="Next: interop demo">
+                →
+              </a>
+            </nav>
+          </div>
 
           <p>
             Most sections below have an "Animate" checkbox — the same buttons,

@@ -124,6 +124,27 @@ const css = /* css */ `
       --dialog-outline-color: var(--navi-focus-outline-color);
       --dialog-box-shadow: var(--navi-popup-box-shadow);
       --dialog-background-color: var(--navi-popup-background-color);
+
+      /* A local dialog is not confined by the viewport but by the box it was
+         declared in — its own containing block, since it is positioned inside
+         it. So the ceiling is written in percentages of THAT box and the
+         browser resolves it, rather than in viewport units that would mean
+         something else entirely inside a small container. The gap follows the
+         same reading: 3% of what holds it, not 3% of the screen.
+
+         This is the pre-JS reading; the placement then writes the same gap
+         back in pixels (see positionDialog), so the caps and the placement
+         cannot say two different things. */
+      &[data-layer="local"] {
+        --x-dialog-viewport-spacing: 3%;
+
+        --dialog-maxmax-width: calc(
+          100% - 2 * var(--x-dialog-viewport-spacing)
+        );
+        --dialog-maxmax-height: calc(
+          100% - 2 * var(--x-dialog-viewport-spacing)
+        );
+      }
     }
   }
 

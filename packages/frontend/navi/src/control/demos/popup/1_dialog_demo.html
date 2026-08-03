@@ -32,24 +32,39 @@
       /* Where this demo sits among the others: a demo is rarely read alone,
          and the next one is usually the answer to "and if it were a popover
          instead?" */
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
       .demo-nav {
         display: flex;
-        margin-bottom: 24px;
-        padding: 10px 14px;
-        align-items: baseline;
-        gap: 16px;
-        font-size: 0.9rem;
-        background: #eaf2fd;
-        border-radius: 8px;
+        align-items: center;
+        gap: 4px;
       }
-      .demo-nav a {
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
         color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
       }
-      .demo-nav-none {
-        color: #8a94a6;
+      .demo-nav > a:hover {
+        background: #d3e5fb;
       }
-      .demo-nav-next {
-        margin-left: auto;
+      /* Kept in place rather than dropped: the pair reads as a position in a
+         row of demos, and a missing arrow says "this is the first one". */
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
       }
       .demo-section {
         margin-bottom: 40px;
@@ -822,7 +837,10 @@
       // which reads as a feature at viewport scale and as too much inside a
       // small container.
       const MARGIN_WITH_CONTAINER_VALUES = [
-        { label: 'default ("3vvw")', value: undefined },
+        // The default is not one value: a share of the VIEWPORT for a
+        // top-layer dialog, a share of the CONTAINER for a local one — the
+        // same 3%, read against whatever actually holds the dialog.
+        { label: 'default ("3vvw" top layer, "3cqw" local)', value: undefined },
         { label: "0", value: 0 },
         { label: "10 (px)", value: 10 },
         { label: "40 (px)", value: 40 },
@@ -1438,14 +1456,19 @@
       // see which one answered.
       const App = () => (
         <NaviDebug debugAll>
-          <h1>Dialog demo</h1>
-
-          <nav class="demo-nav">
-            <span class="demo-nav-none">← nothing before this one</span>
-            <a class="demo-nav-next" href="./2_popover_demo.html">
-              Next: popover demo →
-            </a>
-          </nav>
+          <div class="demo-header">
+            <h1>Dialog demo</h1>
+            {/* Where this demo sits in the row of them: the previous arrow is
+                dead here, which is itself the information */}
+            <nav class="demo-nav">
+              <span class="demo-nav-none" aria-hidden="true">
+                ←
+              </span>
+              <a href="./2_popover_demo.html" title="Next: popover demo">
+                →
+              </a>
+            </nav>
+          </div>
 
           <TableOfContents />
 
