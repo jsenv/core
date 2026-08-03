@@ -54,7 +54,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useEffect, useId, useRef } from "preact/hooks";
+import { useContext, useEffect, useId, useRef } from "preact/hooks";
 
 import {
   ControlgroupChildrenWrapper,
@@ -71,7 +71,11 @@ import { Box } from "../../box/box.jsx";
 import { resolveSpacingSize } from "../../box/box_style_util.js";
 import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
-import { useOpenControllerByProps } from "./open_controller.js";
+import {
+  useOpenController,
+  useOpenPropsEffectOnOpenController,
+} from "./open_controller.js";
+import { SlideShowContext } from "./slideshow.jsx";
 import { popupCss } from "./popup_css.js";
 import {
   armPointerDownOutsideClose,
@@ -179,15 +183,34 @@ const css = /* css */ `
     outline-color: var(--popover-outline-color);
     outline-offset: 0px;
     box-shadow: var(--popover-box-shadow);
+
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
+    overscroll-behavior: none;
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
        stays independent from navi-animation's own opacity/scale/display
        transition list below (no shared transition-property to clobber, no
        propertyName to filter). */
-    /* overflow is not declared here: the popover carries [data-scrollable]
-       (see box.jsx), which is what makes it scroll — and what a
-       header/footer/body inside it then rearranges. */
-    overscroll-behavior: none;
+    /* Its place in the slideshow it takes part in (see slideshow.jsx) — same
+       rules as Dialog's own, and the same reason for display/overlay riding
+       along: a slide leaving must stay on screen for the length of its
+       travel. */
+    &[data-slideshow] {
+      translate: 0 var(--slideshow-offset, 0px);
+      transition-property: translate, display, overlay;
+      transition-duration: var(
+        --slideshow-duration,
+        var(--popup-animation-duration)
+      );
+      transition-timing-function: ease;
+      transition-behavior: allow-discrete;
+
+      &[data-slideshow-instant] {
+        transition-property: none;
+      }
+    }
 
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
@@ -428,7 +451,49 @@ export const Popover = (props) => {
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
 const UncontrolledPopover = (props) => {
-  const openController = useOpenControllerByProps(props);
+  const debugPopup = useDebugPopup();
+  // Resolved here rather than in usePopoverProps: the open handler below needs
+  // the popover element to read what it holds.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // Same as Dialog's own UncontrolledDialog, for the same reasons — see it for
+  // the full story: what the popover held when it opened is what a close is
+  // compared against, and what a cancel puts back.
+  const openController = useOpenController((openEvent) => {
+    const popoverEl = props.ref.current;
+    const uiStateAtOpen = getUIStateFromElement(popoverEl);
+    debugPopup(openEvent, `popover opened, store value at open`, uiStateAtOpen);
+
+    return {
+      onRequestClose: (requestCloseEvent) => {
+        if (requestCloseEvent.detail.isCancel) {
+          return;
+        }
+        const unchanged = compareTwoJsValues(
+          getUIStateFromElement(popoverEl),
+          uiStateAtOpen,
+        );
+        dispatchRequestAction(popoverEl, {
+          event: requestCloseEvent,
+          name: "popover request close",
+          action: unchanged ? null : "auto",
+          reportOnInvalid: true,
+          onInvalid: () => {
+            requestCloseEvent.preventDefault();
+          },
+        });
+      },
+      onClose: (closeEvent) => {
+        if (closeEvent.detail.isCancel) {
+          dispatchRequestSetUIState(popoverEl, uiStateAtOpen, {
+            event: closeEvent,
+          });
+        }
+        props.onClose?.(closeEvent);
+      },
+    };
+  });
+  useOpenPropsEffectOnOpenController(openController, props);
 
   return (
     <ControlledPopover
@@ -610,6 +675,8 @@ const usePopoverProps = (props) => {
   } = props;
   const isTopLayer = layer === "top";
   const ref = props.ref;
+  // Same as Dialog: taking part is declared by being inside a <SlideShow>.
+  const slideshow = useContext(SlideShowContext);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — set at close time, read at the next
@@ -834,6 +901,11 @@ const usePopoverProps = (props) => {
       // needed even in the native/top-layer case, not just the custom
       // renderer's own branch below.
       popoverEl.removeAttribute("navi-hidden");
+      if (slideshow) {
+        // Here, not earlier: a transition needs a start value the browser has
+        // actually painted, and the popover is displayed only from this line on.
+        slideshow.add(popoverEl);
+      }
       // aria-expanded stays "false" here — transitions are still
       // suppressed, so this doesn't matter yet — and only flips once
       // positioned below. Shown *after* the backdrop above so it stacks on
@@ -1102,7 +1174,9 @@ const usePopoverProps = (props) => {
           { prefix: "expand" },
         ) ?? "expand-up";
     }
-    if (resolvedAnimation) {
+    // A member of a slideshow does not animate itself: the slideshow moves it,
+    // and two rules setting translate on the same element can only fight.
+    if (resolvedAnimation && !slideshow) {
       popoverEl.setAttribute("navi-animation", resolvedAnimation);
       backdropEl?.setAttribute("navi-animation", resolvedAnimation);
     } else {
@@ -1169,6 +1243,9 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
+      if (slideshow) {
+        slideshow.remove(popoverEl);
+      }
       // Closing commits, cancelling rolls back — see Dialog's own identical
       // close, and open_controller.js for who passes isCancel.
       if (closeEvent.detail?.isCancel) {
@@ -1363,6 +1440,7 @@ const usePopoverProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
+    "data-slideshow": slideshow ? "" : undefined,
     "baseClassName": "navi_popover",
     "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": (e) => {
