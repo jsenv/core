@@ -114,6 +114,7 @@ Demos are used, not read. A well-chosen example, cut into steps and carrying a s
 - When a difference needs making clear, add the **contrasting example** rather than a sentence about it: default beside opted-out, loading beside loaded.
 - Keep a paragraph only for what the example genuinely cannot show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
 - Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo doesn't exercise.
+- For behaviour that only exists **while interacting** (focus, hover, drag, a key press), put something in the demo that reacts visibly — a zone that says "press →" and fills up when it holds the keyboard shows focus handling; a paragraph about where focus goes does not.
 
 See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running them.
 

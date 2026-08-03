@@ -500,24 +500,29 @@
       // In an effect, not in the change handler: the lock lifts with the
       // render, and a travel asked for before that would be refused by it.
       const ActionThenNextSlides = () => {
-        const [signed, setSigned] = useState(false);
+        // How MANY times it was signed, not whether it was: coming back and
+        // signing again has to move on again, and a boolean that is already
+        // true is a state that never changes twice.
+        const [signCount, setSignCount] = useState(0);
         const listRef = useRef();
         useEffect(() => {
-          if (!signed) {
+          if (signCount === 0) {
             return;
           }
           listRef.current.dispatchEvent(
             new CustomEvent("navi_next", { bubbles: true }),
           );
-        }, [signed]);
+        }, [signCount]);
         return (
           <SlideList duration={useSlideDuration()} ref={listRef}>
-            <Slide id="sign" preventNav={!signed} overflow="auto">
+            <Slide id="sign" preventNav={signCount === 0} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>sign</Text>
               </Box>
               <Box body padding="m">
-                <Button onClick={() => setSigned(true)}>Sign</Button>
+                <Button onClick={() => setSignCount((count) => count + 1)}>
+                  Sign
+                </Button>
               </Box>
             </Slide>
             <Slide id="done" overflow="auto">
