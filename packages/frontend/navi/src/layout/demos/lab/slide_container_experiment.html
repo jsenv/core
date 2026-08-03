@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slide container — experiment</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        font-size: 1.3rem;
+        border-bottom: 2px solid #ddd;
+      }
+      .part {
+        color: white;
+        background: #1a237e;
+      }
+      .part--right {
+        background: #00695c;
+      }
+      .part--down {
+        background: #4527a0;
+      }
+      .filler {
+        padding: 8px 12px;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      .in-document {
+        display: flex;
+        width: 320px;
+        height: 260px;
+        flex-direction: column;
+        border: 1px solid #90caf9;
+        border-radius: 8px;
+      }
+      /* The map of the same slides, drawn: what the grid is supposed to feel
+         like, next to the thing itself */
+      .map {
+        display: grid;
+        grid-auto-rows: 54px;
+        grid-template-columns: repeat(2, 90px);
+        gap: 6px;
+        font-size: 0.8rem;
+      }
+      .map > div {
+        display: grid;
+        place-items: center;
+        color: #444;
+        background: #eceff1;
+        border: 1px dashed #b0bec5;
+        border-radius: 6px;
+      }
+      .map > .is-current {
+        color: white;
+        background: #1a237e;
+        border-style: solid;
+        border-color: #1a237e;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+      .demo-way {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .demo-way > h3 {
+        margin: 0;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Text } from "@jsenv/navi";
+      import { SlideContainer } from "@jsenv/navi/src/layout/lab/slide_container.jsx";
+
+      const Filler = ({ count }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class="filler">
+            {i + 1}
+          </div>
+        ));
+
+      // The map, written once and read by everything below — the grid itself
+      // and the little drawing beside it
+      const AREAS = ["pick   edit", "create"];
+
+      const RowSlide = ({ area, title, className, count, children }) => (
+        <SlideContainer.Item area={area} overflow="auto">
+          <Box
+            header
+            padding="m"
+            flex="x"
+            alignY="center"
+            spacing="xs"
+            className={className}
+          >
+            <Text expandX>{title}</Text>
+            {children}
+          </Box>
+          <Box body padding="m">
+            <Filler count={count} />
+          </Box>
+        </SlideContainer.Item>
+      );
+
+      const App = () => {
+        const [current, setCurrent] = useState("pick");
+        return (
+          <div>
+            <h1>Slide container</h1>
+            <p>
+              Where the slides are is said by <code>layout</code>: a word for a
+              line, or the map itself —{" "}
+              <code>layout={JSON.stringify(AREAS)}</code>, each slide saying
+              which area it is. Travel with the chevrons or the arrow keys — a
+              direction with nothing there is simply not offered.
+            </p>
+
+            <section class="demo-section">
+              <h2>Three slides on a grid</h2>
+              <div class="demo-row">
+                <div class="in-document">
+                  <SlideContainer
+                    layout={AREAS}
+                    duration="400ms"
+                    expandY
+                    current={current}
+                    onCurrentChange={setCurrent}
+                  >
+                    <SlideContainer.Item area="pick" overflow="auto">
+                      <Box
+                        header
+                        padding="m"
+                        flex="x"
+                        alignY="center"
+                        spacing="xs"
+                        className="part"
+                      >
+                        <Text expandX>pick</Text>
+                        <SlideContainer.Move direction="right" padding="xs" />
+                        <SlideContainer.Move direction="down" padding="xs" />
+                      </Box>
+                      <Box body padding="m">
+                        <Filler count={8} />
+                      </Box>
+                    </SlideContainer.Item>
+
+                    <SlideContainer.Item area="create" overflow="auto">
+                      <Box
+                        header
+                        padding="m"
+                        flex="x"
+                        alignY="center"
+                        className="part part--down"
+                      >
+                        <Text expandX>create (below)</Text>
+                        <SlideContainer.Move direction="up" padding="xs" />
+                      </Box>
+                      <Box body padding="m">
+                        <Filler count={3} />
+                      </Box>
+                    </SlideContainer.Item>
+
+                    <SlideContainer.Item area="edit" overflow="auto">
+                      <Box
+                        header
+                        padding="m"
+                        flex="x"
+                        alignY="center"
+                        className="part part--right"
+                      >
+                        <Text expandX>edit (on the right)</Text>
+                        <SlideContainer.Move direction="left" padding="xs" />
+                      </Box>
+                      <Box body padding="m">
+                        <Filler count={4} />
+                      </Box>
+                    </SlideContainer.Item>
+                  </SlideContainer>
+                </div>
+
+                {/* The same map, drawn from the same strings */}
+                <div class="map">
+                  {AREAS.flatMap((row, y) =>
+                    row
+                      .trim()
+                      .split(/\s+/)
+                      .map((area, x) => (
+                        <div
+                          key={`${x},${y}`}
+                          class={area === current ? "is-current" : undefined}
+                          style={
+                            area === "." ? { visibility: "hidden" } : undefined
+                          }
+                        >
+                          {area === "." ? "" : area}
+                        </div>
+                      )),
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section class="demo-section">
+              <h2>One direction: the list, on the same component</h2>
+              <p>
+                <code>layout="row"</code> and <code>layout="column"</code>: the
+                order is the one the slides are written in, and the map is drawn
+                from it. Nothing else changes — same travel, same transition,
+                same inert. That is the whole of what a <code>SlideList</code>{" "}
+                is.
+              </p>
+              <div class="demo-row">
+                <div class="demo-way">
+                  <h3>Row</h3>
+                  <div class="in-document">
+                    <SlideContainer layout="row" duration="400ms" expandY>
+                      <RowSlide
+                        area="first"
+                        title="first"
+                        className="part"
+                        count={3}
+                      >
+                        <SlideContainer.Move direction="right" padding="xs" />
+                      </RowSlide>
+                      <RowSlide
+                        area="second"
+                        title="second"
+                        className="part part--right"
+                        count={6}
+                      >
+                        <SlideContainer.Move direction="left" padding="xs" />
+                        <SlideContainer.Move direction="right" padding="xs" />
+                      </RowSlide>
+                      <RowSlide
+                        area="third"
+                        title="third"
+                        className="part part--down"
+                        count={2}
+                      >
+                        <SlideContainer.Move direction="left" padding="xs" />
+                      </RowSlide>
+                    </SlideContainer>
+                  </div>
+                </div>
+
+                <div class="demo-way">
+                  <h3>Column (vertical)</h3>
+                  <div class="in-document">
+                    <SlideContainer layout="column" duration="400ms" expandY>
+                      <RowSlide
+                        area="top"
+                        title="top"
+                        className="part"
+                        count={3}
+                      >
+                        <SlideContainer.Move direction="down" padding="xs" />
+                      </RowSlide>
+                      <RowSlide
+                        area="bottom"
+                        title="bottom"
+                        className="part part--down"
+                        count={5}
+                      >
+                        <SlideContainer.Move direction="up" padding="xs" />
+                      </RowSlide>
+                    </SlideContainer>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>
