@@ -20,7 +20,7 @@
 import { createContext, toChildArray } from "preact";
 import { Box } from "../../box/box.jsx";
 import { onNaviCommand } from "../commands.js";
-import { useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useMemo, useRef, useState } from "preact/hooks";
 
 const createSlideshow = ({ axis, gap, duration, getSlotSize }) => {
   const members = [];
@@ -239,47 +239,25 @@ export const SlideShow = ({
 };
 
 const contentCss = /* css */ `
-  /* The content variant: the pages are stacked in one box and only the current
-     one is in place, the others parked exactly one box away. The box takes its
-     height once, from the first page — a popup that resized itself at every
-     page change would make the movement about its own growth rather than about
-     the pages, and a page could never clear it cleanly since it would be
-     leaving a box of a different size than the one it travels by. */
+  /* Every page in the same grid cell: the box then measures itself on the
+     LARGEST of them, in both directions, without anything being measured by
+     hand — which is also why nothing here resizes as the pages change. Each
+     page travels by exactly one box, so a short one and a tall one move the
+     same distance. */
   .navi_slideshow_content {
-    position: relative;
+    display: grid;
     overflow: hidden;
 
-    /* Before the first measure the current page lays itself out normally, so
-       the box takes the height it asks for. Only then do the pages become
-       absolute — a page that scrolls its own body cannot say how tall it wants
-       to be once it has already been bounded. */
-    &[data-slideshow-measuring] {
-      > [data-slideshow-page] {
-        position: static;
-        height: auto;
-      }
-      > [data-slideshow-page]:not([data-current]) {
-        display: none;
-      }
-    }
-
     > [data-slideshow-page] {
-      position: absolute;
-      top: 0;
-      left: 0;
-      /* grid, so what a caller puts in a page fills the page: a page that
-         scrolls its own body needs a bounded height to bound it with. And no
-         overflow of its own — the scrollbar belongs to whatever inside asked
-         for it, not to the frame carrying it. */
+      /* So a page shorter than the box still fills it: the box is as big as its
+         largest page, and the others stretch to it rather than floating in a
+         corner of it. */
       display: grid;
-      /* Full height on purpose: it is what makes translate: 100% mean "one box"
-         rather than "my own height", which is the whole trick — a short page
-         and a tall one then travel the same distance. */
-      width: 100%;
-      height: 100%;
-      translate: 0 var(--slideshow-offset, 0%);
+      min-width: 0;
+      min-height: 0;
+      grid-area: 1 / 1;
+      translate: var(--slideshow-offset, 0);
       transition: translate var(--slideshow-duration, 300ms) ease;
-      overflow: auto;
     }
     /* Parked: not shown, and not in the way of what is. */
     > [data-slideshow-page][data-slideshow-displaced] {
@@ -289,34 +267,34 @@ const contentCss = /* css */ `
 `;
 
 /**
- * The same carousel, for CONTENTS rather than popups.
+ * Pages that replace one another inside one box.
  *
- * A popup is promoted to the browser's top layer, so two of them can never sit
- * in one box — hence the container-less variant above. Inside a single popup
- * the opposite is true: the pages are ordinary elements, they do have a common
- * box, and that box is what a slot is measured against.
+ * Horizontal by default — a page arrives from the side, the way one walks
+ * through a form — and vertical with `vertical`, where it arrives from below.
+ * The box takes the size of its largest page (see the CSS above), so nothing
+ * grows or shrinks as one moves through them.
  *
  * The page shown can be driven from outside (`current` + `onCurrentChange`) or
  * left to the slideshow, which then answers the --navi-next/--navi-previous
- * commands from anything inside it.
+ * commands sent from anything inside it.
  *
  * @param {object} props
  * @param {string} [props.current] - id of the page being shown; omit to let the
  *   slideshow keep it and drive it by command.
  * @param {(id: string) => void} [props.onCurrentChange]
+ * @param {boolean} [props.vertical] - pages travel up and down instead of
+ *   sideways.
  * @param {string} [props.duration="300ms"] - how long a page change takes.
- *   Vertical only for now: the pages travel by one box, upward.
  */
 export const SlideShowContent = ({
   current: currentProp,
   onCurrentChange,
+  vertical,
   duration = "300ms",
   children,
   ...rest
 }) => {
   import.meta.css = contentCss;
-  const ref = useRef();
-  const [height, setHeight] = useState(null);
   const pages = toChildArray(children);
   const pageIds = pages.map((page, index) => page.props?.id ?? String(index));
   const [currentState, setCurrentState] = useState(pageIds[0]);
@@ -332,50 +310,14 @@ export const SlideShowContent = ({
     onCurrentChange?.(id);
   };
 
-  // Measured once, when there is something to measure: the box then keeps that
-  // height for good (see the CSS above for why it must not follow the pages).
-  useLayoutEffect(() => {
-    if (height !== null) {
-      return undefined;
-    }
-    const container = ref.current;
-    if (!container) {
-      return undefined;
-    }
-    const firstPage = container.querySelector(
-      "[data-slideshow-page][data-current]",
-    );
-    if (!firstPage) {
-      return undefined;
-    }
-    const observer = new ResizeObserver(() => {
-      const pageHeight = firstPage.getBoundingClientRect().height;
-      if (!pageHeight) {
-        return;
-      }
-      // Disconnected first: writing the height resizes the box, which resizes
-      // the page (it is height: 100%), which the observer would report — the
-      // loop the browser complains about ("ResizeObserver loop completed with
-      // undelivered notifications"). Nothing left to observe once measured.
-      observer.disconnect();
-      setHeight(pageHeight);
-    });
-    observer.observe(firstPage);
-    return () => {
-      observer.disconnect();
-    };
-  }, [height]);
-
   return (
     // Box rather than a plain div: it is how every navi component takes the
     // onnavi_* handlers below — they are navi's own event names, and Box is
     // what carries them onto the element.
     <Box
       {...rest}
-      ref={ref}
       baseClassName="navi_slideshow_content"
       data-slideshow-content=""
-      data-slideshow-measuring={height === null ? "" : undefined}
       // The event a --navi-next/--navi-previous command ends up dispatching…
       onnavi_slideshow_go={(e) => {
         goTo(currentIndex + e.detail.step);
@@ -385,14 +327,11 @@ export const SlideShowContent = ({
       onnavi_command={(e) => {
         onNaviCommand(e);
       }}
-      style={{
-        "--slideshow-duration": duration,
-        "height": height === null ? undefined : `${height}px`,
-        ...rest.style,
-      }}
+      style={{ "--slideshow-duration": duration, ...rest.style }}
     >
       {pages.map((page, index) => {
         const isCurrent = index === currentIndex;
+        const distance = `${(index - currentIndex) * 100}%`;
         return (
           <div
             key={pageIds[index]}
@@ -400,7 +339,9 @@ export const SlideShowContent = ({
             data-current={isCurrent ? "" : undefined}
             data-slideshow-displaced={isCurrent ? undefined : ""}
             style={{
-              "--slideshow-offset": `${(index - currentIndex) * 100}%`,
+              "--slideshow-offset": vertical
+                ? `0 ${distance}`
+                : `${distance} 0`,
             }}
             aria-hidden={isCurrent ? undefined : "true"}
           >
@@ -411,3 +352,14 @@ export const SlideShowContent = ({
     </Box>
   );
 };
+
+/**
+ * One page. Nothing but a Box with the id the slideshow moves it by — it exists
+ * so a page reads as a page rather than as a box that happens to carry an id.
+ */
+const SlideShowItem = ({ children, ...rest }) => (
+  <Box flex="y" {...rest}>
+    {children}
+  </Box>
+);
+SlideShowContent.Item = SlideShowItem;

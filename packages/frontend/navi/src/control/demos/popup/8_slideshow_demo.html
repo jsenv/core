@@ -27,10 +27,29 @@
         font-size: 1.3rem;
         border-bottom: 2px solid #ddd;
       }
-      .demo-row {
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #444;
+        font-size: 0.95rem;
+      }
+      .demo-ways {
         display: flex;
-        align-items: center;
-        gap: 12px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+      .demo-way {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .demo-way > h3 {
+        margin: 0;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
       }
       .part {
         color: white;
@@ -41,12 +60,30 @@
         background: #eef3fb;
         border-bottom: 1px solid #cfe0f5;
       }
-      /* In the document: the slideshow has no popup to take its size from, so
-         it is given one here — same as any box would be. */
+      .wide {
+        width: 900px;
+        padding: 8px 12px;
+        background: #fdf1e0;
+        border-bottom: 1px solid #f0d7ae;
+      }
+      /* In the document there is no popup to take a size from, so the slideshow
+         is given one here — same as any box would be. */
       .in-document {
-        width: 320px;
+        width: 300px;
         border: 1px solid #90caf9;
         border-radius: 8px;
+      }
+      /* Very tall content: without a height the box would be as tall as its
+         tallest page, which is exactly what we do NOT want to see in a page
+         that also has other sections. */
+      .in-document-capped {
+        height: 260px;
+      }
+      /* The slideshow takes the height it is given rather than the one its
+         pages would like: this is the "what holds it decides" of the section
+         next to it, written out. */
+      .in-document-capped > .navi_slideshow_content {
+        height: 100%;
       }
     </style>
   </head>
@@ -66,62 +103,115 @@
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
 
-      const Filler = ({ count }) =>
+      const Filler = ({ count, className = "filler" }) =>
         Array.from({ length: count }, (_, i) => (
-          <div key={i} class="filler">
+          <div key={i} class={className}>
             {i + 1}
           </div>
         ));
 
-      // The same two pages everywhere below: what changes between the three
-      // sections is only what holds them.
-      const Pages = () => (
+      // One page: a header that stays and a body that scrolls, plus the button
+      // that leaves it. "next"/"previous", not "show the page called second":
+      // the buttons say where to go, the slideshow knows where that is.
+      const Page = ({ id, title, direction, children }) => (
+        <SlideShowContent.Item id={id} overflow="auto">
+          <Box header padding="m" flex="x" alignY="center" className="part">
+            <Text expandX>{title}</Text>
+            <Button
+              command={direction === "next" ? "--navi-next" : "--navi-previous"}
+              icon
+              variant="discrete"
+              size="xl"
+              padding="xs"
+              aria-label={direction === "next" ? "Next page" : "Previous page"}
+            >
+              <Icon>
+                {direction === "next" ? <PlusSvg /> : <ChevronUpSvg />}
+              </Icon>
+            </Button>
+          </Box>
+          <Box body padding="m">
+            {children}
+          </Box>
+        </SlideShowContent.Item>
+      );
+
+      // Every section shows the same thing three times: in the document, in a
+      // dialog, in a popover. Taking a component rather than the pages
+      // themselves, because each of the three needs its own copy of them.
+      // eslint-disable-next-line no-unused-vars -- Content IS used, as <Content />
+      const ThreeWays = ({ id, Content, documentClassName = "" }) => (
+        <div class="demo-ways">
+          <div class="demo-way">
+            <h3>In the document</h3>
+            <div class={`in-document ${documentClassName}`}>
+              <Content />
+            </div>
+          </div>
+          <div class="demo-way">
+            <h3>In a dialog</h3>
+            <Button command="--navi-open" commandFor={`${id}_dialog`}>
+              Open the dialog
+            </Button>
+            <Dialog id={`${id}_dialog`} minWidth="300px">
+              <Content />
+            </Dialog>
+          </div>
+          <div class="demo-way">
+            <h3>In a popover</h3>
+            <Button command="--navi-toggle" commandFor={`${id}_popover`}>
+              Open the popover
+            </Button>
+            <Popover id={`${id}_popover`} minWidth="300px">
+              <Content />
+            </Popover>
+          </div>
+        </div>
+      );
+
+      const TwoPages = () => (
         <SlideShowContent duration="400ms">
-          <Box id="first" flex="y" overflow="auto">
-            <Box header padding="m" flex="x" alignY="center" className="part">
-              <Text expandX>first</Text>
-              {/* "next", not "show the page called second": the buttons say
-                  where to go, the slideshow knows where that is */}
-              <Button
-                command="--navi-next"
-                icon
-                variant="discrete"
-                size="xl"
-                padding="xs"
-                aria-label="Next page"
-              >
-                <Icon>
-                  <PlusSvg />
-                </Icon>
-              </Button>
-            </Box>
-            <Box body padding="m">
-              <Filler count={3} />
-            </Box>
-          </Box>
-          <Box id="second" flex="y" overflow="auto">
-            <Box header padding="m" flex="x" alignY="center" className="part">
-              <Text expandX>second</Text>
-              <Button
-                command="--navi-previous"
-                icon
-                variant="discrete"
-                size="xl"
-                padding="xs"
-                aria-label="Previous page"
-              >
-                <Icon>
-                  <ChevronUpSvg />
-                </Icon>
-              </Button>
-            </Box>
-            {/* Taller than the first on purpose: the box keeps the height it
-                took at the start, so this one scrolls its own body instead of
-                making everything grow */}
-            <Box body padding="m">
-              <Filler count={12} />
-            </Box>
-          </Box>
+          <Page id="first" title="first" direction="next">
+            <Filler count={3} />
+          </Page>
+          {/* Taller than the first on purpose: the box is as tall as this one,
+              and the first simply leaves room under itself */}
+          <Page id="second" title="second" direction="previous">
+            <Filler count={8} />
+          </Page>
+        </SlideShowContent>
+      );
+
+      const TwoPagesVertical = () => (
+        <SlideShowContent duration="400ms" vertical>
+          <Page id="first" title="first" direction="next">
+            <Filler count={3} />
+          </Page>
+          <Page id="second" title="second" direction="previous">
+            <Filler count={8} />
+          </Page>
+        </SlideShowContent>
+      );
+
+      const TallPages = () => (
+        <SlideShowContent duration="400ms">
+          <Page id="first" title="first" direction="next">
+            <Filler count={40} />
+          </Page>
+          <Page id="second" title="second" direction="previous">
+            <Filler count={60} />
+          </Page>
+        </SlideShowContent>
+      );
+
+      const WidePages = () => (
+        <SlideShowContent duration="400ms">
+          <Page id="first" title="first" direction="next">
+            <Filler count={3} className="wide" />
+          </Page>
+          <Page id="second" title="second" direction="previous">
+            <Filler count={5} className="wide" />
+          </Page>
         </SlideShowContent>
       );
 
@@ -129,40 +219,82 @@
         <div>
           <h1>Slideshow</h1>
           <p>
-            Pages that replace one another inside one box. The box takes its
-            height once, from the first page; a page travels by exactly one box,
-            so a short one and a tall one move the same distance.
+            Pages that replace one another inside one box. The box takes the
+            size of its largest page, so nothing grows or shrinks as one moves
+            through them; a page travels by exactly one box, sideways by
+            default.
           </p>
 
           <section class="demo-section">
-            <h2>In the document</h2>
-            <div class="in-document">
-              <Pages />
-            </div>
+            <h2>Two pages</h2>
+            <p>
+              The plain case: a page arrives from the right, the one it replaces
+              leaves to the left. The second page is taller than the first, and
+              the box is as tall as it from the start.
+            </p>
+            <ThreeWays id="basic" Content={TwoPages} />
           </section>
 
           <section class="demo-section">
-            <h2>In a dialog</h2>
+            <h2>Vertical</h2>
+            <p>
+              Same pages with <code>vertical</code>: they arrive from below
+              instead of from the side. The travel is the only difference — the
+              box is still sized on its largest page, in both directions.
+            </p>
+            <ThreeWays id="vertical" Content={TwoPagesVertical} />
+          </section>
+
+          <section class="demo-section">
+            <h2>Content taller than the box</h2>
+            <p>
+              Nothing special happens: a page is a box, so it scrolls its own
+              body (<code>overflow="auto"</code> plus a <code>body</code>, see
+              box.jsx). What decides the height is what holds the slideshow — a
+              height here, the screen for a dialog, the space left under the
+              anchor for a popover — never the pages themselves.
+            </p>
+            <ThreeWays
+              id="tall"
+              Content={TallPages}
+              documentClassName="in-document-capped"
+            />
+          </section>
+
+          <section class="demo-section">
+            <h2>Content wider than the box</h2>
+            <p>
+              The same sideways, and the reason the box hides its overflow: a
+              page wider than the box would otherwise show through next to the
+              one being read. It is the page's own body that scrolls, not the
+              slideshow, whose only movement is the travel.
+            </p>
+            <ThreeWays id="wide" Content={WidePages} />
+          </section>
+
+          <section class="demo-section">
+            <h2>Specific to dialog: filling the document</h2>
+            <p>
+              A dialog with <code>expand</code> takes the whole screen, so the
+              slideshow has room given to it rather than taken from its pages:{" "}
+              <code>expandY</code> makes it fill the dialog, and each page then
+              fills the slideshow whatever it contains.
+            </p>
             <div class="demo-row">
-              <Button command="--navi-open" commandFor="slideshow_dialog">
-                Open
+              <Button command="--navi-open" commandFor="expand_dialog">
+                Open the dialog
               </Button>
             </div>
-            <Dialog id="slideshow_dialog" minWidth="320px">
-              <Pages />
+            <Dialog id="expand_dialog" expand>
+              <SlideShowContent duration="400ms" expandY>
+                <Page id="first" title="first" direction="next">
+                  <Filler count={3} />
+                </Page>
+                <Page id="second" title="second" direction="previous">
+                  <Filler count={8} />
+                </Page>
+              </SlideShowContent>
             </Dialog>
-          </section>
-
-          <section class="demo-section">
-            <h2>In a popover</h2>
-            <div class="demo-row">
-              <Button command="--navi-toggle" commandFor="slideshow_popover">
-                Open
-              </Button>
-            </div>
-            <Popover id="slideshow_popover" minWidth="320px">
-              <Pages />
-            </Popover>
           </section>
         </div>
       );

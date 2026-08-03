@@ -1097,7 +1097,7 @@
       // "previous"; nothing here knows which page that is.
       const SlideshowPages = () => (
         <SlideShowContent duration="500ms">
-          <Box id="first" flex="y" overflow="auto">
+          <SlideShowContent.Item id="first" overflow="auto">
             <Box
               header
               padding="m"
@@ -1122,8 +1122,8 @@
             <Box body padding="m">
               <OverflowFiller count={4} />
             </Box>
-          </Box>
-          <Box id="second" flex="y" overflow="auto">
+          </SlideShowContent.Item>
+          <SlideShowContent.Item id="second" overflow="auto">
             <Box
               header
               padding="m"
@@ -1148,7 +1148,7 @@
             <Box body padding="m">
               <OverflowFiller count={14} />
             </Box>
-          </Box>
+          </SlideShowContent.Item>
         </SlideShowContent>
       );
 

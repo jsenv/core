@@ -604,7 +604,7 @@
               <SlideShowContent duration="500ms">
                 {/* The page scrolls its BODY, not itself: header stays, the
                     content under it moves — see box.jsx's header/body/footer */}
-                <Box id="first" flex="y" overflow="auto">
+                <SlideShowContent.Item id="first" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
                     <Button
@@ -623,8 +623,8 @@
                   <Box body padding="m">
                     <OverflowFiller count={3} />
                   </Box>
-                </Box>
-                <Box id="second" flex="y" overflow="auto">
+                </SlideShowContent.Item>
+                <SlideShowContent.Item id="second" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>second</Text>
                     <Button
@@ -643,7 +643,7 @@
                   <Box body padding="m">
                     <OverflowFiller count={6} />
                   </Box>
-                </Box>
+                </SlideShowContent.Item>
               </SlideShowContent>
             </Popover>
           </section>
