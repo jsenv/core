@@ -56,7 +56,7 @@ import {
   trapScrollInside,
   visibleRectEffect,
 } from "@jsenv/dom";
-import { useContext, useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 import {
   ControlgroupChildrenWrapper,
@@ -79,7 +79,6 @@ import {
   useOpenPropsEffectOnOpenController,
 } from "./open_controller.js";
 import { popupCss } from "./popup_css.js";
-import { SlideShowContext } from "./slideshow.jsx";
 import {
   armPointerDownOutsideClose,
   resolveAutoAnimationKind,
@@ -202,54 +201,6 @@ const css = /* css */ `
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
-    /* Its place in the slideshow it takes part in (see slideshow.jsx): every
-       member steps back by the same amount when a new one arrives, which is
-       what keeps the gap between two of them from drifting. The transition is
-       declared here rather than under an attribute, so a member that is not
-       animated at all still travels. */
-    /* Doubled attribute to outrank the member's own animation rules
-       (popup_css.js), which also write translate: while it is in a slideshow,
-       the slideshow says where it stands. Its animation keeps everything else —
-       a "scaling" first page still scales, it just does not move itself. */
-    &[data-slideshow][data-slideshow] {
-      translate: 0 var(--slideshow-offset, 0px);
-      /* display and overlay ride along (allow-discrete below): a slide leaving
-         must stay on screen for the length of its travel, and hiding it the
-         moment it is closed would cut the movement short. */
-      /* Everything that has to move here, and why, in one list: the slide
-         itself (translate), whatever animation the member plays on top of it
-         (opacity/scale/box-shadow — a first page still fades or scales in),
-         and display/overlay so a slide leaving stays on screen for the length
-         of its travel. Replacing this list by translate alone is what stopped
-         the open/close effect from playing at all. */
-      transition-property:
-        translate, opacity, scale, box-shadow, display, overlay;
-      /* The slideshow's own duration, not the dialog's: what moves here is the
-         slideshow, and one movement has one speed. */
-      /* One duration per property, in the same order: the travel belongs to
-         the slideshow, the rest to the member's own animation. */
-      transition-duration:
-        var(--slideshow-duration, var(--popup-animation-duration)),
-        var(--popup-opacity-duration), var(--popup-scale-duration),
-        var(--popup-animation-duration), var(--popup-animation-duration),
-        var(--popup-animation-duration);
-      transition-timing-function: ease;
-      transition-behavior: allow-discrete;
-
-      /* Placed, not moved — see slideshow.jsx's add(): a slide arriving is put
-         one slot away before it is allowed to travel. */
-      &[data-slideshow-instant] {
-        transition-property: none;
-      }
-
-      /* Stepped back, or on its way out: it is no longer the page being
-         answered, so it must not catch what is aimed at the one in front — nor
-         make the user wait for the end of a travel to click. */
-      &[data-slideshow-displaced] {
-        pointer-events: none;
-      }
-    }
-
     /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
        the spacing, which is only the real ceiling for layer="top". A local
        dialog is confined to its positioned ancestor, whose size reaches here
@@ -758,12 +709,6 @@ const useDialogProps = (props) => {
     ...rest
   } = props;
   const isModal = layer === "top";
-  // Taking part in a slideshow is declared by being inside one (see
-  // slideshow.jsx): the dialogs of one slideshow move as one, each stepping
-  // back a slot when the next arrives. They stay separate dialogs — each keeps
-  // its own state, its own validation and its own way out; only the arithmetic
-  // is shared, and none of them knows about the others.
-  const slideshow = useContext(SlideShowContext);
   const ref = props.ref;
   // Only touch changes anything: with a mouse a dialog already wants to be the
   // centered box it is by default, so there is nothing to resolve there.
@@ -958,25 +903,6 @@ const useDialogProps = (props) => {
     // property (e.g. Popup's own flex prop) defeats the UA stylesheet's own
     // dialog:not([open]) default the same way it can for Popover.
     dialogEl.removeAttribute("navi-hidden");
-    if (slideshow) {
-      // Here, not at the top of this effect: the dialog is displayed only from
-      // this line on, and a transition needs a start value the browser has
-      // actually seen. Placed one slot away while it was display:none, it would
-      // simply appear at its final place.
-      // Its own gap with the container, given to the slideshow: two pages of
-      // one movement keep the same distance from the edges as they keep from
-      // each other, and nobody has to repeat the number.
-      const travelled = slideshow.add(dialogEl, {
-        gap: resolveSpacingSize(marginWithContainer, dialogEl.parentElement),
-      });
-      if (travelled) {
-        // The slideshow moves it, so it must not also move itself: two rules
-        // setting translate on the same element can only fight. A first page
-        // does not travel and keeps its own animation.
-        dialogEl.removeAttribute("navi-animation");
-      }
-    }
-
     if (isModal) {
       // Native focus trap — the browser's own top-layer modal already
       // confines Tab/Shift+Tab, nothing to reimplement here.
@@ -1208,9 +1134,6 @@ const useDialogProps = (props) => {
       debugPopup(
         `"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`,
       );
-      if (slideshow) {
-        slideshow.remove(dialogEl);
-      }
       dialogEl.setAttribute("aria-expanded", "false");
       if (!isModal) {
         openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
@@ -1344,7 +1267,6 @@ const useDialogProps = (props) => {
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
     "overflow": "auto",
-    "data-slideshow": slideshow ? "" : undefined,
     "data-layer": layer,
     "data-expand-x": expandX ? "" : undefined,
     "data-expand-y": expandY ? "" : undefined,

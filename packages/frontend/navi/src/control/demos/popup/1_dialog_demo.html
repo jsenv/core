@@ -227,7 +227,7 @@
         Label,
         Link,
         NaviDebug,
-        SlideShowContent,
+        SlideShow,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -1096,8 +1096,8 @@
       // arithmetic is the box's — see slideshow.jsx. The buttons say "next" and
       // "previous"; nothing here knows which page that is.
       const SlideshowPages = () => (
-        <SlideShowContent duration="500ms">
-          <SlideShowContent.Item id="first" overflow="auto">
+        <SlideShow duration="500ms">
+          <SlideShow.Item id="first" overflow="auto">
             <Box
               header
               padding="m"
@@ -1122,8 +1122,8 @@
             <Box body padding="m">
               <OverflowFiller count={4} />
             </Box>
-          </SlideShowContent.Item>
-          <SlideShowContent.Item id="second" overflow="auto">
+          </SlideShow.Item>
+          <SlideShow.Item id="second" overflow="auto">
             <Box
               header
               padding="m"
@@ -1148,8 +1148,8 @@
             <Box body padding="m">
               <OverflowFiller count={14} />
             </Box>
-          </SlideShowContent.Item>
-        </SlideShowContent>
+          </SlideShow.Item>
+        </SlideShow>
       );
 
       const SlideshowSection = () => {

@@ -97,7 +97,7 @@
         Dialog,
         Icon,
         Popover,
-        SlideShowContent,
+        SlideShow,
         Text,
       } from "@jsenv/navi";
       import { ChevronUpSvg } from "@jsenv/navi/src/graphic/icons/chevron_stroke_svg.jsx";
@@ -114,7 +114,7 @@
       // that leaves it. "next"/"previous", not "show the page called second":
       // the buttons say where to go, the slideshow knows where that is.
       const Page = ({ id, title, direction, children }) => (
-        <SlideShowContent.Item id={id} overflow="auto">
+        <SlideShow.Item id={id} overflow="auto">
           <Box header padding="m" flex="x" alignY="center" className="part">
             <Text expandX>{title}</Text>
             <Button
@@ -133,7 +133,7 @@
           <Box body padding="m">
             {children}
           </Box>
-        </SlideShowContent.Item>
+        </SlideShow.Item>
       );
 
       // Every section shows the same thing three times: in the document, in a
@@ -170,7 +170,7 @@
       );
 
       const TwoPages = () => (
-        <SlideShowContent duration="400ms">
+        <SlideShow duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={3} />
           </Page>
@@ -179,40 +179,40 @@
           <Page id="second" title="second" direction="previous">
             <Filler count={8} />
           </Page>
-        </SlideShowContent>
+        </SlideShow>
       );
 
       const TwoPagesVertical = () => (
-        <SlideShowContent duration="400ms" vertical>
+        <SlideShow duration="400ms" vertical>
           <Page id="first" title="first" direction="next">
             <Filler count={3} />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={8} />
           </Page>
-        </SlideShowContent>
+        </SlideShow>
       );
 
       const TallPages = () => (
-        <SlideShowContent duration="400ms">
+        <SlideShow duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={40} />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={60} />
           </Page>
-        </SlideShowContent>
+        </SlideShow>
       );
 
       const WidePages = () => (
-        <SlideShowContent duration="400ms">
+        <SlideShow duration="400ms">
           <Page id="first" title="first" direction="next">
             <Filler count={3} className="wide" />
           </Page>
           <Page id="second" title="second" direction="previous">
             <Filler count={5} className="wide" />
           </Page>
-        </SlideShowContent>
+        </SlideShow>
       );
 
       const App = () => (
@@ -286,14 +286,14 @@
               </Button>
             </div>
             <Dialog id="expand_dialog" expand>
-              <SlideShowContent duration="400ms" expandY>
+              <SlideShow duration="400ms" expandY>
                 <Page id="first" title="first" direction="next">
                   <Filler count={3} />
                 </Page>
                 <Page id="second" title="second" direction="previous">
                   <Filler count={8} />
                 </Page>
-              </SlideShowContent>
+              </SlideShow>
             </Dialog>
           </section>
         </div>
