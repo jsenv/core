@@ -97,7 +97,8 @@ export const createCalloutManager = (
       callout.update(message, calloutOptions);
       return;
     }
-    const resolvedAnchorElement = anchorElement || controller.ref.current;
+    const resolvedAnchorElement =
+      anchorElement || controller.ref.current;
     const removeCloseOnCleanup = addTeardown?.(() => {
       requestCloseCallout(new CustomEvent("cleanup"), "cleanup");
     });

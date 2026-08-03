@@ -264,12 +264,12 @@
               moving the mouse — do one big wheel scroll over the list.
               Currently this lands you on blank filler space instead of real
               items. Root cause: the scroll-sync hit-tests the DOM via{" "}
-              <code>document.elementFromPoint</code> to figure out which item is
-              at the new scroll position; devtools shrinks the page's own
-              visible viewport, so part of the scan can fall outside it and find
-              nothing — the current fallback for "found nothing" is to keep the
-              previous (now stale) render window as-is, instead of estimating a
-              new one.
+              <code>document.elementFromPoint</code> to figure out which item
+              is at the new scroll position; devtools shrinks the page's own
+              visible viewport, so part of the scan can fall outside it and
+              find nothing — the current fallback for "found nothing" is to
+              keep the previous (now stale) render window as-is, instead of
+              estimating a new one.
             </p>
 
             <StatsBar totalItems={LARGE_LIST.length} />

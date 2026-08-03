@@ -1347,11 +1347,12 @@
               produisent (touche, coller, mise à jour externe) en affichant un
               callout. Sans elles, la validation n'a lieu qu'à la soumission.
               <br />
-              <code>charGuard</code> accepte un preset (<code>"numeric"</code>,{" "}
-              <code>"tel"</code>, <code>"card"</code>, <code>"hex"</code>,{" "}
-              <code>"alphanumeric"</code>…) ou une classe de caractères brute (
-              <code>"[A-Z0-9]"</code>). Le <code>inputMode</code> et{" "}
-              <code>pattern</code> sont déduits automatiquement.
+              <code>charGuard</code> accepte un preset (
+              <code>"numeric"</code>, <code>"tel"</code>, <code>"card"</code>,{" "}
+              <code>"hex"</code>, <code>"alphanumeric"</code>…) ou une classe
+              de caractères brute (<code>"[A-Z0-9]"</code>). Le{" "}
+              <code>inputMode</code> et <code>pattern</code> sont déduits
+              automatiquement.
               <br />
               <code>maxLengthGuard</code> remplace <code>maxLength</code> +
               guard : bloque au keydown, tronque au paste/set, et garde la
@@ -1361,7 +1362,8 @@
             {/* 1 — navi_number sans charGuard */}
             <fieldset>
               <legend>
-                <code>type="navi_number"</code> — sans <code>charGuard</code>
+                <code>type="navi_number"</code> — sans{" "}
+                <code>charGuard</code>
               </legend>
               <p class="desc">
                 On peut taper des lettres. La validation n'arrive qu'à la
@@ -1386,19 +1388,14 @@
                 <code>charGuard="numeric"</code>
               </legend>
               <p class="desc">
-                Seuls les chiffres sont autorisés (preset <code>"numeric"</code>{" "}
-                → <code>inputMode="numeric"</code> +{" "}
+                Seuls les chiffres sont autorisés (preset{" "}
+                <code>"numeric"</code> → <code>inputMode="numeric"</code> +{" "}
                 <code>pattern="[0-9]*"</code> auto-déduits). Essayez de :
               </p>
-              <ul
-                class="desc"
-                style={{ margin: "0 0 12px", paddingLeft: "20px" }}
-              >
+              <ul class="desc" style={{ margin: "0 0 12px", paddingLeft: "20px" }}>
                 <li>Taper une lettre → bloqué au keydown</li>
                 <li>Coller du texte invalide (ex : "abc") → bloqué au paste</li>
-                <li>
-                  Cliquer sur « Set "abc123" » → bloqué à la mise à jour externe
-                </li>
+                <li>Cliquer sur « Set "abc123" » → bloqué à la mise à jour externe</li>
               </ul>
               <Box flex="y" spacing="s" alignX="start">
                 <Input
@@ -1480,8 +1477,8 @@
               <p class="desc">
                 Le 4ème caractère est bloqué au keydown avec un callout. Au
                 paste ou mise à jour externe, la valeur est tronquée à 3
-                caractères et un callout informe de la troncature. La validation
-                formulaire reste active à la soumission.
+                caractères et un callout informe de la troncature. La
+                validation formulaire reste active à la soumission.
               </p>
               <Form
                 action={(values) => push4("submit", values)}
@@ -1520,9 +1517,7 @@
 
             {/* 5 — presets charGuard */}
             <fieldset style={{ marginTop: "16px" }}>
-              <legend>
-                Presets <code>charGuard</code>
-              </legend>
+              <legend>Presets <code>charGuard</code></legend>
               <p class="desc">
                 Chaque preset configure automatiquement le{" "}
                 <code>inputMode</code> et le <code>pattern</code> natif.
