@@ -202,6 +202,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { useId, useRef } from "preact/hooks";
       import { createDragToMoveGestureController } from "@jsenv/dom";
       import { Button, Dialog, Popover, Box } from "@jsenv/navi";
@@ -209,17 +210,11 @@
 
       const App = () => (
         <div>
-          <div class="demo-header">
-            <h1>Popup interop demo</h1>
-            <nav class="demo-nav">
-              <a href="./2_popover_demo.html" title="Previous: popover demo">
-                ←
-              </a>
-              <a href="./4_popup_demo.html" title="Next: popup demo">
-                →
-              </a>
-            </nav>
-          </div>
+          <DemoHeader
+            title="Popup interop demo"
+            previous={{ href: "./2_popover_demo.html", label: "Popover" }}
+            next={{ href: "./4_popup_demo.html", label: "Popup" }}
+          />
           <p>
             Individual demos (<code>2_popover_demo.html</code>,{" "}
             <code>1_dialog_demo.html</code>, …) exercise one component at a

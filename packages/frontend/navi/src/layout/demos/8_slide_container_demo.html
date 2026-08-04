@@ -192,6 +192,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { createContext } from "preact";
       import { useContext, useEffect, useRef, useState } from "preact/hooks";
       import {
@@ -744,17 +745,11 @@
 
       const AppContent = () => (
         <div>
-          <div class="demo-header">
-            <h1>Slide container</h1>
-            <nav class="demo-nav">
-              <a href="./7_slot_demo.html" title="Previous: slot demo">
-                ←
-              </a>
-              <a href="./9_separator_demo.html" title="Next: separator demo">
-                →
-              </a>
-            </nav>
-          </div>
+          <DemoHeader
+            title="Slide container demo"
+            previous={{ href: "./7_slot_demo.html", label: "Slot" }}
+            next={{ href: "./9_separator_demo.html", label: "Separator" }}
+          />
 
           <div class="demo-section">
             <p>
@@ -807,7 +802,7 @@
                 Popover demo — Slides
               </Link>{" "}
               ·{" "}
-              <Link href="./slide_container_perf.html">
+              <Link href="./lab/slide_container_perf.html">
                 Slide container — perf
               </Link>
             </p>

@@ -56,6 +56,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { useId, useState } from "preact/hooks";
       import {
         Box,
@@ -133,17 +134,11 @@
       // interaction/focus logs are the fastest way to see which one answered.
       const App = () => (
         <NaviDebug debugAll>
-          <div class="demo-header">
-            <h1>Popup demo</h1>
-            <nav class="demo-nav">
-              <a href="./3_interop_demo.html" title="Previous: interop demo">
-                ←
-              </a>
-              <a href="./5_side_panel_demo.html" title="Next: side panel demo">
-                →
-              </a>
-            </nav>
-          </div>
+          <DemoHeader
+            title="Popup demo"
+            previous={{ href: "./3_interop_demo.html", label: "Popup interop" }}
+            next={{ href: "./5_side_panel_demo.html", label: "SidePanel" }}
+          />
           <div class="demo-row">
             <TriggeredPopup label="auto (wide screen -> popover)" />
             <TriggeredPopup label="mode=dialog forced" mode="dialog" />

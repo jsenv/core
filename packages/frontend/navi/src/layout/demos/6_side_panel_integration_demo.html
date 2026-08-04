@@ -26,6 +26,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { useId, useMemo, useState } from "preact/hooks";
       import {
         BadgeCount,
@@ -134,6 +135,14 @@
 
         return (
           <>
+            <DemoHeader
+              title="SidePanel integration demo"
+              previous={{
+                href: "./5_side_panel_demo.html",
+                label: "SidePanel",
+              }}
+              next={{ href: "./7_slot_demo.html", label: "Slot" }}
+            />
             <div class="demo-controls">
               <Button command="--navi-toggle" commandFor={panelId}>
                 Toggle panel

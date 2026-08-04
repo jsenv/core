@@ -253,6 +253,8 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { useId, useState, useEffect } from "preact/hooks";
       import {
         Box,
@@ -1436,91 +1438,7 @@
             document; the form owns the answer and the dialog owns where it is
             shown — see <Link href="#actions">uiAction / action</Link>.
           </p>
-          <ol className="toc">
-            <li>
-              <Link href="#controlled-by-button">Controlled by button</Link>
-            </li>
-            <li>
-              <Link href="#content-size">Content dimensions</Link>
-              <ul>
-                <li>
-                  <Link href="#content-size-expanding">
-                    Expanding/collapsing content while open
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="#position">Position</Link>
-              <ul>
-                <li>
-                  <Link href="#position-top-layer">top layer</Link>
-                </li>
-                <li>
-                  <Link href="#position-local-layer">local layer</Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="#pointer-interaction-outside">
-                pointerInteractionOutsideEffect
-              </Link>
-            </li>
-            <li>
-              <Link href="#open-from-start">Open from the start</Link>
-            </li>
-            <li>
-              <Link href="#adaptive">dockedOnTouch</Link>
-            </li>
-            <li>
-              <Link href="#overflow">Overflow</Link>
-              <ul>
-                <li>
-                  <Link href="#overflow-top-layer">top layer</Link>
-                </li>
-                <li>
-                  <Link href="#overflow-local-layer">local layer</Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="#validation">Validation</Link>
-              <ul>
-                <li>
-                  <Link href="#validation-required">Required field</Link>
-                </li>
-                <li>
-                  <Link href="#validation-async">
-                    Async action (2s), click outside to close
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#validation-async-cancel-outside">
-                    Async action (2s), click outside to cancel
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#validation-async-error">
-                    Async action failing after 0.5s
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="#slides">Slides</Link>
-              <ul>
-                <li>
-                  <Link href="#slides-top-layer">top layer</Link>
-                </li>
-                <li>
-                  <Link href="#slides-local-layer">local layer</Link>
-                </li>
-              </ul>
-            </li>
-            <li>
-              <Link href="#actions">uiAction / action</Link>
-            </li>
-          </ol>
+          <DocumentToc />
         </div>
       );
 
@@ -1529,19 +1447,10 @@
       // see which one answered.
       const App = () => (
         <NaviDebug debugAll>
-          <div class="demo-header">
-            <h1>Dialog demo</h1>
-            {/* Where this demo sits in the row of them: the previous arrow is
-                dead here, which is itself the information */}
-            <nav class="demo-nav">
-              <span class="demo-nav-none" aria-hidden="true">
-                ←
-              </span>
-              <a href="./2_popover_demo.html" title="Next: popover demo">
-                →
-              </a>
-            </nav>
-          </div>
+          <DemoHeader
+            title="Dialog demo"
+            next={{ href: "./2_popover_demo.html", label: "Popover" }}
+          />
 
           <TableOfContents />
 
