@@ -77,6 +77,7 @@
         WheelGroup,
         coarsePointerSignal,
       } from "@jsenv/navi";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
 
       // Each demo below is one block: its constants, its signals and its
       // components sit together between two banners, so a block can be copied
@@ -90,7 +91,7 @@
         return signal;
       };
 
-      // ── Wheel, one signal per wheel ───────────────────────────────────────
+      // ── 1. custom via picker + wheel, one signal per wheel ────────────────
 
       // Hours 0..5, minutes by 5. Both lists are fixed on purpose: making the
       // minutes depend on the selected hour makes the minute wheel move on its
@@ -127,7 +128,10 @@
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Wheel (one signal per wheel)</h2>
+            <h2 id="wheel_per_signal_demo">
+              1. Duration option — custom via picker + wheel (un signal par
+              roue)
+            </h2>
             <p class="desc">
               Deux roues, deux signaux : chaque roue tient le sien à jour, rien
               à recombiner. Le Picker porte un nom, donc ce qu'il contient
@@ -302,7 +306,7 @@
         );
       };
 
-      // ── Wheel, one signal for both ────────────────────────────────────────
+      // ── 2. custom via picker + wheel, one signal for both ─────────────────
       // KNOWN BROKEN, kept on purpose to work on: the WheelGroup aggregates its
       // two wheels into ONE number and writes it to its signal correctly
       // (wheel_total in the url), but the picker around it hands the form `{}`
@@ -338,7 +342,10 @@
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Wheel (one signal for both)</h2>
+            <h2 id="wheel_one_signal_demo">
+              2. Duration option — custom via picker + wheel (un signal pour les
+              deux)
+            </h2>
             <p class="desc">
               Un seul signal pour les deux roues :{" "}
               <code>aggregateChildStates</code> dit comment elles font un nombre
@@ -522,7 +529,7 @@
         );
       };
 
-      // ── Presets + custom via Picker, nothing proposed ─────────────────────
+      // ── 3. custom via picker + input duration, nothing proposed ───────────
 
       const PICKER_PRESETS = ["1h", "1h30", "2h"];
       // "1h30", not 90: the presets are duration strings, so a numeric default
@@ -547,7 +554,10 @@
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Picker (rien de proposé)</h2>
+            <h2 id="input_duration_demo">
+              3. Duration option — custom via picker + input duration (rien de
+              proposé)
+            </h2>
             <p class="desc">
               L'option "Perso" contient un Picker : cliquer dessus sélectionne
               l'option et ouvre la popup en un seul clic. Le picker s'ouvre sur
@@ -640,12 +650,16 @@
                     >
                       <Box flex="y" alignX="center" padding="m" spacing="l">
                         <Text bold>Veuillez saisir une durée</Text>
+                        {/* required only while "Perso" is the chosen option:
+                            a duration nobody is going to use is not missing,
+                            and submitting a preset would otherwise be refused
+                            for an empty field the user never opened. */}
                         <InputDuration
                           signal={pickerCustomDurationSignal}
                           min="15min"
                           max="4h30"
                           step="5min"
-                          required
+                          required={duration === "custom"}
                         />
                         <Box flex spacing="s" expandX alignX="end">
                           <Button command="--navi-cancel" variant="discrete" />
@@ -672,7 +686,7 @@
         );
       };
 
-      // ── Presets + custom via Picker, 2h15 proposed ────────────────────────
+      // ── 4. custom via picker + input duration, 2h15 proposed ──────────────
 
       const PROPOSAL_PRESETS = ["1h", "1h30", "2h"];
       // 2h15 is proposed, not chosen: the signal holds nothing until the picker
@@ -696,7 +710,10 @@
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Picker (2h15 proposé)</h2>
+            <h2 id="input_duration_proposed_demo">
+              4. Duration option — custom via picker + input duration (2h15
+              proposé)
+            </h2>
             <p class="desc">
               Même chose, mais le champ du picker s'ouvre sur 2h15 : une
               proposition à partir de laquelle régler, pas une réponse. Tant
@@ -842,9 +859,16 @@
         </Box>
       );
 
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <DocumentToc />
+        </div>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
           <ResetAll />
+          <TableOfContents />
           <WheelPerSignalDemo />
           <WheelOneSignalDemo />
           <PickerCustomNoProposalDemo />
