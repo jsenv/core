@@ -102,7 +102,7 @@
     <div id="root"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -271,64 +271,138 @@
 
       // Each step commits on its own — the slide it sits in is what it answers
       // to, so submitting walks to the next one with nothing said about it.
-      const MultiStepSection = () => {
-        const [entries, push, clear] = useCallLog();
+      // `required` is what keeps that walk honest: a step nobody answered holds
+      // the user, so the summary at the end can only be reached by going
+      // through them, and answering a step again puts it back out of reach.
+      const MultiStepFlow = ({ idPrefix, perform, push }) => {
         const [answers, setAnswers] = useState({});
+        const [summary, setSummary] = useState(null);
+        // Read inside an async action, where the state captured at render time
+        // is one step out of date by the time the step before it settles.
+        const answersRef = useRef({});
+
+        const submitStep = async (index, value) => {
+          push(`step ${index + 1}`, value);
+          await perform(value);
+          const merged = { ...answersRef.current, ...value };
+          answersRef.current = merged;
+          setAnswers(merged);
+          // Only the last step produces the thing the summary talks about —
+          // any earlier one invalidates it, exactly as it un-answers the steps
+          // after it.
+          setSummary(
+            index === QUESTIONS.length - 1
+              ? { reference: `REF-${merged.name}-${merged.city}`, ...merged }
+              : null,
+          );
+        };
+
+        return (
+          <SlideContainer
+            layout="row"
+            duration="400ms"
+            className="demo-slide-box"
+          >
+            {QUESTIONS.map((question, index) => (
+              <SlideContainer.Item
+                key={question.id}
+                id={`${idPrefix}_${question.id}`}
+                required
+                overflow="auto"
+              >
+                <Box
+                  header
+                  padding="s"
+                  flex="x"
+                  alignY="center"
+                  className="demo-slide-header"
+                >
+                  {index > 0 && (
+                    <SlideContainer.Previous size="l" padding="xs" />
+                  )}
+                  <Text expandX>
+                    {index + 1} / {QUESTIONS.length}
+                  </Text>
+                </Box>
+                <Form
+                  body
+                  flex="y"
+                  spacing="m"
+                  padding="m"
+                  action={(value) => submitStep(index, value)}
+                >
+                  <Field vertical>
+                    <Label requiredIndicator>{question.label}</Label>
+                    <Input name={question.name} required />
+                  </Field>
+                  <Button type="submit">
+                    {index === QUESTIONS.length - 1 ? "Finish" : "Next"}
+                  </Button>
+                </Form>
+              </SlideContainer.Item>
+            ))}
+            <SlideContainer.Item id={`${idPrefix}_done`} overflow="auto">
+              <Box
+                header
+                padding="s"
+                flex="x"
+                alignY="center"
+                className="demo-slide-header"
+              >
+                <SlideContainer.Previous size="l" padding="xs" />
+                <Text expandX>done</Text>
+              </Box>
+              <Box body padding="m" flex="y" spacing="s">
+                <strong>All set.</strong>
+                {summary ? (
+                  <>
+                    <span>
+                      Reference <code>{summary.reference}</code>
+                    </span>
+                    <span>
+                      {summary.name}, {summary.city}, {summary.colour}
+                    </span>
+                  </>
+                ) : (
+                  <span>Nothing sent yet.</span>
+                )}
+                <span style={{ fontSize: "12px", color: "#666" }}>
+                  answers: <code>{JSON.stringify(answers)}</code>
+                </span>
+              </Box>
+            </SlideContainer.Item>
+          </SlideContainer>
+        );
+      };
+
+      const MultiStepSection = () => {
+        const [syncEntries, pushSync, clearSync] = useCallLog();
+        const [asyncEntries, pushAsync, clearAsync] = useCallLog();
+        const settle = useSettlableAction();
         return (
           <section class="demo-section">
             <Heading id="multi-step">One form per slide</Heading>
-            <div class="demo-row">
-              <span>
-                answers: <code>{JSON.stringify(answers)}</code>
-              </span>
-            </div>
-            <SlideContainer
-              layout="row"
-              duration="400ms"
-              className="demo-slide-box"
-            >
-              {QUESTIONS.map((question, index) => (
-                <SlideContainer.Item
-                  key={question.id}
-                  id={question.id}
-                  overflow="auto"
-                >
-                  <Box
-                    header
-                    padding="s"
-                    flex="x"
-                    alignY="center"
-                    className="demo-slide-header"
-                  >
-                    {index > 0 && (
-                      <SlideContainer.Previous size="l" padding="xs" />
-                    )}
-                    <Text expandX>
-                      {index + 1} / {QUESTIONS.length}
-                    </Text>
-                  </Box>
-                  <Form
-                    body
-                    flex="y"
-                    spacing="m"
-                    padding="m"
-                    action={(value) => {
-                      push(`step ${index + 1}`, value);
-                      setAnswers((previous) => ({ ...previous, ...value }));
-                    }}
-                  >
-                    <Field vertical>
-                      <Label requiredIndicator>{question.label}</Label>
-                      <Input name={question.name} required />
-                    </Field>
-                    <Button type="submit">
-                      {index === QUESTIONS.length - 1 ? "Finish" : "Next"}
-                    </Button>
-                  </Form>
-                </SlideContainer.Item>
-              ))}
-            </SlideContainer>
-            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="multi-step-sync">
+              Steps that commit right away
+            </Heading>
+            <MultiStepFlow
+              idPrefix="sync"
+              push={pushSync}
+              perform={() => undefined}
+            />
+            <CallLog entries={syncEntries} onClear={clearSync} />
+
+            <Heading level={3} id="multi-step-async">
+              Steps that take time
+            </Heading>
+            <SettlePanel {...settle} />
+            <MultiStepFlow
+              idPrefix="async"
+              push={pushAsync}
+              perform={() => settle.action()}
+            />
+            <CallLog entries={asyncEntries} onClear={clearAsync} />
           </section>
         );
       };
@@ -452,6 +526,16 @@
             </li>
             <li>
               <Link href="#multi-step">One form per slide</Link>
+              <ul>
+                <li>
+                  <Link href="#multi-step-sync">
+                    Steps that commit right away
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#multi-step-async">Steps that take time</Link>
+                </li>
+              </ul>
             </li>
             <li>
               <Link href="#dialog">In a dialog</Link>

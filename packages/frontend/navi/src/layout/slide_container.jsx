@@ -236,6 +236,11 @@ export const SlideContainer = ({
   const [currentState, setCurrentState] = useState(undefined);
   const current = currentProp ?? currentState;
   const vertical = layout === "column";
+  // Which required slides have been answered (see Slide's own `required`). Held
+  // here rather than in each slide because answering one says something about
+  // the others: the steps after it were answered about a state that has just
+  // changed, so they stop counting as answered.
+  const [answeredAreas, setAnsweredAreas] = useState([]);
 
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
@@ -244,6 +249,15 @@ export const SlideContainer = ({
         ? lineAreas(slideElements, layout)
         : parseAreas(layout);
     return { slideElements, ...map };
+  };
+
+  const markAnswered = (area) => {
+    const order = readMap().slideElements.map(readArea);
+    const rank = order.indexOf(area);
+    setAnsweredAreas((previous) => [
+      ...previous.filter((answered) => order.indexOf(answered) < rank),
+      area,
+    ]);
   };
 
   // Everything positional is decided here, from the DOM, once per render: where
@@ -467,7 +481,9 @@ export const SlideContainer = ({
       style={{ "--slide-container-duration": duration, ...rest.style }}
     >
       <div data-slide-track="" ref={trackRef}>
-        <SlideContainerContext.Provider value={{ vertical }}>
+        <SlideContainerContext.Provider
+          value={{ vertical, answeredAreas, markAnswered }}
+        >
           {children}
         </SlideContainerContext.Provider>
       </div>
@@ -486,6 +502,13 @@ export const SlideContainer = ({
  * @param {object} props
  * @param {string} [props.area] - which area of the map it is. Defaults to its
  *   id, so a slide that is already named is not named twice.
+ * @param {boolean} [props.required] - this step has to be answered before the
+ *   ones after it can be reached: it holds the user until an action inside it
+ *   completes (a form being sent), and lets go afterwards. What makes a slide
+ *   reachable ONLY by answering the one before it — an arrow key or a "next"
+ *   button cannot skip ahead to a screen that has nothing to show yet.
+ *   Answering a step un-answers the ones after it, since what they were
+ *   answered about has just changed.
  * @param {boolean} [props.preventNav] - hold the user here, whichever way they
  *   try to leave.
  * @param {boolean} [props.preventNavNext] - hold them from going right or down.
@@ -493,19 +516,52 @@ export const SlideContainer = ({
  */
 export const Slide = ({
   area,
+  required,
   preventNav,
   preventNavNext = preventNav,
   preventNavPrevious = preventNav,
   children,
   ...rest
 }) => {
+  const defaultRef = useRef();
+  const ref = rest.ref || defaultRef;
+  const container = useContext(SlideContainerContext);
+  const slideArea = area ?? rest.id;
+  const answered = Boolean(container?.answeredAreas.includes(slideArea));
+  const holdsUntilAnswered = Boolean(required) && !answered;
+  const nextIsLocked = Boolean(preventNavNext) || holdsUntilAnswered;
+
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!required || !element || !container) {
+      return null;
+    }
+    const onActionEnd = () => {
+      // Dropped here rather than left to the re-render this schedules: what
+      // moves to the next slide is the same send that just completed, and the
+      // gate it goes through reads this attribute off the DOM (see goToArea).
+      // A render is a microtask away; the move is not.
+      element.removeAttribute("data-prevent-nav-next");
+      container.markAnswered(slideArea);
+    };
+    // capture: navi_action_end does not bubble (it is dispatched on the control
+    // that owns the action), but it still travels down the capture path.
+    element.addEventListener("navi_action_end", onActionEnd, { capture: true });
+    return () => {
+      element.removeEventListener("navi_action_end", onActionEnd, {
+        capture: true,
+      });
+    };
+  }, [required, slideArea, container]);
+
   const locks = useMemo(
-    () => ({ preventNavNext, preventNavPrevious }),
-    [preventNavNext, preventNavPrevious],
+    () => ({ preventNavNext: nextIsLocked, preventNavPrevious }),
+    [nextIsLocked, preventNavPrevious],
   );
   return (
     <SlideContext.Provider value={locks}>
       <Box
+        ref={ref}
         flex="y"
         // Focusable, but never by Tab: the arrows and Home/End belong to the
         // slides, and a keyboard shortcut only reaches what has the focus — so
@@ -521,8 +577,8 @@ export const Slide = ({
         navi-autofocus="fallback"
         {...rest}
         data-slide=""
-        data-slide-area={area ?? rest.id}
-        data-prevent-nav-next={preventNavNext ? "" : undefined}
+        data-slide-area={slideArea}
+        data-prevent-nav-next={nextIsLocked ? "" : undefined}
         data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
       >
         {children}
