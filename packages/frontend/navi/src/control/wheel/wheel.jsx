@@ -1968,11 +1968,16 @@ export const WheelGroup = (props) => {
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
 
-  // controlType "control_group" (not a bespoke "wheel_group") so a Picker with
-  // type="form" recognises this as its aggregating child (it only syncs
-  // with a control_group — see useUIFacadeStateController). Named wheels aggregate
-  // into { hours, minutes, … }; a nameless wheel warns (name it or it won't be in
-  // the value), same as any control group.
+  // Named wheels aggregate into { hours, minutes, … }; a nameless wheel warns
+  // (name it or it won't be in the value), same as any control group.
+  //
+  // `aggregateChildStates`/`distributeChildUIState` turn that into whatever the
+  // group really is worth instead — a total in minutes, an ISO duration, a date
+  // — one value in both directions, so the group can be driven by a single
+  // `value`/`signal` and hand a single value back. Same mechanism InputDuration
+  // uses for its own hour/minute/second fields (see input_duration.jsx); passed
+  // through rather than fixed here because only the caller knows what two wheels
+  // add up to.
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       allowCapture: true,
@@ -1980,6 +1985,8 @@ export const WheelGroup = (props) => {
       controlType: "control_group",
       stateType: "object",
       cascadeValidationToChildren: true,
+      aggregateChildStates: props.aggregateChildStates,
+      distributeChildUIState: props.distributeChildUIState,
     });
   const { children } = controlgroupProps;
 
@@ -2036,6 +2043,8 @@ export const WheelGroup = (props) => {
       horizontal={undefined}
       glass={undefined}
       frameBorder={undefined}
+      aggregateChildStates={undefined}
+      distributeChildUIState={undefined}
       baseClassName="navi_wheel_group"
       data-horizontal={horizontal ? "" : undefined}
       style={groupStyle}
