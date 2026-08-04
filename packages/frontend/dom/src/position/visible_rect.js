@@ -9,6 +9,7 @@ import {
   closestOpenableAncestor,
   isAncestorOpen,
   observeAncestorOpenState,
+  selfOrClosestOpenableAncestor,
 } from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositionedParent } from "./offset_parent.js";
@@ -567,7 +568,12 @@ export const visibleRectEffect = (
       });
     }
     on_ancestor_events: {
-      let currentOpenableAncestor = closestOpenableAncestor(element);
+      // Self-inclusive on the first step only: `element` can itself be the
+      // dialog/popover that closes (a callout anchored to a dialog rather than
+      // to a field inside it), and its own close hides it just as much as an
+      // ancestor's would. The walk up below starts from parentElement, so the
+      // chain still advances.
+      let currentOpenableAncestor = selfOrClosestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {

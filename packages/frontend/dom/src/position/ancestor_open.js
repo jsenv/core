@@ -5,6 +5,23 @@
 // what each does with a transition differs.
 const ANCESTOR_OPEN_SELECTOR = "dialog, details, [popover], [aria-expanded]";
 
+// A dialog, a details or a [popover] hides its own box when it closes, so an
+// element that IS one is closed in exactly the same way an element inside one
+// is — which matters for anything positioned against it, e.g. a callout
+// anchored to a dialog rather than to a field inside it.
+// [aria-expanded] is deliberately absent although the ancestor selector has
+// it: an element carrying it usually expands something ELSE (a picker's own
+// trigger input carries it for the popup it opens), so reading it as "this
+// element itself is hidden" would be wrong.
+const SELF_OPEN_SELECTOR = "dialog, details, [popover]";
+
+export const selfOrClosestOpenableAncestor = (element) => {
+  if (element.matches?.(SELF_OPEN_SELECTOR)) {
+    return element;
+  }
+  return closestOpenableAncestor(element);
+};
+
 export const closestOpenableAncestor = (element) => {
   const parentElement = element.parentElement;
   if (!parentElement) {

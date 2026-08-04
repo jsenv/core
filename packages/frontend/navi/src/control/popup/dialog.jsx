@@ -63,6 +63,7 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../rules/control_action.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
@@ -513,8 +514,16 @@ const UncontrolledDialog = (props) => {
     return {
       onRequestClose: (requestCloseEvent) => {
         if (requestCloseEvent.detail.isCancel) {
-          // Giving up is always allowed — nothing to validate, nothing to
-          // commit.
+          // Giving up validates nothing and commits nothing, but the dialog
+          // still has to be interactive to do it: mid-action it is busy and
+          // cannot walk away from an answer it does not have yet.
+          dispatchRequestInteraction(dialogEl, {
+            event: requestCloseEvent,
+            name: "dialog request cancel",
+            prevented: () => {
+              requestCloseEvent.preventDefault();
+            },
+          });
           return;
         }
         // Closing IS committing, so a close that cannot commit must not
