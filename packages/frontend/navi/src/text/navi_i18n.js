@@ -315,6 +315,10 @@ naviI18n.addAll({
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",
   },
+  "constraint.readonly.nothing_to_send": {
+    fr: "Modifiez quelque chose avant d'envoyer.",
+    en: "Change something before sending.",
+  },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",
     en: "This action is in progress...",

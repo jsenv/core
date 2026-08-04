@@ -107,22 +107,42 @@ const useFormGroup = (props) => {
       cascadeValidationToChildren: true,
     },
   );
-  useSentValue(
-    childrenWrapperProps.uiGroupStateController,
-    props.sendUnchanged,
-  );
+  const uiStateController = childrenWrapperProps.uiGroupStateController;
+  // The signal, not the plain property: reading it here is what re-renders the
+  // form as its fields change, which is what turns the submit button below
+  // interactive the moment there is something to send.
+  const uiState = uiStateController.uiStateSignal.value;
+  const nothingToSend =
+    !props.sendUnchanged &&
+    compareTwoJsValues(uiState, uiStateController.sentUIState);
+  // Asked by the action gate at submit time, whichever way the submit came in —
+  // a submit event, a --navi-send command, requestSubmit() (see
+  // control_action.js). The value it is given, not `nothingToSend` above: a
+  // field changing updates the state synchronously while the re-render is a
+  // microtask away, so typing and pressing Enter right after must not be read
+  // against the state of the previous frame.
+  uiStateController.shouldRequestAction = (value) =>
+    Boolean(props.sendUnchanged) ||
+    !compareTwoJsValues(value, uiStateController.sentUIState);
+  useFirstUIStateAsSent(uiStateController);
 
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const formContextValue = useMemo(() => {
-    return { loading };
-  }, [loading]);
+    return { loading, nothingToSend };
+  }, [loading, nothingToSend]);
 
   return {
     formRootProps,
     formProps,
+    // What was sent is what the next submit is measured against. On success
+    // only: an action that failed has not been sent, and the user must be able
+    // to try the same value again.
+    onnavi_action_end: () => {
+      uiStateController.sentUIState = uiStateController.uiState;
+    },
     inside: (
       <FormContext.Provider value={formContextValue}>
         <ControlgroupChildrenWrapper
@@ -140,12 +160,14 @@ const useFormGroup = (props) => {
 
 const FormControl = (props) => {
   const { ref, method = "GET" } = props;
-  const { formRootProps, formProps, inside } = useFormGroup(props);
+  const { formRootProps, formProps, onnavi_action_end, inside } =
+    useFormGroup(props);
 
   return (
     <Box
       {...formRootProps}
       {...formProps}
+      onnavi_action_end={onnavi_action_end}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -179,53 +201,30 @@ const FormControl = (props) => {
 // way every other group is — a command, or an action requested on it. method
 // belongs to the browser's own submission, so it means nothing here either.
 const FormNested = (props) => {
-  const { formRootProps, formProps, inside } = useFormGroup(props);
+  const { formRootProps, formProps, onnavi_action_end, inside } =
+    useFormGroup(props);
 
   return (
-    <Box {...formRootProps} {...formProps} pseudoClasses={FormPseudoClasses}>
+    <Box
+      {...formRootProps}
+      {...formProps}
+      onnavi_action_end={onnavi_action_end}
+      pseudoClasses={FormPseudoClasses}
+    >
       {inside}
     </Box>
   );
 };
 
-// Same idea as an input's own lastActionValueRef (control_hooks.jsx): what was
-// last sent, kept so the same thing is not sent twice. A form is only asked
-// about it at submit time, and the answer is read by the action gate wherever
-// the submit came from — a submit event, a `--navi-send` command,
-// `requestSubmit()` — so it is exposed on the controller rather than checked
-// in one of those three places.
-const NOTHING_SENT_YET = Symbol.for("nothing_sent_yet");
-
-const useSentValue = (uiStateController, sendUnchanged) => {
-  const sentValueRef = useRef(NOTHING_SENT_YET);
-
-  uiStateController.shouldRequestAction = (value) => {
-    if (sendUnchanged) {
-      return true;
-    }
-    return !compareTwoJsValues(value, sentValueRef.current);
-  };
-
+// The value the form opens on counts as already sent: a form nobody has touched
+// has nothing to say, defaults filled in or not. Taken in a layout effect
+// rather than during render because the fields register themselves in their own
+// effects, which run first — this is the earliest moment the form knows what it
+// holds. Everything after this baseline is a real send moving it forward (see
+// useFormGroup's own onnavi_action_end).
+const useFirstUIStateAsSent = (uiStateController) => {
   useLayoutEffect(() => {
-    // The value the form opens on counts as already sent: a form nobody has
-    // touched has nothing to say, defaults filled in or not. Read here rather
-    // than during render because the fields register themselves in their own
-    // effects, which run first — this is the earliest the form knows what it
-    // holds.
-    sentValueRef.current = uiStateController.uiState;
-    const element = uiStateController.ref.current;
-    if (!element) {
-      return null;
-    }
-    // On success only: an action that failed has not been sent, and the user
-    // must be able to try the same value again.
-    const onActionEnd = () => {
-      sentValueRef.current = uiStateController.uiState;
-    };
-    element.addEventListener("navi_action_end", onActionEnd);
-    return () => {
-      element.removeEventListener("navi_action_end", onActionEnd);
-    };
+    uiStateController.sentUIState = uiStateController.uiState;
   }, [uiStateController]);
 };
 

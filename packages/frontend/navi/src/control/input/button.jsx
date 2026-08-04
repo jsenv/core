@@ -1,10 +1,11 @@
-import { useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { FormContext } from "../form_context.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -18,12 +19,24 @@ const ButtonFirstResolver = (props) => {
 
 const ButtonCommandPropResolver = (props) => {
   const Next = useNextResolver();
+  const form = useContext(FormContext);
 
   if (props.type === "submit") {
     props.type = "button";
     props.command = props.command || "--navi-send";
   }
   const command = props.command;
+
+  // A send with nothing to send does nothing (see Form's own sendUnchanged), and
+  // a button that visibly does nothing when pressed reads as broken. Read-only
+  // says so before the press and explains it on the press, and the button
+  // becomes interactive again the moment a field changes.
+  if (command === "--navi-send" && form?.nothingToSend && !props.readOnly) {
+    props.readOnly = true;
+    props["data-readonly-message"] =
+      props["data-readonly-message"] ??
+      naviI18n("constraint.readonly.nothing_to_send");
+  }
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a

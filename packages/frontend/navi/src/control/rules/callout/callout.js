@@ -65,6 +65,7 @@ const css = /* css */ `
     inset: auto;
     top: 0;
     left: 0;
+    z-index: 1;
     /* Callout styles */
     display: block;
     height: auto; /* User agent reset */
