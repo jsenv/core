@@ -115,6 +115,9 @@ const useFormGroup = (props) => {
   const nothingToSend =
     !props.sendUnchanged &&
     compareTwoJsValues(uiState, uiStateController.sentUIState);
+  // Read by READONLY_CONSTRAINT from the submit button below, which is
+  // read-only for this reason and has to be able to say so.
+  uiStateController.nothingToSend = nothingToSend;
   // Asked by the action gate at submit time, whichever way the submit came in —
   // a submit event, a --navi-send command, requestSubmit() (see
   // control_action.js). The value it is given, not `nothingToSend` above: a

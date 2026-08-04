@@ -29,14 +29,16 @@ const ButtonCommandPropResolver = (props) => {
 
   // A send with nothing to send does nothing (see Form's own sendUnchanged), and
   // a button that visibly does nothing when pressed reads as broken. Read-only
-  // says so before the press and explains it on the press, and the button
-  // becomes interactive again the moment a field changes.
-  if (command === "--navi-send" && form?.nothingToSend && !props.readOnly) {
-    props.readOnly = true;
-    props["data-readonly-message"] =
-      props["data-readonly-message"] ??
-      naviI18n("constraint.readonly.nothing_to_send");
-  }
+  // says so before the press; what it says on the press is READONLY_CONSTRAINT's
+  // own business, and it recognises this case. Interactive again the moment a
+  // field changes.
+  //
+  // Passed to Next rather than written onto props like everything else here:
+  // this one answers to something outside the button and flips back, and the
+  // props object outlives the render (a button inside a form is the same vnode
+  // when the form re-renders around it), so a write would never be undone.
+  const readOnly =
+    command === "--navi-send" && form?.nothingToSend ? true : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
@@ -54,7 +56,7 @@ const ButtonCommandPropResolver = (props) => {
     }
   }
 
-  return <Next {...props} />;
+  return <Next {...props} readOnly={readOnly} />;
 };
 const COMMAND_DEFAULT_PROPS_FACTORIES = {
   "--navi-clear": () => ({
