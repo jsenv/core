@@ -22,22 +22,28 @@ export const BUSY_CONSTRAINT = {
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
 
-// Read in two halves rather than off the rendered `aria-busy`, which conflates
-// them: that attribute is written during render, so it still says "true" for
-// the whole tick in which an action settles — and that is exactly when this
-// gets asked (an action's own completion side effect walking the surface around
-// it: a popup deciding whether it may finally close, a slide whether it may
-// move on). The action's running state is a signal and is already correct
-// there; `loadingFromProps` covers everything else that makes a control busy
-// (the `loading` prop, a group's loading context) and has no such timing
-// problem.
+// Asked source by source rather than off the rendered `aria-busy`, which
+// conflates them and is a frame behind: that attribute is written during
+// render, so it still says "true" for the whole tick in which an action
+// settles — and that tick is exactly when this gets asked (an action's own
+// completion side effect walking the surface around it: a popup deciding
+// whether it may finally close, a slide whether it may move on).
+//
+// The action's running state is a signal, so it is already right there. A
+// control busy only because the group above is running the action it asked for
+// has no state of its own to read — the group's answer IS its answer, so it
+// asks upward and inherits the same live reading.
 const isControlBusy = (field) => {
-  if (field.loadingFromProps) {
+  if (field.loadingFromOwnProp) {
     return true;
   }
   const { boundAction } = field;
-  if (boundAction) {
-    return boundAction.runningStateSignal.value === RUNNING;
+  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
+    return true;
   }
-  return field.controlHostProps["aria-busy"] === "true";
+  if (field.loadingFromParent) {
+    const parent = field.parentUIStateController;
+    return parent ? isControlBusy(parent) : false;
+  }
+  return false;
 };

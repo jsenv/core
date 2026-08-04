@@ -1193,8 +1193,13 @@ const useInteractiveProps = (
 
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
-    const loadingBase =
-      loading || (controlLoading && parentActionRequester === ref.current);
+    // Busy because the group above is running the action THIS control asked
+    // for (a submit button wearing its form's submission), as opposed to busy
+    // on its own say-so.
+    const loadingFromParent = Boolean(
+      controlLoading && parentActionRequester === ref.current,
+    );
+    const loadingBase = loading || loadingFromParent;
     const readOnlyBase =
       readOnly ||
       controlReadOnly ||
@@ -1202,11 +1207,12 @@ const useInteractiveProps = (
       controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;
-    // The half of "busy" that has nothing to do with the bound action (the
-    // `loading` prop, a group's loading context) — kept apart from it so
-    // BUSY_CONSTRAINT can read the action's own state live without losing this
-    // one. See its own comment for why the rendered aria-busy is not enough.
-    uiStateController.loadingFromProps = loadingBase;
+    // Both halves of "busy" that do not come from the bound action, kept apart
+    // from each other and from it: BUSY_CONSTRAINT answers each from its own
+    // live source rather than from the rendered aria-busy, which conflates all
+    // three and is a frame behind. See its own comment.
+    uiStateController.loadingFromOwnProp = Boolean(loading);
+    uiStateController.loadingFromParent = loadingFromParent;
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
