@@ -45,7 +45,7 @@
         border: 1px solid #dee2e6;
         border-radius: 4px;
       }
-      .form-params h3 {
+      .form-params .panel-title {
         margin-top: 0;
         color: #495057;
       }
@@ -182,7 +182,7 @@
               <Button type="submit">Submit</Button>
             </Form>
             <div className="form-params">
-              <h3>{expectation}</h3>
+              <div className="panel-title">{expectation}</div>
               <pre>{log.length ? log.join("\n") : "— nothing yet —"}</pre>
             </div>
           </div>
@@ -451,7 +451,9 @@
             {/* ✅ Affichage des paramètres du formulaire */}
             {formParams && (
               <div className="form-params">
-                <h3>📋 Paramètres du formulaire soumis :</h3>
+                <div className="panel-title">
+                  📋 Paramètres du formulaire soumis :
+                </div>
                 <pre>{JSON.stringify(formParams, null, 2)}</pre>
               </div>
             )}
@@ -490,7 +492,7 @@
                 borderRadius: "4px",
               }}
             >
-              <h3>Instructions de test :</h3>
+              <div className="panel-title">Instructions de test :</div>
               <ol>
                 <li>
                   <strong>Test 1</strong> : Laissez tous les champs vides et
