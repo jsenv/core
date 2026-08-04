@@ -81,6 +81,7 @@
               <h1>Form Demo</h1>
               <TableOfContents />
               <BasicFormDemo />
+              <UnchangedDemo />
               <FormWithButtonActionDemo />
               <MultiFieldValidationTest />
               <h2 style={{ margin: "40px 20px 0" }}>Input types in forms</h2>
@@ -106,6 +107,9 @@
           <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
             <li>
               <a href="#basic">Basic form</a>
+            </li>
+            <li>
+              <a href="#unchanged">Submitting an unchanged form</a>
             </li>
             <li>
               <a href="#button-action">Form with button action</a>
@@ -184,6 +188,61 @@
                 {result.value}
               </div>
             )}
+          </div>
+        );
+      };
+
+      // Fields that start filled, so "submit without changing anything" is one
+      // press away in each of the three forms below.
+      const PrefilledFields = () => (
+        <div className="field">
+          <Field>
+            <Label>Username</Label>
+            <Input type="text" name="username" defaultValue="dam" />
+          </Field>
+        </div>
+      );
+
+      // A form only acts on an answer that is actually new. What the three do
+      // with a press that has nothing to send is the whole demo: nothing, say
+      // why, or send anyway.
+      const UnchangedDemo = () => {
+        const [sends, setSends] = useState([]);
+        const record = (label) => (value) => {
+          setSends((previous) => [...previous, `${label}: ${value.username}`]);
+        };
+        return (
+          <div className="test-container" id="unchanged">
+            <h2>Submitting an unchanged form</h2>
+
+            <h3>default</h3>
+            <Form name="unchanged_default" action={record("default")}>
+              <PrefilledFields />
+              <Button type="submit">Submit</Button>
+            </Form>
+
+            <h3>readOnlyWhileFormUnchanged (on the button)</h3>
+            <Form name="unchanged_held" action={record("held")}>
+              <PrefilledFields />
+              <Button type="submit" readOnlyWhileFormUnchanged>
+                Submit
+              </Button>
+            </Form>
+
+            <h3>canSendWhileUnchanged (on the form)</h3>
+            <Form
+              name="unchanged_always"
+              canSendWhileUnchanged
+              action={record("always")}
+            >
+              <PrefilledFields />
+              <Button type="submit">Submit</Button>
+            </Form>
+
+            <div className="form-params">
+              <h3>Sent</h3>
+              <pre>{sends.length ? sends.join("\n") : "—"}</pre>
+            </div>
           </div>
         );
       };

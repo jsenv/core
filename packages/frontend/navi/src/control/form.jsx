@@ -33,7 +33,7 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   what is typed in it never becomes part of that group's value. For a form
  *   that lives INSIDE something else while answering a different question —
  *   "create the thing I am about to pick" inside a picker, say.
- * @param {boolean} [props.sendUnchanged] - Send even when nothing changed. By
+ * @param {boolean} [props.canSendWhileUnchanged] - Send even when nothing changed. By
  *   default a form only acts on an answer that is actually new: submitting a
  *   form nobody touched — one just rendered, one whose fields still hold their
  *   defaults, one reopened and left alone — runs no action, and after the first
@@ -93,7 +93,7 @@ export const Form = (props) => {
 const useFormGroup = (props) => {
   const propsForGroup = { ...props };
   delete propsForGroup.standalone;
-  delete propsForGroup.sendUnchanged;
+  delete propsForGroup.canSendWhileUnchanged;
   // Not the generic control `command`, which a control triggers on its own ui
   // actions — here it is what follows a SUCCESSFUL submission. So it is kept
   // out of the control machinery and left in the DOM for the send to read
@@ -129,7 +129,7 @@ const useFormGroup = (props) => {
   // microtask away, so typing and pressing Enter right after must not be read
   // against the state of the previous frame.
   uiStateController.shouldRequestAction = (value) =>
-    Boolean(props.sendUnchanged) ||
+    Boolean(props.canSendWhileUnchanged) ||
     !compareTwoJsValues(value, uiStateController.sentUIState);
   useFirstUIStateAsSent(uiStateController);
 

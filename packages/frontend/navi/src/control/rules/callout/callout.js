@@ -65,6 +65,9 @@ const css = /* css */ `
     inset: auto;
     top: 0;
     left: 0;
+    /* For some reason callout could end up behing elements when it's redisplayed in a dialog
+    (behind button relatively positioned in dialog footer while callout is appended into dialog body)
+    To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
     z-index: 1;
     /* Callout styles */
     display: block;
