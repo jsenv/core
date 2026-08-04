@@ -103,6 +103,17 @@
         id: "wheel_minutes",
       });
 
+      // ── Wheel, one signal for both wheels: its own state ──────────────────
+      const WHEEL_PROPOSED_TOTAL =
+        WHEEL_PROPOSED_HOURS * 60 + WHEEL_PROPOSED_MINUTES;
+      const wheelOneSignalDurationSignal = stateSignal("1h30", {
+        id: "wheel_one_signal",
+        oneOf: ["1h", "1h30", "2h", "custom"],
+      });
+      const wheelTotalSignal = stateSignal(WHEEL_PROPOSED_TOTAL, {
+        id: "wheel_total",
+      });
+
       const dateSignal = stateSignal(Date.now(), {
         id: "date",
         type: "date",
@@ -143,13 +154,49 @@
           wheel_per_signal: wheelPerSignalDurationSignal,
           wheel_hours: wheelHoursSignal,
           wheel_minutes: wheelMinutesSignal,
+          wheel_one_signal: wheelOneSignalDurationSignal,
+          wheel_total: wheelTotalSignal,
         },
       });
       setupRoutes([DEMO_ROUTE]);
 
+      // Every signal this page owns, in one place — what the route serialises
+      // and what "reset all" puts back to nothing.
+      const DEMO_SIGNALS = [
+        dateSignal,
+        wheelPerSignalDurationSignal,
+        wheelHoursSignal,
+        wheelMinutesSignal,
+        wheelOneSignalDurationSignal,
+        wheelTotalSignal,
+        durationSignal2,
+        customDurationSignal,
+        durationSignal3,
+        customDuration3Signal,
+      ];
+
+      const ResetAll = () => (
+        <Box flex="x" alignX="end">
+          <Button
+            variant="discrete"
+            onClick={() => {
+              // undefined, not their defaults: a signal back at its default is
+              // a signal with nothing to say, which is what empties the url.
+              for (const demoSignal of DEMO_SIGNALS) {
+                demoSignal.value = undefined;
+              }
+            }}
+          >
+            Reset all
+          </Button>
+        </Box>
+      );
+
       const App = () => (
         <Box flex="y" spacing="l">
+          <ResetAll />
           <WheelPerSignalDemo />
+          <WheelOneSignalDemo />
           <PresetsWithPickerCustomNoDefaultDemo />
           <PresetsWithPickerCustomWithDefaultDemo />
         </Box>
@@ -319,6 +366,203 @@
                         {/* Docked (a finger), the sheet is dismissed by tapping
                             outside it, so buttons would only take room from the
                             wheels. Centered (a mouse), they stay. */}
+                        {!coarsePointerSignal.value && (
+                          <Box flex spacing="s" expandX alignX="end">
+                            <Button
+                              command="--navi-cancel"
+                              variant="discrete"
+                            />
+                            <Button type="submit" />
+                          </Box>
+                        )}
+                      </Form>
+                    </Picker>
+                  </List.Item>
+                </List>
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
+            {formResultSignal.value !== null ? (
+              <div class="form-result">
+                Form submitted:{" "}
+                {JSON.stringify(formResultSignal.value, null, 2)}
+              </div>
+            ) : (
+              <div class="form-result" style="color:#aaa">
+                Submit the form to see values…
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // ── Wheel, one signal for both ────────────────────────────────────────
+      // KNOWN BROKEN, kept on purpose to work on: the WheelGroup aggregates its
+      // two wheels into ONE number and writes it to its signal correctly
+      // (wheel_total in the url), but the picker around it hands the form `{}`
+      // instead of that number — a picker whose popup holds a group with a
+      // primitive value has no facade for it (type="duration" has one, a bare
+      // number does not). What we want to end up with is
+      // { durationCustom: <what aggregateChildStates returned> }.
+
+      const WheelOneSignalDemo = () => {
+        const formResultSignal = useSignal(null);
+        const duration = wheelOneSignalDurationSignal.value;
+        const totalMinutes = wheelTotalSignal.value;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
+        return (
+          <div class="demo-section">
+            <h2>Duration selector — custom via Wheel (one signal for both)</h2>
+            <p class="desc">
+              Un seul signal pour les deux roues :{" "}
+              <code>aggregateChildStates</code> dit comment elles font un nombre
+              de minutes, <code>distributeChildUIState</code> fait l'inverse.
+              <strong>
+                {" "}
+                Cassé pour l'instant : le form reçoit durationCustom = {"{}"} au
+                lieu du nombre.
+              </strong>
+            </p>
+            <Form
+              flex="y"
+              spacing="m"
+              alignX="start"
+              action={({ duration: chosen, durationCustom }) => {
+                const minutes =
+                  chosen === "custom"
+                    ? Number(durationCustom) || 0
+                    : durationToMinutes(chosen);
+                formResultSignal.value = { minutes, durationCustom };
+              }}
+            >
+              <Field ownLabel vertical>
+                <Label bold>Durée</Label>
+                <List
+                  selectable
+                  horizontal
+                  spacing="s"
+                  id="wheel_one_signal"
+                  name="duration"
+                  required
+                  flexWrap
+                  signal={wheelOneSignalDurationSignal}
+                  border="none"
+                >
+                  {["1h", "1h30", "2h"].map((durationPreset, i) => (
+                    <List.Item
+                      selectable
+                      key={durationPreset}
+                      index={i}
+                      id={`wheel_one_signal_${durationPreset}`}
+                      value={durationPreset}
+                      selected={durationPreset === duration}
+                      borderRadius="s"
+                      borderWidth="1"
+                      minWidth="64"
+                      paddingX="m"
+                      paddingY="s"
+                      alignX="center"
+                    >
+                      <Time type="duration" format="compact">
+                        {durationPreset}
+                      </Time>
+                    </List.Item>
+                  ))}
+                  <List.Item
+                    selectable
+                    index={3}
+                    id="wheel_one_signal_custom"
+                    value="custom"
+                    selected={duration === "custom"}
+                    borderRadius="s"
+                    borderWidth="1"
+                    paddingX="m"
+                    paddingY="s"
+                    alignX="center"
+                    spacing="xxs"
+                    flex
+                    noWrap
+                    command="--navi-open"
+                    commandFor="wheel_one_signal_picker"
+                  >
+                    {duration === "custom" ? (
+                      <Time type="duration" format="compact">
+                        {durationToISOString(
+                          hours === 0 ? { minutes } : { hours, minutes },
+                        )}
+                      </Time>
+                    ) : (
+                      <Text>Perso</Text>
+                    )}
+                    <Icon marginRight="-1ch">
+                      <Picker.UI.PencilSvg />
+                    </Icon>
+                    <Picker
+                      id="wheel_one_signal_picker"
+                      name="durationCustom"
+                      variant="headless"
+                      mode="dialog"
+                      dockedOnTouch
+                      borderRadius="s"
+                    >
+                      <Form flex="y" alignX="center" padding="l" spacing="l">
+                        <Text bold size="l">
+                          Durée de la partie
+                        </Text>
+                        <WheelGroup
+                          required
+                          frameBorder
+                          signal={wheelTotalSignal}
+                          aggregateChildStates={(children) => {
+                            let h = 0;
+                            let m = 0;
+                            for (const child of children) {
+                              if (child.name === "hours")
+                                h = Number(child.uiState) || 0;
+                              if (child.name === "minutes")
+                                m = Number(child.uiState) || 0;
+                            }
+                            return h * 60 + m;
+                          }}
+                          distributeChildUIState={(total, child) => {
+                            const value = Number(total) || 0;
+                            if (child.name === "hours")
+                              return Math.floor(value / 60);
+                            if (child.name === "minutes") return value % 60;
+                            return undefined;
+                          }}
+                        >
+                          <Wheel name="hours" type="integer" size="xxl">
+                            {WHEEL_HOURS.map((hour) => (
+                              <Wheel.Item key={hour} value={hour} paddingX="s">
+                                {hour}
+                              </Wheel.Item>
+                            ))}
+                          </Wheel>
+                          <WheelGroup.Separator size="xxl">
+                            <Unit unit="hour" format="short" color="#6b7280" />
+                          </WheelGroup.Separator>
+                          <Wheel name="minutes" type="integer" size="xxl">
+                            {WHEEL_MINUTES.map((minute) => (
+                              <Wheel.Item
+                                key={minute}
+                                value={minute}
+                                paddingX="s"
+                              >
+                                {String(minute).padStart(2, "0")}
+                              </Wheel.Item>
+                            ))}
+                          </Wheel>
+                          <WheelGroup.Separator size="xxl">
+                            <Unit
+                              unit="minute"
+                              format="short"
+                              color="#6b7280"
+                            />
+                          </WheelGroup.Separator>
+                        </WheelGroup>
                         {!coarsePointerSignal.value && (
                           <Box flex spacing="s" expandX alignX="end">
                             <Button

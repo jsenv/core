@@ -948,15 +948,24 @@ export const useUIGroupStateController = (
           });
         } else {
           controller.syncInternalState(groupUIState, e);
-          // A child changed and the group only synced itself — no applyState,
-          // so nothing has written the bound signal yet. It is still the user
-          // answering (the "silent" branch above is the one that is not: mount
-          // and unmount), so the signal has to follow. See applyState's own
-          // write for the other path.
-          const boundSignal = s.props?.signal;
-          if (boundSignal) {
-            boundSignal.value = groupUIState;
-          }
+          writeBoundSignal(groupUIState);
+        }
+      };
+
+      // The two-way half of a bound `signal`: the same write a leaf control
+      // makes from its own setUIState (see useUIStateController's boundSignal),
+      // for a group whose value is its children's put together.
+      //
+      // Called from both paths a user-driven change can take — applyState when
+      // the change is notified outward, syncInternalState when the group only
+      // brings itself up to date — because either one can be the user
+      // answering. The paths that are NOT the user (a value prop pushed down,
+      // the initial push, mount/unmount) are excluded at each call site rather
+      // than guessed at here.
+      const writeBoundSignal = (newUIState) => {
+        const boundSignal = s.props?.signal;
+        if (boundSignal) {
+          boundSignal.value = newUIState;
         }
       };
 
@@ -970,14 +979,8 @@ export const useUIGroupStateController = (
           `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
         );
         publishUIState(newUIState);
-        // Write the new state back into a bound signal — the same two-way
-        // `signal` binding a leaf control gets (see useUIStateController's own
-        // boundSignal), for a group whose value is its children's put together.
-        // Not on internalBehavior: those are programmatic syncs (a value prop
-        // pushed down, an initial push), not the user answering.
-        const boundSignal = s.props?.signal;
-        if (boundSignal && !internalBehavior) {
-          boundSignal.value = newUIState;
+        if (!internalBehavior) {
+          writeBoundSignal(newUIState);
         }
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,

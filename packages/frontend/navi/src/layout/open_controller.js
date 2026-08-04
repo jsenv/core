@@ -42,6 +42,30 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
  */
+// The elements a space press is turned into a click on, per the HTML
+// activation behaviour: buttons and the things behaving as one. A space
+// anywhere else does something else entirely (types, scrolls) and must be left
+// alone.
+const isActivatedBySpace = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(
+    element.closest(
+      'button, summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]',
+    ),
+  );
+};
+
+// Inside a popup that is open right now — the popup being closed, in practice,
+// since that is the one the key press was delivered to.
+const isInsideOpenPopup = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+};
+
 export const createOpenController = (
   openHandler,
   { debugInteraction } = {},
@@ -117,24 +141,57 @@ export const createOpenController = (
         break prevent_reopen;
       }
 
-      // Both keys activate whatever element has focus. Closing restores focus
-      // to the trigger button, which then receives that activation and reopens
-      // the popup on the spot — the keyboard counterpart of the mousedown case
-      // above. Enter reaches here from a submit inside the popup (a dialog's
-      // own submit button, Enter in a field it contains), space from the
-      // trigger button itself.
-      const activationKeyEvent = findEvent(
+      // The keyboard counterpart of the mousedown case above: a key press that
+      // closes the popup and then goes on to activate the trigger, reopening it
+      // on the spot. Space and Enter both get there, but not the same way and
+      // not always — preventing the key unconditionally would eat presses that
+      // were never going to activate anything (a space typed in a field, an
+      // Enter the popup's own handler already consumed), so each is verified
+      // before being prevented.
+
+      // Space: pressed on the trigger itself, which still has focus (closing
+      // does not move it away from an element outside the popup). The browser
+      // turns that press into a click on keyup, and that click lands back on
+      // the trigger. Only elements the browser activates on space count —
+      // pressing space in a text field inside the popup types a space, and
+      // preventing it would swallow the character.
+      const spaceKeyEvent = findEvent(
         closeEvent,
-        (e) => e.type === "keydown" && (e.key === " " || e.key === "Enter"),
+        (e) => e.type === "keydown" && e.key === " ",
       );
-      if (activationKeyEvent) {
+      if (spaceKeyEvent && isActivatedBySpace(spaceKeyEvent.target)) {
         debugInteraction(
           closeEvent,
-          `closed by "${activationKeyEvent.key}" key -> prevent browser click (activationKeyEvent.preventDefault())`,
+          `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
         );
-        // browser won't try to dispatch click
-        // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-        activationKeyEvent.preventDefault();
+        // The browser won't dispatch the click, and our "space_to_open" sees
+        // defaultPrevented too so it won't try to open the picker either.
+        spaceKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+
+      // Enter: pressed inside the popup (its own submit button, or implicit
+      // submission from a field it contains). The popup closes synchronously
+      // and focus is restored to the trigger, so the activation the browser
+      // still owes this press is delivered to the trigger instead.
+      //
+      // Verified by where the press came from: an Enter from outside the popup
+      // is not this case, and an Enter already consumed by whatever handled the
+      // submit has nothing left to deliver.
+      const enterKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === "Enter",
+      );
+      if (
+        enterKeyEvent &&
+        !enterKeyEvent.defaultPrevented &&
+        isInsideOpenPopup(enterKeyEvent.target)
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by enter from inside the popup -> prevent the activation it would deliver to the trigger (enter.preventDefault())`,
+        );
+        enterKeyEvent.preventDefault();
         break prevent_reopen;
       }
     }
