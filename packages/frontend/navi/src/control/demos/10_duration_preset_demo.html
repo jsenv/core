@@ -85,14 +85,21 @@
       // What the wheels open on when nothing has been chosen yet: a proposal,
       // so one scrolls FROM a duration rather than from nothing. The signals
       // themselves hold nothing until something is chosen.
+      // The proposal lives in the signals themselves, as their default — not as
+      // a `defaultValue` on the wheels. A literal defaultValue wins over the
+      // signal, so a value restored from the url would be ignored and the wheel
+      // would open on the proposal again; being the signal's own default, it
+      // also stays out of the url until something else is chosen.
       const WHEEL_PROPOSED_HOURS = 2;
       const WHEEL_PROPOSED_MINUTES = 30;
       const wheelPerSignalDurationSignal = stateSignal("1h30", {
         id: "wheel_per_signal",
         oneOf: ["1h", "1h30", "2h", "custom"],
       });
-      const wheelHoursSignal = stateSignal(undefined, { id: "wheel_hours" });
-      const wheelMinutesSignal = stateSignal(undefined, {
+      const wheelHoursSignal = stateSignal(WHEEL_PROPOSED_HOURS, {
+        id: "wheel_hours",
+      });
+      const wheelMinutesSignal = stateSignal(WHEEL_PROPOSED_MINUTES, {
         id: "wheel_minutes",
       });
 
@@ -101,7 +108,9 @@
         type: "date",
       });
 
-      const durationSignal2 = stateSignal(90, {
+      // "1h30", not 90: the presets are duration strings, so a numeric default
+      // is not one of the values this signal can hold (see oneOf below).
+      const durationSignal2 = stateSignal("1h30", {
         id: "duration2",
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
@@ -111,7 +120,7 @@
         id: "custom_duration",
       });
 
-      const durationSignal3 = stateSignal(90, {
+      const durationSignal3 = stateSignal("1h30", {
         id: "duration3",
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
@@ -160,8 +169,8 @@
       const WheelPerSignalDemo = () => {
         const formResultSignal = useSignal(null);
         const duration = wheelPerSignalDurationSignal.value;
-        const hours = wheelHoursSignal.value ?? WHEEL_PROPOSED_HOURS;
-        const minutes = wheelMinutesSignal.value ?? WHEEL_PROPOSED_MINUTES;
+        const hours = wheelHoursSignal.value;
+        const minutes = wheelMinutesSignal.value;
 
         return (
           <div class="demo-section">
@@ -273,7 +282,6 @@
                             type="integer"
                             size="xxl"
                             signal={wheelHoursSignal}
-                            defaultValue={WHEEL_PROPOSED_HOURS}
                           >
                             {WHEEL_HOURS.map((hour) => (
                               <Wheel.Item key={hour} value={hour} paddingX="s">
@@ -289,7 +297,6 @@
                             type="integer"
                             size="xxl"
                             signal={wheelMinutesSignal}
-                            defaultValue={WHEEL_PROPOSED_MINUTES}
                           >
                             {WHEEL_MINUTES.map((minute) => (
                               <Wheel.Item
@@ -461,10 +468,7 @@
               id="duration2"
               name="duration"
               required
-              value={duration}
-              uiAction={(v) => {
-                durationSignal2.value = v;
-              }}
+              signal={durationSignal2}
               flexWrap
               border="none"
             >
@@ -531,14 +535,11 @@
                 <Text bold>Veuillez saisir une durée</Text>
 
                 <InputDuration
-                  value={customDuration}
+                  signal={customDurationSignal}
                   min="15min"
                   max="4h30"
                   step="5min"
                   required
-                  uiAction={(v) => {
-                    customDurationSignal.value = v;
-                  }}
                 />
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />
@@ -564,10 +565,7 @@
               id="duration3"
               name="duration"
               required
-              value={duration}
-              uiAction={(v) => {
-                durationSignal3.value = v;
-              }}
+              signal={durationSignal3}
               border="none"
               flexWrap
             >

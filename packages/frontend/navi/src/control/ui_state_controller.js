@@ -948,6 +948,15 @@ export const useUIGroupStateController = (
           });
         } else {
           controller.syncInternalState(groupUIState, e);
+          // A child changed and the group only synced itself — no applyState,
+          // so nothing has written the bound signal yet. It is still the user
+          // answering (the "silent" branch above is the one that is not: mount
+          // and unmount), so the signal has to follow. See applyState's own
+          // write for the other path.
+          const boundSignal = s.props?.signal;
+          if (boundSignal) {
+            boundSignal.value = groupUIState;
+          }
         }
       };
 
