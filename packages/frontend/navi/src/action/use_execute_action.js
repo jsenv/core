@@ -153,7 +153,18 @@ export const useExecuteAction = (
       const [triggerAbort, addAbortCallback] = createPubSub();
       const [triggerError, addErrorCallback] = createPubSub();
       const [triggerComplete, addCompleteCallback] = createPubSub();
-      const addSideEffect = ({ abort, error, complete }) => {
+      // Either three callbacks, one per outcome, or a single one for "however
+      // this ends" — it receives `{ aborted, reason }`, `{ error }` or
+      // `{ data }`, so a caller that only needs to know the action settled
+      // (and whether it worked) does not have to register three.
+      const addSideEffect = (sideEffect) => {
+        if (typeof sideEffect === "function") {
+          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
+          addErrorCallback((error) => sideEffect({ error }));
+          addCompleteCallback((data) => sideEffect({ data }));
+          return;
+        }
+        const { abort, error, complete } = sideEffect;
         addAbortCallback(abort);
         addErrorCallback(error);
         addCompleteCallback(complete);

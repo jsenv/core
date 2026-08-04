@@ -63,6 +63,7 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { dispatchRequestAction } from "../rules/control_action.js";
+import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
   getUIStateFromElement,
@@ -509,9 +510,24 @@ const UncontrolledDialog = (props) => {
     const dialogEl = props.ref.current;
     const uiStateAtOpen = getUIStateFromElement(dialogEl);
     debugPopup(openEvent, `dialog opened, store value at open`, uiStateAtOpen);
+    // True while the dialog's own action runs: it has started committing and
+    // cannot leave before knowing whether that worked.
+    let actionInFlight = false;
 
     return {
       onRequestClose: (requestCloseEvent) => {
+        if (actionInFlight) {
+          // Mid-action there is no way out — not the close button, not Escape,
+          // not the backdrop. The dialog already carries aria-busy (it is a
+          // control running its own action, like any other), so the interaction
+          // gate answers with the busy callout on its own.
+          dispatchRequestInteraction(dialogEl, {
+            event: requestCloseEvent,
+            name: "dialog request close",
+          });
+          requestCloseEvent.preventDefault();
+          return;
+        }
         if (requestCloseEvent.detail.isCancel) {
           // Giving up is always allowed — nothing to validate, nothing to
           // commit.
@@ -524,20 +540,52 @@ const UncontrolledDialog = (props) => {
           getUIStateFromElement(dialogEl),
           uiStateAtOpen,
         );
-        dispatchRequestAction(dialogEl, {
-          event: requestCloseEvent,
-          name: "dialog request close",
-          // action: null when nothing was touched — the constraints are still
-          // checked (an empty required field must report even if the user
-          // typed nothing at all), but there is no answer to commit.
-          action: unchanged ? null : "auto",
-          // Reported even when the dialog has no action of its own: what the
-          // user needs to see is the constraint, not whether someone listens.
-          reportOnInvalid: true,
-          onInvalid: () => {
-            requestCloseEvent.preventDefault();
-          },
-        });
+        // Set only once this close has actually been deferred below: an action
+        // that settles synchronously does so before that, and goes out through
+        // the regular close this function is already in the middle of.
+        let closeDeferred = false;
+        const onActionStart = (actionStartEvent) => {
+          actionInFlight = true;
+          actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
+            actionInFlight = false;
+            if (error || aborted || !closeDeferred) {
+              // Whatever the action left in front of the user (a validation
+              // message, an aborted state) is the reason to stay open.
+              return;
+            }
+            openController.close(requestCloseEvent);
+          });
+        };
+        dialogEl.addEventListener("navi_action_start", onActionStart);
+        try {
+          dispatchRequestAction(dialogEl, {
+            event: requestCloseEvent,
+            name: "dialog request close",
+            // The control that asked to close (a submit button, typically):
+            // what wears the loading state while the action runs and what the
+            // error is reported on if it fails.
+            requester: requestCloseEvent.detail.requester,
+            // action: null when nothing was touched — the constraints are still
+            // checked (an empty required field must report even if the user
+            // typed nothing at all), but there is no answer to commit.
+            action: unchanged ? null : "auto",
+            // Reported even when the dialog has no action of its own: what the
+            // user needs to see is the constraint, not whether someone listens.
+            reportOnInvalid: true,
+            onInvalid: () => {
+              requestCloseEvent.preventDefault();
+            },
+          });
+        } finally {
+          dialogEl.removeEventListener("navi_action_start", onActionStart);
+        }
+        if (actionInFlight) {
+          // An asynchronous action: committing has started but not finished, so
+          // the dialog stays open and busy, and closes itself from the side
+          // effect above once the action succeeds.
+          requestCloseEvent.preventDefault();
+          closeDeferred = true;
+        }
       },
       onClose: (closeEvent) => {
         if (closeEvent.detail.isCancel) {
@@ -566,7 +614,10 @@ const UncontrolledDialog = (props) => {
         });
       }}
       onnavi_request_close={(e) => {
-        openController.requestClose(e, { isCancel: e.detail?.isCancel });
+        openController.requestClose(e, {
+          isCancel: e.detail?.isCancel,
+          requester: e.detail?.source,
+        });
       }}
     />
   );

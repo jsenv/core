@@ -1214,16 +1214,17 @@
         );
       };
 
-      // ── Required ──────────────────────────────────────────────────────────
+      // ── Validation ────────────────────────────────────────────────────────
+
+      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
       // What a dialog does when it is asked to commit while a constraint fails:
       // the field reports, and nothing is committed.
-      const RequiredSection = () => {
+      const RequiredDialog = () => {
         const [entries, push, clear] = useCallLog();
         const [committed, setCommitted] = useState({ name: "" });
         return (
-          <section class="demo-section">
-            <Heading id="required">Required field</Heading>
+          <>
             <div class="demo-row">
               <Button command="--navi-open" commandFor="required_dialog">
                 Open
@@ -1253,9 +1254,96 @@
               </Box>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
-          </section>
+          </>
         );
       };
+
+      // Closing is committing, so a dialog whose action takes time cannot leave
+      // before knowing whether it worked: it stays open and busy, and every way
+      // out (Submit, Cancel, Escape, the backdrop) answers with the busy callout
+      // until the action settles.
+      const AsyncActionDialog = ({
+        id,
+        perform,
+        pointerInteractionOutsideEffect,
+      }) => {
+        const [entries, push, clear] = useCallLog();
+        const [committed, setCommitted] = useState({ name: "" });
+        return (
+          <>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor={id}>
+                Open
+              </Button>
+              <span>
+                committed: <code>{JSON.stringify(committed)}</code>
+              </span>
+            </div>
+            <Dialog
+              id={id}
+              value={committed}
+              pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
+              action={async (value) => {
+                push("action start", value);
+                await perform(value);
+                push("action end", value);
+                setCommitted(value);
+              }}
+            >
+              <Box body padding="m" flex="y" spacing="m">
+                <Field vertical>
+                  <Label>Name</Label>
+                  <Input name="name" />
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button command="--navi-cancel">Cancel</Button>
+                  <Button command="--navi-close">Submit</Button>
+                </Box>
+              </Box>
+            </Dialog>
+            <CallLog entries={entries} onClear={clear} />
+          </>
+        );
+      };
+
+      const ValidationSection = () => (
+        <section class="demo-section">
+          <Heading id="validation">Validation</Heading>
+
+          <Heading level={3} id="validation-required">
+            Required field
+          </Heading>
+          <RequiredDialog />
+
+          <Heading level={3} id="validation-async">
+            Async action (2s), click outside to close
+          </Heading>
+          <AsyncActionDialog
+            id="async_action_dialog"
+            perform={() => delay(2000)}
+          />
+
+          <Heading level={3} id="validation-async-cancel-outside">
+            Async action (2s), click outside to cancel
+          </Heading>
+          <AsyncActionDialog
+            id="async_action_cancel_dialog"
+            pointerInteractionOutsideEffect="cancel"
+            perform={() => delay(2000)}
+          />
+
+          <Heading level={3} id="validation-async-error">
+            Async action failing after 0.5s
+          </Heading>
+          <AsyncActionDialog
+            id="async_action_error_dialog"
+            perform={async () => {
+              await delay(500);
+              throw new Error("Server refused this name");
+            }}
+          />
+        </section>
+      );
 
       // ── uiAction / action ─────────────────────────────────────────────────
 
@@ -1421,7 +1509,27 @@
               </ul>
             </li>
             <li>
-              <Link href="#required">Required field</Link>
+              <Link href="#validation">Validation</Link>
+              <ul>
+                <li>
+                  <Link href="#validation-required">Required field</Link>
+                </li>
+                <li>
+                  <Link href="#validation-async">
+                    Async action (2s), click outside to close
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#validation-async-cancel-outside">
+                    Async action (2s), click outside to cancel
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#validation-async-error">
+                    Async action failing after 0.5s
+                  </Link>
+                </li>
+              </ul>
             </li>
             <li>
               <Link href="#slides">Slides</Link>
@@ -1479,7 +1587,7 @@
           <OpenFromStartSection />
           <AdaptiveSection />
           <OverflowSection />
-          <RequiredSection />
+          <ValidationSection />
           <SlideContainerSection />
           <ActionsSection />
         </NaviDebug>
