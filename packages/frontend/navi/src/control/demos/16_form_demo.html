@@ -250,7 +250,7 @@
             id="unchanged-default-value"
             title="3. A field with a defaultValue"
             note='defaultValue="18": a suggestion the form does not hold — "yes, 18" is an answer.'
-            expectation="Expected: the log below grows even when you submit without modifying anything"
+            expectation="Expected: the log below grows on the FIRST submit even without modifying anything — then stops, since that value has now been sent"
           >
             <Field vertical>
               <Label>Age</Label>
@@ -262,7 +262,7 @@
             id="unchanged-signal-default"
             title="4. A field bound to a signal that has a default"
             note="Same as 3, said with a signal: the signal carries the default, so the field is uncontrolled-with-a-suggestion."
-            expectation="Expected: the log below grows even when you submit without modifying anything"
+            expectation="Expected: the log below grows on the FIRST submit even without modifying anything — then stops, since that value has now been sent"
           >
             <Field vertical>
               <Label>Age</Label>
