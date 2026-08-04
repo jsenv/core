@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Separator demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 24px 0 8px;
+        color: #1a1a1a;
+        font-size: 1.05rem;
+        scroll-margin-top: 12px;
+      }
+      .toc {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      .demo-box {
+        max-width: 420px;
+        padding: 14px 16px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .demo-big {
+        font-size: 28px;
+      }
+      .demo-small {
+        font-size: 11px;
+      }
+      .demo-thick {
+        --size: 4px;
+      }
+      .demo-roomy {
+        --spacing: 2em;
+      }
+      .demo-tight {
+        --spacing: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Link, NaviDebug, Separator, Text } from "@jsenv/navi";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const HorizontalSection = () => (
+        <section class="demo-section">
+          <Heading id="horizontal">Horizontal</Heading>
+          <div class="demo-box">
+            <Text>Above</Text>
+            <Separator />
+            <Text>Below</Text>
+          </div>
+
+          <Heading level={3} id="horizontal-color">
+            color
+          </Heading>
+          <div class="demo-box">
+            <Text>Above</Text>
+            <Separator color="crimson" />
+            <Text>Below</Text>
+          </div>
+
+          <Heading level={3} id="horizontal-size">
+            --size
+          </Heading>
+          <div class="demo-box">
+            <Text>Above</Text>
+            <Separator className="demo-thick" />
+            <Text>Below</Text>
+          </div>
+
+          <Heading level={3} id="horizontal-spacing">
+            --spacing
+          </Heading>
+          <div class="demo-box">
+            <Text>default</Text>
+            <Separator />
+            <Text>--spacing: 0</Text>
+            <Separator className="demo-tight" />
+            <Text>--spacing: 2em</Text>
+            <Separator className="demo-roomy" />
+            <Text>end</Text>
+          </div>
+        </section>
+      );
+
+      // The contrast the prose would otherwise have to make: the same separator
+      // between two font sizes, matching each line without being told about it.
+      const VerticalSection = () => (
+        <section class="demo-section">
+          <Heading id="vertical">Vertical</Heading>
+          <div class="demo-box">
+            <div>
+              <Link href="#vertical">Edit</Link>
+              <Separator vertical />
+              <Link href="#vertical">Duplicate</Link>
+              <Separator vertical />
+              <Link href="#vertical">Delete</Link>
+            </div>
+            <Separator />
+            <div class="demo-big">
+              big <Separator vertical /> text
+            </div>
+            <div class="demo-small">
+              small <Separator vertical /> text
+            </div>
+          </div>
+        </section>
+      );
+
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <Heading id="separator">Separator</Heading>
+          <p>
+            A line between two things — a real <code>&lt;hr&gt;</code> across
+            the flow, a <code>&lt;span&gt;</code> when upright, since an{" "}
+            <code>&lt;hr&gt;</code> cannot sit inside a line of text.
+          </p>
+          <ol className="toc">
+            <li>
+              <Link href="#horizontal">Horizontal</Link>
+              <ul>
+                <li>
+                  <Link href="#horizontal-color">color</Link>
+                </li>
+                <li>
+                  <Link href="#horizontal-size">--size</Link>
+                </li>
+                <li>
+                  <Link href="#horizontal-spacing">--spacing</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <Link href="#vertical">Vertical</Link>
+            </li>
+          </ol>
+        </div>
+      );
+
+      const App = () => (
+        <NaviDebug>
+          <div class="demo-header">
+            <h1>Separator demo</h1>
+            <nav class="demo-nav">
+              <a
+                href="./8_slide_container_demo.html"
+                title="Previous: slide container demo"
+              >
+                ←
+              </a>
+              <a
+                href="./10_page_layout_demo.html"
+                title="Next: page layout demo"
+              >
+                →
+              </a>
+            </nav>
+          </div>
+          <TableOfContents />
+          <HorizontalSection />
+          <VerticalSection />
+        </NaviDebug>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

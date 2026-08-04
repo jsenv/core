@@ -34,6 +34,28 @@ const css = /* css */ `
   }
 `;
 
+/**
+ * A line between two things. Horizontal by default — a real `<hr>`, so it is a
+ * separator to a screen reader too, not a styled div. `vertical` makes it a
+ * `<span>` instead: an `<hr>` cannot sit inside a line of text, and what a
+ * vertical rule separates is almost always inline (two links in a row, a label
+ * and a count).
+ *
+ * A vertical one is `1lh` tall — the height of the line it sits on, not of
+ * whatever contains it — so it matches the text beside it and needs no height
+ * of its own whatever the font size around it.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   vertical?: boolean,
+ *   color?: string,
+ * }>}
+ * @param {boolean} [props.vertical] - Draw it upright, inline with the text
+ *   beside it, instead of across the flow.
+ * @param {string} [props.color] - The line's own colour. Its thickness and the
+ *   room it keeps around it are CSS vars (`--size`, `--spacing`,
+ *   `--spacing-start`, `--spacing-end`) rather than props: they are usually set
+ *   once for a whole surface rather than per separator.
+ */
 export const Separator = ({ vertical, ...props }) => {
   import.meta.css = css;
 

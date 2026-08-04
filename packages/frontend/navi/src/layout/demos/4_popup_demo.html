@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Popup demo</title>
     <style>
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
       body {
         margin: 20px;
         font-family:
@@ -34,7 +66,10 @@
         NaviDebug,
         Popup,
       } from "@jsenv/navi";
-      import { CallLog, useCallLog } from "../utils/call_log.jsx";
+      import {
+        CallLog,
+        useCallLog,
+      } from "../../control/demos/utils/call_log.jsx";
 
       const TriggeredPopup = ({ label, ...rest }) => {
         const popupId = useId();
@@ -98,7 +133,17 @@
       // interaction/focus logs are the fastest way to see which one answered.
       const App = () => (
         <NaviDebug debugAll>
-          <h1>Popup demo</h1>
+          <div class="demo-header">
+            <h1>Popup demo</h1>
+            <nav class="demo-nav">
+              <a href="./3_interop_demo.html" title="Previous: interop demo">
+                ←
+              </a>
+              <a href="./5_side_panel_demo.html" title="Next: side panel demo">
+                →
+              </a>
+            </nav>
+          </div>
           <div class="demo-row">
             <TriggeredPopup label="auto (wide screen -> popover)" />
             <TriggeredPopup label="mode=dialog forced" mode="dialog" />

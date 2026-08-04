@@ -73,7 +73,7 @@ import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../box/box.jsx";
 import { resolveSpacingSize } from "../box/box_style_util.js";
-import { coarsePointerSignal } from "../layout/responsive.js";
+import { coarsePointerSignal } from "./responsive.js";
 import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
 import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {

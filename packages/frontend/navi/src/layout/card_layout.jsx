@@ -1,11 +1,20 @@
-// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
-// this way even narrow window will show some space around the dialog
+/**
+ * A card centered in the area it is given: a bordered, rounded, padded surface
+ * with room kept all around it. It looks like a dialog and is deliberately not
+ * one — it lives in the document, nothing opens or closes it, nothing is made
+ * inert behind it. A sign-in screen, an empty state, a one-question page.
+ *
+ * The room around the card is the outer element's own padding, not a margin on
+ * the card: a margin can collapse and can be scrolled past, whereas padding is
+ * space the outer box genuinely occupies — so a narrow window shrinks the card
+ * and still shows that room, instead of pushing it against the edges.
+ */
 
 import { Box } from "../box/box.jsx";
 
 const css = /* css */ `
   @layer navi {
-    .navi_dialog_layout {
+    .navi_card_layout {
       --layout-margin: 30px;
       --layout-padding: 20px;
       --layout-background: white;
@@ -16,7 +25,7 @@ const css = /* css */ `
       --layout-min-height: auto;
     }
   }
-  .navi_dialog_layout {
+  .navi_card_layout {
     padding-top: var(
       --layout-margin-top,
       var(--layout-margin-y, var(--layout-margin))
@@ -35,7 +44,7 @@ const css = /* css */ `
     );
   }
 
-  .navi_dialog_content {
+  .navi_card {
     min-width: var(--layout-min-width);
     min-height: var(--layout-min-height);
     padding-top: var(
@@ -63,7 +72,7 @@ const css = /* css */ `
   }
 `;
 
-const DialogLayoutStyleCSSVars = {
+const CardLayoutStyleCSSVars = {
   margin: "--layout-margin",
   marginTop: "--layout-margin-top",
   marginBottom: "--layout-margin-bottom",
@@ -82,7 +91,29 @@ const DialogLayoutStyleCSSVars = {
   minWidth: "--layout-min-width",
   minHeight: "--layout-min-height",
 };
-export const DialogLayout = ({
+/**
+ * @type {import("preact").FunctionComponent<{
+ *   alignX?: string,
+ *   alignY?: string,
+ *   margin?: string|number,
+ *   padding?: string|number,
+ *   minWidth?: string|number,
+ *   minHeight?: string|number,
+ *   background?: string,
+ *   borderRadius?: string|number,
+ *   borderWidth?: string|number,
+ *   borderColor?: string,
+ * }>}
+ * @param {string} [props.alignX="center"] - Where the card's own content sits
+ *   across it. The card itself is always centered in the area.
+ * @param {string} [props.alignY="center"] - …and down it.
+ * @param {string|number} [props.margin=30] - Room kept between the card and the
+ *   edges of the area, on every side (see this file's top comment for why it is
+ *   padding underneath). Per-side `marginTop`/`marginRight`/… override it.
+ * @param {string|number} [props.padding=20] - Room inside the card, between its
+ *   border and its content. Per-side props override it the same way.
+ */
+export const CardLayout = ({
   children,
   alignX = "center",
   alignY = "center",
@@ -92,17 +123,12 @@ export const DialogLayout = ({
 
   return (
     <Box
-      baseClassName="navi_dialog_layout"
-      styleCSSVars={DialogLayoutStyleCSSVars}
-      visualSelector=".navi_dialog_content"
+      baseClassName="navi_card_layout"
+      styleCSSVars={CardLayoutStyleCSSVars}
+      visualSelector=".navi_card"
       {...props}
     >
-      <Box
-        flex="y"
-        className="navi_dialog_content"
-        alignX={alignX}
-        alignY={alignY}
-      >
+      <Box flex="y" className="navi_card" alignX={alignX} alignY={alignY}>
         {children}
       </Box>
     </Box>

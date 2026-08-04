@@ -115,7 +115,9 @@
         Input,
         Label,
         Link,
+        List,
         NaviDebug,
+        Picker,
         Popover,
         SlideContainer,
         Text,
@@ -321,9 +323,7 @@
                   alignY="center"
                   className="demo-slide-header"
                 >
-                  {index > 0 && (
-                    <SlideContainer.Left size="l" padding="xs" />
-                  )}
+                  {index > 0 && <SlideContainer.Left size="l" padding="xs" />}
                   <Text expandX>
                     {index + 1} / {QUESTIONS.length}
                   </Text>
@@ -407,6 +407,107 @@
               perform={() => settle.action()}
             />
             <CallLog entries={asyncEntries} onClear={clearAsync} />
+          </section>
+        );
+      };
+
+      // ── A picker in a form ────────────────────────────────────────────────
+
+      const FRUITS = ["Apple", "Banana", "Cherry", "Date"];
+
+      // A picker is a control, not a surface: its popup is its own business and
+      // the form never sees it. What the form gets is one named value, the same
+      // way an input gives one — so a picker in a form needs nothing said about
+      // the popup it opens, in the document or inside a dialog.
+      const PickerInFormSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        const fruitList = (idPrefix) => (
+          <List selectable command="--navi-send">
+            {FRUITS.map((fruit, index) => (
+              <List.Item
+                selectable
+                key={fruit}
+                id={`${idPrefix}_${fruit}`}
+                index={index}
+                value={fruit}
+                padding="s"
+              >
+                {fruit}
+              </List.Item>
+            ))}
+          </List>
+        );
+
+        return (
+          <section class="demo-section">
+            <Heading id="picker">A picker in a form</Heading>
+            <SettlePanel {...settle} />
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              alignX="start"
+              action={async (value) => {
+                push("action start", value);
+                await settle.action();
+                push("action end", value);
+              }}
+            >
+              <Field vertical>
+                <Label requiredIndicator>Fruit</Label>
+                <Picker
+                  name="fruit"
+                  placeholder="Pick one…"
+                  required
+                  minWidth="200"
+                >
+                  {fruitList("doc")}
+                </Picker>
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="picker-in-dialog">
+              …inside a dialog
+            </Heading>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="picker_form_dialog">
+                Open
+              </Button>
+            </div>
+            <Dialog id="picker_form_dialog" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                alignX="start"
+                action={(value) => {
+                  push("dialog action", value);
+                }}
+              >
+                <Field vertical>
+                  <Label requiredIndicator>Fruit</Label>
+                  <Picker
+                    name="fruit"
+                    placeholder="Pick one…"
+                    required
+                    minWidth="200"
+                  >
+                    {fruitList("dlg")}
+                  </Picker>
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button command="--navi-cancel">Cancel</Button>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+            </Dialog>
+            <p class="demo-inside-note">
+              The picker's own popup opens over the dialog and closes on its
+              own; only the form's submit closes the dialog.
+            </p>
           </section>
         );
       };
@@ -685,6 +786,14 @@
               </ul>
             </li>
             <li>
+              <Link href="#picker">A picker in a form</Link>
+              <ul>
+                <li>
+                  <Link href="#picker-in-dialog">…inside a dialog</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
               <Link href="#dialog">In a dialog</Link>
             </li>
             <li>
@@ -704,6 +813,7 @@
           <InDocumentSection />
           <InSlideSection />
           <MultiStepSection />
+          <PickerInFormSection />
           <InDialogSection />
           <InPopoverSection />
           <SlidesInDialogSection />

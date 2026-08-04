@@ -37,6 +37,28 @@ const ViewportLayoutStyleCSSVars = {
   paddingRight: "--layout-padding-right",
   background: "--layout-background",
 };
+/**
+ * The page itself: a box the size of what holds it (`100%` both ways), with a
+ * background and room kept around its content. What a screen is built on top
+ * of, so what is inside it can be laid out against a known area instead of
+ * against whatever the document happens to be tall.
+ *
+ * It only claims 100% of its parent, never of the viewport — so it works the
+ * same inside a route, a preview pane or a demo box, and it is up to the page
+ * around it to be full-height.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   padding?: string|number,
+ *   paddingTop?: string|number,
+ *   paddingBottom?: string|number,
+ *   paddingLeft?: string|number,
+ *   paddingRight?: string|number,
+ *   background?: string,
+ * }>}
+ * @param {string|number} [props.padding=40] - Room kept between the edges and
+ *   the content. The per-side props override it one edge at a time.
+ * @param {string} [props.background] - Painted behind everything inside it.
+ */
 export const ViewportLayout = (props) => {
   import.meta.css = css;
   return (

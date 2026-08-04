@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Slide container demo</title>
     <style>
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
       body {
         margin: 0;
         padding: 20px;
@@ -712,7 +744,17 @@
 
       const AppContent = () => (
         <div>
-          <h1>Slide container</h1>
+          <div class="demo-header">
+            <h1>Slide container</h1>
+            <nav class="demo-nav">
+              <a href="./7_slot_demo.html" title="Previous: slot demo">
+                ←
+              </a>
+              <a href="./9_separator_demo.html" title="Next: separator demo">
+                →
+              </a>
+            </nav>
+          </div>
 
           <div class="demo-section">
             <p>
@@ -757,11 +799,11 @@
             </ol>
             <p class="demo-see-also">
               <strong>See also:</strong>{" "}
-              <Link href="../../control/demos/popup/1_dialog_demo.html#slides">
+              <Link href="./1_dialog_demo.html#slides">
                 Dialog demo — Slides
               </Link>{" "}
               ·{" "}
-              <Link href="../../control/demos/popup/2_popover_demo.html#slides">
+              <Link href="./2_popover_demo.html#slides">
                 Popover demo — Slides
               </Link>{" "}
               ·{" "}

@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SidePanel Demo</title>
     <style>
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
       :root {
         --demo-width: 400px;
       }
@@ -265,7 +297,20 @@
 
         return (
           <div>
-            <h1>SidePanel demos</h1>
+            <div class="demo-header">
+              <h1>SidePanel demos</h1>
+              <nav class="demo-nav">
+                <a href="./4_popup_demo.html" title="Previous: popup demo">
+                  ←
+                </a>
+                <a
+                  href="./6_side_panel_integration_demo.html"
+                  title="Next: side panel integration demo"
+                >
+                  →
+                </a>
+              </nav>
+            </div>
 
             <nav class="demo-toc">
               <strong>Contents</strong>
