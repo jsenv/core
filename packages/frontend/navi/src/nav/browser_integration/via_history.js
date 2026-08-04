@@ -9,6 +9,7 @@ import { getHrefTargetInfo } from "./href_target_info.js";
 export const setupBrowserIntegrationViaHistory = ({
   applyActions,
   applyRouting,
+  isRouting,
 }) => {
   const { history } = window;
 
@@ -147,6 +148,14 @@ export const setupBrowserIntegrationViaHistory = ({
         return;
       }
       if (e.defaultPrevented) {
+        return;
+      }
+      // Nothing here declared a route, so there is nothing to route to: the
+      // page is a plain document and a link in it is a plain link. Taking it
+      // over anyway would push the url and then have nothing to show for it —
+      // the address bar moves and the page does not (see applyRouting's own
+      // "not called yet" branch, which is where that used to end up).
+      if (!isRouting()) {
         return;
       }
       const linkElement = e.target.closest("a");

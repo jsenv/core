@@ -85,14 +85,12 @@
       .demo-small {
         font-size: 11px;
       }
-      .demo-thick {
-        --size: 4px;
-      }
-      .demo-roomy {
-        --spacing: 2em;
-      }
-      .demo-tight {
-        --spacing: 0;
+      /* The same knobs as the props, set once for a whole surface instead of
+         per separator — which is what the CSS vars are for. */
+      .demo-surface {
+        --size: 3px;
+        --color: #1a237e;
+        --margin: 1.5em;
       }
     </style>
   </head>
@@ -133,25 +131,36 @@
           </div>
 
           <Heading level={3} id="horizontal-size">
-            --size
+            size
           </Heading>
           <div class="demo-box">
             <Text>Above</Text>
-            <Separator className="demo-thick" />
+            <Separator size="4px" />
             <Text>Below</Text>
           </div>
 
-          <Heading level={3} id="horizontal-spacing">
-            --spacing
+          <Heading level={3} id="horizontal-margin">
+            margin
           </Heading>
           <div class="demo-box">
             <Text>default</Text>
             <Separator />
-            <Text>--spacing: 0</Text>
-            <Separator className="demo-tight" />
-            <Text>--spacing: 2em</Text>
-            <Separator className="demo-roomy" />
+            <Text>margin="0"</Text>
+            <Separator margin="0" />
+            <Text>margin="2em"</Text>
+            <Separator margin="2em" />
+            <Text>marginStart="2em"</Text>
+            <Separator marginStart="2em" marginEnd="0" />
             <Text>end</Text>
+          </div>
+
+          <Heading level={3} id="horizontal-css">
+            …or from CSS
+          </Heading>
+          <div class="demo-box demo-surface">
+            <Text>Above</Text>
+            <Separator />
+            <Text>Below</Text>
           </div>
         </section>
       );
@@ -173,6 +182,9 @@
             <div class="demo-big">
               big <Separator vertical /> text
             </div>
+            <div>
+              thick <Separator vertical size="3px" color="crimson" /> coloured
+            </div>
             <div class="demo-small">
               small <Separator vertical /> text
             </div>
@@ -186,7 +198,9 @@
           <p>
             A line between two things — a real <code>&lt;hr&gt;</code> across
             the flow, a <code>&lt;span&gt;</code> when upright, since an{" "}
-            <code>&lt;hr&gt;</code> cannot sit inside a line of text.
+            <code>&lt;hr&gt;</code> cannot sit inside a line of text. Every prop
+            below writes a CSS var, so the same thing can be said once for a
+            whole surface instead of per separator.
           </p>
           <ol className="toc">
             <li>
@@ -196,10 +210,13 @@
                   <Link href="#horizontal-color">color</Link>
                 </li>
                 <li>
-                  <Link href="#horizontal-size">--size</Link>
+                  <Link href="#horizontal-size">size</Link>
                 </li>
                 <li>
-                  <Link href="#horizontal-spacing">--spacing</Link>
+                  <Link href="#horizontal-margin">margin</Link>
+                </li>
+                <li>
+                  <Link href="#horizontal-css">…or from CSS</Link>
                 </li>
               </ul>
             </li>
