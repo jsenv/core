@@ -260,6 +260,16 @@ export const SlideContainer = ({
     ]);
   };
 
+  // A slide reporting that what it was there for is done (see Slide's own
+  // onnavi_done). Onwards, or back to where it came from when there is nothing
+  // after it — a step that has been answered is not a step to stay on.
+  const done = (area) => {
+    markAnswered(area);
+    if (!moveNext()) {
+      movePrevious();
+    }
+  };
+
   // Everything positional is decided here, from the DOM, once per render: where
   // each slide stands on the map, which one is current, and how far the track
   // must be for that one to be the one on screen. Reading the DOM is what makes
@@ -482,7 +492,7 @@ export const SlideContainer = ({
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
-          value={{ vertical, answeredAreas, markAnswered }}
+          value={{ vertical, answeredAreas, done }}
         >
           {children}
         </SlideContainerContext.Provider>
@@ -503,12 +513,13 @@ export const SlideContainer = ({
  * @param {string} [props.area] - which area of the map it is. Defaults to its
  *   id, so a slide that is already named is not named twice.
  * @param {boolean} [props.required] - this step has to be answered before the
- *   ones after it can be reached: it holds the user until an action inside it
- *   completes (a form being sent), and lets go afterwards. What makes a slide
- *   reachable ONLY by answering the one before it — an arrow key or a "next"
- *   button cannot skip ahead to a screen that has nothing to show yet.
- *   Answering a step un-answers the ones after it, since what they were
- *   answered about has just changed.
+ *   ones after it can be reached: it holds the user until something inside it
+ *   says it is done (`--navi-done`, which a Form triggers on a successful
+ *   send), and lets go afterwards. What makes a slide reachable ONLY by
+ *   answering the one before it — an arrow key or a "next" button cannot skip
+ *   ahead to a screen that has nothing to show yet. Answering a step
+ *   un-answers the ones after it, since what they were answered about has just
+ *   changed.
  * @param {boolean} [props.preventNav] - hold the user here, whichever way they
  *   try to leave.
  * @param {boolean} [props.preventNavNext] - hold them from going right or down.
@@ -523,36 +534,11 @@ export const Slide = ({
   children,
   ...rest
 }) => {
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
   const container = useContext(SlideContainerContext);
   const slideArea = area ?? rest.id;
   const answered = Boolean(container?.answeredAreas.includes(slideArea));
   const holdsUntilAnswered = Boolean(required) && !answered;
   const nextIsLocked = Boolean(preventNavNext) || holdsUntilAnswered;
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!required || !element || !container) {
-      return null;
-    }
-    const onActionEnd = () => {
-      // Dropped here rather than left to the re-render this schedules: what
-      // moves to the next slide is the same send that just completed, and the
-      // gate it goes through reads this attribute off the DOM (see goToArea).
-      // A render is a microtask away; the move is not.
-      element.removeAttribute("data-prevent-nav-next");
-      container.markAnswered(slideArea);
-    };
-    // capture: navi_action_end does not bubble (it is dispatched on the control
-    // that owns the action), but it still travels down the capture path.
-    element.addEventListener("navi_action_end", onActionEnd, { capture: true });
-    return () => {
-      element.removeEventListener("navi_action_end", onActionEnd, {
-        capture: true,
-      });
-    };
-  }, [required, slideArea, container]);
 
   const locks = useMemo(
     () => ({ preventNavNext: nextIsLocked, preventNavPrevious }),
@@ -561,7 +547,6 @@ export const Slide = ({
   return (
     <SlideContext.Provider value={locks}>
       <Box
-        ref={ref}
         flex="y"
         // Focusable, but never by Tab: the arrows and Home/End belong to the
         // slides, and a keyboard shortcut only reaches what has the focus — so
@@ -576,6 +561,25 @@ export const Slide = ({
         // one (a search box saying it too) still wins over it.
         navi-autofocus="fallback"
         {...rest}
+        // The protocol every command target answers — a slide is one now
+        // (--navi-done). navi_command does not bubble, so the container's own
+        // handler is not an answer for what was aimed here.
+        onnavi_command={(e) => {
+          onNaviCommand(e);
+          rest.onnavi_command?.(e);
+        }}
+        // What was in this slide says it is finished (a form that just sent —
+        // see resolveAfterSend in commands.js). It says nothing about where to
+        // go: that is read here, from this slide's own place in the walk.
+        onnavi_done={(e) => {
+          // Dropped imperatively rather than left to the re-render this
+          // schedules: moving on happens in this same handler, and the gate it
+          // goes through reads this attribute off the DOM (see goToArea) — a
+          // render is a microtask away, the move is not.
+          e.currentTarget.removeAttribute("data-prevent-nav-next");
+          container?.done(slideArea);
+          rest.onnavi_done?.(e);
+        }}
         data-slide=""
         data-slide-area={slideArea}
         data-prevent-nav-next={nextIsLocked ? "" : undefined}

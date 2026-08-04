@@ -304,8 +304,9 @@ registerNaviCommand("--navi-reset", (source, event) => {
  * What a successful send does once the value is committed. The control says it
  * (`command` on a Form, kept in the DOM as data-after-send), and when it says
  * nothing the surface above it decides:
- * - a slide: on to the next step, or back to the one it came from when there is
- *   no next — a step that has been answered is not a step to stay on;
+ * - a slide: it is told the step is done (`--navi-done`) and decides for itself
+ *   what that means — what a finished step does to the walk is the slide's
+ *   business, not the form's;
  * - an open popup: it closes. The popup was there for the duration of one
  *   decision, and the send just made it. A picker already does this when the
  *   send targets the popup itself (executeNaviDefine); a form inside one is the
@@ -326,10 +327,7 @@ const resolveAfterSend = (target) => {
     return undefined;
   }
   if (surface.hasAttribute("data-slide")) {
-    const nextSlide = surface.nextElementSibling;
-    return nextSlide?.hasAttribute("data-slide")
-      ? "--navi-next"
-      : "--navi-previous";
+    return "--navi-done";
   }
   if (surface.getAttribute("aria-expanded") === "true") {
     return "--navi-close";
@@ -431,6 +429,26 @@ registerNaviCommand("--navi-send", (source, event) => {
       runAfterSend();
       return sent;
     },
+  };
+});
+
+// "What I was here for is done" — said to the surface the control lives in, not
+// to the screen that should come next. What a finished step does to the walk is
+// the slide's own business (mark it answered, move on), the same way closing
+// would be the dialog's.
+registerNaviCommand("--navi-done", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_done", {
+        event,
+        source: resolveCommandProxySource(source),
+      }),
   };
 });
 
