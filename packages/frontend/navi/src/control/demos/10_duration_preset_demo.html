@@ -62,7 +62,6 @@
         Field,
         Label,
         List,
-        Input,
         Picker,
         Form,
         Text,
@@ -79,139 +78,46 @@
         coarsePointerSignal,
       } from "@jsenv/navi";
 
-      const PRESET_DURATIONS = ["1h", "1h30", "2h"];
-
-      // ── Wheel, one signal per wheel: its own state ────────────────────────
-      // What the wheels open on when nothing has been chosen yet: a proposal,
-      // so one scrolls FROM a duration rather than from nothing. The signals
-      // themselves hold nothing until something is chosen.
-      // The proposal lives in the signals themselves, as their default — not as
-      // a `defaultValue` on the wheels. A literal defaultValue wins over the
-      // signal, so a value restored from the url would be ignored and the wheel
-      // would open on the proposal again; being the signal's own default, it
-      // also stays out of the url until something else is chosen.
-      const WHEEL_PROPOSED_HOURS = 2;
-      const WHEEL_PROPOSED_MINUTES = 30;
-      const wheelPerSignalDurationSignal = stateSignal("1h30", {
-        id: "wheel_per_signal",
-        oneOf: ["1h", "1h30", "2h", "custom"],
-      });
-      const wheelHoursSignal = stateSignal(WHEEL_PROPOSED_HOURS, {
-        id: "wheel_hours",
-      });
-      const wheelMinutesSignal = stateSignal(WHEEL_PROPOSED_MINUTES, {
-        id: "wheel_minutes",
-      });
-
-      // ── Wheel, one signal for both wheels: its own state ──────────────────
-      const WHEEL_PROPOSED_TOTAL =
-        WHEEL_PROPOSED_HOURS * 60 + WHEEL_PROPOSED_MINUTES;
-      const wheelOneSignalDurationSignal = stateSignal("1h30", {
-        id: "wheel_one_signal",
-        oneOf: ["1h", "1h30", "2h", "custom"],
-      });
-      const wheelTotalSignal = stateSignal(WHEEL_PROPOSED_TOTAL, {
-        id: "wheel_total",
-      });
-
-      const dateSignal = stateSignal(Date.now(), {
-        id: "date",
-        type: "date",
-      });
-
-      // "1h30", not 90: the presets are duration strings, so a numeric default
-      // is not one of the values this signal can hold (see oneOf below).
-      const durationSignal2 = stateSignal("1h30", {
-        id: "duration2",
-        oneOf: [...PRESET_DURATIONS, "custom"],
-      });
-      // Total minutes for the custom option (no default)
-      const customDurationSignal = stateSignal(undefined, {
-        type: "duration",
-        id: "custom_duration",
-      });
-
-      const durationSignal3 = stateSignal("1h30", {
-        id: "duration3",
-        oneOf: [...PRESET_DURATIONS, "custom"],
-      });
-      // Total minutes for the custom option (default: 2h15 = 135 min)
-      // The duration itself, as InputDuration speaks it (ISO 8601) — no
-      // conversion on either side. Whoever needs minutes converts when it reads
-      // the value (see the form action below).
-      const customDuration3Signal = stateSignal("PT2H15M", {
-        id: "custom_duration3",
-        type: "duration",
-      });
-
-      const DEMO_ROUTE = route("", {
-        searchParams: {
-          date: dateSignal,
-          duration2: durationSignal2,
-          custom_duration: customDurationSignal,
-          duration3: durationSignal3,
-          custom_duration3: customDuration3Signal,
-          wheel_per_signal: wheelPerSignalDurationSignal,
-          wheel_hours: wheelHoursSignal,
-          wheel_minutes: wheelMinutesSignal,
-          wheel_one_signal: wheelOneSignalDurationSignal,
-          wheel_total: wheelTotalSignal,
-        },
-      });
-      setupRoutes([DEMO_ROUTE]);
-
-      // Every signal this page owns, in one place — what the route serialises
-      // and what "reset all" puts back to nothing.
-      const DEMO_SIGNALS = [
-        dateSignal,
-        wheelPerSignalDurationSignal,
-        wheelHoursSignal,
-        wheelMinutesSignal,
-        wheelOneSignalDurationSignal,
-        wheelTotalSignal,
-        durationSignal2,
-        customDurationSignal,
-        durationSignal3,
-        customDuration3Signal,
-      ];
-
-      const ResetAll = () => (
-        <Box flex="x" alignX="end">
-          <Button
-            variant="discrete"
-            onClick={() => {
-              // undefined, not their defaults: a signal back at its default is
-              // a signal with nothing to say, which is what empties the url.
-              for (const demoSignal of DEMO_SIGNALS) {
-                demoSignal.value = undefined;
-              }
-            }}
-          >
-            Reset all
-          </Button>
-        </Box>
-      );
-
-      const App = () => (
-        <Box flex="y" spacing="l">
-          <ResetAll />
-          <WheelPerSignalDemo />
-          <WheelOneSignalDemo />
-          <PresetsWithPickerCustomNoDefaultDemo />
-          <PresetsWithPickerCustomWithDefaultDemo />
-        </Box>
-      );
+      // Each demo below is one block: its constants, its signals and its
+      // components sit together between two banners, so a block can be copied
+      // out (or deleted) whole. The only thing they share is `demoSignal`, which
+      // declares a state signal and registers it in the page's route — the route
+      // itself is assembled at the bottom from whatever the blocks declared.
+      const DEMO_SEARCH_PARAMS = {};
+      const demoSignal = (id, defaultValue, options) => {
+        const signal = stateSignal(defaultValue, { id, ...options });
+        DEMO_SEARCH_PARAMS[id] = signal;
+        return signal;
+      };
 
       // ── Wheel, one signal per wheel ───────────────────────────────────────
-      // Self-contained: everything this section needs is between this banner
-      // and the next one, so it can be lifted out whole.
 
       // Hours 0..5, minutes by 5. Both lists are fixed on purpose: making the
       // minutes depend on the selected hour makes the minute wheel move on its
       // own while the hour one is being scrolled.
-      const WHEEL_PRESETS = ["1h", "1h30", "2h"];
       const WHEEL_HOURS = [0, 1, 2, 3, 4, 5];
       const WHEEL_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+      const WHEEL_PRESETS = ["1h", "1h30", "2h"];
+      // What the wheels open on when nothing has been chosen yet: a proposal,
+      // so one scrolls FROM a duration rather than from nothing. The proposal
+      // lives in the signals themselves, as their default — being their default
+      // it stays out of the url until something else is chosen, and a value
+      // restored from the url still wins over it.
+      const WHEEL_PROPOSED_HOURS = 2;
+      const WHEEL_PROPOSED_MINUTES = 30;
+
+      const wheelPerSignalDurationSignal = demoSignal(
+        "wheel_per_signal",
+        "1h30",
+        {
+          oneOf: [...WHEEL_PRESETS, "custom"],
+        },
+      );
+      const wheelHoursSignal = demoSignal("wheel_hours", WHEEL_PROPOSED_HOURS);
+      const wheelMinutesSignal = demoSignal(
+        "wheel_minutes",
+        WHEEL_PROPOSED_MINUTES,
+      );
 
       const WheelPerSignalDemo = () => {
         const formResultSignal = useSignal(null);
@@ -224,8 +130,8 @@
             <h2>Duration selector — custom via Wheel (one signal per wheel)</h2>
             <p class="desc">
               Deux roues, deux signaux : chaque roue tient le sien à jour, rien
-              à recombiner. Le Picker n'a pas de nom, donc les deux champs
-              remontent tels quels dans le form autour de lui.
+              à recombiner. Le Picker porte un nom, donc ce qu'il contient
+              remonte dans le form sous ce nom.
             </p>
             <Form
               flex="y"
@@ -307,9 +213,9 @@
                     <Icon marginRight="-1ch">
                       <Picker.UI.PencilSvg />
                     </Icon>
-                    {/* named like any control: a picker always holds one
-                        value, and here that value is the pair the wheels make
-                        — { hours, minutes } */}
+                    {/* named like any control: a picker always holds one value,
+                        and here that value is the pair the wheels make —
+                        { hours, minutes } */}
                     <Picker
                       id="wheel_per_signal_picker"
                       name="durationCustom"
@@ -405,6 +311,24 @@
       // number does not). What we want to end up with is
       // { durationCustom: <what aggregateChildStates returned> }.
 
+      const WHEEL_ONE_SIGNAL_HOURS = [0, 1, 2, 3, 4, 5];
+      const WHEEL_ONE_SIGNAL_MINUTES = [
+        0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55,
+      ];
+      const WHEEL_ONE_SIGNAL_PRESETS = ["1h", "1h30", "2h"];
+      const WHEEL_ONE_SIGNAL_PROPOSED_TOTAL = 2 * 60 + 30;
+
+      const wheelOneSignalDurationSignal = demoSignal(
+        "wheel_one_signal",
+        "1h30",
+        { oneOf: [...WHEEL_ONE_SIGNAL_PRESETS, "custom"] },
+      );
+      // One signal for both wheels: total minutes.
+      const wheelTotalSignal = demoSignal(
+        "wheel_total",
+        WHEEL_ONE_SIGNAL_PROPOSED_TOTAL,
+      );
+
       const WheelOneSignalDemo = () => {
         const formResultSignal = useSignal(null);
         const duration = wheelOneSignalDurationSignal.value;
@@ -450,7 +374,7 @@
                   signal={wheelOneSignalDurationSignal}
                   border="none"
                 >
-                  {["1h", "1h30", "2h"].map((durationPreset, i) => (
+                  {WHEEL_ONE_SIGNAL_PRESETS.map((durationPreset, i) => (
                     <List.Item
                       selectable
                       key={durationPreset}
@@ -472,7 +396,7 @@
                   ))}
                   <List.Item
                     selectable
-                    index={3}
+                    index={WHEEL_ONE_SIGNAL_PRESETS.length}
                     id="wheel_one_signal_custom"
                     value="custom"
                     selected={duration === "custom"}
@@ -519,23 +443,28 @@
                             let h = 0;
                             let m = 0;
                             for (const child of children) {
-                              if (child.name === "hours")
+                              if (child.name === "hours") {
                                 h = Number(child.uiState) || 0;
-                              if (child.name === "minutes")
+                              }
+                              if (child.name === "minutes") {
                                 m = Number(child.uiState) || 0;
+                              }
                             }
                             return h * 60 + m;
                           }}
                           distributeChildUIState={(total, child) => {
                             const value = Number(total) || 0;
-                            if (child.name === "hours")
+                            if (child.name === "hours") {
                               return Math.floor(value / 60);
-                            if (child.name === "minutes") return value % 60;
+                            }
+                            if (child.name === "minutes") {
+                              return value % 60;
+                            }
                             return undefined;
                           }}
                         >
                           <Wheel name="hours" type="integer" size="xxl">
-                            {WHEEL_HOURS.map((hour) => (
+                            {WHEEL_ONE_SIGNAL_HOURS.map((hour) => (
                               <Wheel.Item key={hour} value={hour} paddingX="s">
                                 {hour}
                               </Wheel.Item>
@@ -545,7 +474,7 @@
                             <Unit unit="hour" format="short" color="#6b7280" />
                           </WheelGroup.Separator>
                           <Wheel name="minutes" type="integer" size="xxl">
-                            {WHEEL_MINUTES.map((minute) => (
+                            {WHEEL_ONE_SIGNAL_MINUTES.map((minute) => (
                               <Wheel.Item
                                 key={minute}
                                 value={minute}
@@ -593,18 +522,41 @@
         );
       };
 
-      // ── PresetsWithPickerCustomNoDefaultDemo ─────────────────────────────
-      const PresetsWithPickerCustomNoDefaultDemo = () => {
+      // ── Presets + custom via Picker, nothing proposed ─────────────────────
+
+      const PICKER_PRESETS = ["1h", "1h30", "2h"];
+      // "1h30", not 90: the presets are duration strings, so a numeric default
+      // is not one of the values this signal can hold (see oneOf).
+      const pickerDurationSignal = demoSignal("duration2", "1h30", {
+        oneOf: [...PICKER_PRESETS, "custom"],
+      });
+      // The custom duration, as InputDuration speaks it (ISO 8601) — no
+      // conversion on either side. Nothing until one is entered.
+      const pickerCustomDurationSignal = demoSignal(
+        "custom_duration",
+        undefined,
+        {
+          type: "duration",
+        },
+      );
+
+      const PickerCustomNoProposalDemo = () => {
         const formResultSignal = useSignal(null);
+        const duration = pickerDurationSignal.value;
+        const customDuration = pickerCustomDurationSignal.value;
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Picker (no default)</h2>
+            <h2>Duration selector — custom via Picker (rien de proposé)</h2>
             <p class="desc">
-              Même variante que ci-dessous, mais sans valeur par défaut pour
-              l'heure et les minutes.
+              L'option "Perso" contient un Picker : cliquer dessus sélectionne
+              l'option et ouvre la popup en un seul clic. Le picker s'ouvre sur
+              un champ vide.
             </p>
             <Form
+              flex="y"
+              spacing="m"
+              alignX="start"
               // durationCustom is what the picker holds — an ISO 8601 duration,
               // since what it contains is one InputDuration.
               action={({ duration, durationCustom }) => {
@@ -614,11 +566,96 @@
                     : durationToMinutes(duration);
                 formResultSignal.value = { minutes };
               }}
-              flex="y"
-              spacing="m"
-              alignX="start"
             >
-              <DurationControl2 />
+              <Field vertical>
+                <Label bold>Durée</Label>
+                <List
+                  selectable
+                  horizontal
+                  spacing="s"
+                  id="duration2"
+                  name="duration"
+                  required
+                  signal={pickerDurationSignal}
+                  flexWrap
+                  border="none"
+                >
+                  {PICKER_PRESETS.map((durationPreset, i) => (
+                    <List.Item
+                      selectable
+                      key={durationPreset}
+                      index={i}
+                      id={`duration2_${durationPreset}`}
+                      value={durationPreset}
+                      selected={duration === durationPreset}
+                      borderRadius="s"
+                      borderWidth="1"
+                      minWidth="64"
+                      paddingX="m"
+                      paddingY="s"
+                      alignX="center"
+                    >
+                      <Time type="duration" format="compact">
+                        {durationPreset}
+                      </Time>
+                    </List.Item>
+                  ))}
+                  <List.Item
+                    selectable
+                    index={PICKER_PRESETS.length}
+                    id="duration2_custom"
+                    value="custom"
+                    selected={duration === "custom"}
+                    borderRadius="s"
+                    borderWidth="1"
+                    minWidth="64"
+                    paddingX="m"
+                    paddingY="s"
+                    alignX="center"
+                    noWrap
+                    flex
+                    spacing="xs"
+                    command="--navi-open"
+                    commandFor="custom_duration_picker2"
+                  >
+                    {customDuration === undefined || customDuration === null ? (
+                      <Text>Perso</Text>
+                    ) : (
+                      <Time type="duration" format="compact">
+                        {customDuration}
+                      </Time>
+                    )}
+                    <Icon marginRight="-1ch">
+                      <Picker.UI.PencilSvg />
+                    </Icon>
+                    <Picker
+                      id="custom_duration_picker2"
+                      name="durationCustom"
+                      variant="headless"
+                      mode="dialog"
+                      borderRadius="s"
+                      // one value, not a form: what it holds is a single
+                      // InputDuration, so the picker IS that duration
+                      type="duration"
+                    >
+                      <Box flex="y" alignX="center" padding="m" spacing="l">
+                        <Text bold>Veuillez saisir une durée</Text>
+                        <InputDuration
+                          signal={pickerCustomDurationSignal}
+                          min="15min"
+                          max="4h30"
+                          step="5min"
+                          required
+                        />
+                        <Box flex spacing="s" expandX alignX="end">
+                          <Button command="--navi-cancel" variant="discrete" />
+                          <Button command="--navi-define" variant="discrete" />
+                        </Box>
+                      </Box>
+                    </Picker>
+                  </List.Item>
+                </List>
+              </Field>
               <Button type="submit">Submit</Button>
             </Form>
             {formResultSignal.value !== null ? (
@@ -635,20 +672,41 @@
         );
       };
 
-      // ── PresetsWithPickerCustomWithDefaultDemo ────────────────────────────
-      const PresetsWithPickerCustomWithDefaultDemo = () => {
+      // ── Presets + custom via Picker, 2h15 proposed ────────────────────────
+
+      const PROPOSAL_PRESETS = ["1h", "1h30", "2h"];
+      // 2h15 is proposed, not chosen: the signal holds nothing until the picker
+      // is confirmed, so the option reads "Perso" and the url stays clean. The
+      // proposal is a `defaultValue` on the input instead (see below) — which is
+      // also where a reset goes back to.
+      const PROPOSED_CUSTOM_DURATION = "PT2H15M";
+      const proposalDurationSignal = demoSignal("duration3", "1h30", {
+        oneOf: [...PROPOSAL_PRESETS, "custom"],
+      });
+      const proposalCustomDurationSignal = demoSignal(
+        "custom_duration3",
+        undefined,
+        { type: "duration" },
+      );
+
+      const PickerCustomProposedDemo = () => {
         const formResultSignal = useSignal(null);
+        const duration = proposalDurationSignal.value;
+        const customDuration = proposalCustomDurationSignal.value;
 
         return (
           <div class="demo-section">
-            <h2>Duration selector — custom via Picker (2h15 par défaut)</h2>
+            <h2>Duration selector — custom via Picker (2h15 proposé)</h2>
             <p class="desc">
-              Variante : l'option "Autre" contient un Picker. Cliquer dessus
-              ouvre une popup avec un input heures et un input minutes. La
-              sélection de l'option et l'ouverture du Picker se font en un seul
-              clic.
+              Même chose, mais le champ du picker s'ouvre sur 2h15 : une
+              proposition à partir de laquelle régler, pas une réponse. Tant
+              qu'on n'a pas confirmé, l'option affiche "Perso" et l'url ne
+              contient rien.
             </p>
             <Form
+              flex="y"
+              spacing="m"
+              alignX="start"
               action={({ duration, durationCustom }) => {
                 const minutes =
                   duration === "custom"
@@ -656,11 +714,97 @@
                     : durationToMinutes(duration);
                 formResultSignal.value = { minutes };
               }}
-              flex="y"
-              spacing="m"
-              alignX="start"
             >
-              <DurationControl3 />
+              <Field ownLabel vertical>
+                <Label bold>Durée</Label>
+                <List
+                  selectable
+                  horizontal
+                  spacing="s"
+                  id="duration3"
+                  name="duration"
+                  required
+                  signal={proposalDurationSignal}
+                  border="none"
+                  flexWrap
+                >
+                  {PROPOSAL_PRESETS.map((durationPreset, i) => (
+                    <List.Item
+                      selectable
+                      key={durationPreset}
+                      index={i}
+                      id={`duration3_${durationPreset}`}
+                      value={durationPreset}
+                      selected={duration === durationPreset}
+                      borderRadius="s"
+                      borderWidth="1"
+                      minWidth="64"
+                      paddingX="m"
+                      paddingY="s"
+                      alignX="center"
+                    >
+                      <Time type="duration" format="compact">
+                        {durationPreset}
+                      </Time>
+                    </List.Item>
+                  ))}
+                  <List.Item
+                    selectable
+                    index={PROPOSAL_PRESETS.length}
+                    id="duration3_custom"
+                    value="custom"
+                    selected={duration === "custom"}
+                    borderRadius="s"
+                    borderWidth="1"
+                    minWidth="64"
+                    paddingX="m"
+                    paddingY="s"
+                    alignX="center"
+                    noWrap
+                    flex
+                    spacing="xs"
+                    command="--navi-open"
+                    commandFor="custom_duration_picker3"
+                  >
+                    {customDuration === undefined || customDuration === null ? (
+                      <Text>Perso</Text>
+                    ) : (
+                      <Time type="duration" format="compact">
+                        {customDuration}
+                      </Time>
+                    )}
+                    <Icon marginRight="-1ch">
+                      <Picker.UI.PencilSvg />
+                    </Icon>
+                    <Picker
+                      id="custom_duration_picker3"
+                      name="durationCustom"
+                      variant="headless"
+                      mode="dialog"
+                      borderRadius="s"
+                      type="duration"
+                    >
+                      <Box flex="y" alignX="center" padding="m" spacing="m">
+                        <Text bold>Veuillez saisir une durée</Text>
+                        {/* signal + defaultValue: the signal is where the answer
+                            goes and comes from, defaultValue only what to open
+                            on while there is no answer yet. */}
+                        <InputDuration
+                          signal={proposalCustomDurationSignal}
+                          defaultValue={PROPOSED_CUSTOM_DURATION}
+                          min="0min"
+                          max="4h"
+                          step="5min"
+                        />
+                        <Box flex spacing="s" expandX alignX="end">
+                          <Button command="--navi-cancel" variant="discrete" />
+                          <Button command="--navi-define" variant="discrete" />
+                        </Box>
+                      </Box>
+                    </Picker>
+                  </List.Item>
+                </List>
+              </Field>
               <Button type="submit">Submit</Button>
             </Form>
             {formResultSignal.value !== null ? (
@@ -677,222 +821,36 @@
         );
       };
 
-      // ── DurationPreset ────────────────────────────────────────────────────
+      // ── The page itself ───────────────────────────────────────────────────
 
-      const DurationPreset = ({ children, ...props }) => {
-        return (
-          <List.Item
-            selectable
-            borderRadius="s"
-            borderWidth="1"
-            minWidth="64"
-            paddingX="m"
-            paddingY="s"
-            alignX="center"
-            {...props}
+      setupRoutes([route("", { searchParams: DEMO_SEARCH_PARAMS })]);
+
+      const ResetAll = () => (
+        <Box flex="x" alignX="end">
+          <Button
+            variant="discrete"
+            onClick={() => {
+              // undefined, not their defaults: a signal back at its default is a
+              // signal with nothing to say, which is what empties the url.
+              for (const signal of Object.values(DEMO_SEARCH_PARAMS)) {
+                signal.value = undefined;
+              }
+            }}
           >
-            <Time type="duration" format="compact">
-              {children}
-            </Time>
-          </List.Item>
-        );
-      };
+            Reset all
+          </Button>
+        </Box>
+      );
 
-      // ── DurationControl2 (custom via Picker, no default) ──────────────────
-      const DurationControl2 = () => {
-        const duration = durationSignal2.value;
-
-        return (
-          <Field vertical>
-            <Label bold>Durée</Label>
-            <List
-              selectable
-              horizontal
-              spacing="s"
-              id="duration2"
-              name="duration"
-              required
-              signal={durationSignal2}
-              flexWrap
-              border="none"
-            >
-              {PRESET_DURATIONS.map((minutes, i) => (
-                <DurationPreset
-                  key={minutes}
-                  index={i}
-                  id={`duration2_${minutes}`}
-                  value={minutes}
-                  selected={duration === String(minutes)}
-                >
-                  {minutes}
-                </DurationPreset>
-              ))}
-              <CustomDurationOptionWithPicker2
-                index={PRESET_DURATIONS.length}
-                id="duration2_custom"
-                value="custom"
-                selected={duration === "custom"}
-              />
-            </List>
-          </Field>
-        );
-      };
-
-      const CustomDurationOptionWithPicker2 = (props) => {
-        const customDuration = customDurationSignal.value;
-
-        return (
-          <List.Item
-            selectable
-            borderRadius="s"
-            borderWidth="1"
-            minWidth="64"
-            paddingX="m"
-            paddingY="s"
-            alignX="center"
-            noWrap
-            flex
-            spacing="xs"
-            command="--navi-open"
-            commandFor="custom_duration_picker2"
-            {...props}
-          >
-            {customDuration === undefined || customDuration === null ? (
-              <Text>Perso</Text>
-            ) : (
-              <Time type="duration" format="compact">
-                {customDuration}
-              </Time>
-            )}
-            <Icon marginRight="-1ch">
-              <Picker.UI.PencilSvg />
-            </Icon>
-            <Picker
-              id="custom_duration_picker2"
-              name="durationCustom"
-              variant="headless"
-              mode="dialog"
-              borderRadius="s"
-              type="duration"
-            >
-              <Box flex="y" alignX="center" padding="m" spacing="l">
-                <Text bold>Veuillez saisir une durée</Text>
-
-                <InputDuration
-                  signal={customDurationSignal}
-                  min="15min"
-                  max="4h30"
-                  step="5min"
-                  required
-                />
-                <Box flex spacing="s" expandX alignX="end">
-                  <Button command="--navi-cancel" variant="discrete" />
-                  <Button command="--navi-define" variant="discrete" />
-                </Box>
-              </Box>
-            </Picker>
-          </List.Item>
-        );
-      };
-
-      // ── DurationControl3 (custom via Picker, 2h15 default) ────────────────
-      const DurationControl3 = () => {
-        const duration = durationSignal3.value;
-
-        return (
-          <Field ownLabel vertical>
-            <Label bold>Durée</Label>
-            <List
-              selectable
-              horizontal
-              spacing="s"
-              id="duration3"
-              name="duration"
-              required
-              signal={durationSignal3}
-              border="none"
-              flexWrap
-            >
-              {PRESET_DURATIONS.map((minutes, i) => (
-                <DurationPreset
-                  key={minutes}
-                  index={i}
-                  id={`duration3_${minutes}`}
-                  value={minutes}
-                  selected={duration === String(minutes)}
-                >
-                  {minutes}
-                </DurationPreset>
-              ))}
-              <CustomDurationOptionWithPicker3
-                index={PRESET_DURATIONS.length}
-                id="duration3_custom"
-                value="custom"
-                selected={duration === "custom"}
-              />
-            </List>
-          </Field>
-        );
-      };
-
-      const CustomDurationOptionWithPicker3 = (props) => {
-        const customDuration = customDuration3Signal.value;
-
-        return (
-          <List.Item
-            selectable
-            borderRadius="s"
-            borderWidth="1"
-            minWidth="64"
-            paddingX="m"
-            paddingY="s"
-            alignX="center"
-            noWrap
-            flex
-            spacing="xs"
-            command="--navi-open"
-            commandFor="custom_duration_picker3"
-            // navi-command-target="child-control"
-            {...props}
-          >
-            <Time type="duration" format="compact">
-              {customDuration}
-            </Time>
-            <Icon marginRight="-1ch">
-              <Picker.UI.PencilSvg />
-            </Icon>
-            <Picker
-              id="custom_duration_picker3"
-              name="durationCustom"
-              variant="headless"
-              mode="dialog"
-              borderRadius="s"
-              // one value, not a form: what it holds is a single
-              // InputDuration, so the picker IS that duration
-              type="duration"
-            >
-              <Box flex="y" alignX="center" padding="m" spacing="m">
-                <Text bold>Veuillez saisir une durée</Text>
-                {/* signal, not value + uiAction: the input reads it to place
-                    itself and writes it back on every change, so there is no
-                    second copy of the value to keep in step. */}
-                <InputDuration
-                  signal={customDuration3Signal}
-                  min="0min"
-                  max="4h"
-                  step="5min"
-                />
-                <Box flex spacing="s" expandX alignX="end">
-                  <Button command="--navi-cancel" variant="discrete" />
-                  <Button command="--navi-define" variant="discrete" />
-                </Box>
-              </Box>
-            </Picker>
-          </List.Item>
-        );
-      };
-
-      // ── App ───────────────────────────────────────────────────────────────
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <ResetAll />
+          <WheelPerSignalDemo />
+          <WheelOneSignalDemo />
+          <PickerCustomNoProposalDemo />
+          <PickerCustomProposedDemo />
+        </Box>
+      );
 
       render(
         <NaviDebug debugAll>
