@@ -1,4 +1,13 @@
 /**
+ * A dialog is a surface, not a control: it holds no value, has no action and
+ * aggregates nothing. Fields and a submit go in a `<Form>` inside it, exactly
+ * as they would in the document — the form owns the answer, and the dialog owns
+ * where it is shown. What the two say to each other is small and goes one way:
+ * the form says it is finished (`--navi-close`, see resolveAfterSend in
+ * commands.js) and the dialog closes; the dialog, before letting a close
+ * through, asks what it contains whether anything is mid-action and refuses if
+ * so (see findBusyElementInside below).
+ *
  * A dialog is centered in the viewport by default, with no anchor to grow
  * out of or slide in from — `animation={true}`/`"auto"` resolves through
  * Popover's own no-real-anchor path (see popover.jsx's own top comment).
@@ -58,20 +67,9 @@ import {
 } from "@jsenv/dom";
 import { useEffect, useRef } from "preact/hooks";
 
-import {
-  ControlgroupChildrenWrapper,
-  useControlgroupProps,
-} from "../control_hooks.jsx";
-import {
-  dispatchRequestAction,
-  watchActionCompletion,
-} from "../rules/control_action.js";
+import { onNaviCommand } from "../commands.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
-import {
-  dispatchRequestSetUIState,
-  getUIStateFromElement,
-} from "../ui_state_dom.js";
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { BUSY_CONSTRAINT } from "../rules/interaction/busy_constraint.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
 import { Box } from "../../box/box.jsx";
 import { resolveSpacingSize } from "../../box/box_style_util.js";
@@ -394,7 +392,8 @@ const css = /* css */ `
 
 /**
  * A dialog box — modal by default (real `<dialog>` + `showModal()`, browser
- * top layer), or confined to a local container via `layer="local"`. See
+ * top layer), or confined to a local container via `layer="local"`. A surface
+ * only: put a `<Form>` inside it for anything with fields and a submit. See
  * this file's own top comment for the full architecture (positionArea
  * grammar, anchor's sizing-only role, backdrop mechanics).
  *
@@ -503,86 +502,30 @@ export const Dialog = (props) => {
 const UncontrolledDialog = (props) => {
   const debugPopup = useDebugPopup();
   // Resolved here rather than left to useDialogProps: the open handler below
-  // needs the dialog element to read what it holds.
+  // needs the dialog element to look at what it contains.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  // Same shape as picker_custom's own controller, for the same reason: what the
-  // dialog held when it opened is what a close is compared against, and what a
-  // cancel puts back — so it lives in the closure of one opening.
   const openController = useOpenController((openEvent) => {
     const dialogEl = props.ref.current;
-    const uiStateAtOpen = getUIStateFromElement(dialogEl);
-    debugPopup(openEvent, `dialog opened, store value at open`, uiStateAtOpen);
+    debugPopup(openEvent, `dialog opened`);
 
     return {
       onRequestClose: (requestCloseEvent) => {
-        if (requestCloseEvent.detail.isCancel) {
-          // Giving up validates nothing and commits nothing, but the dialog
-          // still has to be interactive to do it: mid-action it is busy and
-          // cannot walk away from an answer it does not have yet.
-          dispatchRequestInteraction(dialogEl, {
+        // Whatever is inside must not be interrupted mid-action: a form that is
+        // sending holds an answer that is neither committed nor given up. The
+        // dialog has no such state of its own to consult (it is layout — see
+        // this file's top comment), so it asks what it contains, and lets that
+        // control report why the way it would to anyone else.
+        const busyElement = findBusyElementInside(dialogEl);
+        if (busyElement) {
+          dispatchRequestInteraction(busyElement, {
             event: requestCloseEvent,
-            name: "dialog request cancel",
-            prevented: () => {
-              requestCloseEvent.preventDefault();
-            },
+            name: "dialog request close",
           });
-          return;
-        }
-        // Closing IS committing, so a close that cannot commit must not
-        // happen: the failing constraint reports itself and the dialog stays
-        // open, with the form still in front of the user.
-        const unchanged = compareTwoJsValues(
-          getUIStateFromElement(dialogEl),
-          uiStateAtOpen,
-        );
-        const { isRunning, whenSucceeded } = watchActionCompletion(
-          dialogEl,
-          () =>
-            dispatchRequestAction(dialogEl, {
-              event: requestCloseEvent,
-              name: "dialog request close",
-              // The control that asked to close (a submit button, typically):
-              // what wears the loading state while the action runs and what the
-              // error is reported on if it fails.
-              requester: requestCloseEvent.detail.requester,
-              // action: null when nothing was touched — the constraints are
-              // still checked (an empty required field must report even if the
-              // user typed nothing at all), but there is no answer to commit.
-              action: unchanged ? null : "auto",
-              // Reported even when the dialog has no action of its own: what
-              // the user needs to see is the constraint, not whether someone
-              // listens.
-              reportOnInvalid: true,
-              // Blocked before the action even got a chance — the dialog is
-              // disabled, read-only, or busy already running the action a
-              // previous close request started. The gate has said which;
-              // closing is committing, so it must not happen either.
-              prevented: () => {
-                requestCloseEvent.preventDefault();
-              },
-              onInvalid: () => {
-                requestCloseEvent.preventDefault();
-              },
-            }),
-        );
-        if (isRunning) {
-          // An asynchronous action: committing has started but not finished, so
-          // the dialog stays open and busy until it succeeds.
           requestCloseEvent.preventDefault();
-          whenSucceeded(() => {
-            openController.close(requestCloseEvent);
-          });
         }
       },
       onClose: (closeEvent) => {
-        if (closeEvent.detail.isCancel) {
-          // A cancelled dialog leaves no trace: what was typed goes back to
-          // what it opened on.
-          dispatchRequestSetUIState(dialogEl, uiStateAtOpen, {
-            event: closeEvent,
-          });
-        }
         props.onClose?.(closeEvent);
       },
     };
@@ -668,64 +611,25 @@ const DOCKED = {
   expandX: true,
 };
 
-// Only the keys actually present, never the whole props object: everything a
-// dialog takes that a control group knows nothing about (openController,
-// positionArea, animation…) would otherwise come back out as the group's
-// leftover props and land on the element as stray attributes. Copied key by key
-// rather than spread with undefined defaults because the group reads presence,
-// not value — an always-there `value: undefined` reads as "controlled with no
-// handler" and makes the whole popup read-only.
-const CONTROL_GROUP_PROP_NAMES = [
-  "name",
-  "action",
-  "uiAction",
-  "value",
-  "defaultValue",
-  "required",
-  "readOnly",
-  "disabled",
-];
-const pickControlGroupProps = (props) => {
-  const controlGroupProps = { ref: props.ref, id: props.id };
-  for (const name of CONTROL_GROUP_PROP_NAMES) {
-    if (Object.hasOwn(props, name)) {
-      controlGroupProps[name] = props[name];
+// The first control inside `dialogEl` that is mid-action, if any. Walks the
+// controls rather than reading an attribute off the dialog: a dialog carries no
+// state of its own (see this file's top comment), and `aria-busy` on the
+// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+const findBusyElementInside = (dialogEl) => {
+  for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
+    const controller = element.__uiStateController__;
+    if (controller && BUSY_CONSTRAINT.check(controller)) {
+      return element;
     }
   }
-  return controlGroupProps;
+  return null;
 };
 
 const useDialogProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
-  // Resolved before the group hook below rather than with the rest of the
-  // props: the group needs the dialog's own element to hang its state and its
-  // events on, and that is this ref.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  // A dialog holds controls, so it IS one: it aggregates whatever named
-  // controls it contains into a single object and owns their joint state,
-  // exactly like a ControlGroup. That is also what makes it a form boundary —
-  // ControlgroupChildrenWrapper below resets the field contexts, so what is
-  // inside a dialog belongs to the dialog, not to the form around it.
-  // A curated object, not `props`: everything a dialog takes that a control
-  // group knows nothing about (openController, positionArea, animation…) would
-  // otherwise come back out as the group's leftover props and land on the
-  // element as stray attributes — which is exactly how navi-autofocus got
-  // overwritten and `opencontroller="[object Object]"` appeared on it.
-  const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
-    pickControlGroupProps(props),
-    {
-      controlType: "dialog",
-      // "object" by default — a popup holds a form and hands back named values.
-      // "single" for a popup that IS one value (a picker's list): see
-      // GROUP_DEFAULTS in ui_state_controller.js.
-      stateType: props.stateType || "object",
-      allowCapture: true,
-      wantRequesterButtonState: true,
-      cascadeValidationToChildren: true,
-    },
-  );
   const {
     openController,
     // "top" (default) → real <dialog>, showModal(), the browser's own top
@@ -863,10 +767,6 @@ const useDialogProps = (props) => {
   openController.openEffect = (e) => {
     const dialogEl = ref.current;
     const backdropEl = backdropRef.current;
-    // What the dialog held when it opened: the answer to compare against when
-    // it closes (nothing changed → nothing to commit) and the state to put
-    // back when it is cancelled — a cancelled dialog must leave no trace, the
-    // same way a cancelled picker restores the value it was opened on.
     if (!dialogEl) {
       return undefined;
     }
@@ -1302,23 +1202,22 @@ const useDialogProps = (props) => {
     "data-pointer-interaction-outside": pointerInteractionOutsideEffect,
     "styleCSSVars": DIALOG_STYLE_CSS_VARS,
     ...rest,
-    // Right after ...rest, not last: what makes the dialog a control (its name,
-    // its state, its action, and the onnavi_command/onnavi_request_interaction
-    // pair this hook used to declare by hand) — but everything the dialog sets
-    // for itself below still wins over it.
-    ...groupRootProps,
-    ...groupProps,
-    // The control-group props are consumed by the hook above, never forwarded:
-    // on a <dialog> element they would only render as stray attributes
-    // (value="[object Object]" and friends).
-    "value": undefined,
-    "defaultValue": undefined,
-    "stateType": undefined,
-    "action": undefined,
-    "uiAction": undefined,
     ...autoFocusProps,
     "as": "dialog",
     ref,
+    // Not a control, but still something the rest of navi has to be able to
+    // recognise: outside-click detection asks what a click landed in
+    // ("[navi-control='dialog'], [navi-control='popover']" — see openEffect
+    // above), and --navi-open/--navi-close resolve their target this way.
+    "navi-control": "dialog",
+    // The protocol every command target answers. It came with the control
+    // group before; a dialog is layout and still has to answer --navi-open,
+    // --navi-close and --navi-toggle, which are dispatched here and do not
+    // bubble.
+    "onnavi_command": (e) => {
+      onNaviCommand(e);
+      rest.onnavi_command?.(e);
+    },
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed
@@ -1346,11 +1245,7 @@ const useDialogProps = (props) => {
       // onKeyDownShortcuts above instead.
       openController.requestClose(e, { isCancel: true });
     },
-    "children": (
-      <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
-        {children}
-      </ControlgroupChildrenWrapper>
-    ),
+    children,
   });
 
   // Outside-click handling for layer="local" only — the via-attribute

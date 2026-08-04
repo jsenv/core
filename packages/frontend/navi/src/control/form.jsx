@@ -16,6 +16,7 @@
 import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
@@ -106,7 +107,7 @@ const useFormGroup = (props) => {
       cascadeValidationToChildren: true,
     },
   );
-  useActionBaseline(
+  useSentValue(
     childrenWrapperProps.uiGroupStateController,
     props.sendUnchanged,
   );
@@ -187,33 +188,39 @@ const FormNested = (props) => {
   );
 };
 
-/**
- * What "nothing changed" is measured against (see `isSendingNothingNew` in
- * control_action.js): the value the form last sent, or the one it first
- * rendered with. Held on the controller so the action gate reads the same
- * baseline wherever the send came from — a submit event, a `--navi-send`
- * command, `requestSubmit()`.
- *
- * Taken in a layout effect rather than during render: the fields register
- * themselves in their own effects, which run first, so this is the earliest
- * moment the form knows what it holds.
- */
-const useActionBaseline = (uiStateController, sendUnchanged) => {
-  const baselineRef = useRef(undefined);
-  // No baseline at all is how a form says "send it anyway": with nothing to
-  // compare against, every send is new.
-  uiStateController.actionBaselineRef = sendUnchanged ? undefined : baselineRef;
+// Same idea as an input's own lastActionValueRef (control_hooks.jsx): what was
+// last sent, kept so the same thing is not sent twice. A form is only asked
+// about it at submit time, and the answer is read by the action gate wherever
+// the submit came from — a submit event, a `--navi-send` command,
+// `requestSubmit()` — so it is exposed on the controller rather than checked
+// in one of those three places.
+const NOTHING_SENT_YET = Symbol.for("nothing_sent_yet");
+
+const useSentValue = (uiStateController, sendUnchanged) => {
+  const sentValueRef = useRef(NOTHING_SENT_YET);
+
+  uiStateController.shouldRequestAction = (value) => {
+    if (sendUnchanged) {
+      return true;
+    }
+    return !compareTwoJsValues(value, sentValueRef.current);
+  };
 
   useLayoutEffect(() => {
-    baselineRef.current = uiStateController.uiState;
+    // The value the form opens on counts as already sent: a form nobody has
+    // touched has nothing to say, defaults filled in or not. Read here rather
+    // than during render because the fields register themselves in their own
+    // effects, which run first — this is the earliest the form knows what it
+    // holds.
+    sentValueRef.current = uiStateController.uiState;
     const element = uiStateController.ref.current;
     if (!element) {
       return null;
     }
-    // Moved on success only: an action that failed has not been sent, and the
-    // user must be able to try the same value again.
+    // On success only: an action that failed has not been sent, and the user
+    // must be able to try the same value again.
     const onActionEnd = () => {
-      baselineRef.current = uiStateController.uiState;
+      sentValueRef.current = uiStateController.uiState;
     };
     element.addEventListener("navi_action_end", onActionEnd);
     return () => {

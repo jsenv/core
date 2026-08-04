@@ -19,7 +19,6 @@
 
 import { dispatchInternalCustomEvent } from "@jsenv/dom";
 
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { findControlHost } from "../control_dom.js";
 import { findControlProxyTargetController } from "../controller_registry.js";
 import { dispatchRequestInteraction } from "./control_interaction.js";
@@ -171,7 +170,14 @@ export const tryActionAfterInteractionAllowed = (
   }
 
   if (action === "auto" || action?.isAction) {
-    if (isSendingNothingNew(controller, uiState)) {
+    // A control that commits gets the last word on whether this particular
+    // value is worth acting on — see Form's own `shouldRequestAction`, which
+    // is where "nothing changed since the last send" is decided. Everything
+    // before this still ran (the interaction gate, the constraints), and the
+    // caller is still told the send went through: what follows a send (a slide
+    // moving on, a popup closing) is about the user being done, not about
+    // whether there was anything to send.
+    if (controller?.shouldRequestAction?.(uiState) === false) {
       return true;
     }
     dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
@@ -187,25 +193,3 @@ export const tryActionAfterInteractionAllowed = (
   return true;
 };
 
-/**
- * A control that commits does not act on an answer nobody changed: submitting a
- * form nobody touched is a click, not an answer. The baseline is what it last
- * sent, or what it held when it first rendered — see `Form`'s own
- * `sendUnchanged`, which is how a form that DOES want to send the same thing
- * twice says so (it simply keeps no baseline).
- *
- * Everything before this still runs — the interaction gate, the constraints, so
- * an empty required field still reports — and the caller is still told the send
- * went through: what follows a send (a slide moving on, a popup closing) is
- * about the user being done, not about whether anything had to be sent.
- *
- * Only controls that keep a baseline are concerned; every other control (a
- * button, an input firing on change) has none and acts every time.
- */
-const isSendingNothingNew = (controller, uiState) => {
-  const baselineRef = controller?.actionBaselineRef;
-  if (!baselineRef) {
-    return false;
-  }
-  return compareTwoJsValues(uiState, baselineRef.current);
-};

@@ -259,6 +259,7 @@
         Button,
         Dialog,
         Field,
+        Form,
         Input,
         Icon,
         Label,
@@ -1235,33 +1236,36 @@
             </div>
             <Dialog
               id="required_dialog"
-              value={committed}
-              // a form with a submit button: the button is where committing
-              // happens, so leaving by clicking outside means giving up — the
-              // opposite default from a dialog the user edits in place
+              // the submit button is where committing happens, so leaving by
+              // clicking outside means giving up
               pointerInteractionOutsideEffect="cancel"
-              action={(value) => {
-                push("action", value);
-                setCommitted(value);
-              }}
             >
-              <Box body padding="m" flex="y" spacing="m">
+              <Form
+                body
+                padding="m"
+                flex="y"
+                spacing="m"
+                value={committed}
+                action={(value) => {
+                  push("action", value);
+                  setCommitted(value);
+                }}
+              >
                 <Field vertical>
                   <Label requiredIndicator>Name</Label>
                   <Input name="name" required />
                 </Field>
-                <Button command="--navi-close">Submit</Button>
-              </Box>
+                <Button type="submit">Submit</Button>
+              </Form>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
           </>
         );
       };
 
-      // Closing is committing, so a dialog whose action takes time cannot leave
-      // before knowing whether it worked: it stays open and busy, and every way
-      // out (Submit, Cancel, Escape, the backdrop) answers with the busy callout
-      // until the action settles.
+      // A form that takes time to send holds the dialog around it: every way
+      // out (Cancel, Escape, the backdrop) answers with the busy callout until
+      // the send settles, and the dialog closes on its own once it succeeds.
       const AsyncActionDialog = ({
         id,
         perform,
@@ -1281,25 +1285,30 @@
             </div>
             <Dialog
               id={id}
-              value={committed}
               pointerInteractionOutsideEffect={pointerInteractionOutsideEffect}
-              action={async (value) => {
-                push("action start", value);
-                await perform(value);
-                push("action end", value);
-                setCommitted(value);
-              }}
             >
-              <Box body padding="m" flex="y" spacing="m">
+              <Form
+                body
+                padding="m"
+                flex="y"
+                spacing="m"
+                value={committed}
+                action={async (value) => {
+                  push("action start", value);
+                  await perform(value);
+                  push("action end", value);
+                  setCommitted(value);
+                }}
+              >
                 <Field vertical>
                   <Label>Name</Label>
                   <Input name="name" />
                 </Field>
                 <Box flex="x" spacing="s">
                   <Button command="--navi-cancel">Cancel</Button>
-                  <Button command="--navi-close">Submit</Button>
+                  <Button type="submit">Submit</Button>
                 </Box>
-              </Box>
+              </Form>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
           </>
@@ -1352,27 +1361,18 @@
         // Controlled from here so the demo can show what the dialog committed:
         // the log says when, this says what stuck.
         const [committed, setCommitted] = useState({ note: "" });
-        const [confirmed, setConfirmed] = useState({ note: "" });
 
         return (
           <section class="demo-section">
             <Heading id="actions">uiAction / action</Heading>
             <p>
-              A dialog aggregates the named controls it contains, so it is
-              handed <code>{"{ note }"}</code>, not a bare string.{" "}
-              <code>uiAction</code> fires while typing — it is the live state.{" "}
-              <code>action</code> fires when the dialog <em>closes</em>, and
-              only if something actually changed: closing a dialog nobody
-              touched is not an answer. Cancelling commits nothing and puts back
-              what the dialog opened on.
-            </p>
-
-            <Heading level={3} id="actions-default">
-              Default
-            </Heading>
-            <p>
-              <kbd>Escape</kbd> cancels; clicking outside closes, and closing
-              commits.
+              The dialog holds no value of its own — the form inside it does,
+              and it is the form that is handed <code>{"{ note }"}</code>.{" "}
+              <code>uiAction</code> fires while typing; <code>action</code>{" "}
+              fires on submit, and only if something actually changed. A
+              successful send closes the dialog around it (see{" "}
+              <code>resolveAfterSend</code> in commands.js); leaving any other
+              way sends nothing.
             </p>
             <div class="demo-row">
               <Button command="--navi-open" commandFor="actions_dialog">
@@ -1382,57 +1382,28 @@
                 committed: <code>{JSON.stringify(committed)}</code>
               </span>
             </div>
-            <Dialog
-              id="actions_dialog"
-              value={committed}
-              uiAction={(value) => {
-                push("uiAction", value);
-              }}
-              action={(value) => {
-                push("action", value);
-                setCommitted(value);
-              }}
-            >
-              <Box flex="y" spacing="m" padding="m">
+            <Dialog id="actions_dialog">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                value={committed}
+                uiAction={(value) => {
+                  push("uiAction", value);
+                }}
+                action={(value) => {
+                  push("action", value);
+                  setCommitted(value);
+                }}
+              >
                 <Field vertical>
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-              </Box>
+                <Button type="submit">Submit</Button>
+              </Form>
             </Dialog>
             <CallLog entries={entries} onClear={clear} />
-
-            <Heading level={3} id="actions-cancel-outside">
-              pointerInteractionOutsideEffect="cancel"
-            </Heading>
-            <p>
-              Now both ways out are a cancel, so the dialog owes the user a way
-              to commit: a button that closes it.
-            </p>
-            <div class="demo-row">
-              <Button command="--navi-open" commandFor="actions_cancel_dialog">
-                Open
-              </Button>
-              <span>
-                committed: <code>{JSON.stringify(confirmed)}</code>
-              </span>
-            </div>
-            <Dialog
-              id="actions_cancel_dialog"
-              value={confirmed}
-              pointerInteractionOutsideEffect="cancel"
-              action={(value) => {
-                setConfirmed(value);
-              }}
-            >
-              <Box flex="y" spacing="m" padding="m">
-                <Field vertical>
-                  <Label>Note</Label>
-                  <Input name="note" placeholder="type something…" />
-                </Field>
-                <Button command="--navi-close">Submit</Button>
-              </Box>
-            </Dialog>
           </section>
         );
       };
@@ -1456,10 +1427,11 @@
         <div className="demo-section">
           <Heading id="dialog">Dialog</Heading>
           <p>
-            A surface opened over the page for one decision. It is a control
-            group: whatever named controls it contains are aggregated into a
-            single value, it is a form boundary, and it commits that value when
-            it closes — see <Link href="#actions">uiAction / action</Link>.
+            A surface opened over the page for one decision — a surface only: it
+            holds no value and has no action. Fields and a submit go in a{" "}
+            <code>&lt;Form&gt;</code> inside it, just as they would in the
+            document; the form owns the answer and the dialog owns where it is
+            shown — see <Link href="#actions">uiAction / action</Link>.
           </p>
           <ol className="toc">
             <li>
@@ -1544,16 +1516,6 @@
             </li>
             <li>
               <Link href="#actions">uiAction / action</Link>
-              <ul>
-                <li>
-                  <Link href="#actions-default">Default</Link>
-                </li>
-                <li>
-                  <Link href="#actions-cancel-outside">
-                    pointerInteractionOutsideEffect="cancel"
-                  </Link>
-                </li>
-              </ul>
             </li>
           </ol>
         </div>
