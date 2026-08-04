@@ -1333,7 +1333,7 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           return false;
         }
         if (
-          props.type === "controlgroup" &&
+          props.type === "form" &&
           childController.controlType !== "control_group" &&
           childController.controlType !== "form"
         ) {

@@ -33,7 +33,7 @@ import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
   PickerArrayUI,
   PickerColorUI,
-  PickerControlGroupUI,
+  PickerFormUI,
   PickerDatetimeUI,
   PickerDateUI,
   PickerDurationUI,
@@ -824,7 +824,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
-Picker.UI.ControlGroup = PickerControlGroupUI;
+Picker.UI.Form = PickerFormUI;
 Picker.UI.Multiple = PickerArrayUI;
 
 Picker.UI.PencilSvg = PencilSvg;

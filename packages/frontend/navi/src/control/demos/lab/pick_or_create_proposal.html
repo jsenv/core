@@ -512,9 +512,9 @@
                       // Back to the list rather than closing: the entry shows
                       // up there, already selected, so what just happened is
                       // visible — and one more tap chooses it or another. The
-                      // list is above this screen, and "previous" walks the map
-                      // that way once there is nothing to the left.
-                      command="--navi-left"
+                      // list is above this screen on the map, so that is the
+                      // direction said.
+                      command="--navi-up"
                       action={submitForm}
                       flex="y"
                       overflow="auto"
@@ -566,7 +566,7 @@
                         {/* the same way back as the arrow above, where the
                             thumb already is once the form is filled */}
                         <Button
-                          command="--navi-left"
+                          command="--navi-up"
                           variant="discrete"
                           paddingY="s"
                         >

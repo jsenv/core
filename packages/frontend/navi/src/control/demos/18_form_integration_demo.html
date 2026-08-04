@@ -516,7 +516,7 @@
       // ── A form in a picker ────────────────────────────────────────────────
 
       // The other way round from the section above: here the popup belongs to
-      // the picker and the form is what is inside it. `type="controlgroup"`
+      // the picker and the form is what is inside it. `type="form"`
       // says the picker's value is whatever the group in its popup aggregates —
       // a Form or a ControlGroup, both of which are that group.
       const FormInPickerSection = () => {
@@ -537,7 +537,7 @@
               <Label>Address</Label>
               <Picker
                 name="address"
-                type="controlgroup"
+                type="form"
                 placeholder="Enter an address…"
                 value={address}
                 minWidth="260"
@@ -593,7 +593,10 @@
                 <Label requiredIndicator>Name</Label>
                 <Input name="name" required defaultValue="Ada" />
               </Field>
-              <ControlGroup name="address" flex="y" spacing="s">
+              {/* fieldset so the grouping is visible: what it draws a box
+                  around is exactly what lands under the "address" key. */}
+              <ControlGroup name="address" as="fieldset" flex="y" spacing="s">
+                <legend>address</legend>
                 <Field vertical>
                   <Label>Street</Label>
                   <Input name="street" defaultValue="Rue de la paix" />

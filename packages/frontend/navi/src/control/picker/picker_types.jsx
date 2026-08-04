@@ -48,8 +48,8 @@ export const PickerTypeResolver = (props) => {
   if (props.type === "array") {
     return <PickerArray {...props} />;
   }
-  if (props.type === "controlgroup") {
-    return <PickerControlGroup {...props} />;
+  if (props.type === "form") {
+    return <PickerForm {...props} />;
   }
   return <Next {...props} />;
 };
@@ -64,12 +64,12 @@ const PickerText = (props) => {
 // when the group is only a shape and has no submit — and this picker's value is
 // whatever that group aggregates. The popup itself holds nothing: it is a
 // surface (see dialog.jsx), so there is nothing to tell it about the shape.
-const PickerControlGroup = (props) => {
+const PickerForm = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
+  return <Next ui={<PickerFormUI />} {...props} type="navi_js" />;
 };
-export const PickerControlGroupUI = () => {
+export const PickerFormUI = () => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value || Object.keys(value).length === 0) {

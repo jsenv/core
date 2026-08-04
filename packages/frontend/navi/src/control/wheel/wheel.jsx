@@ -1969,7 +1969,7 @@ export const WheelGroup = (props) => {
   const groupRef = props.ref;
 
   // controlType "control_group" (not a bespoke "wheel_group") so a Picker with
-  // type="controlgroup" recognises this as its aggregating child (it only syncs
+  // type="form" recognises this as its aggregating child (it only syncs
   // with a control_group — see useUIFacadeStateController). Named wheels aggregate
   // into { hours, minutes, … }; a nameless wheel warns (name it or it won't be in
   // the value), same as any control group.

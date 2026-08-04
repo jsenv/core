@@ -476,7 +476,7 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
-                une valeur objet sur un <code>Picker type="controlgroup"</code>.
+                une valeur objet sur un <code>Picker type="form"</code>.
                 Les champs internes doivent se mettre à jour et le{" "}
                 <code>uiAction</code> doit être appelé.
               </p>
@@ -485,7 +485,7 @@
                 <Picker
                   id={pickerId}
                   name="address"
-                  type="controlgroup"
+                  type="form"
                   placeholder="Saisir une adresse"
                   uiAction={(v) => {
                     pushEntry("uiAction", v);
@@ -561,7 +561,7 @@
             <h2>ControlGroup interne — inside a form</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-                Le <code>Picker type="controlgroup"</code> est dans un{" "}
+                Le <code>Picker type="form"</code> est dans un{" "}
                 <code>Form</code>. On vérifie que le formulaire récupère bien la
                 valeur objet du picker sous son <code>name</code> lors du
                 submit.
@@ -578,7 +578,7 @@
                   <legend>address</legend>
                   <Picker
                     name="address"
-                    type="controlgroup"
+                    type="form"
                     placeholder="Saisir une adresse"
                     uiAction={(v) => {
                       pushEntry("uiAction", v);
@@ -644,7 +644,7 @@
                 <legend>contact</legend>
                 <Picker
                   name="contact"
-                  type="controlgroup"
+                  type="form"
                   placeholder="Renseigner le contact"
                   uiAction={(v) => {
                     pushEntry("uiAction", v);
@@ -1874,7 +1874,7 @@
                   defaultValue=
                   {'{{ street: "12 rue de la Paix", city: "Paris" }}'}
                 </code>{" "}
-                sur le <code>Picker type="controlgroup"</code> — les inputs
+                sur le <code>Picker type="form"</code> — les inputs
                 internes n'ont pas de <code>defaultValue</code>. Les champs
                 doivent être préremplis à l'ouverture.
               </p>
@@ -1882,7 +1882,7 @@
                 <legend>address</legend>
                 <Picker
                   name="address"
-                  type="controlgroup"
+                  type="form"
                   placeholder="Saisir une adresse"
                   defaultValue={{ street: "12 rue de la Paix", city: "Paris" }}
                   uiAction={(v) => {
@@ -1940,7 +1940,7 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 <code>value={"{address}"}</code> sur le{" "}
-                <code>Picker type="controlgroup"</code> — les inputs internes
+                <code>Picker type="form"</code> — les inputs internes
                 n'ont pas de <code>value</code>. Confirmer met à jour l'état
                 React et les champs se synchronisent.
               </p>
@@ -1948,7 +1948,7 @@
                 <legend>address</legend>
                 <Picker
                   name="address"
-                  type="controlgroup"
+                  type="form"
                   placeholder="Saisir une adresse"
                   value={address}
                   uiAction={(v) => {
@@ -2087,7 +2087,7 @@
                     Personnalisé
                     <Picker
                       name="custom"
-                      type="controlgroup"
+                      type="form"
                       placeholder="hh:mm"
                     >
                       <ControlGroup>
