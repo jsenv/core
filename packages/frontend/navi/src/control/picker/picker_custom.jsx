@@ -575,11 +575,6 @@ const PickerContentInsidePopup = (props) => {
     // but popupProps is built explicitly here, so it only travels if named.
     // "popupLayer" rather than "layer": the picker itself is not the popup.
     popupLayer,
-    // The popup is the control group now (see dialog.jsx/popover.jsx): a
-    // picker's popup holds ONE value — the list inside it — so it aggregates
-    // as "single". A picker whose popup holds a real form (type="controlgroup")
-    // passes "object" instead.
-    popupStateType = "single",
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
@@ -631,7 +626,6 @@ const PickerContentInsidePopup = (props) => {
         {...popupProps}
         mode={mode}
         layer={popupLayer}
-        stateType={popupStateType}
         animation={animation}
         positionArea={
           isPopover

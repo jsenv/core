@@ -89,6 +89,7 @@ export const DialogLayout = ({
   ...props
 }) => {
   import.meta.css = css;
+
   return (
     <Box
       baseClassName="navi_dialog_layout"
