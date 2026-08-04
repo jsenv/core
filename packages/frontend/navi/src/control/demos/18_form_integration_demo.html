@@ -113,6 +113,7 @@
         Field,
         Form,
         Input,
+        ControlGroup,
         Label,
         Link,
         List,
@@ -512,6 +513,103 @@
         );
       };
 
+      // ── A form in a picker ────────────────────────────────────────────────
+
+      // The other way round from the section above: here the popup belongs to
+      // the picker and the form is what is inside it. `type="controlgroup"`
+      // says the picker's value is whatever the group in its popup aggregates —
+      // a Form or a ControlGroup, both of which are that group.
+      const FormInPickerSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [address, setAddress] = useState({
+          street: "Rue de la paix",
+          city: "Paris",
+        });
+        return (
+          <section class="demo-section">
+            <Heading id="form-in-picker">A form in a picker</Heading>
+            <div class="demo-row">
+              <span>
+                address: <code>{JSON.stringify(address)}</code>
+              </span>
+            </div>
+            <Field vertical>
+              <Label>Address</Label>
+              <Picker
+                name="address"
+                type="controlgroup"
+                placeholder="Enter an address…"
+                value={address}
+                minWidth="260"
+                action={(value) => {
+                  push("picker action", value);
+                  setAddress(value);
+                }}
+              >
+                <Form
+                  flex="y"
+                  spacing="m"
+                  padding="m"
+                  action={(value) => {
+                    push("form action", value);
+                  }}
+                >
+                  <Field vertical>
+                    <Label requiredIndicator>Street</Label>
+                    <Input name="street" required />
+                  </Field>
+                  <Field vertical>
+                    <Label>City</Label>
+                    <Input name="city" />
+                  </Field>
+                  <Button type="submit">Done</Button>
+                </Form>
+              </Picker>
+            </Field>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── A control group in a form ─────────────────────────────────────────
+
+      // What a ControlGroup is still for now that a Form nests: a name. The
+      // fields inside it land under that name in the form's own value instead of
+      // next to the form's other fields.
+      const ControlGroupInFormSection = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <section class="demo-section">
+            <Heading id="control-group">A control group in a form</Heading>
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              action={(value) => {
+                push("action", value);
+              }}
+            >
+              <Field vertical>
+                <Label requiredIndicator>Name</Label>
+                <Input name="name" required defaultValue="Ada" />
+              </Field>
+              <ControlGroup name="address" flex="y" spacing="s">
+                <Field vertical>
+                  <Label>Street</Label>
+                  <Input name="street" defaultValue="Rue de la paix" />
+                </Field>
+                <Field vertical>
+                  <Label>City</Label>
+                  <Input name="city" defaultValue="Paris" />
+                </Field>
+              </ControlGroup>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
       // ── In a dialog ───────────────────────────────────────────────────────
 
       const InDialogSection = () => {
@@ -814,6 +912,8 @@
           <InSlideSection />
           <MultiStepSection />
           <PickerInFormSection />
+          <FormInPickerSection />
+          <ControlGroupInFormSection />
           <InDialogSection />
           <InPopoverSection />
           <SlidesInDialogSection />

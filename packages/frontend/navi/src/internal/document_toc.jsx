@@ -19,6 +19,8 @@
 
 import { useEffect, useRef, useState } from "preact/hooks";
 
+import { Link } from "../nav/link/link.jsx";
+
 const css = /* css */ `
   .navi_document_toc {
     margin: 0;
@@ -29,6 +31,12 @@ const css = /* css */ `
     margin: 0;
     padding-left: 20px;
     list-style: circle;
+  }
+  /* Deeper entries read as detail of the one above rather than as siblings of
+     it — same shape the hand-written tables of contents had. */
+  .navi_document_toc ul a {
+    color: #555;
+    font-size: 0.9rem;
   }
 `;
 
@@ -159,8 +167,11 @@ const renderLevel = (entries, level) => {
     }
     const children = entries.slice(index + 1, end);
     items.push(
+      // Link, not a bare <a>: it is what the hand-written tables of contents
+      // used, and what makes an entry follow the same visited/active/readonly
+      // treatment as every other link in the page.
       <li key={entry.id}>
-        <a href={`#${entry.id}`}>{entry.text}</a>
+        <Link href={`#${entry.id}`}>{entry.text}</Link>
         {children.length > 0 && <ul>{renderLevel(children, level + 1)}</ul>}
       </li>,
     );

@@ -1334,9 +1334,13 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
         }
         if (
           props.type === "controlgroup" &&
-          childController.controlType !== "control_group"
+          childController.controlType !== "control_group" &&
+          childController.controlType !== "form"
         ) {
           // ignore non control group registration (input outside the control group for instance)
+          // A Form counts as one: it is the same thing said with a submit — what
+          // this picker syncs with is whatever aggregates the named controls in
+          // its popup, and both do.
           return false;
         }
         if (

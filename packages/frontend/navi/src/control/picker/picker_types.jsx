@@ -60,19 +60,14 @@ const PickerText = (props) => {
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
+// The popup holds a group of named controls — a `<Form>`, or a `<ControlGroup>`
+// when the group is only a shape and has no submit — and this picker's value is
+// whatever that group aggregates. The popup itself holds nothing: it is a
+// surface (see dialog.jsx), so there is nothing to tell it about the shape.
 const PickerControlGroup = (props) => {
   const Next = useNextResolver();
 
-  // popupStateType: this picker's popup really is a group of named controls,
-  // so its popup aggregates into an object like any other dialog would.
-  return (
-    <Next
-      ui={<PickerControlGroupUI />}
-      popupStateType="object"
-      {...props}
-      type="navi_js"
-    />
-  );
+  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
 };
 export const PickerControlGroupUI = () => {
   const { value, placeholder } = useContext(PickerContext);
