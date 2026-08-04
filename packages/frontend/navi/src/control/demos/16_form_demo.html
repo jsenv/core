@@ -45,7 +45,7 @@
         border: 1px solid #dee2e6;
         border-radius: 4px;
       }
-      .form-params .panel-title {
+      .form-params h3 {
         margin-top: 0;
         color: #495057;
       }
@@ -155,7 +155,15 @@
       // Four forms, one question: does the action run when submit is pressed
       // without touching anything? What separates them is only where the field's
       // starting content comes from — nothing, a value, a suggestion.
-      const UnchangedCase = ({ id, title, note, children, expectation }) => {
+      const UnchangedCase = ({
+        id,
+        title,
+        note,
+        children,
+        expectation,
+        formProps,
+        submitProps,
+      }) => {
         const [log, setLog] = useState([]);
         return (
           <div className="test-container" id={id}>
@@ -177,12 +185,15 @@
                   `action ← ${JSON.stringify(value)}`,
                 ]);
               }}
+              {...formProps}
             >
               {children}
-              <Button type="submit">Submit</Button>
+              <Button type="submit" {...submitProps}>
+                Submit
+              </Button>
             </Form>
-            <div className="form-params">
-              <div className="panel-title">{expectation}</div>
+            <div className="form-params" data-toc-ignore>
+              <h3>{expectation}</h3>
               <pre>{log.length ? log.join("\n") : "— nothing yet —"}</pre>
             </div>
           </div>
@@ -215,7 +226,7 @@
             id="unchanged-empty"
             title="1. An empty field"
             note="No value, no defaultValue: the form holds nothing and shows nothing."
-            expectation="Expected: no action on an untouched submit"
+            expectation="Expected: the log below does not grow when you submit without modifying anything"
           >
             <Field vertical>
               <Label>Name</Label>
@@ -227,7 +238,7 @@
             id="unchanged-value"
             title="2. A field with a value"
             note='value="Ada": the form holds it, so submitting it back says nothing new.'
-            expectation="Expected: no action on an untouched submit"
+            expectation="Expected: the log below does not grow when you submit without modifying anything"
           >
             <Field vertical>
               <Label>Name</Label>
@@ -239,7 +250,7 @@
             id="unchanged-default-value"
             title="3. A field with a defaultValue"
             note='defaultValue="18": a suggestion the form does not hold — "yes, 18" is an answer.'
-            expectation="Expected: the action RUNS on an untouched submit"
+            expectation="Expected: the log below grows even when you submit without modifying anything"
           >
             <Field vertical>
               <Label>Age</Label>
@@ -250,12 +261,38 @@
           <UnchangedCase
             id="unchanged-signal-default"
             title="4. A field bound to a signal that has a default"
-            note="Same as 3, said with a signal: navi seeds defaultValue from the signal's own default."
-            expectation="Expected: the action RUNS on an untouched submit"
+            note="Same as 3, said with a signal: the signal carries the default, so the field is uncontrolled-with-a-suggestion."
+            expectation="Expected: the log below grows even when you submit without modifying anything"
           >
             <Field vertical>
               <Label>Age</Label>
-              <Input name="age" defaultValue={ageSignal} />
+              <Input name="age" signal={ageSignal} />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-read-only-button"
+            title="5. readOnlyWhileFormUnchanged, on the submit button"
+            note="Case 2 again, with a button that would rather say it is waiting than accept a press that sends nothing. Press it as is to hear why, then type."
+            expectation="Expected: the button is read-only until you modify the field"
+            submitProps={{ readOnlyWhileFormUnchanged: true }}
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-can-send"
+            title="6. canSendWhileUnchanged, on the form"
+            note="Case 2 again, for a form where sending the same thing twice is the point — a notification, an action whose duplicates are fine."
+            expectation="Expected: the log below grows on every press"
+            formProps={{ canSendWhileUnchanged: true }}
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" />
             </Field>
           </UnchangedCase>
         </div>
@@ -450,7 +487,7 @@
 
             {/* ✅ Affichage des paramètres du formulaire */}
             {formParams && (
-              <div className="form-params">
+              <div className="form-params" data-toc-ignore>
                 <div className="panel-title">
                   📋 Paramètres du formulaire soumis :
                 </div>
@@ -492,7 +529,7 @@
                 borderRadius: "4px",
               }}
             >
-              <div className="panel-title">Instructions de test :</div>
+              <h3>Instructions de test :</h3>
               <ol>
                 <li>
                   <strong>Test 1</strong> : Laissez tous les champs vides et
@@ -525,7 +562,7 @@
           return null;
         }
         return (
-          <div className="form-params">
+          <div className="form-params" data-toc-ignore>
             <strong>Submitted:</strong>
             <pre>{JSON.stringify(result, null, 2)}</pre>
           </div>

@@ -48,6 +48,9 @@ const css = /* css */ `
  * @param {number} [props.to=3] - The last one. Deeper headings are ignored
  *   rather than nested forever — a table of contents that lists everything is
  *   the document again.
+ *
+ * A heading (or anything containing one) carrying `data-toc-ignore` is left
+ * out, for the ones that are headings without being sections.
  */
 export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
   import.meta.css = css;
@@ -150,6 +153,12 @@ const readHeadings = (root, from, to, ignoredContainer) => {
   const entries = [];
   for (const heading of root.querySelectorAll(selector.join(","))) {
     if (ignoredContainer && ignoredContainer.contains(heading)) {
+      continue;
+    }
+    // Opted out by the document: a heading can be the right markup for
+    // something that is not a section of the page — a panel's own title, a
+    // label above a result — and saying so beats having to avoid <h*> for it.
+    if (heading.closest("[data-toc-ignore]")) {
       continue;
     }
     const text = readHeadingText(heading);
