@@ -174,19 +174,37 @@
 
       // ── In the document ───────────────────────────────────────────────────
 
+      // Fields that start filled, so submitting an untouched form is one press
+      // away — the case each example below answers differently.
+      const PrefilledFields = () => (
+        <>
+          <Field vertical>
+            <Label requiredIndicator>Name</Label>
+            <Input name="name" required defaultValue="Ada" />
+          </Field>
+          <Field vertical>
+            <Label>Email</Label>
+            <Input name="email" type="email" defaultValue="ada@lovelace.io" />
+          </Field>
+        </>
+      );
+
       const InDocumentSection = () => {
         const [entries, push, clear] = useCallLog();
+        const [heldEntries, pushHeld, clearHeld] = useCallLog();
         const [pingEntries, pushPing, clearPing] = useCallLog();
         const settle = useSettlableAction();
         return (
           <section class="demo-section">
             <Heading id="document">In the document</Heading>
             <p>
-              The fields below start filled. Submitting without touching them
-              runs nothing — an answer nobody changed is not an answer. Change
-              one and it sends; submit the same thing again and it stops sending
-              again, because what it last sent is what the next one is measured
-              against.
+              An answer nobody changed is not an answer: submitting an untouched
+              form runs no action. Everything else still happens — constraints
+              are checked, and what follows a send still follows it (nothing
+              here, a closed dialog or the next slide further down). Change a
+              field and it sends; submit the same thing again and it stops
+              sending again, because what it last sent is what the next one is
+              measured against.
             </p>
             <SettlePanel {...settle} />
             <Form
@@ -199,21 +217,32 @@
                 push("action end", value);
               }}
             >
-              <Field vertical>
-                <Label requiredIndicator>Name</Label>
-                <Input name="name" required defaultValue="Ada" />
-              </Field>
-              <Field vertical>
-                <Label>Email</Label>
-                <Input
-                  name="email"
-                  type="email"
-                  defaultValue="ada@lovelace.io"
-                />
-              </Field>
+              <PrefilledFields />
               <Button type="submit">Submit</Button>
             </Form>
             <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="document-read-only-while-form-unchanged">
+              readOnlyWhileFormUnchanged
+            </Heading>
+            <p>
+              Same form, on a button that would rather say it is waiting than
+              accept a press that sends nothing. Click it untouched to hear why.
+            </p>
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              action={(value) => {
+                pushHeld("action", value);
+              }}
+            >
+              <PrefilledFields />
+              <Button type="submit" readOnlyWhileFormUnchanged>
+                Submit
+              </Button>
+            </Form>
+            <CallLog entries={heldEntries} onClear={clearHeld} />
 
             <Heading level={3} id="document-send-unchanged">
               sendUnchanged
@@ -560,6 +589,11 @@
             <li>
               <Link href="#document">In the document</Link>
               <ul>
+                <li>
+                  <Link href="#document-read-only-while-form-unchanged">
+                    readOnlyWhileFormUnchanged
+                  </Link>
+                </li>
                 <li>
                   <Link href="#document-send-unchanged">sendUnchanged</Link>
                 </li>

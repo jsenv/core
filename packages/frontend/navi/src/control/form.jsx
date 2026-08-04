@@ -37,11 +37,14 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   default a form only acts on an answer that is actually new: submitting a
  *   form nobody touched — one just rendered, one whose fields still hold their
  *   defaults, one reopened and left alone — runs no action, and after the first
- *   submission it is that value the next one is compared against. What follows
- *   the send still happens either way (the slide moves on, the popup closes):
- *   the user is done regardless of whether there was anything to send. Set this
- *   for a form where sending the same thing twice is the point — a single
- *   button that fires off a notification, an action whose duplicates are fine.
+ *   submission it is that value the next one is compared against. Everything
+ *   around the action still happens either way: the constraints are checked,
+ *   and what follows the send still follows it (the slide moves on, the popup
+ *   closes) — the user is done regardless of whether there was anything to
+ *   send. Set this for a form where sending the same thing twice is the point —
+ *   a single button that fires off a notification, an action whose duplicates
+ *   are fine. See also `readOnlyWhileFormUnchanged` on `Button`, for a submit that
+ *   should say it is waiting rather than accept a press that sends nothing.
  * @param {string} [props.command] - What follows a submission that went
  *   through: the form has answered its question, and this says what the screen
  *   does about it. Nothing runs when the submission is refused — the form then
@@ -112,15 +115,16 @@ const useFormGroup = (props) => {
   // form as its fields change, which is what turns the submit button below
   // interactive the moment there is something to send.
   const uiState = uiStateController.uiStateSignal.value;
-  const nothingToSend =
-    !props.sendUnchanged &&
-    compareTwoJsValues(uiState, uiStateController.sentUIState);
-  // Read by READONLY_CONSTRAINT from the submit button below, which is
-  // read-only for this reason and has to be able to say so.
-  uiStateController.nothingToSend = nothingToSend;
+  // False until a field differs from what was last sent, true while it does,
+  // and false again the moment it comes back to it — the plain fact about the
+  // value, with no opinion about what a submit would do with it.
+  const changed = !compareTwoJsValues(uiState, uiStateController.sentUIState);
+  // Read by READONLY_CONSTRAINT from a submit button held back by this form,
+  // which has to be able to say what it is waiting for.
+  uiStateController.changed = changed;
   // Asked by the action gate at submit time, whichever way the submit came in —
   // a submit event, a --navi-send command, requestSubmit() (see
-  // control_action.js). The value it is given, not `nothingToSend` above: a
+  // control_action.js). The value it is given, not `changed` above: a
   // field changing updates the state synchronously while the re-render is a
   // microtask away, so typing and pressing Enter right after must not be read
   // against the state of the previous frame.
@@ -134,8 +138,8 @@ const useFormGroup = (props) => {
   // const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const formContextValue = useMemo(() => {
-    return { loading, nothingToSend };
-  }, [loading, nothingToSend]);
+    return { loading, changed };
+  }, [loading, changed]);
 
   return {
     formRootProps,

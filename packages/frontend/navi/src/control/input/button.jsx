@@ -27,18 +27,26 @@ const ButtonCommandPropResolver = (props) => {
   }
   const command = props.command;
 
-  // A send with nothing to send does nothing (see Form's own sendUnchanged), and
-  // a button that visibly does nothing when pressed reads as broken. Read-only
-  // says so before the press; what it says on the press is READONLY_CONSTRAINT's
-  // own business, and it recognises this case. Interactive again the moment a
-  // field changes.
+  // `readOnlyWhileFormUnchanged`: hold the send button back until the form
+  // around it holds something new, so it says it is waiting instead of
+  // accepting a press that would send nothing.
+  //
+  // Opt-in, because a press that sends nothing is usually still worth
+  // accepting: in a dialog or a slide it closes the dialog / moves to the next
+  // step all the same — the user IS done, there was simply nothing to send. It
+  // is only in a form that goes nowhere on its own (one in the document) that
+  // the press would visibly do nothing at all.
   //
   // Passed to Next rather than written onto props like everything else here:
-  // this one answers to something outside the button and flips back, and the
-  // props object outlives the render (a button inside a form is the same vnode
-  // when the form re-renders around it), so a write would never be undone.
+  // these answer to something outside the button and flip back, and the props
+  // object outlives the render (a button inside a form is the same vnode when
+  // the form re-renders around it), so a write would never be undone.
   const readOnly =
-    command === "--navi-send" && form?.nothingToSend ? true : props.readOnly;
+    props.readOnlyWhileFormUnchanged &&
+    command === "--navi-send" &&
+    form?.changed === false
+      ? true
+      : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
@@ -56,7 +64,13 @@ const ButtonCommandPropResolver = (props) => {
     }
   }
 
-  return <Next {...props} readOnly={readOnly} />;
+  return (
+    <Next
+      {...props}
+      readOnlyWhileFormUnchanged={undefined}
+      readOnly={readOnly}
+    />
+  );
 };
 const COMMAND_DEFAULT_PROPS_FACTORIES = {
   "--navi-clear": () => ({

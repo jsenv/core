@@ -29,10 +29,12 @@ const readOnlyMessage = (field) => {
   if (field.controlType !== "button") {
     return naviI18n("constraint.readonly.default");
   }
-  // A send button held back by the form above it, which has nothing new to send
-  // (see Form's own `sendUnchanged`): what stops the press is not the button,
-  // it is the form still waiting for a change, so that is what it says.
-  if (field.parentUIStateController?.nothingToSend) {
+  // A send button held back by the form above it, which holds nothing new (see
+  // Button's own `readOnlyWhileFormUnchanged`): what stops the press is not the
+  // button, it is the form still waiting for a change, so that is what it says.
+  // `=== false` and not `!`: only a form answers this at all, and only when it
+  // has actually looked.
+  if (field.parentUIStateController?.changed === false) {
     return naviI18n("constraint.readonly.awaiting_change");
   }
   return naviI18n("constraint.readonly.button");
