@@ -80,29 +80,6 @@
       } from "@jsenv/navi";
 
       const PRESET_DURATIONS = ["1h", "1h30", "2h"];
-      // Value is one of the preset numbers (60, 90, 120) or the string "custom".
-      // When "custom", the actual duration is derived from customDurationHourSignal
-      // and customDurationMinuteSignal.
-      const durationSignal = stateSignal(90, {
-        id: "duration",
-        oneOf: [...PRESET_DURATIONS, "custom"],
-        // persists: true,
-      });
-      const customDurationHourSignal = stateSignal(2, {
-        id: "custom_hour",
-        type: "hour",
-        min: 0,
-        max: 4,
-        // persists: true,
-      });
-      const customDurationMinuteSignal = stateSignal(15, {
-        id: "custom_minute",
-        type: "minute",
-        min: 0,
-        max: 59,
-        step: 5,
-        // persists: true,
-      });
 
       // ── Wheel, one signal per wheel: its own state ────────────────────────
       // What the wheels open on when nothing has been chosen yet: a proposal,
@@ -139,20 +116,21 @@
         oneOf: [...PRESET_DURATIONS, "custom"],
       });
       // Total minutes for the custom option (default: 2h15 = 135 min)
-      const customDurationMinutesSignal3 = stateSignal(135, {
-        id: "custom_minutes3",
+      // The duration itself, as InputDuration speaks it (ISO 8601) — no
+      // conversion on either side. Whoever needs minutes converts when it reads
+      // the value (see the form action below).
+      const customDuration3Signal = stateSignal("PT2H15M", {
+        id: "custom_duration3",
+        type: "duration",
       });
 
       const DEMO_ROUTE = route("", {
         searchParams: {
           date: dateSignal,
-          duration: durationSignal,
-          custom_hour: customDurationHourSignal,
-          custom_minute: customDurationMinuteSignal,
           duration2: durationSignal2,
           custom_duration: customDurationSignal,
           duration3: durationSignal3,
-          custom_minutes3: customDurationMinutesSignal3,
+          custom_duration3: customDuration3Signal,
           wheel_per_signal: wheelPerSignalDurationSignal,
           wheel_hours: wheelHoursSignal,
           wheel_minutes: wheelMinutesSignal,
@@ -163,7 +141,6 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <WheelPerSignalDemo />
-          <PresetsWithInlineCustomDemo />
           <PresetsWithPickerCustomNoDefaultDemo />
           <PresetsWithPickerCustomWithDefaultDemo />
         </Box>
@@ -363,49 +340,6 @@
         );
       };
 
-      // ── PresetsWithInlineCustomDemo ───────────────────────────────────────
-      const PresetsWithInlineCustomDemo = () => {
-        const formResultSignal = useSignal(null);
-
-        return (
-          <div class="demo-section">
-            <h2>Duration selector — presets + custom</h2>
-            <p class="desc">
-              3 preset options (60, 90, 120 min) and a "custom" option with a
-              time Picker. The custom item is selected when the current value is
-              not one of the presets. The Picker opens to let the user enter any
-              duration. Everything is wired in a Form.
-            </p>
-            <Form
-              action={({ duration }) => {
-                if (duration === "custom") {
-                  const hours = customDurationHourSignal.value || 0;
-                  const minutes = customDurationMinuteSignal.value || 0;
-                  duration = hours * 60 + minutes;
-                }
-                formResultSignal.value = { duration };
-              }}
-              flex="y"
-              spacing="m"
-              alignX="start"
-            >
-              <DurationControl />
-              <Button type="submit">Submit</Button>
-            </Form>
-            {formResultSignal.value !== null ? (
-              <div class="form-result">
-                Form submitted:{" "}
-                {JSON.stringify(formResultSignal.value, null, 2)}
-              </div>
-            ) : (
-              <div class="form-result" style="color:#aaa">
-                Submit the form to see values…
-              </div>
-            )}
-          </div>
-        );
-      };
-
       // ── PresetsWithPickerCustomNoDefaultDemo ─────────────────────────────
       const PresetsWithPickerCustomNoDefaultDemo = () => {
         const formResultSignal = useSignal(null);
@@ -463,7 +397,7 @@
               action={({ duration }) => {
                 const minutes =
                   duration === "custom"
-                    ? customDurationMinutesSignal3.value
+                    ? durationToMinutes(customDuration3Signal.value)
                     : duration;
                 formResultSignal.value = { minutes };
               }}
@@ -488,49 +422,6 @@
         );
       };
 
-      // ── DurationControl ───────────────────────────────────────────────────
-      const DurationControl = () => {
-        const duration = durationSignal.value;
-
-        return (
-          <Field ownLabel vertical>
-            <Label bold>Durée</Label>
-            <List
-              selectable
-              horizontal
-              spacing="s"
-              id="duration"
-              name="duration"
-              required
-              flexWrap
-              value={duration}
-              uiAction={(v) => {
-                durationSignal.value = v;
-              }}
-              border="none"
-            >
-              {PRESET_DURATIONS.map((durationPreset, i) => (
-                <DurationPreset
-                  key={durationPreset}
-                  index={i}
-                  id={`duration_${durationPreset}`}
-                  value={durationPreset}
-                  selected={durationPreset === duration}
-                >
-                  {durationPreset}
-                </DurationPreset>
-              ))}
-              <CustomDurationOption
-                index={PRESET_DURATIONS.length}
-                id="duration_custom"
-                value="custom"
-                selected={duration === "custom"}
-              />
-            </List>
-          </Field>
-        );
-      };
-
       // ── DurationPreset ────────────────────────────────────────────────────
 
       const DurationPreset = ({ children, ...props }) => {
@@ -548,49 +439,6 @@
             <Time type="duration" format="compact">
               {children}
             </Time>
-          </List.Item>
-        );
-      };
-
-      // ── CustomDurationOption ─────────────────────────────────────────────
-
-      const CustomDurationOption = (props) => {
-        const hours = customDurationHourSignal.value;
-        const minutes = customDurationMinuteSignal.value;
-
-        return (
-          <List.Item
-            selectable
-            borderRadius="s"
-            borderWidth="1"
-            minWidth="64"
-            paddingX="m"
-            paddingY="s"
-            alignX="center"
-            noWrap
-            {...props}
-          >
-            Autre
-            <Box flex spacing="xxs">
-              <Input
-                type="navi_number"
-                min="0"
-                max="23"
-                value={hours}
-                action={(v) => {
-                  customDurationHourSignal.value = v;
-                }}
-              />
-              <Input
-                type="navi_number"
-                min="0"
-                max="59"
-                value={minutes}
-                action={(v) => {
-                  customDurationMinuteSignal.value = v;
-                }}
-              />
-            </Box>
           </List.Item>
         );
       };
@@ -742,7 +590,7 @@
       };
 
       const CustomDurationOptionWithPicker3 = (props) => {
-        const totalMinutes = customDurationMinutesSignal3.value;
+        const customDuration = customDuration3Signal.value;
 
         return (
           <List.Item
@@ -761,7 +609,9 @@
             // navi-command-target="child-control"
             {...props}
           >
-            <Time type="minute">{totalMinutes}</Time>
+            <Time type="duration" format="compact">
+              {customDuration}
+            </Time>
             <Icon marginRight="-1ch">
               <Picker.UI.PencilSvg />
             </Icon>
@@ -776,14 +626,14 @@
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
                 <Form>
+                  {/* signal, not value + uiAction: the input reads it to place
+                      itself and writes it back on every change, so there is no
+                      second copy of the value to keep in step. */}
                   <InputDuration
-                    value={totalMinutes}
-                    min={0}
-                    max={240}
-                    step={5}
-                    uiAction={(v) => {
-                      customDurationMinutesSignal3.value = v;
-                    }}
+                    signal={customDuration3Signal}
+                    min="0min"
+                    max="4h"
+                    step="5min"
                   />
                 </Form>
                 <Box flex spacing="s" expandX alignX="end">
