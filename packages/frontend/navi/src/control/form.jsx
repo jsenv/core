@@ -119,7 +119,10 @@ const useFormGroup = (props) => {
   // False until a field differs from what was last sent, true while it does,
   // and false again the moment it comes back to it — the plain fact about the
   // value, with no opinion about what a submit would do with it.
-  const changed = !compareTwoJsValues(uiState, uiStateController.sentUIState);
+  const changed = !compareTwoJsValues(
+    withoutEmptyFields(uiState),
+    uiStateController.sentUIState,
+  );
   // Read by READONLY_CONSTRAINT from a submit button held back by this form,
   // which has to be able to say what it is waiting for.
   uiStateController.changed = changed;
@@ -131,7 +134,10 @@ const useFormGroup = (props) => {
   // against the state of the previous frame.
   uiStateController.shouldRequestAction = (value) =>
     Boolean(props.canSendWhileUnchanged) ||
-    !compareTwoJsValues(value, uiStateController.sentUIState);
+    !compareTwoJsValues(
+      withoutEmptyFields(value),
+      uiStateController.sentUIState,
+    );
   useFirstUIStateAsSent(uiStateController);
 
   const { basePseudoState, children } = formProps;
@@ -149,7 +155,9 @@ const useFormGroup = (props) => {
     // only: an action that failed has not been sent, and the user must be able
     // to try the same value again.
     onnavi_action_end: () => {
-      uiStateController.sentUIState = uiStateController.uiState;
+      uiStateController.sentUIState = withoutEmptyFields(
+        uiStateController.uiState,
+      );
     },
     inside: (
       <FormContext.Provider value={formContextValue}>
@@ -224,26 +232,54 @@ const FormNested = (props) => {
   );
 };
 
-// Nothing has been sent yet, and no value can compare equal to it — so a first
-// submit always goes through.
-const NOTHING_SENT = Symbol.for("navi_nothing_sent");
+// What the form HOLDS, as opposed to what it is showing. A `value` is held: the
+// form was given it, and sending it back says nothing new. A `defaultValue` is
+// only a suggestion — an age that is usually 18, a duration that is usually
+// 1h30 — so the form holds nothing for that field, and sending the suggestion
+// back IS an answer ("yes, 18"). A field bound to a signal falls on whichever
+// side the signal put it: one carrying a default seeds `defaultValue`, one
+// without controls the field outright.
+const readHeldUIState = (uiStateController) => {
+  const uiState = uiStateController.uiState;
+  // A form given a value holds all of it, whatever its fields say.
+  if (uiStateController.hasValueProp) {
+    return withoutEmptyFields(uiState);
+  }
+  const held = { ...uiState };
+  for (const child of uiStateController.getChildControllers?.() || []) {
+    if (child.name && !child.hasStateProp) {
+      delete held[child.name];
+    }
+  }
+  return withoutEmptyFields(held);
+};
 
-// What the form opens on counts as already sent ONLY when the form was given a
-// value. A `defaultValue` is a suggestion, not something the form holds: an age
-// that is usually 18, a duration that is usually 1h30, a date that is usually
-// today. Sending it back is a real answer — "yes, 18" — and the form has to let
-// it through, which it cannot do if it treats the suggestion as what it already
-// sent.
-//
+// A field holding nothing is a field the form has nothing to say about, and
+// whether it is absent or present-and-empty is an accident of when it
+// registered — the baseline is taken before the fields have had their say, the
+// value at submit after. Compared as they are, an empty form would look changed
+// by the mere existence of an empty field.
+const withoutEmptyFields = (uiState) => {
+  if (!uiState || typeof uiState !== "object") {
+    return {};
+  }
+  const kept = {};
+  for (const key of Object.keys(uiState)) {
+    const value = uiState[key];
+    if (value !== undefined && value !== "") {
+      kept[key] = value;
+    }
+  }
+  return kept;
+};
+
 // Taken in a layout effect rather than during render because the fields
 // register themselves in their own effects, which run first — this is the
 // earliest moment the form knows what it holds. Everything after this baseline
 // is a real send moving it forward (see useFormGroup's own onnavi_action_end).
 const useFirstUIStateAsSent = (uiStateController) => {
   useLayoutEffect(() => {
-    uiStateController.sentUIState = uiStateController.hasValueProp
-      ? uiStateController.uiState
-      : NOTHING_SENT;
+    uiStateController.sentUIState = readHeldUIState(uiStateController);
   }, [uiStateController]);
 };
 

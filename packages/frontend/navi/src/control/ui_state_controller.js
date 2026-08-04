@@ -171,6 +171,12 @@ export const useUIStateController = (
         parentUiStateSignalHolder,
         isProxy,
         allowNameless,
+        // Set here too, not only in `update` below: a control rendered once and
+        // never re-rendered would otherwise never say whether it was GIVEN a
+        // value (`value`, or a bound signal with no default of its own) or is
+        // merely showing a suggestion (`defaultValue`) — a distinction Form
+        // reads to decide what counts as already sent.
+        hasStateProp: Boolean(controlInfo.hasStateProp),
 
         props,
         ref: props.ref,

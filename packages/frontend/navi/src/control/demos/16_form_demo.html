@@ -72,13 +72,22 @@
         Field,
         Label,
         NaviDebug,
+        stateSignal,
       } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
 
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
             <div>
-              <h1>Form Demo</h1>
+              <DemoHeader
+                title="Form demo"
+                next={{
+                  href: "./18_form_integration_demo.html",
+                  label: "Form integration",
+                }}
+              />
               <TableOfContents />
               <BasicFormDemo />
               <UnchangedDemo />
@@ -104,58 +113,7 @@
       const TableOfContents = () => (
         <div className="test-container">
           <h2>Table of contents</h2>
-          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-            <li>
-              <a href="#basic">Basic form</a>
-            </li>
-            <li>
-              <a href="#unchanged">Submitting an unchanged form</a>
-            </li>
-            <li>
-              <a href="#button-action">Form with button action</a>
-            </li>
-            <li>
-              <a href="#multi-field">Multi-field validation</a>
-            </li>
-            <li>
-              Input types in forms
-              <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-                <li>
-                  <a href="#form-text">text</a>
-                </li>
-                <li>
-                  <a href="#form-email">email</a>
-                </li>
-                <li>
-                  <a href="#form-password">password</a>
-                </li>
-                <li>
-                  <a href="#form-number">number</a>
-                </li>
-                <li>
-                  <a href="#form-date">date</a>
-                </li>
-                <li>
-                  <a href="#form-datetime">datetime-local</a>
-                </li>
-                <li>
-                  <a href="#form-time">time</a>
-                </li>
-                <li>
-                  <a href="#form-search">search</a>
-                </li>
-                <li>
-                  <a href="#form-tel">tel</a>
-                </li>
-                <li>
-                  <a href="#form-range">range</a>
-                </li>
-                <li>
-                  <a href="#form-checkbox">checkbox</a>
-                </li>
-              </ol>
-            </li>
-          </ol>
+          <DocumentToc />
         </div>
       );
 
@@ -192,60 +150,116 @@
         );
       };
 
-      // Fields that start filled, so "submit without changing anything" is one
-      // press away in each of the three forms below.
-      const PrefilledFields = () => (
-        <div className="field">
-          <Field>
-            <Label>Username</Label>
-            <Input type="text" name="username" defaultValue="dam" />
-          </Field>
-        </div>
-      );
+      // ── Submitting an unchanged form ──────────────────────────────────────
 
-      // A form only acts on an answer that is actually new. What the three do
-      // with a press that has nothing to send is the whole demo: nothing, say
-      // why, or send anyway.
-      const UnchangedDemo = () => {
-        const [sends, setSends] = useState([]);
-        const record = (label) => (value) => {
-          setSends((previous) => [...previous, `${label}: ${value.username}`]);
-        };
+      // Four forms, one question: does the action run when submit is pressed
+      // without touching anything? What separates them is only where the field's
+      // starting content comes from — nothing, a value, a suggestion.
+      const UnchangedCase = ({ id, title, note, children, expectation }) => {
+        const [log, setLog] = useState([]);
         return (
-          <div className="test-container" id="unchanged">
-            <h2>Submitting an unchanged form</h2>
-
-            <h3>default</h3>
-            <Form name="unchanged_default" action={record("default")}>
-              <PrefilledFields />
-              <Button type="submit">Submit</Button>
-            </Form>
-
-            <h3>readOnlyWhileFormUnchanged (on the button)</h3>
-            <Form name="unchanged_held" action={record("held")}>
-              <PrefilledFields />
-              <Button type="submit" readOnlyWhileFormUnchanged>
-                Submit
-              </Button>
-            </Form>
-
-            <h3>canSendWhileUnchanged (on the form)</h3>
+          <div className="test-container" id={id}>
+            <h3>{title}</h3>
+            <p className="desc">{note}</p>
             <Form
-              name="unchanged_always"
-              canSendWhileUnchanged
-              action={record("always")}
+              name={id}
+              flex="y"
+              spacing="m"
+              alignX="start"
+              // --navi-void: a command that does nothing but say it ran. It is
+              // what a dialog's own close (or a slide's move) would be here, so
+              // the log shows the two halves apart — "the action ran" and "what
+              // follows a send ran".
+              command="--navi-void"
+              action={(value) => {
+                setLog((previous) => [
+                  ...previous,
+                  `action ← ${JSON.stringify(value)}`,
+                ]);
+              }}
             >
-              <PrefilledFields />
+              {children}
               <Button type="submit">Submit</Button>
             </Form>
-
             <div className="form-params">
-              <h3>Sent</h3>
-              <pre>{sends.length ? sends.join("\n") : "—"}</pre>
+              <h3>{expectation}</h3>
+              <pre>{log.length ? log.join("\n") : "— nothing yet —"}</pre>
             </div>
           </div>
         );
       };
+
+      // A signal carrying a default: navi seeds the input's defaultValue from
+      // it, so the field is uncontrolled-with-a-suggestion — the same shape as
+      // the defaultValue case above it, said with a signal.
+      const ageSignal = stateSignal(18, { id: "age" });
+
+      const UnchangedDemo = () => (
+        <div className="test-container" id="unchanged">
+          <h2>Submitting an unchanged form</h2>
+          <p className="desc">
+            A form only acts on an answer that is actually new. What counts as
+            "new" is the point of the four cases below: a <code>value</code> is
+            what the form <em>holds</em>, a <code>defaultValue</code> (from the
+            prop or from a signal's default) is only a <em>suggestion</em> — and
+            sending a suggestion back is a real answer.
+          </p>
+          <p className="desc">
+            Every form carries <code>command="--navi-void"</code>, which logs
+            nothing but always runs: in a dialog that command would be the
+            close. So a press that logs no action still went through — which is
+            why a dialog closes on it.
+          </p>
+
+          <UnchangedCase
+            id="unchanged-empty"
+            title="1. An empty field"
+            note="No value, no defaultValue: the form holds nothing and shows nothing."
+            expectation="Expected: no action on an untouched submit"
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-value"
+            title="2. A field with a value"
+            note='value="Ada": the form holds it, so submitting it back says nothing new.'
+            expectation="Expected: no action on an untouched submit"
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" readOnly={false} />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-default-value"
+            title="3. A field with a defaultValue"
+            note='defaultValue="18": a suggestion the form does not hold — "yes, 18" is an answer.'
+            expectation="Expected: the action RUNS on an untouched submit"
+          >
+            <Field vertical>
+              <Label>Age</Label>
+              <Input name="age" defaultValue="18" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-signal-default"
+            title="4. A field bound to a signal that has a default"
+            note="Same as 3, said with a signal: navi seeds defaultValue from the signal's own default."
+            expectation="Expected: the action RUNS on an untouched submit"
+          >
+            <Field vertical>
+              <Label>Age</Label>
+              <Input name="age" defaultValue={ageSignal} />
+            </Field>
+          </UnchangedCase>
+        </div>
+      );
 
       const FormWithButtonActionDemo = () => {
         const [formResult, setFormResult] = useState(null);
