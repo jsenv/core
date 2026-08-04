@@ -197,6 +197,7 @@
             note="La même chose avec un seul signal : le groupe dit comment deux roues font un nombre, et l'inverse. Plus de code, utile seulement quand la paire EST une valeur ailleurs (une url, un envoi)."
             durationSignal={durationSignal0b}
             pickerId="duration_wheel_picker_b"
+            pickerName="durationWheel"
             Wheels={DurationWheels}
             totalMinutes={customDurationWheelSignal.value ?? PROPOSED_MINUTES}
           />
@@ -326,6 +327,7 @@
       const WheelCustomDurationOption = ({
         chosen,
         pickerId,
+        pickerName,
         totalMinutes,
         // eslint-disable-next-line no-unused-vars -- used below as <Wheels />
         Wheels,
@@ -366,7 +368,12 @@
             </Icon>
             <Picker
               id={pickerId}
-              name="durationWheel"
+              // Nameless when what it holds is an object (the two wheels): it
+              // then merges into the form around it, and the form reads hours
+              // and minutes among its own fields. Named when what it holds is
+              // one number — a value has to land somewhere, and only an object
+              // can merge into an object.
+              name={pickerName}
               variant="headless"
               mode="dialog"
               type="form"
@@ -402,6 +409,7 @@
         durationSignal,
         totalMinutes,
         pickerId,
+        pickerName,
         Wheels,
       }) => {
         const formResultSignal = useSignal(null);
@@ -412,9 +420,21 @@
             <h2>{title}</h2>
             <p class="desc">{note}</p>
             <Form
-              action={({ duration: chosen }) => {
+              // hours/minutes arrive here alongside duration: the wheels are
+              // in this form, and the group holding them is nameless, so what
+              // it holds is part of the form's own value rather than a key of
+              // its own. Read from the value, not from the signals — the
+              // signals are there to survive a reload, not to be the answer.
+              action={({ duration: chosen, hours, minutes, durationWheel }) => {
                 formResultSignal.value = {
-                  duration: chosen === "custom" ? totalMinutes : chosen,
+                  duration:
+                    chosen !== "custom"
+                      ? chosen
+                      : // hours/minutes when the wheels merged into this form,
+                        // durationWheel when they came as one number under a
+                        // key of their own — the two shapes this page compares
+                        (durationWheel ??
+                        (Number(hours) || 0) * 60 + (Number(minutes) || 0)),
                 };
               }}
               flex="y"
@@ -455,6 +475,7 @@
                     selected={duration === "custom"}
                     chosen={duration === "custom"}
                     pickerId={pickerId}
+                    pickerName={pickerName}
                     totalMinutes={totalMinutes}
                     Wheels={Wheels}
                   />

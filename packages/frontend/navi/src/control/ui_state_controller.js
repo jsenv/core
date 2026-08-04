@@ -696,6 +696,15 @@ const CANNOT_DERIVE = Symbol("cannot_derive");
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
 // group, creation throws so the caller knows it must supply them.
+// A child that groups other controls and was given no name of its own, holding
+// an object — the only shape that can be merged into the object around it.
+// A nameless LEAF (an input nobody named) is still a mistake and still warns.
+const isNamelessGrouping = (child, uiState) =>
+  typeof child.registerChild === "function" &&
+  uiState !== null &&
+  typeof uiState === "object" &&
+  !Array.isArray(uiState);
+
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
@@ -778,6 +787,15 @@ const GROUP_DEFAULTS = {
       for (const child of children) {
         const { name, uiState, allowNameless } = child;
         if (!name) {
+          // A nameless GROUP is a grouping, not a value: it exists to hold its
+          // children together (a WheelGroup sharing navigation, a fieldset-ish
+          // cluster) without claiming a key of its own, so what it holds is
+          // merged in as if its children had been written here. Naming it is
+          // what turns the same group into one key — see ControlGroup's `name`.
+          if (isNamelessGrouping(child, uiState)) {
+            Object.assign(groupValues, uiState);
+            continue;
+          }
           if (!allowNameless) {
             console.warn(
               "A group child is missing a name property, its state won't be included in the group state",
@@ -799,6 +817,11 @@ const GROUP_DEFAULTS = {
         Object.prototype.hasOwnProperty.call(newUIState, childName)
       ) {
         return newUIState[childName];
+      }
+      // Merged in on the way up (see above), so on the way down it takes the
+      // whole object and picks out its own keys — the same value it produced.
+      if (isNamelessGrouping(child, child.uiState)) {
+        return newUIState;
       }
       return CANNOT_DERIVE;
     },
