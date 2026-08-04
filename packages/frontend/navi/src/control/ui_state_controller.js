@@ -1332,15 +1332,11 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           // not be treated as the picker's synced child.
           return false;
         }
-        if (
-          props.type === "form" &&
-          childController.controlType !== "control_group" &&
-          childController.controlType !== "form"
-        ) {
-          // ignore non control group registration (input outside the control group for instance)
-          // A Form counts as one: it is the same thing said with a submit — what
-          // this picker syncs with is whatever aggregates the named controls in
-          // its popup, and both do.
+        if (props.type === "form" && childController.controlType !== "form") {
+          // Only a form: what a type="form" picker syncs with is the form in
+          // its popup, not any control that happens to be in there (an input
+          // sitting outside the form, a ControlGroup — which is a way of
+          // grouping controls INSIDE a form, not a thing a picker talks to).
           return false;
         }
         if (

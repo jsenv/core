@@ -476,8 +476,8 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 Des boutons extérieurs envoient <code>--navi-update</code> avec
-                une valeur objet sur un <code>Picker type="form"</code>.
-                Les champs internes doivent se mettre à jour et le{" "}
+                une valeur objet sur un <code>Picker type="form"</code>. Les
+                champs internes doivent se mettre à jour et le{" "}
                 <code>uiAction</code> doit être appelé.
               </p>
               <fieldset>
@@ -494,7 +494,7 @@
                     pushEntry("action", v);
                   }}
                 >
-                  <ControlGroup>
+                  <Form>
                     <Box flex="y" spacing="s" padding="s" alignX="start">
                       <fieldset>
                         <legend>street</legend>
@@ -518,7 +518,7 @@
                         />
                       </fieldset>
                     </Box>
-                  </ControlGroup>
+                  </Form>
                   <Box flex spacing="s">
                     <Button command="--navi-cancel">Annuler</Button>
                     <Button command="--navi-define">Définir</Button>
@@ -561,10 +561,9 @@
             <h2>ControlGroup interne — inside a form</h2>
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
-                Le <code>Picker type="form"</code> est dans un{" "}
-                <code>Form</code>. On vérifie que le formulaire récupère bien la
-                valeur objet du picker sous son <code>name</code> lors du
-                submit.
+                Le <code>Picker type="form"</code> est dans un <code>Form</code>
+                . On vérifie que le formulaire récupère bien la valeur objet du
+                picker sous son <code>name</code> lors du submit.
               </p>
               <Form
                 action={(values) => {
@@ -587,7 +586,7 @@
                       pushEntry("action", v);
                     }}
                   >
-                    <ControlGroup>
+                    <Form>
                       <Box flex="y" spacing="s" padding="s" alignX="start">
                         <fieldset>
                           <legend>street</legend>
@@ -611,7 +610,7 @@
                           />
                         </fieldset>
                       </Box>
-                    </ControlGroup>
+                    </Form>
                     <Box flex spacing="s">
                       <Button command="--navi-cancel">Annuler</Button>
                       <Button command="--navi-define">Définir</Button>
@@ -653,7 +652,7 @@
                     pushEntry("action", v);
                   }}
                 >
-                  <ControlGroup>
+                  <Form>
                     <Box flex="y" spacing="s" padding="s" alignX="start">
                       <fieldset>
                         <legend>firstName (required)</legend>
@@ -678,7 +677,7 @@
                         />
                       </fieldset>
                     </Box>
-                  </ControlGroup>
+                  </Form>
                   <Box flex spacing="s">
                     <Button command="--navi-cancel">Annuler</Button>
                     <Button command="--navi-define">Définir</Button>
@@ -1874,9 +1873,9 @@
                   defaultValue=
                   {'{{ street: "12 rue de la Paix", city: "Paris" }}'}
                 </code>{" "}
-                sur le <code>Picker type="form"</code> — les inputs
-                internes n'ont pas de <code>defaultValue</code>. Les champs
-                doivent être préremplis à l'ouverture.
+                sur le <code>Picker type="form"</code> — les inputs internes
+                n'ont pas de <code>defaultValue</code>. Les champs doivent être
+                préremplis à l'ouverture.
               </p>
               <fieldset>
                 <legend>address</legend>
@@ -1892,7 +1891,7 @@
                     pushEntry("action", v);
                   }}
                 >
-                  <ControlGroup>
+                  <Form>
                     <Box flex="y" spacing="s" padding="s" alignX="start">
                       <fieldset>
                         <legend>street</legend>
@@ -1915,7 +1914,7 @@
                         />
                       </fieldset>
                     </Box>
-                  </ControlGroup>
+                  </Form>
                   <Box flex spacing="s">
                     <Button command="--navi-cancel">Annuler</Button>
                     <Button command="--navi-define">Définir</Button>
@@ -1940,9 +1939,9 @@
             <Box flex="y" spacing="m" alignX="start">
               <p style={{ margin: 0, color: "#555", fontSize: "0.9rem" }}>
                 <code>value={"{address}"}</code> sur le{" "}
-                <code>Picker type="form"</code> — les inputs internes
-                n'ont pas de <code>value</code>. Confirmer met à jour l'état
-                React et les champs se synchronisent.
+                <code>Picker type="form"</code> — les inputs internes n'ont pas
+                de <code>value</code>. Confirmer met à jour l'état React et les
+                champs se synchronisent.
               </p>
               <fieldset>
                 <legend>address</legend>
@@ -1959,7 +1958,7 @@
                     setAddress(v);
                   }}
                 >
-                  <ControlGroup>
+                  <Form>
                     <Box flex="y" spacing="s" padding="s" alignX="start">
                       <fieldset>
                         <legend>street</legend>
@@ -1982,7 +1981,7 @@
                         />
                       </fieldset>
                     </Box>
-                  </ControlGroup>
+                  </Form>
                   <Box flex spacing="s">
                     <Button command="--navi-cancel">Annuler</Button>
                     <Button command="--navi-define">Définir</Button>
@@ -2085,12 +2084,8 @@
                   </List.Item>
                   <List.Item selectable index={2} value="custom" padding="s">
                     Personnalisé
-                    <Picker
-                      name="custom"
-                      type="form"
-                      placeholder="hh:mm"
-                    >
-                      <ControlGroup>
+                    <Picker name="custom" type="form" placeholder="hh:mm">
+                      <Form>
                         <Box flex="x" spacing="s" padding="s">
                           <fieldset>
                             <legend>h</legend>
@@ -2105,7 +2100,7 @@
                             />
                           </fieldset>
                         </Box>
-                      </ControlGroup>
+                      </Form>
                       <Box flex spacing="s">
                         <Button command="--navi-cancel">Annuler</Button>
                         <Button command="--navi-define">Définir</Button>

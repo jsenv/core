@@ -41,12 +41,12 @@ const ButtonCommandPropResolver = (props) => {
   // these answer to something outside the button and flip back, and the props
   // object outlives the render (a button inside a form is the same vnode when
   // the form re-renders around it), so a write would never be undone.
-  const readOnly =
+  const heldByForm = Boolean(
     props.readOnlyWhileFormUnchanged &&
-    command === "--navi-send" &&
-    form?.changed === false
-      ? true
-      : props.readOnly;
+      command === "--navi-send" &&
+      form?.changed === false,
+  );
+  const readOnly = heldByForm ? true : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
@@ -69,6 +69,10 @@ const ButtonCommandPropResolver = (props) => {
       {...props}
       readOnlyWhileFormUnchanged={undefined}
       readOnly={readOnly}
+      // Why it is read-only, for READONLY_CONSTRAINT to say the right thing:
+      // read-only for some other reason (a caller's own prop, a read-only form
+      // around it) must not be explained as "waiting for a change".
+      data-readonly-reason={heldByForm ? "form-unchanged" : undefined}
     />
   );
 };

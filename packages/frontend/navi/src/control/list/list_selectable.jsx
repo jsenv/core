@@ -119,6 +119,18 @@ const css = /* css */ `
         cursor: var(--x-list-item-cursor);
         pointer-events: auto;
       }
+
+      /* A popup opened from the row is not part of the row: it is shown over
+         the page — in the browser's own top layer for a modal one — and only
+         happens to be declared here. pointer-events is inherited, so without
+         this it inherits the row's own "none" and nothing inside it can be
+         clicked, however far from the row it is painted. Matched on what makes
+         an element a popup to the browser rather than on navi's own attribute:
+         anything shown over the page has the same claim, navi's or not. */
+      dialog,
+      [popover] {
+        pointer-events: auto;
+      }
     }
 
     &[data-interactive] {

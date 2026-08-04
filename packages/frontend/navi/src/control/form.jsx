@@ -224,15 +224,26 @@ const FormNested = (props) => {
   );
 };
 
-// The value the form opens on counts as already sent: a form nobody has touched
-// has nothing to say, defaults filled in or not. Taken in a layout effect
-// rather than during render because the fields register themselves in their own
-// effects, which run first — this is the earliest moment the form knows what it
-// holds. Everything after this baseline is a real send moving it forward (see
-// useFormGroup's own onnavi_action_end).
+// Nothing has been sent yet, and no value can compare equal to it — so a first
+// submit always goes through.
+const NOTHING_SENT = Symbol.for("navi_nothing_sent");
+
+// What the form opens on counts as already sent ONLY when the form was given a
+// value. A `defaultValue` is a suggestion, not something the form holds: an age
+// that is usually 18, a duration that is usually 1h30, a date that is usually
+// today. Sending it back is a real answer — "yes, 18" — and the form has to let
+// it through, which it cannot do if it treats the suggestion as what it already
+// sent.
+//
+// Taken in a layout effect rather than during render because the fields
+// register themselves in their own effects, which run first — this is the
+// earliest moment the form knows what it holds. Everything after this baseline
+// is a real send moving it forward (see useFormGroup's own onnavi_action_end).
 const useFirstUIStateAsSent = (uiStateController) => {
   useLayoutEffect(() => {
-    uiStateController.sentUIState = uiStateController.uiState;
+    uiStateController.sentUIState = uiStateController.hasValueProp
+      ? uiStateController.uiState
+      : NOTHING_SENT;
   }, [uiStateController]);
 };
 
