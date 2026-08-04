@@ -67,7 +67,15 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
         // Its own block is skipped: a table of contents naming the block it
         // sits in tells the reader where they already are.
         const own = findOwnBlock(ref.current, root);
-        const next = readHeadings(root, from, to, own);
+        let next = readHeadings(root, from, to, own);
+        // Skipping its own block emptied the table: what was taken for a block
+        // holds every heading there is, so it is not a block, it is the page —
+        // a table of contents dropped straight into a wrapper that has no
+        // heading of its own. Better to list the document twice over than to
+        // list nothing.
+        if (next.length === 0 && own) {
+          next = readHeadings(root, from, to, null);
+        }
         // The observer fires on every render of every section; replacing the
         // state each time would re-render this list (and re-trigger the
         // observer) for nothing.

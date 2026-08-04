@@ -114,10 +114,17 @@
           oneOf: [...WHEEL_PRESETS, "custom"],
         },
       );
-      const wheelHoursSignal = demoSignal("wheel_hours", WHEEL_PROPOSED_HOURS);
+      // type: "number" is not decoration: the wheel keeps its values typed end
+      // to end (its items ARE the numbers below), so a value coming back from
+      // the url as the string "5" matches no item — the wheel would fall back to
+      // its first one while the signal still reads 5 everywhere else.
+      const wheelHoursSignal = demoSignal("wheel_hours", WHEEL_PROPOSED_HOURS, {
+        type: "number",
+      });
       const wheelMinutesSignal = demoSignal(
         "wheel_minutes",
         WHEEL_PROPOSED_MINUTES,
+        { type: "number" },
       );
 
       const WheelPerSignalDemo = () => {
@@ -331,6 +338,7 @@
       const wheelTotalSignal = demoSignal(
         "wheel_total",
         WHEEL_ONE_SIGNAL_PROPOSED_TOTAL,
+        { type: "number" },
       );
 
       const WheelOneSignalDemo = () => {
@@ -804,8 +812,9 @@
                       <Box flex="y" alignX="center" padding="m" spacing="m">
                         <Text bold>Veuillez saisir une durée</Text>
                         {/* signal + defaultValue: the signal is where the answer
-                            goes and comes from, defaultValue only what to open
-                            on while there is no answer yet. */}
+                            goes and comes back from, defaultValue only what to
+                            open on while there is no answer yet — so the option
+                            reads "Perso" until a duration is actually chosen. */}
                         <InputDuration
                           signal={proposalCustomDurationSignal}
                           defaultValue={PROPOSED_CUSTOM_DURATION}
@@ -861,6 +870,10 @@
 
       const TableOfContents = () => (
         <div class="demo-section">
+          {/* A heading of its own, ignored by the table it introduces: it is
+              also what marks this block as a section, so the entries below are
+              read from the OTHER sections. */}
+          <h2 data-toc-ignore>Sommaire</h2>
           <DocumentToc />
         </div>
       );
