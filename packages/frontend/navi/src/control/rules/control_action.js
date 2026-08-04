@@ -60,6 +60,54 @@ export const dispatchRequestAction = (
   });
 };
 
+/**
+ * Dispatches an action and reports whether it outlived the dispatch.
+ *
+ * "start" is dispatched synchronously (see `use_execute_action.js`), so an
+ * action that has not settled by the time `dispatchAction` returns is
+ * asynchronous — which is the question anything waiting on a commit actually
+ * asks before acting on it: a dialog before closing, `--navi-send` before
+ * moving to the next slide.
+ *
+ * `whenSucceeded` registers what to do once it completes, and only then: an
+ * error or an abort leaves whatever the action left in front of the user
+ * (a validation message, an aborted state) instead.
+ *
+ * @param {Element} element - The element the action is dispatched on.
+ * @param {() => any} dispatchAction
+ * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void }}
+ */
+export const watchActionCompletion = (element, dispatchAction) => {
+  let running = false;
+  let onSuccess = null;
+  const onActionStart = (actionStartEvent) => {
+    running = true;
+    actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
+      running = false;
+      if (error || aborted) {
+        return;
+      }
+      // Null for an action that settled before the caller ever asked to wait
+      // (a synchronous one): it goes out through the caller's own normal path.
+      onSuccess?.();
+    });
+  };
+  element.addEventListener("navi_action_start", onActionStart);
+  let result;
+  try {
+    result = dispatchAction();
+  } finally {
+    element.removeEventListener("navi_action_start", onActionStart);
+  }
+  return {
+    result,
+    isRunning: running,
+    whenSucceeded: (callback) => {
+      onSuccess = callback;
+    },
+  };
+};
+
 export const tryActionAfterInteractionAllowed = (
   element,
   {

@@ -62,7 +62,10 @@ import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "../control_hooks.jsx";
-import { dispatchRequestAction } from "../rules/control_action.js";
+import {
+  dispatchRequestAction,
+  watchActionCompletion,
+} from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
   dispatchRequestSetUIState,
@@ -533,59 +536,43 @@ const UncontrolledDialog = (props) => {
           getUIStateFromElement(dialogEl),
           uiStateAtOpen,
         );
-        let actionIsRunning = false;
-        // Set only once this close has actually been deferred below: an action
-        // that settles synchronously does so before that, and goes out through
-        // the regular close this function is already in the middle of.
-        let closeDeferred = false;
-        const onActionStart = (actionStartEvent) => {
-          actionIsRunning = true;
-          actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
-            actionIsRunning = false;
-            if (error || aborted || !closeDeferred) {
-              // Whatever the action left in front of the user (a validation
-              // message, an aborted state) is the reason to stay open.
-              return;
-            }
+        const { isRunning, whenSucceeded } = watchActionCompletion(
+          dialogEl,
+          () =>
+            dispatchRequestAction(dialogEl, {
+              event: requestCloseEvent,
+              name: "dialog request close",
+              // The control that asked to close (a submit button, typically):
+              // what wears the loading state while the action runs and what the
+              // error is reported on if it fails.
+              requester: requestCloseEvent.detail.requester,
+              // action: null when nothing was touched — the constraints are
+              // still checked (an empty required field must report even if the
+              // user typed nothing at all), but there is no answer to commit.
+              action: unchanged ? null : "auto",
+              // Reported even when the dialog has no action of its own: what
+              // the user needs to see is the constraint, not whether someone
+              // listens.
+              reportOnInvalid: true,
+              // Blocked before the action even got a chance — the dialog is
+              // disabled, read-only, or busy already running the action a
+              // previous close request started. The gate has said which;
+              // closing is committing, so it must not happen either.
+              prevented: () => {
+                requestCloseEvent.preventDefault();
+              },
+              onInvalid: () => {
+                requestCloseEvent.preventDefault();
+              },
+            }),
+        );
+        if (isRunning) {
+          // An asynchronous action: committing has started but not finished, so
+          // the dialog stays open and busy until it succeeds.
+          requestCloseEvent.preventDefault();
+          whenSucceeded(() => {
             openController.close(requestCloseEvent);
           });
-        };
-        dialogEl.addEventListener("navi_action_start", onActionStart);
-        try {
-          dispatchRequestAction(dialogEl, {
-            event: requestCloseEvent,
-            name: "dialog request close",
-            // The control that asked to close (a submit button, typically):
-            // what wears the loading state while the action runs and what the
-            // error is reported on if it fails.
-            requester: requestCloseEvent.detail.requester,
-            // action: null when nothing was touched — the constraints are still
-            // checked (an empty required field must report even if the user
-            // typed nothing at all), but there is no answer to commit.
-            action: unchanged ? null : "auto",
-            // Reported even when the dialog has no action of its own: what the
-            // user needs to see is the constraint, not whether someone listens.
-            reportOnInvalid: true,
-            // Blocked before the action even got a chance — the dialog is
-            // disabled, read-only, or busy already running the action a
-            // previous close request started. The gate has said which; closing
-            // is committing, so it must not happen either.
-            prevented: () => {
-              requestCloseEvent.preventDefault();
-            },
-            onInvalid: () => {
-              requestCloseEvent.preventDefault();
-            },
-          });
-        } finally {
-          dialogEl.removeEventListener("navi_action_start", onActionStart);
-        }
-        if (actionIsRunning) {
-          // An asynchronous action: committing has started but not finished, so
-          // the dialog stays open and busy, and closes itself from the side
-          // effect above once the action succeeds.
-          requestCloseEvent.preventDefault();
-          closeDeferred = true;
         }
       },
       onClose: (closeEvent) => {

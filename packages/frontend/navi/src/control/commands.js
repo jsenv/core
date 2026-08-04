@@ -7,7 +7,10 @@ import {
   isControlRoot,
 } from "./control_dom.js";
 import { readControlValue } from "./control_value.js";
-import { dispatchRequestAction } from "./rules/control_action.js";
+import {
+  dispatchRequestAction,
+  watchActionCompletion,
+} from "./rules/control_action.js";
 import { dispatchRequestInteraction } from "./rules/control_interaction.js";
 import {
   dispatchRequestClearUIState,
@@ -379,35 +382,53 @@ registerNaviCommand("--navi-send", (source, event) => {
       // and the popup must stay open — with the form still in front of the
       // user, showing what it is waiting for.
       let invalid = false;
-      const sent = dispatchRequestAction(target, {
-        onInvalid: () => {
-          invalid = true;
-        },
-        event,
-        name: "--navi-send",
-        always: () => {
-          const initiator =
-            event.detail && typeof event.detail === "object"
-              ? event.detail.eventChain[0]
-              : event;
-          const { form } = target;
-          if (form) {
-            // prevent form submission when clicking buttons or pressing enter on inputs
-            initiator.preventDefault();
-          } else if (
-            initiator.type === "keydown" &&
-            initiator.key === "Enter"
-          ) {
-            // prevent triggering click on such button, they are already performing submit
-            // (this ensures enter inside a picker won't trigger picker button click)
-            initiator.preventDefault();
-          }
-        },
-        requester,
-      });
-      if (sent !== false && !invalid && afterSend) {
+      const runAfterSend = () => {
         triggerNaviCommand(source, afterSend, event, { optional: true });
+      };
+      const {
+        result: sent,
+        isRunning,
+        whenSucceeded,
+      } = watchActionCompletion(target, () =>
+        dispatchRequestAction(target, {
+          onInvalid: () => {
+            invalid = true;
+          },
+          event,
+          name: "--navi-send",
+          always: () => {
+            const initiator =
+              event.detail && typeof event.detail === "object"
+                ? event.detail.eventChain[0]
+                : event;
+            const { form } = target;
+            if (form) {
+              // prevent form submission when clicking buttons or pressing enter on inputs
+              initiator.preventDefault();
+            } else if (
+              initiator.type === "keydown" &&
+              initiator.key === "Enter"
+            ) {
+              // prevent triggering click on such button, they are already performing submit
+              // (this ensures enter inside a picker won't trigger picker button click)
+              initiator.preventDefault();
+            }
+          },
+          requester,
+        }),
+      );
+      if (sent === false || invalid || !afterSend) {
+        return sent;
       }
+      if (isRunning) {
+        // The send is committing but has not finished: leaving now would take
+        // the form off the screen mid-submission (a popup closing over its own
+        // running action, a slide moving on before it is answered). What
+        // follows the send waits for the send to be real.
+        whenSucceeded(runAfterSend);
+        return sent;
+      }
+      runAfterSend();
       return sent;
     },
   };

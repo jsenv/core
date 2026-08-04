@@ -199,94 +199,6 @@
         );
       };
 
-      // ── In a dialog ───────────────────────────────────────────────────────
-
-      const InDialogSection = () => {
-        const [entries, push, clear] = useCallLog();
-        const settle = useSettlableAction();
-        return (
-          <section class="demo-section">
-            <Heading id="dialog">In a dialog</Heading>
-            <SettlePanel {...settle} />
-            <div class="demo-row">
-              <Button command="--navi-open" commandFor="form_in_dialog">
-                Open
-              </Button>
-            </div>
-            <Dialog id="form_in_dialog" className="demo-popup-box">
-              <Form
-                flex="y"
-                spacing="m"
-                padding="m"
-                action={async (value) => {
-                  push("action start", value);
-                  await settle.action();
-                  push("action end", value);
-                }}
-              >
-                <NameEmailFields />
-                <Box flex="x" spacing="s">
-                  <Button command="--navi-cancel">Cancel</Button>
-                  <Button type="submit">Submit</Button>
-                </Box>
-              </Form>
-              {/* Inside the dialog, outside the form: read-only stops at the
-                  form's own edge, so these stay usable while it submits —
-                  unlike Cancel and Submit, which are in the form. */}
-              <Box padding="m" flex="x" spacing="s">
-                <Button disabled={!settle.pending} onClick={settle.succeed}>
-                  Succeed (in dialog)
-                </Button>
-                <Button disabled={!settle.pending} onClick={settle.fail}>
-                  Fail (in dialog)
-                </Button>
-              </Box>
-            </Dialog>
-            <p class="demo-inside-note">
-              A dialog holding a form that is submitting has to stay put:
-              Escape, a backdrop click and Cancel should all answer that it is
-              busy. Today they close it, form in flight and all — the form's
-              action is its own business and nothing tells the dialog about it.
-            </p>
-            <CallLog entries={entries} onClear={clear} />
-          </section>
-        );
-      };
-
-      // ── In a popover ──────────────────────────────────────────────────────
-
-      const InPopoverSection = () => {
-        const [entries, push, clear] = useCallLog();
-        const settle = useSettlableAction();
-        return (
-          <section class="demo-section">
-            <Heading id="popover">In a popover</Heading>
-            <SettlePanel {...settle} />
-            <div class="demo-row">
-              <Button command="--navi-toggle" commandFor="form_in_popover">
-                Open
-              </Button>
-            </div>
-            <Popover id="form_in_popover" className="demo-popup-box">
-              <Form
-                flex="y"
-                spacing="m"
-                padding="m"
-                action={async (value) => {
-                  push("action start", value);
-                  await settle.action();
-                  push("action end", value);
-                }}
-              >
-                <NameEmailFields />
-                <Button type="submit">Submit</Button>
-              </Form>
-            </Popover>
-            <CallLog entries={entries} onClear={clear} />
-          </section>
-        );
-      };
-
       // ── In one slide ──────────────────────────────────────────────────────
 
       const InSlideSection = () => {
@@ -421,6 +333,94 @@
         );
       };
 
+      // ── In a dialog ───────────────────────────────────────────────────────
+
+      const InDialogSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="dialog">In a dialog</Heading>
+            <SettlePanel {...settle} />
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="form_in_dialog">
+                Open
+              </Button>
+            </div>
+            <Dialog id="form_in_dialog" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                action={async (value) => {
+                  push("action start", value);
+                  await settle.action();
+                  push("action end", value);
+                }}
+              >
+                <NameEmailFields />
+                <Box flex="x" spacing="s">
+                  <Button command="--navi-cancel">Cancel</Button>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+              {/* Inside the dialog, outside the form: read-only stops at the
+                  form's own edge, so these stay usable while it submits —
+                  unlike Cancel and Submit, which are in the form. */}
+              <Box padding="m" flex="x" spacing="s">
+                <Button disabled={!settle.pending} onClick={settle.succeed}>
+                  Succeed (in dialog)
+                </Button>
+                <Button disabled={!settle.pending} onClick={settle.fail}>
+                  Fail (in dialog)
+                </Button>
+              </Box>
+            </Dialog>
+            <p class="demo-inside-note">
+              A dialog holding a form that is submitting has to stay put:
+              Escape, a backdrop click and Cancel should all answer that it is
+              busy. Today they close it, form in flight and all — the form's
+              action is its own business and nothing tells the dialog about it.
+            </p>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── In a popover ──────────────────────────────────────────────────────
+
+      const InPopoverSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="popover">In a popover</Heading>
+            <SettlePanel {...settle} />
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="form_in_popover">
+                Open
+              </Button>
+            </div>
+            <Popover id="form_in_popover" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                action={async (value) => {
+                  push("action start", value);
+                  await settle.action();
+                  push("action end", value);
+                }}
+              >
+                <NameEmailFields />
+                <Button type="submit">Submit</Button>
+              </Form>
+            </Popover>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
         return (
@@ -448,16 +448,16 @@
               <Link href="#document">In the document</Link>
             </li>
             <li>
-              <Link href="#dialog">In a dialog</Link>
-            </li>
-            <li>
-              <Link href="#popover">In a popover</Link>
-            </li>
-            <li>
               <Link href="#slide">In a slide</Link>
             </li>
             <li>
               <Link href="#multi-step">One form per slide</Link>
+            </li>
+            <li>
+              <Link href="#dialog">In a dialog</Link>
+            </li>
+            <li>
+              <Link href="#popover">In a popover</Link>
             </li>
           </ol>
         </div>
@@ -468,10 +468,10 @@
           <h1>Form integration demo</h1>
           <TableOfContents />
           <InDocumentSection />
-          <InDialogSection />
-          <InPopoverSection />
           <InSlideSection />
           <MultiStepSection />
+          <InDialogSection />
+          <InPopoverSection />
         </NaviDebug>
       );
 
