@@ -194,10 +194,7 @@
                   name="duration"
                   required
                   flexWrap
-                  value={duration}
-                  uiAction={(v) => {
-                    wheelPerSignalDurationSignal.value = v;
-                  }}
+                  signal={wheelPerSignalDurationSignal}
                   border="none"
                 >
                   {WHEEL_PRESETS.map((durationPreset, i) => (

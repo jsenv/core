@@ -865,8 +865,18 @@ export const useUIGroupStateController = (
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const hasValueProp = Object.hasOwn(props, "value");
-  const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
-  const { id, name, value, defaultValue, uiAction } = props;
+  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
+  // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
+  // with the signal's current value as what it starts on. Write-back is already
+  // handled (see applyState's own boundSignal), so this is the half that makes
+  // `signal` two-way on a group: the children are placed from it when they
+  // register, exactly as they would be from a defaultValue.
+  const boundSignal = hasValueProp ? undefined : props.signal;
+  const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
+  const { id, name, value, uiAction } = props;
+  const defaultValue = hasOwnDefaultValueProp
+    ? props.defaultValue
+    : boundSignal?.value;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
