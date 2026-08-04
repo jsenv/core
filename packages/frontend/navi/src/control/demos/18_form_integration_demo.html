@@ -92,6 +92,9 @@
         border: 1px solid #ccc;
         border-radius: 8px;
       }
+      .demo-dialog-slides {
+        height: 260px;
+      }
       .demo-slide-header {
         color: white;
         background: #1a237e;
@@ -452,11 +455,143 @@
               </Box>
             </Dialog>
             <p class="demo-inside-note">
-              A dialog holding a form that is submitting has to stay put:
-              Escape, a backdrop click and Cancel should all answer that it is
-              busy. Today they close it, form in flight and all — the form's
-              action is its own business and nothing tells the dialog about it.
+              While the form sends, every way out of the dialog (Escape, a
+              backdrop click, Cancel) answers that it is busy.
             </p>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── Slides in a dialog ────────────────────────────────────────────────
+
+      const INITIAL_COLOURS = [
+        { id: "red", name: "Red" },
+        { id: "green", name: "Green" },
+        { id: "blue", name: "Blue" },
+      ];
+
+      // Two forms, two surfaces, one dialog. The pick form answers the question
+      // the dialog was opened for, so it talks past the slide it happens to sit
+      // in and closes the dialog. The rename form answers a question of its own,
+      // so it goes back to the slide it came from and the dialog stays open.
+      // Neither default would have done: a form in a slide reports to its slide,
+      // so both say where they report with `command`.
+      const SlidesInDialogSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [colours, setColours] = useState(INITIAL_COLOURS);
+        const [chosen, setChosen] = useState(null);
+        const [renamedId, setRenamedId] = useState(INITIAL_COLOURS[0].id);
+        const settle = useSettlableAction();
+        const renamed = colours.find((colour) => colour.id === renamedId);
+
+        return (
+          <section class="demo-section">
+            <Heading id="slides-in-dialog">Slides in a dialog</Heading>
+            <SettlePanel {...settle} />
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="colour_dialog">
+                Pick a colour
+              </Button>
+              <span>
+                chosen: <code>{JSON.stringify(chosen)}</code>
+              </span>
+            </div>
+            <Dialog id="colour_dialog" className="demo-popup-box">
+              <SlideContainer
+                layout="row"
+                duration="400ms"
+                className="demo-dialog-slides"
+              >
+                <SlideContainer.Item id="colour_pick" overflow="auto">
+                  <Box
+                    header
+                    padding="s"
+                    className="demo-slide-header"
+                    flex="x"
+                    alignY="center"
+                  >
+                    <Text expandX>Pick</Text>
+                  </Box>
+                  <Form
+                    body
+                    flex="y"
+                    spacing="m"
+                    padding="m"
+                    // past the slide, to the dialog: choosing a colour is what
+                    // this dialog was opened for, so it is over once it is done
+                    command="--navi-close"
+                    action={async (value) => {
+                      push("choose", value);
+                      await settle.action();
+                      setChosen(value.colour);
+                    }}
+                  >
+                    {colours.map((colour) => (
+                      <Box key={colour.id} flex="x" alignY="center" spacing="s">
+                        <Field expandX>
+                          <Input
+                            type="radio"
+                            name="colour"
+                            value={colour.id}
+                            marginRight="3"
+                          />
+                          <Label>{colour.name}</Label>
+                        </Field>
+                        <Button
+                          command="--navi-next"
+                          onClick={() => setRenamedId(colour.id)}
+                        >
+                          Rename
+                        </Button>
+                      </Box>
+                    ))}
+                    <Button type="submit">Choose</Button>
+                  </Form>
+                </SlideContainer.Item>
+
+                <SlideContainer.Item id="colour_rename" overflow="auto">
+                  <Box
+                    header
+                    padding="s"
+                    className="demo-slide-header"
+                    flex="x"
+                    alignY="center"
+                  >
+                    <SlideContainer.Previous size="l" padding="xs" />
+                    <Text expandX>Rename</Text>
+                  </Box>
+                  <Form
+                    // Remounted per colour, so the field shows the name of the
+                    // one being renamed and counts as untouched again.
+                    key={renamedId}
+                    body
+                    flex="y"
+                    spacing="m"
+                    padding="m"
+                    // back where it came from: renaming is a detour, not the
+                    // answer the dialog is waiting for
+                    command="--navi-previous"
+                    action={(value) => {
+                      push("rename", { id: renamedId, ...value });
+                      setColours((previous) =>
+                        previous.map((colour) =>
+                          colour.id === renamedId
+                            ? { ...colour, name: value.name }
+                            : colour,
+                        ),
+                      );
+                    }}
+                  >
+                    <Field vertical>
+                      <Label requiredIndicator>Name</Label>
+                      <Input name="name" required defaultValue={renamed.name} />
+                    </Field>
+                    <Button type="submit">Rename</Button>
+                  </Form>
+                </SlideContainer.Item>
+              </SlideContainer>
+            </Dialog>
             <CallLog entries={entries} onClear={clear} />
           </section>
         );
@@ -544,6 +679,9 @@
             <li>
               <Link href="#popover">In a popover</Link>
             </li>
+            <li>
+              <Link href="#slides-in-dialog">Slides in a dialog</Link>
+            </li>
           </ol>
         </div>
       );
@@ -557,6 +695,7 @@
           <MultiStepSection />
           <InDialogSection />
           <InPopoverSection />
+          <SlidesInDialogSection />
         </NaviDebug>
       );
 
