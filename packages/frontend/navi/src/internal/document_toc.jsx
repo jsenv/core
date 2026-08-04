@@ -17,7 +17,7 @@
  * getting it wrong.
  */
 
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 const css = /* css */ `
   .navi_document_toc {
@@ -43,6 +43,7 @@ const css = /* css */ `
  */
 export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
   import.meta.css = css;
+  const ref = useRef();
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {
@@ -52,7 +53,10 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
     }
     const read = () => {
       setEntries((previous) => {
-        const next = readHeadings(root, from, to);
+        // Its own block is skipped: a table of contents naming the block it
+        // sits in tells the reader where they already are.
+        const own = ref.current?.closest("section, .demo-section");
+        const next = readHeadings(root, from, to, own);
         // The observer fires on every render of every section; replacing the
         // state each time would re-render this list (and re-trigger the
         // observer) for nothing.
@@ -67,7 +71,11 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
     };
   }, [rootSelector, from, to]);
 
-  return <ol className="navi_document_toc">{renderLevel(entries, from)}</ol>;
+  return (
+    <ol ref={ref} className="navi_document_toc">
+      {renderLevel(entries, from)}
+    </ol>
+  );
 };
 
 // The heading's own id, or the one on the anchor link inside it — demos put
@@ -91,13 +99,16 @@ const readHeadingText = (heading) => {
   return clone.textContent.trim();
 };
 
-const readHeadings = (root, from, to) => {
+const readHeadings = (root, from, to, ignoredContainer) => {
   const selector = [];
   for (let level = from; level <= to; level++) {
     selector.push(`h${level}`);
   }
   const entries = [];
   for (const heading of root.querySelectorAll(selector.join(","))) {
+    if (ignoredContainer && ignoredContainer.contains(heading)) {
+      continue;
+    }
     const id = readHeadingId(heading);
     if (!id) {
       // Nothing to link to. Listing it would produce an entry that does not go
