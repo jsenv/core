@@ -667,6 +667,10 @@ const LinkPlain = (props) => {
       }}
       holdSpaceForStyle={currentEffectBold ? { fontWeight: "bold" } : undefined}
       preventSpaceUnderlines
+      // A trailing icon (the anchor arrow, the blank-target one) belongs to the
+      // text it follows: without this the browser may break the line right
+      // before it and leave it alone under a link long enough to wrap.
+      attachLastChild={Boolean(endIconEl)}
       // Visual
       data-appearance={appearance}
       data-current-effect-bold={currentEffectBold ? "" : undefined}
@@ -691,45 +695,10 @@ const LinkPlain = (props) => {
       }
     >
       {startIconEl}
-      {endIconEl
-        ? keepEndIconWithLastWord(innerChildren, endIconEl)
-        : innerChildren}
+      {innerChildren}
+      {endIconEl}
     </Text>
   );
-};
-
-// A trailing icon belongs to the text it follows, not to itself: it is an
-// atomic inline, so the browser is free to break the line right before it and
-// leave it stranded alone under a link long enough to wrap. There is no
-// character to join it with either — a word joiner does not suppress a break
-// before an atomic inline — so the last word and the icon go in one nowrap box
-// instead, the classic widow fix. The gap inside it is written by hand for the
-// same reason Text writes its own (see FAKE_SPACE there): a real space would be
-// underlined along with the link.
-//
-// Text children only: splitting a last word out of arbitrary nodes is not
-// something to guess at, and anything else keeps today's behaviour.
-const keepEndIconWithLastWord = (children, endIconEl) => {
-  const attached = (text) => (
-    <span key="end" style="white-space: nowrap">
-      {text}
-      <span data-navi-space="" style="padding-left: 0.25em">
-        &#8203;
-      </span>
-      {endIconEl}
-    </span>
-  );
-  if (typeof children !== "string") {
-    return [children, endIconEl];
-  }
-  const lastWordMatch = /\s+(\S+)$/.exec(children);
-  if (!lastWordMatch) {
-    return attached(children);
-  }
-  // An array, not a fragment: Text puts its own space between its children, and
-  // a fragment would reach it as a single one — gluing the head to the last
-  // word.
-  return [children.slice(0, lastWordMatch.index), attached(lastWordMatch[1])];
 };
 
 const LinkCurrentIndicator = () => {

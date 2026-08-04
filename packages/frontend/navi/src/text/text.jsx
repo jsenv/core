@@ -224,6 +224,45 @@ const CustomWidthSpace = ({ value, useRealSpaceChar }) => {
   return <span style={`padding-left: ${value}`}>&#8203;</span>;
 };
 
+// Keeps the last child from being left alone on a line of its own — an icon
+// after a label, a unit after a number. It is an atomic inline, so the browser
+// is free to break the line right before it, and no character can stop that (a
+// word joiner does not suppress a break before an atomic inline). So the last
+// word of what precedes it and the child itself go in one nowrap box instead:
+// the classic widow fix, applied to the one place it is always wrong to break.
+//
+// Only the last word travels with it — wrapping the whole preceding child would
+// stop a long label from wrapping at all.
+const attachLastTextChild = (children, separator) => {
+  const childArray = toChildArray(children);
+  if (childArray.length < 2) {
+    // Nothing to attach it to: on its own it cannot be orphaned.
+    return children;
+  }
+  const lastChild = childArray[childArray.length - 1];
+  const previousChild = childArray[childArray.length - 2];
+  const before = childArray.slice(0, -2);
+  const attach = (attached) => (
+    <span key="attached" style="white-space: nowrap">
+      {attached}
+      {separator}
+      {lastChild}
+    </span>
+  );
+  if (typeof previousChild !== "string") {
+    return [...before, attach(previousChild)];
+  }
+  const lastWordMatch = /\s+(\S+)$/.exec(previousChild);
+  if (!lastWordMatch) {
+    return [...before, attach(previousChild)];
+  }
+  return [
+    ...before,
+    previousChild.slice(0, lastWordMatch.index),
+    attach(lastWordMatch[1]),
+  ];
+};
+
 const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
@@ -357,6 +396,11 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [skeleton]
  *   Same as `loading` but without the shimmer animation — a static grey bar.
  *
+ * @param {boolean} [attachLastChild]
+ *   Keeps the last child on the same line as the word before it — a trailing
+ *   icon, a unit, an arrow. Without it the browser may break the line right
+ *   before that child and leave it alone underneath.
+ *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
  *   Useful inside `<a>` elements where browsers draw an underline under spaces.
@@ -466,6 +510,7 @@ const TextUI = (props) => {
     ref,
     spacing,
     preventSpaceUnderlines = false,
+    attachLastChild = false,
     boldStable,
     holdSpaceForStyle,
     capitalize,
@@ -484,6 +529,19 @@ const TextUI = (props) => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName),
   };
+  if (attachLastChild) {
+    // Before the spacing pass, so the box it makes is one child of it: the gap
+    // between the text and the box is Text's own, the one inside it is written
+    // here (it has to live inside the nowrap box to be unbreakable).
+    children = attachLastTextChild(
+      children,
+      resolvedSpacing === "pre" ||
+        resolvedSpacing === 0 ||
+        resolvedSpacing === "0"
+        ? null
+        : defaultSpace,
+    );
+  }
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;

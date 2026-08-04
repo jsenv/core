@@ -254,7 +254,15 @@
                             ))}
                           </Wheel>
                           <WheelGroup.Separator size="xxl">
-                            <Unit unit="hour" format="short" color="#6b7280" />
+                            <Unit
+                              unit="hour"
+                              format="short"
+                              color="#6b7280"
+                              // The unit is written smaller than the digits, so
+                              // centering it in the row leaves it reading high
+                              // next to them: a hair down puts it on their line.
+                              marginTop="0.2em"
+                            />
                           </WheelGroup.Separator>
                           <Wheel
                             name="minutes"
@@ -277,6 +285,7 @@
                               unit="minute"
                               format="short"
                               color="#6b7280"
+                              marginTop="0.2em"
                             />
                           </WheelGroup.Separator>
                         </WheelGroup>
@@ -314,13 +323,15 @@
       };
 
       // ── 2. custom via picker + wheel, one signal for both ─────────────────
-      // KNOWN BROKEN, kept on purpose to work on: the WheelGroup aggregates its
-      // two wheels into ONE number and writes it to its signal correctly
-      // (wheel_total in the url), but the picker around it hands the form `{}`
-      // instead of that number — a picker whose popup holds a group with a
-      // primitive value has no facade for it (type="duration" has one, a bare
-      // number does not). What we want to end up with is
-      // { durationCustom: <what aggregateChildStates returned> }.
+      // The variant above holds a PAIR of values (one signal per wheel, the
+      // form reads { hours, minutes }); this one holds ONE — the number of
+      // minutes its two wheels add up to — so what the form reads under
+      // durationCustom is that number itself.
+      //
+      // Which is why there is no Form inside the picker here: a form aggregates
+      // its children into one key per name, and a single nameless value has no
+      // key to land under. The picker takes what the group inside it is worth,
+      // directly.
 
       const WHEEL_ONE_SIGNAL_HOURS = [0, 1, 2, 3, 4, 5];
       const WHEEL_ONE_SIGNAL_MINUTES = [
@@ -357,12 +368,10 @@
             <p class="desc">
               Un seul signal pour les deux roues :{" "}
               <code>aggregateChildStates</code> dit comment elles font un nombre
-              de minutes, <code>distributeChildUIState</code> fait l'inverse.
-              <strong>
-                {" "}
-                Cassé pour l'instant : le form reçoit durationCustom = {"{}"} au
-                lieu du nombre.
-              </strong>
+              de minutes, <code>distributeChildUIState</code> fait l'inverse. Le
+              picker est un <code>type="number"</code> : ce qu'il contient vaut
+              un nombre, et c'est ce nombre que le form reçoit sous{" "}
+              <code>durationCustom</code>.
             </p>
             <Form
               flex="y"
@@ -438,15 +447,23 @@
                     <Icon marginRight="-1ch">
                       <Picker.UI.PencilSvg />
                     </Icon>
+                    {/* type="number": what this picker holds is a number of
+                        minutes — the one value its wheels add up to. No Form
+                        inside it either (unlike the demo above, whose picker
+                        holds a PAIR of fields): a form aggregates its children
+                        into one key per name, and there is nothing to name
+                        here. The picker takes what the group inside it is
+                        worth, directly. */}
                     <Picker
                       id="wheel_one_signal_picker"
                       name="durationCustom"
                       variant="headless"
                       mode="dialog"
+                      type="number"
                       dockedOnTouch
                       borderRadius="s"
                     >
-                      <Form flex="y" alignX="center" padding="l" spacing="l">
+                      <Box flex="y" alignX="center" padding="l" spacing="l">
                         <Text bold size="l">
                           Durée de la partie
                         </Text>
@@ -485,7 +502,15 @@
                             ))}
                           </Wheel>
                           <WheelGroup.Separator size="xxl">
-                            <Unit unit="hour" format="short" color="#6b7280" />
+                            <Unit
+                              unit="hour"
+                              format="short"
+                              color="#6b7280"
+                              // The unit is written smaller than the digits, so
+                              // centering it in the row leaves it reading high
+                              // next to them: a hair down puts it on their line.
+                              marginTop="0.2em"
+                            />
                           </WheelGroup.Separator>
                           <Wheel name="minutes" type="integer" size="xxl">
                             {WHEEL_ONE_SIGNAL_MINUTES.map((minute) => (
@@ -503,6 +528,7 @@
                               unit="minute"
                               format="short"
                               color="#6b7280"
+                              marginTop="0.2em"
                             />
                           </WheelGroup.Separator>
                         </WheelGroup>
@@ -512,10 +538,10 @@
                               command="--navi-cancel"
                               variant="discrete"
                             />
-                            <Button type="submit" />
+                            <Button command="--navi-define" />
                           </Box>
                         )}
-                      </Form>
+                      </Box>
                     </Picker>
                   </List.Item>
                 </List>
