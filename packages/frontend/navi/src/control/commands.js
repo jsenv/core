@@ -452,10 +452,15 @@ registerNaviCommand("--navi-done", (source, event) => {
   };
 });
 
-// Which slide is shown is the slide container's own business: a button says "next", not
-// "show the slide with that id" — which is what lets them be rearranged
-// without touching what drives them.
-const registerSlideCommand = (command, eventName) => {
+// Which slide is shown is the slide container's own business: a button says
+// which way to go, not "show the slide with that id" — which is what lets them
+// be rearranged without touching what drives them.
+//
+// A direction, not a step: slides are laid out on a map (see
+// slide_container.jsx), and on a map "next" only means something when there is
+// a single axis to walk. One vocabulary for both cases beats a second one that
+// works half the time.
+const registerSlideCommand = (command, dx, dy) => {
   registerNaviCommand(command, (source, event) => {
     const target =
       resolveExplicitTarget(source) || source.closest("[data-slide-container]");
@@ -464,12 +469,19 @@ const registerSlideCommand = (command, eventName) => {
     }
     return {
       target,
-      implementation: () => dispatchCustomEvent(target, eventName, { event }),
+      implementation: () =>
+        dispatchCustomEvent(target, "navi_slide_move", {
+          event,
+          dx,
+          dy,
+        }),
     };
   });
 };
-registerSlideCommand("--navi-next", "navi_next");
-registerSlideCommand("--navi-previous", "navi_previous");
+registerSlideCommand("--navi-right", 1, 0);
+registerSlideCommand("--navi-left", -1, 0);
+registerSlideCommand("--navi-down", 0, 1);
+registerSlideCommand("--navi-up", 0, -1);
 
 registerNaviCommand("--navi-toggle", (source, event) => {
   const target =

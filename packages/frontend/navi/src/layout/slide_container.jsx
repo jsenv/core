@@ -201,8 +201,9 @@ const findFocusTargetInSlide = (slideElement) => {
 
 /**
  * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
- * left to the container, which then answers the --navi-next/--navi-previous
- * commands sent from anything inside it.
+ * left to the container, which then answers the
+ * --navi-left/--navi-right/--navi-up/--navi-down commands sent from anything
+ * inside it.
  *
  * Which slides there are is read from the DOM, not from the children: a slide
  * is whatever <Slide> put there, wherever it came from — a fragment, a .map(),
@@ -453,18 +454,10 @@ export const SlideContainer = ({
       {...rest}
       baseClassName="navi_slide_container"
       data-slide-container=""
-      // One event per direction, no step to read: "next" is what a button, a
-      // command and a line of code all mean, and it is all any of them has to
-      // say. Dispatch it (bubbling) from anywhere inside to move on — an action
-      // finishing, a field becoming valid…
-      onnavi_next={() => {
-        moveNext();
-      }}
-      onnavi_previous={() => {
-        movePrevious();
-      }}
-      // …and the one a Move button dispatches, for a map where "next" has no
-      // meaning but "down" does.
+      // A direction, never a step: on a map "next" only means something when
+      // there is a single axis to walk, so everything that moves a slide — a
+      // chevron, --navi-left/right/up/down, a line of code — says which way.
+      // Dispatch it (bubbling) from anywhere inside to move.
       onnavi_slide_move={(e) => {
         const { dx, dy } = e.detail;
         move(dx, dy);
@@ -592,10 +585,34 @@ export const Slide = ({
 };
 
 const DIRECTIONS = {
-  right: { dx: 1, dy: 0, Svg: ChevronRightSvg, label: "Slide on the right" },
-  left: { dx: -1, dy: 0, Svg: ChevronLeftSvg, label: "Slide on the left" },
-  down: { dx: 0, dy: 1, Svg: ChevronDownSvg, label: "Slide below" },
-  up: { dx: 0, dy: -1, Svg: ChevronUpSvg, label: "Slide above" },
+  right: {
+    dx: 1,
+    dy: 0,
+    command: "--navi-right",
+    Svg: ChevronRightSvg,
+    label: "Slide on the right",
+  },
+  left: {
+    dx: -1,
+    dy: 0,
+    command: "--navi-left",
+    Svg: ChevronLeftSvg,
+    label: "Slide on the left",
+  },
+  down: {
+    dx: 0,
+    dy: 1,
+    command: "--navi-down",
+    Svg: ChevronDownSvg,
+    label: "Slide below",
+  },
+  up: {
+    dx: 0,
+    dy: -1,
+    command: "--navi-up",
+    Svg: ChevronUpSvg,
+    label: "Slide above",
+  },
 };
 
 const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
@@ -657,7 +674,7 @@ const SlideStep = ({ step, ...rest }) => {
       : "left";
   return (
     <SlideNavButton
-      command={isNext ? "--navi-next" : "--navi-previous"}
+      command={DIRECTIONS[direction].command}
       locked={locked}
       ChevronSvg={DIRECTIONS[direction].Svg}
       aria-label={isNext ? "Next slide" : "Previous slide"}
@@ -676,24 +693,16 @@ const SlideStep = ({ step, ...rest }) => {
  */
 const SlideMove = ({ direction, ...rest }) => {
   const locks = useContext(SlideContext);
-  const { dx, dy, Svg, label } = DIRECTIONS[direction];
+  const { dx, dy, command, Svg, label } = DIRECTIONS[direction];
   const forward = dx > 0 || dy > 0;
   const locked = forward ? locks?.preventNavNext : locks?.preventNavPrevious;
   return (
     <SlideNavButton
+      command={command}
       locked={locked}
       ChevronSvg={Svg}
       aria-label={label}
       {...rest}
-      onClick={(e) => {
-        e.currentTarget.dispatchEvent(
-          new CustomEvent("navi_slide_move", {
-            detail: { dx, dy },
-            bubbles: true,
-          }),
-        );
-        rest.onClick?.(e);
-      }}
     />
   );
 };

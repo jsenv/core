@@ -501,7 +501,7 @@
       };
 
       // Same lock, no chevron at all: the action itself moves the list on, by
-      // dispatching the event a --navi-next command would have dispatched.
+      // dispatching the event a --navi-right command would have dispatched.
       // In an effect, not in the change handler: the lock lifts with the
       // render, and a travel asked for before that would be refused by it.
       const ActionThenNextSlides = () => {
@@ -515,7 +515,10 @@
             return;
           }
           listRef.current.dispatchEvent(
-            new CustomEvent("navi_next", { bubbles: true }),
+            new CustomEvent("navi_slide_move", {
+              detail: { dx: 1, dy: 0 },
+              bubbles: true,
+            }),
           );
         }, [signCount]);
         return (
@@ -848,7 +851,7 @@
               <code>preventNavPrevious</code>, or <code>preventNav</code> for
               both) on a <code>Slide</code> holds the user there. It is read
               where the travel is decided, so it holds against every way of
-              asking — the chevron, the keyboard, a <code>--navi-next</code>{" "}
+              asking — the chevron, the keyboard, a <code>--navi-right</code>{" "}
               command, an event dispatched by hand.
             </p>
             <div class="demo-ways">
@@ -875,7 +878,7 @@
               <div class="demo-way">
                 <h3>The action moves on</h3>
                 <p class="demo-note">
-                  No chevron at all: signing dispatches <code>navi_next</code>.
+                  No chevron at all: signing dispatches <code>navi_slide_move</code>.
                 </p>
                 <div class="in-document">
                   <ActionThenNextSlides />

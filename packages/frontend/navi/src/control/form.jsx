@@ -50,8 +50,9 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   does about it. Nothing runs when the submission is refused — the form then
  *   stays in front of the user, showing what it is waiting for.
  *
- *   `"--navi-close"` dismisses the popup the form is in, `"--navi-previous"` /
- *   `"--navi-next"` walk the slide list it is in, `"--navi-void"` stays put.
+ *   `"--navi-close"` dismisses the popup the form is in,
+ *   `"--navi-left"`/`"--navi-right"`/`"--navi-up"`/`"--navi-down"` move on the
+ *   slide map it is in, `"--navi-void"` stays put.
  *   Any navi command, really: it is triggered from the form, so it finds its
  *   target the way that command always does.
  *

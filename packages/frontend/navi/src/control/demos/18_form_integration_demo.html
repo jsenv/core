@@ -256,7 +256,7 @@
                 </Box>
                 <Box body padding="m">
                   A submission that went through moves on by itself — nothing
-                  here says <code>--navi-next</code>.
+                  here says <code>--navi-right</code>.
                 </Box>
               </SlideContainer.Item>
             </SlideContainer>
@@ -482,13 +482,15 @@
         const [colours, setColours] = useState(INITIAL_COLOURS);
         const [chosen, setChosen] = useState(null);
         const [renamedId, setRenamedId] = useState(INITIAL_COLOURS[0].id);
-        const settle = useSettlableAction();
+        // One per form, and settled from inside its own slide (below): both
+        // take time, and each has to be watchable without the other.
+        const chooseSettle = useSettlableAction();
+        const renameSettle = useSettlableAction();
         const renamed = colours.find((colour) => colour.id === renamedId);
 
         return (
           <section class="demo-section">
             <Heading id="slides-in-dialog">Slides in a dialog</Heading>
-            <SettlePanel {...settle} />
             <div class="demo-row">
               <Button command="--navi-open" commandFor="colour_dialog">
                 Pick a colour
@@ -523,7 +525,7 @@
                     command="--navi-close"
                     action={async (value) => {
                       push("choose", value);
-                      await settle.action();
+                      await chooseSettle.action();
                       setChosen(value.colour);
                     }}
                   >
@@ -539,7 +541,7 @@
                           <Label>{colour.name}</Label>
                         </Field>
                         <Button
-                          command="--navi-next"
+                          command="--navi-right"
                           onClick={() => setRenamedId(colour.id)}
                         >
                           Rename
@@ -548,6 +550,11 @@
                     ))}
                     <Button type="submit">Choose</Button>
                   </Form>
+                  {/* In the slide, outside the form: still usable while the
+                      form it settles is sending. */}
+                  <Box footer padding="s">
+                    <SettlePanel {...chooseSettle} />
+                  </Box>
                 </SlideContainer.Item>
 
                 <SlideContainer.Item id="colour_rename" overflow="auto">
@@ -571,9 +578,10 @@
                     padding="m"
                     // back where it came from: renaming is a detour, not the
                     // answer the dialog is waiting for
-                    command="--navi-previous"
-                    action={(value) => {
+                    command="--navi-left"
+                    action={async (value) => {
                       push("rename", { id: renamedId, ...value });
+                      await renameSettle.action();
                       setColours((previous) =>
                         previous.map((colour) =>
                           colour.id === renamedId
@@ -589,6 +597,9 @@
                     </Field>
                     <Button type="submit">Rename</Button>
                   </Form>
+                  <Box footer padding="s">
+                    <SettlePanel {...renameSettle} />
+                  </Box>
                 </SlideContainer.Item>
               </SlideContainer>
             </Dialog>
