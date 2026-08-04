@@ -117,19 +117,24 @@ export const createOpenController = (
         break prevent_reopen;
       }
 
-      const spaceEvent = findEvent(
+      // Both keys activate whatever element has focus. Closing restores focus
+      // to the trigger button, which then receives that activation and reopens
+      // the popup on the spot — the keyboard counterpart of the mousedown case
+      // above. Enter reaches here from a submit inside the popup (a dialog's
+      // own submit button, Enter in a field it contains), space from the
+      // trigger button itself.
+      const activationKeyEvent = findEvent(
         closeEvent,
-        (e) => e.type === "keydown" && e.key === " ",
+        (e) => e.type === "keydown" && (e.key === " " || e.key === "Enter"),
       );
-      if (spaceEvent) {
-        // space would trigger a click on the picker button causing it to re-open immediatly after closing
+      if (activationKeyEvent) {
         debugInteraction(
           closeEvent,
-          `closed by space key -> prevent browser click (spaceEvent.preventDefault())`,
+          `closed by "${activationKeyEvent.key}" key -> prevent browser click (activationKeyEvent.preventDefault())`,
         );
         // browser won't try to dispatch click
         // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-        spaceEvent.preventDefault();
+        activationKeyEvent.preventDefault();
         break prevent_reopen;
       }
     }
