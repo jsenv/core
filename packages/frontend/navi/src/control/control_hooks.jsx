@@ -852,7 +852,15 @@ const createControlInfo = (props, { controlType }) => {
         // so an input+signal is uncontrolled-with-default; the signal only
         // receives write-backs (onUIAction).
         hasStateProp = false;
-        stateInitial = props.defaultValue;
+        // A signal holding something wins over the default: `defaultValue` is a
+        // suggestion of what to start from (and what a reset goes back to), not
+        // an answer — while the signal's value IS the answer, restored from the
+        // url or set by whoever owns it. Taking the default here would show a
+        // suggestion in place of the value on every reload.
+        stateInitial =
+          signal && signal.value !== undefined
+            ? signal.value
+            : props.defaultValue;
       } else if (signal) {
         // A plain bound signal with no default (e.g. Wheel): its live value
         // seeds and controls the state.
@@ -889,7 +897,10 @@ const createControlInfo = (props, { controlType }) => {
       stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
       hasStateProp = false;
-      stateInitial = props.defaultValue;
+      // Same precedence as an input above: the signal's value is the answer,
+      // defaultValue only the suggestion to start from.
+      stateInitial =
+        signal && signal.value !== undefined ? signal.value : props.defaultValue;
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;

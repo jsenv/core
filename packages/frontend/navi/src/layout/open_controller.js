@@ -1,4 +1,8 @@
-import { chainEvent, findEvent } from "@jsenv/dom";
+import {
+  chainEvent,
+  findEvent,
+  getKeyboardEventDefaultAction,
+} from "@jsenv/dom";
 import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
@@ -42,30 +46,6 @@ import { useStableCallback } from "../utils/use_stable_callback.js";
  *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
  *   popup unmounting).
  */
-// The elements a space press is turned into a click on, per the HTML
-// activation behaviour: buttons and the things behaving as one. A space
-// anywhere else does something else entirely (types, scrolls) and must be left
-// alone.
-const isActivatedBySpace = (element) => {
-  if (!element || element.nodeType !== 1) {
-    return false;
-  }
-  return Boolean(
-    element.closest(
-      'button, summary, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"]',
-    ),
-  );
-};
-
-// Inside a popup that is open right now — the popup being closed, in practice,
-// since that is the one the key press was delivered to.
-const isInsideOpenPopup = (element) => {
-  if (!element || element.nodeType !== 1) {
-    return false;
-  }
-  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
-};
-
 export const createOpenController = (
   openHandler,
   { debugInteraction } = {},
@@ -152,14 +132,18 @@ export const createOpenController = (
       // Space: pressed on the trigger itself, which still has focus (closing
       // does not move it away from an element outside the popup). The browser
       // turns that press into a click on keyup, and that click lands back on
-      // the trigger. Only elements the browser activates on space count —
-      // pressing space in a text field inside the popup types a space, and
-      // preventing it would swallow the character.
+      // the trigger. Asked of the browser's own default action rather than
+      // guessed from the tag name: a space that scrolls, or types into a field
+      // inside the popup, has no activation to prevent and preventing it would
+      // swallow the scroll / the character.
       const spaceKeyEvent = findEvent(
         closeEvent,
         (e) => e.type === "keydown" && e.key === " ",
       );
-      if (spaceKeyEvent && isActivatedBySpace(spaceKeyEvent.target)) {
+      if (
+        spaceKeyEvent &&
+        getKeyboardEventDefaultAction(spaceKeyEvent) === "activate"
+      ) {
         debugInteraction(
           closeEvent,
           `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
@@ -175,9 +159,10 @@ export const createOpenController = (
       // and focus is restored to the trigger, so the activation the browser
       // still owes this press is delivered to the trigger instead.
       //
-      // Verified by where the press came from: an Enter from outside the popup
-      // is not this case, and an Enter already consumed by whatever handled the
-      // submit has nothing left to deliver.
+      // Verified on two counts: the press still owes an activation (the
+      // browser's default action for it is one — "activate" on a submit button,
+      // "form_submit" on a field — and nothing has consumed it yet), and it came
+      // from inside the popup. An Enter from outside is not this case at all.
       const enterKeyEvent = findEvent(
         closeEvent,
         (e) => e.type === "keydown" && e.key === "Enter",
@@ -185,6 +170,9 @@ export const createOpenController = (
       if (
         enterKeyEvent &&
         !enterKeyEvent.defaultPrevented &&
+        ENTER_ACTIVATING_DEFAULT_ACTION_SET.has(
+          getKeyboardEventDefaultAction(enterKeyEvent),
+        ) &&
         isInsideOpenPopup(enterKeyEvent.target)
       ) {
         debugInteraction(
@@ -306,6 +294,24 @@ export const createOpenController = (
   };
   return controller;
 };
+
+// Inside a popup that is open right now — the popup being closed, in practice,
+// since that is the one the key press was delivered to.
+const isInsideOpenPopup = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+};
+
+// What Enter is about to do when it is about to activate something: press the
+// focused control, or submit the form around it. Anything else it can do
+// (typing a newline, nothing at all) leaves no activation behind to land on the
+// trigger once focus is restored.
+const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
+  "activate",
+  "form_submit",
+]);
 
 // Created once per popup instance: openHandler is wrapped in a stable callback
 // so the controller identity never changes across renders, even though

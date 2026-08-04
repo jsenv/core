@@ -874,9 +874,16 @@ export const useUIGroupStateController = (
   const boundSignal = hasValueProp ? undefined : props.signal;
   const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
   const { id, name, value, uiAction } = props;
-  const defaultValue = hasOwnDefaultValueProp
-    ? props.defaultValue
-    : boundSignal?.value;
+  // A signal holding something wins over `defaultValue`: the default is a
+  // suggestion of where to start (and where a reset goes back to), the signal's
+  // value is the answer — same precedence a leaf control applies (see
+  // control_hooks' own resolveControlInfo).
+  const defaultValue =
+    boundSignal && boundSignal.value !== undefined
+      ? boundSignal.value
+      : hasOwnDefaultValueProp
+        ? props.defaultValue
+        : boundSignal?.value;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
