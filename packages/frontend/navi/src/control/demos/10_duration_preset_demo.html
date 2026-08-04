@@ -175,13 +175,16 @@
               flex="y"
               spacing="m"
               alignX="start"
-              action={({ duration: chosen, hours: h, minutes: m }) => {
-                formResultSignal.value = {
-                  duration:
-                    chosen === "custom"
-                      ? (Number(h) || 0) * 60 + (Number(m) || 0)
-                      : chosen,
-                };
+              // Read from what this form controls, never from the signals: the
+              // preset list under "duration", the picker under "durationCustom"
+              // — here the { hours, minutes } its wheels make.
+              action={({ duration, durationCustom }) => {
+                const minutes =
+                  duration === "custom"
+                    ? (Number(durationCustom?.hours) || 0) * 60 +
+                      (Number(durationCustom?.minutes) || 0)
+                    : durationToMinutes(duration);
+                formResultSignal.value = { minutes };
               }}
             >
               <Field ownLabel vertical>
@@ -248,10 +251,12 @@
                     <Icon marginRight="-1ch">
                       <Picker.UI.PencilSvg />
                     </Icon>
-                    {/* no name: what it holds is the two wheels, and they
-                        belong to the form around it */}
+                    {/* named like any control: a picker always holds one
+                        value, and here that value is the pair the wheels make
+                        — { hours, minutes } */}
                     <Picker
                       id="wheel_per_signal_picker"
+                      name="durationCustom"
                       variant="headless"
                       mode="dialog"
                       type="form"
@@ -349,10 +354,12 @@
               l'heure et les minutes.
             </p>
             <Form
-              action={({ duration }) => {
+              // durationCustom is what the picker holds — an ISO 8601 duration,
+              // since what it contains is one InputDuration.
+              action={({ duration, durationCustom }) => {
                 const minutes =
                   duration === "custom"
-                    ? durationToMinutes(customDurationSignal.value)
+                    ? durationToMinutes(durationCustom)
                     : durationToMinutes(duration);
                 formResultSignal.value = { minutes };
               }}
@@ -391,11 +398,11 @@
               clic.
             </p>
             <Form
-              action={({ duration }) => {
+              action={({ duration, durationCustom }) => {
                 const minutes =
                   duration === "custom"
-                    ? durationToMinutes(customDuration3Signal.value)
-                    : duration;
+                    ? durationToMinutes(durationCustom)
+                    : durationToMinutes(duration);
                 formResultSignal.value = { minutes };
               }}
               flex="y"
@@ -618,21 +625,21 @@
               variant="headless"
               mode="dialog"
               borderRadius="s"
-              type="form"
+              // one value, not a form: what it holds is a single
+              // InputDuration, so the picker IS that duration
+              type="duration"
             >
               <Box flex="y" alignX="center" padding="m" spacing="m">
                 <Text bold>Veuillez saisir une durée</Text>
-                <Form>
-                  {/* signal, not value + uiAction: the input reads it to place
-                      itself and writes it back on every change, so there is no
-                      second copy of the value to keep in step. */}
-                  <InputDuration
-                    signal={customDuration3Signal}
-                    min="0min"
-                    max="4h"
-                    step="5min"
-                  />
-                </Form>
+                {/* signal, not value + uiAction: the input reads it to place
+                    itself and writes it back on every change, so there is no
+                    second copy of the value to keep in step. */}
+                <InputDuration
+                  signal={customDuration3Signal}
+                  min="0min"
+                  max="4h"
+                  step="5min"
+                />
                 <Box flex spacing="s" expandX alignX="end">
                   <Button command="--navi-cancel" variant="discrete" />
                   <Button command="--navi-define" variant="discrete" />
