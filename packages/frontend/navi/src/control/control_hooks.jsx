@@ -1202,6 +1202,11 @@ const useInteractiveProps = (
       controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;
+    // The half of "busy" that has nothing to do with the bound action (the
+    // `loading` prop, a group's loading context) — kept apart from it so
+    // BUSY_CONSTRAINT can read the action's own state live without losing this
+    // one. See its own comment for why the rendered aria-busy is not enough.
+    uiStateController.loadingFromProps = loadingBase;
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
@@ -1472,6 +1477,13 @@ const useInteractiveProps = (
   // keeps those reads current without any extra bookkeeping.
   const firstRender = uiStateController.controlHostProps === undefined;
   uiStateController.controlHostProps = controlHostProps;
+  // The action itself, not just what the last render made of it: its running
+  // state is a signal and changes the instant the action settles, while
+  // controlHostProps above is a snapshot of the render before that. Anything
+  // asked "is this control busy?" in that same tick — the interaction gate, on
+  // an action's own completion side effect — has to read the signal to get an
+  // answer that is not one frame late (see BUSY_CONSTRAINT).
+  uiStateController.boundAction = boundAction;
   if (firstRender) {
     // Deferred from the factory so these run after controlHostProps is set.
     // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
