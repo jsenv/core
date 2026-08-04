@@ -176,10 +176,18 @@
 
       const InDocumentSection = () => {
         const [entries, push, clear] = useCallLog();
+        const [pingEntries, pushPing, clearPing] = useCallLog();
         const settle = useSettlableAction();
         return (
           <section class="demo-section">
             <Heading id="document">In the document</Heading>
+            <p>
+              The fields below start filled. Submitting without touching them
+              runs nothing — an answer nobody changed is not an answer. Change
+              one and it sends; submit the same thing again and it stops sending
+              again, because what it last sent is what the next one is measured
+              against.
+            </p>
             <SettlePanel {...settle} />
             <Form
               className="demo_form_box"
@@ -191,10 +199,41 @@
                 push("action end", value);
               }}
             >
-              <NameEmailFields />
+              <Field vertical>
+                <Label requiredIndicator>Name</Label>
+                <Input name="name" required defaultValue="Ada" />
+              </Field>
+              <Field vertical>
+                <Label>Email</Label>
+                <Input
+                  name="email"
+                  type="email"
+                  defaultValue="ada@lovelace.io"
+                />
+              </Field>
               <Button type="submit">Submit</Button>
             </Form>
             <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="document-send-unchanged">
+              sendUnchanged
+            </Heading>
+            <p>
+              A form with nothing to change in the first place: every press is
+              meant to send.
+            </p>
+            <Form
+              sendUnchanged
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              action={() => {
+                pushPing("action", { at: pingEntries.length + 1 });
+              }}
+            >
+              <Button type="submit">Send notification</Button>
+            </Form>
+            <CallLog entries={pingEntries} onClear={clearPing} />
           </section>
         );
       };
@@ -520,6 +559,11 @@
           <ol className="toc">
             <li>
               <Link href="#document">In the document</Link>
+              <ul>
+                <li>
+                  <Link href="#document-send-unchanged">sendUnchanged</Link>
+                </li>
+              </ul>
             </li>
             <li>
               <Link href="#slide">In a slide</Link>

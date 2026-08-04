@@ -13,7 +13,7 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useContext, useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
 import {
@@ -32,6 +32,15 @@ import { dispatchRequestResetUIState } from "./ui_state_dom.js";
  *   what is typed in it never becomes part of that group's value. For a form
  *   that lives INSIDE something else while answering a different question —
  *   "create the thing I am about to pick" inside a picker, say.
+ * @param {boolean} [props.sendUnchanged] - Send even when nothing changed. By
+ *   default a form only acts on an answer that is actually new: submitting a
+ *   form nobody touched — one just rendered, one whose fields still hold their
+ *   defaults, one reopened and left alone — runs no action, and after the first
+ *   submission it is that value the next one is compared against. What follows
+ *   the send still happens either way (the slide moves on, the popup closes):
+ *   the user is done regardless of whether there was anything to send. Set this
+ *   for a form where sending the same thing twice is the point — a single
+ *   button that fires off a notification, an action whose duplicates are fine.
  * @param {string} [props.command] - What follows a submission that went
  *   through: the form has answered its question, and this says what the screen
  *   does about it. Nothing runs when the submission is refused — the form then
@@ -80,6 +89,7 @@ export const Form = (props) => {
 const useFormGroup = (props) => {
   const propsForGroup = { ...props };
   delete propsForGroup.standalone;
+  delete propsForGroup.sendUnchanged;
   // Not the generic control `command`, which a control triggers on its own ui
   // actions — here it is what follows a SUCCESSFUL submission. So it is kept
   // out of the control machinery and left in the DOM for the send to read
@@ -96,6 +106,11 @@ const useFormGroup = (props) => {
       cascadeValidationToChildren: true,
     },
   );
+  useActionBaseline(
+    childrenWrapperProps.uiGroupStateController,
+    props.sendUnchanged,
+  );
+
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
@@ -170,6 +185,41 @@ const FormNested = (props) => {
       {inside}
     </Box>
   );
+};
+
+/**
+ * What "nothing changed" is measured against (see `isSendingNothingNew` in
+ * control_action.js): the value the form last sent, or the one it first
+ * rendered with. Held on the controller so the action gate reads the same
+ * baseline wherever the send came from — a submit event, a `--navi-send`
+ * command, `requestSubmit()`.
+ *
+ * Taken in a layout effect rather than during render: the fields register
+ * themselves in their own effects, which run first, so this is the earliest
+ * moment the form knows what it holds.
+ */
+const useActionBaseline = (uiStateController, sendUnchanged) => {
+  const baselineRef = useRef(undefined);
+  // No baseline at all is how a form says "send it anyway": with nothing to
+  // compare against, every send is new.
+  uiStateController.actionBaselineRef = sendUnchanged ? undefined : baselineRef;
+
+  useLayoutEffect(() => {
+    baselineRef.current = uiStateController.uiState;
+    const element = uiStateController.ref.current;
+    if (!element) {
+      return null;
+    }
+    // Moved on success only: an action that failed has not been sent, and the
+    // user must be able to try the same value again.
+    const onActionEnd = () => {
+      baselineRef.current = uiStateController.uiState;
+    };
+    element.addEventListener("navi_action_end", onActionEnd);
+    return () => {
+      element.removeEventListener("navi_action_end", onActionEnd);
+    };
+  }, [uiStateController]);
 };
 
 const FormPseudoClasses = [
