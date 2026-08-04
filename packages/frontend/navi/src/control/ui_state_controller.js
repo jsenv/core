@@ -1076,6 +1076,13 @@ export const useUIGroupStateController = (
         },
         onUIAction: (e, { skipCommand } = {}) => {
           const currentUIState = controller.uiState;
+          // The same write applyState/onChange make (see writeBoundSignal), for
+          // the case where the state did not move but the user acted all the
+          // same — a picker whose suggestion was confirmed untouched, say. A
+          // leaf control writes its signal from its own onUIAction for exactly
+          // this reason; setting a signal to what it already holds is a no-op,
+          // so the paths that write twice cost nothing.
+          writeBoundSignal(currentUIState);
           s.uiAction?.(currentUIState, e);
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {

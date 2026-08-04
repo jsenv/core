@@ -240,7 +240,7 @@
                         <Text bold size="l">
                           Durée de la partie
                         </Text>
-                        <WheelGroup required frameBorder>
+                        <WheelGroup frameBorder>
                           <Wheel
                             name="hours"
                             type="integer"
@@ -451,7 +451,6 @@
                           Durée de la partie
                         </Text>
                         <WheelGroup
-                          required
                           frameBorder
                           signal={wheelTotalSignal}
                           aggregateChildStates={(children) => {
@@ -870,10 +869,9 @@
 
       const TableOfContents = () => (
         <div class="demo-section">
-          {/* A heading of its own, ignored by the table it introduces: it is
-              also what marks this block as a section, so the entries below are
-              read from the OTHER sections. */}
-          <h2 data-toc-ignore>Sommaire</h2>
+          {/* Its own heading needs no opting out: DocumentToc lists what comes
+              after it, and this sits above. */}
+          <h2>Sommaire</h2>
           <DocumentToc />
         </div>
       );

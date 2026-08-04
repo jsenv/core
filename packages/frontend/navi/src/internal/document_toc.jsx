@@ -49,10 +49,21 @@ const css = /* css */ `
  *   rather than nested forever — a table of contents that lists everything is
  *   the document again.
  *
+ * @param {"after"|"before"|"all"} [props.lists="after"] - Which side of itself
+ *   to read. "after" by default: a table of contents introduces what follows
+ *   it, so everything above — the page title, its own heading, whatever
+ *   preamble sits there — is not part of what it lists. "before" for one placed
+ *   at the foot of the page, "all" to read the whole document either way.
+ *
  * A heading (or anything containing one) carrying `data-toc-ignore` is left
  * out, for the ones that are headings without being sections.
  */
-export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
+export const DocumentToc = ({
+  rootSelector = "body",
+  from = 2,
+  to = 3,
+  lists = "after",
+}) => {
   import.meta.css = css;
   const ref = useRef();
   const [entries, setEntries] = useState([]);
@@ -64,18 +75,7 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
     }
     const read = () => {
       setEntries((previous) => {
-        // Its own block is skipped: a table of contents naming the block it
-        // sits in tells the reader where they already are.
-        const own = findOwnBlock(ref.current, root);
-        let next = readHeadings(root, from, to, own);
-        // Skipping its own block emptied the table: what was taken for a block
-        // holds every heading there is, so it is not a block, it is the page —
-        // a table of contents dropped straight into a wrapper that has no
-        // heading of its own. Better to list the document twice over than to
-        // list nothing.
-        if (next.length === 0 && own) {
-          next = readHeadings(root, from, to, null);
-        }
+        const next = readHeadings(root, from, to, ref.current, lists);
         // The observer fires on every render of every section; replacing the
         // state each time would re-render this list (and re-trigger the
         // observer) for nothing.
@@ -88,7 +88,7 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
     return () => {
       observer.disconnect();
     };
-  }, [rootSelector, from, to]);
+  }, [rootSelector, from, to, lists]);
 
   return (
     <ol ref={ref} className="navi_document_toc">
@@ -97,23 +97,19 @@ export const DocumentToc = ({ rootSelector = "body", from = 2, to = 3 }) => {
   );
 };
 
-// The block the table of contents lives in — the nearest ancestor that holds a
-// heading, which is the one that heading names. Found by walking rather than by
-// matching a class, because what wraps a section differs from one document to
-// the next (a <section>, a .demo-section, a plain div).
-//
-// The walk stops before the root on purpose: a table of contents sitting
-// directly in the document belongs to no block in particular, and taking the
-// root would skip every heading there is.
-const findOwnBlock = (tocElement, root) => {
-  let candidate = tocElement?.parentElement;
-  while (candidate && candidate !== root) {
-    if (candidate.querySelector(HEADING_SELECTOR)) {
-      return candidate;
-    }
-    candidate = candidate.parentElement;
+// Which side of the table of contents a heading is on, in document order — the
+// same order the reader goes through the page in. A heading inside the table's
+// own block counts as before it (the block's own title, the page title above
+// it), which is what keeps a table of contents from naming where the reader
+// already is, with nothing to declare for it.
+const isBeforeToc = (heading, tocElement) => {
+  if (!tocElement) {
+    return false;
   }
-  return null;
+  return Boolean(
+    heading.compareDocumentPosition(tocElement) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
 };
 
 // Where a link to this heading would point, if anywhere.
@@ -153,15 +149,18 @@ const readHeadingText = (heading) => {
   return clone.textContent.trim();
 };
 
-const readHeadings = (root, from, to, ignoredContainer) => {
+const readHeadings = (root, from, to, tocElement, lists) => {
   const selector = [];
   for (let level = from; level <= to; level++) {
     selector.push(`h${level}`);
   }
   const entries = [];
   for (const heading of root.querySelectorAll(selector.join(","))) {
-    if (ignoredContainer && ignoredContainer.contains(heading)) {
-      continue;
+    if (lists !== "all") {
+      const before = isBeforeToc(heading, tocElement);
+      if (lists === "after" ? before : !before) {
+        continue;
+      }
     }
     // Opted out by the document: a heading can be the right markup for
     // something that is not a section of the page — a panel's own title, a

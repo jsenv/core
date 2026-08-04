@@ -16,6 +16,7 @@ import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
+import { isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -285,7 +286,19 @@ const PickerCustom = (props) => {
       enterExpanded();
 
       const valueAtOpen = getPickerInputUIState(ref.current);
-      debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
+      // Whether that value is an ANSWER or only a suggestion. A picker showing
+      // a defaultValue holds nothing, so closing on it untouched IS the answer
+      // ("yes, 2h15") — the same rule Form applies to an untouched field (see
+      // isUIStateHeld). Read at open, before anything inside can change it.
+      const heldAtOpen = isUIStateHeld(
+        getPickerInput(ref.current)?.__uiStateController__,
+      );
+      debugPopup(
+        openEvent,
+        `picker opened, store value at open`,
+        valueAtOpen,
+        heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`,
+      );
 
       return {
         onRequestClose: (requestCloseEvent) => {
@@ -296,8 +309,9 @@ const PickerCustom = (props) => {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
           const valueAtClose = getUIStateFromElement(inputEl);
-          if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-            // Value unchanged — no action to run, but still allow the close.
+          if (heldAtOpen && compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            // Value unchanged and already held — closing on it says nothing
+            // new. No action to run, but still allow the close.
             return;
           }
 
@@ -326,6 +340,18 @@ const PickerCustom = (props) => {
             dispatchRequestSetUIState(inputEl, valueAtOpen, {
               event: closeEvent,
             });
+          } else if (!heldAtOpen) {
+            // Confirmed a suggestion: nothing changed, so nothing has told the
+            // control's own bound signal / uiAction that this is now the
+            // answer. Say it here — this is the moment the suggestion becomes
+            // one. Harmless when the value did change on the way: the state is
+            // already what it is, and this only re-runs the same reaction.
+            const controller = getPickerInput(
+              ref.current,
+            )?.__uiStateController__;
+            const answering = controller?.facadeChild || controller;
+            debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
+            answering?.onUIAction(closeEvent);
           }
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
