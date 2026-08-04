@@ -928,6 +928,15 @@ export const useUIGroupStateController = (
           `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
         );
         publishUIState(newUIState);
+        // Write the new state back into a bound signal — the same two-way
+        // `signal` binding a leaf control gets (see useUIStateController's own
+        // boundSignal), for a group whose value is its children's put together.
+        // Not on internalBehavior: those are programmatic syncs (a value prop
+        // pushed down, an initial push), not the user answering.
+        const boundSignal = s.props?.signal;
+        if (boundSignal && !internalBehavior) {
+          boundSignal.value = newUIState;
+        }
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,
         });
