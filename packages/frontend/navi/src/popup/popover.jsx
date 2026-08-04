@@ -1,4 +1,9 @@
 /**
+ * A popover is a surface, not a control: it holds no value, has no action and
+ * aggregates nothing — same as Dialog, see dialog.jsx's own top comment for the
+ * whole reasoning. Fields and a submit go in a `<Form>` inside it; the form
+ * owns the answer, the popover owns where it is shown.
+ *
  * A popup positioned via `anchor`/`positionArea`. Two real rendering
  * strategies live in this file, each its own component: `PopoverViaAttribute`
  * (native Popover API, top layer) and `PopoverCustom` (`position: absolute`
@@ -56,21 +61,14 @@ import {
 } from "@jsenv/dom";
 import { useEffect, useId, useRef } from "preact/hooks";
 
-import {
-  ControlgroupChildrenWrapper,
-  useControlgroupProps,
-} from "../control_hooks.jsx";
-import { dispatchRequestAction } from "../rules/control_action.js";
-import {
-  dispatchRequestSetUIState,
-  getUIStateFromElement,
-} from "../ui_state_dom.js";
-import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
+import { onNaviCommand } from "../control/commands.js";
+import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
+import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { Box } from "../../box/box.jsx";
-import { resolveSpacingSize } from "../../box/box_style_util.js";
-import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
+import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
@@ -461,38 +459,24 @@ const UncontrolledPopover = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Same as Dialog's own UncontrolledDialog, for the same reasons — see it for
-  // the full story: what the popover held when it opened is what a close is
-  // compared against, and what a cancel puts back.
+  // the full story: a popover is a surface, so the only thing it has to say
+  // about closing is that what it contains must not be interrupted mid-action.
   const openController = useOpenController((openEvent) => {
     const popoverEl = props.ref.current;
-    const uiStateAtOpen = getUIStateFromElement(popoverEl);
-    debugPopup(openEvent, `popover opened, store value at open`, uiStateAtOpen);
+    debugPopup(openEvent, `popover opened`);
 
     return {
       onRequestClose: (requestCloseEvent) => {
-        if (requestCloseEvent.detail.isCancel) {
-          return;
+        const busyElement = findBusyElementInside(popoverEl);
+        if (busyElement) {
+          dispatchRequestInteraction(busyElement, {
+            event: requestCloseEvent,
+            name: "popover request close",
+          });
+          requestCloseEvent.preventDefault();
         }
-        const unchanged = compareTwoJsValues(
-          getUIStateFromElement(popoverEl),
-          uiStateAtOpen,
-        );
-        dispatchRequestAction(popoverEl, {
-          event: requestCloseEvent,
-          name: "popover request close",
-          action: unchanged ? null : "auto",
-          reportOnInvalid: true,
-          onInvalid: () => {
-            requestCloseEvent.preventDefault();
-          },
-        });
       },
       onClose: (closeEvent) => {
-        if (closeEvent.detail.isCancel) {
-          dispatchRequestSetUIState(popoverEl, uiStateAtOpen, {
-            event: closeEvent,
-          });
-        }
         props.onClose?.(closeEvent);
       },
     };
@@ -578,64 +562,27 @@ const PopoverCustom = (props) => {
  * contentProps]` — two plain prop objects ready to spread onto a
  * backdrop/content element each.
  */
-// Only the keys actually present, never the whole props object: everything a
-// popover takes that a control group knows nothing about (openController,
-// positionArea, animation…) would otherwise come back out as the group's
-// leftover props and land on the element as stray attributes. Copied key by key
-// rather than spread with undefined defaults because the group reads presence,
-// not value — an always-there `value: undefined` reads as "controlled with no
-// handler" and makes the whole popup read-only.
-const CONTROL_GROUP_PROP_NAMES = [
-  "name",
-  "action",
-  "uiAction",
-  "value",
-  "defaultValue",
-  "required",
-  "readOnly",
-  "disabled",
-];
-const pickControlGroupProps = (props) => {
-  const controlGroupProps = { ref: props.ref, id: props.id };
-  for (const name of CONTROL_GROUP_PROP_NAMES) {
-    if (Object.hasOwn(props, name)) {
-      controlGroupProps[name] = props[name];
+// The first control inside `popupEl` that is mid-action, if any. Walks the
+// controls rather than reading an attribute off the popup: a popup carries no
+// state of its own (see this file's top comment), and `aria-busy` on the
+// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+// Same as Dialog's own; kept in both rather than shared, since it is three
+// lines and each file reads on its own.
+const findBusyElementInside = (popupEl) => {
+  for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
+    const controller = element.__uiStateController__;
+    if (controller && BUSY_CONSTRAINT.check(controller)) {
+      return element;
     }
   }
-  return controlGroupProps;
+  return null;
 };
 
 const usePopoverProps = (props) => {
   const backdropProps = {};
   const contentProps = {};
-  // Resolved before the group hook below rather than with the rest of the
-  // props: the group needs the popover's own element to hang its state and its
-  // events on, and that is this ref.
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  // Same as Dialog (see its own useDialogProps): a popover holds controls, so
-  // it is one — it aggregates whatever named controls it contains into a
-  // single object, and ControlgroupChildrenWrapper below makes it a form
-  // boundary, so what is inside belongs to the popover rather than to the form
-  // around it.
-  // A curated object, not `props`: everything a popover takes that a control
-  // group knows nothing about (openController, positionArea, animation…) would
-  // otherwise come back out as the group's leftover props and land on the
-  // element as stray attributes — which is exactly how navi-autofocus got
-  // overwritten and `opencontroller="[object Object]"` appeared on it.
-  const [groupRootProps, groupProps, groupChildrenProps] = useControlgroupProps(
-    pickControlGroupProps(props),
-    {
-      controlType: "popover",
-      // "object" by default — a popup holds a form and hands back named values.
-      // "single" for a popup that IS one value (a picker's list): see
-      // GROUP_DEFAULTS in ui_state_controller.js.
-      stateType: props.stateType || "object",
-      allowCapture: true,
-      wantRequesterButtonState: true,
-      cascadeValidationToChildren: true,
-    },
-  );
   const {
     openController,
     // "top" (default) → via-attribute, in the browser's own top layer;
@@ -743,9 +690,6 @@ const usePopoverProps = (props) => {
 
   openController.openEffect = (e) => {
     const popoverEl = ref.current;
-    // See Dialog's own openEffect: what the popover held when it opened is
-    // both what a close is compared against and what a cancel puts back.
-    const uiStateAtOpen = getUIStateFromElement(popoverEl);
     // backdropEl is null when pointerInteractionOutsideEffect is "none" —
     // the backdrop isn't rendered at all in that case.
     const backdropEl = backdropRef.current;
@@ -1238,20 +1182,6 @@ const usePopoverProps = (props) => {
     // reason: only ever built here.
     return (closeEvent) => {
       debugPopup(closeEvent, `closePopover()`);
-      // Closing commits, cancelling rolls back — see Dialog's own identical
-      // close, and open_controller.js for who passes isCancel.
-      if (closeEvent.detail?.isCancel) {
-        dispatchRequestSetUIState(popoverEl, uiStateAtOpen, {
-          event: closeEvent,
-        });
-      } else if (
-        !compareTwoJsValues(getUIStateFromElement(popoverEl), uiStateAtOpen)
-      ) {
-        dispatchRequestAction(popoverEl, {
-          event: closeEvent,
-          name: "close",
-        });
-      }
       popoverEl.setAttribute("aria-expanded", "false");
       // Set regardless of isTopLayer — see the open side's own identical
       // comment (openEffect above) for why hidePopover() alone isn't
@@ -1412,22 +1342,21 @@ const usePopoverProps = (props) => {
     "navi-hidden": openController.opened ? undefined : "",
     "styleCSSVars": POPUP_STYLE_CSS_VARS,
     ...rest,
-    // Right after ...rest, not last: what makes the popover a control (its name,
-    // its state, its action, and the onnavi_command/onnavi_request_interaction
-    // pair this hook used to declare by hand) — but everything the popover sets
-    // for itself below still wins over it.
-    ...groupRootProps,
-    ...groupProps,
-    // The control-group props are consumed by the hook above, never forwarded:
-    // on a <popover> element they would only render as stray attributes
-    // (value="[object Object]" and friends).
-    "value": undefined,
-    "defaultValue": undefined,
-    "stateType": undefined,
-    "action": undefined,
-    "uiAction": undefined,
     ...autoFocusProps,
     ref,
+    // Not a control, but still something the rest of navi has to be able to
+    // recognise: outside-click detection asks what a click landed in
+    // ("[navi-control='dialog'], [navi-control='popover']"), and
+    // --navi-open/--navi-close resolve their target this way.
+    "navi-control": "popover",
+    // The protocol every command target answers. It came with the control
+    // group before; a popover is layout and still has to answer --navi-open,
+    // --navi-close and --navi-toggle, which are dispatched here and do not
+    // bubble.
+    "onnavi_command": (e) => {
+      onNaviCommand(e);
+      rest.onnavi_command?.(e);
+    },
     // A popup scrolls, and asking Box for that overflow is also what lets what
     // it contains claim header/footer/body (see box.jsx) — a popup is always a
     // scrolling area, so it says so once, here.
@@ -1438,11 +1367,7 @@ const usePopoverProps = (props) => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
     },
-    "children": (
-      <ControlgroupChildrenWrapper {...groupChildrenProps} name={undefined}>
-        {children}
-      </ControlgroupChildrenWrapper>
-    ),
+    children,
     // onnavi_request_open/onnavi_request_close: for the uncontrolled case,
     // already arrive here as plain props via ...rest (wired by
     // UncontrolledPopover above, forwarded through ControlledPopover's own

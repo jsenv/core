@@ -67,15 +67,15 @@ import {
 } from "@jsenv/dom";
 import { useEffect, useRef } from "preact/hooks";
 
-import { onNaviCommand } from "../commands.js";
-import { dispatchRequestInteraction } from "../rules/control_interaction.js";
-import { BUSY_CONSTRAINT } from "../rules/interaction/busy_constraint.js";
+import { onNaviCommand } from "../control/commands.js";
+import { dispatchRequestInteraction } from "../control/rules/control_interaction.js";
+import { BUSY_CONSTRAINT } from "../control/rules/interaction/busy_constraint.js";
 import { useAutoFocus } from "@jsenv/navi/src/utils/focus/use_auto_focus.js";
-import { Box } from "../../box/box.jsx";
-import { resolveSpacingSize } from "../../box/box_style_util.js";
-import { coarsePointerSignal } from "../../layout/responsive.js";
-import { createOnKeyDownForShortcuts } from "../../keyboard/keyboard_shortcuts.js";
-import { useDebugFocus, useDebugPopup } from "../../navi_debug.jsx";
+import { Box } from "../box/box.jsx";
+import { resolveSpacingSize } from "../box/box_style_util.js";
+import { coarsePointerSignal } from "../layout/responsive.js";
+import { createOnKeyDownForShortcuts } from "../keyboard/keyboard_shortcuts.js";
+import { useDebugFocus, useDebugPopup } from "../navi_debug.jsx";
 import {
   useOpenController,
   useOpenPropsEffectOnOpenController,

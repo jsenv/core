@@ -1,7 +1,7 @@
 import { signal } from "@preact/signals";
 import { useLayoutEffect } from "preact/hooks";
 
-import { Box } from "../../box/box.jsx";
+import { Box } from "../box/box.jsx";
 
 /**
  * Creates a linked `[Slot, SlotFill]` pair so content rendered anywhere in

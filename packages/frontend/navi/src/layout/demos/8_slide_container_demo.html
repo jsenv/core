@@ -261,27 +261,33 @@
         ));
 
       // One slide: a header that stays and a body that scrolls, plus the button
-      // that leaves it. SlideContainer.Next/.Previous say where to go — which slide
+      // that leaves it. SlideContainer.Right/.Previous say where to go — which slide
       // that is, and which way the chevron points, is the list's business.
-      const DemoSlide = ({ id, title, direction, children }) => (
-        <SlideContainer.Item id={id} overflow="auto">
-          <Box header padding="m" flex="x" alignY="center" className="part">
-            {/* Title first, then the ways out of it, side by side: a slide in
+      const DemoSlide = ({ id, title, direction, vertical, children }) => {
+        // Four ways out, so a slide says which one it offers rather than
+        // "next": the container's own axis is what picks the pair here.
+        const Back = vertical ? SlideContainer.Up : SlideContainer.Left;
+        const On = vertical ? SlideContainer.Down : SlideContainer.Right;
+        return (
+          <SlideContainer.Item id={id} overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              {/* Title first, then the ways out of it, side by side: a slide in
                 the middle needs both, and neither button needs to know it is
                 in the middle — each says one word */}
-            <Text expandX>{title}</Text>
-            {direction !== "next" && (
-              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
-            )}
-            {direction !== "previous" && (
-              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
-            )}
-          </Box>
-          <Box body padding="m">
-            {children}
-          </Box>
-        </SlideContainer.Item>
-      );
+              <Text expandX>{title}</Text>
+              {direction !== "next" && (
+                <Back size="xl" padding="xs" marginY="-xs" />
+              )}
+              {direction !== "previous" && (
+                <On size="xl" padding="xs" marginY="-xs" />
+              )}
+            </Box>
+            <Box body padding="m">
+              {children}
+            </Box>
+          </SlideContainer.Item>
+        );
+      };
 
       // Every section shows the same thing three times: in the document, in a
       // dialog, in a popover. Taking a component rather than the slides
@@ -346,10 +352,10 @@
 
       const TwoSlidesVertical = () => (
         <SlideContainer duration={useSlideDuration()} layout="column">
-          <DemoSlide id="first" title="first" direction="next">
+          <DemoSlide id="first" title="first" direction="next" vertical>
             <Filler count={3} />
           </DemoSlide>
-          <DemoSlide id="second" title="second" direction="previous">
+          <DemoSlide id="second" title="second" direction="previous" vertical>
             <Filler count={8} />
           </DemoSlide>
         </SlideContainer>
@@ -357,10 +363,10 @@
 
       const WideSlidesVertical = () => (
         <SlideContainer duration={useSlideDuration()} layout="column">
-          <DemoSlide id="first" title="first" direction="next">
+          <DemoSlide id="first" title="first" direction="next" vertical>
             <Filler count={3} className="wide" />
           </DemoSlide>
-          <DemoSlide id="second" title="second" direction="previous">
+          <DemoSlide id="second" title="second" direction="previous" vertical>
             <Filler count={5} className="wide" />
           </DemoSlide>
         </SlideContainer>
@@ -383,7 +389,7 @@
           <Slide id="who" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>who</Text>
-              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               <FocusPad>press → </FocusPad>
@@ -393,8 +399,8 @@
           <Slide id="where" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>where</Text>
-              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
-              <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="m">
               <FocusPad>press → or ←</FocusPad>
@@ -404,7 +410,7 @@
           <Slide id="done" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>done</Text>
-              <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Text>(nothing focusable here)</Text>
@@ -436,7 +442,7 @@
             <Slide id="terms" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -452,7 +458,7 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>
@@ -474,7 +480,7 @@
             <Slide id="terms" preventNavNext={!agreed} overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>terms</Text>
-                <SlideContainer.Next size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <label class="demo-option">
@@ -490,7 +496,7 @@
             <Slide id="signed" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>signed</Text>
-                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>…and you agreed.</Text>
@@ -529,7 +535,7 @@
                 {/* No way out here, but its room is kept: inert + hidden, so
                     the header is the same height as the next slide's and the
                     top of the box does not jump as one travels */}
-                <SlideContainer.Next
+                <SlideContainer.Right
                   size="xl"
                   padding="xs"
                   marginY="-xs"
@@ -546,7 +552,7 @@
             <Slide id="done" overflow="auto">
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>done</Text>
-                <SlideContainer.Previous size="xl" padding="xs" marginY="-xs" />
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
               </Box>
               <Box body padding="m">
                 <Text>Signed — and the list moved on by itself.</Text>
@@ -573,18 +579,8 @@
               className="part"
             >
               <Text expandX>pick</Text>
-              <SlideContainer.Move
-                direction="right"
-                size="xl"
-                padding="xs"
-                marginY="-xs"
-              />
-              <SlideContainer.Move
-                direction="down"
-                size="xl"
-                padding="xs"
-                marginY="-xs"
-              />
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Filler count={6} />
@@ -599,12 +595,7 @@
               className="part part-create"
             >
               <Text expandX>create (below)</Text>
-              <SlideContainer.Move
-                direction="up"
-                size="xl"
-                padding="xs"
-                marginY="-xs"
-              />
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Filler count={3} />
@@ -619,12 +610,7 @@
               className="part part-edit"
             >
               <Text expandX>edit (on the right)</Text>
-              <SlideContainer.Move
-                direction="left"
-                size="xl"
-                padding="xs"
-                marginY="-xs"
-              />
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Filler count={4} />
@@ -685,10 +671,20 @@
                 expandY
                 layout={vertical ? "column" : "row"}
               >
-                <DemoSlide id="first" title="first" direction="next">
+                <DemoSlide
+                  id="first"
+                  title="first"
+                  direction="next"
+                  vertical={vertical}
+                >
                   <Filler count={3} />
                 </DemoSlide>
-                <DemoSlide id="second" title="second" direction="previous">
+                <DemoSlide
+                  id="second"
+                  title="second"
+                  direction="previous"
+                  vertical={vertical}
+                >
                   <Filler count={8} />
                 </DemoSlide>
               </SlideContainer>
@@ -769,7 +765,9 @@
                 Popover demo — Slides
               </Link>{" "}
               ·{" "}
-              <Link href="./slide_container_perf.html">Slide container — perf</Link>
+              <Link href="./slide_container_perf.html">
+                Slide container — perf
+              </Link>
             </p>
           </div>
 
@@ -878,7 +876,8 @@
               <div class="demo-way">
                 <h3>The action moves on</h3>
                 <p class="demo-note">
-                  No chevron at all: signing dispatches <code>navi_slide_move</code>.
+                  No chevron at all: signing dispatches{" "}
+                  <code>navi_slide_move</code>.
                 </p>
                 <div class="in-document">
                   <ActionThenNextSlides />

@@ -11,8 +11,8 @@
  */
 import { stringifyStyle } from "@jsenv/dom";
 
-import { Box } from "../../box/box.jsx";
-import { withPropsClassName } from "../../utils/with_props_class_name.js";
+import { Box } from "../box/box.jsx";
+import { withPropsClassName } from "../utils/with_props_class_name.js";
 import { Popup } from "./popup.jsx";
 
 const css = /* css */ `

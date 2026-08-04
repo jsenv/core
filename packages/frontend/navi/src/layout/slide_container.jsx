@@ -659,34 +659,12 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
  * column up/down — so the button points where the slide actually goes without
  * the caller having to keep the two in sync.
  */
-const SlideStep = ({ step, ...rest }) => {
-  const context = useContext(SlideContainerContext);
-  const locks = useContext(SlideContext);
-  const vertical = context?.vertical;
-  const isNext = step === "next";
-  const locked = isNext ? locks?.preventNavNext : locks?.preventNavPrevious;
-  const direction = vertical
-    ? isNext
-      ? "down"
-      : "up"
-    : isNext
-      ? "right"
-      : "left";
-  return (
-    <SlideNavButton
-      command={DIRECTIONS[direction].command}
-      locked={locked}
-      ChevronSvg={DIRECTIONS[direction].Svg}
-      aria-label={isNext ? "Next slide" : "Previous slide"}
-      {...rest}
-    />
-  );
-};
-
 /**
- * A way out pointing where it goes, for a map where "next" says nothing but
- * "down" does. It says a direction, not a slide: what is over there is the
- * map's business, and moving a screen changes nothing here.
+ * A way out pointing where it goes. It says a direction, not a slide: what is
+ * over there is the map's business, and moving a screen changes nothing here.
+ * Four of them, matching the four commands (`--navi-left` and friends) — a map
+ * has four ways out, and a component per direction is what makes that obvious
+ * at the call site.
  *
  * @param {object} props
  * @param {"right"|"left"|"down"|"up"} props.direction
@@ -707,10 +685,13 @@ const SlideMove = ({ direction, ...rest }) => {
   );
 };
 
-const SlideNext = (props) => <SlideStep {...props} step="next" />;
-const SlidePrevious = (props) => <SlideStep {...props} step="previous" />;
+const SlideLeft = (props) => <SlideMove {...props} direction="left" />;
+const SlideRight = (props) => <SlideMove {...props} direction="right" />;
+const SlideUp = (props) => <SlideMove {...props} direction="up" />;
+const SlideDown = (props) => <SlideMove {...props} direction="down" />;
 
 SlideContainer.Item = Slide;
-SlideContainer.Next = SlideNext;
-SlideContainer.Previous = SlidePrevious;
-SlideContainer.Move = SlideMove;
+SlideContainer.Left = SlideLeft;
+SlideContainer.Right = SlideRight;
+SlideContainer.Up = SlideUp;
+SlideContainer.Down = SlideDown;

@@ -354,6 +354,7 @@
         NaviDebug,
         Box,
         Field,
+        Form,
         Icon,
         Input,
         Label,
@@ -605,21 +606,23 @@
                 committed: <code>{JSON.stringify(committed)}</code>
               </span>
             </div>
-            <Popover
-              id="pop_required"
-              value={committed}
-              pointerInteractionOutsideEffect="cancel"
-              action={(value) => {
-                setCommitted(value);
-              }}
-            >
-              <Box body padding="m" flex="y" spacing="m">
+            <Popover id="pop_required" pointerInteractionOutsideEffect="cancel">
+              <Form
+                body
+                padding="m"
+                flex="y"
+                spacing="m"
+                value={committed}
+                action={(value) => {
+                  setCommitted(value);
+                }}
+              >
                 <Field vertical>
                   <Label requiredIndicator>Name</Label>
                   <Input name="name" required />
                 </Field>
-                <Button command="--navi-close">Submit</Button>
-              </Box>
+                <Button type="submit">Submit</Button>
+              </Form>
             </Popover>
           </section>
         );
@@ -648,7 +651,7 @@
                 <SlideContainer.Item id="first" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>first</Text>
-                    <SlideContainer.Next size="xl" padding="xs" />
+                    <SlideContainer.Right size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={3} />
@@ -657,7 +660,7 @@
                 <SlideContainer.Item id="second" overflow="auto">
                   <Box header padding="m" className="demo-overflow-part">
                     <Text expandX>second</Text>
-                    <SlideContainer.Previous size="xl" padding="xs" />
+                    <SlideContainer.Left size="xl" padding="xs" />
                   </Box>
                   <Box body padding="m">
                     <OverflowFiller count={6} />
@@ -705,24 +708,26 @@
                 committed: <code>{JSON.stringify(committed)}</code>
               </span>
             </div>
-            <Popover
-              id="pop_actions"
-              value={committed}
-              uiAction={(value) => {
-                push("uiAction", value);
-              }}
-              action={(value) => {
-                push("action", value);
-                setCommitted(value);
-              }}
-            >
-              <Box flex="y" spacing="m" padding="m">
+            <Popover id="pop_actions">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                value={committed}
+                uiAction={(value) => {
+                  push("uiAction", value);
+                }}
+                action={(value) => {
+                  push("action", value);
+                  setCommitted(value);
+                }}
+              >
                 <Field vertical>
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-                <Button command="--navi-close">Close (commits)</Button>
-              </Box>
+                <Button type="submit">Submit</Button>
+              </Form>
             </Popover>
             <CallLog entries={entries} onClear={clear} />
 
@@ -743,18 +748,23 @@
             </div>
             <Popover
               id="pop_actions_close"
-              value={confirmed}
               pointerInteractionOutsideEffect="close"
-              action={(value) => {
-                setConfirmed(value);
-              }}
             >
-              <Box flex="y" spacing="m" padding="m">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                value={confirmed}
+                action={(value) => {
+                  setConfirmed(value);
+                }}
+              >
                 <Field vertical>
                   <Label>Note</Label>
                   <Input name="note" placeholder="type something…" />
                 </Field>
-              </Box>
+                <Button type="submit">Submit</Button>
+              </Form>
             </Popover>
           </section>
         );
