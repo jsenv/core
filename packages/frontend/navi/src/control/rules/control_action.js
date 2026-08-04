@@ -87,9 +87,17 @@ export const watchActionCompletion = (element, dispatchAction) => {
       if (error || aborted) {
         return;
       }
+      // A microtask later, not right here: this runs inside the `batch()` that
+      // settles the action (see actions.js), and a bound action mirrors its
+      // running state through a signal effect the batch defers — so the action
+      // still reads as running until the batch ends. What waits for a commit
+      // asks exactly that question next (the interaction gate, on the way to
+      // closing a popup), and must not be told the action is still going.
       // Null for an action that settled before the caller ever asked to wait
       // (a synchronous one): it goes out through the caller's own normal path.
-      onSuccess?.();
+      queueMicrotask(() => {
+        onSuccess?.();
+      });
     });
   };
   element.addEventListener("navi_action_start", onActionStart);
