@@ -29,6 +29,7 @@
  */
 
 import { findFocusable } from "@jsenv/dom";
+import { findFocusTarget } from "../utils/focus/focus_transfer.js";
 import { createContext } from "preact";
 import {
   useContext,
@@ -105,13 +106,6 @@ const css = /* css */ `
            slides. */
         translate: var(--slide-offset, 0);
       }
-      /* No ring around a whole screen: a slide takes the focus only so the
-         arrows have somewhere to be heard (tabindex -1, see Slide), never
-         because the user aimed at it — it is not a control and not a Tab stop,
-         and what it holds draws its own ring when it takes over. */
-      > [data-slide]:focus {
-        outline: none;
-      }
       /* Nothing here for a slide not on screen: [inert] (set from JS) already
          takes it out of reach of the pointer, of Tab and of a screen reader —
          one attribute instead of pointer-events plus aria-hidden, and the only
@@ -178,10 +172,9 @@ const focusMemory = new WeakMap();
 /**
  * Where the keyboard goes when a slide arrives. What this slide last had wins
  * over everything: coming back is coming back to where one was, chevron
- * included. Failing a memory, a slide is opened to DO something in it, and its
- * prev/next buttons are how one leaves — landing there means the first thing
- * offered is going away again, so they come last, only if nothing else is
- * offered at all.
+ * included. Failing a memory, the ladder every container uses (findFocusTarget)
+ * answers — the slide itself being marked navi-autofocus="fallback", so it
+ * takes the keyboard only when it has nothing else to offer.
  */
 const findFocusTargetInSlide = (slideElement) => {
   const remembered = focusMemory.get(slideElement);
@@ -195,29 +188,15 @@ const findFocusTargetInSlide = (slideElement) => {
       return stillFocusable;
     }
   }
-  const asked = slideElement.querySelector(
-    `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
-  );
-  if (asked) {
-    // The mark is not always ON the focusable itself — a control puts it on the
-    // box it renders, the field inside being what takes the keyboard.
-    const askedFocusable = findFocusable(asked);
-    if (askedFocusable) {
-      return askedFocusable;
-    }
-  }
-  const focusableButNav = findFocusable(slideElement, {
-    // The slide itself is focusable (it is where the arrows are heard), so it
-    // would answer first and the field inside would never be reached.
+  // A slide is opened to DO something in it, and its prev/next buttons are how
+  // one leaves — landing there means the first thing offered is going away
+  // again. So the ways out are skipped, and the slide itself (a fallback, see
+  // Slide) takes the keyboard when it has nothing else to offer.
+  const found = findFocusTarget(slideElement, {
     exclude: (element) =>
-      element === slideElement || Boolean(element.closest("[data-slide-nav]")),
+      element !== slideElement && Boolean(element.closest("[data-slide-nav]")),
   });
-  if (focusableButNav) {
-    return focusableButNav;
-  }
-  // Nothing to do in this slide but leave it: the way out, or the slide itself
-  // — which at least gives the keyboard somewhere to be.
-  return findFocusable(slideElement);
+  return found?.target;
 };
 
 /**
@@ -535,6 +514,11 @@ export const Slide = ({
         // -1 because it is not a stop on the way through the page: what one
         // Tabs to is what is IN the slide.
         tabIndex={-1}
+        // …and "focus me only if nothing inside me can": whoever hands the
+        // focus to a container — a popup opening, a slide arriving — reads this
+        // the same way (see findFocusTarget), and a fallback deeper than this
+        // one (a search box saying it too) still wins over it.
+        navi-autofocus="fallback"
         {...rest}
         data-slide=""
         data-slide-area={area ?? rest.id}
@@ -560,8 +544,11 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     // explainable (it can still be reached, hovered, described) — it just does
     // nothing while the slide is holding on to the user.
     readOnly={Boolean(locked)}
-    // The way OUT of a slide: marked so the focus arriving in a slide can
-    // prefer anything else (see findFocusTargetInSlide).
+    // The way OUT of a slide: marked so the focus arriving in one can prefer
+    // anything else (see findFocusTargetInSlide). Not navi-autofocus="fallback"
+    // — that attribute also makes an element claim the focus when it is the
+    // last thing left on a page (see useAutoFocus), which a chevron must never
+    // do.
     data-slide-nav=""
     icon
     variant="discrete"

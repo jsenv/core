@@ -61,6 +61,65 @@ export const markAutofocusRestoreOnClose = (containerEl) => {
   }
 };
 
+/**
+ * Where the focus goes inside a container, in the order candidates are tried:
+ * 1. [navi-autofocus] with a value of its own — "put it here";
+ * 2. the first focusable that is not a fallback — what one came to do;
+ * 3. the DEEPEST [navi-autofocus="fallback"] — "focus me if nothing inside me
+ *    can", so a fallback holding another fallback yields to it. A slide says
+ *    this about itself: it takes the keyboard only when it has nothing to
+ *    offer, and never over what it contains;
+ * 4. nothing, and the caller decides what that means.
+ *
+ * @param {HTMLElement} containerEl
+ * @param {object} [options]
+ * @param {(element: HTMLElement) => boolean} [options.exclude] - never land
+ *   here (a slide's own way out, say).
+ * @returns {{target: HTMLElement, reason: string}|undefined}
+ */
+export const findFocusTarget = (containerEl, { exclude } = {}) => {
+  const skip = (element) =>
+    isRestorableAutofocus(element) || Boolean(exclude?.(element));
+
+  const asked = containerEl.querySelector(
+    `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
+  );
+  if (asked && !exclude?.(asked)) {
+    // The mark is not always ON the focusable itself — a control puts it on the
+    // box it renders, the field inside being what takes the keyboard.
+    const askedFocusable = findFocusable(asked, { exclude });
+    if (askedFocusable) {
+      return { target: askedFocusable, reason: "navi-autofocus" };
+    }
+  }
+  const focusable = findFocusable(containerEl, { exclude: skip });
+  if (focusable) {
+    return { target: focusable, reason: "first focusable element" };
+  }
+  const fallbacks = Array.from(
+    containerEl.querySelectorAll(`[navi-autofocus="fallback"]`),
+  );
+  if (containerEl.matches?.(`[navi-autofocus="fallback"]`)) {
+    // Last of all: querySelectorAll only looks at descendants, and the
+    // container is the outermost fallback there is.
+    fallbacks.push(containerEl);
+  }
+  const deepestFallback = fallbacks.find(
+    (candidate) =>
+      !exclude?.(candidate) &&
+      !fallbacks.some(
+        (other) => other !== candidate && candidate.contains(other),
+      ),
+  );
+  if (deepestFallback) {
+    const fallbackFocusable = findFocusable(deepestFallback, { exclude });
+    if (fallbackFocusable) {
+      return { target: fallbackFocusable, reason: "navi-autofocus fallback" };
+    }
+  }
+  return undefined;
+};
+
 export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
   const focusedElement = getFocusedBeforeTransfer(prepareEvent);
   const focusVisible = isMatchingFocusVisible(focusedElement);
@@ -85,37 +144,10 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         target = lastFocused;
       }
       if (!target) {
-        const naviAutoFocus = containerEl.querySelector(
-          `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
-        );
-        if (naviAutoFocus) {
-          reason = "navi-autofocus";
-          target = naviAutoFocus;
-        }
-      }
-      if (!target) {
-        const focusable = findFocusable(containerEl, {
-          exclude: isRestorableAutofocus,
-        });
-        if (focusable) {
-          reason = "first focusable element";
-          target = focusable;
-        }
-      }
-      if (!target) {
-        // A [navi-autofocus="fallback"] INSIDE the container (e.g. a search
-        // input) wins over the container itself. The container is only the
-        // fallback-of-the-fallback: a focusable popup root gets focus solely
-        // when nothing inside it already carries the fallback. (matches() covers
-        // the container-only case since querySelector searches descendants only.)
-        const naviAutoFocusFallback =
-          containerEl.querySelector(`[navi-autofocus="fallback"]`) ||
-          (containerEl.matches(`[navi-autofocus="fallback"]`)
-            ? containerEl
-            : null);
-        if (naviAutoFocusFallback) {
-          reason = "navi-autofocus fallback";
-          target = naviAutoFocusFallback;
+        const found = findFocusTarget(containerEl);
+        if (found) {
+          reason = found.reason;
+          target = found.target;
         }
       }
       if (!target) {
