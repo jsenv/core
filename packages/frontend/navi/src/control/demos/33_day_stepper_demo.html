@@ -157,15 +157,15 @@
       // ── In a form ─────────────────────────────────────────────────────────
 
       const InFormDemo = () => {
-        const [entries, log, clear] = useCallLog();
+        const [entries, push, clear] = useCallLog();
 
         return (
           <div class="demo-section">
             <Heading id="in-form">Dans un formulaire</Heading>
             <p class="desc">Le jour part avec le formulaire, sous son name.</p>
             <Form
-              action={(formData) => {
-                log(Object.fromEntries(formData));
+              action={(values) => {
+                push("Form action", values);
               }}
             >
               <Box flex spacing="m" alignY="end">

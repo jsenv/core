@@ -1158,6 +1158,44 @@
         );
       };
 
+      // A window over something endless: three slides are enough for a row
+      // that never runs out, because the container comes back to the middle
+      // after each travel and the content moves one step with it.
+      const LoopSlides = () => {
+        const [number, setNumber] = useState(0);
+        return (
+          <SlideContainer
+            loop
+            defaultCurrent="current"
+            onLoop={({ dx }) => {
+              setNumber(number + dx);
+            }}
+            duration={useSlideDuration()}
+            width="220px"
+            backgroundColor="white"
+            borderWidth="1"
+            borderStyle="solid"
+            borderColor="#90caf9"
+          >
+            <Slide area="previous" padding="m" flex alignX="center">
+              <Text>{number - 1}</Text>
+            </Slide>
+            <Slide area="current" padding="m">
+              <Box flex alignY="center" spacing="s">
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+                <Text expandX align="center">
+                  {number}
+                </Text>
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              </Box>
+            </Slide>
+            <Slide area="next" padding="m" flex alignX="center">
+              <Text>{number + 1}</Text>
+            </Slide>
+          </SlideContainer>
+        );
+      };
+
       // A map instead of a line: "create" is a step further into the decision
       // so it sits below, "edit" is about one entry of the list so it sits
       // beside it. Same component, same travel — only where the slides are
@@ -1478,6 +1516,16 @@
               nothing there is simply not offered — try ← → ↑ ↓.
             </p>
             <ThreeWays id="map" Content={MapSlides} />
+          </section>
+
+          <section class="demo-section" id="loop">
+            <Heading id="loop">A window instead of places</Heading>
+            <p>
+              <code>loop</code>: the travel plays, the window comes back to the
+              middle, and <code>onLoop</code> moves the content one step — three
+              slides for a row with no end. Press ← →.
+            </p>
+            <LoopSlides />
           </section>
 
           <ExpandDialogSection />
