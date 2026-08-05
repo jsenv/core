@@ -165,6 +165,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -243,9 +244,10 @@
         // capitalized: JSX reads a lowercase name as an html tag, and props are
         // camelCase — so the prop is createForm and the element is <CreateForm>
         const CreateForm = createForm;
+        // The container itself, for the one travel nothing on screen asks for:
+        // going back to the list once an entry is deleted.
+        const slideContainerRef = useRef();
         const searchSignal = useSignal("");
-        const prefillSignal = useSignal("");
-        const slideSignal = useSignal(`${id}_pick`);
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -287,6 +289,17 @@
           // Where to go is not decided here: the form says it with its own
           // command (--navi-back), which follows a send that went through.
         };
+        // Same as the edit screen: what to prefill is what the travel here
+        // carried — the "+" button hands over nothing, the "create «typed»" row
+        // hands over what was typed.
+        const CreateSlideForm = () => {
+          const prefill = useSlideValue() ?? "";
+          // keyed by it: the fields are uncontrolled, so arriving with another
+          // name must give them a fresh defaultValue rather than keep the
+          // previous one
+          return <CreateForm key={prefill} prefill={prefill} />;
+        };
+
         // Inside the slide, which is the only place that can ask what the
         // travel here was about: the pencil sent { id, name } along with
         // --navi-right (see its `value`), and this reads it back. Nothing is
@@ -354,7 +367,15 @@
           if (value && value.id === entry.id) {
             onChange(null);
           }
-          slideSignal.value = `${id}_pick`;
+          // Back to the list: nothing follows a deletion on its own, so it is
+          // said here — as a command dispatched at the container, the same one
+          // a button would have carried.
+          slideContainerRef.current?.dispatchEvent(
+            new CustomEvent("navi_slide_go_to", {
+              bubbles: true,
+              detail: { area: `${id}_pick` },
+            }),
+          );
         };
 
         return (
@@ -396,15 +417,12 @@
                     comes from below; editing is about one entry of the list, so
                     it comes from its side — see slide_container.jsx */}
                 <SlideContainer
+                  ref={slideContainerRef}
                   layout={[`${id}_pick ${id}_edit`, `${id}_create`]}
                   // The arrows walk the list of candidates, not the map: a
                   // screen here is reached by asking for it (the pencil, the
                   // + button, a way out), never by pressing left.
                   keyboardTravel={false}
-                  current={slideSignal.value}
-                  onCurrentChange={(slideId) => {
-                    slideSignal.value = slideId;
-                  }}
                 >
                   <Slide id={`${id}_pick`} overflow="auto">
                     {/* No way back in it on purpose: this slide is the first
@@ -428,16 +446,15 @@
                           not require having searched first, so the entry point
                           must not depend on the search box holding something */}
                       <Button
-                        command="--navi-void"
+                        // The create screen sits below this one, and this
+                        // button opens it with nothing to prefill.
+                        command="--navi-down"
+                        value=""
                         icon
                         variant="discrete"
                         padding="xs"
                         size="xl"
                         aria-label={createTitle}
-                        onClick={() => {
-                          prefillSignal.value = "";
-                          slideSignal.value = `${id}_create`;
-                        }}
                       >
                         <Icon color="#6b7280">
                           <PlusSvg />
@@ -540,15 +557,15 @@
                                 different command, so it needs its own control
                                 to carry it. */}
                             <Button
-                              command="--navi-void"
+                              // Same screen, opened about the name that was
+                              // typed: the travel carries it, and the form
+                              // there reads it back.
+                              command="--navi-down"
+                              value={typed}
                               variant="discrete"
                               padding="s"
                               expandX
                               alignX="start"
-                              onClick={() => {
-                                prefillSignal.value = typed;
-                                slideSignal.value = `${id}_create`;
-                              }}
                             >
                               « {typed} » : {createLabel}
                             </Button>
@@ -607,14 +624,7 @@
                       {/* body: the fields are what scrolls, so the header above
                           and the footer below stay put */}
                       <Box body padding="m">
-                        {/* keyed by the prefill: the fields are uncontrolled,
-                            so a new name typed in the search must give them a
-                            fresh defaultValue rather than keep the previous
-                            one */}
-                        <CreateForm
-                          key={prefillSignal.value}
-                          prefill={prefillSignal.value}
-                        />
+                        <CreateSlideForm />
                       </Box>
                       {/* row-reverse + wrap: with enough width the two sit side
                           by side, cancel on the left and confirm on the right

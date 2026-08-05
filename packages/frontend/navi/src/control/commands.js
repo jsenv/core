@@ -25,7 +25,8 @@ export const triggerNaviCommand = (
   event,
   { optional, value } = {},
 ) => {
-  const naviCommand = NAVI_COMMANDS[command];
+  const naviCommand =
+    NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
     console.warn(`Unknown command "${command}"`);
     return false;
@@ -38,7 +39,10 @@ export const triggerNaviCommand = (
     // attribute was present but target not found — already warned inside resolveExplicitTarget
     return false;
   }
-  const execute = naviCommand.commandHandler(element, event);
+  const execute = naviCommand.commandHandler(element, event, {
+    // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
+    argument: command.includes(":") ? commandArgument(command) : undefined,
+  });
   if (!execute) {
     if (optional) {
       return false;
@@ -192,6 +196,13 @@ const NAVI_COMMANDS = {};
 // - Returns undefined when no target can be found — this is a normal outcome for
 //   some commands (e.g. --navi-send when the source is outside any navi context).
 // - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+// A command can carry an argument of its own, after a colon:
+// "--navi-go-to-slide:edit" is the go-to-slide command, told where to go. It is
+// part of the command because it says WHAT the command does — where a `value`
+// says what it is about, and a source needs to be able to say both.
+const commandName = (command) => command.split(":")[0];
+const commandArgument = (command) => command.slice(command.indexOf(":") + 1);
+
 const registerNaviCommand = (command, commandHandler) => {
   NAVI_COMMANDS[command] = {
     name: command,
@@ -489,38 +500,38 @@ registerSlideCommand("--navi-left", -1, 0);
 registerSlideCommand("--navi-down", 0, 1);
 registerSlideCommand("--navi-up", 0, -1);
 
-// By name, when a direction cannot say it: a screen that is reached from
-// several places, or from one that is not next to it on the map. The name is
-// the command's own value — `value="edit"` next to `command="--navi-go-to-slide"`
-// — so where to go is written where everything else about a source is written.
-registerNaviCommand("--navi-go-to-slide", (source, event) => {
-  const target =
-    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
-  if (!target) {
-    return undefined;
-  }
-  return {
-    target,
-    implementation: () => {
-      const value = resolveCommandValue(source, event);
-      // A plain area name, or { area, value } when there is something to hand
-      // over as well (the slide arriving reads it with useSlideValue).
-      const area = typeof value === "string" ? value : value?.area;
-      if (!area) {
-        console.warn(
-          `--navi-go-to-slide needs the area to go to as its value`,
-          source,
-        );
-        return false;
-      }
-      return dispatchCustomEvent(target, "navi_slide_go_to", {
-        event,
-        area,
-        value: typeof value === "string" ? undefined : value?.value,
-      });
-    },
-  };
-});
+// By name, when a direction cannot say it: a screen reached from several
+// places, or from one that is not next to it on the map. The name is part of
+// the command — `command="--navi-go-to-slide:edit"` — which leaves `value` for
+// what every other command uses it for: what this is about. A source needs to
+// be able to say both, and it says them in the two places that already mean
+// those two things.
+registerNaviCommand(
+  "--navi-go-to-slide",
+  (source, event, { argument } = {}) => {
+    const target =
+      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+    if (!target) {
+      return undefined;
+    }
+    if (!argument) {
+      console.warn(
+        `--navi-go-to-slide needs the area to go to: --navi-go-to-slide:my_area`,
+        source,
+      );
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () =>
+        dispatchCustomEvent(target, "navi_slide_go_to", {
+          event,
+          area: argument,
+          value: resolveCommandValue(source, event),
+        }),
+    };
+  },
+);
 
 // Back where one came from — the slide that sent the user here, whichever way
 // that was. What "back" means is a fact about the travel, not about the map: a

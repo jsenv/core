@@ -915,9 +915,10 @@
                 <Button
                   key={name}
                   // By name rather than by direction: this button knows which
-                  // screen it opens, not where that screen sits on the map.
-                  command="--navi-go-to-slide"
-                  value={{ area: "carried_edit", value: { name } }}
+                  // screen it opens, not where that screen sits on the map —
+                  // and `value` stays free to say what the travel is about.
+                  command="--navi-go-to-slide:carried_edit"
+                  value={{ name }}
                   variant="discrete"
                 >
                   edit {name}
