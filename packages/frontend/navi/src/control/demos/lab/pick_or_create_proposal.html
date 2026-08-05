@@ -284,9 +284,8 @@
             // the selection is a copy of the entry, so it goes stale otherwise
             onChange(entry);
           }
-          // Back to the list, which is where this slide was entered from — and
-          // not "the slide before it", which would be the create form.
-          slideSignal.value = `${id}_pick`;
+          // Where to go is not decided here: the form says it with its own
+          // command (--navi-back), which follows a send that went through.
         };
         // Inside the slide, which is the only place that can ask what the
         // travel here was about: the pencil sent { id, name } along with
@@ -301,11 +300,16 @@
             : null;
           return (
             <Form
+              // Its value is its own: this form lives inside the Picker, and
+              // without this the picker's value would stop being "the chosen
+              // entry" and become the fields of this form — whose constraints
+              // would join the picker's too.
               standalone
-              // The way back is not "one slide back" here: this slide is
-              // entered from the list, over the create form, so where to return
-              // is decided in submitEdit.
-              command="--navi-void"
+              // Back where the user came from, which is the list — said as
+              // "back" rather than "left" because that is what it means: this
+              // screen is reached from the list, and it returns there whatever
+              // the map looks like.
+              command="--navi-back"
               action={(values) => submitEdit(entry, values)}
               flex="y"
               overflow="auto"

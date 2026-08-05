@@ -489,6 +489,56 @@ registerSlideCommand("--navi-left", -1, 0);
 registerSlideCommand("--navi-down", 0, 1);
 registerSlideCommand("--navi-up", 0, -1);
 
+// By name, when a direction cannot say it: a screen that is reached from
+// several places, or from one that is not next to it on the map. The name is
+// the command's own value — `value="edit"` next to `command="--navi-go-to-slide"`
+// — so where to go is written where everything else about a source is written.
+registerNaviCommand("--navi-go-to-slide", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () => {
+      const value = resolveCommandValue(source, event);
+      // A plain area name, or { area, value } when there is something to hand
+      // over as well (the slide arriving reads it with useSlideValue).
+      const area = typeof value === "string" ? value : value?.area;
+      if (!area) {
+        console.warn(
+          `--navi-go-to-slide needs the area to go to as its value`,
+          source,
+        );
+        return false;
+      }
+      return dispatchCustomEvent(target, "navi_slide_go_to", {
+        event,
+        area,
+        value: typeof value === "string" ? undefined : value?.value,
+      });
+    },
+  };
+});
+
+// Back where one came from — the slide that sent the user here, whichever way
+// that was. What "back" means is a fact about the travel, not about the map: a
+// screen reached from two places goes back to the one it was reached from, and
+// no direction can say that.
+registerNaviCommand("--navi-back", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_slide_back", { event }),
+  };
+});
+
 registerNaviCommand("--navi-toggle", (source, event) => {
   const target =
     resolveExplicitTarget(source) || resolveClosestExpandable(source);

@@ -20,6 +20,11 @@
 
 const PAGES_ENDPOINT = "/.internal/pages.json";
 const STORAGE_KEY = "jsenv_page_switcher";
+// Open across a reload: this is a dev tool on a page one is editing, and a hot
+// reload in the middle of looking for the next page should not close what one
+// was looking at. In sessionStorage, not localStorage: it says what THIS tab was
+// doing a second ago, which is not something to remember tomorrow.
+const OPEN_KEY = "jsenv_page_switcher_open";
 // What kind of page it is, as the server reads it from where the file sits and
 // what it is called (see html_pages.js): something tried out, something shown,
 // or a page like any other.
@@ -283,6 +288,25 @@ const countMatches = (node, matches) => {
   return count;
 };
 
+const rememberOpen = (isOpen) => {
+  try {
+    if (isOpen) {
+      window.sessionStorage.setItem(OPEN_KEY, "1");
+    } else {
+      window.sessionStorage.removeItem(OPEN_KEY);
+    }
+  } catch {
+    // private mode, quota — it just will not come back
+  }
+};
+const wasOpen = () => {
+  try {
+    return window.sessionStorage.getItem(OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
 let open = null;
 
 const openSwitcher = async () => {
@@ -318,6 +342,7 @@ const openSwitcher = async () => {
 
   const close = () => {
     open = null;
+    rememberOpen(false);
     host.remove();
     document.removeEventListener("keydown", onKeyDown, true);
     if (focusedBefore && focusedBefore.isConnected) {
@@ -344,6 +369,9 @@ const openSwitcher = async () => {
       return;
     }
     if (row.type === "file") {
+      // Going somewhere is done with it: what reopens across a reload is a
+      // switcher one was still using.
+      rememberOpen(false);
       window.location.href = row.file.url;
       return;
     }
@@ -535,6 +563,7 @@ const openSwitcher = async () => {
   backdrop.addEventListener("mousedown", close);
 
   open = { input, close };
+  rememberOpen(true);
   input.focus();
 
   const pages = await loadPages();
@@ -564,8 +593,14 @@ const listenSwitcherKey = () => {
     openSwitcher();
   });
 };
-if (document.readyState === "complete") {
+const setup = () => {
   listenSwitcherKey();
+  if (wasOpen()) {
+    openSwitcher();
+  }
+};
+if (document.readyState === "complete") {
+  setup();
 } else {
-  window.addEventListener("load", listenSwitcherKey, { once: true });
+  window.addEventListener("load", setup, { once: true });
 }

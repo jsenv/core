@@ -914,8 +914,10 @@
               {["Ada", "Grace", "Katherine"].map((name) => (
                 <Button
                   key={name}
-                  command="--navi-right"
-                  value={{ name }}
+                  // By name rather than by direction: this button knows which
+                  // screen it opens, not where that screen sits on the map.
+                  command="--navi-go-to-slide"
+                  value={{ area: "carried_edit", value: { name } }}
                   variant="discrete"
                 >
                   edit {name}
@@ -926,7 +928,10 @@
           <Slide id="carried_edit" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>edit</Text>
-              <SlideContainer.Left size="l" padding="xs" marginY="-xs" />
+              {/* Back where one came from, whichever screen that was */}
+              <Button command="--navi-back" variant="discrete" padding="xs">
+                back
+              </Button>
             </Box>
             <Box body padding="m">
               <CarriedValueForm />

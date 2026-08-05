@@ -288,6 +288,12 @@ export const SlideContainer = ({
   // because two ways in can mean two different things, and kept until the next
   // travel there replaces it.
   const [valueByArea, setValueByArea] = useState(EMPTY_VALUE_BY_AREA);
+  // Where each area was reached FROM: what "back" means is a fact about the
+  // travel, not about the map — a screen reached from two places goes back to
+  // the one it was reached from, and no direction can say that. A ref, not
+  // state: nothing on screen depends on it, and a travel must read what the
+  // one before it wrote, not what the last render saw.
+  const cameFromRef = useRef({});
 
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
@@ -389,13 +395,21 @@ export const SlideContainer = ({
    *   which is what lets a key that changes nothing keep its own meaning.
    */
   const goToArea = (area, { forward, event, value } = {}) => {
-    const { slideElements } = readMap();
+    const { slideElements, placeOf } = readMap();
     const currentElement =
       slideElements.find((slideElement) =>
         slideElement.hasAttribute("data-current"),
       ) || slideElements[0];
     if (!area || area === readArea(currentElement)) {
       return false;
+    }
+    if (forward === undefined) {
+      // Asked for by name (--navi-go-to-slide, --navi-back) rather than by a
+      // direction: which way it is is still a fact, read off the map, and it is
+      // what says which of the two locks below applies.
+      const from = placeOf.get(readArea(currentElement)) || { x: 0, y: 0 };
+      const to = placeOf.get(area) || { x: 0, y: 0 };
+      forward = to.y === from.y ? to.x > from.x : to.y > from.y;
     }
     // The one gate every way out goes through — a key, a command, a button, an
     // event dispatched by hand: a slide that holds on to the user holds them
@@ -435,6 +449,10 @@ export const SlideContainer = ({
     if (value !== undefined) {
       setValueByArea((previous) => ({ ...previous, [area]: value }));
     }
+    cameFromRef.current = {
+      ...cameFromRef.current,
+      [area]: readArea(currentElement),
+    };
     setCurrentAreaState(area);
     onCurrentChange?.(area);
     return true;
@@ -606,6 +624,23 @@ export const SlideContainer = ({
         // own mousedown), and the focus transfer reads the whole chain to know
         // where the interaction started.
         move(dx, dy, e, value);
+      }}
+      // By name rather than by direction (--navi-go-to-slide): the caller says
+      // where, the map says nothing about it.
+      onnavi_slide_go_to={(e) => {
+        const { area, value } = e.detail;
+        goToArea(area, { event: e, value });
+      }}
+      // …and back where one came from (--navi-back).
+      onnavi_slide_back={(e) => {
+        const { slideElements } = readMap();
+        const currentElement = slideElements.find((slideElement) =>
+          slideElement.hasAttribute("data-current"),
+        );
+        const cameFrom = cameFromRef.current[readArea(currentElement)];
+        if (cameFrom) {
+          goToArea(cameFrom, { event: e });
+        }
       }}
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
