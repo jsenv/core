@@ -281,51 +281,54 @@
 
       // ── Value ─────────────────────────────────────────────────────────────
 
-      const ValueDemo = () => {
-        const [entries, push, clear] = useCallLog();
+      const BackendCase = ({ id, title, value, children }) => (
+        <>
+          <Heading level={3} id={id}>
+            {title}
+          </Heading>
+          <FakeBackend value={value}>
+            {({ value: backendValue, action }) => (
+              <Form action={action}>
+                <Box flex spacing="m" alignY="end">
+                  <Field flex="y">
+                    <Label>Jour</Label>
+                    {children(backendValue)}
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+        </>
+      );
 
-        return (
-          <div class="demo-section">
-            <Heading id="value">value, defaultValue</Heading>
-            <Box flex="y" spacing="l" alignX="start">
-              <Variant caption="rien : aujourd'hui">
-                <DayStepper width="300px" />
-              </Variant>
-              <Variant caption={`defaultValue="${day(-3)}"`}>
-                <DayStepper defaultValue={day(-3)} width="300px" />
-              </Variant>
-            </Box>
-
-            <Heading level={3} id="value-held">
-              Ce que le serveur sait déjà
-            </Heading>
-            <p class="desc">
-              Le jour vient du serveur (<code>value</code>) : soumettre sans y
-              toucher n'a rien à dire, donc rien ne part. Un pas, et l'appel a
-              lieu.
-            </p>
-            <FakeBackend value={{ day: day(-3) }} name="Serveur">
-              {({ value, action }) => (
-                <Form
-                  action={async (values) => {
-                    const sent = await action(values);
-                    push("Form action", sent);
-                  }}
-                >
-                  <Box flex spacing="m" alignY="end">
-                    <Field flex="y">
-                      <Label>Jour</Label>
-                      <DayStepper name="day" value={value.day} width="300px" />
-                    </Field>
-                    <Button type="submit">Enregistrer</Button>
-                  </Box>
-                </Form>
-              )}
-            </FakeBackend>
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
+      const ValueDemo = () => (
+        <div class="demo-section">
+          <Heading id="value">
+            Simulation backend : ce qui part, et quand
+          </Heading>
+          <BackendCase id="value-nothing" title="Rien de part et d'autre">
+            {() => <DayStepper name="day" width="300px" />}
+          </BackendCase>
+          <BackendCase
+            id="value-default"
+            title={`Backend vide, defaultValue="${day(-3)}"`}
+          >
+            {() => (
+              <DayStepper name="day" defaultValue={day(-3)} width="300px" />
+            )}
+          </BackendCase>
+          <BackendCase
+            id="value-held"
+            title="Le backend a déjà un jour (value)"
+            value={{ day: day(-3) }}
+          >
+            {(backendValue) => (
+              <DayStepper name="day" value={backendValue.day} width="300px" />
+            )}
+          </BackendCase>
+        </div>
+      );
 
       // ── min ───────────────────────────────────────────────────────────────
 
