@@ -423,6 +423,14 @@ export const SlideContainer = ({
     // this travel decides (arriving by key shows one, by click does not).
     const containerEl = containerRef.current;
     if (containerEl && !slideElement.contains(document.activeElement)) {
+      if (document.activeElement === containerEl) {
+        // Already here, and .focus() on what is already focused does nothing at
+        // all — the browser will not reconsider its focus ring for it. So the
+        // focus is given up for an instant and taken back, which is the only
+        // way to say "same place, but arrived at with the keyboard this time":
+        // travelling by key from a box that was clicked into must show a ring.
+        containerEl.blur();
+      }
       containerEl.focus({
         preventScroll: true,
         focusVisible: focusTransfer.focusVisible,
