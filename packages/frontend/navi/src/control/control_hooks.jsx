@@ -413,7 +413,17 @@ export const useControlProps = (
             return {
               name: "navi_change",
               allowed: () => {
-                syncUIStateWithDOM(e);
+                // The state, but only when nobody has read it yet. navi_change
+                // is dispatched by input_effect, which listens to the very
+                // "input" event the reaction above already answered — syncing
+                // again there is the same gesture read twice, and uiAction fired
+                // twice with it. Everything else it reports (a "change" with no
+                // input before it: autocomplete, a value set from code, a form
+                // restored; a paste; a reset) never reached that reaction, so
+                // this is where those get in.
+                if (e.type !== "input") {
+                  syncUIStateWithDOM(e);
+                }
                 requestActionOnAllowed(e);
               },
             };
