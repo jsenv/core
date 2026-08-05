@@ -57,8 +57,7 @@ import { Picker } from "./picker.jsx";
 
 const css = /* css */ `
   .navi_picker_stepper {
-    /* What the picker's own box fills: headless, it draws nothing and covers
-       whatever it is inside, which is what the calendar is anchored to. */
+    /* What the loading outline is drawn around. */
     position: relative;
     /* Framed like every other control (see navi_css_vars.js): what one steps
        through is a value one edits, and a box around it is what says so. Said
@@ -83,12 +82,10 @@ const css = /* css */ `
      it is the container that takes the keyboard — but it is where the ring is
      drawn, so a demo can hold it there and show what it looks like. */
   .navi_picker_stepper[data-focus-visible],
-  .navi_picker_stepper:has(
-    > [data-focus-outline-delegate][data-focus-visible]
-  ) {
+  .navi_picker_stepper:has([data-focus-outline-delegate][data-focus-visible]) {
     outline-style: solid;
   }
-  .navi_picker_stepper > [data-focus-outline-delegate] {
+  .navi_picker_stepper [data-focus-outline-delegate] {
     --navi-focus-outline-style: none;
   }
   /* Same fading every navi control does when it is not to be touched (the
@@ -113,6 +110,16 @@ const css = /* css */ `
       transparent
     );
   }
+  /* The middle, as a box of its own: the headless picker draws nothing and
+     covers whatever is positioned around it, and THAT box is where the browser
+     opens its calendar. Around the whole control it would open under a chevron;
+     around the value it opens under the value one pressed. */
+  .navi_picker_stepper_middle {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex: 1 1 0;
+  }
   /* The value takes it as padding; the two chevrons take it as their own
      --button-padding-y (a button's padding lives on its content, see
      button_ui.jsx), which is why it is said as a variable rather than applied
@@ -129,11 +136,11 @@ const css = /* css */ `
   }
   /* The middle opens the picker, so it says so under the pointer — and stops
      saying it the moment pressing it would only get an answer about why not. */
-  .navi_picker_stepper > [data-slide-container] {
+  .navi_picker_stepper [data-slide-container] {
     cursor: pointer;
   }
-  .navi_picker_stepper[data-readonly] > [data-slide-container],
-  .navi_picker_stepper[data-disabled] > [data-slide-container] {
+  .navi_picker_stepper[data-readonly] [data-slide-container],
+  .navi_picker_stepper[data-disabled] [data-slide-container] {
     cursor: default;
   }
   /* Kept inside its own slide: the three days share one cell, so anything
@@ -394,30 +401,6 @@ export const DayStepper = ({
         color="var(--navi-loader-color)"
         inset={-2}
       />
-      {/* One picker for the three days, behind them: what a press on the day
-          opens, and what holds the day for a form. */}
-      <Picker
-        ref={pickerRef}
-        id={pickerId}
-        type="date"
-        variant="headless"
-        name={name}
-        // Whatever was said about the day, said to the picker: a `value` it
-        // holds, a `signal` it follows, a `defaultValue` it merely starts on —
-        // including what a form makes of the difference (it HOLDS a value and
-        // has nothing to send back, where a default is a suggestion and
-        // confirming it is an answer). A day is always shown, so there is
-        // always a default: today, when nobody named one.
-        {...dayProps}
-        min={min}
-        max={max}
-        readOnly={readOnly}
-        disabled={disabled}
-        loading={loading}
-        uiAction={(dayNext, event) => {
-          uiAction?.(dayNext, stepEventRef.current ?? event);
-        }}
-      />
       <Button
         command={vertical ? "--navi-up" : "--navi-left"}
         commandFor={containerId}
@@ -444,56 +427,85 @@ export const DayStepper = ({
       >
         <Icon>{vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}</Icon>
       </Button>
-      <SlideContainer
-        id={containerId}
-        layout={vertical ? "column" : "row"}
-        // What is left beside the two chevrons, whatever the days it holds are
-        // long: a control that resizes as one steps through it is a control one
-        // has to aim at twice.
-        expandX
-        defaultCurrent="current"
-        duration={`${duration}ms`}
-        // The three days are a window over an endless row: the container plays
-        // the travel and comes back to the middle, and the day moves one step
-        // here, in onLoop, as it lands.
-        loop
-        onLoop={({ dx, dy, event }) => {
-          // One step, whichever axis it came from: the map is a line, so only
-          // one of the two is ever anything but zero. The event goes with it —
-          // it is what says a chevron (or an arrow key) asked for this day.
-          setDay(addDays(day, (dx || dy) * step), event);
-        }}
-        // The whole middle opens the calendar — a command, like the chevrons
-        // send one, and no button of its own: the day would then be one more
-        // Tab stop, and the focus would follow it out of the box as it travels.
-        commandFor={pickerId}
-        // Sent whatever state the control is in: the picker is the one that
-        // knows it cannot be opened right now, and refusing there is what says
-        // so out loud (read-only, busy). Refusing here would be a press that
-        // does nothing and explains nothing.
-        onClick={(e) => {
-          triggerNaviCommand(e.currentTarget, "--navi-open", e);
-        }}
-      >
-        <Slide area="previous" flex align="center">
-          {renderDay(dayPrevious, dayTextProps)}
-        </Slide>
-        <Slide
-          area="current"
-          flex
-          align="center"
-          // The days a min/max leaves out are simply not reachable: the way out
-          // is closed on the slide being left, so a key, a chevron and a
-          // command are all stopped by the same thing.
-          preventNavPrevious={!previousAllowed}
-          preventNavNext={!nextAllowed}
+      {/* One box for the value and the picker behind it: the picker is
+          headless, so what the browser anchors its calendar to is whatever box
+          is positioned around it — and that has to be the value one pressed. */}
+      <div className="navi_picker_stepper_middle">
+        {/* One picker for the three days, behind them: what a press on the day
+          opens, and what holds the day for a form. */}
+        <Picker
+          ref={pickerRef}
+          id={pickerId}
+          type="date"
+          variant="headless"
+          name={name}
+          // Whatever was said about the day, said to the picker: a `value` it
+          // holds, a `signal` it follows, a `defaultValue` it merely starts on —
+          // including what a form makes of the difference (it HOLDS a value and
+          // has nothing to send back, where a default is a suggestion and
+          // confirming it is an answer). A day is always shown, so there is
+          // always a default: today, when nobody named one.
+          {...dayProps}
+          min={min}
+          max={max}
+          readOnly={readOnly}
+          disabled={disabled}
+          loading={loading}
+          uiAction={(dayNext, event) => {
+            uiAction?.(dayNext, stepEventRef.current ?? event);
+          }}
+        />
+        <SlideContainer
+          id={containerId}
+          layout={vertical ? "column" : "row"}
+          // What is left beside the two chevrons, whatever the days it holds are
+          // long: a control that resizes as one steps through it is a control one
+          // has to aim at twice.
+          expandX
+          defaultCurrent="current"
+          duration={`${duration}ms`}
+          // The three days are a window over an endless row: the container plays
+          // the travel and comes back to the middle, and the day moves one step
+          // here, in onLoop, as it lands.
+          loop
+          onLoop={({ dx, dy, event }) => {
+            // One step, whichever axis it came from: the map is a line, so only
+            // one of the two is ever anything but zero. The event goes with it —
+            // it is what says a chevron (or an arrow key) asked for this day.
+            setDay(addDays(day, (dx || dy) * step), event);
+          }}
+          // The whole middle opens the calendar — a command, like the chevrons
+          // send one, and no button of its own: the day would then be one more
+          // Tab stop, and the focus would follow it out of the box as it travels.
+          commandFor={pickerId}
+          // Sent whatever state the control is in: the picker is the one that
+          // knows it cannot be opened right now, and refusing there is what says
+          // so out loud (read-only, busy). Refusing here would be a press that
+          // does nothing and explains nothing.
+          onClick={(e) => {
+            triggerNaviCommand(e.currentTarget, "--navi-open", e);
+          }}
         >
-          {renderDay(day, dayTextProps)}
-        </Slide>
-        <Slide area="next" flex align="center">
-          {renderDay(dayNext, dayTextProps)}
-        </Slide>
-      </SlideContainer>
+          <Slide area="previous" flex align="center">
+            {renderDay(dayPrevious, dayTextProps)}
+          </Slide>
+          <Slide
+            area="current"
+            flex
+            align="center"
+            // The days a min/max leaves out are simply not reachable: the way out
+            // is closed on the slide being left, so a key, a chevron and a
+            // command are all stopped by the same thing.
+            preventNavPrevious={!previousAllowed}
+            preventNavNext={!nextAllowed}
+          >
+            {renderDay(day, dayTextProps)}
+          </Slide>
+          <Slide area="next" flex align="center">
+            {renderDay(dayNext, dayTextProps)}
+          </Slide>
+        </SlideContainer>
+      </div>
       <Button
         command={vertical ? "--navi-down" : "--navi-right"}
         commandFor={containerId}
