@@ -225,22 +225,22 @@ naviI18n.addAll({
   },
 });
 
-// Stepper messages — the ends of what one steps through, said without naming
+// Spin messages — the ends of what one steps through, said without naming
 // what it is made of: the same words fit days, months, pages or sizes.
 naviI18n.addAll({
-  "stepper.previous": {
+  "spin.previous": {
     en: "Previous",
     fr: "Précédent",
   },
-  "stepper.next": {
+  "spin.next": {
     en: "Next",
     fr: "Suivant",
   },
-  "stepper.nothing_before": {
+  "spin.nothing_before": {
     en: "No item before this one.",
     fr: "Pas d'élément avant celui-ci.",
   },
-  "stepper.nothing_after": {
+  "spin.nothing_after": {
     en: "No item after this one.",
     fr: "Pas d'élément après celui-ci.",
   },

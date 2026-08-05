@@ -2,7 +2,7 @@
  * A value one steps through, one press at a time: what is chosen sits between
  * the way back and the way on, and the two of them are the whole control.
  *
- * Days for now — DayStepper below — but nothing here is about days except how
+ * Days for now — DaySpin below — but nothing here is about days except how
  * one is written and what "one step" adds. The name says where this is going:
  * a picker whose value is stepped rather than typed (a month, a page, a size),
  * shown as the picker it is.
@@ -56,7 +56,7 @@ import {
 import { Picker } from "./picker.jsx";
 
 const css = /* css */ `
-  .navi_picker_stepper {
+  .navi_picker_spin {
     /* What the loading outline is drawn around. */
     position: relative;
     /* Framed like every other control (see navi_css_vars.js): what one steps
@@ -81,17 +81,17 @@ const css = /* css */ `
      Said on this box too (the first selector): nothing focuses it for real —
      it is the container that takes the keyboard — but it is where the ring is
      drawn, so a demo can hold it there and show what it looks like. */
-  .navi_picker_stepper[data-focus-visible],
-  .navi_picker_stepper:has([data-focus-outline-delegate][data-focus-visible]) {
+  .navi_picker_spin[data-focus-visible],
+  .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]) {
     outline-style: solid;
   }
-  .navi_picker_stepper [data-focus-outline-delegate] {
+  .navi_picker_spin [data-focus-outline-delegate] {
     --navi-focus-outline-style: none;
   }
   /* Same fading every navi control does when it is not to be touched (the
      border first, the words too once it is out of service): what is inside is
      three pieces of ours, so the box says it for all of them. */
-  .navi_picker_stepper[data-readonly] {
+  .navi_picker_spin[data-readonly] {
     border-color: color-mix(
       in srgb,
       var(--navi-control-border-color) 45%,
@@ -102,7 +102,7 @@ const css = /* css */ `
       color: color-mix(in srgb, currentColor 60%, transparent);
     }
   }
-  .navi_picker_stepper[data-disabled] {
+  .navi_picker_spin[data-disabled] {
     color: color-mix(in srgb, currentColor 40%, transparent);
     border-color: color-mix(
       in srgb,
@@ -114,40 +114,53 @@ const css = /* css */ `
      covers whatever is positioned around it, and THAT box is where the browser
      opens its calendar. Around the whole control it would open under a chevron;
      around the value it opens under the value one pressed. */
-  .navi_picker_stepper_middle {
+  .navi_picker_spin_middle {
     position: relative;
     display: flex;
     min-width: 0;
     flex: 1 1 0;
+  }
+  /* The hidden picker, centred and no wider than it needs to be: the browser
+     opens its calendar from the box the input occupies, and it chooses which
+     corner. Over the whole middle that choice is a coin toss between one end
+     and the other; over a narrow box in the middle, whichever corner it picks
+     is under the value one pressed. */
+  .navi_picker_spin_middle > .navi_picker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: min(100%, var(--picker-spin-picker-width, 12ch));
+    translate: -50% 0;
   }
   /* The value takes it as padding; the two chevrons take it as their own
      --button-padding-y (a button's padding lives on its content, see
      button_ui.jsx), which is why it is said as a variable rather than applied
      here. Same number on all three: it is what makes them one line rather than
      three boxes. */
-  .navi_picker_stepper [data-slide] {
-    padding-block: var(--picker-stepper-padding-y);
+  .navi_picker_spin [data-slide] {
+    padding-block: var(--picker-spin-padding-y);
   }
   /* Centred, always: the middle holds three values of three different lengths,
      and a value that starts where the last one ended reads as a jump. */
-  .navi_picker_stepper [data-slide] {
+  .navi_picker_spin [data-slide] {
     text-align: center;
     overflow: hidden;
   }
   /* The middle opens the picker, so it says so under the pointer — and stops
      saying it the moment pressing it would only get an answer about why not. */
-  .navi_picker_stepper [data-slide-container] {
+  .navi_picker_spin [data-slide-container] {
     cursor: pointer;
   }
-  .navi_picker_stepper[data-readonly] [data-slide-container],
-  .navi_picker_stepper[data-disabled] [data-slide-container] {
+  .navi_picker_spin[data-readonly] [data-slide-container],
+  .navi_picker_spin[data-disabled] [data-slide-container] {
     cursor: default;
   }
   /* Kept inside its own slide: the three days share one cell, so anything
      sticking out would be written across the two beside it. A day too long for
      the box simply wraps — the box grows, and the words are all there; say
      maxLines to cut it instead, which the text itself knows how to do. */
-  .navi_picker_stepper [data-slide] > * {
+  .navi_picker_spin [data-slide] > * {
     max-width: 100%;
     overflow: hidden;
   }
@@ -155,59 +168,57 @@ const css = /* css */ `
      presses is a chevron. Its height is its own, rather than the middle's, so a
      value that wraps does not turn the two into towers; the font is the one
      around it, so "one line" means the same on both sides. */
-  .navi_picker_stepper > .navi_picker_stepper_way_out {
+  .navi_picker_spin > .navi_picker_spin_way_out {
     box-sizing: border-box;
-    height: calc(1lh + 2 * var(--picker-stepper-padding-y));
-    padding-block: var(--picker-stepper-padding-y);
+    height: calc(1lh + 2 * var(--picker-spin-padding-y));
+    padding-block: var(--picker-spin-padding-y);
     color: inherit;
     background: none;
     border: none;
     border-radius: var(--navi-control-border-radius);
     cursor: pointer;
   }
-  .navi_picker_stepper > .navi_picker_stepper_way_out:hover {
+  .navi_picker_spin > .navi_picker_spin_way_out:hover {
     background: color-mix(in srgb, currentColor 8%, transparent);
   }
   /* Nothing that way: still there, still pressable — pressing it is how one
      learns why (see WayOut's own callout). */
-  .navi_picker_stepper > .navi_picker_stepper_way_out[data-unavailable] {
+  .navi_picker_spin > .navi_picker_spin_way_out[data-unavailable] {
     color: color-mix(in srgb, currentColor 35%, transparent);
   }
-  .navi_picker_stepper[data-readonly] > .navi_picker_stepper_way_out,
-  .navi_picker_stepper[data-disabled] > .navi_picker_stepper_way_out {
+  .navi_picker_spin[data-readonly] > .navi_picker_spin_way_out,
+  .navi_picker_spin[data-disabled] > .navi_picker_spin_way_out {
     cursor: default;
   }
   /* Square beside the value, full width above and below it: a way out is as
      wide as what it steps through when it sits across it. */
-  .navi_picker_stepper:not([data-vertical]) > .navi_picker_stepper_way_out {
+  .navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out {
     aspect-ratio: 1;
     justify-content: center;
   }
-  .navi_picker_stepper[data-vertical] > .navi_picker_stepper_way_out {
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
     width: 100%;
     justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner
-     of a rounded stepper is rounded there too, and nowhere else. Said with
+     of a rounded spin is rounded there too, and nowhere else. Said with
      inherit rather than clipped away with overflow, which would cut the focus
      ring of the very button it rounds. */
-  .navi_picker_stepper:not([data-vertical])
-    > .navi_picker_stepper_way_out:first-of-type {
+  .navi_picker_spin:not([data-vertical])
+    > .navi_picker_spin_way_out:first-of-type {
     border-start-start-radius: inherit;
     border-end-start-radius: inherit;
   }
-  .navi_picker_stepper:not([data-vertical])
-    > .navi_picker_stepper_way_out:last-of-type {
+  .navi_picker_spin:not([data-vertical])
+    > .navi_picker_spin_way_out:last-of-type {
     border-start-end-radius: inherit;
     border-end-end-radius: inherit;
   }
-  .navi_picker_stepper[data-vertical]
-    > .navi_picker_stepper_way_out:first-of-type {
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:first-of-type {
     border-start-start-radius: inherit;
     border-start-end-radius: inherit;
   }
-  .navi_picker_stepper[data-vertical]
-    > .navi_picker_stepper_way_out:last-of-type {
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:last-of-type {
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
   }
@@ -231,7 +242,7 @@ const css = /* css */ `
  * }>}
  * @param {string} [value] The day shown, as "YYYY-MM-DD". Held from above:
  *   `uiAction` says when it should move. Say `signal` for a two-way binding
- *   instead, or `defaultValue` to let the stepper hold the day itself.
+ *   instead, or `defaultValue` to let the spin hold the day itself.
  * @param {number} [step=1] How many days a press covers — 7 for a week at a
  *   time, and the label then names the day one lands on, as it always does.
  * @param {number} [duration=250] How long a travel takes, in milliseconds.
@@ -256,7 +267,7 @@ const css = /* css */ `
  *   there is a word for it ("samedi 8 août (demain)"), since a day near now is
  *   read as a distance from now before it is read as a date.
  */
-export const DayStepper = ({
+export const DaySpin = ({
   value,
   defaultValue,
   uiAction,
@@ -356,7 +367,7 @@ export const DayStepper = ({
     // reads the day shown as an answer one can send rather than as something it
     // already holds — and said even when a signal is bound, because a signal
     // with nothing in it would otherwise leave the picker empty while the
-    // stepper shows a day, and a form has nothing to send about an empty field.
+    // spin shows a day, and a form has nothing to send about an empty field.
     dayProps.defaultValue =
       defaultValue ??
       signalProp?.options?.getDefaultValue?.(false) ??
@@ -405,17 +416,17 @@ export const DayStepper = ({
   return (
     <Box
       {...rest}
-      baseClassName="navi_picker_stepper"
+      baseClassName="navi_picker_spin"
       flex={vertical ? "y" : "x"}
       alignY="center"
       // The states this box draws itself: the ring above is the one that is
       // asked for by hand (pseudoState) as well as held for real.
-      pseudoClasses={PICKER_STEPPER_PSEUDO_CLASSES}
+      pseudoClasses={PICKER_SPIN_PSEUDO_CLASSES}
       data-vertical={vertical ? "" : undefined}
       data-readonly={readOnlyResolved ? "" : undefined}
       data-disabled={disabledResolved ? "" : undefined}
       style={{
-        "--picker-stepper-padding-y": resolveSpacingSize(paddingY),
+        "--picker-spin-padding-y": resolveSpacingSize(paddingY),
         ...rest.style,
       }}
     >
@@ -431,16 +442,16 @@ export const DayStepper = ({
         containerId={containerId}
         unavailableMessage={wayOutMessage(
           previousAllowed,
-          "stepper.nothing_before",
+          "spin.nothing_before",
         )}
-        label={previousLabel ?? naviI18n("stepper.previous")}
+        label={previousLabel ?? naviI18n("spin.previous")}
       >
         {vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}
       </WayOut>
       {/* One box for the value and the picker behind it: the picker is
           headless, so what the browser anchors its calendar to is whatever box
           is positioned around it — and that has to be the value one pressed. */}
-      <div className="navi_picker_stepper_middle">
+      <div className="navi_picker_spin_middle">
         {/* One picker for the three days, behind them: what a press on the day
           opens, and what holds the day for a form. */}
         <Picker
@@ -492,7 +503,11 @@ export const DayStepper = ({
           // knows it cannot be opened right now, and refusing there is what says
           // so out loud (read-only, busy). Refusing here would be a press that
           // does nothing and explains nothing.
+          // preventDefault, because a <Label> around the whole control forwards
+          // a click to what it labels — the picker — and that would open the
+          // calendar a second time, right after this command did.
           onClick={(e) => {
+            e.preventDefault();
             triggerNaviCommand(e.currentTarget, "--navi-open", e);
           }}
         >
@@ -519,8 +534,8 @@ export const DayStepper = ({
       <WayOut
         command={vertical ? "--navi-down" : "--navi-right"}
         containerId={containerId}
-        unavailableMessage={wayOutMessage(nextAllowed, "stepper.nothing_after")}
-        label={nextLabel ?? naviI18n("stepper.next")}
+        unavailableMessage={wayOutMessage(nextAllowed, "spin.nothing_after")}
+        label={nextLabel ?? naviI18n("spin.next")}
       >
         {vertical ? <ChevronDownSvg /> : <ChevronRightSvg />}
       </WayOut>
@@ -529,7 +544,7 @@ export const DayStepper = ({
 };
 
 // A way out is a place one presses, not a control: no <button>, on purpose.
-// A <button> is labelable, so a <Label> wrapping the whole stepper would bind
+// A <button> is labelable, so a <Label> wrapping the whole spin would bind
 // to the first chevron instead of to the picker — the thing that actually holds
 // the value — and a form would carry two more controls that answer for nothing.
 // It is not focusable either: the keyboard walks the days on the container (see
@@ -543,7 +558,7 @@ const WayOut = ({
 }) => (
   <Box
     as="span"
-    baseClassName="navi_picker_stepper_way_out"
+    baseClassName="navi_picker_spin_way_out"
     // Announced as a button because that is what it is to whoever cannot see
     // the chevron — and marked unavailable rather than removed when there is
     // nothing that way, so it keeps its place.
@@ -555,7 +570,16 @@ const WayOut = ({
     commandfor={containerId}
     flex
     align="center"
+    // A press, answered where it starts: mousedown rather than click, which is
+    // what makes holding one feel immediate — and the click after it is stopped
+    // below, so a <Label> wrapping the whole control does not forward it to the
+    // picker and open the calendar on the way past.
     onClick={(e) => {
+      e.preventDefault();
+    }}
+    onMouseDown={(e) => {
+      // No focus, no text selection: the keyboard is put on the days below.
+      e.preventDefault();
       const wayOutElement = e.currentTarget;
       if (unavailableMessage) {
         // Why it does nothing, said where one pressed: a control would have
@@ -577,7 +601,7 @@ const WayOut = ({
   </Box>
 );
 
-const PICKER_STEPPER_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
 
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only

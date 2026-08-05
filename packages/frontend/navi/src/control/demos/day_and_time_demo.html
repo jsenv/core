@@ -30,6 +30,8 @@
       }
       .datetime-panel {
         width: 100%;
+        padding: 16px;
+        border: 1px solid gray;
       }
       .datetime-panel-row {
         padding-top: 12px;
@@ -50,7 +52,7 @@
       import {
         Box,
         Button,
-        DayStepper,
+        DaySpin,
         Field,
         Form,
         Label,
@@ -117,7 +119,7 @@
           <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
             <Field as="label" flex="y" expandX>
               Date et heure
-              <DayStepper name="day" expandX borderWidth="0" {...dayProps} />
+              <DaySpin name="day" expandX borderWidth="0" {...dayProps} />
             </Field>
             {/* No label of its own: the wheels are the other half of the same
                 answer, and what they are is written above them. */}

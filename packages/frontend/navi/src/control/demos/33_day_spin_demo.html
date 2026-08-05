@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Day stepper demo</title>
+    <title>Day spin demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -48,7 +48,7 @@
       import {
         Box,
         Button,
-        DayStepper,
+        DaySpin,
         Field,
         Form,
         Label,
@@ -98,7 +98,7 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader
-            title="Day stepper"
+            title="Day spin"
             previous={{ href: "./32_wheel_demo.html", label: "Wheel" }}
           />
           <TableOfContents />
@@ -165,7 +165,7 @@
           <p class="desc">
             Les flèches changent de jour, le centre ouvre le calendrier.
           </p>
-          <DayStepper signal={daySignal} width="300px" />
+          <DaySpin signal={daySignal} width="300px" />
         </div>
       );
 
@@ -176,10 +176,10 @@
           <Heading id="dimensions">Dimensions</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="sans width : la largeur suit le jour affiché">
-              <DayStepper defaultValue={TODAY} />
+              <DaySpin defaultValue={TODAY} />
             </Variant>
             <Variant caption='width="300px"'>
-              <DayStepper defaultValue={TODAY} width="300px" />
+              <DaySpin defaultValue={TODAY} width="300px" />
             </Variant>
           </Box>
 
@@ -192,12 +192,12 @@
           <Box flex spacing="xl" alignY="start">
             <Variant caption={`defaultValue="${day(4)}"`}>
               <UnderText>
-                <DayStepper defaultValue={day(4)} width="220px" />
+                <DaySpin defaultValue={day(4)} width="220px" />
               </UnderText>
             </Variant>
             <Variant caption={`defaultValue="${TODAY}"`}>
               <UnderText>
-                <DayStepper defaultValue={TODAY} width="220px" />
+                <DaySpin defaultValue={TODAY} width="220px" />
               </UnderText>
             </Variant>
           </Box>
@@ -208,12 +208,12 @@
           <Box flex spacing="xl" alignY="start">
             <Variant caption={`defaultValue="${day(4)}"`}>
               <UnderText>
-                <DayStepper defaultValue={day(4)} width="220px" maxLines={1} />
+                <DaySpin defaultValue={day(4)} width="220px" maxLines={1} />
               </UnderText>
             </Variant>
             <Variant caption={`defaultValue="${TODAY}"`}>
               <UnderText>
-                <DayStepper defaultValue={TODAY} width="220px" maxLines={1} />
+                <DaySpin defaultValue={TODAY} width="220px" maxLines={1} />
               </UnderText>
             </Variant>
           </Box>
@@ -225,7 +225,7 @@
           <Box flex spacing="xl" alignY="start">
             <Variant caption={`defaultValue="${day(4)}"`}>
               <UnderText>
-                <DayStepper
+                <DaySpin
                   defaultValue={day(4)}
                   width="220px"
                   maxLines={2}
@@ -235,7 +235,7 @@
             </Variant>
             <Variant caption={`defaultValue="${TODAY}"`}>
               <UnderText>
-                <DayStepper
+                <DaySpin
                   defaultValue={TODAY}
                   width="220px"
                   maxLines={2}
@@ -253,13 +253,13 @@
           </p>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption='size="xxs"'>
-              <DayStepper defaultValue={TODAY} size="xxs" width="300px" />
+              <DaySpin defaultValue={TODAY} size="xxs" width="300px" />
             </Variant>
             <Variant caption="par défaut">
-              <DayStepper defaultValue={TODAY} width="300px" />
+              <DaySpin defaultValue={TODAY} width="300px" />
             </Variant>
             <Variant caption='size="xxl"'>
-              <DayStepper defaultValue={TODAY} size="xxl" width="300px" />
+              <DaySpin defaultValue={TODAY} size="xxl" width="300px" />
             </Variant>
           </Box>
         </div>
@@ -272,13 +272,13 @@
           <Heading id="customization">Customization</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="par défaut">
-              <DayStepper defaultValue={TODAY} width="300px" />
+              <DaySpin defaultValue={TODAY} width="300px" />
             </Variant>
             <Variant caption='borderWidth="0"'>
-              <DayStepper defaultValue={TODAY} width="300px" borderWidth="0" />
+              <DaySpin defaultValue={TODAY} width="300px" borderWidth="0" />
             </Variant>
             <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
-              <DayStepper
+              <DaySpin
                 defaultValue={TODAY}
                 width="300px"
                 borderColor="#1a73e8"
@@ -290,7 +290,7 @@
                 at 300px the day would be cut and one would be looking at that
                 instead of at the padding. */}
             <Variant caption='paddingY="m", width="380px"'>
-              <DayStepper defaultValue={TODAY} width="380px" paddingY="m" />
+              <DaySpin defaultValue={TODAY} width="380px" paddingY="m" />
             </Variant>
           </Box>
 
@@ -299,13 +299,13 @@
           </Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="par défaut">
-              <DayStepper defaultValue={TODAY} width="300px" />
+              <DaySpin defaultValue={TODAY} width="300px" />
             </Variant>
             <Variant caption='format="short"'>
-              <DayStepper defaultValue={TODAY} width="300px" format="short" />
+              <DaySpin defaultValue={TODAY} width="300px" format="short" />
             </Variant>
             <Variant caption='format="numeric"'>
-              <DayStepper defaultValue={TODAY} width="300px" format="numeric" />
+              <DaySpin defaultValue={TODAY} width="300px" format="numeric" />
             </Variant>
           </Box>
 
@@ -314,7 +314,7 @@
           </Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption='vertical, format="short"'>
-              <DayStepper
+              <DaySpin
                 defaultValue={TODAY}
                 vertical
                 width="220px"
@@ -332,19 +332,19 @@
           <Heading id="states">États</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="readOnly">
-              <DayStepper defaultValue={TODAY} width="300px" readOnly />
+              <DaySpin defaultValue={TODAY} width="300px" readOnly />
             </Variant>
             <Variant caption="disabled">
-              <DayStepper defaultValue={TODAY} width="300px" disabled />
+              <DaySpin defaultValue={TODAY} width="300px" disabled />
             </Variant>
             <Variant caption="loading">
-              <DayStepper defaultValue={TODAY} width="300px" loading />
+              <DaySpin defaultValue={TODAY} width="300px" loading />
             </Variant>
             {/* Held rather than obtained: the ring is what one sees when the
                 days have the keyboard, and here it is on the page next to the
                 other states instead of only under a Tab press. */}
             <Variant caption="focus visible">
-              <DayStepper
+              <DaySpin
                 defaultValue={TODAY}
                 width="300px"
                 pseudoState={{ ":focus-visible": true }}
@@ -383,15 +383,13 @@
             Simulation backend : ce qui part, et quand
           </Heading>
           <BackendCase id="value-nothing" title="Rien de part et d'autre">
-            {() => <DayStepper name="day" width="300px" />}
+            {() => <DaySpin name="day" width="300px" />}
           </BackendCase>
           <BackendCase
             id="value-default"
             title={`Backend vide, defaultValue="${day(-3)}"`}
           >
-            {() => (
-              <DayStepper name="day" defaultValue={day(-3)} width="300px" />
-            )}
+            {() => <DaySpin name="day" defaultValue={day(-3)} width="300px" />}
           </BackendCase>
           <BackendCase
             id="value-held"
@@ -399,7 +397,7 @@
             value={{ day: day(-3) }}
           >
             {(backendValue) => (
-              <DayStepper name="day" value={backendValue.day} width="300px" />
+              <DaySpin name="day" value={backendValue.day} width="300px" />
             )}
           </BackendCase>
         </div>
@@ -412,7 +410,7 @@
           <Heading id="min">min</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption={`min="${TODAY}" (aujourd'hui)`}>
-              <DayStepper signal={boundedDaySignal} min={TODAY} width="300px" />
+              <DaySpin signal={boundedDaySignal} min={TODAY} width="300px" />
             </Variant>
           </Box>
         </div>
@@ -425,7 +423,7 @@
           <Heading id="max">max</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption={`max="${TODAY}" (aujourd'hui)`}>
-              <DayStepper defaultValue={TODAY} max={TODAY} width="300px" />
+              <DaySpin defaultValue={TODAY} max={TODAY} width="300px" />
             </Variant>
           </Box>
         </div>
@@ -438,7 +436,7 @@
           <Heading id="step">step</Heading>
           <Box flex="y" spacing="l" alignX="start">
             <Variant caption="step={7}">
-              <DayStepper
+              <DaySpin
                 defaultValue={TODAY}
                 step={7}
                 width="300px"
@@ -461,7 +459,7 @@
             <p class="desc">
               L'événement dit d'où vient le jour : une flèche, ou le calendrier.
             </p>
-            <DayStepper
+            <DaySpin
               defaultValue={TODAY}
               width="300px"
               uiAction={(dayPicked, event) => {
