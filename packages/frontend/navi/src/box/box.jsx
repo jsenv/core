@@ -147,7 +147,16 @@ import.meta.css = /* css */ `
            told it may, and without that the body grows instead of scrolling */
         min-height: 0;
         flex: 0 1 auto;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
         overflow: auto;
+
+        &:focus-visible {
+          outline-style: solid;
+        }
       }
     }
   }
