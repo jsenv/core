@@ -23,7 +23,7 @@
  * slide that is about to leave.
  */
 
-import { useId, useLayoutEffect, useRef } from "preact/hooks";
+import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
@@ -42,6 +42,11 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { triggerNaviCommand } from "../commands.js";
+import {
+  DisabledContext,
+  LoadingContext,
+  ReadOnlyContext,
+} from "../control_context.js";
 import { useControlUIState } from "../control_hooks.jsx";
 import {
   dispatchRequestResetUIState,
@@ -315,6 +320,18 @@ export const DayStepper = ({
     dayProps.defaultValue = dayFallback;
   }
 
+  // Told from above as often as said here: a form running its action puts
+  // every control inside it out of service (that is how the chevrons grey out
+  // by themselves), and the day they sit around must fade with them — it is one
+  // control, not a box with three moods.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const loadingFromAbove = useContext(LoadingContext);
+  const disabledFromAbove = useContext(DisabledContext);
+  const readOnlyResolved = Boolean(
+    readOnly || loading || readOnlyFromAbove || loadingFromAbove,
+  );
+  const disabledResolved = Boolean(disabled || disabledFromAbove);
+
   const dayTextProps = { lang, format, maxLines };
 
   const dayPrevious = addDays(day, -step);
@@ -329,8 +346,8 @@ export const DayStepper = ({
       flex={vertical ? "y" : "x"}
       alignY="center"
       data-vertical={vertical ? "" : undefined}
-      data-readonly={readOnly ? "" : undefined}
-      data-disabled={disabled ? "" : undefined}
+      data-readonly={readOnlyResolved ? "" : undefined}
+      data-disabled={disabledResolved ? "" : undefined}
       style={{
         "--picker-stepper-padding-y": resolveSpacingSize(paddingY),
         ...rest.style,
@@ -418,7 +435,7 @@ export const DayStepper = ({
         // Tab stop, and the focus would follow it out of the box as it travels.
         commandFor={pickerId}
         onClick={(e) => {
-          if (readOnly || disabled || loading) {
+          if (readOnlyResolved || disabledResolved) {
             return;
           }
           triggerNaviCommand(e.currentTarget, "--navi-open", e);
