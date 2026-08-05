@@ -179,7 +179,11 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         `restore focus to previously focused element`,
         focusedElement,
       );
-      focusedElement.focus({ preventScroll: true });
+      const restoreFocusVisible = isMatchingFocusVisible(focusedElement);
+      focusedElement.focus({
+        preventScroll: true,
+        focusVisible: restoreFocusVisible,
+      });
     },
   };
 };

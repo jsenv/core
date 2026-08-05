@@ -283,22 +283,30 @@ definePseudoClass(":active", {
 // here and in control_hooks.jsx) can read it.
 let keyboardNavigationUsed = false;
 
-// Whether `el` should be treated as :focus-visible. Normally the native
-// :focus-visible match — but a control marked data-prevent-eager-focus-visible
-// (a button-like trigger whose native :focus-visible matches too eagerly: a
-// typed-into <input> on mouse focus, or a <div>/spinbutton focused
-// programmatically by a mouse-driven picker open) only counts while the current
-// modality is keyboard. So a purely mouse interaction never reveals its ring,
-// like a plain <button>. Use this instead of a bare el.matches(":focus-visible")
-// wherever focus-visible is evaluated.
+// Whether `el` should be treated as :focus-visible: the native match AND the
+// current modality being keyboard. Use this instead of a bare
+// el.matches(":focus-visible") wherever focus-visible is evaluated.
+//
+// The native match alone cannot be trusted, because we routinely take the
+// pointer out of the browser's hands: a picker opens on mousedown and calls
+// preventDefault() so the browser does not move focus itself (see
+// picker_custom.jsx). The browser therefore never registers that a pointer was
+// what moved focus, and whatever focus-visible state the previous keyboard
+// interaction left behind stays true — even across the programmatic
+// focus({ focusVisible: false }) that follows. Close a picker with Escape (ring
+// on the trigger, rightly) and click it open again: the popup's own focusable
+// would come up ringed, from a mouse press.
+//
+// `keyboardNavigationUsed` has no such blind spot — it is set by navigation
+// keydowns and cleared by pointerdown, whatever anyone prevents afterwards — so
+// it is the authority here. It used to gate only elements marked
+// data-prevent-eager-focus-visible; that marker is gone, the rule is now the
+// same for every element.
 export const isMatchingFocusVisible = (el) => {
   if (!el.matches(":focus-visible")) {
     return false;
   }
-  if (
-    el.hasAttribute("data-prevent-eager-focus-visible") &&
-    !keyboardNavigationUsed
-  ) {
+  if (!keyboardNavigationUsed) {
     return false;
   }
   return true;
@@ -435,13 +443,16 @@ focus_classes: {
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    // Same answer isMatchingFocusVisible would give below, reached without
+    // touching the DOM: nothing can inherit a ring while the modality is the
+    // pointer.
     if (requireFocusVisible && !keyboardNavigationUsed) {
       return false;
     }
     // A controller/proxy counts as focused for inheritance via the same rule
     // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
-    // the focus-visible variant (so a marked, mouse-focused controller doesn't
-    // propagate an eager ring).
+    // the focus-visible variant (so a mouse-focused controller doesn't propagate
+    // a ring).
     const isFocusedTarget = (target) =>
       requireFocusVisible
         ? isMatchingFocusVisible(target)

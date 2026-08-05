@@ -79,20 +79,21 @@ const css = /* css */ `
     border-radius: var(--navi-control-border-radius);
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
-    /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
+    &:focus {
+      /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
        the neighbours are just hints, so the ring belongs on the selected value,
        not the whole column. The spinbutton container is the focusable element, so
        suppress its own UA outline in favour of the ring. [data-focus-visible] lets
        a caller force the ring. */
-    &:focus {
       outline: none;
     }
-    &:focus-visible .navi_wheel_focus_ring,
-    &[data-focus-visible] .navi_wheel_focus_ring {
-      outline: var(--navi-focus-outline-width) solid
-        var(--navi-focus-outline-color);
-      /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-      outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
+    &[data-focus-visible] {
+      .navi_wheel_focus_ring {
+        outline: var(--navi-focus-outline-width) solid
+          var(--navi-focus-outline-color);
+        /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
+      }
     }
 
     /* Readonly & disabled dim the neighbour text identically; disabled dims the
