@@ -178,22 +178,25 @@
             <Variant caption="maxLines={2}">
               <DayStepper defaultValue={TODAY} width="180px" maxLines={2} />
             </Variant>
-            <Variant caption="noWrap">
-              <DayStepper defaultValue={TODAY} width="180px" noWrap />
+            <Variant caption="maxLines={1}">
+              <DayStepper defaultValue={TODAY} width="180px" maxLines={1} />
             </Variant>
           </Box>
 
           <Heading level={3} id="size">
             size
           </Heading>
+          <p class="desc">
+            Tous en <code>width="300px"</code>.
+          </p>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption='size="xxs", width="300px"'>
+            <Variant caption='size="xxs"'>
               <DayStepper defaultValue={TODAY} size="xxs" width="300px" />
             </Variant>
-            <Variant caption='width="300px"'>
+            <Variant caption="par défaut">
               <DayStepper defaultValue={TODAY} width="300px" />
             </Variant>
-            <Variant caption='size="xxl", width="300px"'>
+            <Variant caption='size="xxl"'>
               <DayStepper defaultValue={TODAY} size="xxl" width="300px" />
             </Variant>
           </Box>

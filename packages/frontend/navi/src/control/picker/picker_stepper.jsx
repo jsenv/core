@@ -38,7 +38,6 @@ import {
   SlideContainer,
 } from "@jsenv/navi/src/layout/slide_container.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
-import { createOnKeyDownForShortcuts } from "@jsenv/navi/src/keyboard/keyboard_shortcuts.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
@@ -63,6 +62,25 @@ const css = /* css */ `
     border: var(--navi-control-border-width) solid
       var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
+    outline-width: var(--navi-focus-outline-width);
+    /* Just outside the border, never on it: the ring belongs to the whole
+       control — the two chevrons included, since pressing one lands the
+       keyboard here (see navi-focus-delegate below). */
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: var(--navi-focus-outline-width);
+  }
+  /* The days hold the keyboard, and this box wears their ring: the container
+     fills it, so its own ring would be drawn a pixel inside this border and
+     two rings that close together read as a mistake. Same offer a dialog and a
+     popover answer (data-focus-outline-delegate, see slide_container.jsx), and
+     the same reply — the delegate stands down. */
+  .navi_picker_stepper:has(
+    > [data-focus-outline-delegate][data-focus-visible]
+  ) {
+    outline-style: solid;
+  }
+  .navi_picker_stepper > [data-focus-outline-delegate] {
+    --navi-focus-outline-style: none;
   }
   /* Same fading every navi control does when it is not to be touched (the
      border first, the words too once it is out of service): what is inside is
@@ -102,22 +120,11 @@ const css = /* css */ `
   }
   /* Kept inside its own slide: the three days share one cell, so anything
      sticking out would be written across the two beside it. A day too long for
-     the box simply wraps — the box grows, and the words are all there. */
+     the box simply wraps — the box grows, and the words are all there; say
+     maxLines to cut it instead, which the text itself knows how to do. */
   .navi_picker_stepper [data-slide] > * {
     max-width: 100%;
     overflow: hidden;
-  }
-  /* …unless one asks for one line (noWrap) or for a few (maxLines): the day is
-     then cut with an ellipsis rather than allowed to change the height of the
-     control every time it lands on a longer date. */
-  .navi_picker_stepper[data-nowrap] [data-slide] > * {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .navi_picker_stepper[data-max-lines] [data-slide] > * {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: var(--picker-stepper-max-lines);
   }
   /* As tall as one line of what it steps through — not half the box: what one
      presses is a chevron. Its height is its own, rather than the middle's, so a
@@ -190,11 +197,9 @@ const css = /* css */ `
  *   one scans; `short` where the room is not there.
  * @param {string} [paddingY="xs"] Above and below, on the day AND on the two
  *   chevrons: it is what makes the three the same height.
- * @param {boolean} [noWrap] Keep the day on one line and cut it with an
- *   ellipsis rather than let it wrap. `maxLines` is the same idea with room for
- *   a few lines; without either, a day too long for the box wraps and the box
- *   grows.
- * @param {number} [maxLines] How many lines the day may take before it is cut.
+ * @param {number} [maxLines] How many lines the day may take before it is cut
+ *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a day
+ *   too long for the box wraps, and the box grows.
  * @param {boolean} [vertical] The same control standing up: the ways out above
  *   and below rather than left and right, and the days travelling upwards.
  * Everything a box takes is taken here too — `width`, `borderWidth`,
@@ -223,7 +228,6 @@ export const DayStepper = ({
   readOnly,
   disabled,
   loading,
-  noWrap,
   maxLines,
   renderDay = renderDayDefault,
   previousLabel = "Previous day",
@@ -311,45 +315,7 @@ export const DayStepper = ({
     dayProps.defaultValue = dayFallback;
   }
 
-  // Only from the chevrons: inside the container the very same keys are the
-  // container's own (it walks its map), and answering them here too would step
-  // twice for one press.
-  const stepFromChevron = (e, command) => {
-    const stepperEl = e.currentTarget;
-    if (stepperEl.querySelector("[data-slide-container]").contains(e.target)) {
-      return null;
-    }
-    const chevron = stepperEl.querySelector(
-      `.navi_button[command="${command}"]`,
-    );
-    if (!chevron) {
-      return null;
-    }
-    triggerNaviCommand(chevron, command, e);
-    return false;
-  };
-  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowleft: {
-      enabled: !vertical,
-      handler: (e) => stepFromChevron(e, "--navi-left"),
-    },
-    arrowright: {
-      enabled: !vertical,
-      handler: (e) => stepFromChevron(e, "--navi-right"),
-    },
-    arrowup: {
-      enabled: Boolean(vertical),
-      handler: (e) => stepFromChevron(e, "--navi-up"),
-    },
-    arrowdown: {
-      enabled: Boolean(vertical),
-      handler: (e) => stepFromChevron(e, "--navi-down"),
-    },
-  });
-
-  // Everything a day is written with, in one object: whoever replaces
-  // renderDay gets the same say over the words as the default one has.
-  const dayTextProps = { lang, format, noWrap, maxLines };
+  const dayTextProps = { lang, format, maxLines };
 
   const dayPrevious = addDays(day, -step);
   const dayNext = addDays(day, step);
@@ -365,27 +331,18 @@ export const DayStepper = ({
       data-vertical={vertical ? "" : undefined}
       data-readonly={readOnly ? "" : undefined}
       data-disabled={disabled ? "" : undefined}
-      data-nowrap={noWrap ? "" : undefined}
-      data-max-lines={maxLines ? "" : undefined}
-      // The keys, when the focus is on a chevron rather than on the days: a
-      // chevron is a way out one PRESSES, so its arrow keys would otherwise do
-      // nothing at all — while the same press one slide to the left travels.
-      // Sent as the command the chevron itself carries, so the answer to "is
-      // there a day that way" is given once, by the container and the slide
-      // being left (see the Slide's own preventNav).
-      onKeyDown={(e) => {
-        onKeyDownShortcuts(e);
-        rest.onKeyDown?.(e);
-      }}
       style={{
         "--picker-stepper-padding-y": resolveSpacingSize(paddingY),
-        "--picker-stepper-max-lines": maxLines,
         ...rest.style,
       }}
     >
       {/* Around the whole box, the way a button wears it: the day is on its
           way somewhere, and it is the day one is looking at. */}
-      <LoadingOutline loading={loading} inset={-2} />
+      <LoadingOutline
+        loading={loading}
+        color="var(--navi-loader-color)"
+        inset={-2}
+      />
       {/* One picker for the three days, behind them: what a press on the day
           opens, and what holds the day for a form. */}
       <Picker
@@ -414,6 +371,12 @@ export const DayStepper = ({
       <Button
         command={vertical ? "--navi-up" : "--navi-left"}
         commandFor={containerId}
+        // Pressed, never focused: the keyboard lands on the days instead, which
+        // is the one place the arrows mean something — so a chevron and an
+        // arrow key are the same gesture rather than two, and Tab has one stop
+        // here rather than three.
+        tabIndex="-1"
+        navi-focus-delegate={containerId}
         icon
         variant="discrete"
         // Read-only while the day is being sent, too: what one is looking at is
@@ -461,13 +424,13 @@ export const DayStepper = ({
           triggerNaviCommand(e.currentTarget, "--navi-open", e);
         }}
       >
-        <Slide area="previous" flex alignX="center">
+        <Slide area="previous" flex align="center">
           {renderDay(dayPrevious, dayTextProps)}
         </Slide>
         <Slide
           area="current"
           flex
-          alignX="center"
+          align="center"
           // The days a min/max leaves out are simply not reachable: the way out
           // is closed on the slide being left, so a key, a chevron and a
           // command are all stopped by the same thing.
@@ -476,13 +439,15 @@ export const DayStepper = ({
         >
           {renderDay(day, dayTextProps)}
         </Slide>
-        <Slide area="next" flex alignX="center">
+        <Slide area="next" flex align="center">
           {renderDay(dayNext, dayTextProps)}
         </Slide>
       </SlideContainer>
       <Button
         command={vertical ? "--navi-down" : "--navi-right"}
         commandFor={containerId}
+        tabIndex="-1"
+        navi-focus-delegate={containerId}
         icon
         variant="discrete"
         readOnly={!nextAllowed || readOnly || loading}
@@ -501,16 +466,17 @@ export const DayStepper = ({
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only
 // the second is read at a glance.
-const renderDayDefault = (day, { lang, format, noWrap, maxLines } = {}) => (
+const renderDayDefault = (day, { lang, format, maxLines } = {}) => (
   <Time
     type="date"
     format={format}
     dayLabel
     lang={lang}
-    // Said even when false: a Time keeps its date on one line by default, and
-    // here a day too long for the box is meant to wrap unless one asked
-    // otherwise.
-    noWrap={Boolean(noWrap)}
+    // A Time keeps its date on one line by default; here a day too long for
+    // the box is meant to wrap, so that is undone — except for maxLines={1},
+    // which IS one line and cuts it itself (see Text's own TextOverflow):
+    // saying "you may wrap" there would undo the truncation instead.
+    noWrap={maxLines === 1 ? undefined : false}
     maxLines={maxLines}
   >
     {day}

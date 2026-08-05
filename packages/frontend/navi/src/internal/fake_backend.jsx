@@ -1,14 +1,15 @@
 /**
  * A backend, on the page.
  *
- * Two values and one call, all visible: what the backend holds, what the screen
- * holds, and — when an action runs — the call itself, waiting for an answer
- * that a human gives by pressing "répondre" or "échouer".
+ * The strip on top is the backend and nothing else: what it holds, and — when
+ * an action runs — the call itself, waiting for an answer a human gives by
+ * pressing "répondre" or "échouer". Under it, marked as such, is the frontend:
+ * whatever one puts inside.
  *
- * What it is mostly for: the difference between the two values. A form whose
- * fields already match the backend has nothing to send, so a submit that does
- * nothing is the right answer rather than a bug — which is impossible to see
- * until both values are written down side by side.
+ * What it is mostly for: the difference between the two. A form whose fields
+ * already match the backend has nothing to send, so a submit that does nothing
+ * is the right answer rather than a bug — which is impossible to see until the
+ * backend's own value is on the page next to the screen's.
  *
  * The call waits on purpose. A delay one picks is a delay one waits through; a
  * call held until it is answered is a pause in the middle of the action, where
@@ -29,8 +30,7 @@
  * application's.
  */
 
-import { effect } from "@preact/signals";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 
 const css = /* css */ `
   .navi_fake_backend {
@@ -44,18 +44,15 @@ const css = /* css */ `
     padding: 8px 12px;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 16px;
+    gap: 8px;
     color: #37474f;
     font-size: 12px;
     background: #eceff1;
   }
-  .navi_fake_backend_field {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
   .navi_fake_backend_label {
+    color: #78909c;
     font-weight: 600;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -72,12 +69,12 @@ const css = /* css */ `
     align-items: center;
     gap: 6px;
   }
-  .navi_fake_backend_idle {
-    margin-left: auto;
-    color: #78909c;
-  }
   .navi_fake_backend_body {
-    padding: 16px 12px;
+    display: flex;
+    padding: 8px 12px 16px;
+    flex-direction: column;
+    align-items: start;
+    gap: 8px;
   }
 `;
 
@@ -93,21 +90,6 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
   // The call in flight, held until someone answers it: what it was given, and
   // the two ways it can end.
   const [call, setCall] = useState(null);
-  // What the screen holds, read from the control inside rather than passed in:
-  // it is the other half of the comparison, and asking the DOM for it means the
-  // caller has nothing to wire up.
-  const [uiValue, setUIValue] = useState(undefined);
-  const bodyRef = useRef();
-  useLayoutEffect(() => {
-    const controlElement = bodyRef.current.querySelector("[navi-control]");
-    const controller = controlElement?.__uiStateController__;
-    if (!controller) {
-      return undefined;
-    }
-    return effect(() => {
-      setUIValue(controller.uiStateSignal.value);
-    });
-  }, []);
 
   const action = (received) =>
     new Promise((resolve, reject) => {
@@ -126,14 +108,8 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
   return (
     <div className="navi_fake_backend">
       <div className="navi_fake_backend_head">
-        <span className="navi_fake_backend_field">
-          <span className="navi_fake_backend_label">backend</span>
-          <span className="navi_fake_backend_value">{stringify(value)}</span>
-        </span>
-        <span className="navi_fake_backend_field">
-          <span className="navi_fake_backend_label">frontend</span>
-          <span className="navi_fake_backend_value">{stringify(uiValue)}</span>
-        </span>
+        <span className="navi_fake_backend_label">backend</span>
+        <span className="navi_fake_backend_value">{stringify(value)}</span>
         {call ? (
           <span className="navi_fake_backend_call">
             <span className="navi_fake_backend_value">
@@ -146,11 +122,10 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
               échouer
             </button>
           </span>
-        ) : (
-          <span className="navi_fake_backend_idle">aucun appel</span>
-        )}
+        ) : null}
       </div>
-      <div className="navi_fake_backend_body" ref={bodyRef}>
+      <div className="navi_fake_backend_body">
+        <span className="navi_fake_backend_label">frontend</span>
         {children({ value, action })}
       </div>
     </div>
