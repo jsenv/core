@@ -58,14 +58,6 @@
         margin: 0 0 8px;
         font-size: 0.95rem;
       }
-      .day-stepper {
-        width: 320px;
-        padding: 6px 4px;
-        color: #5f6368;
-        font-size: 15px;
-        border: 1px solid #dadce0;
-        border-radius: 10px;
-      }
       .demo-hr {
         margin: 20px 0;
         border: none;
@@ -89,7 +81,6 @@
       import { ClipboardInspect } from "../utils/clipboard_inspect.jsx";
       import {
         Box,
-        DayStepper,
         Field,
         Label,
         Link,
@@ -127,7 +118,6 @@
           <CustomizationDemo />
           <ClipboardDemo />
           <DateTimeComboDemo />
-          <DayStepperDemo />
         </Box>
       );
 
@@ -889,23 +879,6 @@
         );
       };
 
-      // ── Day stepper ──────────────────────────────────────────────────────
-
-      const stepperDaySignal = stateSignal(TODAY, {
-        id: "stepper_day",
-        type: "date",
-      });
-
-      const DayStepperDemo = () => (
-        <div class="demo-section">
-          <Heading id="day-stepper">Day stepper</Heading>
-          <p class="desc">
-            Les flèches changent de jour, le centre ouvre le picker.
-          </p>
-          <DayStepper signal={stepperDaySignal} className="day-stepper" />
-        </div>
-      );
-
       // ── The page itself ──────────────────────────────────────────────────
 
       setupRoutes([
@@ -915,7 +888,6 @@
             with_initial_date: withInitialDateSignal,
             combo_date: comboDateSignal,
             combo_time: comboTimeSignal,
-            stepper_day: stepperDaySignal,
           },
         }),
       ]);

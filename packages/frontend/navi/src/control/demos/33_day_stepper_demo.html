@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Day stepper demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      .boxed {
+        border: 1px solid #dadce0;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Day stepper</h1>
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        DayStepper,
+        Field,
+        Form,
+        Label,
+        Link,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const today = new Date();
+      const day = (offset) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() + offset);
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        return `${date.getFullYear()}-${month}-${String(date.getDate()).padStart(2, "0")}`;
+      };
+      const TODAY = day(0);
+      const YESTERDAY = day(-1);
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <TableOfContents />
+          <BasicsDemo />
+          <BoundsDemo />
+          <WeekDemo />
+          <InFormDemo />
+        </Box>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <h2>Sommaire</h2>
+          <DocumentToc />
+        </div>
+      );
+
+      // ── Basics ────────────────────────────────────────────────────────────
+
+      const daySignal = stateSignal(TODAY, { id: "day", type: "date" });
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="basics">Le jour, celui d'avant, celui d'après</Heading>
+          <p class="desc">
+            Les flèches changent de jour, le centre ouvre le calendrier.
+          </p>
+          <DayStepper signal={daySignal} />
+        </div>
+      );
+
+      // ── Bounds ────────────────────────────────────────────────────────────
+
+      const boundedDaySignal = stateSignal(TODAY, {
+        id: "bounded_day",
+        type: "date",
+      });
+
+      const BoundsDemo = () => (
+        <div class="demo-section">
+          <Heading id="bounds">min / max</Heading>
+          <p class="desc">Hier au plus tôt, dans 3 jours au plus tard.</p>
+          <DayStepper
+            signal={boundedDaySignal}
+            min={YESTERDAY}
+            max={day(3)}
+            className="boxed"
+          />
+        </div>
+      );
+
+      // ── Step ──────────────────────────────────────────────────────────────
+
+      const WeekDemo = () => (
+        <div class="demo-section">
+          <Heading id="step">step</Heading>
+          <p class="desc">Une semaine par flèche.</p>
+          <DayStepper
+            defaultValue={TODAY}
+            step={7}
+            previousLabel="Semaine précédente"
+            nextLabel="Semaine suivante"
+          />
+        </div>
+      );
+
+      // ── In a form ─────────────────────────────────────────────────────────
+
+      const InFormDemo = () => {
+        const [entries, log, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="in-form">Dans un formulaire</Heading>
+            <p class="desc">Le jour part avec le formulaire, sous son name.</p>
+            <Form
+              action={(formData) => {
+                log(Object.fromEntries(formData));
+              }}
+            >
+              <Box flex spacing="m" alignY="end">
+                <Field flex="y">
+                  <Label>Jour</Label>
+                  <DayStepper
+                    name="day"
+                    defaultValue={TODAY}
+                    className="boxed"
+                  />
+                </Field>
+                <Button type="submit">Soumettre</Button>
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── The page itself ──────────────────────────────────────────────────
+
+      setupRoutes([
+        route("", {
+          searchParams: {
+            day: daySignal,
+            bounded_day: boundedDaySignal,
+          },
+        }),
+      ]);
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>

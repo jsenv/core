@@ -1,25 +1,23 @@
 /**
  * A day, with the one before and the one after one press away.
  *
- * Three slides for an endless row of days: the previous one, the one shown, the
- * next one. A press travels by one slide, then the day arriving takes the
- * middle and the track returns there with the travel switched off — so the
- * window is always centred on the current day and the row never runs out. That
- * is what makes this neither a wheel (nothing here answers to scrolling) nor a
- * plain slide container (its slides are written once, and days are not).
+ * Three slides for an endless row of days, kept by a looping slide container:
+ * a press travels by one, then the window comes back to the middle while the
+ * day moves one step under it (see its `loop`/`onLoop`). So the three days are
+ * only ever "the one before, this one, the one after" and the row never runs
+ * out.
  *
- * One picker for the three days, headless and behind them: a picker is where
- * the day is chosen from a calendar, and there is one day being chosen. Each
- * slide is a button that opens it — which is also what keeps Slide out of the
- * commands business, a slide being a place, not a control.
+ * One picker for the three days, headless and behind them: a picker is where a
+ * day is chosen from a calendar, and there is one day being chosen. Pressing
+ * the day opens it.
  *
- * Everything that moves is said as a command: the chevrons travel the container
- * next to them (--navi-left/--navi-right + commandFor), the slides open the
- * picker (--navi-open + commandFor). Nothing here calls a handler that moves
- * something else behind the scenes.
+ * Two things take the keyboard and no more: the container (arrows walk the
+ * days, Enter/Space open the calendar) and the two chevrons. The day itself is
+ * not a control — a click on the container opens the picker by command — which
+ * is what keeps the focus where the travel happens instead of moving it into a
+ * slide that is about to leave.
  */
 
-import { batch } from "@preact/signals";
 import { useId, useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -31,39 +29,19 @@ import {
   Slide,
   SlideContainer,
 } from "@jsenv/navi/src/layout/slide_container.jsx";
-import { formatDayRelative } from "@jsenv/navi/src/text/format_time.js";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
-import { languagesSignal } from "@jsenv/navi/src/text/lang_signal.js";
-import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
+import { triggerNaviCommand } from "../commands.js";
 import { Button } from "../input/button.jsx";
 import { Picker } from "../picker/picker.jsx";
 
 const css = /* css */ `
   .navi_day_stepper {
-    --day-stepper-width: 20ch;
-
+    /* What the picker's own box fills: headless, it draws nothing and covers
+       whatever it is inside, which is what the calendar is anchored to. */
     position: relative;
   }
-  /* The three days are in one grid cell, so the box would otherwise measure
-     itself on the longest label and change width as one steps through days.
-     A width of its own keeps the two chevrons still. */
-  .navi_day_stepper > [data-slide-container] {
-    width: var(--day-stepper-width);
-    flex: 0 0 auto;
-  }
-  /* Behind the days, and the size of the whole box: headless, so it draws
-     nothing at all — it is here to be opened by them and to be what the
-     calendar is anchored to, which needs a box of its own. */
-  .navi_day_stepper_picker {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-  }
 `;
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * @type {import("preact").FunctionComponent<{
@@ -88,10 +66,13 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * @param {number} [step=1] How many days a press covers — 7 for a week at a
  *   time, and the label then names the day one lands on, as it always does.
  * @param {number} [duration=250] How long a travel takes, in milliseconds.
+ * @param {string} [min] The first day one can reach, as "YYYY-MM-DD"; `max` is
+ *   the last. Beyond them the travel simply does not happen and the chevron
+ *   that way says so.
  * @param {(day: string) => import("preact").ComponentChildren} [renderDay] What
- *   to write for a day. Defaults to "yesterday"/"today"/"tomorrow" around
- *   today and the short date beyond, since a day near now is read as a
- *   distance from now before it is read as a date.
+ *   to write for a day. Defaults to the short date plus what it is to today
+ *   when there is a word for it ("sam. 8 août (demain)"), since a day near now
+ *   is read as a distance from now before it is read as a date.
  */
 export const DayStepper = ({
   value,
@@ -113,11 +94,6 @@ export const DayStepper = ({
   const id = useId();
   const containerId = `${id}_days`;
   const pickerId = `${id}_picker`;
-  // The area the track is travelling TO, or "current" when it is at rest in the
-  // middle. It is also what says a travel is running, and the day only changes
-  // once that travel is over — the two must land in the same render or the
-  // wrong day shows for a frame.
-  const [area, setArea] = useState("current");
   const [dayState, setDayState] = useState(() => defaultValue ?? todayString());
   const day = value ?? signal?.value ?? dayState;
 
@@ -134,36 +110,12 @@ export const DayStepper = ({
   const previousAllowed = !min || dayPrevious >= min;
   const nextAllowed = !max || dayNext <= max;
 
-  // The container is what travels — a chevron, an arrow key, a command from
-  // anywhere — and this is where that travel is answered: the day arriving
-  // takes the middle, and the track is put back there without a travel of its
-  // own (see the duration below).
-  const onCurrentChange = (areaNext) => {
-    if (areaNext === "current" || area !== "current") {
-      return;
-    }
-    setArea(areaNext);
-    setTimeout(() => {
-      batch(() => {
-        setArea("current");
-        setDay(areaNext === "next" ? dayNext : dayPrevious);
-      });
-    }, duration);
-  };
-
   return (
-    <Box
-      {...rest}
-      baseClassName="navi_day_stepper"
-      flex
-      alignY="center"
-      alignX="center"
-    >
-      {/* One picker for the three days, behind them: what a slide opens (see
-          the buttons below), and what holds the day for a form. */}
+    <Box {...rest} baseClassName="navi_day_stepper" flex alignY="stretch">
+      {/* One picker for the three days, behind them: what a press on the day
+          opens, and what holds the day for a form. */}
       <Picker
         id={pickerId}
-        className="navi_day_stepper_picker"
         type="date"
         variant="headless"
         name={name}
@@ -181,6 +133,12 @@ export const DayStepper = ({
         variant="discrete"
         readOnly={!previousAllowed}
         aria-label={previousLabel}
+        // A third of the box each, and its full height: what one presses to
+        // change the day is as big as the day it changes.
+        expandX
+        expandY
+        flex
+        align="center"
       >
         <Icon>
           <ChevronLeftSvg />
@@ -189,37 +147,35 @@ export const DayStepper = ({
       <SlideContainer
         id={containerId}
         layout="row"
-        current={area}
-        onCurrentChange={onCurrentChange}
-        // The way back to the middle is not a travel: the day has just changed
-        // under it, so the three slides already hold what they must and the
-        // track has only to be where the middle one is.
-        duration={area === "current" ? "0ms" : `${duration}ms`}
+        defaultCurrent="current"
+        duration={`${duration}ms`}
+        // The three days are a window over an endless row: the container plays
+        // the travel and comes back to the middle, and the day moves one step
+        // here, in onLoop, as it lands.
+        loop
+        onLoop={({ dx }) => {
+          setDay(addDays(day, dx * step));
+        }}
+        // The whole middle opens the calendar — a command, like the chevrons
+        // send one, and no button of its own: the day would then be one more
+        // Tab stop, and the focus would follow it out of the box as it travels.
+        commandFor={pickerId}
+        onClick={(e) => {
+          triggerNaviCommand(e.currentTarget, "--navi-open", e);
+        }}
       >
-        <Slide area="previous">
-          <DayButton
-            day={dayPrevious}
-            pickerId={pickerId}
-            lang={lang}
-            renderDay={renderDay}
-          />
+        <Slide area="previous">{renderDay(dayPrevious, { lang })}</Slide>
+        <Slide
+          area="current"
+          // The days a min/max leaves out are simply not reachable: the way out
+          // is closed on the slide being left, so a key, a chevron and a
+          // command are all stopped by the same thing.
+          preventNavPrevious={!previousAllowed}
+          preventNavNext={!nextAllowed}
+        >
+          {renderDay(day, { lang })}
         </Slide>
-        <Slide area="current">
-          <DayButton
-            day={day}
-            pickerId={pickerId}
-            lang={lang}
-            renderDay={renderDay}
-          />
-        </Slide>
-        <Slide area="next">
-          <DayButton
-            day={dayNext}
-            pickerId={pickerId}
-            lang={lang}
-            renderDay={renderDay}
-          />
-        </Slide>
+        <Slide area="next">{renderDay(dayNext, { lang })}</Slide>
       </SlideContainer>
       <Button
         command="--navi-right"
@@ -228,6 +184,10 @@ export const DayStepper = ({
         variant="discrete"
         readOnly={!nextAllowed}
         aria-label={nextLabel}
+        expandX
+        expandY
+        flex
+        align="center"
       >
         <Icon>
           <ChevronRightSvg />
@@ -237,40 +197,14 @@ export const DayStepper = ({
   );
 };
 
-// A day is a button: pressing it opens the one picker behind the three of them.
-// A Button rather than a command on the Slide itself — a slide is a place, not
-// a control, and it has no business carrying one.
-const DayButton = ({ day, pickerId, lang, renderDay }) => (
-  <Button
-    command="--navi-open"
-    commandFor={pickerId}
-    variant="discrete"
-    expandX
-    paddingY="xs"
-  >
-    {renderDay(day, { lang })}
-  </Button>
+// The date, and what it is to today when that is something one has a word for:
+// "sam. 8 août (demain)" says both where one is and how far that is, and only
+// the second is read at a glance.
+const renderDayDefault = (day, { lang } = {}) => (
+  <Time type="date" format="short" dayLabel lang={lang}>
+    {day}
+  </Time>
 );
-
-const renderDayDefault = (day, { lang = languagesSignal.value } = {}) => {
-  const offset = Math.round(
-    (dayToDate(day) - dayToDate(todayString())) / MS_PER_DAY,
-  );
-  if (offset >= -1 && offset <= 1) {
-    const relative = formatDayRelative(offset, lang);
-    // Uppercased here rather than with Text's `capitalize`: that one is
-    // text-transform, which capitalizes every word — and browsers count what
-    // follows an apostrophe as one ("Aujourd'Hui").
-    return (
-      <Text>{`${relative.slice(0, 1).toUpperCase()}${relative.slice(1)}`}</Text>
-    );
-  }
-  return (
-    <Time type="date" format="short" lang={lang}>
-      {day}
-    </Time>
-  );
-};
 
 const dayToDate = (day) => new Date(`${day}T00:00:00`);
 

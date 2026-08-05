@@ -219,6 +219,15 @@ const lineAreas = (slideElements, layout) => {
   return parseAreas(layout === "column" ? names : [names.join(" ")]);
 };
 
+// A CSS duration read as a number, so a window knows when its travel is over.
+const durationToMs = (duration) => {
+  const number = parseFloat(duration);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  return String(duration).trimEnd().endsWith("ms") ? number : number * 1000;
+};
+
 const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
@@ -248,6 +257,18 @@ const readArea = (slideElement) =>
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
  * @param {(area: string) => void} [props.onCurrentChange]
+ * @param {boolean} [props.loop] - the slides are a window over something
+ *   endless (days, months, a carousel) rather than places one stays at. A
+ *   travel plays as usual and then the window comes back to the slide it rests
+ *   on, without a travel of its own — so the content is expected to have moved
+ *   one step meanwhile, which is what `onLoop` is for. Travelling off one end
+ *   comes back on the other, since a window has no end.
+ * @param {(detail: {area: string, dx: number, dy: number, event: Event}) => void} [props.onLoop]
+ *   - the window has rolled one step this way and is back at rest: move the
+ *   content by one step, here, so the picture that lands in the middle is the
+ *   one that just travelled there. Called once the travel is over, and in the
+ *   same render as the return to rest — anything later shows the old content
+ *   for a frame.
  * @param {boolean} [props.keyboardTravel=true] - whether the arrows (and
  *   Home/End) walk the map. On by default: a map one can see is a map one
  *   expects to walk. Off when the arrows mean something else where these slides
@@ -261,6 +282,8 @@ export const SlideContainer = ({
   current: currentProp,
   defaultCurrent,
   onCurrentChange,
+  loop,
+  onLoop,
   keyboardTravel = true,
   duration = "300ms",
   children,
@@ -275,7 +298,17 @@ export const SlideContainer = ({
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
   const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
-  const current = currentProp ?? currentAreaState;
+  // Where the window is while it rolls, and nothing more: a looping container
+  // rests where it rested before (below), so this is the travel itself rather
+  // than a change of slide.
+  const [rollingArea, setRollingArea] = useState(null);
+  // The way back to rest is not a travel: the content has moved one step under
+  // the window, so the picture is already the right one and the track has only
+  // to be where the resting slide is. Undone the frame after, or the next
+  // travel would jump too.
+  const [rollingBack, setRollingBack] = useState(false);
+  const rollingRef = useRef(false);
+  const current = rollingArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
   // Which required slides have been answered (see Slide's own `required`). Held
   // here rather than in each slide because answering one says something about
@@ -294,6 +327,21 @@ export const SlideContainer = ({
   // state: nothing on screen depends on it, and a travel must read what the
   // one before it wrote, not what the last render saw.
   const cameFromRef = useRef({});
+
+  // The travel is given back as soon as the return to rest has been painted:
+  // one frame with it off is all it takes, and leaving it off would make the
+  // next travel a jump.
+  useLayoutEffect(() => {
+    if (!rollingBack) {
+      return undefined;
+    }
+    const frame = requestAnimationFrame(() => {
+      setRollingBack(false);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [rollingBack]);
 
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
@@ -394,7 +442,13 @@ export const SlideContainer = ({
    * @returns {boolean} whether it moved — false is "there was nowhere to go",
    *   which is what lets a key that changes nothing keep its own meaning.
    */
-  const goToArea = (area, { forward, event, value } = {}) => {
+  const goToArea = (area, { forward, event, value, dx = 0, dy = 0 } = {}) => {
+    // A window mid-roll answers to nothing: it is on its way somewhere and the
+    // content that goes with it has not moved yet, so a second travel would be
+    // about a picture nobody is looking at.
+    if (rollingRef.current) {
+      return false;
+    }
     const { slideElements, placeOf } = readMap();
     const currentElement =
       slideElements.find((slideElement) =>
@@ -453,6 +507,22 @@ export const SlideContainer = ({
       ...cameFromRef.current,
       [area]: readArea(currentElement),
     };
+    if (loop) {
+      // A window does not change slide, it rolls: the travel plays, and once it
+      // is over the window is put back where it rests while whoever owns the
+      // content moves it one step. Both in the same tick — the return to rest
+      // and the new content are the same picture, and a render between them
+      // would show the old one in the new place.
+      rollingRef.current = true;
+      setRollingArea(area);
+      setTimeout(() => {
+        rollingRef.current = false;
+        setRollingArea(null);
+        setRollingBack(true);
+        onLoop?.({ area, dx, dy, event });
+      }, durationToMs(duration));
+      return true;
+    }
     setCurrentAreaState(area);
     onCurrentChange?.(area);
     return true;
@@ -505,14 +575,37 @@ export const SlideContainer = ({
       ) || slideElements[0];
     const currentArea = readArea(currentElement);
     let { x, y } = placeOf.get(currentArea) || { x: 0, y: 0 };
+    // How far the line being walked goes, needed only by a window: stepping off
+    // one of its ends comes back on the other, since a window has no ends.
+    const line = loop
+      ? [...areaAt.keys()]
+          .map((key) => key.split(",").map(Number))
+          .filter(([cellX, cellY]) => (dx ? cellY === y : cellX === x))
+          .map(([cellX, cellY]) => (dx ? cellX : cellY))
+      : null;
+    const first = line ? Math.min(...line) : 0;
+    const last = line ? Math.max(...line) : 0;
+    let steps = 0;
     while (true) {
       x += dx;
       y += dy;
-      if (x < 0 || y < 0) {
+      if (loop) {
+        if (dx) {
+          x = x < first ? last : x > last ? first : x;
+        } else {
+          y = y < first ? last : y > last ? first : y;
+        }
+      } else if (x < 0 || y < 0) {
         return undefined;
       }
       const area = areaAt.get(`${x},${y}`);
-      if (area === currentArea) {
+      if (area === currentArea || (loop && area === undefined)) {
+        // A hole, or a cell of the area one is already on: keep walking — and
+        // give up once the whole line has been walked, which only happens when
+        // there is nowhere else on it to go.
+        if (loop && (steps += 1) > line.length) {
+          return undefined;
+        }
         continue;
       }
       return area;
@@ -523,6 +616,8 @@ export const SlideContainer = ({
       forward: dx > 0 || dy > 0,
       event,
       value,
+      dx,
+      dy,
     });
 
   // "next"/"previous" are the same movement said without a direction, which is
@@ -651,7 +746,10 @@ export const SlideContainer = ({
         onKeyDownShortcuts(e);
         rest.onKeyDown?.(e);
       }}
-      style={{ "--slide-container-duration": duration, ...rest.style }}
+      style={{
+        "--slide-container-duration": rollingBack ? "0ms" : duration,
+        ...rest.style,
+      }}
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
