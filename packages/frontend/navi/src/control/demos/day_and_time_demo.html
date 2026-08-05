@@ -94,11 +94,10 @@
 
       const twoDigits = (value) => String(value).padStart(2, "0");
 
-      // Nothing for the day: what one is asked for is a day, and there is no
-      // reason to pretend one has already been chosen — the stepper opens on
-      // today by itself. The hour is the other way round: a time has to start
-      // somewhere on a wheel, and "now" is the only sensible somewhere.
-      const daySignal = stateSignal(undefined, { id: "day", type: "date" });
+      // Now, on all three: nothing is in the url until one of them moves away
+      // from it (that is what a stateSignal default means), and what the page
+      // suggests is a whole date and time one can send as it stands.
+      const daySignal = stateSignal(NOW.day, { id: "day", type: "date" });
       const hoursSignal = stateSignal(NOW.hours, {
         id: "hours",
         type: "number",
