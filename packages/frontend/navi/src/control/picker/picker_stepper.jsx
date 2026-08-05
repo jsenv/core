@@ -327,10 +327,30 @@ export const DayStepper = ({
   const readOnlyFromAbove = useContext(ReadOnlyContext);
   const loadingFromAbove = useContext(LoadingContext);
   const disabledFromAbove = useContext(DisabledContext);
+  const loadingResolved = Boolean(loading || loadingFromAbove);
   const readOnlyResolved = Boolean(
-    readOnly || loading || readOnlyFromAbove || loadingFromAbove,
+    readOnly || readOnlyFromAbove || loadingResolved,
   );
   const disabledResolved = Boolean(disabled || disabledFromAbove);
+
+  // Why a chevron refuses, in its own words — and only when the reason is
+  // ours: the end of what one may reach is something this control knows and
+  // navi cannot guess. For everything else the reason belongs to the state the
+  // whole control is in, and it is said about the control ("read-only",
+  // "busy") rather than about the button, which is not what the user was
+  // pressing.
+  const wayOutMessage = (allowed, endKey) => {
+    if (!allowed) {
+      return naviI18n(endKey);
+    }
+    if (loadingResolved) {
+      return naviI18n("constraint.busy.default");
+    }
+    if (readOnlyResolved) {
+      return naviI18n("constraint.readonly.default");
+    }
+    return undefined;
+  };
 
   const dayTextProps = { lang, format, maxLines };
 
@@ -399,12 +419,12 @@ export const DayStepper = ({
         // Read-only while the day is being sent, too: what one is looking at is
         // on its way somewhere and stepping it would be a second answer to a
         // question still being asked.
-        readOnly={!previousAllowed || readOnly || loading}
-        disabled={disabled}
-        // What a press would do, rather than the button's own state: "not
-        // available right now" says nothing, and it is not the button that is
-        // unavailable — it is the value it would have gone to.
-        readOnlyMessage={naviI18n("stepper.nothing_before")}
+        readOnly={!previousAllowed || readOnlyResolved}
+        disabled={disabledResolved}
+        readOnlyMessage={wayOutMessage(
+          previousAllowed,
+          "stepper.nothing_before",
+        )}
         aria-label={previousLabel}
         flex
         align="center"
@@ -467,9 +487,9 @@ export const DayStepper = ({
         navi-focus-delegate={containerId}
         icon
         variant="discrete"
-        readOnly={!nextAllowed || readOnly || loading}
-        disabled={disabled}
-        readOnlyMessage={naviI18n("stepper.nothing_after")}
+        readOnly={!nextAllowed || readOnlyResolved}
+        disabled={disabledResolved}
+        readOnlyMessage={wayOutMessage(nextAllowed, "stepper.nothing_after")}
         aria-label={nextLabel}
         flex
         align="center"

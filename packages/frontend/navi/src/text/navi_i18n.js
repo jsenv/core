@@ -229,12 +229,12 @@ naviI18n.addAll({
 // what it is made of: the same words fit days, months, pages or sizes.
 naviI18n.addAll({
   "stepper.nothing_before": {
-    en: "There is nothing before this one.",
-    fr: "Il n'y a rien avant.",
+    en: "No item before this one.",
+    fr: "Pas d'élément avant celui-ci.",
   },
   "stepper.nothing_after": {
-    en: "There is nothing after this one.",
-    fr: "Il n'y a rien après.",
+    en: "No item after this one.",
+    fr: "Pas d'élément après celui-ci.",
   },
 });
 
