@@ -66,13 +66,17 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import {
+        Box,
         Form,
         Button,
         Input,
         Field,
         Label,
         NaviDebug,
+        Slide,
+        SlideContainer,
         stateSignal,
+        Text,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
@@ -92,6 +96,7 @@
               <BasicFormDemo />
               <UnchangedDemo />
               <FormWithButtonActionDemo />
+              <TwoSubmitButtonsDemo />
               <MultiFieldValidationTest />
               <h2 style={{ margin: "40px 20px 0" }}>Input types in forms</h2>
               <FormTextDemo />
@@ -354,6 +359,74 @@
                 {formResult.value}
               </div>
             )}
+          </div>
+        );
+      };
+
+      // Two ways to send the same form: the action is told which button asked
+      // (it carries a name and a value, like any field), and what follows the
+      // send is that button's own business too — `formCommand`, next to the
+      // form's `command`, the way the browser's own formaction sits next to
+      // action.
+      const TwoSubmitButtonsDemo = () => {
+        const [log, setLog] = useState([]);
+        const append = (line) => setLog((previous) => [...previous, line]);
+        return (
+          <div className="test-container" id="two-submits">
+            <h2>Two submit buttons in one form</h2>
+            <p>
+              Both send the form and both put it in loading while the action
+              runs — save stays on the slide, delete moves on to the next one.
+            </p>
+            <div style={{ width: "320px", border: "1px solid #90caf9" }}>
+              <SlideContainer>
+                <Slide id="two_submits_edit" overflow="auto">
+                  <Form
+                    name="two-submits"
+                    action={async ({ name, intent }) => {
+                      await new Promise((r) => setTimeout(r, 700));
+                      append(`${intent}: "${name}"`);
+                      return intent;
+                    }}
+                  >
+                    <Box padding="m" flex="y" spacing="s">
+                      <Field>
+                        <Label>Name</Label>
+                        <Input type="text" name="name" defaultValue="Ada" />
+                      </Field>
+                      <Box flex spacing="s">
+                        {/* Stays here: no formCommand, so nothing follows the
+                            send but the action itself. */}
+                        <Button type="submit" name="intent" value="save">
+                          Save
+                        </Button>
+                        {/* Goes: this button says what follows ITS own send. */}
+                        <Button
+                          type="submit"
+                          name="intent"
+                          value="delete"
+                          formCommand="--navi-go-to-slide:two_submits_gone"
+                          variant="discrete"
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Form>
+                </Slide>
+                <Slide id="two_submits_gone" overflow="auto">
+                  <Box padding="m" flex="y" spacing="s" alignX="start">
+                    <Text>Deleted.</Text>
+                    <Button command="--navi-back" variant="discrete">
+                      back
+                    </Button>
+                  </Box>
+                </Slide>
+              </SlideContainer>
+            </div>
+            <div className="status success" style={{ minHeight: "1.5em" }}>
+              {log.join(" · ")}
+            </div>
           </div>
         );
       };

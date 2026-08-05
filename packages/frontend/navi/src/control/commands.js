@@ -324,7 +324,16 @@ registerNaviCommand("--navi-reset", (source, event) => {
  *   same act, a level down;
  * - the document: nothing. A form on a page stays where it is.
  */
-const resolveAfterSend = (target) => {
+// What follows a send that went through — and it is asked of the button that
+// sent before the form it sent, because a form with two submit buttons has two
+// answers: "save" stays, "delete" goes back to the list. Same shape as the
+// browser's own formaction/formmethod, and the same shape the action already
+// has (it is told which button requested it).
+const resolveAfterSend = (target, requester) => {
+  const askedForByRequester = requester?.getAttribute?.("data-after-send");
+  if (askedForByRequester) {
+    return askedForByRequester;
+  }
   const askedFor = target.getAttribute?.("data-after-send");
   if (askedFor) {
     return askedFor;
@@ -362,8 +371,6 @@ registerNaviCommand("--navi-send", (source, event) => {
   // looking at, and a decision just taken there is a reason to leave it. The
   // NEAREST surface answers, and only that one — a form inside a slide inside a
   // dialog goes back a slide, it does not also close the dialog.
-  const afterSend = resolveAfterSend(target);
-
   // send inside expandable
   if (target.getAttribute("aria-expanded") === "true") {
     return {
@@ -387,6 +394,10 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
+      // Read here rather than above: it depends on the requester, which is only
+      // known now — Enter in a field sends through the first submit button, and
+      // what follows the send is that button's answer.
+      const afterSend = resolveAfterSend(target, requester);
       // Nothing is committed when a constraint fails, so nothing is decided
       // and the popup must stay open — with the form still in front of the
       // user, showing what it is waiting for.

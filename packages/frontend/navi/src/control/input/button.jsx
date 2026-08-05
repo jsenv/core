@@ -26,6 +26,14 @@ const ButtonCommandPropResolver = (props) => {
     props.command = props.command || "--navi-send";
   }
   const command = props.command;
+  // What follows a send THIS button asked for, overriding the form's own
+  // `command` (see resolveAfterSend in commands.js). Named after the browser's
+  // formaction/formmethod/formtarget, which are the same idea: a submit button
+  // saying how its own submission differs. For a form with two ways out —
+  // "save" stays, "delete" goes back to the list.
+  const { formCommand } = props;
+  props.formCommand = undefined;
+  props["data-after-send"] = formCommand;
 
   // `readOnlyWhileFormUnchanged`: hold the send button back until the form
   // around it holds something new, so it says it is waiting instead of
@@ -43,8 +51,8 @@ const ButtonCommandPropResolver = (props) => {
   // the form re-renders around it), so a write would never be undone.
   const heldByForm = Boolean(
     props.readOnlyWhileFormUnchanged &&
-      command === "--navi-send" &&
-      form?.changed === false,
+    command === "--navi-send" &&
+    form?.changed === false,
   );
   const readOnly = heldByForm ? true : props.readOnly;
 
