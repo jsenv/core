@@ -395,9 +395,15 @@
                         <Input type="text" name="name" defaultValue="Ada" />
                       </Field>
                       <Box flex spacing="s">
-                        {/* Stays here: no formCommand, so nothing follows the
-                            send but the action itself. */}
-                        <Button type="submit" name="intent" value="save">
+                        {/* Stays here: an empty formCommand says "nothing
+                            follows my send" — without it the form would do what
+                            a form in a slide does, and move on. */}
+                        <Button
+                          type="submit"
+                          name="intent"
+                          value="save"
+                          formCommand=""
+                        >
                           Save
                         </Button>
                         {/* Goes: this button says what follows ITS own send. */}

@@ -31,9 +31,14 @@ const ButtonCommandPropResolver = (props) => {
   // formaction/formmethod/formtarget, which are the same idea: a submit button
   // saying how its own submission differs. For a form with two ways out —
   // "save" stays, "delete" goes back to the list.
+  // Written only when the caller said something, empty string included: an
+  // empty one means "nothing follows my send", which is not the same as saying
+  // nothing at all (then the form, or the surface around it, decides).
   const { formCommand } = props;
   props.formCommand = undefined;
-  props["data-after-send"] = formCommand;
+  if (formCommand !== undefined) {
+    props["data-after-send"] = formCommand;
+  }
 
   // `readOnlyWhileFormUnchanged`: hold the send button back until the form
   // around it holds something new, so it says it is waiting instead of

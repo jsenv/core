@@ -330,13 +330,15 @@ registerNaviCommand("--navi-reset", (source, event) => {
 // browser's own formaction/formmethod, and the same shape the action already
 // has (it is told which button requested it).
 const resolveAfterSend = (target, requester) => {
-  const askedForByRequester = requester?.getAttribute?.("data-after-send");
-  if (askedForByRequester) {
-    return askedForByRequester;
+  // Present but empty is an answer too — "nothing follows my send" — and it is
+  // how a button opts out of what the surface would otherwise do (a form in a
+  // slide moves on, in a popup closes). Hence hasAttribute rather than a
+  // truthiness test on the value.
+  if (requester?.hasAttribute?.("data-after-send")) {
+    return requester.getAttribute("data-after-send") || undefined;
   }
-  const askedFor = target.getAttribute?.("data-after-send");
-  if (askedFor) {
-    return askedFor;
+  if (target.hasAttribute?.("data-after-send")) {
+    return target.getAttribute("data-after-send") || undefined;
   }
   // From above the target: a popup that IS the send target is handled on its
   // own (see the aria-expanded branch below), and must not answer twice.
