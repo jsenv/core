@@ -37,15 +37,6 @@
         color: #555;
         font-size: 13px;
       }
-      /* A width of its own: the three days it holds are not the same length,
-         and without one the control would resize as one steps through it. */
-      .stepper {
-        width: 340px;
-      }
-      .boxed {
-        border: 1px solid #dadce0;
-        border-radius: 10px;
-      }
     </style>
   </head>
   <body>
@@ -99,6 +90,7 @@
           <BasicsDemo />
           <BoundsDemo />
           <WeekDemo />
+          <VerticalDemo />
           <InFormDemo />
         </Box>
       );
@@ -120,7 +112,7 @@
           <p class="desc">
             Les flèches changent de jour, le centre ouvre le calendrier.
           </p>
-          <DayStepper signal={daySignal} className="stepper" />
+          <DayStepper signal={daySignal} width="340px" />
         </div>
       );
 
@@ -139,7 +131,11 @@
             signal={boundedDaySignal}
             min={YESTERDAY}
             max={day(3)}
-            className="stepper boxed"
+            width="340px"
+            borderWidth="1"
+            borderStyle="solid"
+            borderColor="#dadce0"
+            borderRadius="10px"
           />
         </div>
       );
@@ -153,9 +149,28 @@
           <DayStepper
             defaultValue={TODAY}
             step={7}
-            className="stepper"
+            width="340px"
             previousLabel="Semaine précédente"
             nextLabel="Semaine suivante"
+          />
+        </div>
+      );
+
+      // ── Vertical ──────────────────────────────────────────────────────────
+
+      const VerticalDemo = () => (
+        <div class="demo-section">
+          <Heading id="vertical">vertical</Heading>
+          <p class="desc">Le même, debout : ↑ ↓.</p>
+          <DayStepper
+            defaultValue={TODAY}
+            vertical
+            format="short"
+            width="220px"
+            borderWidth="1"
+            borderStyle="solid"
+            borderColor="#dadce0"
+            borderRadius="10px"
           />
         </div>
       );
@@ -180,7 +195,11 @@
                   <DayStepper
                     name="day"
                     defaultValue={TODAY}
-                    className="stepper boxed"
+                    width="340px"
+                    borderWidth="1"
+                    borderStyle="solid"
+                    borderColor="#dadce0"
+                    borderRadius="10px"
                   />
                 </Field>
                 <Button type="submit">Soumettre</Button>

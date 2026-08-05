@@ -225,6 +225,19 @@ naviI18n.addAll({
   },
 });
 
+// Stepper messages — the ends of what one steps through, said without naming
+// what it is made of: the same words fit days, months, pages or sizes.
+naviI18n.addAll({
+  "stepper.nothing_before": {
+    en: "There is nothing before this one.",
+    fr: "Il n'y a rien avant.",
+  },
+  "stepper.nothing_after": {
+    en: "There is nothing after this one.",
+    fr: "Il n'y a rien après.",
+  },
+});
+
 // List messages — override any key to customize list messages
 naviI18n.addAll({
   "list.empty": {
