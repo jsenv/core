@@ -44,6 +44,18 @@
   // other two are one click away, and the choice is remembered.
   const DEFAULT_KIND_STATE = { demo: true, experiment: false, page: false };
 
+  // The page this script is running in, as the list spells its urls (see
+  // html_pages.js: "/" + the path from the root). Decoded, because a name with a
+  // space or an accent reaches location.pathname percent-encoded and would never
+  // match the list.
+  const currentPageUrl = () => {
+    try {
+      return decodeURIComponent(window.location.pathname);
+    } catch {
+      return window.location.pathname;
+    }
+  };
+
   const isSwitcherKey = (event) => {
     if (event.key !== "k" && event.key !== "K") {
       return false;
@@ -138,9 +150,23 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    /* The page one is already on, so a switcher opened blind says where it was
+       opened from. Under the selection rule below, which must win when the two
+       are the same row. */
+    li[data-here] {
+      background: light-dark(#eff6ff, #172554);
+    }
+    li[data-here] .strong {
+      color: light-dark(#1d4ed8, #93c5fd);
+    }
     li[data-current] {
       color: white;
       background: light-dark(#2563eb, #3b82f6);
+    }
+    /* Selected AND the page one is on: the selection owns the row's colours,
+       accents included, or the name would be dark blue on blue. */
+    li[data-current] .strong {
+      color: inherit;
     }
     li[data-current] .dim,
     li[data-current] .count {
@@ -163,6 +189,18 @@
     }
     .strong {
       font-weight: 600;
+    }
+    .here {
+      margin-left: auto;
+      padding-left: 8px;
+      color: light-dark(#1d4ed8, #93c5fd);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    li[data-current] .here {
+      color: inherit;
+      opacity: 0.85;
     }
     .count {
       margin-left: auto;
@@ -293,6 +331,21 @@
     return count;
   };
 
+  // The road down to a file, as node paths — what has to be open for that file
+  // to be a row at all.
+  const pathTo = (node, matches, trail = []) => {
+    if (node.files.some(matches)) {
+      return trail;
+    }
+    for (const child of node.directories.values()) {
+      const found = pathTo(child, matches, [...trail, child.path]);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  };
+
   const rememberOpen = (isOpen) => {
     try {
       if (isOpen) {
@@ -344,6 +397,12 @@
     // The rows as drawn, in order: what ↑/↓ walks and what Enter acts on.
     let rows = [];
     let currentIndex = 0;
+    const here = currentPageUrl();
+    const isHere = (file) => file.url === here;
+    // Folded away, but holding the page one is on: opened for this session only
+    // and never written down — what the reader folded is still what they folded
+    // the next time they come here from somewhere else.
+    const revealed = new Set();
 
     const close = () => {
       open = null;
@@ -430,7 +489,10 @@
           if (count === 0) {
             continue;
           }
-          const collapsed = !searching && state.collapsed.has(child.path);
+          const collapsed =
+            !searching &&
+            state.collapsed.has(child.path) &&
+            !revealed.has(child.path);
           nextRows.push({
             type: "directory",
             node: child,
@@ -486,6 +548,13 @@
         name.className = "strong";
         name.textContent = row.file.name;
         item.append(icon, name);
+        if (isHere(row.file)) {
+          item.setAttribute("data-here", "");
+          const hereLabel = document.createElement("span");
+          hereLabel.className = "here";
+          hereLabel.textContent = "here";
+          item.append(hereLabel);
+        }
       }
       item.addEventListener("mousedown", (event) => {
         event.preventDefault();
@@ -577,7 +646,21 @@
       return; // closed while the list was still coming
     }
     tree = buildTree(pages);
+    // Opened on the page one is on: it is selected and scrolled to, so the list
+    // starts from where the reader already is rather than from the top of a
+    // tree they then have to find themselves in.
+    for (const path of pathTo(tree, isHere) || []) {
+      revealed.add(path);
+    }
     render();
+    const hereIndex = rows.findIndex(
+      (row) => row.type === "file" && isHere(row.file),
+    );
+    if (hereIndex !== -1) {
+      currentIndex = hereIndex;
+      render();
+      list.children[currentIndex]?.scrollIntoView({ block: "center" });
+    }
     input.addEventListener("input", () => {
       currentIndex = 0;
       render();

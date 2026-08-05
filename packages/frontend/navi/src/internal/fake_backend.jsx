@@ -74,7 +74,10 @@ const css = /* css */ `
   .navi_fake_backend_frontier {
     display: flex;
     box-sizing: border-box;
-    height: 34px;
+    min-height: 34px;
+    /* Room to grow for what crosses it — a payload is not always one line — and
+       a scrollbar past that, so a big one does not push the two sides apart. */
+    max-height: 100px;
     margin: -17px 12px 0;
     padding: 4px 10px;
     align-items: center;
@@ -89,7 +92,8 @@ const css = /* css */ `
       #eceff1 12px
     );
     border: 1px dashed #b0bec5;
-    border-radius: 999px;
+    border-radius: 15px;
+    overflow-y: auto;
   }
   .navi_fake_backend_sent,
   .navi_fake_backend_answer {
@@ -108,7 +112,7 @@ const css = /* css */ `
   }
   .navi_fake_backend_body {
     display: flex;
-    padding: 25px 12px 16px;
+    padding: 12px 12px 14px;
     flex-direction: column;
     align-items: start;
     gap: 8px;
