@@ -41,7 +41,6 @@
   </head>
   <body>
     <div id="container">
-      <h1>Day stepper</h1>
       <div id="app"></div>
     </div>
     <script type="module" jsenv-type="module/jsx">
@@ -61,6 +60,7 @@
         stateSignal,
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
       import { FakeBackend } from "../../internal/fake_backend.jsx";
 
@@ -97,6 +97,10 @@
 
       const App = () => (
         <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Day stepper"
+            previous={{ href: "./32_wheel_demo.html", label: "Wheel" }}
+          />
           <TableOfContents />
           <BasicsDemo />
           <DimensionsDemo />

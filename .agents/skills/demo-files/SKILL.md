@@ -40,6 +40,54 @@ the commentary around them. See
 Before leaving a paragraph in a demo: could an example replace it? does it say
 _how_ rather than _what_? Either way — delete it, build the example.
 
+## What a demo page is made of
+
+Shared furniture lives next to the source, not copy-pasted into each demo:
+
+- **`src/internal/demo_header.jsx`** — `<DemoHeader>`: the title strip and the way
+  back to the directory listing. Every demo starts with it.
+- **`src/internal/document_toc.jsx`** — `<DocumentToc>`: the table of contents,
+  read off the headings that come after it (so it is always right). Put it in a
+  first section; give every heading an id and an anchor link.
+- **`src/internal/fake_backend.jsx`** — `<FakeBackend value={…}>{({ value, action }) => …}</FakeBackend>`:
+  a backend on the page. Three bands — what the backend holds, the frontier where a
+  call in flight is drawn, and the frontend below. The call waits until a human
+  presses "répondre" or "échouer", which is what makes the loading state, the error
+  callout and "nothing to send" watchable rather than a flicker. Use it for
+  anything asynchronous: an action, a form, an optimistic update.
+- **`src/control/demos/utils/call_log.jsx`** — `useCallLog()` + `<CallLog>`: what
+  was called with what, and from which event. Use it for `uiAction`/`action`
+  rather than a paragraph describing when they fire.
+
+Shape that has worked out, in order:
+
+1. `<DemoHeader>`, then a section holding `<DocumentToc>` — and, when the page
+   binds signals to the url, a "reset all" button beside it (set them to
+   `undefined`, which is what empties the url).
+2. The plain case first: the component with nothing on it.
+3. One section per concern, and never two concerns in one section — a section
+   showing sizes shows nothing else; the one showing styles changes nothing else.
+   Sub-headings (h3) for the variations inside it.
+4. The props that bound or drive the thing (`min`, `max`, `step`, `uiAction`)
+   last, one section each: `min` alone, then `max` alone, so each is seen doing
+   its own thing (a `min` set to today makes the left way out unavailable at once).
+
+And within a section:
+
+- **The caption comes before the example**: one reads what is being shown, then
+  looks at it.
+- **Show the default next to the variant**, and change one prop between them.
+  Everything else identical — same width, same content — or the comparison is
+  about the wrong thing.
+- **Fix what would otherwise move.** A control whose width follows its content
+  makes every example a different size; give the compared examples a `width` and
+  say so once in the section.
+- **Drive it with props, not with a class name**: `borderWidth="1"`,
+  `width="300px"`, `paddingY="m"` — a demo is also where the API is read. Reach
+  for a stylesheet only for the page's own furniture.
+- **States are part of the demo**: `readOnly`, `disabled`, `loading` side by side
+  say more than any sentence about them.
+
 ## Overview
 
 Many packages (especially `@jsenv/navi`) ship standalone `*_demo.html` files next to the source they demonstrate, e.g. `packages/frontend/navi/src/control/demos/00_field_demo.html`. These are plain HTML files loaded through jsenv's dev server — no build step, no bundler config to write.

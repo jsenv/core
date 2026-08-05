@@ -1,10 +1,12 @@
 /**
  * A backend, on the page.
  *
- * The strip on top is the backend and nothing else: what it holds, and — when
- * an action runs — the call itself, waiting for an answer a human gives by
- * pressing "répondre" or "échouer". Under it, marked as such, is the frontend:
- * whatever one puts inside.
+ * Three bands, in the order things travel: the backend and what it holds at the
+ * top, the frontier in the middle, the frontend (whatever one puts inside) at
+ * the bottom. Everything crossing between the two is drawn in that middle
+ * band — what the frontend sent, pointing up, and the two answers the backend
+ * may give, pointing back down. Nothing is in flight until an action runs, so
+ * the band is empty until then.
  *
  * What it is mostly for: the difference between the two. A form whose fields
  * already match the backend has nothing to send, so a submit that does nothing
@@ -63,11 +65,41 @@ const css = /* css */ `
     background: white;
     border-radius: 4px;
   }
-  .navi_fake_backend_call {
+  /* The line the two sides talk across, drawn rather than implied: what is on
+     it is in flight, and the arrows say which way. Hatched so it reads as a
+     border and not as a third party. */
+  .navi_fake_backend_frontier {
     display: flex;
-    margin-left: auto;
+    min-height: 34px;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    color: #546e7a;
+    font-size: 12px;
+    background: repeating-linear-gradient(
+      -45deg,
+      #f5f7f8,
+      #f5f7f8 6px,
+      #eceff1 6px,
+      #eceff1 12px
+    );
+    border-top: 1px dashed #b0bec5;
+    border-bottom: 1px dashed #b0bec5;
+  }
+  .navi_fake_backend_sent,
+  .navi_fake_backend_answer {
+    display: flex;
     align-items: center;
     gap: 6px;
+  }
+  /* Upwards from the frontend, downwards from the backend: the same call, seen
+     from the side that is speaking. */
+  .navi_fake_backend_arrow {
+    font-size: 14px;
+    line-height: 1;
+  }
+  .navi_fake_backend_answer {
+    margin-left: auto;
   }
   .navi_fake_backend_body {
     display: flex;
@@ -110,18 +142,26 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
       <div className="navi_fake_backend_head">
         <span className="navi_fake_backend_label">backend</span>
         <span className="navi_fake_backend_value">{stringify(value)}</span>
+      </div>
+      <div className="navi_fake_backend_frontier">
         {call ? (
-          <span className="navi_fake_backend_call">
-            <span className="navi_fake_backend_value">
-              {stringify(call.received)}
+          <>
+            <span className="navi_fake_backend_sent">
+              <span className="navi_fake_backend_arrow">↑</span>
+              <span className="navi_fake_backend_value">
+                {stringify(call.received)}
+              </span>
             </span>
-            <button type="button" onClick={answer}>
-              répondre
-            </button>
-            <button type="button" onClick={fail}>
-              échouer
-            </button>
-          </span>
+            <span className="navi_fake_backend_answer">
+              <button type="button" onClick={answer}>
+                répondre
+              </button>
+              <button type="button" onClick={fail}>
+                échouer
+              </button>
+              <span className="navi_fake_backend_arrow">↓</span>
+            </span>
+          </>
         ) : null}
       </div>
       <div className="navi_fake_backend_body">
