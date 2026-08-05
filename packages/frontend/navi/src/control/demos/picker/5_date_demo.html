@@ -22,6 +22,10 @@
       h2 {
         margin: 0 0 4px;
         font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      h3 {
+        scroll-margin-top: 12px;
       }
       .demo-section {
         margin-bottom: 24px;
@@ -29,6 +33,7 @@
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
       }
       p.desc {
         margin: 0 0 16px;
@@ -49,6 +54,20 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
       }
+      .sub-heading {
+        margin: 0 0 8px;
+        font-size: 0.95rem;
+      }
+      .demo-hr {
+        margin: 20px 0;
+        border: none;
+        border-top: 1px solid #eee;
+      }
+      .demo-hr-tight {
+        margin: 4px 0;
+        border: none;
+        border-top: 1px solid #eee;
+      }
     </style>
   </head>
   <body>
@@ -64,14 +83,30 @@
         Box,
         Field,
         Label,
+        Link,
         Picker,
         Form,
         Button,
         NaviDebug,
+        getNowHoursRoundedToStep,
+        isToday,
         stateSignal,
         route,
         setupRoutes,
       } from "@jsenv/navi";
+      import { DocumentToc } from "../../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -88,63 +123,18 @@
 
       const TableOfContents = () => (
         <div class="demo-section">
-          <h2>Table of contents</h2>
-          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-            <li>
-              <a href="#states">États</a>
-            </li>
-            <li>
-              Interactivity
-              <ol style={{ paddingLeft: "20px" }}>
-                <li>
-                  <a href="#outside-form">Outside a form</a>
-                </li>
-                <li>
-                  <a href="#inside-form">Inside a form (+ required)</a>
-                </li>
-              </ol>
-            </li>
-            <li>
-              Validation
-              <ol style={{ paddingLeft: "20px" }}>
-                <li>
-                  <a href="#validation-required">Required</a>
-                </li>
-                <li>
-                  <a href="#validation-min">Min</a>
-                </li>
-                <li>
-                  <a href="#validation-max">Max</a>
-                </li>
-                <li>
-                  <a href="#validation-step">Step</a>
-                </li>
-              </ol>
-            </li>
-            <li>
-              <a href="#customization">Customization</a>
-            </li>
-            <li>
-              <a href="#clipboard">Clipboard</a>
-            </li>
-            <li>
-              <a href="#date-time-combo">Date + Time combo</a>
-            </li>
-          </ol>
+          <h2>Sommaire</h2>
+          <DocumentToc />
         </div>
       );
 
-      // ── 1. États ──────────────────────────────────────────────────────────
+      // ── États ─────────────────────────────────────────────────────────────
 
       const DEFAULT_DATE = "2026-06-03";
 
       const StatesDemo = () => (
-        <div class="demo-section" id="states">
-          <h2>1. États</h2>
-          <p class="desc">
-            États principaux du picker date jsenv. La colonne native est fournie
-            à titre de comparaison.
-          </p>
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
           <div class="states-grid">
             <div>
               <div class="states-col-header">Navi Picker</div>
@@ -187,16 +177,15 @@
                     name="date_overflow"
                     type="date"
                     defaultValue="2026-09-11"
-                    ui={<Picker.UI.Date long />}
                     style={{ width: "120px" }}
                   />
                 </Field>
                 <Field flex="y">
                   <Label border="1px dotted grey">
-                    Width 200px + alignX center
+                    Width 200px + textAlign center
                   </Label>
                   <Picker
-                    name="date_align_center"
+                    name="date_width_align"
                     type="date"
                     defaultValue={DEFAULT_DATE}
                     width="200px"
@@ -230,11 +219,11 @@
         </div>
       );
 
-      // ── 2. Interactivity — outside a form ─────────────────────────────────
+      // ── Interactivity — outside a form ────────────────────────────────────
 
       const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-      const noInitialDateSignal = stateSignal("", {
+      const noInitialDateSignal = stateSignal(undefined, {
         id: "no_initial_date",
         type: "date",
       });
@@ -243,45 +232,18 @@
         type: "date",
       });
 
-      const now = new Date();
-      const in30days = new Date(now);
-      in30days.setDate(now.getDate() + 30);
-
-      const dateSignalCombo = stateSignal(DEFAULT_DATE, {
-        type: "date",
-        min: now,
-        autoFix: true,
-      });
-      const timeSignalCombo = stateSignal("09:00", {
-        type: "time",
-        min: "07:00",
-        max: "21:00",
-        step: "00:30",
-      });
-
-      const DEMO_ROUTE = route("", {
-        searchParams: {
-          no_initial_date: noInitialDateSignal,
-          with_initial_date: withInitialDateSignal,
-
-          combo_date: dateSignalCombo,
-          combo_time: timeSignalCombo,
-        },
-      });
-      setupRoutes([DEMO_ROUTE]);
-
       const WithActionDemo = () => {
         const [entries, push, clear] = useCallLog();
 
         return (
-          <div class="demo-section" id="outside-form">
-            <h2>2. Interactivity — outside a form</h2>
+          <div class="demo-section">
+            <Heading id="outside-form">Interactivity — outside a form</Heading>
             <p class="desc">
-              L'action est asynchrone (simule un appel réseau de 800 ms). Le
-              picker passe en état loading pendant ce temps.
+              <code>action</code> est asynchrone (800 ms) : le picker passe en
+              état loading pendant ce temps.
             </p>
             <Box flex="y" spacing="m">
-              <Field vertical>
+              <Field flex="y">
                 <Label>No initial date</Label>
                 <Picker
                   name="date_no_initial"
@@ -297,7 +259,7 @@
                   }}
                 />
               </Field>
-              <Field vertical>
+              <Field flex="y">
                 <Label>With initial date</Label>
                 <Picker
                   name="date_with_initial"
@@ -319,18 +281,14 @@
         );
       };
 
-      // ── 3. Interactivity — inside a form ─────────────────────────────────
+      // ── Interactivity — inside a form ─────────────────────────────────────
 
       const InFormDemo = () => {
         const [entries, push, clear] = useCallLog();
 
         return (
-          <div class="demo-section" id="inside-form">
-            <h2>3. Interactivity — inside a form</h2>
-            <p class="desc">
-              Deux pickers obligatoires : l'un avec une valeur par défaut,
-              l'autre sans. La soumission échoue si un champ est vide.
-            </p>
+          <div class="demo-section">
+            <Heading id="inside-form">Interactivity — inside a form</Heading>
             <Form
               action={(values) => {
                 push("Form action", values);
@@ -339,7 +297,7 @@
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
+              <Field flex="y">
                 <Label>Date (avec valeur par défaut, required)</Label>
                 <Picker
                   name="date_with_default"
@@ -351,7 +309,7 @@
                   }}
                 />
               </Field>
-              <Field vertical>
+              <Field flex="y">
                 <Label>Date (sans valeur, required)</Label>
                 <Picker
                   name="date_no_default"
@@ -369,22 +327,15 @@
         );
       };
 
-      // ── 4. Validation ───────────────────────────────────────────────────
+      // ── Validation ───────────────────────────────────────────────────────
 
       const ValidationRequired = () => {
         const [entries, push, clear] = useCallLog();
         return (
           <div>
-            <h3
-              id="validation-required"
-              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
-            >
-              4.1 Required
-            </h3>
-            <p class="desc">
-              Picker sans valeur, obligatoire. Soumettre déclenche le callout de
-              validation.
-            </p>
+            <Heading level={3} id="validation-required" class="sub-heading">
+              Required
+            </Heading>
             <Form
               action={(values) => {
                 push("Form action", values);
@@ -393,7 +344,7 @@
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
+              <Field flex="y">
                 <Label>Date (required)</Label>
                 <Picker name="val_required" type="date" required />
               </Field>
@@ -408,17 +359,9 @@
         const [entries, push, clear] = useCallLog();
         return (
           <div>
-            <h3
-              id="validation-min"
-              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
-            >
-              4.2 Min
-            </h3>
-            <p class="desc">
-              Pré-rempli avec <code>2026-05-01</code> alors que{" "}
-              <code>min="2026-06-01"</code>. Soumettre déclenche le callout de
-              validation.
-            </p>
+            <Heading level={3} id="validation-min" class="sub-heading">
+              Min
+            </Heading>
             <Form
               action={(values) => {
                 push("Form action", values);
@@ -427,8 +370,10 @@
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
-                <Label>Date (min 2026-06-01, required)</Label>
+              <Field flex="y">
+                <Label>
+                  Date (min 2026-06-01, valeur 2026-05-01, required)
+                </Label>
                 <Picker
                   name="val_min"
                   type="date"
@@ -448,17 +393,9 @@
         const [entries, push, clear] = useCallLog();
         return (
           <div>
-            <h3
-              id="validation-max"
-              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
-            >
-              4.3 Max
-            </h3>
-            <p class="desc">
-              Pré-rempli avec <code>2026-12-01</code> alors que{" "}
-              <code>max="2026-06-30"</code>. Soumettre déclenche le callout de
-              validation.
-            </p>
+            <Heading level={3} id="validation-max" class="sub-heading">
+              Max
+            </Heading>
             <Form
               action={(values) => {
                 push("Form action", values);
@@ -467,8 +404,10 @@
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
-                <Label>Date (max 2026-06-30, required)</Label>
+              <Field flex="y">
+                <Label>
+                  Date (max 2026-06-30, valeur 2026-12-01, required)
+                </Label>
                 <Picker
                   name="val_max"
                   type="date"
@@ -488,17 +427,9 @@
         const [entries, push, clear] = useCallLog();
         return (
           <div>
-            <h3
-              id="validation-step"
-              style={{ margin: "0 0 8px", fontSize: "0.95rem" }}
-            >
-              4.4 Step
-            </h3>
-            <p class="desc">
-              Pré-rempli avec <code>2026-06-03</code> (mercredi) alors que{" "}
-              <code>min="2026-06-01"</code> + <code>step="7"</code> (tous les 7
-              jours). Les dates valides sont 2026-06-01, 2026-06-08, etc.
-            </p>
+            <Heading level={3} id="validation-step" class="sub-heading">
+              Step
+            </Heading>
             <Form
               action={(values) => {
                 push("Form action", values);
@@ -507,8 +438,10 @@
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
-                <Label>Date (step 7 jours, required)</Label>
+              <Field flex="y">
+                <Label>
+                  Date (min 2026-06-01 + step 7, valeur 2026-06-03, required)
+                </Label>
                 <Picker
                   name="val_step"
                   type="date"
@@ -526,39 +459,21 @@
       };
 
       const ValidationDemo = () => (
-        <div class="demo-section" id="validation">
-          <h2>4. Validation</h2>
+        <div class="demo-section">
+          <Heading id="validation">Validation</Heading>
           <Box flex="y" spacing="m">
             <ValidationRequired />
-            <hr
-              style={{
-                margin: "4px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
+            <hr class="demo-hr-tight" />
             <ValidationMin />
-            <hr
-              style={{
-                margin: "4px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
+            <hr class="demo-hr-tight" />
             <ValidationMax />
-            <hr
-              style={{
-                margin: "4px 0",
-                border: "none",
-                borderTop: "1px solid #eee",
-              }}
-            />
+            <hr class="demo-hr-tight" />
             <ValidationStep />
           </Box>
         </div>
       );
 
-      // ── 5. Customization ─────────────────────────────────────────────────
+      // ── Customization ────────────────────────────────────────────────────
 
       // Dates chosen to contrast short vs long day/month names:
       // "2026-06-03" → mercredi 3 juin      (medium day, short month)
@@ -574,22 +489,19 @@
       const DAY_LABEL_TOMORROW = "2026-06-04";
 
       const CustomizationDemo = () => (
-        <div class="demo-section" id="customization">
-          <h2>5. Customization — Picker.UI.Date</h2>
+        <div class="demo-section">
+          <Heading id="customization">Customization — Picker.UI.Date</Heading>
           <p class="desc">
-            Passez <code>ui={"{<Picker.UI.Date />}"}</code> pour personnaliser
-            l'affichage de la date sélectionnée. Les props sont transmises au
-            composant <code>&lt;Time type="date"&gt;</code> sous-jacent.
+            <code>ui={"{<Picker.UI.Date />}"}</code> personnalise l'affichage de
+            la date sélectionnée ; ses props sont transmises au{" "}
+            <code>&lt;Time type="date"&gt;</code> sous-jacent.
           </p>
 
           <div class="states-grid">
             <div>
-              <h3 class="states-col-header">Default — format long</h3>
-              <p class="desc">
-                Format par défaut&nbsp;: nom du jour et du mois en toutes
-                lettres (ex&nbsp;: «&nbsp;mercredi 3 juin 2026&nbsp;»). La
-                largeur varie davantage selon la date.
-              </p>
+              <Heading level={3} id="format-long" class="states-col-header">
+                Default — format long
+              </Heading>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
                   <Picker
@@ -600,18 +512,9 @@
                   />
                 ))}
               </Box>
-              <hr
-                style={{
-                  margin: "12px 0",
-                  border: "none",
-                  borderTop: "1px solid #eee",
-                }}
-              />
-              <p
-                class="desc"
-                style={{ margin: "0 0 8px", fontStyle: "italic" }}
-              >
-                avec dayLabel
+              <hr class="demo-hr" />
+              <p class="desc" style={{ margin: "0 0 8px" }}>
+                dayLabel
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 <Picker
@@ -635,12 +538,9 @@
               </Box>
             </div>
             <div>
-              <h3 class="states-col-header">format="short" — format court</h3>
-              <p class="desc">
-                Forme abrégée via <code>format="short"</code> (ex&nbsp;:
-                «&nbsp;Mer. 3 juin&nbsp;»). La largeur varie légèrement selon le
-                mois, mais reste compacte.
-              </p>
+              <Heading level={3} id="format-short" class="states-col-header">
+                format="short"
+              </Heading>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
                   <Picker
@@ -652,18 +552,9 @@
                   />
                 ))}
               </Box>
-              <hr
-                style={{
-                  margin: "12px 0",
-                  border: "none",
-                  borderTop: "1px solid #eee",
-                }}
-              />
-              <p
-                class="desc"
-                style={{ margin: "0 0 8px", fontStyle: "italic" }}
-              >
-                avec dayLabel
+              <hr class="demo-hr" />
+              <p class="desc" style={{ margin: "0 0 8px" }}>
+                dayLabel
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 <Picker
@@ -706,18 +597,10 @@
             </div>
           </div>
 
-          <hr
-            style={{
-              margin: "20px 0",
-              border: "none",
-              borderTop: "1px solid #eee",
-            }}
-          />
-          <h3 class="states-col-header">numeric — jj/mm/aaaa</h3>
-          <p class="desc">
-            Format numérique&nbsp;: chiffres uniquement, séparateurs selon la
-            locale (ex&nbsp;: «&nbsp;03/06/2026&nbsp;» en français).
-          </p>
+          <hr class="demo-hr" />
+          <Heading level={3} id="format-numeric" class="states-col-header">
+            format="numeric"
+          </Heading>
           <Box flex="y" spacing="xs" alignX="start">
             {DEMO_DATES.map((d, i) => (
               <Picker
@@ -730,21 +613,10 @@
             ))}
           </Box>
 
-          <hr
-            style={{
-              margin: "20px 0",
-              border: "none",
-              borderTop: "1px solid #eee",
-            }}
-          />
-          <h3 class="states-col-header">
+          <hr class="demo-hr" />
+          <Heading level={3} id="sizing" class="states-col-header">
             Sizing, padding, border-radius, text-align
-          </h3>
-          <p class="desc">
-            Le picker accepte <code>size</code> ("s", "m", "l"…), du padding via{" "}
-            <code>paddingX</code> / <code>paddingY</code>, un border-radius via{" "}
-            <code>borderRadius</code>, et <code>textAlign</code>.
-          </p>
+          </Heading>
           <Box flex="y" spacing="s" alignX="start">
             <span style={{ color: "#888", fontSize: "12px" }}>
               size s / m / l
@@ -839,13 +711,8 @@
             </Box>
             <div>
               <p class="desc" style={{ margin: "0 0 8px" }}>
-                <strong>Interactivité de la bordure et du border-radius</strong>
-                <br />
-                Cliquer sur la bordure elle-même ouvre le picker (la bordure
-                fait partie de la surface cliquable). En revanche, les coins
-                arrondis créés par le border-radius ne sont pas interactifs — le
-                hit-area suit la forme rectangulaire de l'élément avant
-                arrondissement.
+                La bordure fait partie de la surface cliquable ; les coins
+                arrondis, non — le hit-area reste rectangulaire.
               </p>
               <Picker
                 name="date_border_demo"
@@ -857,25 +724,13 @@
             </div>
           </Box>
 
-          <hr
-            style={{
-              margin: "20px 0",
-              border: "none",
-              borderTop: "1px solid #eee",
-            }}
-          />
-          <h3 class="states-col-header">ui="default" — UI du navigateur</h3>
-          <p class="desc">
-            Passer <code>ui="default"</code> conserve l'UI native du navigateur
-            tout en bénéficiant du système navi (validation, action, états
-            loading…).
-          </p>
+          <hr class="demo-hr" />
+          <Heading level={3} id="ui-default" class="states-col-header">
+            ui="default" — UI du navigateur
+          </Heading>
           <div class="states-grid">
             <div>
-              <p
-                class="desc"
-                style={{ margin: "0 0 8px", fontStyle: "italic" }}
-              >
+              <p class="desc" style={{ margin: "0 0 8px" }}>
                 Picker ui="default"
               </p>
               <Box flex="y" spacing="xs" alignX="start">
@@ -891,11 +746,8 @@
               </Box>
             </div>
             <div>
-              <p
-                class="desc"
-                style={{ margin: "0 0 8px", fontStyle: "italic" }}
-              >
-                input natif (référence)
+              <p class="desc" style={{ margin: "0 0 8px" }}>
+                input natif
               </p>
               <Box flex="y" spacing="xs" alignX="start">
                 {DEMO_DATES.map((d, i) => (
@@ -907,18 +759,14 @@
         </div>
       );
 
-      // ── 6. Clipboard ─────────────────────────────────────────────────────
+      // ── Clipboard ────────────────────────────────────────────────────────
 
       const ClipboardDemo = () => (
-        <div class="demo-section" id="clipboard">
-          <h2>6. Clipboard</h2>
+        <div class="demo-section">
+          <Heading id="clipboard">Clipboard</Heading>
           <p class="desc">
-            La source est en <strong>français</strong> (
-            <code>ui={'{<Picker.UI.Date lang="fr" />}'}</code>) et la cible en{" "}
-            <strong>anglais</strong> (
-            <code>ui={'{<Picker.UI.Date lang="en" />}'}</code>). Copier / couper
-            dans la source puis coller dans la cible : le texte affiché change
-            de langue mais la date sous-jacente est préservée.
+            Copier / couper dans la source puis coller dans la cible : le texte
+            affiché change de langue, la date sous-jacente est préservée.
           </p>
           <ClipboardInspect>
             <div
@@ -955,57 +803,85 @@
         </div>
       );
 
-      // ── 7. Date + Time combo ─────────────────────────────────────────────
+      // ── Date + Time combo ────────────────────────────────────────────────
+
+      const SLOT_STEP_MINUTES = 30;
+      const SLOT_STEP = "00:30";
+      const SLOT_FIRST = "07:00";
+      const SLOT_LAST = "21:00";
+
+      const toDayString = (date) =>
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      const TODAY = toDayString(new Date());
+
+      const comboDateSignal = stateSignal(TODAY, {
+        id: "combo_date",
+        type: "date",
+        min: TODAY,
+        autoFix: true,
+      });
+      const comboTimeSignal = stateSignal(undefined, {
+        id: "combo_time",
+        type: "time",
+      });
+
+      setupRoutes([
+        route("", {
+          searchParams: {
+            no_initial_date: noInitialDateSignal,
+            with_initial_date: withInitialDateSignal,
+            combo_date: comboDateSignal,
+            combo_time: comboTimeSignal,
+          },
+        }),
+      ]);
 
       const DateTimeComboDemo = () => {
         const [entries, push, clear] = useCallLog();
+        const day = comboDateSignal.value;
+        // Today has no slot in the past: the first one is the next step
+        // boundary from now, so a slot is never proposed for a moment gone by.
+        const firstSlot = isToday(day)
+          ? getNowHoursRoundedToStep(SLOT_STEP_MINUTES)
+          : SLOT_FIRST;
 
         return (
-          <div class="demo-section" id="date-time-combo">
-            <h2>7. Date + Time combo</h2>
-            <p class="desc">
-              Cas avancé combinant un picker de date et un picker d'heure. Le
-              picker d'heure ne propose que les créneaux disponibles — si le
-              jour sélectionné est aujourd'hui, <code>min</code> est calculé via{" "}
-              <code>getNowHoursRoundedToStep</code> pour ne montrer que les
-              créneaux futurs (arrondi au prochain pas supérieur).
-            </p>
-
+          <div class="demo-section">
+            <Heading id="date-time-combo">Date + Time combo</Heading>
             <Form
               action={(values) => {
-                push("Form action (dynamic)", values);
+                push("Form action", values);
               }}
               flex="y"
               spacing="m"
               alignX="start"
             >
-              <Field vertical>
-                <Label>Jour</Label>
-                <Box flex spacing="s">
-                  <Field>
-                    <Picker
-                      name="combo_date"
-                      type="date"
-                      required
-                      value={dateSignalCombo}
-                      uiAction={(v) => {
-                        dateSignalCombo.value = v;
-                      }}
-                    />
-                  </Field>
-                  <Field>
-                    <Picker
-                      name="combo_time"
-                      type="time"
-                      required
-                      value={timeSignalCombo}
-                      uiAction={(v) => {
-                        timeSignalCombo.value = v;
-                      }}
-                    />
-                  </Field>
-                </Box>
-              </Field>
+              <Box flex spacing="m" alignY="end">
+                <Field flex="y">
+                  <Label>Jour (aujourd'hui au plus tôt)</Label>
+                  <Picker
+                    name="combo_date"
+                    type="date"
+                    required
+                    min={TODAY}
+                    signal={comboDateSignal}
+                  />
+                </Field>
+                <Field flex="y">
+                  <Label>
+                    Créneau ({firstSlot} – {SLOT_LAST})
+                  </Label>
+                  <Picker
+                    name="combo_time"
+                    type="navi_time"
+                    required
+                    min={firstSlot}
+                    max={SLOT_LAST}
+                    step={SLOT_STEP}
+                    signal={comboTimeSignal}
+                  />
+                </Field>
+              </Box>
               <Button type="submit">Soumettre</Button>
             </Form>
 

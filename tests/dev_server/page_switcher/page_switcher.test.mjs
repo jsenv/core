@@ -63,19 +63,43 @@ const openSwitcher = async () => {
   );
 };
 
+const clickKindToggle = (label) =>
+  page.evaluate((kindLabel) => {
+    /* eslint-disable no-undef */
+    const host = [...document.body.children].find((element) =>
+      element.shadowRoot?.querySelector(".panel"),
+    );
+    const toggle = [...host.shadowRoot.querySelectorAll(".kind_toggle")].find(
+      (button) => button.textContent.includes(kindLabel),
+    );
+    toggle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    /* eslint-enable no-undef */
+  }, label);
+
 try {
   await page.goto(`${devServer.origin}/index.html`);
   await openSwitcher();
+  // Demos only to begin with, folded where folding loses nothing.
   await takeSnapshots("0_opened");
 
-  await page.keyboard.type("demo");
-  await takeSnapshots("1_filtered");
+  await clickKindToggle("pages");
+  await takeSnapshots("1_pages_too");
 
-  // Enter goes to the page under the cursor, and the switcher is gone with it.
+  // The first row is a directory, and Enter on one folds it instead of
+  // navigating.
+  await page.keyboard.press("Enter");
+  await takeSnapshots("2_folded");
+  await page.keyboard.press("Enter");
+
+  await page.keyboard.type("demo");
+  await takeSnapshots("3_filtered");
+
+  // Enter on a file goes there, and the switcher is gone with it.
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await page.waitForURL(/first_demo\.html$/);
   writeFileSync(
-    new URL(`./2_after_enter.png`, snapshotsDirectoryUrl),
+    new URL(`./4_after_enter.png`, snapshotsDirectoryUrl),
     await page.screenshot(),
   );
 } finally {

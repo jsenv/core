@@ -165,7 +165,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useLayoutEffect } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -246,9 +245,6 @@
         const CreateForm = createForm;
         const searchSignal = useSignal("");
         const prefillSignal = useSignal("");
-        // Which entry the edit slide is about, and which slide is on screen:
-        // the pencil jumps straight to the third one, which no "next" would do
-        const editingSignal = useSignal(null);
         const slideSignal = useSignal(`${id}_pick`);
 
         // Without a search, the ones used recently come first: that is the tap
@@ -281,8 +277,8 @@
         // Only what this user typed in can be edited: an entry that came from
         // the backend is shared with everyone else, and renaming it here would
         // rename it under them.
-        const submitEdit = (values) => {
-          const entry = { ...editingSignal.value, ...toEntry(values) };
+        const submitEdit = (edited, values) => {
+          const entry = { ...edited, ...toEntry(values) };
           onUpdate(entry);
           if (value && value.id === entry.id) {
             // the selection is a copy of the entry, so it goes stale otherwise
@@ -294,26 +290,61 @@
         };
         // Inside the slide, which is the only place that can ask what the
         // travel here was about: the pencil sent { id, name } along with
-        // --navi-right (see its `value`), and this reads it back.
-        const EditSlideForm = () => {
+        // --navi-right (see its `value`), and this reads it back. Nothing is
+        // stored on the side for it — the entry being edited is what the
+        // command handed over, and it is known here and nowhere else.
+        const EditSlide = () => {
           const slideValue = useSlideValue();
           const entry = slideValue
             ? (entries.find((candidate) => candidate.id === slideValue.id) ??
               slideValue)
             : null;
-          // Mirrored into the signal the actions outside this slide read
-          // (submitEdit, deleteEntry): they answer for the whole surface, and
-          // what is being edited is decided here.
-          useLayoutEffect(() => {
-            editingSignal.value = entry;
-          }, [entry]);
-          // keyed by the entry: the fields are uncontrolled, so editing another
-          // one must give them fresh defaults
-          return <CreateForm key={entry?.id} entry={entry} />;
+          return (
+            <Form
+              standalone
+              // The way back is not "one slide back" here: this slide is
+              // entered from the list, over the create form, so where to return
+              // is decided in submitEdit.
+              command="--navi-void"
+              action={(values) => submitEdit(entry, values)}
+              flex="y"
+              overflow="auto"
+              expandY
+            >
+              <Box header flex="x" spacing="xs" alignY="center" padding="m">
+                <Text expandX fontSize="1rem">
+                  <strong>{editTitle}</strong>
+                </Text>
+                {/* This screen is beside the list, so the way out points at
+                    it */}
+                <SlideContainer.Left size="xl" padding="xs" marginRight="-xs" />
+              </Box>
+              <Box body padding="m">
+                {/* keyed by the entry: the fields are uncontrolled, so editing
+                    another one must give them fresh defaults */}
+                <CreateForm key={entry?.id} entry={entry} />
+              </Box>
+              <Box footer padding="m" paddingY="s" className="form-actions">
+                <Button command="--navi-send" paddingY="s">
+                  Enregistrer
+                </Button>
+                {/* --navi-void: removing is not leaving, so nothing follows
+                    from the command — where to go afterwards is decided here,
+                    once the entry is gone */}
+                <Button
+                  command="--navi-void"
+                  variant="discrete"
+                  paddingY="s"
+                  onClick={() => deleteEntry(entry)}
+                >
+                  Supprimer
+                </Button>
+              </Box>
+            </Form>
+          );
         };
 
-        const deleteEntry = () => {
-          const entry = editingSignal.value;
+        const deleteEntry = (entry) => {
           onDelete(entry);
           if (value && value.id === entry.id) {
             onChange(null);
@@ -608,60 +639,7 @@
                   {/* Third slide, reached only by a pencil: editing is about
                       one entry, so it is not somewhere one walks into */}
                   <Slide id={`${id}_edit`} flex="y">
-                    <Form
-                      standalone
-                      // The way back is not "one slide back" here: this slide
-                      // is entered from the list, over the create form, so
-                      // where to return is decided in submitEdit.
-                      command="--navi-void"
-                      action={submitEdit}
-                      flex="y"
-                      overflow="auto"
-                      expandY
-                    >
-                      <Box
-                        header
-                        flex="x"
-                        spacing="xs"
-                        alignY="center"
-                        padding="m"
-                      >
-                        <Text expandX fontSize="1rem">
-                          <strong>{editTitle}</strong>
-                        </Text>
-                        {/* This screen is beside the list, so the way out
-                            points at it */}
-                        <SlideContainer.Left
-                          size="xl"
-                          padding="xs"
-                          marginRight="-xs"
-                        />
-                      </Box>
-                      <Box body padding="m">
-                        <EditSlideForm />
-                      </Box>
-                      <Box
-                        footer
-                        padding="m"
-                        paddingY="s"
-                        className="form-actions"
-                      >
-                        <Button command="--navi-send" paddingY="s">
-                          Enregistrer
-                        </Button>
-                        {/* --navi-void: removing is not leaving, so nothing
-                            follows from the command — where to go afterwards is
-                            decided here, once the entry is gone */}
-                        <Button
-                          command="--navi-void"
-                          variant="discrete"
-                          paddingY="s"
-                          onClick={deleteEntry}
-                        >
-                          Supprimer
-                        </Button>
-                      </Box>
-                    </Form>
+                    <EditSlide />
                   </Slide>
                 </SlideContainer>
               </Picker>
