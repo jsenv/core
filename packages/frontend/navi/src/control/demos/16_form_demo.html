@@ -376,7 +376,14 @@
             <h2>Two submit buttons in one form</h2>
             <p>
               Both send the form and both put it in loading while the action
-              runs — save stays on the slide, delete moves on to the next one.
+              runs — save stays on the slide, delete moves on to the next one. A
+              button with an action of its own is the other way round: only it
+              goes loading, and the form is left alone —{" "}
+              <a href="#button-action">see above</a>, and{" "}
+              <a href="./01_button_demo.html#interactivity-form-own-action">
+                in the button demo
+              </a>
+              .
             </p>
             <div style={{ width: "320px", border: "1px solid #90caf9" }}>
               <SlideContainer>
@@ -395,14 +402,14 @@
                         <Input type="text" name="name" defaultValue="Ada" />
                       </Field>
                       <Box flex spacing="s">
-                        {/* Stays here: an empty formCommand says "nothing
+                        {/* Stays here: --navi-void is how one says "nothing
                             follows my send" — without it the form would do what
                             a form in a slide does, and move on. */}
                         <Button
                           type="submit"
                           name="intent"
                           value="save"
-                          formCommand=""
+                          formCommand="--navi-void"
                         >
                           Save
                         </Button>
