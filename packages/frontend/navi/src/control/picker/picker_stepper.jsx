@@ -23,7 +23,8 @@
  * slide that is about to leave.
  */
 
-import { useId, useState } from "preact/hooks";
+import { useSignal } from "@preact/signals";
+import { useId } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
@@ -50,9 +51,11 @@ const css = /* css */ `
        whatever it is inside, which is what the calendar is anchored to. */
     position: relative;
   }
-  /* The same above and below on all three, from one place: it is what makes the
-     value and the two ways out one line rather than three boxes. */
-  .navi_picker_stepper > .navi_button,
+  /* The value takes it as padding; the two chevrons take it as their own
+     --button-padding-y (a button's padding lives on its content, see
+     button_ui.jsx), which is why it is said as a variable rather than applied
+     here. Same number on all three: it is what makes them one line rather than
+     three boxes. */
   .navi_picker_stepper [data-slide] {
     padding-block: var(--picker-stepper-padding-y);
   }
@@ -67,6 +70,7 @@ const css = /* css */ `
      around it, so "one line" means the same on both sides. */
   .navi_picker_stepper > .navi_button {
     --button-font-size: inherit;
+    --button-padding-y: var(--picker-stepper-padding-y);
 
     height: calc(1lh + 2 * var(--picker-stepper-padding-y));
   }
@@ -144,8 +148,8 @@ const css = /* css */ `
 export const DayStepper = ({
   value,
   defaultValue,
-  signal,
   onChange,
+  signal: signalProp,
   name,
   min,
   max,
@@ -164,14 +168,22 @@ export const DayStepper = ({
   const id = useId();
   const containerId = `${id}_days`;
   const pickerId = `${id}_picker`;
-  const [dayState, setDayState] = useState(() => defaultValue ?? todayString());
-  const day = value ?? signal?.value ?? dayState;
+  // The day lives in a signal even when nobody handed one over, because that is
+  // what the picker below is given (see it): a picker holding a `value` is a
+  // picker the form HOLDS, and a form that already holds what it would send has
+  // nothing to send — a stepper opening on a day would then refuse to submit it
+  // until one stepped away and back. A signal seeds it the way a defaultValue
+  // does: a suggestion, and confirming it is an answer.
+  const ownDaySignal = useSignal(defaultValue ?? todayString());
+  const daySignal = signalProp ? signalProp : ownDaySignal;
+  const day = value ?? daySignal.value;
 
   const setDay = (dayNext) => {
-    if (signal) {
-      signal.value = dayNext;
+    // Controlled: the day comes from above and only what it is told about
+    // changes it.
+    if (value === undefined) {
+      daySignal.value = dayNext;
     }
-    setDayState(dayNext);
     onChange?.(dayNext);
   };
 
@@ -199,7 +211,14 @@ export const DayStepper = ({
         type="date"
         variant="headless"
         name={name}
-        value={day}
+        // Held from above, or only suggested from here: a form HOLDS what a
+        // `value` says and has nothing to send back, while a signal paired with
+        // a defaultValue is a suggestion — the day shown is where one starts,
+        // and confirming it is an answer. Without that a stepper opening on a
+        // day would refuse to submit it until one stepped away and back.
+        {...(value === undefined
+          ? { signal: daySignal, defaultValue: day }
+          : { value })}
         min={min}
         max={max}
         uiAction={(dayPicked) => {

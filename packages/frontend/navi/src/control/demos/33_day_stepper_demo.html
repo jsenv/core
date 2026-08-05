@@ -54,6 +54,7 @@
         Form,
         Label,
         Link,
+        Text,
         NaviDebug,
         route,
         setupRoutes,
@@ -88,6 +89,7 @@
         <Box flex="y" spacing="l">
           <TableOfContents />
           <BasicsDemo />
+          <LooksDemo />
           <BoundsDemo />
           <WeekDemo />
           <VerticalDemo />
@@ -113,6 +115,71 @@
             Les flèches changent de jour, le centre ouvre le calendrier.
           </p>
           <DayStepper signal={daySignal} width="340px" />
+        </div>
+      );
+
+      // ── Looks ─────────────────────────────────────────────────────────────
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          {children}
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+        </Box>
+      );
+
+      const LooksDemo = () => (
+        <div class="demo-section">
+          <Heading id="looks">Apparence</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="bare">
+              <DayStepper defaultValue={TODAY} width="340px" />
+            </Variant>
+            <Variant caption='borderWidth="1" borderRadius="10px"'>
+              <DayStepper
+                defaultValue={TODAY}
+                width="340px"
+                borderWidth="1"
+                borderStyle="solid"
+                borderColor="#dadce0"
+                borderRadius="10px"
+              />
+            </Variant>
+            <Variant caption='paddingY="m"'>
+              <DayStepper
+                defaultValue={TODAY}
+                width="340px"
+                paddingY="m"
+                borderWidth="1"
+                borderStyle="solid"
+                borderColor="#dadce0"
+                borderRadius="10px"
+              />
+            </Variant>
+            <Variant caption='size="xxl"'>
+              <DayStepper
+                defaultValue={TODAY}
+                size="xxl"
+                width="520px"
+                borderWidth="1"
+                borderStyle="solid"
+                borderColor="#dadce0"
+                borderRadius="10px"
+              />
+            </Variant>
+            <Variant caption='size="xxs"'>
+              <DayStepper
+                defaultValue={TODAY}
+                size="xxs"
+                width="240px"
+                borderWidth="1"
+                borderStyle="solid"
+                borderColor="#dadce0"
+                borderRadius="10px"
+              />
+            </Variant>
+          </Box>
         </div>
       );
 
