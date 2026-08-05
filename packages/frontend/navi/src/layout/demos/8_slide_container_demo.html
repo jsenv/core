@@ -823,6 +823,11 @@
             borderStyle="solid"
             borderColor={borderColor}
             borderRadius={rounded ? "12px" : undefined}
+            // Held on, not obtained: `pseudoState` overrides what the box
+            // would have worked out for itself (see box.jsx), which is what
+            // puts both states on the page at once, side by side, without
+            // anything having to be focused.
+            pseudoState={focusVisible ? { ":focus-visible": true } : undefined}
           >
             <Slide
               id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}${backgroundColor ? "_bg" : ""}${borderWidth === "1" ? "" : "_bordered"}`}
@@ -834,13 +839,6 @@
               // where a transparent one lets the container's own show through
               // all the way.
               backgroundColor={backgroundColor}
-              // Held on, not obtained: `pseudoState` overrides what the box
-              // would have worked out for itself (see box.jsx), which is what
-              // puts both states on the page at once, side by side, without
-              // anything having to be focused.
-              pseudoState={
-                focusVisible ? { ":focus-visible": true } : undefined
-              }
             >
               <Box header padding="m" flex="x" alignY="center" className="part">
                 <Text expandX>a slide</Text>

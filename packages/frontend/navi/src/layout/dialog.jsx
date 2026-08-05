@@ -289,12 +289,18 @@ const css = /* css */ `
     }
 
     &[data-focus-visible],
-    /* …or a slide filling it holds the keyboard: its own container would draw
-       the ring on the very edge this dialog already outlines, one pixel in and
-       clipped by it — so the dialog draws it instead (see slide_container.jsx,
-       which stands down for this case). */
-    &:has(> .navi_slide_container [data-slide][data-focus-visible]) {
+    /* …or something filling it holds the keyboard and offers its ring to
+       whoever holds it (data-focus-outline-delegate — a slide container says
+       this, see slide_container.jsx). Its own ring would land on the very edge
+       this dialog already outlines, one pixel in, so the dialog draws it
+       instead. Direct children only: a delegate deeper in has its own box to
+       ring, and this edge is not it. */
+    &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
+    }
+    /* …and the delegate stands down. */
+    > [data-focus-outline-delegate] {
+      --navi-focus-outline-style: none;
     }
 
     &[open] {

@@ -87,35 +87,25 @@ const css = /* css */ `
     border-radius: inherit;
     overflow: hidden;
 
-    /* An element of its own (see the JSX), not an outline on this box — same
-       shape as the wheel's own ring, drawn the same way (see
-       .navi_wheel_focus_ring). It comes after the slides in the DOM, which is
-       what puts it above them; nothing to raise.
-       Its box is the padding box (that is what an absolutely positioned child
-       is placed against), so whatever border this container was given is
-       already out of the way — and it is inset by twice the ring's width on top
-       of that, which is exactly what an outline drawn one width OUTWARD needs
-       to land just inside the box rather than under the border, where this
-       box's own overflow would clip it. */
-    > .navi_slide_focus_ring {
-      position: absolute;
-      inset: calc(2 * var(--navi-focus-outline-width));
-      border-radius: inherit;
-      pointer-events: none;
-    }
-    &:has([data-slide][data-focus-visible]) > .navi_slide_focus_ring {
-      outline: var(--navi-focus-outline-width) solid
-        var(--navi-focus-outline-color);
-      outline-offset: var(--navi-focus-outline-width);
-    }
-    /* …unless the popup itself draws it: a container filling a dialog or a
-       popover has its ring land on the very edge the popup already outlines,
-       and two rings a pixel apart read as a mistake. The popup takes it over
-       (see dialog.jsx / popover.jsx). */
-    :where(dialog, [popover])
-      > &:has([data-slide][data-focus-visible])
-      > .navi_slide_focus_ring {
+    /* The browser's own ring, suppressed in favour of the one below: this box
+       is focusable (see its tabIndex) and would otherwise get the UA outline
+       drawn on top of ours, on its own terms. Same as the wheel does. */
+    &:focus {
       outline: none;
+    }
+
+    /* Outside the box, which is where an outline is drawn by default: nothing
+       inside can paint over it (the slides are all within), and this box's own
+       overflow does not clip it either — an element's outline is not its own
+       overflow's business. So it needs no element of its own, unlike the
+       wheel's ring, which marks a window inside the wheel. */
+    &[data-focus-visible] {
+      outline-width: var(--navi-focus-outline-width);
+      /* A style of its own, not the shorthand, so whoever holds this box can
+         take the ring over by setting the variable to "none" — the delegation
+         offered by data-focus-outline-delegate. */
+      outline-style: var(--navi-focus-outline-style, solid);
+      outline-color: var(--navi-focus-outline-color);
     }
 
     /* ONE thing moves: the track. The slides are laid out once and for all,
@@ -253,6 +243,9 @@ export const SlideContainer = ({
   import.meta.css = css;
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
+  // The box itself: it is what takes the keyboard when what is on screen holds
+  // nothing that can (see handOverFocus).
+  const containerRef = useRef();
   // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
   const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
@@ -396,6 +389,7 @@ export const SlideContainer = ({
       const focusIsLoose =
         !focusedElement ||
         focusedElement === document.body ||
+        focusedElement === containerRef.current ||
         currentElement.contains(focusedElement);
       if (focusIsLoose) {
         // What the slide being left was left on, so coming back comes back to
@@ -413,11 +407,21 @@ export const SlideContainer = ({
 
   // Hand the focus to a slide: what it was left on if it remembers something,
   // and otherwise the ladder every container uses — which passes over the ways
-  // out (they say so themselves, see SlideNavButton) and ends on the slide
-  // itself, a fallback, when it has nothing to offer.
+  // out (they say so themselves, see SlideNavButton).
+  //
+  // A slide with nothing focusable in it leaves the ladder empty-handed, and
+  // that is what this box is for: it takes the keyboard itself (see its own
+  // tabIndex), so the arrows keep working and the ring says where one is.
   const handOverFocus = (slideElement, event) => {
     const focusTransfer = prepareFocusTransfer(event, debugFocus);
     focusTransfer.transferFocus(event, slideElement);
+    const containerEl = containerRef.current;
+    if (containerEl && !containerEl.contains(document.activeElement)) {
+      containerEl.focus({
+        preventScroll: true,
+        focusVisible: focusTransfer.focusVisible,
+      });
+    }
   };
 
   /**
@@ -496,8 +500,28 @@ export const SlideContainer = ({
     // what carries them onto the element.
     <Box
       {...rest}
+      ref={containerRef}
       baseClassName="navi_slide_container"
       data-slide-container=""
+      // The focusable one, and a Tab stop: a slide is not (see Slide), so the
+      // keyboard lands on what the current slide holds, and on this box when it
+      // holds nothing. It is also what makes the arrows and Home/End reachable
+      // at all — a keyboard shortcut only reaches what has the focus.
+      tabIndex={rest.tabIndex ?? 0}
+      // "not me, unless you have nothing else": whoever hands the focus here —
+      // a popup opening, a slide arriving — reads this the same way (see
+      // findFocusTarget), so this box takes the keyboard only when what is on
+      // screen holds nothing that can.
+      navi-autofocus="last-resort"
+      // "the box around me may draw my focus ring instead of me": a container
+      // filling a dialog or a popover has its ring land on the very edge the
+      // popup already outlines, and two rings a pixel apart read as a mistake.
+      // The popup answers this attribute (see dialog.jsx / popover.jsx) and
+      // silences the ring below through --navi-focus-outline-style.
+      data-focus-outline-delegate=""
+      // Focusable and a surface, so it says what state it is in — and
+      // :focus-visible is what the ring below is drawn from.
+      pseudoClasses={SLIDE_CONTAINER_PSEUDO_CLASSES}
       // A direction, never a step: on a map "next" only means something when
       // there is a single axis to walk, so everything that moves a slide — a
       // chevron, --navi-left/right/up/down, a line of code — says which way.
@@ -528,12 +552,6 @@ export const SlideContainer = ({
           {children}
         </SlideContainerContext.Provider>
       </div>
-      {/* After the slides, so it is painted over them — an outline on the box
-          itself would be drawn under their backgrounds, and a slide with a
-          header would show the ring everywhere except along it. Rendered
-          whatever the state: it is CSS that decides when it shows, from the
-          slide holding the keyboard. */}
-      <div className="navi_slide_focus_ring" />
     </Box>
   );
 };
@@ -585,19 +603,10 @@ export const Slide = ({
     <SlideContext.Provider value={locks}>
       <Box
         flex="y"
-        // Focusable, but never by Tab: the arrows and Home/End belong to the
-        // slides, and a keyboard shortcut only reaches what has the focus — so
-        // pressing anywhere on a slide (the browser focuses the nearest
-        // focusable ancestor) is enough to be able to walk the map afterwards.
-        // -1 because it is not a stop on the way through the page: what one
-        // Tabs to is what is IN the slide.
-        tabIndex={-1}
-        // …and "not me, unless you have nothing else": whoever hands the focus
-        // to a container — a popup opening, a slide arriving — reads this the
-        // same way (see findFocusTarget), so the slide takes the keyboard only
-        // when it holds nothing that can, and anything inside saying the same
-        // thing (its own chevrons) still wins over it, being deeper.
-        navi-autofocus="last-resort"
+        // Not focusable: the keyboard goes to what is IN a slide, and when a
+        // slide holds nothing, to the container around it (see
+        // SlideContainer's own tabIndex). One stop for the whole thing rather
+        // than one per screen — the shape a wheel and its values already have.
         {...rest}
         // The protocol every command target answers — a slide is one now
         // (--navi-done). navi_command does not bubble, so the container's own
@@ -622,11 +631,10 @@ export const Slide = ({
         data-slide-area={slideArea}
         data-prevent-nav-next={nextIsLocked ? "" : undefined}
         data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
-        // A slide is focusable (see tabIndex above) and is a surface one
-        // interacts with, so it says what state it is in the way every other
-        // surface does — a dialog carries the very same set. :focus-within is
-        // the one a slide is really about: it is what tells the slide holding
-        // the keyboard from the ones waiting.
+        // A surface one interacts with says what state it is in, the way every
+        // other surface does — a dialog carries the very same set.
+        // :focus-within is the one a slide is really about: it is what tells
+        // the slide holding the keyboard from the ones waiting.
         pseudoClasses={SLIDE_PSEUDO_CLASSES}
       >
         {children}
@@ -634,6 +642,14 @@ export const Slide = ({
     </SlideContext.Provider>
   );
 };
+
+const SLIDE_CONTAINER_PSEUDO_CLASSES = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+];
 
 const SLIDE_PSEUDO_CLASSES = [
   ":hover",
