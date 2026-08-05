@@ -40,11 +40,6 @@
         padding: 12px 8px;
         border-top: 1px solid #e8eaed;
       }
-      .datetime-panel-day {
-        width: 260px;
-        color: #5f6368;
-        font-size: 15px;
-      }
       .chosen {
         color: #202124;
         font-size: 15px;
@@ -70,7 +65,7 @@
         setupRoutes,
         stateSignal,
       } from "@jsenv/navi";
-      import { DemoHeader } from "../internal/demo_header.jsx";
+      import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
 
       const MINUTE_STEP = 5;
       const HOURS = Array.from({ length: 24 }, (unused, hour) => hour);
@@ -123,14 +118,8 @@
       const DayAndTimePanel = () => (
         <Box flex="y" className="datetime-panel">
           <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
-            <DayStepper
-              signal={draftDaySignal}
-              format="short"
-              className="datetime-panel-day"
-              previousLabel="Jour précédent"
-              nextLabel="Jour suivant"
-            />
-            <WheelGroup glass frameBorder>
+            <DayStepper expandX signal={draftDaySignal} border="0" />
+            <WheelGroup frameBorder>
               <Wheel
                 name="hours"
                 type="integer"
