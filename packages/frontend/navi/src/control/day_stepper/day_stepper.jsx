@@ -13,6 +13,7 @@
  * press away from stepping day by day.
  */
 
+import { batch } from "@preact/signals";
 import { useState } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
@@ -121,8 +122,10 @@ export const DayStepper = ({
       // The day arriving and the track coming back to the middle are the same
       // moment: a render holding one without the other shows the wrong day for
       // a frame.
-      setTravelArea(null);
-      setDay(count > 0 ? dayNext : dayPrevious);
+      batch(() => {
+        setTravelArea(null);
+        setDay(count > 0 ? dayNext : dayPrevious);
+      });
     }, duration);
   };
 

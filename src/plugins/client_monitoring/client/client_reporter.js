@@ -25,6 +25,12 @@ const HEARTBEAT_MS = 15000;
 // Continuous activities (mousemove, scroll) only need to refresh "what the tab
 // is doing" occasionally, not on every event.
 const CONTINUOUS_THROTTLE_MS = 2000;
+// A single log line is worth reading, not storing whole: one console.log of a
+// big object serializes to megabytes, and that string is then kept by the
+// buffer here, by the dev server's own per-client buffer, and by the
+// server-events history — three copies of something nobody will read past the
+// first screen. Cut at the source, once, where the size is known.
+const LOG_TEXT_MAX = 10_000;
 
 const randomId = () =>
   typeof window.crypto !== "undefined" && window.crypto.randomUUID
@@ -260,11 +266,25 @@ const setup = () => {
     typeof requestIdleCallback === "function"
       ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
       : (fn) => setTimeout(fn, 0);
+  const truncate = (text) =>
+    typeof text === "string" && text.length > LOG_TEXT_MAX
+      ? `${text.slice(0, LOG_TEXT_MAX)}… (${text.length - LOG_TEXT_MAX} more characters)`
+      : text;
   const formatOne = (captured) => {
+    const formatted = formatConsole(captured.args);
     pushLog({
       level: captured.level,
       ts: captured.ts,
-      ...formatConsole(captured.args),
+      ...formatted,
+      text: truncate(formatted.text),
+      // The styled runs carry the same text a second time (see formatConsole),
+      // so they are cut the same way.
+      segments: formatted.segments
+        ? formatted.segments.map((segment) => ({
+            ...segment,
+            text: truncate(segment.text),
+          }))
+        : undefined,
     });
   };
   const processConsoleQueue = (deadline) => {

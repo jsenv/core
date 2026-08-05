@@ -77,6 +77,18 @@ const ACTIVITY_MAX_PER_CLIENT = 50;
 const INACTIVITY_MS = 60 * 1000;
 // A tab not heard from for this long is considered closed and dropped.
 const TAB_TTL_MS = 2 * 60 * 1000;
+// What a browser sends is not to be trusted with the server's memory: a log
+// line is cut at the source too (see client_reporter.js), and cut again here so
+// a hand-made POST cannot park megabytes in the buffer — which the
+// server-events history would then keep a second time.
+// A little above the client's own cut, so the "… (N more characters)" it adds
+// survives this one — the reader needs to know something was left out.
+const LOG_TEXT_MAX = 10_064;
+// Clients seen since the server started, at most. One per browser profile in
+// practice, but every private window and every cleared storage adds one that
+// never comes back, each carrying its own buffer — so the oldest ones that are
+// no longer online are let go.
+const CLIENT_MAX = 50;
 
 // The dev server already parses browser + version from a request (sec-ch-ua or
 // user-agent) via getRuntimeFromRequest; it does not cover the OS, so this fills
@@ -160,6 +172,23 @@ export const jsenvPluginClientMonitoring = () => {
       client.os = osFromUserAgent(userAgent);
     }
     return client;
+  };
+
+  // The oldest silent ones first: a client still reporting is one someone is
+  // looking at, whatever its age.
+  const pruneClients = () => {
+    if (clients.size <= CLIENT_MAX) {
+      return;
+    }
+    const droppable = [...clients.values()]
+      .filter((client) => !isOnline(client))
+      .sort((a, b) => a.lastSeen - b.lastSeen);
+    for (const client of droppable) {
+      if (clients.size <= CLIENT_MAX) {
+        return;
+      }
+      clients.delete(client.id);
+    }
   };
 
   const pruneLogs = (client) => {
@@ -309,6 +338,7 @@ export const jsenvPluginClientMonitoring = () => {
 
     updateTab(client, body.tab);
     pruneTabs(client);
+    pruneClients();
 
     if (firstEver) {
       sendClientHere({ reason: "new", client: serializeClient(client) });
@@ -329,13 +359,22 @@ export const jsenvPluginClientMonitoring = () => {
     for (const rawLog of logs) {
       const entry = {
         level: rawLog.level || "log",
-        text: typeof rawLog.text === "string" ? rawLog.text : "",
+        text:
+          typeof rawLog.text === "string"
+            ? rawLog.text.slice(0, LOG_TEXT_MAX)
+            : "",
         ts: rawLog.ts || now(),
       };
       // styled console segments ({ text, css } per %c run), when present, so a
       // monitor can render colors; the plain text stays for copy/paste.
       if (Array.isArray(rawLog.segments)) {
-        entry.segments = rawLog.segments;
+        entry.segments = rawLog.segments.map((segment) => ({
+          ...segment,
+          text:
+            typeof segment?.text === "string"
+              ? segment.text.slice(0, LOG_TEXT_MAX)
+              : "",
+        }));
       }
       client.logs.push(entry);
       sendClientLog({ clientId, ...entry });
