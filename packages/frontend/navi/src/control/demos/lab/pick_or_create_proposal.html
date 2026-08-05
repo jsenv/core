@@ -328,14 +328,15 @@
                 <Button command="--navi-send" paddingY="s">
                   Enregistrer
                 </Button>
-                {/* --navi-void: removing is not leaving, so nothing follows
-                    from the command — where to go afterwards is decided here,
-                    once the entry is gone */}
+                {/* `action`, not a command: this button runs something of its
+                    own, which is not what the form around it is for — an action
+                    is how a button says so, and it gets the loading state and
+                    the error reporting that come with one. Where to go once the
+                    entry is gone is decided in deleteEntry. */}
                 <Button
-                  command="--navi-void"
+                  action={() => deleteEntry(entry)}
                   variant="discrete"
                   paddingY="s"
-                  onClick={() => deleteEntry(entry)}
                 >
                   Supprimer
                 </Button>
