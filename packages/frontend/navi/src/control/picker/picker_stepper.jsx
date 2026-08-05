@@ -185,7 +185,6 @@ const css = /* css */ `
  *   value?: string,
  *   defaultValue?: string,
  *   signal?: import("@preact/signals").Signal<string>,
- *   onChange?: (day: string) => void,
  *   name?: string,
  *   min?: string,
  *   max?: string,
@@ -197,9 +196,9 @@ const css = /* css */ `
  *   nextLabel?: string,
  *   [key: string]: any,
  * }>}
- * @param {string} [value] The day shown, as "YYYY-MM-DD". Controlled: pair it
- *   with `onChange`. Say `signal` for a two-way binding instead, or
- *   `defaultValue` to let the stepper hold the day itself.
+ * @param {string} [value] The day shown, as "YYYY-MM-DD". Held from above:
+ *   `uiAction` says when it should move. Say `signal` for a two-way binding
+ *   instead, or `defaultValue` to let the stepper hold the day itself.
  * @param {number} [step=1] How many days a press covers — 7 for a week at a
  *   time, and the label then names the day one lands on, as it always does.
  * @param {number} [duration=250] How long a travel takes, in milliseconds.
@@ -227,7 +226,6 @@ const css = /* css */ `
 export const DayStepper = ({
   value,
   defaultValue,
-  onChange,
   uiAction,
   signal: signalProp,
   name,
@@ -244,8 +242,8 @@ export const DayStepper = ({
   loading,
   maxLines,
   renderDay = renderDayDefault,
-  previousLabel = "Previous day",
-  nextLabel = "Next day",
+  previousLabel,
+  nextLabel,
   ...rest
 }) => {
   import.meta.css = css;
@@ -409,7 +407,6 @@ export const DayStepper = ({
         readOnly={readOnly}
         disabled={disabled}
         loading={loading}
-        onChange={onChange}
         uiAction={(dayNext, event) => {
           uiAction?.(dayNext, stepEventRef.current ?? event);
         }}
@@ -434,7 +431,7 @@ export const DayStepper = ({
           previousAllowed,
           "stepper.nothing_before",
         )}
-        aria-label={previousLabel}
+        aria-label={previousLabel ?? naviI18n("stepper.previous")}
         flex
         align="center"
       >
@@ -500,7 +497,7 @@ export const DayStepper = ({
         readOnly={!nextAllowed || readOnlyResolved}
         disabled={disabledResolved}
         readOnlyMessage={wayOutMessage(nextAllowed, "stepper.nothing_after")}
-        aria-label={nextLabel}
+        aria-label={nextLabel ?? naviI18n("stepper.next")}
         flex
         align="center"
       >

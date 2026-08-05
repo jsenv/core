@@ -120,8 +120,12 @@ const css = /* css */ `
       min-height: 0;
       grid-area: 1 / 1;
       border-radius: inherit;
+      /* Where the track IS. Moving there is animated from JS (see the layout
+         effect's own track.animate): a transition would have to be watched from
+         the outside to know when it ends, and "when it ends" is what a looping
+         container needs to be exact about. An animation is asked directly —
+         it has a finished promise of its own. */
       translate: var(--slide-container-offset, 0);
-      transition: translate var(--slide-container-duration, 300ms) ease;
 
       > [data-slide] {
         /* All in the one cell, so the box is as big as its largest slide and
@@ -310,6 +314,14 @@ export const SlideContainer = ({
   // frame after, or the travel after that would jump too.
   const [noTravel, setNoTravel] = useState(true);
   const rollingRef = useRef(false);
+  // Where the track was left, so the next move knows what to travel FROM: an
+  // animation is written as two ends, and reading the first one off the DOM
+  // mid-travel would read a moving value.
+  const offsetRef = useRef();
+  const trackAnimationRef = useRef(null);
+  // What to do once the travel now starting is over, handed to the animation as
+  // soon as there is one.
+  const rollBackRef = useRef(null);
   const current = rollingArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
   // Which required slides have been answered (see Slide's own `required`). Held
@@ -419,19 +431,42 @@ export const SlideContainer = ({
         slideElement.removeAttribute("inert");
       }
     }
-    // Set here rather than left to the style prop, and right before the offset
-    // it governs: the two are one decision (this much travel for this move),
-    // and a box that applies its style on its own schedule would let them land
-    // in different frames — the travel then plays with the duration of the move
-    // before it.
-    containerRef.current.style.setProperty(
-      "--slide-container-duration",
-      noTravel ? "0ms" : duration,
-    );
-    trackRef.current.style.setProperty(
-      "--slide-container-offset",
-      `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`,
-    );
+    const track = trackRef.current;
+    const offset = `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`;
+    const offsetBefore = offsetRef.current;
+    offsetRef.current = offset;
+    // Where the track ends up, always — the animation below only covers the way
+    // there, and when it is over this is what holds.
+    track.style.setProperty("--slide-container-offset", offset);
+    const durationMs = durationToMs(duration);
+    const travels =
+      !noTravel &&
+      durationMs > 0 &&
+      offsetBefore !== undefined &&
+      offsetBefore !== offset;
+    if (travels) {
+      // Cancelled rather than layered: two animations on the same property
+      // would blend, and what one sees then is neither of the two moves.
+      trackAnimationRef.current?.cancel();
+      trackAnimationRef.current = track.animate(
+        [{ translate: offsetBefore }, { translate: offset }],
+        { duration: durationMs, easing: "ease" },
+      );
+    }
+    // A window waiting for its travel to be over (see goToArea's own loop
+    // branch): the animation says when, and says it about the move that just
+    // started rather than about a duration counted out beside it.
+    const rollBack = rollBackRef.current;
+    if (rollBack) {
+      rollBackRef.current = null;
+      if (travels) {
+        trackAnimationRef.current.finished.then(rollBack, () => {
+          // cancelled by the next travel — that one answers for it
+        });
+      } else {
+        requestAnimationFrame(rollBack);
+      }
+    }
     // The keyboard is on a slide about to go out of reach and nobody has moved
     // it: inert would drop it on the floor (document.body), so it is handed to
     // the slide on screen instead. No event to read — this travel was asked for
@@ -525,12 +560,12 @@ export const SlideContainer = ({
       // would show the old one in the new place.
       rollingRef.current = true;
       setRollingArea(area);
-      setTimeout(() => {
+      rollBackRef.current = () => {
         rollingRef.current = false;
         setRollingArea(null);
         setNoTravel(true);
         onLoop?.({ area, dx, dy, event });
-      }, durationToMs(duration));
+      };
       return true;
     }
     setCurrentAreaState(area);
