@@ -75,7 +75,6 @@
         Unit,
         Wheel,
         WheelGroup,
-        coarsePointerSignal,
       } from "@jsenv/navi";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
@@ -297,18 +296,6 @@
                             />
                           </WheelGroup.Separator>
                         </WheelGroup>
-                        {/* Docked (a finger), the sheet is dismissed by tapping
-                            outside it, so buttons would only take room from the
-                            wheels. Centered (a mouse), they stay. */}
-                        {!coarsePointerSignal.value && (
-                          <Box flex spacing="s" expandX alignX="end">
-                            <Button
-                              command="--navi-cancel"
-                              variant="discrete"
-                            />
-                            <Button type="submit" />
-                          </Box>
-                        )}
                       </Form>
                     </Picker>
                   </List.Item>
@@ -543,15 +530,6 @@
                             />
                           </WheelGroup.Separator>
                         </WheelGroup>
-                        {!coarsePointerSignal.value && (
-                          <Box flex spacing="s" expandX alignX="end">
-                            <Button
-                              command="--navi-cancel"
-                              variant="discrete"
-                            />
-                            <Button command="--navi-define" />
-                          </Box>
-                        )}
                       </Box>
                     </Picker>
                   </List.Item>
@@ -705,10 +683,6 @@
                           step="5min"
                           required={duration === "custom"}
                         />
-                        <Box flex spacing="s" expandX alignX="end">
-                          <Button command="--navi-cancel" variant="discrete" />
-                          <Button command="--navi-define" variant="discrete" />
-                        </Box>
                       </Box>
                     </Picker>
                   </List.Item>
@@ -858,10 +832,6 @@
                           max="4h"
                           step="5min"
                         />
-                        <Box flex spacing="s" expandX alignX="end">
-                          <Button command="--navi-cancel" variant="discrete" />
-                          <Button command="--navi-define" variant="discrete" />
-                        </Box>
                       </Box>
                     </Picker>
                   </List.Item>
