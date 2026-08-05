@@ -116,6 +116,7 @@ export {
 export { Field, Label } from "./src/control/field.jsx";
 export { Form } from "./src/control/form.jsx";
 export { Group } from "./src/control/group.jsx";
+export { DayStepper } from "./src/control/day_stepper/day_stepper.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";

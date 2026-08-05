@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Day and time demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      /* The panel of the screenshot: a sheet of its own, whatever holds it. */
+      .datetime-panel {
+        width: 340px;
+        padding: 16px 8px 8px;
+        background: white;
+        border: 1px solid #dadce0;
+        border-radius: 12px;
+      }
+      .datetime-panel-row {
+        padding: 12px 8px;
+        border-top: 1px solid #e8eaed;
+      }
+      .datetime-panel-day {
+        color: #5f6368;
+        font-size: 15px;
+      }
+      .chosen {
+        color: #202124;
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        DayStepper,
+        NaviDebug,
+        Text,
+        Time,
+        Wheel,
+        WheelGroup,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../internal/demo_header.jsx";
+
+      const MINUTE_STEP = 5;
+      const HOURS = Array.from({ length: 24 }, (unused, hour) => hour);
+      const MINUTES = Array.from(
+        { length: 60 / MINUTE_STEP },
+        (unused, index) => index * MINUTE_STEP,
+      );
+
+      const nowRoundedToStep = () => {
+        const now = new Date();
+        now.setMinutes(
+          Math.ceil(now.getMinutes() / MINUTE_STEP) * MINUTE_STEP,
+          0,
+          0,
+        );
+        return {
+          day: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+          hours: now.getHours(),
+          minutes: now.getMinutes(),
+        };
+      };
+
+      const NOW = nowRoundedToStep();
+
+      const daySignal = stateSignal(NOW.day, {
+        id: "day",
+        type: "date",
+      });
+      const hoursSignal = stateSignal(NOW.hours, {
+        id: "hours",
+        type: "number",
+      });
+      const minutesSignal = stateSignal(NOW.minutes, {
+        id: "minutes",
+        type: "number",
+      });
+
+      // What the panel is being edited FROM: the values it goes back to when
+      // the edition is abandoned, and where it puts them when it is confirmed.
+      const draftDaySignal = stateSignal(daySignal.peek(), { type: "date" });
+      const draftHoursSignal = stateSignal(hoursSignal.peek(), {
+        type: "number",
+      });
+      const draftMinutesSignal = stateSignal(minutesSignal.peek(), {
+        type: "number",
+      });
+
+      const twoDigits = (value) => String(value).padStart(2, "0");
+
+      const DayAndTimePanel = () => (
+        <Box flex="y" className="datetime-panel">
+          <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
+            <DayStepper
+              signal={draftDaySignal}
+              className="datetime-panel-day"
+              previousLabel="Jour précédent"
+              nextLabel="Jour suivant"
+            />
+            <WheelGroup glass frameBorder>
+              <Wheel
+                name="hours"
+                type="integer"
+                size="xxl"
+                signal={draftHoursSignal}
+              >
+                {HOURS.map((hour) => (
+                  <Wheel.Item key={hour} value={hour} paddingX="s">
+                    {twoDigits(hour)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator size="xxl">:</WheelGroup.Separator>
+              <Wheel
+                name="minutes"
+                type="integer"
+                size="xxl"
+                signal={draftMinutesSignal}
+              >
+                {MINUTES.map((minute) => (
+                  <Wheel.Item key={minute} value={minute} paddingX="s">
+                    {twoDigits(minute)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </WheelGroup>
+          </Box>
+          <Box flex alignX="center" className="datetime-panel-row">
+            <Button
+              variant="discrete"
+              onClick={() => {
+                const now = nowRoundedToStep();
+                draftDaySignal.value = now.day;
+                draftHoursSignal.value = now.hours;
+                draftMinutesSignal.value = now.minutes;
+              }}
+            >
+              Réinitialiser à l'heure actuelle
+            </Button>
+          </Box>
+          <Box flex spacing="s" alignX="end" className="datetime-panel-row">
+            <Button
+              onClick={() => {
+                draftDaySignal.value = daySignal.value;
+                draftHoursSignal.value = hoursSignal.value;
+                draftMinutesSignal.value = minutesSignal.value;
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              cta
+              onClick={() => {
+                daySignal.value = draftDaySignal.value;
+                hoursSignal.value = draftHoursSignal.value;
+                minutesSignal.value = draftMinutesSignal.value;
+              }}
+            >
+              Définir
+            </Button>
+          </Box>
+        </Box>
+      );
+
+      const PanelDemo = () => (
+        <div class="demo-section">
+          <h2 id="panel">Panneau</h2>
+          <Box flex="y" spacing="l" alignX="start">
+            <DayAndTimePanel />
+            <Text className="chosen">
+              Départ :{" "}
+              <Time type="datetime">
+                {`${daySignal.value}T${twoDigits(hoursSignal.value)}:${twoDigits(minutesSignal.value)}`}
+              </Time>
+            </Text>
+          </Box>
+        </div>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader title="Day and time demo" />
+          <PanelDemo />
+        </Box>
+      );
+
+      setupRoutes([
+        route("", {
+          searchParams: {
+            day: daySignal,
+            hours: hoursSignal,
+            minutes: minutesSignal,
+          },
+        }),
+      ]);
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>

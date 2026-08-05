@@ -85,37 +85,25 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
-      import { batch } from "@preact/signals";
       import { CallLog, useCallLog } from "../utils/call_log.jsx";
       import { ClipboardInspect } from "../utils/clipboard_inspect.jsx";
       import {
         Box,
+        DayStepper,
         Field,
-        Icon,
         Label,
         Link,
         Picker,
         Form,
         Button,
         NaviDebug,
-        Slide,
-        SlideContainer,
-        Text,
-        Time,
-        formatDayRelative,
         getNowHoursRoundedToStep,
         isToday,
-        languagesSignal,
         stateSignal,
         route,
         setupRoutes,
       } from "@jsenv/navi";
       import { DocumentToc } from "../../../internal/document_toc.jsx";
-      import {
-        ChevronLeftSvg,
-        ChevronRightSvg,
-      } from "../../../graphic/icons/chevron_stroke_svg.jsx";
 
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
@@ -903,131 +891,10 @@
 
       // ── Day stepper ──────────────────────────────────────────────────────
 
-      const DAY_MS = 24 * 60 * 60 * 1000;
-      const DAY_TRAVEL_MS = 250;
-
-      const addDays = (day, count) => {
-        const date = new Date(`${day}T00:00:00`);
-        date.setDate(date.getDate() + count);
-        return toDayString(date);
-      };
-
       const stepperDaySignal = stateSignal(TODAY, {
         id: "stepper_day",
         type: "date",
       });
-
-      // "Aujourd'hui" for the three days around today, the date itself beyond:
-      // near now, a day is read as a distance from now before it is read as a
-      // date.
-      const DayLabel = ({ day }) => {
-        const offset = Math.round(
-          (new Date(`${day}T00:00:00`) - new Date(`${TODAY}T00:00:00`)) /
-            DAY_MS,
-        );
-        if (offset >= -1 && offset <= 1) {
-          const relative = formatDayRelative(offset, languagesSignal.value);
-          return (
-            <Text>{`${relative[0].toUpperCase()}${relative.slice(1)}`}</Text>
-          );
-        }
-        return (
-          <Time type="date" format="short">
-            {day}
-          </Time>
-        );
-      };
-
-      // The label is the picker: headless, so the day on screen is the whole
-      // trigger and clicking it opens the calendar.
-      const DayCell = ({ day }) => (
-        <Picker
-          type="date"
-          variant="headless"
-          value={day}
-          textAlign="center"
-          style={{ width: "100%" }}
-          uiAction={(value) => {
-            stepperDaySignal.value = value;
-          }}
-          ui={<DayLabel day={day} />}
-        />
-      );
-
-      // Three slides for an endless row of days: the one before, the one shown
-      // and the one after. A press travels by one, then the day arriving takes
-      // the middle and the track goes back there with the travel switched off —
-      // so the window is always centred on the day and the row never ends.
-      const DayStepper = () => {
-        const [travel, setTravel] = useState(null);
-        const day = stepperDaySignal.value;
-
-        const travelBy = (count) => {
-          if (travel) {
-            return;
-          }
-          setTravel(count > 0 ? "next" : "previous");
-          setTimeout(() => {
-            // In one go: the day arriving and the track returning to the middle
-            // are the same moment, and a render holding one without the other
-            // shows the wrong day for a frame.
-            batch(() => {
-              stepperDaySignal.value = addDays(stepperDaySignal.peek(), count);
-              setTravel(null);
-            });
-          }, DAY_TRAVEL_MS);
-        };
-
-        return (
-          <Box flex alignY="center" className="day-stepper">
-            <Button
-              icon
-              variant="discrete"
-              aria-label="Jour précédent"
-              onClick={() => {
-                travelBy(-1);
-              }}
-            >
-              <Icon>
-                <ChevronLeftSvg />
-              </Icon>
-            </Button>
-            <SlideContainer
-              layout="row"
-              current={travel ?? "current"}
-              duration={travel ? `${DAY_TRAVEL_MS}ms` : "0ms"}
-              // The arrows are the two buttons around this box, and the day in
-              // the middle is a picker: nothing here is walked with the
-              // keyboard, and this box is not a stop of its own.
-              keyboardTravel={false}
-              tabIndex={-1}
-              style={{ flex: "1 1 auto", minWidth: 0 }}
-            >
-              <Slide area="previous">
-                <DayCell day={addDays(day, -1)} />
-              </Slide>
-              <Slide area="current">
-                <DayCell day={day} />
-              </Slide>
-              <Slide area="next">
-                <DayCell day={addDays(day, 1)} />
-              </Slide>
-            </SlideContainer>
-            <Button
-              icon
-              variant="discrete"
-              aria-label="Jour suivant"
-              onClick={() => {
-                travelBy(1);
-              }}
-            >
-              <Icon>
-                <ChevronRightSvg />
-              </Icon>
-            </Button>
-          </Box>
-        );
-      };
 
       const DayStepperDemo = () => (
         <div class="demo-section">
@@ -1035,7 +902,7 @@
           <p class="desc">
             Les flèches changent de jour, le centre ouvre le picker.
           </p>
-          <DayStepper />
+          <DayStepper signal={stepperDaySignal} className="day-stepper" />
         </div>
       );
 
