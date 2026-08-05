@@ -168,6 +168,21 @@
             </Variant>
           </Box>
 
+          <Heading level={3} id="too-long">
+            Un jour trop long pour la boîte
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='width="180px" : le jour passe à la ligne'>
+              <DayStepper defaultValue={TODAY} width="180px" />
+            </Variant>
+            <Variant caption="maxLines={2}">
+              <DayStepper defaultValue={TODAY} width="180px" maxLines={2} />
+            </Variant>
+            <Variant caption="noWrap">
+              <DayStepper defaultValue={TODAY} width="180px" noWrap />
+            </Variant>
+          </Box>
+
           <Heading level={3} id="size">
             size
           </Heading>
