@@ -197,34 +197,6 @@
       }
       /* The states row: several small boxes side by side, each showing one
          state of the same slide. */
-      .states {
-        display: flex;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        gap: 20px;
-      }
-      .state {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .state > figcaption {
-        color: #666;
-        font-size: 0.8rem;
-      }
-      /* Same rule as .in-document: what one sees IS the container, so it is what
-         carries the border and the background, and the ring lands on those very
-         edges. */
-      .state-frame > .navi_slide_container {
-        width: 220px;
-        background: white;
-        border: 1px solid #90caf9;
-      }
-      /* The radius goes on the container — never on a slide. It passes it down
-         to its track and clips the corners. */
-      .state-frame-rounded > .navi_slide_container {
-        border-radius: 12px;
-      }
     </style>
   </head>
   <body>
@@ -587,18 +559,22 @@
         );
         return (
           <div>
-            {/* The window: eleven cells across, which is what it takes for a 6×6
-                map to stay wholly inside it wherever it has slid to (five cells
-                of travel either way, plus the one on show). The map never leaves
-                the frame — one simply watches it move. */}
+            {/* The window: the size of the map itself, 6 cells by 6. The
+                container sits at its centre (the dashed frame) and the map
+                slides UNDER it — going one cell to the right slides the whole
+                grid one cell to the left, and whatever ends up outside the
+                window is cut off. That is the mechanism itself: one thing
+                moves, the track, and an ordinary container is this same window
+                shrunk to a single cell. */}
             <Box
               flex
               alignX="center"
               alignY="center"
-              width={`${(2 * MAP_SIDE - 1) * MAP_CELL_WIDTH}px`}
-              height={`${(2 * MAP_SIDE - 1) * MAP_CELL_HEIGHT}px`}
+              width={`${MAP_SIDE * MAP_CELL_WIDTH}px`}
+              height={`${MAP_SIDE * MAP_CELL_HEIGHT}px`}
               overflow="hidden"
               borderWidth="1"
+              borderStyle="solid"
               borderColor="#cfd8e3"
             >
               {/* Showing what it would normally hide: `overflow="visible"` is
@@ -626,6 +602,7 @@
                       alignX="center"
                       alignY="center"
                       borderWidth="1"
+                      borderStyle="solid"
                       borderColor={isCurrent ? "#1a237e" : "#b0bec5"}
                       // One square in two tinted, so a move of one cell reads as
                       // a move even between two empty cells.
@@ -659,7 +636,8 @@
               <span class="demo-note">
                 …or click a cell and use the arrow keys. The dashed frame is the
                 container itself — one cell, the only thing that would be on
-                show if it clipped its overflow as it normally does.
+                show if it clipped its overflow as it normally does. Everything
+                else is the map, sliding underneath.
               </span>
             </div>
           </div>
@@ -669,34 +647,38 @@
       // One box, one state: the same slide shown at rest and showing its focus,
       // so what the ring looks like — and where it is drawn — can be read off
       // the page rather than described.
-      const StateSlide = ({
-        rounded,
-        focusVisible,
-        backgroundColor,
-        caption,
-        children,
-      }) => (
-        <div class="state">
-          <div class={`state-frame ${rounded ? "state-frame-rounded" : ""}`}>
-            <SlideContainer duration={useSlideDuration()}>
-              <Slide
-                id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}${backgroundColor ? "_bg" : ""}`}
-                overflow="auto"
-                // A background of its own, when it wants one: a slide is a box,
-                // so it takes the same prop as any other. Worth showing because
-                // it is the one that changes what a travel LOOKS like — a slide
-                // with a background of its own passes in front of what is behind
-                // it, where a transparent one lets the container's own show
-                // through all the way.
-                backgroundColor={backgroundColor}
-                // Held on, not obtained: `pseudoState` overrides what the box
-                // would have worked out for itself (see box.jsx), which is what
-                // puts both states on the page at once, side by side, without
-                // anything having to be focused.
-                pseudoState={
-                  focusVisible ? { ":focus-visible": true } : undefined
-                }
-              >
+      // How big a slide container is: as big as its LARGEST slide, in both
+      // directions, whatever is on show. Two things to see, so two little
+      // demos: one slide whose content grows (the box follows it), then a small
+      // slide next to a bigger one (the box is the big one's size from the
+      // start, and nothing moves when they swap).
+      const SizingOneSlide = () => {
+        const [lineCount, setLineCount] = useState(2);
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex spacing="xs" alignY="center">
+              <Text size="s" color="#666">
+                lines in the slide:
+              </Text>
+              {[1, 2, 5, 9].map((count) => (
+                <Button
+                  key={count}
+                  variant={count === lineCount ? undefined : "discrete"}
+                  onClick={() => setLineCount(count)}
+                >
+                  {count}
+                </Button>
+              ))}
+            </Box>
+            <SlideContainer
+              width="260px"
+              backgroundColor="white"
+              borderWidth="1"
+              borderStyle="solid"
+              borderColor="#90caf9"
+              duration={useSlideDuration()}
+            >
+              <Slide id="sizing_alone" overflow="auto">
                 <Box
                   header
                   padding="m"
@@ -704,18 +686,113 @@
                   alignY="center"
                   className="part"
                 >
-                  <Text expandX>a slide</Text>
+                  <Text expandX>the only slide</Text>
                 </Box>
                 <Box body padding="m">
-                  <Text>{children}</Text>
+                  <Filler count={lineCount} />
                 </Box>
               </Slide>
             </SlideContainer>
-          </div>
-          <figcaption>
+            <Text size="s" color="#666">
+              No height anywhere: the box is what the slide needs.
+            </Text>
+          </Box>
+        );
+      };
+
+      const SizingTwoSlides = () => (
+        <Box flex="y" spacing="s" alignX="start">
+          <SlideContainer
+            width="260px"
+            backgroundColor="white"
+            borderWidth="1"
+            borderStyle="solid"
+            borderColor="#90caf9"
+            duration={useSlideDuration()}
+          >
+            <Slide id="sizing_small" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>small</Text>
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <Filler count={1} />
+              </Box>
+            </Slide>
+            <Slide id="sizing_big" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+                <Text expandX>big</Text>
+              </Box>
+              <Box body padding="m">
+                <Filler count={7} />
+              </Box>
+            </Slide>
+          </SlideContainer>
+          <Text size="s" color="#666">
+            The small one is on show, and the box is already the big one's size
+            — press → and nothing resizes.
+          </Text>
+        </Box>
+      );
+
+      const StateSlide = ({
+        rounded,
+        borderWidth = "1",
+        borderColor = "#90caf9",
+        focusVisible,
+        backgroundColor,
+        caption,
+        children,
+      }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          {/* Everything one sees is said HERE, on the container: it is the box
+              on the page, so it carries the width, the border, the corners and
+              its own background — and its focus ring then lands on those very
+              edges. Written as props rather than as a rule reaching for
+              .navi_slide_container from a stylesheet: the box takes them like
+              any other Box. */}
+          <SlideContainer
+            duration={useSlideDuration()}
+            width="220px"
+            backgroundColor="white"
+            borderWidth={borderWidth}
+            // Without a style there is nothing to draw: border-width alone
+            // leaves border-style at "none".
+            borderStyle="solid"
+            borderColor={borderColor}
+            borderRadius={rounded ? "12px" : undefined}
+          >
+            <Slide
+              id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}${backgroundColor ? "_bg" : ""}${borderWidth === "1" ? "" : "_bordered"}`}
+              overflow="auto"
+              // A background of its own, when it wants one: a slide is a box, so
+              // it takes the same prop as any other. Worth showing because it is
+              // the one that changes what a travel LOOKS like — a slide with a
+              // background of its own passes in front of what is behind it,
+              // where a transparent one lets the container's own show through
+              // all the way.
+              backgroundColor={backgroundColor}
+              // Held on, not obtained: `pseudoState` overrides what the box
+              // would have worked out for itself (see box.jsx), which is what
+              // puts both states on the page at once, side by side, without
+              // anything having to be focused.
+              pseudoState={
+                focusVisible ? { ":focus-visible": true } : undefined
+              }
+            >
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>a slide</Text>
+              </Box>
+              <Box body padding="m">
+                <Text>{children}</Text>
+              </Box>
+            </Slide>
+          </SlideContainer>
+          <Text size="s" color="#666">
             {caption ?? (focusVisible ? "holding the keyboard" : "at rest")}
-          </figcaption>
-        </div>
+          </Text>
+        </Box>
       );
 
       const ThreeSlides = () => (
@@ -1057,25 +1134,47 @@
               CONTAINER, not on the slide, which is what makes it follow the
               corners.
             </p>
-            <div class="states">
+            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide>square</StateSlide>
               <StateSlide focusVisible>square</StateSlide>
-            </div>
+            </Box>
             <p>
               The same, with a <code>border-radius</code> on the box holding the
               container:
             </p>
-            <div class="states">
+            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide rounded>rounded</StateSlide>
               <StateSlide rounded focusVisible>
                 rounded
               </StateSlide>
-            </div>
+            </Box>
+            <p>
+              A container with a border of its own — the ring is drawn inside
+              it, following the same edges rather than doubling them:
+            </p>
+            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                caption='borderWidth="3"'
+              >
+                bordered
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                rounded
+                focusVisible
+                caption="…rounded, and holding the keyboard"
+              >
+                bordered
+              </StateSlide>
+            </Box>
             <p>
               And a slide given a background of its own — the same prop any box
               takes:
             </p>
-            <div class="states">
+            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide
                 backgroundColor="#fdf1e0"
                 caption='backgroundColor="#fdf1e0"'
@@ -1090,7 +1189,7 @@
               >
                 on its own paper
               </StateSlide>
-            </div>
+            </Box>
             <p class="demo-note" style="max-width: 46em">
               <strong>
                 The radius belongs to the container, never to a slide.
@@ -1101,6 +1200,43 @@
               corners (<code>overflow: hidden</code>). The ring follows the same
               rule for the same reason: drawn on a slide it would come out
               square inside a rounded box, cutting across the curve.
+            </p>
+          </section>
+
+          <section class="demo-section" id="sizing">
+            <Heading id="sizing">How big it is</Heading>
+            <p>
+              A slide container is as big as its <strong>largest</strong> slide,
+              in both directions, and nothing here measures anything: every
+              slide sits in the same grid cell, so the cell is the size of the
+              biggest of them and the others stretch to it. Which means the box
+              never grows or shrinks as one travels — the size is decided by all
+              the slides at once, not by the one on show.
+            </p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>One slide</h3>
+                <p class="demo-note">
+                  Nothing else to measure against: the box is exactly what the
+                  slide needs, and follows it as it grows.
+                </p>
+                <SizingOneSlide />
+              </div>
+              <div class="demo-way">
+                <h3>A small slide and a big one</h3>
+                <p class="demo-note">
+                  The small one is showing, but the box is the big one's size
+                  already — that is what makes the travel still: nothing to
+                  resize on the way.
+                </p>
+                <SizingTwoSlides />
+              </div>
+            </div>
+            <p class="demo-note" style="max-width: 46em">
+              Give the container a size of its own (a <code>height</code>, a
+              dialog's own room) and the reading is reversed: the slides then
+              scroll their own body inside it — see{" "}
+              <Link href="#taller">Content taller than the box</Link>.
             </p>
           </section>
 
