@@ -72,7 +72,7 @@ const css = /* css */ `
        control — the two chevrons included, since pressing one lands the
        keyboard here (see navi-focus-delegate below). */
     outline-color: var(--navi-focus-outline-color);
-    outline-offset: var(--navi-focus-outline-width);
+    outline-offset: 0px;
   }
   /* The days hold the keyboard, and this box wears their ring: the container
      fills it, so its own ring would be drawn a pixel inside this border and

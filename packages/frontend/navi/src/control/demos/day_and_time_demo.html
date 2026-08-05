@@ -28,16 +28,11 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         scroll-margin-top: 16px;
       }
-      /* The panel of the screenshot: a sheet of its own, whatever holds it. */
       .datetime-panel {
-        width: 340px;
-        padding: 16px 8px 8px;
-        background: white;
-        border: 1px solid #dadce0;
-        border-radius: 12px;
+        width: 100%;
       }
       .datetime-panel-row {
-        padding: 12px 8px;
+        padding-top: 12px;
         border-top: 1px solid #e8eaed;
       }
       .chosen {
@@ -121,42 +116,35 @@
       }) => (
         <Form action={action} flex="y" className="datetime-panel">
           <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
-            <Field flex="y" expandX>
-              <Label>Jour</Label>
+            <Field as="label" flex="y" expandX>
+              Date et heure
               <DayStepper name="day" expandX borderWidth="0" {...dayProps} />
             </Field>
-            <Field flex="y" alignX="center">
-              <Label>Heure</Label>
-              <WheelGroup frameBorder>
-                <Wheel name="hours" type="integer" size="xxl" {...hoursProps}>
-                  {HOURS.map((hour) => (
-                    <Wheel.Item key={hour} value={hour} paddingX="s">
-                      {twoDigits(hour)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
-                <WheelGroup.Separator size="xxl">
-                  <Wheel.Colon />
-                </WheelGroup.Separator>
-                <Wheel
-                  name="minutes"
-                  type="integer"
-                  size="xxl"
-                  {...minutesProps}
-                >
-                  {MINUTES.map((minute) => (
-                    <Wheel.Item key={minute} value={minute} paddingX="s">
-                      {twoDigits(minute)}
-                    </Wheel.Item>
-                  ))}
-                </Wheel>
-              </WheelGroup>
-            </Field>
+            {/* No label of its own: the wheels are the other half of the same
+                answer, and what they are is written above them. */}
+            <WheelGroup frameBorder>
+              <Wheel name="hours" type="integer" size="xxl" {...hoursProps}>
+                {HOURS.map((hour) => (
+                  <Wheel.Item key={hour} value={hour} paddingX="s">
+                    {twoDigits(hour)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+              <WheelGroup.Separator size="xxl">
+                <Wheel.Colon />
+              </WheelGroup.Separator>
+              <Wheel name="minutes" type="integer" size="xxl" {...minutesProps}>
+                {MINUTES.map((minute) => (
+                  <Wheel.Item key={minute} value={minute} paddingX="s">
+                    {twoDigits(minute)}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </WheelGroup>
           </Box>
-          <Box flex spacing="s" alignX="end" className="datetime-panel-row">
-            <Button command="--navi-reset">Annuler</Button>
+          <Box flex alignX="end" className="datetime-panel-row">
             <Button type="submit" cta>
-              Définir
+              Envoyer
             </Button>
           </Box>
         </Form>
