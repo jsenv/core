@@ -103,7 +103,7 @@ const css = /* css */ `
       --popover-border-width: 1px;
       --popover-border-color: var(--navi-popup-border-color);
       --popover-outline-width: var(--navi-focus-outline-width);
-      --popover-outline-offset: calc(-0.5 * var(--popover-outline-width));
+      --popover-outline-offset: calc(-1 * var(--popover-outline-width));
       --popover-outline-color: var(--navi-focus-outline-color);
       --popover-background-color: var(--navi-popup-background-color);
     }
@@ -178,7 +178,7 @@ const css = /* css */ `
     border-radius: var(--popover-border-radius);
     outline-width: var(--popover-outline-width);
     outline-color: var(--popover-outline-color);
-    outline-offset: 0px;
+    outline-offset: var(--popover-outline-offset);
     box-shadow: var(--popover-box-shadow);
 
     /* overflow is not declared here: the popover carries [data-scrollable]
