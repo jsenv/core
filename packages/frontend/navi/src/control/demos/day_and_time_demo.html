@@ -184,9 +184,25 @@
         </div>
       );
 
+      const DEMO_SIGNALS = [daySignal, hoursSignal, minutesSignal];
+
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="Day and time demo" />
+          <Box flex alignX="end">
+            <Button
+              variant="discrete"
+              onClick={() => {
+                // undefined, not their defaults: a signal back at its default is
+                // a signal with nothing to say, which is what empties the url.
+                for (const signal of DEMO_SIGNALS) {
+                  signal.value = undefined;
+                }
+              }}
+            >
+              Tout réinitialiser
+            </Button>
+          </Box>
           <FirstVisitDemo />
           <AlreadySetDemo />
         </Box>

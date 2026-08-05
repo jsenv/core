@@ -57,6 +57,7 @@ import {
   useControlgroupProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { seedDefaultValueFromSignal } from "../input/resolve_input_props.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import { dispatchRequestSetUIState } from "../ui_state_dom.js";
@@ -1121,6 +1122,11 @@ function WheelUI(props) {
   // complex values). The wheel's own `type` prop ("integer", "day"…) is a
   // rendering hint kept on the container (data-wheel-type), never on the input.
   const inputRef = useRef(null);
+  // A signal with a default of its own seeds `defaultValue` here as it does on
+  // an input or a picker (see seedDefaultValueFromSignal): the wheel then starts
+  // on it while staying uncontrolled, so a form reads what it shows as an answer
+  // one can send rather than as a value it already holds.
+  seedDefaultValueFromSignal(props);
   const [controlRootProps, controlHostProps, { facadeController }] =
     useControlFacadeProps(
       {

@@ -48,11 +48,11 @@ import {
   ReadOnlyContext,
 } from "../control_context.js";
 import { useControlUIState } from "../control_hooks.jsx";
+import { openCallout } from "../rules/callout/callout.js";
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
 } from "../ui_state_dom.js";
-import { Button } from "../input/button.jsx";
 import { Picker } from "./picker.jsx";
 
 const css = /* css */ `
@@ -155,37 +155,59 @@ const css = /* css */ `
      presses is a chevron. Its height is its own, rather than the middle's, so a
      value that wraps does not turn the two into towers; the font is the one
      around it, so "one line" means the same on both sides. */
-  .navi_picker_stepper > .navi_button {
-    --button-font-size: inherit;
-    --button-padding-y: var(--picker-stepper-padding-y);
-
+  .navi_picker_stepper > .navi_picker_stepper_way_out {
+    box-sizing: border-box;
     height: calc(1lh + 2 * var(--picker-stepper-padding-y));
+    padding-block: var(--picker-stepper-padding-y);
+    color: inherit;
+    background: none;
+    border: none;
+    border-radius: var(--navi-control-border-radius);
+    cursor: pointer;
+  }
+  .navi_picker_stepper > .navi_picker_stepper_way_out:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+  /* Nothing that way: still there, still pressable — pressing it is how one
+     learns why (see WayOut's own callout). */
+  .navi_picker_stepper > .navi_picker_stepper_way_out[data-unavailable] {
+    color: color-mix(in srgb, currentColor 35%, transparent);
+  }
+  .navi_picker_stepper[data-readonly] > .navi_picker_stepper_way_out,
+  .navi_picker_stepper[data-disabled] > .navi_picker_stepper_way_out {
+    cursor: default;
   }
   /* Square beside the value, full width above and below it: a way out is as
      wide as what it steps through when it sits across it. */
-  .navi_picker_stepper:not([data-vertical]) > .navi_button {
+  .navi_picker_stepper:not([data-vertical]) > .navi_picker_stepper_way_out {
     aspect-ratio: 1;
+    justify-content: center;
   }
-  .navi_picker_stepper[data-vertical] > .navi_button {
+  .navi_picker_stepper[data-vertical] > .navi_picker_stepper_way_out {
     width: 100%;
+    justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner
      of a rounded stepper is rounded there too, and nowhere else. Said with
      inherit rather than clipped away with overflow, which would cut the focus
      ring of the very button it rounds. */
-  .navi_picker_stepper:not([data-vertical]) > .navi_button:first-of-type {
+  .navi_picker_stepper:not([data-vertical])
+    > .navi_picker_stepper_way_out:first-of-type {
     border-start-start-radius: inherit;
     border-end-start-radius: inherit;
   }
-  .navi_picker_stepper:not([data-vertical]) > .navi_button:last-of-type {
+  .navi_picker_stepper:not([data-vertical])
+    > .navi_picker_stepper_way_out:last-of-type {
     border-start-end-radius: inherit;
     border-end-end-radius: inherit;
   }
-  .navi_picker_stepper[data-vertical] > .navi_button:first-of-type {
+  .navi_picker_stepper[data-vertical]
+    > .navi_picker_stepper_way_out:first-of-type {
     border-start-start-radius: inherit;
     border-start-end-radius: inherit;
   }
-  .navi_picker_stepper[data-vertical] > .navi_button:last-of-type {
+  .navi_picker_stepper[data-vertical]
+    > .navi_picker_stepper_way_out:last-of-type {
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
   }
@@ -324,18 +346,21 @@ export const DayStepper = ({
   const dayProps = {};
   if (value !== undefined) {
     dayProps.value = value;
-  } else if (signalProp) {
-    dayProps.signal = signalProp;
-  }
-  if (defaultValue !== undefined) {
-    dayProps.defaultValue = defaultValue;
-  } else if (value === undefined && !signalProp) {
-    // A day is always shown, so there is always one to start from — today, or
-    // the nearest day a min/max/step leaves reachable. A default rather than a
-    // value, so a form reads the day shown as an answer one can send rather
-    // than as something it already holds. A signal brings its own default (see
-    // resolveInputProps), so it is left alone.
-    dayProps.defaultValue = dayFallback;
+  } else {
+    if (signalProp) {
+      dayProps.signal = signalProp;
+    }
+    // A day is always shown, so the picker always HOLDS one: what was named, or
+    // what the signal starts on, or today (the nearest day a min/max/step
+    // leaves reachable). Said as a default rather than as a value, so a form
+    // reads the day shown as an answer one can send rather than as something it
+    // already holds — and said even when a signal is bound, because a signal
+    // with nothing in it would otherwise leave the picker empty while the
+    // stepper shows a day, and a form has nothing to send about an empty field.
+    dayProps.defaultValue =
+      defaultValue ??
+      signalProp?.options?.getDefaultValue?.(false) ??
+      dayFallback;
   }
 
   // Told from above as often as said here: a form running its action puts
@@ -401,32 +426,17 @@ export const DayStepper = ({
         color="var(--navi-loader-color)"
         inset={-2}
       />
-      <Button
+      <WayOut
         command={vertical ? "--navi-up" : "--navi-left"}
-        commandFor={containerId}
-        // Pressed, never focused: the keyboard lands on the days instead, which
-        // is the one place the arrows mean something — so a chevron and an
-        // arrow key are the same gesture rather than two, and Tab has one stop
-        // here rather than three.
-        tabIndex="-1"
-        navi-focus-delegate={containerId}
-        icon
-        variant="discrete"
-        // Read-only while the day is being sent, too: what one is looking at is
-        // on its way somewhere and stepping it would be a second answer to a
-        // question still being asked.
-        readOnly={!previousAllowed || readOnlyResolved}
-        disabled={disabledResolved}
-        readOnlyMessage={wayOutMessage(
+        containerId={containerId}
+        unavailableMessage={wayOutMessage(
           previousAllowed,
           "stepper.nothing_before",
         )}
-        aria-label={previousLabel ?? naviI18n("stepper.previous")}
-        flex
-        align="center"
+        label={previousLabel ?? naviI18n("stepper.previous")}
       >
-        <Icon>{vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}</Icon>
-      </Button>
+        {vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}
+      </WayOut>
       {/* One box for the value and the picker behind it: the picker is
           headless, so what the browser anchors its calendar to is whatever box
           is positioned around it — and that has to be the value one pressed. */}
@@ -506,25 +516,66 @@ export const DayStepper = ({
           </Slide>
         </SlideContainer>
       </div>
-      <Button
+      <WayOut
         command={vertical ? "--navi-down" : "--navi-right"}
-        commandFor={containerId}
-        tabIndex="-1"
-        navi-focus-delegate={containerId}
-        icon
-        variant="discrete"
-        readOnly={!nextAllowed || readOnlyResolved}
-        disabled={disabledResolved}
-        readOnlyMessage={wayOutMessage(nextAllowed, "stepper.nothing_after")}
-        aria-label={nextLabel ?? naviI18n("stepper.next")}
-        flex
-        align="center"
+        containerId={containerId}
+        unavailableMessage={wayOutMessage(nextAllowed, "stepper.nothing_after")}
+        label={nextLabel ?? naviI18n("stepper.next")}
       >
-        <Icon>{vertical ? <ChevronDownSvg /> : <ChevronRightSvg />}</Icon>
-      </Button>
+        {vertical ? <ChevronDownSvg /> : <ChevronRightSvg />}
+      </WayOut>
     </Box>
   );
 };
+
+// A way out is a place one presses, not a control: no <button>, on purpose.
+// A <button> is labelable, so a <Label> wrapping the whole stepper would bind
+// to the first chevron instead of to the picker — the thing that actually holds
+// the value — and a form would carry two more controls that answer for nothing.
+// It is not focusable either: the keyboard walks the days on the container (see
+// its own tabIndex), where the arrows already mean this.
+const WayOut = ({
+  command,
+  containerId,
+  unavailableMessage,
+  label,
+  children,
+}) => (
+  <Box
+    as="span"
+    baseClassName="navi_picker_stepper_way_out"
+    // Announced as a button because that is what it is to whoever cannot see
+    // the chevron — and marked unavailable rather than removed when there is
+    // nothing that way, so it keeps its place.
+    role="button"
+    aria-label={label}
+    aria-disabled={unavailableMessage ? "true" : undefined}
+    data-unavailable={unavailableMessage ? "" : undefined}
+    // Read by triggerNaviCommand below the same way it reads a button's own.
+    commandfor={containerId}
+    flex
+    align="center"
+    onClick={(e) => {
+      const wayOutElement = e.currentTarget;
+      if (unavailableMessage) {
+        // Why it does nothing, said where one pressed: a control would have
+        // done this through its own interaction gate, and this one has none.
+        openCallout(unavailableMessage, {
+          anchorElement: wayOutElement,
+          status: "info",
+          openingEvent: e,
+        });
+        return;
+      }
+      // The keyboard follows the press: the days are where the arrows work, so
+      // pressing a chevron leaves one able to keep going with the keys.
+      document.getElementById(containerId)?.focus({ preventScroll: true });
+      triggerNaviCommand(wayOutElement, command, e);
+    }}
+  >
+    <Icon>{children}</Icon>
+  </Box>
+);
 
 const PICKER_STEPPER_PSEUDO_CLASSES = [":hover", ":focus-visible"];
 

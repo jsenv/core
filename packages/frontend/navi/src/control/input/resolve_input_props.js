@@ -67,6 +67,33 @@ const NAVI_TYPE_DEFAULTS = {
  * - `time`, `datetime-local`, `datetime`:
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
+/**
+ * A bound signal that carries a default of its own says the same thing on every
+ * control: the control starts there and is otherwise uncontrolled (it
+ * write-syncs the signal), which is what makes a form read the value shown as a
+ * SUGGESTION rather than as something it already holds. Written once and used
+ * by everything that takes a `signal` — a wheel that skipped this was the same
+ * signal meaning two different things depending on which control it was handed
+ * to (see wheel.jsx).
+ */
+export const seedDefaultValueFromSignal = (props) => {
+  const signalOptions = props.signal?.options;
+  if (!signalOptions) {
+    return;
+  }
+  if (Object.hasOwn(props, "defaultValue")) {
+    // explicit defaultValue prop prevails
+    return;
+  }
+  // Snapshot the signal's current default so that resetUIState restores to the
+  // original default — not the value the signal had at the time of the last
+  // re-render.
+  const defaultValue = signalOptions.getDefaultValue(false);
+  if (defaultValue !== undefined) {
+    props.defaultValue = defaultValue;
+  }
+};
+
 export const resolveInputProps = (props) => {
   // `signal` carries a bound state signal. It is left on `props` on purpose:
   // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
@@ -122,19 +149,7 @@ export const resolveInputProps = (props) => {
       return;
     }
 
-    if (signalOptions) {
-      if (Object.hasOwn(props, "defaultValue")) {
-        // explicit defaultValue prop prevails
-      } else {
-        // If no explicit defaultValue, snapshot the signal's current default
-        // so that resetUIState restores to the original default — not the
-        // value the signal had at the time of the last re-render.
-        const defaultVal = signalOptions.getDefaultValue(false);
-        if (defaultVal !== undefined) {
-          props.defaultValue = defaultVal;
-        }
-      }
-    }
+    seedDefaultValueFromSignal(props);
   }
 
   const currentType = props.type;
