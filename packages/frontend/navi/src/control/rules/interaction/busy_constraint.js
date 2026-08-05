@@ -5,6 +5,12 @@ import { CONSTRAINT_ATTRIBUTE_SET } from "../constraint_attribute_set.js";
 export const BUSY_CONSTRAINT = {
   name: "busy",
   messageAttribute: "data-busy-message",
+  // True for as long as an action runs and false again right after, with
+  // nothing to re-check it in between: a title written from it would still be
+  // saying "this action is in progress" over a button that has been idle for
+  // minutes. The callout says it live while it lasts, which is where that
+  // message belongs (see control_interaction.js).
+  transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
   check: (field) => {

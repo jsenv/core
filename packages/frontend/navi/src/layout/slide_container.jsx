@@ -416,8 +416,13 @@ export const SlideContainer = ({
   const handOverFocus = (slideElement, event) => {
     const focusTransfer = prepareFocusTransfer(event, debugFocus);
     focusTransfer.transferFocus(event, slideElement);
+    // Asked of the SLIDE, not of this box: the box contains itself, so asking
+    // it would answer "yes, it is here" for the very case this is about — a
+    // slide with nothing focusable, where the keyboard is already on the box
+    // and must be put back on it, if only to say so with a ring the modality of
+    // this travel decides (arriving by key shows one, by click does not).
     const containerEl = containerRef.current;
-    if (containerEl && !containerEl.contains(document.activeElement)) {
+    if (containerEl && !slideElement.contains(document.activeElement)) {
       containerEl.focus({
         preventScroll: true,
         focusVisible: focusTransfer.focusVisible,
