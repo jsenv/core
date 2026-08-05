@@ -648,92 +648,132 @@
       // so what the ring looks like — and where it is drawn — can be read off
       // the page rather than described.
       // How big a slide container is: as big as its LARGEST slide, in both
-      // directions, whatever is on show. Two things to see, so two little
-      // demos: one slide whose content grows (the box follows it), then a small
-      // slide next to a bigger one (the box is the big one's size from the
-      // start, and nothing moves when they swap).
-      const SizingOneSlide = () => {
-        const [lineCount, setLineCount] = useState(2);
+      // directions, whatever is on show. Four little demos rather than a
+      // paragraph — one slide growing taller, one growing wider, then the same
+      // two cases with a second slide that is bigger than the one on screen.
+      //
+      // The container carries a border and the slides a background of their
+      // own, so the two sizes can be told apart: what the box is, and what the
+      // slide inside it fills.
+      const SizingFrame = ({ children, ...rest }) => (
+        <SlideContainer
+          backgroundColor="white"
+          borderWidth="1"
+          borderStyle="solid"
+          borderColor="#90caf9"
+          duration={useSlideDuration()}
+          {...rest}
+        >
+          {children}
+        </SlideContainer>
+      );
+      // Its way out always in the same corner, whichever direction it points:
+      // a chevron that moves from one side to the other between two screens is
+      // a chevron one has to look for.
+      const SizingSlide = ({ id, title, direction, children }) => (
+        <Slide id={id} overflow="auto" backgroundColor="#f4f7fc">
+          <Box header padding="m" flex="x" alignY="center" className="part">
+            <Text expandX noWrap>
+              {title}
+            </Text>
+            {/* Always in the same corner, whichever way it goes — and nothing
+                at all when there is nowhere to go. */}
+            {direction === "next" && (
+              <SlideContainer.Right size="l" padding="xs" marginY="-xs" />
+            )}
+            {direction === "previous" && (
+              <SlideContainer.Left size="l" padding="xs" marginY="-xs" />
+            )}
+          </Box>
+          <Box body padding="m">
+            {children}
+          </Box>
+        </Slide>
+      );
+
+      const SizingTaller = () => {
+        const [lineCount, setLineCount] = useState(1);
         return (
           <Box flex="y" spacing="s" alignX="start">
             <Box flex spacing="xs" alignY="center">
-              <Text size="s" color="#666">
-                lines in the slide:
-              </Text>
-              {[1, 2, 5, 9].map((count) => (
+              {[1, 3, 6].map((count) => (
                 <Button
                   key={count}
                   variant={count === lineCount ? undefined : "discrete"}
                   onClick={() => setLineCount(count)}
                 >
-                  {count}
+                  {count} line{count > 1 ? "s" : ""}
                 </Button>
               ))}
             </Box>
-            <SlideContainer
-              width="260px"
-              backgroundColor="white"
-              borderWidth="1"
-              borderStyle="solid"
-              borderColor="#90caf9"
-              duration={useSlideDuration()}
-            >
-              <Slide id="sizing_alone" overflow="auto">
-                <Box
-                  header
-                  padding="m"
-                  flex="x"
-                  alignY="center"
-                  className="part"
-                >
-                  <Text expandX>the only slide</Text>
-                </Box>
-                <Box body padding="m">
-                  <Filler count={lineCount} />
-                </Box>
-              </Slide>
-            </SlideContainer>
-            <Text size="s" color="#666">
-              No height anywhere: the box is what the slide needs.
-            </Text>
+            <SizingFrame width="240px">
+              <SizingSlide id="sizing_taller" title="alone">
+                <Filler count={lineCount} />
+              </SizingSlide>
+            </SizingFrame>
           </Box>
         );
       };
 
-      const SizingTwoSlides = () => (
-        <Box flex="y" spacing="s" alignX="start">
-          <SlideContainer
-            width="260px"
-            backgroundColor="white"
-            borderWidth="1"
-            borderStyle="solid"
-            borderColor="#90caf9"
-            duration={useSlideDuration()}
-          >
-            <Slide id="sizing_small" overflow="auto">
-              <Box header padding="m" flex="x" alignY="center" className="part">
-                <Text expandX>small</Text>
-                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
-              </Box>
-              <Box body padding="m">
-                <Filler count={1} />
-              </Box>
-            </Slide>
-            <Slide id="sizing_big" overflow="auto">
-              <Box header padding="m" flex="x" alignY="center" className="part">
-                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
-                <Text expandX>big</Text>
-              </Box>
-              <Box body padding="m">
-                <Filler count={7} />
-              </Box>
-            </Slide>
-          </SlideContainer>
-          <Text size="s" color="#666">
-            The small one is on show, and the box is already the big one's size
-            — press → and nothing resizes.
-          </Text>
-        </Box>
+      const SizingWider = () => {
+        const [itemCount, setItemCount] = useState(1);
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex spacing="xs" alignY="center">
+              {[1, 3, 5].map((count) => (
+                <Button
+                  key={count}
+                  variant={count === itemCount ? undefined : "discrete"}
+                  onClick={() => setItemCount(count)}
+                >
+                  {count} tag{count > 1 ? "s" : ""}
+                </Button>
+              ))}
+            </Box>
+            {/* No width this time: sideways too, the box is what the slide
+                needs. */}
+            <SizingFrame>
+              <SizingSlide id="sizing_wider" title="alone">
+                <Box flex spacing="xs" noWrap>
+                  {Array.from({ length: itemCount }, (_, i) => (
+                    <Text
+                      key={i}
+                      paddingX="s"
+                      paddingY="xxs"
+                      backgroundColor="#e8eef7"
+                      borderRadius="s"
+                      noWrap
+                    >
+                      tag {i + 1}
+                    </Text>
+                  ))}
+                </Box>
+              </SizingSlide>
+            </SizingFrame>
+          </Box>
+        );
+      };
+
+      const SizingTwoTall = () => (
+        <SizingFrame width="240px">
+          <SizingSlide id="sizing_short" title="short" direction="next">
+            <Filler count={1} />
+          </SizingSlide>
+          <SizingSlide id="sizing_tall" title="tall" direction="previous">
+            <Filler count={3} />
+          </SizingSlide>
+        </SizingFrame>
+      );
+
+      const SizingTwoWide = () => (
+        <SizingFrame>
+          <SizingSlide id="sizing_narrow" title="narrow" direction="next">
+            <Text noWrap>a word</Text>
+          </SizingSlide>
+          <SizingSlide id="sizing_wide" title="wide" direction="previous">
+            <Text noWrap>a rather longer sentence than the other one</Text>
+          </SizingSlide>
+        </SizingFrame>
       );
 
       const StateSlide = ({
@@ -1206,36 +1246,30 @@
           <section class="demo-section" id="sizing">
             <Heading id="sizing">How big it is</Heading>
             <p>
-              A slide container is as big as its <strong>largest</strong> slide,
-              in both directions, and nothing here measures anything: every
-              slide sits in the same grid cell, so the cell is the size of the
-              biggest of them and the others stretch to it. Which means the box
-              never grows or shrinks as one travels — the size is decided by all
-              the slides at once, not by the one on show.
+              As big as its <strong>largest</strong> slide, in both directions.
             </p>
             <div class="demo-ways">
               <div class="demo-way">
-                <h3>One slide</h3>
-                <p class="demo-note">
-                  Nothing else to measure against: the box is exactly what the
-                  slide needs, and follows it as it grows.
-                </p>
-                <SizingOneSlide />
+                <h3>One slide, taller</h3>
+                <SizingTaller />
               </div>
               <div class="demo-way">
-                <h3>A small slide and a big one</h3>
-                <p class="demo-note">
-                  The small one is showing, but the box is the big one's size
-                  already — that is what makes the travel still: nothing to
-                  resize on the way.
-                </p>
-                <SizingTwoSlides />
+                <h3>One slide, wider</h3>
+                <SizingWider />
+              </div>
+              <div class="demo-way">
+                <h3>Two slides, one taller</h3>
+                <SizingTwoTall />
+              </div>
+              <div class="demo-way">
+                <h3>Two slides, one wider</h3>
+                <SizingTwoWide />
               </div>
             </div>
             <p class="demo-note" style="max-width: 46em">
               Give the container a size of its own (a <code>height</code>, a
-              dialog's own room) and the reading is reversed: the slides then
-              scroll their own body inside it — see{" "}
+              dialog's own room) and the slides scroll their own body inside it
+              instead — see{" "}
               <Link href="#taller">Content taller than the box</Link>.
             </p>
           </section>

@@ -60,13 +60,13 @@ const css = /* css */ `
      slide travels by exactly one box, so a short one and a tall one move the
      same distance. */
   .navi_slide_container {
-    /* The ring of the slide holding the keyboard is drawn HERE, on the
-       container, rather than on the slide: a slide is deliberately square (its
-       corners belong to this box, see [data-slide] below), so a ring drawn on
-       one would come out square inside a rounded box and cut across the curve.
-       Here it follows whatever radius this box was given.
-       Here rather than on the track for the other half of the reason: the track
-       is what travels, and a ring riding along would slide out of the frame for
+    /* The ring of the slide holding the keyboard is drawn on the CONTAINER,
+       not on the slide: a slide is deliberately square (its corners belong to
+       this box, see [data-slide] below), so a ring drawn on one would come out
+       square inside a rounded box and cut across the curve. Here it follows
+       whatever radius this box was given.
+       Not on the track either, for the other half of the reason: the track is
+       what travels, and a ring riding along would slide out of the frame for
        the length of a travel. The two have the same geometry at rest, so
        nothing is lost by drawing it on the one that stays still.
        :has(), not a class set from JS: which slide is showing its focus is
@@ -87,22 +87,26 @@ const css = /* css */ `
     border-radius: inherit;
     overflow: hidden;
 
-    &:has([data-slide][data-focus-visible])::after {
+    /* An element of its own (see the JSX), not an outline on this box: an
+       outline is painted UNDER the backgrounds of what the slide contains, so a
+       slide with a header — the usual shape — would show the ring everywhere
+       except along its header. Same shape as the wheel's own ring, drawn the
+       same way (see .navi_wheel_focus_ring). */
+    > .navi_slide_focus_ring {
       position: absolute;
+      /* A pixel in from the edge, so the ring reads as a ring rather than as a
+         border of the box. */
       inset: var(--navi-slide-outline-gap, 1px);
       z-index: 1;
-      border: var(--navi-focus-outline-width) solid
-        var(--navi-focus-outline-color);
       border-radius: inherit;
       pointer-events: none;
-      /* An overlay, not an outline: an outline is painted UNDER the backgrounds
-         of what the slide contains, so a slide with a header — the usual shape
-         — would show the ring everywhere except along its header. Same trick
-         the wheel uses for its own (see .navi_wheel_focus_ring).
-         Inside the box, since the box clips its overflow and anything drawn
-         outside it would simply not appear, with a pixel of gap so it reads as
-         a ring rather than as a border of the box. */
-      content: "";
+    }
+    &:has([data-slide][data-focus-visible]) > .navi_slide_focus_ring {
+      /* Inward: this box clips its overflow, and an outline drawn outside the
+         ring's own box would land where nothing is painted. */
+      outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--navi-focus-outline-width));
     }
 
     /* ONE thing moves: the track. The slides are laid out once and for all,
@@ -508,6 +512,11 @@ export const SlideContainer = ({
       }}
       style={{ "--slide-container-duration": duration, ...rest.style }}
     >
+      {/* A ring the slides cannot paint over, the way the wheel does it: an
+          outline on the box itself is drawn under their backgrounds. Rendered
+          whatever the state — it is CSS that decides when it shows, from the
+          slide that holds the keyboard. */}
+      <div className="navi_slide_focus_ring" />
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
           value={{ vertical, answeredAreas, done }}

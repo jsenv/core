@@ -223,7 +223,9 @@ const css = /* css */ `
     .navi_wheel_focus_ring {
       position: absolute;
       z-index: 2;
-      border-radius: 3px;
+      /* The wheel's own, whatever it was given: a ring with a radius of its own
+         would go its own way the moment a caller rounds the wheel. */
+      border-radius: inherit;
       pointer-events: none;
     }
     /* The loading outline (rendered as a container child, outside the viewport)
