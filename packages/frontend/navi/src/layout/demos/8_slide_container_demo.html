@@ -396,6 +396,17 @@
         </SlideContainer>
       );
 
+      const TallSlidesVertical = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <DemoSlide id="first" title="first" direction="next" vertical>
+            <Filler count={40} />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous" vertical>
+            <Filler count={60} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
       const TwoSlidesVertical = () => (
         <SlideContainer duration={useSlideDuration()} layout="column">
           <DemoSlide id="first" title="first" direction="next" vertical>
@@ -776,8 +787,14 @@
 
       // Nothing focusable inside, so the slide itself takes the keyboard as soon
       // as the popup opens — which is the case the popup's own ring is for.
-      const FocusRingSlides = () => (
-        <SlideContainer duration={useSlideDuration()}>
+      const FocusRingSlides = ({ focusVisible }) => (
+        <SlideContainer
+          duration={useSlideDuration()}
+          // Held on, as in StateSlide: what the popup answers is the container's
+          // data-focus-visible, so forcing it shows the ring without having to
+          // open anything from the keyboard.
+          pseudoState={focusVisible ? { ":focus-visible": true } : undefined}
+        >
           <Slide id="focus_ring_first" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
               <Text expandX>first</Text>
@@ -1248,7 +1265,7 @@
                   Open the dialog
                 </Button>
                 <Dialog id="focus_ring_dialog" minWidth="260px" flex="y">
-                  <FocusRingSlides />
+                  <FocusRingSlides focusVisible />
                 </Dialog>
               </div>
               <div class="demo-way">
@@ -1257,6 +1274,36 @@
                   Open the popover
                 </Button>
                 <Popover id="focus_ring_popover" minWidth="260px" flex="y">
+                  <FocusRingSlides focusVisible />
+                </Popover>
+              </div>
+            </div>
+            <p>
+              The same two, ringed or not by the way they were opened — press
+              Space on the button, then click it:
+            </p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>In a dialog</h3>
+                <Button
+                  command="--navi-open"
+                  commandFor="focus_ring_dialog_live"
+                >
+                  Open the dialog
+                </Button>
+                <Dialog id="focus_ring_dialog_live" minWidth="260px" flex="y">
+                  <FocusRingSlides />
+                </Dialog>
+              </div>
+              <div class="demo-way">
+                <h3>In a popover</h3>
+                <Button
+                  command="--navi-toggle"
+                  commandFor="focus_ring_popover_live"
+                >
+                  Open the popover
+                </Button>
+                <Popover id="focus_ring_popover_live" minWidth="260px" flex="y">
                   <FocusRingSlides />
                 </Popover>
               </div>
@@ -1319,22 +1366,6 @@
             <ThreeWays id="basic" Content={TwoSlides} />
           </section>
 
-          <section class="demo-section" id="taller">
-            <Heading id="taller">Content taller than the box</Heading>
-            <p>
-              Nothing special happens: a slide is a box, so it scrolls its own
-              body (<code>overflow="auto"</code> plus a <code>body</code>, see
-              box.jsx). What decides the height is what holds the container — a
-              height here, the screen for a dialog, the space left under the
-              anchor for a popover — never the slides themselves.
-            </p>
-            <ThreeWays
-              id="tall"
-              Content={TallSlides}
-              documentClassName="in-document-capped"
-            />
-          </section>
-
           <section class="demo-section" id="vertical">
             <Heading id="vertical">Vertical</Heading>
             <p>
@@ -1344,6 +1375,33 @@
               directions.
             </p>
             <ThreeWays id="vertical" Content={TwoSlidesVertical} />
+          </section>
+
+          <section class="demo-section" id="taller">
+            <Heading id="taller">Content taller than the box</Heading>
+            <p>The slide scrolls its own body; the box keeps its size.</p>
+            <ThreeWays
+              id="tall"
+              Content={TallSlides}
+              documentClassName="in-document-capped"
+            />
+            <p>…and the same going up and down:</p>
+            <ThreeWays
+              id="tall_vertical"
+              Content={TallSlidesVertical}
+              documentClassName="in-document-capped"
+            />
+          </section>
+
+          <section class="demo-section" id="wider">
+            <Heading id="wider">Content wider than the box (vertical)</Heading>
+            <p>
+              Sideways now belongs to the content, not to the travel: the slides
+              go up and down while what they hold scrolls left and right. Their
+              own body is what scrolls, and the box hides its overflow so the
+              slide waiting below never shows through.
+            </p>
+            <ThreeWays id="wide" Content={WideSlidesVertical} />
           </section>
 
           <section class="demo-section" id="map">
@@ -1356,17 +1414,6 @@
               nothing there is simply not offered — try ← → ↑ ↓.
             </p>
             <ThreeWays id="map" Content={MapSlides} />
-          </section>
-
-          <section class="demo-section" id="wider">
-            <Heading id="wider">Content wider than the box (vertical)</Heading>
-            <p>
-              Sideways now belongs to the content, not to the travel: the slides
-              go up and down while what they hold scrolls left and right. Their
-              own body is what scrolls, and the box hides its overflow so the
-              slide waiting below never shows through.
-            </p>
-            <ThreeWays id="wide" Content={WideSlidesVertical} />
           </section>
 
           <ExpandDialogSection />
