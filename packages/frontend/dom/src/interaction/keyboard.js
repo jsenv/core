@@ -9,7 +9,12 @@
  * - `"value_change"` — key increments/decrements the field value (range, number, date…)
  * - `"cursor_move"`  — key moves the text cursor within the field
  * - `"type"`         — key produces or deletes text content
- * - `"scroll"`       — key scrolls the page or a scrollable container
+ * - `"scroll"`       — key would scroll the page: nothing on the element itself
+ *                      claims it, so it is safe to intercept
+ * - `"scroll_self"`   — the focused element scrolls ITSELF that way (it really
+ *                      overflows on that axis): the key is spoken for, and
+ *                      taking it would leave a scrollable region no way to be
+ *                      scrolled from the keyboard
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
 export const normalizeKeyboardKey = (rawKey) => {
@@ -81,6 +86,23 @@ const isTypingIntent = (e) => {
     return true;
   }
   return false;
+};
+
+// Whether this element is what scrolls on that axis: it says it may (overflow)
+// and it has somewhere to go (it overflows). Both are needed — an "auto" box
+// whose content fits scrolls nothing, and the keys are then free.
+const canScrollSelf = (element, axis) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  const style = getComputedStyle(element);
+  const overflow = axis === "x" ? style.overflowX : style.overflowY;
+  if (overflow !== "auto" && overflow !== "scroll") {
+    return false;
+  }
+  return axis === "x"
+    ? element.scrollWidth > element.clientWidth
+    : element.scrollHeight > element.clientHeight;
 };
 
 const DEFAULT_BEHAVIORS = [
@@ -252,6 +274,31 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       escape: "dismiss",
     },
+  },
+  {
+    // An element that really scrolls — a slide's own body, a scrollable panel:
+    // the browser gives it the arrows (and Home/End/PageUp/PageDown) so it can
+    // be read from the keyboard, and that is not a key to take. Asked per axis
+    // and per element, not from a class or an attribute: what makes it true is
+    // that it overflows right now.
+    test: (el) => canScrollSelf(el, "y") || canScrollSelf(el, "x"),
+    keys: {
+      arrowup: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      arrowdown: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      arrowleft: (e) =>
+        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
+      arrowright: (e) =>
+        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
+      pageup: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      pagedown: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      home: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      end: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      space: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+    },
+    // no fallback: only these keys are claimed, everything else keeps looking
   },
   {
     // Non-interactive elements: browser scrolls on Space and arrow keys

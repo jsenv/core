@@ -418,6 +418,17 @@
         </SlideContainer>
       );
 
+      const WideSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={3} className="wide" />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
+            <Filler count={5} className="wide" />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
       const WideSlidesVertical = () => (
         <SlideContainer duration={useSlideDuration()} layout="column">
           <DemoSlide id="first" title="first" direction="next" vertical>
@@ -813,6 +824,80 @@
           </Slide>
         </SlideContainer>
       );
+
+      // Held on by default so the ring is simply there to look at; unticked, the
+      // same examples answer to what one actually does — Tab onto a container,
+      // Space on a button that opens a popup, a click that shows nothing.
+      const FocusOutlineSection = () => {
+        const [forced, setForced] = useStoredBoolean(
+          "slide_container_demo_force_focus_visible",
+          true,
+        );
+        return (
+          <section class="demo-section" id="focus-outline">
+            <Heading id="focus-outline">The focus outline</Heading>
+            <p>The slide holding the keyboard, ringed by its container.</p>
+            <label class="demo-option">
+              <input
+                type="checkbox"
+                checked={forced}
+                onChange={(e) => setForced(e.target.checked)}
+              />
+              force focus-visible
+            </label>
+            <Box flex="y" spacing="l" alignX="start" marginTop="m">
+              <StateSlide focusVisible={forced} caption="plain">
+                square
+              </StateSlide>
+              <StateSlide
+                rounded
+                focusVisible={forced}
+                caption='borderRadius="12px"'
+              >
+                rounded
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                focusVisible={forced}
+                caption='borderWidth="3"'
+              >
+                bordered
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                rounded
+                focusVisible={forced}
+                caption='borderWidth="3" + borderRadius="12px"'
+              >
+                both
+              </StateSlide>
+            </Box>
+            <p>…and in a popup, where the popup carries it:</p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>In a dialog</h3>
+                <Button command="--navi-open" commandFor="focus_ring_dialog">
+                  Open the dialog
+                </Button>
+                <Dialog id="focus_ring_dialog" minWidth="260px" flex="y">
+                  <FocusRingSlides focusVisible={forced} />
+                </Dialog>
+              </div>
+              <div class="demo-way">
+                <h3>In a popover</h3>
+                <Button command="--navi-toggle" commandFor="focus_ring_popover">
+                  Open the popover
+                </Button>
+                <Popover id="focus_ring_popover" minWidth="260px" flex="y">
+                  <FocusRingSlides focusVisible={forced} />
+                </Popover>
+              </div>
+            </div>
+          </section>
+        );
+      };
 
       const StateSlide = ({
         rounded,
@@ -1229,86 +1314,7 @@
             </p>
           </section>
 
-          <section class="demo-section" id="focus-outline">
-            <Heading id="focus-outline">The focus outline</Heading>
-            <p>The slide holding the keyboard, ringed by its container.</p>
-            <Box flex="y" spacing="l" alignX="start">
-              <StateSlide focusVisible caption="plain">
-                square
-              </StateSlide>
-              <StateSlide rounded focusVisible caption='borderRadius="12px"'>
-                rounded
-              </StateSlide>
-              <StateSlide
-                borderWidth="3"
-                borderColor="#f57c00"
-                focusVisible
-                caption='borderWidth="3"'
-              >
-                bordered
-              </StateSlide>
-              <StateSlide
-                borderWidth="3"
-                borderColor="#f57c00"
-                rounded
-                focusVisible
-                caption='borderWidth="3" + borderRadius="12px"'
-              >
-                both
-              </StateSlide>
-            </Box>
-            <p>…and in a popup, where the popup carries it:</p>
-            <div class="demo-ways">
-              <div class="demo-way">
-                <h3>In a dialog</h3>
-                <Button command="--navi-open" commandFor="focus_ring_dialog">
-                  Open the dialog
-                </Button>
-                <Dialog id="focus_ring_dialog" minWidth="260px" flex="y">
-                  <FocusRingSlides focusVisible />
-                </Dialog>
-              </div>
-              <div class="demo-way">
-                <h3>In a popover</h3>
-                <Button command="--navi-toggle" commandFor="focus_ring_popover">
-                  Open the popover
-                </Button>
-                <Popover id="focus_ring_popover" minWidth="260px" flex="y">
-                  <FocusRingSlides focusVisible />
-                </Popover>
-              </div>
-            </div>
-            <p>
-              The same two, ringed or not by the way they were opened — press
-              Space on the button, then click it:
-            </p>
-            <div class="demo-ways">
-              <div class="demo-way">
-                <h3>In a dialog</h3>
-                <Button
-                  command="--navi-open"
-                  commandFor="focus_ring_dialog_live"
-                >
-                  Open the dialog
-                </Button>
-                <Dialog id="focus_ring_dialog_live" minWidth="260px" flex="y">
-                  <FocusRingSlides />
-                </Dialog>
-              </div>
-              <div class="demo-way">
-                <h3>In a popover</h3>
-                <Button
-                  command="--navi-toggle"
-                  commandFor="focus_ring_popover_live"
-                >
-                  Open the popover
-                </Button>
-                <Popover id="focus_ring_popover_live" minWidth="260px" flex="y">
-                  <FocusRingSlides />
-                </Popover>
-              </div>
-            </div>
-          </section>
+          <FocusOutlineSection />
 
           <section class="demo-section" id="focus">
             <Heading id="focus">Focus</Heading>
@@ -1348,24 +1354,6 @@
             </p>
           </section>
 
-          <section class="demo-section" id="the-map">
-            <Heading id="the-map">Seeing the map</Heading>
-            <p>
-              The map, with the frame widened to show what it usually hides.
-            </p>
-            <MapReveal />
-          </section>
-
-          <section class="demo-section" id="two-slides">
-            <Heading id="two-slides">Two slides</Heading>
-            <p>
-              The plain case: a slide arrives from the right, the one it
-              replaces leaves to the left. The second slide is taller than the
-              first, and the box is as tall as it from the start.
-            </p>
-            <ThreeWays id="basic" Content={TwoSlides} />
-          </section>
-
           <section class="demo-section" id="vertical">
             <Heading id="vertical">Vertical</Heading>
             <p>
@@ -1394,14 +1382,25 @@
           </section>
 
           <section class="demo-section" id="wider">
-            <Heading id="wider">Content wider than the box (vertical)</Heading>
+            <Heading id="wider">Content wider than the box</Heading>
+            <p>The slide scrolls sideways; the box keeps its size.</p>
+            <ThreeWays id="wide" Content={WideSlides} />
+            <p>…and the same with the travel going up and down:</p>
+            <ThreeWays id="wide_vertical" Content={WideSlidesVertical} />
+          </section>
+
+          <section class="demo-section" id="list-in-a-slide">
+            <Heading id="list-in-a-slide">A list inside a slide</Heading>
             <p>
-              Sideways now belongs to the content, not to the travel: the slides
-              go up and down while what they hold scrolls left and right. Their
-              own body is what scrolls, and the box hides its overflow so the
-              slide waiting below never shows through.
+              ↑/↓ mean two things here: walk the list, or travel the map. The
+              focused element decides — a list item answers the key itself, and
+              only a press nothing else wants reaches the container.
             </p>
-            <ThreeWays id="wide" Content={WideSlidesVertical} />
+            <ThreeWays
+              id="list_in_slide"
+              Content={ListInSlides}
+              documentClassName="in-document-capped"
+            />
           </section>
 
           <section class="demo-section" id="map">
@@ -1417,20 +1416,6 @@
           </section>
 
           <ExpandDialogSection />
-
-          <section class="demo-section" id="list-in-a-slide">
-            <Heading id="list-in-a-slide">A list inside a slide</Heading>
-            <p>
-              ↑/↓ mean two things here: walk the list, or travel the map. The
-              focused element decides — a list item answers the key itself, and
-              only a press nothing else wants reaches the container.
-            </p>
-            <ThreeWays
-              id="list_in_slide"
-              Content={ListInSlides}
-              documentClassName="in-document-capped"
-            />
-          </section>
 
           <section class="demo-section" id="locking">
             <Heading id="locking">Locking the way out</Heading>
@@ -1476,6 +1461,16 @@
             </div>
           </section>
 
+          <section class="demo-section" id="two-slides">
+            <Heading id="two-slides">Two slides</Heading>
+            <p>
+              The plain case: a slide arrives from the right, the one it
+              replaces leaves to the left. The second slide is taller than the
+              first, and the box is as tall as it from the start.
+            </p>
+            <ThreeWays id="basic" Content={TwoSlides} />
+          </section>
+
           <section class="demo-section" id="three-slides">
             <Heading id="three-slides">Three slides</Heading>
             <p>
@@ -1485,6 +1480,14 @@
               needs nothing said about it anywhere.
             </p>
             <ThreeWays id="three" Content={ThreeSlides} />
+          </section>
+
+          <section class="demo-section" id="the-map">
+            <Heading id="the-map">Seeing the map</Heading>
+            <p>
+              The map, with the frame widened to show what it usually hides.
+            </p>
+            <MapReveal />
           </section>
         </div>
       );
