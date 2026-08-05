@@ -99,11 +99,13 @@
       const WHEEL_HOURS = [0, 1, 2, 3, 4, 5];
       const WHEEL_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
       const WHEEL_PRESETS = ["1h", "1h30", "2h"];
-      // What the wheels open on when nothing has been chosen yet: a proposal,
-      // so one scrolls FROM a duration rather than from nothing. The proposal
-      // lives in the signals themselves, as their default — being their default
-      // it stays out of the url until something else is chosen, and a value
-      // restored from the url still wins over it.
+      // What the wheels open on when nothing has been chosen yet: a proposal, so
+      // one scrolls FROM a duration rather than from nothing. It is a
+      // `defaultValue` on each wheel, NOT the signals' default — a proposal is
+      // not an answer, so the signals hold nothing until the picker is
+      // confirmed. That is what lets the option read "Perso" at first, and what
+      // puts the chosen duration in the url afterwards even when it happens to
+      // be the proposed one.
       const WHEEL_PROPOSED_HOURS = 2;
       const WHEEL_PROPOSED_MINUTES = 30;
 
@@ -118,20 +120,23 @@
       // to end (its items ARE the numbers below), so a value coming back from
       // the url as the string "5" matches no item — the wheel would fall back to
       // its first one while the signal still reads 5 everywhere else.
-      const wheelHoursSignal = demoSignal("wheel_hours", WHEEL_PROPOSED_HOURS, {
+      const wheelHoursSignal = demoSignal("wheel_hours", undefined, {
         type: "number",
       });
-      const wheelMinutesSignal = demoSignal(
-        "wheel_minutes",
-        WHEEL_PROPOSED_MINUTES,
-        { type: "number" },
-      );
+      const wheelMinutesSignal = demoSignal("wheel_minutes", undefined, {
+        type: "number",
+      });
 
       const WheelPerSignalDemo = () => {
         const formResultSignal = useSignal(null);
         const duration = wheelPerSignalDurationSignal.value;
         const hours = wheelHoursSignal.value;
         const minutes = wheelMinutesSignal.value;
+        // A custom duration exists as soon as one has been confirmed — the
+        // signals hold nothing before that. Shown whatever option is selected:
+        // it is what "Perso" means from then on, the same way the presets keep
+        // showing their own duration when they are not the chosen one.
+        const hasCustom = hours !== undefined || minutes !== undefined;
 
         return (
           <div class="demo-section">
@@ -210,12 +215,13 @@
                     command="--navi-open"
                     commandFor="wheel_per_signal_picker"
                   >
-                    {/* "Perso" until this is the duration in use: a number for
-                        an option nobody picked reads as the current answer */}
-                    {duration === "custom" ? (
+                    {/* "Perso" only while there is nothing to show: once a
+                        custom duration has been confirmed, that is what this
+                        option is worth */}
+                    {hasCustom ? (
                       <Time type="duration" format="compact">
                         {durationToISOString(
-                          hours === 0 ? { minutes } : { hours, minutes },
+                          hours ? { hours, minutes } : { minutes },
                         )}
                       </Time>
                     ) : (
@@ -246,6 +252,7 @@
                             type="integer"
                             size="xxl"
                             signal={wheelHoursSignal}
+                            defaultValue={WHEEL_PROPOSED_HOURS}
                           >
                             {WHEEL_HOURS.map((hour) => (
                               <Wheel.Item key={hour} value={hour} paddingX="s">
@@ -269,6 +276,7 @@
                             type="integer"
                             size="xxl"
                             signal={wheelMinutesSignal}
+                            defaultValue={WHEEL_PROPOSED_MINUTES}
                           >
                             {WHEEL_MINUTES.map((minute) => (
                               <Wheel.Item
@@ -338,6 +346,9 @@
         0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55,
       ];
       const WHEEL_ONE_SIGNAL_PRESETS = ["1h", "1h30", "2h"];
+      // Same as the demo above: proposed, not chosen — so it lives on the group
+      // as a defaultValue and the signal stays empty until the picker is
+      // confirmed.
       const WHEEL_ONE_SIGNAL_PROPOSED_TOTAL = 2 * 60 + 30;
 
       const wheelOneSignalDurationSignal = demoSignal(
@@ -346,16 +357,15 @@
         { oneOf: [...WHEEL_ONE_SIGNAL_PRESETS, "custom"] },
       );
       // One signal for both wheels: total minutes.
-      const wheelTotalSignal = demoSignal(
-        "wheel_total",
-        WHEEL_ONE_SIGNAL_PROPOSED_TOTAL,
-        { type: "number" },
-      );
+      const wheelTotalSignal = demoSignal("wheel_total", undefined, {
+        type: "number",
+      });
 
       const WheelOneSignalDemo = () => {
         const formResultSignal = useSignal(null);
         const duration = wheelOneSignalDurationSignal.value;
         const totalMinutes = wheelTotalSignal.value;
+        const hasCustom = totalMinutes !== undefined;
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
 
@@ -435,10 +445,10 @@
                     command="--navi-open"
                     commandFor="wheel_one_signal_picker"
                   >
-                    {duration === "custom" ? (
+                    {hasCustom ? (
                       <Time type="duration" format="compact">
                         {durationToISOString(
-                          hours === 0 ? { minutes } : { hours, minutes },
+                          hours ? { hours, minutes } : { minutes },
                         )}
                       </Time>
                     ) : (
@@ -470,6 +480,7 @@
                         <WheelGroup
                           frameBorder
                           signal={wheelTotalSignal}
+                          defaultValue={WHEEL_ONE_SIGNAL_PROPOSED_TOTAL}
                           aggregateChildStates={(children) => {
                             let h = 0;
                             let m = 0;

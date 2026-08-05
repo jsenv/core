@@ -34,6 +34,47 @@ export const isUIStateHeld = (controller) => {
   if (boundSignal) {
     return boundSignal.value !== undefined;
   }
-  // Uncontrolled: what it shows is its own default until it differs from it.
-  return !compareTwoJsValues(controller.uiState, controller.defaultValue);
+  // Uncontrolled with a suggestion: what it shows is that suggestion until it
+  // differs from it.
+  if (controller.defaultValue !== undefined) {
+    return !compareTwoJsValues(controller.uiState, controller.defaultValue);
+  }
+  // A group holding nothing of its own is worth what its children are: two
+  // wheels each on their own suggestion make a group still waiting for an
+  // answer, one of them moved makes a group holding one.
+  const childControllers = controller.getChildControllers?.() || [];
+  if (childControllers.length > 0) {
+    return childControllers.some((child) => isUIStateHeld(child));
+  }
+  return controller.uiState !== undefined;
+};
+
+/**
+ * Tell a control — and everything inside it — that what it is showing is now
+ * the answer, without its state having to move.
+ *
+ * The state is already right; what has not happened is anyone saying so. A
+ * control reports an answer through `onUIAction` (that is where a bound signal
+ * is written, where `uiAction` fires), and a suggestion nobody touched never
+ * got there. Confirming a picker is exactly that moment.
+ *
+ * Down the whole subtree because that is where the answer actually lives: a
+ * picker holding a group of two wheels has one signal per wheel, and it is each
+ * wheel that has to record what it is showing. Commands are skipped — a
+ * `command` on a control is its reaction to being used, and this is a
+ * confirmation happening elsewhere, whose own command (the picker's) is already
+ * running.
+ */
+export const commitUIStateAsAnswer = (controller, e) => {
+  if (!controller) {
+    return;
+  }
+  const answering = controller.facadeChild || controller;
+  commitSubtree(answering, e);
+};
+const commitSubtree = (controller, e) => {
+  controller.onUIAction?.(e, { skipCommand: true });
+  for (const child of controller.getChildControllers?.() || []) {
+    commitSubtree(child, e);
+  }
 };

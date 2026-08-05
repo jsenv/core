@@ -16,7 +16,7 @@ import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
-import { isUIStateHeld } from "../held_ui_state.js";
+import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -346,12 +346,11 @@ const PickerCustom = (props) => {
             // answer. Say it here — this is the moment the suggestion becomes
             // one. Harmless when the value did change on the way: the state is
             // already what it is, and this only re-runs the same reaction.
-            const controller = getPickerInput(
-              ref.current,
-            )?.__uiStateController__;
-            const answering = controller?.facadeChild || controller;
             debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
-            answering?.onUIAction(closeEvent);
+            commitUIStateAsAnswer(
+              getPickerInput(ref.current)?.__uiStateController__,
+              closeEvent,
+            );
           }
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
