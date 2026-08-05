@@ -124,7 +124,7 @@ const css = /* css */ `
       --dialog-border-radius: var(--navi-popup-border-radius);
       --dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
       --dialog-outline-width: var(--navi-focus-outline-width);
-      --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
+      --dialog-outline-offset: calc(-0.5 * var(--dialog-outline-width));
       --dialog-outline-color: var(--navi-focus-outline-color);
       --dialog-box-shadow: var(--navi-popup-box-shadow);
       --dialog-background-color: var(--navi-popup-background-color);

@@ -106,6 +106,7 @@ const css = /* css */ `
          offered by data-focus-outline-delegate. */
       outline-style: var(--navi-focus-outline-style, solid);
       outline-color: var(--navi-focus-outline-color);
+      outline-offset: calc(-0.5 * var(--navi-focus-outline-width));
     }
 
     /* ONE thing moves: the track. The slides are laid out once and for all,

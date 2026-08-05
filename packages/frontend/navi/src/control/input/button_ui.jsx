@@ -25,7 +25,7 @@ const css = /* css */ `
       --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
-      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
+      --button-outline-offset: calc(-0.5 * var(--button-outline-width));
       --button-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --button-padding-x-default: var(--navi-button-padding-x-default);

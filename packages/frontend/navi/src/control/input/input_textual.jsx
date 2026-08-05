@@ -66,7 +66,7 @@ const css = /* css */ `
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(var(--outline-width) / 2 * -1);
+      --outline-offset: calc(-0.5 * var(--outline-width));
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);

@@ -56,7 +56,7 @@ const css = /* css */ `
       --picker-border-width: var(--navi-control-border-width);
       /* Focus outline */
       --picker-outline-width: var(--navi-focus-outline-width);
-      --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
+      --picker-outline-offset: calc(-0.5 * var(--picker-outline-width));
       --picker-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --picker-padding-x-default: var(--navi-picker-padding-x-default);

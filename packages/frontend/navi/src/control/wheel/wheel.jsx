@@ -92,7 +92,7 @@ const css = /* css */ `
         outline: var(--navi-focus-outline-width) solid
           var(--navi-focus-outline-color);
         /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-        outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
+        outline-offset: calc(-0.5 * var(--navi-focus-outline-width));
       }
     }
 

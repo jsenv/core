@@ -103,7 +103,7 @@ const css = /* css */ `
       --popover-border-width: 1px;
       --popover-border-color: var(--navi-popup-border-color);
       --popover-outline-width: var(--navi-focus-outline-width);
-      --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
+      --popover-outline-offset: calc(-0.5 * var(--popover-outline-width));
       --popover-outline-color: var(--navi-focus-outline-color);
       --popover-background-color: var(--navi-popup-background-color);
     }
