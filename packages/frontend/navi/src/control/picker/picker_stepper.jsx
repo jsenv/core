@@ -123,6 +123,15 @@ const css = /* css */ `
     text-align: center;
     overflow: hidden;
   }
+  /* The middle opens the picker, so it says so under the pointer — and stops
+     saying it the moment pressing it would only get an answer about why not. */
+  .navi_picker_stepper > [data-slide-container] {
+    cursor: pointer;
+  }
+  .navi_picker_stepper[data-readonly] > [data-slide-container],
+  .navi_picker_stepper[data-disabled] > [data-slide-container] {
+    cursor: default;
+  }
   /* Kept inside its own slide: the three days share one cell, so anything
      sticking out would be written across the two beside it. A day too long for
      the box simply wraps — the box grows, and the words are all there; say
@@ -454,10 +463,11 @@ export const DayStepper = ({
         // send one, and no button of its own: the day would then be one more
         // Tab stop, and the focus would follow it out of the box as it travels.
         commandFor={pickerId}
+        // Sent whatever state the control is in: the picker is the one that
+        // knows it cannot be opened right now, and refusing there is what says
+        // so out loud (read-only, busy). Refusing here would be a press that
+        // does nothing and explains nothing.
         onClick={(e) => {
-          if (readOnlyResolved || disabledResolved) {
-            return;
-          }
           triggerNaviCommand(e.currentTarget, "--navi-open", e);
         }}
       >

@@ -150,6 +150,18 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    /* A file IS a link — an href, so cmd/ctrl+click opens it in a tab and the
+       browser's own menu offers the rest. It fills its row so the whole line
+       stays the target. */
+    li > a {
+      display: flex;
+      flex: 1;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      color: inherit;
+      text-decoration: none;
+    }
     /* The page one is already on, so a switcher opened blind says where it was
        opened from. Under the selection rule below, which must win when the two
        are the same row. */
@@ -183,9 +195,10 @@
       flex: none;
       font-size: 12px;
     }
-    /* The name is what one reads; the road to it is context. */
+    /* The name is what one reads; the road to it is context — grey, but grey one
+       can still read: on the dark panel #64748b sat barely above the background. */
     .dim {
-      color: light-dark(#94a3b8, #64748b);
+      color: light-dark(#94a3b8, #94a3b8);
     }
     .strong {
       font-weight: 600;
@@ -205,7 +218,7 @@
     .count {
       margin-left: auto;
       padding-left: 8px;
-      color: light-dark(#94a3b8, #64748b);
+      color: light-dark(#94a3b8, #94a3b8);
       font-size: 11px;
       font-variant-numeric: tabular-nums;
     }
@@ -539,6 +552,8 @@
         count.textContent = row.count;
         item.append(count);
       } else {
+        const link = document.createElement("a");
+        link.href = row.file.url;
         const icon = document.createElement("span");
         icon.className = "kind_icon";
         icon.textContent =
@@ -547,14 +562,34 @@
         const name = document.createElement("span");
         name.className = "strong";
         name.textContent = row.file.name;
-        item.append(icon, name);
+        link.append(icon, name);
         if (isHere(row.file)) {
           item.setAttribute("data-here", "");
           const hereLabel = document.createElement("span");
           hereLabel.className = "here";
           hereLabel.textContent = "here";
-          item.append(hereLabel);
+          link.append(hereLabel);
         }
+        item.append(link);
+        link.addEventListener("click", (event) => {
+          currentIndex = index;
+          // Anything but a plain left click is the browser's business — a new
+          // tab, a new window, a download: the switcher stays exactly as it is,
+          // still open, for the next one.
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          ) {
+            return;
+          }
+          // Going somewhere is done with it (see activate) — and the link does
+          // the going, so nothing here has to touch location.
+          rememberOpen(false);
+        });
+        return item;
       }
       item.addEventListener("mousedown", (event) => {
         event.preventDefault();

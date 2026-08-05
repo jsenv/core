@@ -4,9 +4,11 @@
  * Three bands, in the order things travel: the backend and what it holds at the
  * top, the frontier in the middle, the frontend (whatever one puts inside) at
  * the bottom. Everything crossing between the two is drawn in that middle
- * band — what the frontend sent, pointing up, and the two answers the backend
- * may give, pointing back down. Nothing is in flight until an action runs, so
- * the band is empty until then.
+ * band — the two answers the backend may give on the left, what the frontend
+ * sent on the right. A side each, and each side keeps it: the backend speaks
+ * from the left (its name, its value, its two buttons), the frontend from the
+ * right (its name, and what it is asking for). Nothing is in flight until an
+ * action runs, so the band is empty until then.
  *
  * What it is mostly for: the difference between the two. A form whose fields
  * already match the backend has nothing to send, so a submit that does nothing
@@ -107,7 +109,10 @@ const css = /* css */ `
     font-size: 14px;
     line-height: 1;
   }
-  .navi_fake_backend_answer {
+  /* Each side of the frontier belongs to the side it comes from: the backend
+     answers from the left, where its name and its value are; what the frontend
+     sends arrives on the right, where its own name is. */
+  .navi_fake_backend_sent {
     margin-left: auto;
   }
   .navi_fake_backend_body {
@@ -116,6 +121,11 @@ const css = /* css */ `
     flex-direction: column;
     align-items: start;
     gap: 8px;
+  }
+  /* Right, against the backend's own name on the left: the two labels face each
+     other across the frontier. */
+  .navi_fake_backend_body > .navi_fake_backend_label {
+    align-self: end;
   }
 `;
 
@@ -155,20 +165,20 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
       <div className="navi_fake_backend_frontier">
         {call ? (
           <>
-            <span className="navi_fake_backend_sent">
-              <span className="navi_fake_backend_arrow">↑</span>
-              <span className="navi_fake_backend_value">
-                {stringify(call.received)}
-              </span>
-            </span>
             <span className="navi_fake_backend_answer">
+              <span className="navi_fake_backend_arrow">↓</span>
               <button type="button" onClick={answer}>
                 répondre
               </button>
               <button type="button" onClick={fail}>
                 échouer
               </button>
-              <span className="navi_fake_backend_arrow">↓</span>
+            </span>
+            <span className="navi_fake_backend_sent">
+              <span className="navi_fake_backend_value">
+                {stringify(call.received)}
+              </span>
+              <span className="navi_fake_backend_arrow">↑</span>
             </span>
           </>
         ) : null}
