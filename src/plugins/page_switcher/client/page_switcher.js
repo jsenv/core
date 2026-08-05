@@ -14,6 +14,14 @@
 
 const PAGES_ENDPOINT = "/.internal/pages.json";
 const MAX_SHOWN = 200;
+// What kind of page it is, as the server reads it from where the file sits and
+// what it is called (see html_pages.js): something tried out, something shown,
+// or a page like any other.
+const KIND_ICON = {
+  experiment: "🧪",
+  demo: "🎬",
+  page: "📄",
+};
 
 const isSwitcherKey = (event) => {
   if (event.key !== "k" && event.key !== "K") {
@@ -73,7 +81,10 @@ const STYLE_TEXT = /* css */ `
     overflow-y: auto;
   }
   li {
+    display: flex;
     padding: 7px 10px;
+    align-items: center;
+    gap: 8px;
     color: light-dark(#0f172a, #e2e8f0);
     font-size: 13px;
     font-family: ui-monospace, monospace;
@@ -86,6 +97,14 @@ const STYLE_TEXT = /* css */ `
   li[data-current] {
     color: white;
     background: light-dark(#2563eb, #3b82f6);
+  }
+  .kind {
+    width: 1.2em;
+    flex: none;
+    /* Kept legible on the highlighted row too: an emoji ignores color, the
+       letter beside it must not. */
+    font-size: 12px;
+    text-align: center;
   }
   .empty {
     padding: 14px 16px;
@@ -141,15 +160,15 @@ const openSwitcher = async () => {
     }
   };
   const go = () => {
-    const url = matches[currentIndex];
-    if (url) {
-      window.location.href = url;
+    const page = matches[currentIndex];
+    if (page) {
+      window.location.href = page.url;
     }
   };
   const render = (pages) => {
     const needle = input.value.trim().toLowerCase();
     matches = needle
-      ? pages.filter((page) => page.toLowerCase().includes(needle))
+      ? pages.filter((page) => page.url.toLowerCase().includes(needle))
       : pages;
     currentIndex = 0;
     list.textContent = "";
@@ -162,7 +181,13 @@ const openSwitcher = async () => {
     }
     for (const [index, page] of matches.slice(0, MAX_SHOWN).entries()) {
       const item = document.createElement("li");
-      item.textContent = page;
+      const kind = document.createElement("span");
+      kind.className = "kind";
+      kind.textContent = KIND_ICON[page.kind] || KIND_ICON.page;
+      kind.title = page.kind;
+      const label = document.createElement("span");
+      label.textContent = page.url;
+      item.append(kind, label);
       if (index === 0) {
         item.setAttribute("data-current", "");
       }

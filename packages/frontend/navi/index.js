@@ -212,7 +212,11 @@ export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 // Layout
 export { CardLayout } from "./src/layout/card_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
-export { Slide, SlideContainer } from "./src/layout/slide_container.jsx";
+export {
+  Slide,
+  SlideContainer,
+  useSlideValue,
+} from "./src/layout/slide_container.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 

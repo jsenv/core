@@ -87,13 +87,13 @@ export const jsenvPluginProtocolFile = ({
             "The .html files served under the source directory, as urls to navigate to.",
           availableMediaTypes: ["application/json"],
           declarationSource: import.meta.url,
-          fetch: () => ({
+          fetch: async () => ({
             status: 200,
             headers: {
               "content-type": "application/json",
               "cache-control": "no-store",
             },
-            body: JSON.stringify(listHtmlPages()),
+            body: JSON.stringify(await listHtmlPages()),
           }),
         },
       ],

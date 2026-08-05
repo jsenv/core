@@ -474,6 +474,12 @@ const registerSlideCommand = (command, dx, dy) => {
           event,
           dx,
           dy,
+          // What the source was worth, carried along: a button that says which
+          // entry it is about (value={{ name }}) sends that with the travel, and
+          // the slide arriving keeps it — see Slide's own `useSlideValue`. Read
+          // the same way every other command reads a value, so a source says it
+          // in one way whatever the command.
+          value: resolveCommandValue(source, event),
         }),
     };
   });

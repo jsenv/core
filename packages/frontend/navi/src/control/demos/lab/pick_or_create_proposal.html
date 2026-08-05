@@ -165,6 +165,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useLayoutEffect } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -183,6 +184,7 @@
         SlideContainer,
         Text,
         useSearchText,
+        useSlideValue,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
@@ -290,6 +292,26 @@
           // not "the slide before it", which would be the create form.
           slideSignal.value = `${id}_pick`;
         };
+        // Inside the slide, which is the only place that can ask what the
+        // travel here was about: the pencil sent { id, name } along with
+        // --navi-right (see its `value`), and this reads it back.
+        const EditSlideForm = () => {
+          const slideValue = useSlideValue();
+          const entry = slideValue
+            ? (entries.find((candidate) => candidate.id === slideValue.id) ??
+              slideValue)
+            : null;
+          // Mirrored into the signal the actions outside this slide read
+          // (submitEdit, deleteEntry): they answer for the whole surface, and
+          // what is being edited is decided here.
+          useLayoutEffect(() => {
+            editingSignal.value = entry;
+          }, [entry]);
+          // keyed by the entry: the fields are uncontrolled, so editing another
+          // one must give them fresh defaults
+          return <CreateForm key={entry?.id} entry={entry} />;
+        };
+
         const deleteEntry = () => {
           const entry = editingSignal.value;
           onDelete(entry);
@@ -339,6 +361,10 @@
                     it comes from its side — see slide_container.jsx */}
                 <SlideContainer
                   layout={[`${id}_pick ${id}_edit`, `${id}_create`]}
+                  // The arrows walk the list of candidates, not the map: a
+                  // screen here is reached by asking for it (the pencil, the
+                  // + button, a way out), never by pressing left.
+                  keyboardTravel={false}
                   current={slideSignal.value}
                   onCurrentChange={(slideId) => {
                     slideSignal.value = slideId;
@@ -436,15 +462,18 @@
                                   would choose the entry instead of editing it */}
                               {entry.isNew && (
                                 <Button
-                                  command="--navi-void"
+                                  // The edit screen is the one to the right of
+                                  // the list on this map, so the button says
+                                  // where to go rather than setting the slide
+                                  // by hand — and `value` says what the travel
+                                  // is about, which the slide arriving reads
+                                  // back (useSlideValue) to fill its form.
+                                  command="--navi-right"
+                                  value={{ name: entry.name, id: entry.id }}
                                   icon
                                   variant="discrete"
                                   padding="xs"
                                   aria-label={`Modifier ${entry.name}`}
-                                  onClick={() => {
-                                    editingSignal.value = entry;
-                                    slideSignal.value = `${id}_edit`;
-                                  }}
                                   pointerEvents="auto"
                                 >
                                   <Icon color="#6b7280">
@@ -609,12 +638,7 @@
                         />
                       </Box>
                       <Box body padding="m">
-                        {/* keyed by the entry: the fields are uncontrolled, so
-                            editing another one must give them fresh defaults */}
-                        <CreateForm
-                          key={editingSignal.value?.id}
-                          entry={editingSignal.value}
-                        />
+                        <EditSlideForm />
                       </Box>
                       <Box
                         footer

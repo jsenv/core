@@ -154,12 +154,30 @@ const css = /* css */ `
   }
 `;
 
+// One object, shared: the areas nothing was ever handed to all read the same
+// empty map, and a re-render changes nothing for them.
+const EMPTY_VALUE_BY_AREA = {};
+
 // What the container tells what is inside it: which way it travels, so a button
 // can point the right way without being told twice.
 const SlideContainerContext = createContext(null);
 // What a slide tells what is inside IT: whether leaving it is allowed right
 // now, so its own prev/next buttons say so instead of failing when pressed.
 const SlideContext = createContext(null);
+// What the travel into THIS slide carried (see SlideContainer's valueByArea).
+const SlideValueContext = createContext(undefined);
+
+/**
+ * What the command that opened this slide was about: the `value` of whatever
+ * asked for the travel — a button saying which entry it is editing
+ * (`value={{ name }}` next to `command="--navi-right"`), a `--navi-down`
+ * dispatched by hand with one.
+ *
+ * Undefined until something hands one over, and kept until the next travel into
+ * the same slide hands over another: a screen opened again about something else
+ * is about that something else.
+ */
+export const useSlideValue = () => useContext(SlideValueContext);
 
 /**
  * The map, as cells: ["pick edit", "create"] becomes a lookup from a place to
@@ -230,6 +248,12 @@ const readArea = (slideElement) =>
  *   Without it the first slide is the one shown, the way a stack of pages opens
  *   on its first page.
  * @param {(area: string) => void} [props.onCurrentChange]
+ * @param {boolean} [props.keyboardTravel=true] - whether the arrows (and
+ *   Home/End) walk the map. On by default: a map one can see is a map one
+ *   expects to walk. Off when the arrows mean something else where these slides
+ *   are — a list of choices one moves through, a picker whose screens are
+ *   steps rather than places — so the keys keep the meaning the content gives
+ *   them, and travelling stays something one asks for (a button, a command).
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
  */
 export const SlideContainer = ({
@@ -237,6 +261,7 @@ export const SlideContainer = ({
   current: currentProp,
   defaultCurrent,
   onCurrentChange,
+  keyboardTravel = true,
   duration = "300ms",
   children,
   ...rest
@@ -257,6 +282,12 @@ export const SlideContainer = ({
   // the others: the steps after it were answered about a state that has just
   // changed, so they stop counting as answered.
   const [answeredAreas, setAnsweredAreas] = useState([]);
+  // What the last travel INTO an area carried, if anything: a button saying
+  // which entry it is about (value={{ name }}) hands it to the slide it opens,
+  // which reads it back with useSlideValue to fill a form with it. Per area,
+  // because two ways in can mean two different things, and kept until the next
+  // travel there replaces it.
+  const [valueByArea, setValueByArea] = useState(EMPTY_VALUE_BY_AREA);
 
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
@@ -357,7 +388,7 @@ export const SlideContainer = ({
    * @returns {boolean} whether it moved — false is "there was nowhere to go",
    *   which is what lets a key that changes nothing keep its own meaning.
    */
-  const goToArea = (area, { forward, event } = {}) => {
+  const goToArea = (area, { forward, event, value } = {}) => {
     const { slideElements } = readMap();
     const currentElement =
       slideElements.find((slideElement) =>
@@ -400,6 +431,9 @@ export const SlideContainer = ({
         arrivingElement.removeAttribute("inert");
         handOverFocus(arrivingElement, event);
       }
+    }
+    if (value !== undefined) {
+      setValueByArea((previous) => ({ ...previous, [area]: value }));
     }
     setCurrentAreaState(area);
     onCurrentChange?.(area);
@@ -466,8 +500,12 @@ export const SlideContainer = ({
       return area;
     }
   };
-  const move = (dx, dy, event) =>
-    goToArea(areaTowards(dx, dy), { forward: dx > 0 || dy > 0, event });
+  const move = (dx, dy, event, value) =>
+    goToArea(areaTowards(dx, dy), {
+      forward: dx > 0 || dy > 0,
+      event,
+      value,
+    });
 
   // "next"/"previous" are the same movement said without a direction, which is
   // all a line ever needs: to the right, or downwards when that is where the
@@ -500,12 +538,33 @@ export const SlideContainer = ({
   // travel does about the focus is decided from the interaction that asked for
   // it (see goToArea), so it has to reach that far.
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowright: (e) => travelled(move(1, 0, e)),
-    arrowleft: (e) => travelled(move(-1, 0, e)),
-    arrowdown: (e) => travelled(move(0, 1, e)),
-    arrowup: (e) => travelled(move(0, -1, e)),
-    home: (e) => travelled(goToEnd(false, e)),
-    end: (e) => travelled(goToEnd(true, e)),
+    // A shortcut that is not offered is not the same as one that does nothing:
+    // `enabled` leaves the key to whatever else wants it (see
+    // keyboard_shortcuts.js), rather than swallowing it here.
+    arrowright: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(move(1, 0, e)),
+    },
+    arrowleft: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(move(-1, 0, e)),
+    },
+    arrowdown: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(move(0, 1, e)),
+    },
+    arrowup: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(move(0, -1, e)),
+    },
+    home: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(goToEnd(false, e)),
+    },
+    end: {
+      enabled: keyboardTravel,
+      handler: (e) => travelled(goToEnd(true, e)),
+    },
   });
 
   return (
@@ -541,12 +600,12 @@ export const SlideContainer = ({
       // chevron, --navi-left/right/up/down, a line of code — says which way.
       // Dispatch it (bubbling) from anywhere inside to move.
       onnavi_slide_move={(e) => {
-        const { dx, dy } = e.detail;
+        const { dx, dy, value } = e.detail;
         // `e`, not e.detail.event: a navi event carries the chain it came from
         // (a --navi-right command carries the click that ran it, that click its
         // own mousedown), and the focus transfer reads the whole chain to know
         // where the interaction started.
-        move(dx, dy, e);
+        move(dx, dy, e, value);
       }}
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
@@ -561,7 +620,7 @@ export const SlideContainer = ({
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
-          value={{ vertical, answeredAreas, done }}
+          value={{ vertical, answeredAreas, done, valueByArea }}
         >
           {children}
         </SlideContainerContext.Provider>
@@ -613,46 +672,50 @@ export const Slide = ({
     () => ({ preventNavNext: nextIsLocked, preventNavPrevious }),
     [nextIsLocked, preventNavPrevious],
   );
+  // What the travel into this slide carried, if anything (see useSlideValue).
+  const slideValue = container?.valueByArea?.[slideArea];
   return (
     <SlideContext.Provider value={locks}>
-      <Box
-        flex="y"
-        // Not focusable: the keyboard goes to what is IN a slide, and when a
-        // slide holds nothing, to the container around it (see
-        // SlideContainer's own tabIndex). One stop for the whole thing rather
-        // than one per screen — the shape a wheel and its values already have.
-        {...rest}
-        // The protocol every command target answers — a slide is one now
-        // (--navi-done). navi_command does not bubble, so the container's own
-        // handler is not an answer for what was aimed here.
-        onnavi_command={(e) => {
-          onNaviCommand(e);
-          rest.onnavi_command?.(e);
-        }}
-        // What was in this slide says it is finished (a form that just sent —
-        // see resolveAfterSend in commands.js). It says nothing about where to
-        // go: that is read here, from this slide's own place in the walk.
-        onnavi_done={(e) => {
-          // Dropped imperatively rather than left to the re-render this
-          // schedules: moving on happens in this same handler, and the gate it
-          // goes through reads this attribute off the DOM (see goToArea) — a
-          // render is a microtask away, the move is not.
-          e.currentTarget.removeAttribute("data-prevent-nav-next");
-          container?.done(slideArea);
-          rest.onnavi_done?.(e);
-        }}
-        data-slide=""
-        data-slide-area={slideArea}
-        data-prevent-nav-next={nextIsLocked ? "" : undefined}
-        data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
-        // A surface one interacts with says what state it is in, the way every
-        // other surface does — a dialog carries the very same set.
-        // :focus-within is the one a slide is really about: it is what tells
-        // the slide holding the keyboard from the ones waiting.
-        pseudoClasses={SLIDE_PSEUDO_CLASSES}
-      >
-        {children}
-      </Box>
+      <SlideValueContext.Provider value={slideValue}>
+        <Box
+          flex="y"
+          // Not focusable: the keyboard goes to what is IN a slide, and when a
+          // slide holds nothing, to the container around it (see
+          // SlideContainer's own tabIndex). One stop for the whole thing rather
+          // than one per screen — the shape a wheel and its values already have.
+          {...rest}
+          // The protocol every command target answers — a slide is one now
+          // (--navi-done). navi_command does not bubble, so the container's own
+          // handler is not an answer for what was aimed here.
+          onnavi_command={(e) => {
+            onNaviCommand(e);
+            rest.onnavi_command?.(e);
+          }}
+          // What was in this slide says it is finished (a form that just sent —
+          // see resolveAfterSend in commands.js). It says nothing about where to
+          // go: that is read here, from this slide's own place in the walk.
+          onnavi_done={(e) => {
+            // Dropped imperatively rather than left to the re-render this
+            // schedules: moving on happens in this same handler, and the gate it
+            // goes through reads this attribute off the DOM (see goToArea) — a
+            // render is a microtask away, the move is not.
+            e.currentTarget.removeAttribute("data-prevent-nav-next");
+            container?.done(slideArea);
+            rest.onnavi_done?.(e);
+          }}
+          data-slide=""
+          data-slide-area={slideArea}
+          data-prevent-nav-next={nextIsLocked ? "" : undefined}
+          data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
+          // A surface one interacts with says what state it is in, the way every
+          // other surface does — a dialog carries the very same set.
+          // :focus-within is the one a slide is really about: it is what tells
+          // the slide holding the keyboard from the ones waiting.
+          pseudoClasses={SLIDE_PSEUDO_CLASSES}
+        >
+          {children}
+        </Box>
+      </SlideValueContext.Provider>
     </SlideContext.Provider>
   );
 };
