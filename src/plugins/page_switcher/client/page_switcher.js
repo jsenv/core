@@ -155,10 +155,10 @@
        stays the target. */
     li > a {
       display: flex;
+      min-width: 0;
       flex: 1;
       align-items: center;
       gap: 6px;
-      min-width: 0;
       color: inherit;
       text-decoration: none;
     }
