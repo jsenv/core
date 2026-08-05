@@ -41,6 +41,7 @@
         border-top: 1px solid #e8eaed;
       }
       .datetime-panel-day {
+        width: 260px;
         color: #5f6368;
         font-size: 15px;
       }
@@ -124,6 +125,7 @@
           <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
             <DayStepper
               signal={draftDaySignal}
+              format="short"
               className="datetime-panel-day"
               previousLabel="Jour précédent"
               nextLabel="Jour suivant"

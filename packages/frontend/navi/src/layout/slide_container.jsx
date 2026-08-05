@@ -302,11 +302,13 @@ export const SlideContainer = ({
   // rests where it rested before (below), so this is the travel itself rather
   // than a change of slide.
   const [rollingArea, setRollingArea] = useState(null);
-  // The way back to rest is not a travel: the content has moved one step under
-  // the window, so the picture is already the right one and the track has only
-  // to be where the resting slide is. Undone the frame after, or the next
-  // travel would jump too.
-  const [rollingBack, setRollingBack] = useState(false);
+  // Nothing travels until something changes: the first paint is where the
+  // slides ARE (a container opening on its third slide opens there, it does not
+  // fly there), and the way back to rest is not a travel either — the content
+  // has moved one step under the window, so the picture is already the right
+  // one and the track has only to be where the resting slide is. Undone the
+  // frame after, or the travel after that would jump too.
+  const [noTravel, setNoTravel] = useState(true);
   const rollingRef = useRef(false);
   const current = rollingArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
@@ -328,20 +330,19 @@ export const SlideContainer = ({
   // one before it wrote, not what the last render saw.
   const cameFromRef = useRef({});
 
-  // The travel is given back as soon as the return to rest has been painted:
-  // one frame with it off is all it takes, and leaving it off would make the
-  // next travel a jump.
+  // The travel is given back as soon as the picture it must not animate has
+  // been painted: one frame with it off is all it takes.
   useLayoutEffect(() => {
-    if (!rollingBack) {
+    if (!noTravel) {
       return undefined;
     }
     const frame = requestAnimationFrame(() => {
-      setRollingBack(false);
+      setNoTravel(false);
     });
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [rollingBack]);
+  }, [noTravel]);
 
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
@@ -518,7 +519,7 @@ export const SlideContainer = ({
       setTimeout(() => {
         rollingRef.current = false;
         setRollingArea(null);
-        setRollingBack(true);
+        setNoTravel(true);
         onLoop?.({ area, dx, dy, event });
       }, durationToMs(duration));
       return true;
@@ -747,7 +748,7 @@ export const SlideContainer = ({
         rest.onKeyDown?.(e);
       }}
       style={{
-        "--slide-container-duration": rollingBack ? "0ms" : duration,
+        "--slide-container-duration": noTravel ? "0ms" : duration,
         ...rest.style,
       }}
     >
