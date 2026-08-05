@@ -33,10 +33,12 @@ await page.setViewportSize({ width: 800, height: 500 });
 // from there rather than from the page's own HTML.
 const readSwitcherHtml = () =>
   page.evaluate(() => {
+    /* eslint-disable no-undef */
     const host = [...document.body.children].find((element) =>
       element.shadowRoot?.querySelector(".panel"),
     );
     return host ? host.shadowRoot.querySelector(".panel").outerHTML : "";
+    /* eslint-enable no-undef */
   });
 const takeSnapshots = async (scenario) => {
   writeFileSync(
@@ -51,10 +53,13 @@ const takeSnapshots = async (scenario) => {
 const openSwitcher = async () => {
   await page.keyboard.press("ControlOrMeta+k");
   // The list is fetched the first time it opens.
-  await page.waitForFunction(() =>
-    [...document.body.children].some((element) =>
-      element.shadowRoot?.querySelector("li"),
-    ),
+  await page.waitForFunction(
+    () =>
+      /* eslint-disable no-undef */
+      [...document.body.children].some((element) =>
+        element.shadowRoot?.querySelector("li"),
+      ),
+    /* eslint-enable no-undef */
   );
 };
 
