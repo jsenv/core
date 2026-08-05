@@ -112,12 +112,18 @@ export const createControlInteraction = (
           // has been idle for minutes. Those say what they have to say through
           // the callout, live, while it lasts.
           if (!interactionFailedConstraintInfo.constraint?.transient) {
-            element.setAttribute(
-              "title",
+            // The same message the callout would show, not the generated one:
+            // a control that says why in its own words (readOnlyMessage and
+            // friends) says it wherever the reason is read.
+            const { message } = getConstraintMessage(
+              controller,
+              interactionFailedConstraintInfo.constraint,
               interactionFailedConstraintInfo.message,
+              {},
             );
+            element.setAttribute("title", message);
             // Remembered so it can be taken back below.
-            titleWritten = interactionFailedConstraintInfo.message;
+            titleWritten = message;
           }
         } else if (titleWritten !== null) {
           // Only what this rule wrote, and only if nothing has changed it since
