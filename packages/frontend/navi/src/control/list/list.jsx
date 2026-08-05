@@ -441,7 +441,9 @@ const css = /* css */ `
      and disappear as things load. Targeted on the outline itself rather than
      inherited from the item, so a control nested deeper (which has room around
      it, and does not reach the edges) keeps the outline it asked for. */
-  .navi_list_item > * > .navi_loading_outline_wrapper {
+  .navi_list_item > * > .navi_loading_outline_wrapper,
+  .navi_list_item_header > * > .navi_loading_outline_wrapper,
+  .navi_list_item_footer > * > .navi_loading_outline_wrapper {
     --loading-outline-min-inset: 0px;
   }
 
