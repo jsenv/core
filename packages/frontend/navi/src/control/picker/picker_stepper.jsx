@@ -37,6 +37,7 @@ import {
   Slide,
   SlideContainer,
 } from "@jsenv/navi/src/layout/slide_container.jsx";
+import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
@@ -62,6 +63,24 @@ const css = /* css */ `
       var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
   }
+  /* Same fading every navi control does when it is not to be touched (the
+     border first, the words too once it is out of service): what is inside is
+     three pieces of ours, so the box says it for all of them. */
+  .navi_picker_stepper[data-readonly] {
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 45%,
+      transparent
+    );
+  }
+  .navi_picker_stepper[data-disabled] {
+    color: color-mix(in srgb, currentColor 40%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent
+    );
+  }
   /* The value takes it as padding; the two chevrons take it as their own
      --button-padding-y (a button's padding lives on its content, see
      button_ui.jsx), which is why it is said as a variable rather than applied
@@ -74,6 +93,16 @@ const css = /* css */ `
      and a value that starts where the last one ended reads as a jump. */
   .navi_picker_stepper [data-slide] {
     text-align: center;
+    overflow: hidden;
+  }
+  /* Cut rather than spilled: the three days share one cell, so a day too long
+     for the box would be written across the two beside it. One line and an
+     ellipsis says "there is more of this" without moving anything. */
+  .navi_picker_stepper [data-slide] > * {
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
   /* As tall as one line of what it steps through — not half the box: what one
      presses is a chevron. Its height is its own, rather than the middle's, so a
@@ -171,6 +200,9 @@ export const DayStepper = ({
   format = "long",
   paddingY = "xs",
   vertical,
+  readOnly,
+  disabled,
+  loading,
   renderDay = renderDayDefault,
   previousLabel = "Previous day",
   nextLabel = "Next day",
@@ -185,9 +217,10 @@ export const DayStepper = ({
   // settles which of them wins — and what a form makes of each — and this reads
   // the answer back. Nothing of that story is told twice.
   const pickerRef = useRef();
+  const dayFallback = firstDayAllowed({ min, max, step });
   const day =
     useControlUIState(pickerRef, value ?? defaultValue ?? signalProp?.peek()) ??
-    todayString();
+    dayFallback;
 
   // …and the other way round when a signal was handed over: a bound signal is
   // the day, wherever it is moved from — the url, a back/forward, a button
@@ -248,11 +281,12 @@ export const DayStepper = ({
   if (defaultValue !== undefined) {
     dayProps.defaultValue = defaultValue;
   } else if (value === undefined && !signalProp) {
-    // A day is always shown, so there is always one to start from — and a
-    // default rather than a value, so a form reads the day shown as an answer
-    // one can send rather than as something it already holds. A signal brings
-    // its own default (see resolveInputProps), so it is left alone.
-    dayProps.defaultValue = todayString();
+    // A day is always shown, so there is always one to start from — today, or
+    // the nearest day a min/max/step leaves reachable. A default rather than a
+    // value, so a form reads the day shown as an answer one can send rather
+    // than as something it already holds. A signal brings its own default (see
+    // resolveInputProps), so it is left alone.
+    dayProps.defaultValue = dayFallback;
   }
 
   const dayPrevious = addDays(day, -step);
@@ -267,11 +301,16 @@ export const DayStepper = ({
       flex={vertical ? "y" : "x"}
       alignY="center"
       data-vertical={vertical ? "" : undefined}
+      data-readonly={readOnly ? "" : undefined}
+      data-disabled={disabled ? "" : undefined}
       style={{
         "--picker-stepper-padding-y": resolveSpacingSize(paddingY),
         ...rest.style,
       }}
     >
+      {/* Around the whole box, the way a button wears it: the day is on its
+          way somewhere, and it is the day one is looking at. */}
+      <LoadingOutline loading={loading} inset={-2} />
       {/* One picker for the three days, behind them: what a press on the day
           opens, and what holds the day for a form. */}
       <Picker
@@ -289,6 +328,9 @@ export const DayStepper = ({
         {...dayProps}
         min={min}
         max={max}
+        readOnly={readOnly}
+        disabled={disabled}
+        loading={loading}
         onChange={onChange}
         uiAction={(dayNext, event) => {
           uiAction?.(dayNext, stepEventRef.current ?? event);
@@ -299,7 +341,11 @@ export const DayStepper = ({
         commandFor={containerId}
         icon
         variant="discrete"
-        readOnly={!previousAllowed}
+        // Read-only while the day is being sent, too: what one is looking at is
+        // on its way somewhere and stepping it would be a second answer to a
+        // question still being asked.
+        readOnly={!previousAllowed || readOnly || loading}
+        disabled={disabled}
         // What a press would do, rather than the button's own state: "not
         // available right now" says nothing, and it is not the button that is
         // unavailable — it is the value it would have gone to.
@@ -334,6 +380,9 @@ export const DayStepper = ({
         // Tab stop, and the focus would follow it out of the box as it travels.
         commandFor={pickerId}
         onClick={(e) => {
+          if (readOnly || disabled || loading) {
+            return;
+          }
           triggerNaviCommand(e.currentTarget, "--navi-open", e);
         }}
       >
@@ -361,7 +410,8 @@ export const DayStepper = ({
         commandFor={containerId}
         icon
         variant="discrete"
-        readOnly={!nextAllowed}
+        readOnly={!nextAllowed || readOnly || loading}
+        disabled={disabled}
         readOnlyMessage={naviI18n("stepper.nothing_after")}
         aria-label={nextLabel}
         flex
@@ -381,6 +431,37 @@ const renderDayDefault = (day, { lang, format } = {}) => (
     {day}
   </Time>
 );
+
+// The day one starts on when nobody said which: today, unless a min/max puts
+// today out of reach — a control opening on a day it refuses to keep would be
+// invalid before it has been touched. A step counts from `min`, so the day
+// landed on is one the chevrons can actually reach.
+const firstDayAllowed = ({ min, max, step }) => {
+  const today = todayString();
+  if (min && today < min) {
+    return min;
+  }
+  if (max && today > max) {
+    return alignOnStep(max, { min, step, down: true });
+  }
+  return alignOnStep(today, { min, step });
+};
+
+const alignOnStep = (day, { min, step, down }) => {
+  if (!min || !step || step === 1) {
+    return day;
+  }
+  const stepsAway = Math.round(
+    (dayToDate(day) - dayToDate(min)) / (step * MS_PER_DAY),
+  );
+  const aligned = addDays(min, stepsAway * step);
+  if (down && aligned > day) {
+    return addDays(aligned, -step);
+  }
+  return aligned;
+};
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const dayToDate = (day) => new Date(`${day}T00:00:00`);
 

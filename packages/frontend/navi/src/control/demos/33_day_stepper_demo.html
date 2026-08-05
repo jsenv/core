@@ -62,6 +62,7 @@
       } from "@jsenv/navi";
       import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
 
       const Heading = ({ level = 2, id, children, ...rest }) => {
         const Tag = `h${level}`;
@@ -99,12 +100,13 @@
           <TableOfContents />
           <BasicsDemo />
           <DimensionsDemo />
-          <LooksDemo />
-          <BoundsDemo />
-          <WeekDemo />
-          <VerticalDemo />
+          <CustomizationDemo />
+          <StatesDemo />
+          <ValueDemo />
+          <MinDemo />
+          <MaxDemo />
+          <StepDemo />
           <UIActionDemo />
-          <InFormDemo />
         </Box>
       );
 
@@ -129,6 +131,17 @@
         </div>
       );
 
+      // The prop being shown, then what it does: one reads the caption and
+      // looks for its effect, never the other way round.
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
       // ── Basics ────────────────────────────────────────────────────────────
 
       const BasicsDemo = () => (
@@ -137,49 +150,7 @@
           <p class="desc">
             Les flèches changent de jour, le centre ouvre le calendrier.
           </p>
-          <DayStepper signal={daySignal} width="340px" />
-        </div>
-      );
-
-      // ── Looks ─────────────────────────────────────────────────────────────
-
-      const Variant = ({ caption, children }) => (
-        <Box flex="y" spacing="xs" alignX="start">
-          {children}
-          <Text size="s" color="#666">
-            {caption}
-          </Text>
-        </Box>
-      );
-
-      const LooksDemo = () => (
-        <div class="demo-section">
-          <Heading id="looks">Apparence</Heading>
-          <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="par défaut">
-              <DayStepper defaultValue={TODAY} width="340px" />
-            </Variant>
-            <Variant caption='borderWidth="0"'>
-              <DayStepper defaultValue={TODAY} width="340px" borderWidth="0" />
-            </Variant>
-            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
-              <DayStepper
-                defaultValue={TODAY}
-                width="340px"
-                borderColor="#1a73e8"
-                borderRadius="10px"
-              />
-            </Variant>
-            <Variant caption='paddingY="m"'>
-              <DayStepper defaultValue={TODAY} width="340px" paddingY="m" />
-            </Variant>
-            <Variant caption='size="xxl"'>
-              <DayStepper defaultValue={TODAY} size="xxl" width="520px" />
-            </Variant>
-            <Variant caption='size="xxs"'>
-              <DayStepper defaultValue={TODAY} size="xxs" width="240px" />
-            </Variant>
-          </Box>
+          <DayStepper signal={daySignal} width="300px" />
         </div>
       );
 
@@ -189,65 +160,200 @@
         <div class="demo-section">
           <Heading id="dimensions">Dimensions</Heading>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption='format="numeric"'>
-              <DayStepper defaultValue={TODAY} format="numeric" />
-            </Variant>
-            <Variant caption='format="short"'>
-              <DayStepper defaultValue={TODAY} format="short" />
-            </Variant>
-            <Variant caption="par défaut, sans width : la largeur suit le jour affiché">
+            <Variant caption="sans width : la largeur suit le jour affiché">
               <DayStepper defaultValue={TODAY} />
             </Variant>
-            <Variant caption='width="340px"'>
-              <DayStepper defaultValue={TODAY} width="340px" />
+            <Variant caption='width="300px"'>
+              <DayStepper defaultValue={TODAY} width="300px" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="size">
+            size
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='size="xxs", width="300px"'>
+              <DayStepper defaultValue={TODAY} size="xxs" width="300px" />
+            </Variant>
+            <Variant caption='width="300px"'>
+              <DayStepper defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='size="xxl", width="300px"'>
+              <DayStepper defaultValue={TODAY} size="xxl" width="300px" />
             </Variant>
           </Box>
         </div>
       );
 
-      // ── Bounds ────────────────────────────────────────────────────────────
+      // ── Customization ─────────────────────────────────────────────────────
 
-      const BoundsDemo = () => (
+      const CustomizationDemo = () => (
         <div class="demo-section">
-          <Heading id="bounds">min / max</Heading>
-          <p class="desc">Hier au plus tôt, dans 3 jours au plus tard.</p>
-          <DayStepper
-            signal={boundedDaySignal}
-            min={YESTERDAY}
-            max={day(3)}
-            width="340px"
-          />
+          <Heading id="customization">Customization</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <DayStepper defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='borderWidth="0"'>
+              <DayStepper defaultValue={TODAY} width="300px" borderWidth="0" />
+            </Variant>
+            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
+              <DayStepper
+                defaultValue={TODAY}
+                width="300px"
+                borderColor="#1a73e8"
+                borderRadius="10px"
+              />
+            </Variant>
+            {/* Wider than the others on purpose: a taller padding makes the
+                two chevrons taller, and therefore wider (they are square), so
+                at 300px the day would be cut and one would be looking at that
+                instead of at the padding. */}
+            <Variant caption='paddingY="m", width="380px"'>
+              <DayStepper defaultValue={TODAY} width="380px" paddingY="m" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="text">
+            Le texte
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <DayStepper defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='format="short"'>
+              <DayStepper defaultValue={TODAY} width="300px" format="short" />
+            </Variant>
+            <Variant caption='format="numeric"'>
+              <DayStepper defaultValue={TODAY} width="300px" format="numeric" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="vertical">
+            vertical
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='vertical, format="short"'>
+              <DayStepper
+                defaultValue={TODAY}
+                vertical
+                width="220px"
+                format="short"
+              />
+            </Variant>
+          </Box>
         </div>
       );
 
-      // ── Step ──────────────────────────────────────────────────────────────
+      // ── States ────────────────────────────────────────────────────────────
 
-      const WeekDemo = () => (
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="readOnly">
+              <DayStepper defaultValue={TODAY} width="300px" readOnly />
+            </Variant>
+            <Variant caption="disabled">
+              <DayStepper defaultValue={TODAY} width="300px" disabled />
+            </Variant>
+            <Variant caption="loading">
+              <DayStepper defaultValue={TODAY} width="300px" loading />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Value ─────────────────────────────────────────────────────────────
+
+      const ValueDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="value">value, defaultValue</Heading>
+            <Box flex="y" spacing="l" alignX="start">
+              <Variant caption="rien : aujourd'hui">
+                <DayStepper width="300px" />
+              </Variant>
+              <Variant caption={`defaultValue="${day(-3)}"`}>
+                <DayStepper defaultValue={day(-3)} width="300px" />
+              </Variant>
+            </Box>
+
+            <Heading level={3} id="value-held">
+              Ce que le serveur sait déjà
+            </Heading>
+            <p class="desc">
+              Le jour vient du serveur (<code>value</code>) : soumettre sans y
+              toucher n'a rien à dire, donc rien ne part. Un pas, et l'appel a
+              lieu.
+            </p>
+            <FakeBackend value={{ day: day(-3) }} name="Serveur">
+              {({ value, action }) => (
+                <Form
+                  action={async (values) => {
+                    const sent = await action(values);
+                    push("Form action", sent);
+                  }}
+                >
+                  <Box flex spacing="m" alignY="end">
+                    <Field flex="y">
+                      <Label>Jour</Label>
+                      <DayStepper name="day" value={value.day} width="300px" />
+                    </Field>
+                    <Button type="submit">Enregistrer</Button>
+                  </Box>
+                </Form>
+              )}
+            </FakeBackend>
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── min ───────────────────────────────────────────────────────────────
+
+      const MinDemo = () => (
+        <div class="demo-section">
+          <Heading id="min">min</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption={`min="${TODAY}" (aujourd'hui)`}>
+              <DayStepper signal={boundedDaySignal} min={TODAY} width="300px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── max ───────────────────────────────────────────────────────────────
+
+      const MaxDemo = () => (
+        <div class="demo-section">
+          <Heading id="max">max</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption={`max="${TODAY}" (aujourd'hui)`}>
+              <DayStepper defaultValue={TODAY} max={TODAY} width="300px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── step ──────────────────────────────────────────────────────────────
+
+      const StepDemo = () => (
         <div class="demo-section">
           <Heading id="step">step</Heading>
-          <p class="desc">Une semaine par flèche.</p>
-          <DayStepper
-            defaultValue={TODAY}
-            step={7}
-            width="340px"
-            previousLabel="Semaine précédente"
-            nextLabel="Semaine suivante"
-          />
-        </div>
-      );
-
-      // ── Vertical ──────────────────────────────────────────────────────────
-
-      const VerticalDemo = () => (
-        <div class="demo-section">
-          <Heading id="vertical">vertical</Heading>
-          <p class="desc">Le même, debout : ↑ ↓.</p>
-          <DayStepper
-            defaultValue={TODAY}
-            vertical
-            format="short"
-            width="220px"
-          />
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="step={7}">
+              <DayStepper
+                defaultValue={TODAY}
+                step={7}
+                width="300px"
+                previousLabel="Semaine précédente"
+                nextLabel="Semaine suivante"
+              />
+            </Variant>
+          </Box>
         </div>
       );
 
@@ -264,38 +370,11 @@
             </p>
             <DayStepper
               defaultValue={TODAY}
-              width="340px"
+              width="300px"
               uiAction={(dayPicked, event) => {
                 push("uiAction", dayPicked, event);
               }}
             />
-            <CallLog entries={entries} onClear={clear} />
-          </div>
-        );
-      };
-
-      // ── In a form ─────────────────────────────────────────────────────────
-
-      const InFormDemo = () => {
-        const [entries, push, clear] = useCallLog();
-
-        return (
-          <div class="demo-section">
-            <Heading id="in-form">Dans un formulaire</Heading>
-            <p class="desc">Le jour part avec le formulaire, sous son name.</p>
-            <Form
-              action={(values) => {
-                push("Form action", values);
-              }}
-            >
-              <Box flex spacing="m" alignY="end">
-                <Field flex="y">
-                  <Label>Jour</Label>
-                  <DayStepper name="day" defaultValue={TODAY} width="340px" />
-                </Field>
-                <Button type="submit">Soumettre</Button>
-              </Box>
-            </Form>
             <CallLog entries={entries} onClear={clear} />
           </div>
         );
