@@ -63,6 +63,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./control_context.js";
+import { findControlHost } from "./control_dom.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import {
@@ -80,6 +81,7 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
+  getUIStateFromElement,
 } from "./ui_state_dom.js";
 
 // Sentinel used as the initial value of lastActionValueRef.
@@ -900,7 +902,9 @@ const createControlInfo = (props, { controlType }) => {
       // Same precedence as an input above: the signal's value is the answer,
       // defaultValue only the suggestion to start from.
       stateInitial =
-        signal && signal.value !== undefined ? signal.value : props.defaultValue;
+        signal && signal.value !== undefined
+          ? signal.value
+          : props.defaultValue;
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;
@@ -1124,6 +1128,53 @@ export const useControlgroupProps = (
  * </ControlFacadeChildrenWrapper>
  * ```
  */
+/**
+ * What a control holds, read from the control itself.
+ *
+ * For a component built AROUND a control rather than instead of one — a
+ * stepper wrapping a picker, a preview beside a field: the control keeps the
+ * whole value story (`value` vs `defaultValue` vs `signal`, and what a form
+ * makes of each), and this is how the wrapper knows what is in it without
+ * having to tell that story a second time.
+ *
+ * Read from the DOM rather than from props on purpose: a value set from
+ * anywhere — the control's own popup, a signal moved elsewhere, a paste —
+ * comes back the same way, because every one of them ends in the same
+ * navi_ui_state_change.
+ *
+ * @param {{current: HTMLElement}} ref - the control's own ref (the element
+ *   given the `ref` prop, whatever the control renders around it).
+ * @param {any} [uiStateInitial] - what to say before the control has mounted,
+ *   which is the one moment the DOM cannot be asked.
+ */
+export const useControlUIState = (ref, uiStateInitial) => {
+  const [uiState, setUIState] = useState(uiStateInitial);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    // The host, not the box around it: a control is a whole little tree (a
+    // picker is a box holding an input) and the state is announced on the one
+    // element that holds it. Same resolution every request goes through, see
+    // ui_state_dom.js.
+    const host = findControlHost(element) || element;
+    // Asked once here rather than trusted from the props above: between the
+    // first render and this effect the control has read its own value prop, its
+    // defaultValue and any signal it was bound to, and settled which of them
+    // wins — the answer to that is on the element, not in what we were handed.
+    setUIState(getUIStateFromElement(host));
+    const onUIStateChange = (e) => {
+      setUIState(e.detail.value);
+    };
+    host.addEventListener("navi_ui_state_change", onUIStateChange);
+    return () => {
+      host.removeEventListener("navi_ui_state_change", onUIStateChange);
+    };
+  }, [ref]);
+  return uiState;
+};
+
 export const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, { uiStateController }] =
     useControlProps(props, options);

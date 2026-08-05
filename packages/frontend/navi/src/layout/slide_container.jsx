@@ -419,6 +419,15 @@ export const SlideContainer = ({
         slideElement.removeAttribute("inert");
       }
     }
+    // Set here rather than left to the style prop, and right before the offset
+    // it governs: the two are one decision (this much travel for this move),
+    // and a box that applies its style on its own schedule would let them land
+    // in different frames — the travel then plays with the duration of the move
+    // before it.
+    containerRef.current.style.setProperty(
+      "--slide-container-duration",
+      noTravel ? "0ms" : duration,
+    );
     trackRef.current.style.setProperty(
       "--slide-container-offset",
       `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`,
@@ -747,10 +756,7 @@ export const SlideContainer = ({
         onKeyDownShortcuts(e);
         rest.onKeyDown?.(e);
       }}
-      style={{
-        "--slide-container-duration": noTravel ? "0ms" : duration,
-        ...rest.style,
-      }}
+      style={rest.style}
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider

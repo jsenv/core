@@ -23,8 +23,7 @@
  * slide that is about to leave.
  */
 
-import { useSignal } from "@preact/signals";
-import { useId } from "preact/hooks";
+import { useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
@@ -42,6 +41,11 @@ import { Icon } from "@jsenv/navi/src/text/icon.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { triggerNaviCommand } from "../commands.js";
+import { useControlUIState } from "../control_hooks.jsx";
+import {
+  dispatchRequestResetUIState,
+  dispatchRequestSetUIState,
+} from "../ui_state_dom.js";
 import { Button } from "../input/button.jsx";
 import { Picker } from "./picker.jsx";
 
@@ -50,6 +54,13 @@ const css = /* css */ `
     /* What the picker's own box fills: headless, it draws nothing and covers
        whatever it is inside, which is what the calendar is anchored to. */
     position: relative;
+    /* Framed like every other control (see navi_css_vars.js): what one steps
+       through is a value one edits, and a box around it is what says so. Said
+       as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
+       of one's own still wins — an inline style beats a stylesheet. */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
   }
   /* The value takes it as padding; the two chevrons take it as their own
      --button-padding-y (a button's padding lives on its content, see
@@ -149,6 +160,7 @@ export const DayStepper = ({
   value,
   defaultValue,
   onChange,
+  uiAction,
   signal: signalProp,
   name,
   min,
@@ -168,24 +180,80 @@ export const DayStepper = ({
   const id = useId();
   const containerId = `${id}_days`;
   const pickerId = `${id}_picker`;
-  // The day lives in a signal even when nobody handed one over, because that is
-  // what the picker below is given (see it): a picker holding a `value` is a
-  // picker the form HOLDS, and a form that already holds what it would send has
-  // nothing to send — a stepper opening on a day would then refuse to submit it
-  // until one stepped away and back. A signal seeds it the way a defaultValue
-  // does: a suggestion, and confirming it is an answer.
-  const ownDaySignal = useSignal(defaultValue ?? todayString());
-  const daySignal = signalProp ? signalProp : ownDaySignal;
-  const day = value ?? daySignal.value;
+  // The picker holds the day, and it is asked rather than shadowed: `value`,
+  // `defaultValue` and `signal` are handed to it untouched (see below), it
+  // settles which of them wins — and what a form makes of each — and this reads
+  // the answer back. Nothing of that story is told twice.
+  const pickerRef = useRef();
+  const day =
+    useControlUIState(pickerRef, value ?? defaultValue ?? signalProp?.peek()) ??
+    todayString();
 
-  const setDay = (dayNext) => {
-    // Controlled: the day comes from above and only what it is told about
-    // changes it.
-    if (value === undefined) {
-      daySignal.value = dayNext;
+  // …and the other way round when a signal was handed over: a bound signal is
+  // the day, wherever it is moved from — the url, a back/forward, a button
+  // elsewhere on the page — and the control follows it. A picker seeded from a
+  // signal only writes back into it (see resolveInputProps), which is enough
+  // for a field one only ever types into and not for a day that is also moved
+  // from outside. Undefined is not a day: the signal has nothing to say, so the
+  // control goes back to what it started on.
+  const signalDay = signalProp ? signalProp.value : undefined;
+  // The day as of the render this effect belongs to, and not one the closure
+  // captured a while ago: a step writes the signal, the signal brings us back
+  // here, and comparing against a stale day would set it a second time — one
+  // uiAction per step becoming two.
+  const dayRef = useRef(day);
+  dayRef.current = day;
+  useLayoutEffect(() => {
+    const pickerEl = pickerRef.current;
+    if (!signalProp || !pickerEl) {
+      return;
     }
-    onChange?.(dayNext);
+    if (signalDay === undefined) {
+      dispatchRequestResetUIState(pickerEl);
+      return;
+    }
+    if (signalDay !== dayRef.current) {
+      dispatchRequestSetUIState(pickerEl, signalDay, {});
+    }
+  }, [signalDay]);
+
+  // A step is a change made to the picker, not beside it: it goes in the way a
+  // paste or a pick from the calendar goes in, so the signal, the form and
+  // `uiAction` all learn about it from the same place — and the event that
+  // asked for it travels with it, which is how `uiAction` can tell a chevron
+  // from the calendar.
+  // What asked for the day being set, while it is being set: the picker
+  // announces the change as its own input event, which says nothing of what
+  // started it — so it is held here for the length of the dispatch and handed
+  // to uiAction below. That is how a caller tells a chevron from the calendar.
+  const stepEventRef = useRef(null);
+  const setDay = (dayNext, event) => {
+    stepEventRef.current = event;
+    try {
+      dispatchRequestSetUIState(pickerRef.current, dayNext, { event });
+    } finally {
+      stepEventRef.current = null;
+    }
   };
+
+  // Passed through rather than defaulted here: a prop nobody wrote must not
+  // reach the picker at all (it reads the presence of `value`, not its
+  // content), so each is added only if it was given.
+  const dayProps = {};
+  if (value !== undefined) {
+    dayProps.value = value;
+  } else if (signalProp) {
+    dayProps.signal = signalProp;
+  }
+  if (defaultValue !== undefined) {
+    dayProps.defaultValue = defaultValue;
+  } else if (value === undefined && !signalProp) {
+    // A day is always shown, so there is always one to start from — and a
+    // default rather than a value, so a form reads the day shown as an answer
+    // one can send rather than as something it already holds. A signal brings
+    // its own default (see resolveInputProps), so it is left alone.
+    dayProps.defaultValue = todayString();
+  }
 
   const dayPrevious = addDays(day, -step);
   const dayNext = addDays(day, step);
@@ -207,22 +275,23 @@ export const DayStepper = ({
       {/* One picker for the three days, behind them: what a press on the day
           opens, and what holds the day for a form. */}
       <Picker
+        ref={pickerRef}
         id={pickerId}
         type="date"
         variant="headless"
         name={name}
-        // Held from above, or only suggested from here: a form HOLDS what a
-        // `value` says and has nothing to send back, while a signal paired with
-        // a defaultValue is a suggestion — the day shown is where one starts,
-        // and confirming it is an answer. Without that a stepper opening on a
-        // day would refuse to submit it until one stepped away and back.
-        {...(value === undefined
-          ? { signal: daySignal, defaultValue: day }
-          : { value })}
+        // Whatever was said about the day, said to the picker: a `value` it
+        // holds, a `signal` it follows, a `defaultValue` it merely starts on —
+        // including what a form makes of the difference (it HOLDS a value and
+        // has nothing to send back, where a default is a suggestion and
+        // confirming it is an answer). A day is always shown, so there is
+        // always a default: today, when nobody named one.
+        {...dayProps}
         min={min}
         max={max}
-        uiAction={(dayPicked) => {
-          setDay(dayPicked);
+        onChange={onChange}
+        uiAction={(dayNext, event) => {
+          uiAction?.(dayNext, stepEventRef.current ?? event);
         }}
       />
       <Button
@@ -254,10 +323,11 @@ export const DayStepper = ({
         // the travel and comes back to the middle, and the day moves one step
         // here, in onLoop, as it lands.
         loop
-        onLoop={({ dx, dy }) => {
+        onLoop={({ dx, dy, event }) => {
           // One step, whichever axis it came from: the map is a line, so only
-          // one of the two is ever anything but zero.
-          setDay(addDays(day, (dx || dy) * step));
+          // one of the two is ever anything but zero. The event goes with it —
+          // it is what says a chevron (or an arrow key) asked for this day.
+          setDay(addDays(day, (dx || dy) * step), event);
         }}
         // The whole middle opens the calendar — a command, like the chevrons
         // send one, and no button of its own: the day would then be one more

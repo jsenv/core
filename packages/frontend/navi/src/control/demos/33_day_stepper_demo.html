@@ -85,28 +85,51 @@
       const TODAY = day(0);
       const YESTERDAY = day(-1);
 
+      // The days this page keeps in the url, and what "Tout réinitialiser"
+      // puts back.
+      const daySignal = stateSignal(TODAY, { id: "day", type: "date" });
+      const boundedDaySignal = stateSignal(TODAY, {
+        id: "bounded_day",
+        type: "date",
+      });
+      const DEMO_SIGNALS = [daySignal, boundedDaySignal];
+
       const App = () => (
         <Box flex="y" spacing="l">
           <TableOfContents />
           <BasicsDemo />
+          <DimensionsDemo />
           <LooksDemo />
           <BoundsDemo />
           <WeekDemo />
           <VerticalDemo />
+          <UIActionDemo />
           <InFormDemo />
         </Box>
       );
 
       const TableOfContents = () => (
         <div class="demo-section">
-          <h2>Sommaire</h2>
+          <Box flex alignY="center" spacing="m">
+            <h2 style="margin: 0; flex: 1">Sommaire</h2>
+            <Button
+              onClick={() => {
+                // undefined, not their defaults: a signal back at its
+                // default is a signal with nothing to say, which is what
+                // empties the url.
+                for (const signal of DEMO_SIGNALS) {
+                  signal.value = undefined;
+                }
+              }}
+            >
+              Tout réinitialiser
+            </Button>
+          </Box>
           <DocumentToc />
         </div>
       );
 
       // ── Basics ────────────────────────────────────────────────────────────
-
-      const daySignal = stateSignal(TODAY, { id: "day", type: "date" });
 
       const BasicsDemo = () => (
         <div class="demo-section">
@@ -133,62 +156,56 @@
         <div class="demo-section">
           <Heading id="looks">Apparence</Heading>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="bare">
+            <Variant caption="par défaut">
               <DayStepper defaultValue={TODAY} width="340px" />
             </Variant>
-            <Variant caption='borderWidth="1" borderRadius="10px"'>
+            <Variant caption='borderWidth="0"'>
+              <DayStepper defaultValue={TODAY} width="340px" borderWidth="0" />
+            </Variant>
+            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
               <DayStepper
                 defaultValue={TODAY}
                 width="340px"
-                borderWidth="1"
-                borderStyle="solid"
-                borderColor="#dadce0"
+                borderColor="#1a73e8"
                 borderRadius="10px"
               />
             </Variant>
             <Variant caption='paddingY="m"'>
-              <DayStepper
-                defaultValue={TODAY}
-                width="340px"
-                paddingY="m"
-                borderWidth="1"
-                borderStyle="solid"
-                borderColor="#dadce0"
-                borderRadius="10px"
-              />
+              <DayStepper defaultValue={TODAY} width="340px" paddingY="m" />
             </Variant>
             <Variant caption='size="xxl"'>
-              <DayStepper
-                defaultValue={TODAY}
-                size="xxl"
-                width="520px"
-                borderWidth="1"
-                borderStyle="solid"
-                borderColor="#dadce0"
-                borderRadius="10px"
-              />
+              <DayStepper defaultValue={TODAY} size="xxl" width="520px" />
             </Variant>
             <Variant caption='size="xxs"'>
-              <DayStepper
-                defaultValue={TODAY}
-                size="xxs"
-                width="240px"
-                borderWidth="1"
-                borderStyle="solid"
-                borderColor="#dadce0"
-                borderRadius="10px"
-              />
+              <DayStepper defaultValue={TODAY} size="xxs" width="240px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Dimensions ────────────────────────────────────────────────────────
+
+      const DimensionsDemo = () => (
+        <div class="demo-section">
+          <Heading id="dimensions">Dimensions</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='format="numeric"'>
+              <DayStepper defaultValue={TODAY} format="numeric" />
+            </Variant>
+            <Variant caption='format="short"'>
+              <DayStepper defaultValue={TODAY} format="short" />
+            </Variant>
+            <Variant caption="par défaut, sans width : la largeur suit le jour affiché">
+              <DayStepper defaultValue={TODAY} />
+            </Variant>
+            <Variant caption='width="340px"'>
+              <DayStepper defaultValue={TODAY} width="340px" />
             </Variant>
           </Box>
         </div>
       );
 
       // ── Bounds ────────────────────────────────────────────────────────────
-
-      const boundedDaySignal = stateSignal(TODAY, {
-        id: "bounded_day",
-        type: "date",
-      });
 
       const BoundsDemo = () => (
         <div class="demo-section">
@@ -199,10 +216,6 @@
             min={YESTERDAY}
             max={day(3)}
             width="340px"
-            borderWidth="1"
-            borderStyle="solid"
-            borderColor="#dadce0"
-            borderRadius="10px"
           />
         </div>
       );
@@ -234,13 +247,32 @@
             vertical
             format="short"
             width="220px"
-            borderWidth="1"
-            borderStyle="solid"
-            borderColor="#dadce0"
-            borderRadius="10px"
           />
         </div>
       );
+
+      // ── uiAction ──────────────────────────────────────────────────────────
+
+      const UIActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="ui-action">uiAction</Heading>
+            <p class="desc">
+              L'événement dit d'où vient le jour : une flèche, ou le calendrier.
+            </p>
+            <DayStepper
+              defaultValue={TODAY}
+              width="340px"
+              uiAction={(dayPicked, event) => {
+                push("uiAction", dayPicked, event);
+              }}
+            />
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
 
       // ── In a form ─────────────────────────────────────────────────────────
 
@@ -259,15 +291,7 @@
               <Box flex spacing="m" alignY="end">
                 <Field flex="y">
                   <Label>Jour</Label>
-                  <DayStepper
-                    name="day"
-                    defaultValue={TODAY}
-                    width="340px"
-                    borderWidth="1"
-                    borderStyle="solid"
-                    borderColor="#dadce0"
-                    borderRadius="10px"
-                  />
+                  <DayStepper name="day" defaultValue={TODAY} width="340px" />
                 </Field>
                 <Button type="submit">Soumettre</Button>
               </Box>
