@@ -135,6 +135,7 @@ import.meta.css = /* css */ `
       > [data-header],
       > [data-footer] {
         position: static;
+        z-index: unset;
         flex-shrink: 0;
       }
 

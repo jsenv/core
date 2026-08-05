@@ -467,12 +467,12 @@ const css = /* css */ `
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
- *   `autoFocus="fallback"` below has somewhere to land when the dialog has
+ *   `autoFocus="last-resort"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
- * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
- *   `focus_transfer.js` — `"fallback"` focuses the dialog itself if it has
- *   no other focusable descendant, `"restore"` keeps it out of the opening
- *   focus chain unless it held focus when the dialog closed.
+ * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
+ *   `focus_transfer.js` — `"last-resort"` focuses the dialog itself only if it
+ *   has no other focusable descendant, `"restore"` keeps it out of the
+ *   opening focus chain unless it held focus when the dialog closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
@@ -661,15 +661,15 @@ const useDialogProps = (props) => {
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
     anchor,
-    // Makes the dialog itself a valid focus target so autoFocus="fallback"
-    // below has somewhere to land when it contains nothing focusable of its
-    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // Makes the dialog itself a valid focus target so
+    // autoFocus="last-resort" below has somewhere to land when it contains
+    // nothing focusable of its own — -1 keeps it out of the normal Tab order (it's only ever reached
     // programmatically). <dialog> has no default tabindex of its own.
     tabIndex = -1,
     // See use_auto_focus.js's own docs for why this must never reach the DOM
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
-    autoFocus = "fallback",
+    autoFocus = "last-resort",
     onKeyDown,
     children,
     ...rest

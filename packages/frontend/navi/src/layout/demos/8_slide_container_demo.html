@@ -171,20 +171,107 @@
         background: #fdf1e0;
         border-bottom: 1px solid #f0d7ae;
       }
-      /* In the document there is no popup to take a size from, so the list
-         is given one here — same as any box would be. */
-      .in-document {
-        display: flex;
+      /* In the document there is no popup to take a size from, so the container
+         is given one here — same as any box would be. On the CONTAINER itself,
+         not on a wrapper around it: it is the box one sees, so it is the box
+         that carries the border, the corners and the background, and its focus
+         ring then follows the same edges. Only the width is said; the height is
+         whatever the slides need, which is the behaviour worth showing. */
+      .in-document > .navi_slide_container {
         width: 300px;
-        flex-direction: column;
+        background: white;
         border: 1px solid #90caf9;
         border-radius: 8px;
       }
-      /* Very tall content: without a height the box would be as tall as its
-         tallest slide, which is exactly what we do NOT want to see in a page
-         that also has other sections. */
-      .in-document-capped {
+      .in-document {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      /* Very tall content: a height here and now the slides scroll instead —
+         without it the box would be as tall as its tallest slide, which is
+         exactly what we do NOT want to see in a page that also has other
+         sections. Forced on the container for the same reason as above. */
+      .in-document-capped > .navi_slide_container {
         height: 260px;
+      }
+      /* The map, shown through its own window: what a slide container normally
+         hides (every slide but one, each parked at its place on the map) is
+         made visible here — the window is what clips, and it is deliberately
+         several cells wide instead of one.
+         Exactly 3 cells by 3, so the grid fills it edge to edge: what one sees
+         is the map itself, sliding, with nothing around it to read as part of
+         the box. */
+      .map-window {
+        --map-cell-width: 120px;
+        --map-cell-height: 80px;
+
+        display: flex;
+        width: calc(3 * var(--map-cell-width));
+        height: calc(3 * var(--map-cell-height));
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #cfd8e3;
+        overflow: hidden;
+      }
+      /* The container itself keeps its size (one cell) — only its clipping is
+         given up, so the slides waiting around it are drawn instead of cut. */
+      .map-window .navi_slide_container {
+        overflow: visible;
+      }
+      .map-cell {
+        width: var(--map-cell-width);
+        height: var(--map-cell-height);
+        color: #37474f;
+        font-size: 0.85rem;
+        font-family: ui-monospace, monospace;
+        background: #ffffff;
+        border: 1px solid #b0bec5;
+      }
+      /* The checkerboard: one square in two is tinted, so a move of one cell
+         reads as a move even when both cells are empty. */
+      .map-cell-odd {
+        background: #e8eef7;
+      }
+      /* Waiting its turn: drawn, but plainly not the one being shown. */
+      .map-window [data-slide-displaced] {
+        opacity: 0.35;
+      }
+      .map-window [data-current] {
+        color: white;
+        background: #1a237e;
+        border-color: #1a237e;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      }
+      /* The states row: several small boxes side by side, each showing one
+         state of the same slide. */
+      .states {
+        display: flex;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .state {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .state > figcaption {
+        color: #666;
+        font-size: 0.8rem;
+      }
+      /* Same rule as .in-document: what one sees IS the container, so it is what
+         carries the border and the background, and the ring lands on those very
+         edges. */
+      .state-frame > .navi_slide_container {
+        width: 220px;
+        background: white;
+        border: 1px solid #90caf9;
+      }
+      /* The radius goes on the container — never on a slide. It passes it down
+         to its track and clips the corners. */
+      .state-frame-rounded > .navi_slide_container {
+        border-radius: 12px;
       }
     </style>
   </head>
@@ -193,6 +280,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
       import { createContext } from "preact";
       import { useContext, useEffect, useRef, useState } from "preact/hooks";
       import {
@@ -201,6 +289,7 @@
         Dialog,
         Input,
         Link,
+        List,
         Popover,
         Slide,
         SlideContainer,
@@ -450,6 +539,166 @@
             </Box>
           </Slide>
         </SlideContainer>
+      );
+
+      // A list in the middle of a vertical map: the slides go up and down, and so
+      // does the list's own selection — so ↑/↓ have two possible readings, and
+      // only one of them can be right at a time. Whoever holds the keyboard
+      // decides: on a list item they walk the list, anywhere else on the slide
+      // they travel.
+      const ListInSlides = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <Slide id="above" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>above</Text>
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Text>↓ travels from here (nothing else wants the key)</Text>
+            </Box>
+          </Slide>
+          <Slide id="the-list" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+              <Text expandX>the list</Text>
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Text size="s" color="#666">
+                Click an item, then press ↑/↓: the selection should move inside
+                the list, not the slide. Press ↑/↓ with the focus outside the
+                list (the text below, a chevron) and the slide travels.
+              </Text>
+              {/* No ids on purpose: this section is rendered three times over
+                  (in the document, in a dialog, in a popover) and navi would
+                  rightly complain about three lists sharing one */}
+              <List selectable name="fruit" border="none">
+                {["apple", "banana", "cherry", "date"].map((fruit, index) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    index={index}
+                    value={fruit}
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    {fruit}
+                  </List.Item>
+                ))}
+              </List>
+              <Text size="s">outside the list — ↑/↓ travels</Text>
+            </Box>
+          </Slide>
+          <Slide id="below" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+              <Text expandX>below</Text>
+            </Box>
+            <Box body padding="m">
+              <Text>↑ goes back to the list</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // The map, made visible. A slide container shows one slide and hides the
+      // rest — each is already laid out at its own place, and the track slides
+      // the whole map under a window one cell wide. Here the window is made
+      // bigger and the clipping given up, so what is normally out of sight is
+      // drawn faintly around what is being shown: the arrangement one writes in
+      // `layout` IS what one sees, and moving is the map sliding under it.
+      const MAP_SIDE = 6;
+      // Where it opens: a cell with neighbours on all four sides, so the window
+      // is full from the start.
+      const MAP_MIDDLE = 2;
+      const MAP_CELLS = Array.from({ length: MAP_SIDE }, (_, y) =>
+        Array.from({ length: MAP_SIDE }, (_, x) => ({
+          x,
+          y,
+          area: `cell_${x}_${y}`,
+          label: `${String.fromCharCode(97 + x)}${y + 1}`,
+        })),
+      );
+      const MAP_LAYOUT = MAP_CELLS.map((row) =>
+        row.map((cell) => cell.area).join(" "),
+      );
+
+      const MapReveal = () => (
+        <div>
+          <div class="map-window">
+            {/* Opened on the middle of the map rather than on its corner: with
+                a cell on every side, the window is full and what one sees is
+                the grid, not the grid and the room around it. */}
+            <SlideContainer
+              id="map_reveal"
+              layout={MAP_LAYOUT}
+              defaultCurrent={`cell_${MAP_MIDDLE}_${MAP_MIDDLE}`}
+              duration={useSlideDuration()}
+            >
+              {MAP_CELLS.flat().map(({ x, y, area, label }) => (
+                <Slide
+                  key={area}
+                  id={area}
+                  alignX="center"
+                  alignY="center"
+                  className={`map-cell ${(x + y) % 2 ? "map-cell-odd" : ""}`}
+                >
+                  {label}
+                </Slide>
+              ))}
+            </SlideContainer>
+          </div>
+          {/* Aimed at the container by id: the same four commands its own
+              chevrons use, said from outside it. */}
+          <div class="demo-row" style="margin-top: 12px">
+            <SlideContainer.Left commandFor="map_reveal" />
+            <SlideContainer.Right commandFor="map_reveal" />
+            <SlideContainer.Up commandFor="map_reveal" />
+            <SlideContainer.Down commandFor="map_reveal" />
+            <span class="demo-note">
+              …or click a cell and use the arrow keys.
+            </span>
+          </div>
+        </div>
+      );
+
+      // One box, one state: the same slide shown at rest and showing its focus,
+      // so what the ring looks like — and where it is drawn — can be read off
+      // the page rather than described.
+      const StateSlide = ({ rounded, focusVisible, children }) => (
+        <div class="state">
+          <div class={`state-frame ${rounded ? "state-frame-rounded" : ""}`}>
+            <SlideContainer duration={useSlideDuration()}>
+              <Slide
+                id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}`}
+                overflow="auto"
+                // Held on, not obtained: `pseudoState` overrides what the box
+                // would have worked out for itself (see box.jsx), which is what
+                // puts both states on the page at once, side by side, without
+                // anything having to be focused.
+                pseudoState={
+                  focusVisible ? { ":focus-visible": true } : undefined
+                }
+              >
+                <Box
+                  header
+                  padding="m"
+                  flex="x"
+                  alignY="center"
+                  className="part"
+                >
+                  <Text expandX>a slide</Text>
+                </Box>
+                <Box body padding="m">
+                  <Text>{children}</Text>
+                </Box>
+              </Slide>
+            </SlideContainer>
+          </div>
+          <figcaption>
+            {focusVisible ? "holding the keyboard" : "at rest"}
+          </figcaption>
+        </div>
       );
 
       const ThreeSlides = () => (
@@ -761,37 +1010,11 @@
             </p>
             <SlideSettings />
             <strong>On this page</strong>
-            <ol className="toc">
-              <li>
-                <Link href="#two-slides">Two slides</Link>
-                <ul>
-                  <li>
-                    <Link href="#taller">Content taller than the box</Link>
-                  </li>
-                  <li>
-                    <Link href="#wider">Content wider than the box</Link>
-                  </li>
-                </ul>
-              </li>
-              <li>
-                <Link href="#vertical">Vertical</Link>
-              </li>
-              <li>
-                <Link href="#three-slides">Three slides</Link>
-              </li>
-              <li>
-                <Link href="#map">A map instead of a line</Link>
-              </li>
-              <li>
-                <Link href="#focus">Focus</Link>
-              </li>
-              <li>
-                <Link href="#locking">Locking the way out</Link>
-              </li>
-              <li>
-                <Link href="#dialog">Specific to dialog</Link>
-              </li>
-            </ol>
+            {/* Sections only: the h3s below them are the three ways each one is
+                shown (in the document, in a dialog, in a popover), repeated
+                section after section — a table of contents listing them says
+                nothing about where anything is. */}
+            <DocumentToc to={2} />
             <p class="demo-see-also">
               <strong>See also:</strong>{" "}
               <Link href="./1_dialog_demo.html#slides">
@@ -807,6 +1030,55 @@
               </Link>
             </p>
           </div>
+
+          <section class="demo-section" id="states">
+            <Heading id="states">What a slide looks like</Heading>
+            <p>
+              A slide draws nothing of its own: it is a box like any other, and
+              what one sees at rest is whatever it was given. The one thing it
+              does draw is the ring of the slide holding the keyboard — on the
+              CONTAINER, not on the slide, which is what makes it follow the
+              corners.
+            </p>
+            <div class="states">
+              <StateSlide>square</StateSlide>
+              <StateSlide focusVisible>square</StateSlide>
+            </div>
+            <p>
+              The same, with a <code>border-radius</code> on the box holding the
+              container:
+            </p>
+            <div class="states">
+              <StateSlide rounded>rounded</StateSlide>
+              <StateSlide rounded focusVisible>
+                rounded
+              </StateSlide>
+            </div>
+            <p class="demo-note" style="max-width: 46em">
+              <strong>
+                The radius belongs to the container, never to a slide.
+              </strong>{" "}
+              Two rounded slides passing each other leave a pinched gap between
+              their curves where the page shows through, for the length of the
+              travel — so a slide is kept square and the container clips the
+              corners (<code>overflow: hidden</code>). The ring follows the same
+              rule for the same reason: drawn on a slide it would come out
+              square inside a rounded box, cutting across the curve.
+            </p>
+          </section>
+
+          <section class="demo-section" id="the-map">
+            <Heading id="the-map">Seeing the map</Heading>
+            <p>
+              Every slide is laid out once, each at its own place on the map,
+              and one thing moves: the track under the window. Normally the
+              window is one cell wide and hides the rest — here it is made
+              bigger and the clipping given up (<code>overflow: visible</code>),
+              so the slides waiting their turn are drawn faintly all around the
+              one being shown. Moving is the whole map sliding underneath.
+            </p>
+            <MapReveal />
+          </section>
 
           <section class="demo-section" id="two-slides">
             <Heading id="two-slides">Two slides</Heading>
@@ -877,6 +1149,20 @@
               the keyboard is filled in.
             </p>
             <ThreeWays id="focus" Content={FocusSlides} />
+          </section>
+
+          <section class="demo-section" id="list-in-a-slide">
+            <Heading id="list-in-a-slide">A list inside a slide</Heading>
+            <p>
+              ↑/↓ mean two things here: walk the list, or travel the map. The
+              focused element decides — a list item answers the key itself, and
+              only a press nothing else wants reaches the container.
+            </p>
+            <ThreeWays
+              id="list_in_slide"
+              Content={ListInSlides}
+              documentClassName="in-document-capped"
+            />
           </section>
 
           <section class="demo-section" id="locking">

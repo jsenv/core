@@ -312,6 +312,14 @@ export const isMatchingFocusVisible = (el) => {
   return true;
 };
 
+// The current modality, for code deciding whether something it is about to
+// focus should show a ring — a slide arriving, a popup opening. The question is
+// "was the user on the keyboard when this was asked for", which is what this
+// flag says; the element that happens to hold the focus right now says nothing
+// about it (it may have been focused programmatically, ring or no ring, by the
+// travel before this one).
+export const isKeyboardModality = () => keyboardNavigationUsed;
+
 focus_classes: {
   // We implement :focus and :focus-visible with enriched semantics:
   // an element is considered focused not only when it natively has focus, but also

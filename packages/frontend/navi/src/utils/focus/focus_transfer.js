@@ -1,6 +1,6 @@
 import { findFocusable, getElementSignature } from "@jsenv/dom";
 
-import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
+import { isKeyboardModality } from "@jsenv/navi/src/box/pseudo_styles.js";
 
 /**
  * Decides which element receives focus when a container (popover, dialog, …)
@@ -9,10 +9,10 @@ import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
  * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
  * focus lands. Candidates are tried in this order:
  * 1. The element that held focus when the container was last closed, if it
- *    opted into that with "fallback" or "restore"
- * 2. [navi-autofocus] with any other value ("" for a plain `autoFocus`)
+ *    opted into that
+ * 2. [navi-autofocus] asking for it ("" for a plain `autoFocus`)
  * 3. The first focusable element
- * 4. [navi-autofocus="fallback"], the container itself included
+ * 4. [navi-autofocus="last-resort"], the container itself included
  * 5. The element focused before the container opened
  *
  * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
@@ -26,9 +26,14 @@ import { isMatchingFocusVisible } from "@jsenv/navi/src/box/pseudo_styles.js";
 // container which mark among its descendants is its own.
 let restoreIdCounter = 0;
 
+// The values that never ASK for the focus: one takes it for want of anything
+// better ("last-resort"), the other only takes it back ("restore"). What they
+// have in common is being worth giving back to — a container that was holding
+// the keyboard itself, a field that said it wants it, are both places one was,
+// and coming back to where one was is the whole point of a restore.
 const isRestorableAutofocus = (el) => {
   const value = el.getAttribute("navi-autofocus");
-  return value === "fallback" || value === "restore";
+  return value === "last-resort" || value === "restore";
 };
 
 const clearAutofocusRestore = (containerEl) => {
@@ -47,6 +52,29 @@ const clearAutofocusRestore = (containerEl) => {
   return lastFocused;
 };
 
+/**
+ * "When the focus comes back here, put it on this" — what transferFocus reads
+ * first when it next hands the focus to that container.
+ *
+ * Told rather than watched: whoever is about to take the focus away is the one
+ * moment that still knows what was holding it.
+ */
+export const markAutofocusRestore = (containerEl, element) => {
+  clearAutofocusRestore(containerEl);
+  if (!element || !(containerEl === element || containerEl.contains(element))) {
+    return;
+  }
+  const restoreId = `${++restoreIdCounter}`;
+  containerEl.setAttribute("navi-autofocus-restore", restoreId);
+  element.setAttribute("navi-autofocus-last-focused", restoreId);
+};
+
+// A popup closing remembers only what asked to be remembered: reopening a
+// dialog on whatever the mouse last touched inside it would be surprising,
+// while a field marked "restore" (or anything marked "last-resort") has said
+// that is what it wants. A slide has the opposite need and says so itself —
+// coming back to a slide is coming back to what one was doing, whatever that
+// was (see slide_container.jsx).
 export const markAutofocusRestoreOnClose = (containerEl) => {
   clearAutofocusRestore(containerEl);
   const focused = document.activeElement;
@@ -55,39 +83,52 @@ export const markAutofocusRestoreOnClose = (containerEl) => {
     (containerEl === focused || containerEl.contains(focused)) &&
     isRestorableAutofocus(focused)
   ) {
-    const restoreId = `${++restoreIdCounter}`;
-    containerEl.setAttribute("navi-autofocus-restore", restoreId);
-    focused.setAttribute("navi-autofocus-last-focused", restoreId);
+    markAutofocusRestore(containerEl, focused);
   }
 };
 
 /**
  * Where the focus goes inside a container, in the order candidates are tried:
- * 1. [navi-autofocus] with a value of its own — "put it here";
- * 2. the first focusable that is not a fallback — what one came to do;
- * 3. the DEEPEST [navi-autofocus="fallback"] — "focus me if nothing inside me
- *    can", so a fallback holding another fallback yields to it. A slide says
- *    this about itself: it takes the keyboard only when it has nothing to
- *    offer, and never over what it contains;
+ * 1. the first [navi-autofocus] that leads somewhere focusable — "put it here";
+ * 2. the first focusable that asks for nothing in particular — what one came to
+ *    do;
+ * 3. the DEEPEST [navi-autofocus="last-resort"], the container itself included
+ *    — "not me, unless you have nothing else". Deepest first, because of two
+ *    nested ones the inner is the more precise answer: a dialog holding a panel
+ *    holding a close button lands on the button, not on the dialog;
  * 4. nothing, and the caller decides what that means.
  *
+ * One word covers both readings of "last resort", because they are the same
+ * sentence said by different elements. On a FOCUSABLE — a picker's search box,
+ * a panel's close button, a slide's chevron — it means "prefer anything else in
+ * here to me". On a CONTAINER — a dialog, a popover, a slide — it means the
+ * same about its own contents, and those contents being tried first (step 2
+ * walks them) is exactly what makes the container a last resort.
+ *
  * @param {HTMLElement} containerEl
- * @param {object} [options]
- * @param {(element: HTMLElement) => boolean} [options.exclude] - never land
- *   here (a slide's own way out, say).
  * @returns {{target: HTMLElement, reason: string}|undefined}
  */
-export const findFocusTarget = (containerEl, { exclude } = {}) => {
-  const skip = (element) =>
-    isRestorableAutofocus(element) || Boolean(exclude?.(element));
+export const findFocusTarget = (containerEl) => {
+  // Not while there is anything else: what takes the focus only for want of
+  // anything better ("last-resort") and what only takes it back ("restore").
+  // Neither is dropped, both are simply tried later — step 3 below for the
+  // first, and for the second the restore transferFocus does before ever
+  // calling here.
+  const skip = (element) => isRestorableAutofocus(element);
 
-  const asked = containerEl.querySelector(
-    `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
-  );
-  if (asked && !exclude?.(asked)) {
-    // The mark is not always ON the focusable itself — a control puts it on the
-    // box it renders, the field inside being what takes the keyboard.
-    const askedFocusable = findFocusable(asked, { exclude });
+  // Every mark, not just the first: a mark is only worth stopping at if it
+  // leads somewhere focusable. One inside a screen waiting its turn (an inert
+  // slide) says where the focus goes WHEN it arrives there, not now — so it is
+  // passed over here rather than treated as an answer that then fails silently.
+  for (const asked of containerEl.querySelectorAll(`[navi-autofocus]`)) {
+    if (skip(asked)) {
+      continue;
+    }
+    // Through findFocusable: the mark is not always ON the focusable itself — a
+    // control puts it on the box it renders, the field inside being what takes
+    // the keyboard — and it is also what answers "can this be focused at all"
+    // (inert, hidden, disabled).
+    const askedFocusable = findFocusable(asked, { exclude: skip });
     if (askedFocusable) {
       return { target: askedFocusable, reason: "navi-autofocus" };
     }
@@ -96,25 +137,27 @@ export const findFocusTarget = (containerEl, { exclude } = {}) => {
   if (focusable) {
     return { target: focusable, reason: "first focusable element" };
   }
-  const fallbacks = Array.from(
-    containerEl.querySelectorAll(`[navi-autofocus="fallback"]`),
+  const lastResorts = Array.from(
+    containerEl.querySelectorAll(`[navi-autofocus="last-resort"]`),
   );
-  if (containerEl.matches?.(`[navi-autofocus="fallback"]`)) {
+  if (containerEl.matches?.(`[navi-autofocus="last-resort"]`)) {
     // Last of all: querySelectorAll only looks at descendants, and the
-    // container is the outermost fallback there is.
-    fallbacks.push(containerEl);
+    // container is the outermost last resort there is.
+    lastResorts.push(containerEl);
   }
-  const deepestFallback = fallbacks.find(
+  const deepestLastResort = lastResorts.find(
     (candidate) =>
-      !exclude?.(candidate) &&
-      !fallbacks.some(
+      !lastResorts.some(
         (other) => other !== candidate && candidate.contains(other),
       ),
   );
-  if (deepestFallback) {
-    const fallbackFocusable = findFocusable(deepestFallback, { exclude });
-    if (fallbackFocusable) {
-      return { target: fallbackFocusable, reason: "navi-autofocus fallback" };
+  if (deepestLastResort) {
+    const lastResortFocusable = findFocusable(deepestLastResort);
+    if (lastResortFocusable) {
+      return {
+        target: lastResortFocusable,
+        reason: "navi-autofocus last-resort",
+      };
     }
   }
   return undefined;
@@ -122,7 +165,15 @@ export const findFocusTarget = (containerEl, { exclude } = {}) => {
 
 export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
   const focusedElement = getFocusedBeforeTransfer(prepareEvent);
-  const focusVisible = isMatchingFocusVisible(focusedElement);
+  // Whether what receives the focus shows a ring: the modality of the
+  // interaction asking for the transfer, not the state of the element handing
+  // it over. That element is often no witness at all — a popup opened from a
+  // trigger whose mousedown we prevented keeps a :focus-visible nobody can see,
+  // and a slide handing over to the next one was itself focused programmatically
+  // without a ring, so it would report "no ring" for a travel asked for with
+  // ArrowLeft. The modality answers "was the user on the keyboard when this was
+  // asked for", which is the whole question (see isKeyboardModality).
+  const focusVisible = isKeyboardModality();
 
   debugFocus(
     prepareEvent,
@@ -140,8 +191,14 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       let reason;
       const lastFocused = clearAutofocusRestore(containerEl);
       if (lastFocused) {
-        reason = "element focused when closed (restore)";
-        target = lastFocused;
+        // Through findFocusable: what was remembered may have become a wrapper
+        // since (or stopped taking focus at all), and what is inside it is then
+        // what the memory meant.
+        const stillFocusable = findFocusable(lastFocused);
+        if (stillFocusable) {
+          reason = "element focused when it was left (restore)";
+          target = stillFocusable;
+        }
       }
       if (!target) {
         const found = findFocusTarget(containerEl);
@@ -179,7 +236,7 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         `restore focus to previously focused element`,
         focusedElement,
       );
-      const restoreFocusVisible = isMatchingFocusVisible(focusedElement);
+      const restoreFocusVisible = isKeyboardModality();
       focusedElement.focus({
         preventScroll: true,
         focusVisible: restoreFocusVisible,
@@ -194,8 +251,10 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
 // meaning the focus did not yet reach the element receiving the mousedown
 // as a result document.activeElement is not up-to-date (can be document.body for instance)
 const getFocusedBeforeTransfer = (e) => {
-  const initiator =
-    e.detail && e.detail.eventChain ? e.detail.eventChain[0] : null;
+  // No event at all: a transfer asked for by code (a `current` prop moving a
+  // slide, say) has no interaction to read — whatever holds the focus is all
+  // there is to know.
+  const initiator = e?.detail?.eventChain ? e.detail.eventChain[0] : null;
   if (initiator) {
     if (initiator.type === "mousedown") {
       // if we we had let browser give focus, the element would be the one that would be focused

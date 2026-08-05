@@ -28,8 +28,10 @@
  * it is the same component in the document, in a dialog or in a popover.
  */
 
-import { findFocusable } from "@jsenv/dom";
-import { findFocusTarget } from "../utils/focus/focus_transfer.js";
+import {
+  markAutofocusRestore,
+  prepareFocusTransfer,
+} from "../utils/focus/focus_transfer.js";
 import { createContext } from "preact";
 import {
   useContext,
@@ -39,8 +41,8 @@ import {
   useState,
 } from "preact/hooks";
 import { Box } from "../box/box.jsx";
-import { isMatchingFocusVisible } from "../box/pseudo_styles.js";
 import { onNaviCommand } from "../control/commands.js";
+import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
 import {
   ChevronDownSvg,
@@ -58,6 +60,18 @@ const css = /* css */ `
      slide travels by exactly one box, so a short one and a tall one move the
      same distance. */
   .navi_slide_container {
+    /* The ring of the slide holding the keyboard is drawn HERE, on the
+       container, rather than on the slide: a slide is deliberately square (its
+       corners belong to this box, see [data-slide] below), so a ring drawn on
+       one would come out square inside a rounded box and cut across the curve.
+       Here it follows whatever radius this box was given.
+       Here rather than on the track for the other half of the reason: the track
+       is what travels, and a ring riding along would slide out of the frame for
+       the length of a travel. The two have the same geometry at rest, so
+       nothing is lost by drawing it on the one that stays still.
+       :has(), not a class set from JS: which slide is showing its focus is
+       something the DOM already says. */
+    position: relative;
     display: grid;
     min-width: 0;
     min-height: 0;
@@ -73,6 +87,24 @@ const css = /* css */ `
     border-radius: inherit;
     overflow: hidden;
 
+    &:has([data-slide][data-focus-visible])::after {
+      position: absolute;
+      inset: var(--navi-slide-outline-gap, 1px);
+      z-index: 1;
+      border: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      border-radius: inherit;
+      pointer-events: none;
+      /* An overlay, not an outline: an outline is painted UNDER the backgrounds
+         of what the slide contains, so a slide with a header — the usual shape
+         — would show the ring everywhere except along its header. Same trick
+         the wheel uses for its own (see .navi_wheel_focus_ring).
+         Inside the box, since the box clips its overflow and anything drawn
+         outside it would simply not appear, with a pixel of gap so it reads as
+         a ring rather than as a border of the box. */
+      content: "";
+    }
+
     /* ONE thing moves: the track. The slides are laid out once and for all,
        each at its own place on the map, and never transition — so two
        neighbours cannot end up a pixel apart mid-travel the way two transitions
@@ -83,6 +115,7 @@ const css = /* css */ `
       min-width: 0;
       min-height: 0;
       grid-area: 1 / 1;
+      border-radius: inherit;
       translate: var(--slide-container-offset, 0);
       transition: translate var(--slide-container-duration, 300ms) ease;
 
@@ -100,6 +133,9 @@ const css = /* css */ `
            above) — so what one sees is rounded at rest and butt-jointed in
            motion, with nothing between two slides at any point of the travel. */
         border-radius: 0;
+        /* Never on the slide: the ring is drawn on the container above, which
+           is where the corners are. */
+        outline: none;
         /* Its place on the map, in boxes — not a movement: same percentage
            reference as the track's own (both are the size of the box), so the
            distance the track travels is exactly the distance between two
@@ -164,41 +200,6 @@ const lineAreas = (slideElements, layout) => {
 const readArea = (slideElement) =>
   slideElement.getAttribute("data-slide-area") || slideElement.id || "";
 
-// What each slide had under the keyboard when it gave it up. Per slide, not one
-// per container: coming back from the third slide to the first must land where
-// the first was left, which a single "previous focus" could not remember.
-const focusMemory = new WeakMap();
-
-/**
- * Where the keyboard goes when a slide arrives. What this slide last had wins
- * over everything: coming back is coming back to where one was, chevron
- * included. Failing a memory, the ladder every container uses (findFocusTarget)
- * answers — the slide itself being marked navi-autofocus="fallback", so it
- * takes the keyboard only when it has nothing else to offer.
- */
-const findFocusTargetInSlide = (slideElement) => {
-  const remembered = focusMemory.get(slideElement);
-  if (remembered && slideElement.contains(remembered)) {
-    // Where the keyboard was when this slide was left: coming back is coming
-    // back to what one was doing, not to the top of the slide. Through
-    // findFocusable, because what was focused may have become a wrapper since
-    // (or stopped taking focus at all).
-    const stillFocusable = findFocusable(remembered);
-    if (stillFocusable) {
-      return stillFocusable;
-    }
-  }
-  // A slide is opened to DO something in it, and its prev/next buttons are how
-  // one leaves — landing there means the first thing offered is going away
-  // again. So the ways out are skipped, and the slide itself (a fallback, see
-  // Slide) takes the keyboard when it has nothing else to offer.
-  const found = findFocusTarget(slideElement, {
-    exclude: (element) =>
-      element !== slideElement && Boolean(element.closest("[data-slide-nav]")),
-  });
-  return found?.target;
-};
-
 /**
  * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
  * left to the container, which then answers the
@@ -219,23 +220,30 @@ const findFocusTargetInSlide = (slideElement) => {
  *   written is simply not there.
  * @param {string} [props.current] - area (or id) of the slide being shown; omit
  *   to keep it here and drive it by command.
+ * @param {string} [props.defaultCurrent] - which slide to open on, when the
+ *   travel is left to the container. Mount-only, like every other `default*`:
+ *   it says where one starts, not where one is — say `current` for that.
+ *   Without it the first slide is the one shown, the way a stack of pages opens
+ *   on its first page.
  * @param {(area: string) => void} [props.onCurrentChange]
  * @param {string} [props.duration="300ms"] - how long a slide change takes.
  */
 export const SlideContainer = ({
   layout = "row",
   current: currentProp,
+  defaultCurrent,
   onCurrentChange,
   duration = "300ms",
   children,
   ...rest
 }) => {
   import.meta.css = css;
+  const debugFocus = useDebugFocus();
   const trackRef = useRef();
-  // The area of the slide being shown, not its rank: a rank would be wrong the
+  // The AREA of the slide being shown, not its rank: a rank would be wrong the
   // moment a slide appears before it, and there is nothing to renumber here.
-  const [currentState, setCurrentState] = useState(undefined);
-  const current = currentProp ?? currentState;
+  const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
+  const current = currentProp ?? currentAreaState;
   const vertical = layout === "column";
   // Which required slides have been answered (see Slide's own `required`). Held
   // here rather than in each slide because answering one says something about
@@ -264,10 +272,10 @@ export const SlideContainer = ({
   // A slide reporting that what it was there for is done (see Slide's own
   // onnavi_done). Onwards, or back to where it came from when there is nothing
   // after it — a step that has been answered is not a step to stay on.
-  const done = (area) => {
+  const done = (area, event) => {
     markAnswered(area);
-    if (!moveNext()) {
-      movePrevious();
+    if (!moveNext(event)) {
+      movePrevious(event);
     }
   };
 
@@ -292,24 +300,17 @@ export const SlideContainer = ({
       x: 0,
       y: 0,
     };
-    // Read before anything is marked: setting inert below moves the focus out
-    // by itself, so afterwards there is no way to tell whether it was inside.
-    const slideLosingFocus = slideElements.find(
+    // Read before anything is marked: setting inert below moves the focus out by
+    // itself, so afterwards there is no way to tell whether it was inside. A
+    // travel asked for from inside has already handed the focus over (see
+    // goToArea) and this is false by then; what is left here is the travel
+    // nobody asked for — a `current` prop moved from outside, with the keyboard
+    // still on the slide about to go out of reach.
+    const focusIsLeaving = slideElements.some(
       (slideElement) =>
         slideElement !== currentElement &&
         slideElement.contains(document.activeElement),
     );
-    // Not on screen: out of reach for the pointer, for Tab and for a screen
-    // reader, so only the slide shown answers. inert rather than aria-hidden +
-    // pointer-events: aria-hidden over something focused is refused by the
-    // browser (and rightly — it would hide from assistive technology the very
-    // thing the keyboard is on), while inert takes the focus away instead of
-    // lying about it.
-    const focusWasLeaving = Boolean(slideLosingFocus);
-    let focusVisible = false;
-    if (slideLosingFocus) {
-      focusVisible = isMatchingFocusVisible(document.activeElement);
-    }
     for (const slideElement of slideElements) {
       const { x, y } = placeOf.get(readArea(slideElement)) || { x: 0, y: 0 };
       slideElement.style.setProperty(
@@ -329,21 +330,12 @@ export const SlideContainer = ({
       "--slide-container-offset",
       `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`,
     );
-    // The keyboard was on the slide leaving — usually on the very button that
-    // asked to leave it. inert drops that focus on the floor (document.body),
-    // so it is handed to the slide arriving instead: the next Tab starts where
-    // the eye is, and the button that answers Enter is one of those on screen.
-    // Not conditioned on the focus having already left: inert takes it away on
-    // its own schedule, and waiting for that would leave a frame where the
-    // keyboard is nowhere.
-    if (focusWasLeaving) {
-      const target = findFocusTargetInSlide(currentElement);
-      if (target) {
-        // The ring follows the modality, not the transfer: arriving by keyboard
-        // shows it, arriving by click does not — same reading as a popup
-        // handing focus to its content (see focus_transfer.js).
-        target.focus({ preventScroll: true, focusVisible });
-      }
+    // The keyboard is on a slide about to go out of reach and nobody has moved
+    // it: inert would drop it on the floor (document.body), so it is handed to
+    // the slide on screen instead. No event to read — this travel was asked for
+    // by code — so the transfer has nothing but the modality to go on.
+    if (focusIsLeaving) {
+      handOverFocus(currentElement, undefined);
     }
     // Out of reach LAST, once the keyboard has already moved on: a browser
     // takes the focus off an element the moment it becomes inert, and on its
@@ -358,7 +350,7 @@ export const SlideContainer = ({
    * @returns {boolean} whether it moved — false is "there was nowhere to go",
    *   which is what lets a key that changes nothing keep its own meaning.
    */
-  const goToArea = (area, { forward } = {}) => {
+  const goToArea = (area, { forward, event } = {}) => {
     const { slideElements } = readMap();
     const currentElement =
       slideElements.find((slideElement) =>
@@ -378,9 +370,41 @@ export const SlideContainer = ({
     ) {
       return false;
     }
-    setCurrentState(area);
+    // The focus moves here, while the event that asked for it is still in hand:
+    // who pressed what, and whether they were on the keyboard, is knowable now
+    // and gone a render later. The slide arriving is made reachable on the spot
+    // for that — it is out of reach only because it was not on screen, and it is
+    // about to be.
+    const arrivingElement = slideElements.find(
+      (slideElement) => readArea(slideElement) === area,
+    );
+    if (arrivingElement) {
+      const focusedElement = document.activeElement;
+      const focusIsLoose =
+        !focusedElement ||
+        focusedElement === document.body ||
+        currentElement.contains(focusedElement);
+      if (focusIsLoose) {
+        // What the slide being left was left on, so coming back comes back to
+        // it — the chevron one pressed included. Written down at the one moment
+        // it is known, rather than watched for at every focusin.
+        markAutofocusRestore(currentElement, focusedElement);
+        arrivingElement.removeAttribute("inert");
+        handOverFocus(arrivingElement, event);
+      }
+    }
+    setCurrentAreaState(area);
     onCurrentChange?.(area);
     return true;
+  };
+
+  // Hand the focus to a slide: what it was left on if it remembers something,
+  // and otherwise the ladder every container uses — which passes over the ways
+  // out (they say so themselves, see SlideNavButton) and ends on the slide
+  // itself, a fallback, when it has nothing to offer.
+  const handOverFocus = (slideElement, event) => {
+    const focusTransfer = prepareFocusTransfer(event, debugFocus);
+    focusTransfer.transferFocus(event, slideElement);
   };
 
   /**
@@ -411,18 +435,22 @@ export const SlideContainer = ({
       return area;
     }
   };
-  const move = (dx, dy) =>
-    goToArea(areaTowards(dx, dy), { forward: dx > 0 || dy > 0 });
+  const move = (dx, dy, event) =>
+    goToArea(areaTowards(dx, dy), { forward: dx > 0 || dy > 0, event });
 
   // "next"/"previous" are the same movement said without a direction, which is
   // all a line ever needs: to the right, or downwards when that is where the
   // slides are. On a map they mean the same thing, and fall back to the other
   // axis when there is nothing that way — a step onwards, however the screens
   // happen to be arranged.
-  const moveNext = () =>
-    vertical ? move(0, 1) || move(1, 0) : move(1, 0) || move(0, 1);
-  const movePrevious = () =>
-    vertical ? move(0, -1) || move(-1, 0) : move(-1, 0) || move(0, -1);
+  const moveNext = (event) =>
+    vertical
+      ? move(0, 1, event) || move(1, 0, event)
+      : move(1, 0, event) || move(0, 1, event);
+  const movePrevious = (event) =>
+    vertical
+      ? move(0, -1, event) || move(-1, 0, event)
+      : move(-1, 0, event) || move(0, -1, event);
 
   // Arrows walk the map, Home/End jump to its ends — but only where those keys
   // mean nothing else: applyKeyboardShortcuts refuses to intercept a key the
@@ -432,18 +460,21 @@ export const SlideContainer = ({
   // move. A shortcut that moved nothing returns null and the key goes back to
   // the page (scrolling, most likely).
   const travelled = (moved) => (moved ? false : null);
-  const goToEnd = (last) => {
+  const goToEnd = (last, event) => {
     const { order } = readMap();
     const area = last ? order[order.length - 1] : order[0];
-    return goToArea(area, { forward: last });
+    return goToArea(area, { forward: last, event });
   };
+  // Each handler is given the key press that ran it, and hands it on: what the
+  // travel does about the focus is decided from the interaction that asked for
+  // it (see goToArea), so it has to reach that far.
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowright: () => travelled(move(1, 0)),
-    arrowleft: () => travelled(move(-1, 0)),
-    arrowdown: () => travelled(move(0, 1)),
-    arrowup: () => travelled(move(0, -1)),
-    home: () => travelled(goToEnd(false)),
-    end: () => travelled(goToEnd(true)),
+    arrowright: (e) => travelled(move(1, 0, e)),
+    arrowleft: (e) => travelled(move(-1, 0, e)),
+    arrowdown: (e) => travelled(move(0, 1, e)),
+    arrowup: (e) => travelled(move(0, -1, e)),
+    home: (e) => travelled(goToEnd(false, e)),
+    end: (e) => travelled(goToEnd(true, e)),
   });
 
   return (
@@ -460,7 +491,11 @@ export const SlideContainer = ({
       // Dispatch it (bubbling) from anywhere inside to move.
       onnavi_slide_move={(e) => {
         const { dx, dy } = e.detail;
-        move(dx, dy);
+        // `e`, not e.detail.event: a navi event carries the chain it came from
+        // (a --navi-right command carries the click that ran it, that click its
+        // own mousedown), and the focus transfer reads the whole chain to know
+        // where the interaction started.
+        move(dx, dy, e);
       }}
       // …and the protocol every command target answers: without this the
       // command resolves, finds this element, and nothing runs.
@@ -470,16 +505,6 @@ export const SlideContainer = ({
       onKeyDown={(e) => {
         onKeyDownShortcuts(e);
         rest.onKeyDown?.(e);
-      }}
-      // Written down as it happens rather than when the slide is left: what the
-      // keyboard was on IS what it was on, chevron included — one leaves a
-      // slide by pressing its "next", so that is where coming back belongs.
-      onfocusin={(e) => {
-        const slideElement = e.target.closest?.("[data-slide]");
-        if (slideElement) {
-          focusMemory.set(slideElement, e.target);
-        }
-        rest.onfocusin?.(e);
       }}
       style={{ "--slide-container-duration": duration, ...rest.style }}
     >
@@ -548,11 +573,12 @@ export const Slide = ({
         // -1 because it is not a stop on the way through the page: what one
         // Tabs to is what is IN the slide.
         tabIndex={-1}
-        // …and "focus me only if nothing inside me can": whoever hands the
-        // focus to a container — a popup opening, a slide arriving — reads this
-        // the same way (see findFocusTarget), and a fallback deeper than this
-        // one (a search box saying it too) still wins over it.
-        navi-autofocus="fallback"
+        // …and "not me, unless you have nothing else": whoever hands the focus
+        // to a container — a popup opening, a slide arriving — reads this the
+        // same way (see findFocusTarget), so the slide takes the keyboard only
+        // when it holds nothing that can, and anything inside saying the same
+        // thing (its own chevrons) still wins over it, being deeper.
+        navi-autofocus="last-resort"
         {...rest}
         // The protocol every command target answers — a slide is one now
         // (--navi-done). navi_command does not bubble, so the container's own
@@ -577,12 +603,26 @@ export const Slide = ({
         data-slide-area={slideArea}
         data-prevent-nav-next={nextIsLocked ? "" : undefined}
         data-prevent-nav-previous={preventNavPrevious ? "" : undefined}
+        // A slide is focusable (see tabIndex above) and is a surface one
+        // interacts with, so it says what state it is in the way every other
+        // surface does — a dialog carries the very same set. :focus-within is
+        // the one a slide is really about: it is what tells the slide holding
+        // the keyboard from the ones waiting.
+        pseudoClasses={SLIDE_PSEUDO_CLASSES}
       >
         {children}
       </Box>
     </SlideContext.Provider>
   );
 };
+
+const SLIDE_PSEUDO_CLASSES = [
+  ":hover",
+  ":active",
+  ":focus",
+  ":focus-visible",
+  ":focus-within",
+];
 
 const DIRECTIONS = {
   right: {
@@ -621,12 +661,13 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     // explainable (it can still be reached, hovered, described) — it just does
     // nothing while the slide is holding on to the user.
     readOnly={Boolean(locked)}
-    // The way OUT of a slide: marked so the focus arriving in one can prefer
-    // anything else (see findFocusTargetInSlide). Not navi-autofocus="fallback"
-    // — that attribute also makes an element claim the focus when it is the
-    // last thing left on a page (see useAutoFocus), which a chevron must never
-    // do.
-    data-slide-nav=""
+    // "not me, unless you have nothing else": arriving on a way out means the
+    // first thing offered is leaving again, so whoever hands out the focus —
+    // a slide arriving, a dialog holding slides opening — lands on what there
+    // is to do instead. It stays perfectly focusable by a click or by Tab, and
+    // a slide holding nothing but its chevrons does land on one: there was
+    // nothing else, which is exactly what this says.
+    autoFocus="last-resort"
     icon
     variant="discrete"
     // Takes the focus like any other button, on purpose. It used to refuse it
