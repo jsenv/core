@@ -103,9 +103,9 @@
           />
           <TableOfContents />
           <BasicsDemo />
+          <StatesDemo />
           <DimensionsDemo />
           <CustomizationDemo />
-          <StatesDemo />
           <ValueDemo />
           <MinDemo />
           <MaxDemo />
@@ -161,7 +161,7 @@
 
       const BasicsDemo = () => (
         <div class="demo-section">
-          <Heading id="basics">Le jour, celui d'avant, celui d'après</Heading>
+          <Heading id="nominal">Cas nominal</Heading>
           <p class="desc">
             Les flèches changent de jour, le centre ouvre le calendrier.
           </p>
@@ -339,6 +339,16 @@
             </Variant>
             <Variant caption="loading">
               <DayStepper defaultValue={TODAY} width="300px" loading />
+            </Variant>
+            {/* Held rather than obtained: the ring is what one sees when the
+                days have the keyboard, and here it is on the page next to the
+                other states instead of only under a Tab press. */}
+            <Variant caption="focus visible">
+              <DayStepper
+                defaultValue={TODAY}
+                width="300px"
+                pseudoState={{ ":focus-visible": true }}
+              />
             </Variant>
           </Box>
         </div>

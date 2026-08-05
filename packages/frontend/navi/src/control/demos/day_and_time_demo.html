@@ -62,6 +62,9 @@
         NaviDebug,
         Wheel,
         WheelGroup,
+        route,
+        setupRoutes,
+        stateSignal,
       } from "@jsenv/navi";
       import { DemoHeader } from "@jsenv/navi/src/internal/demo_header.jsx";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
@@ -88,30 +91,44 @@
       };
 
       const NOW = nowRoundedToStep();
+      const inDays = (count) => {
+        const date = new Date(`${NOW.day}T00:00:00`);
+        date.setDate(date.getDate() + count);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+      };
 
       const twoDigits = (value) => String(value).padStart(2, "0");
 
-      const DayAndTimeForm = ({ value, action }) => (
+      // Nothing for the day: what one is asked for is a day, and there is no
+      // reason to pretend one has already been chosen — the stepper opens on
+      // today by itself. The hour is the other way round: a time has to start
+      // somewhere on a wheel, and "now" is the only sensible somewhere.
+      const daySignal = stateSignal(undefined, { id: "day", type: "date" });
+      const hoursSignal = stateSignal(NOW.hours, {
+        id: "hours",
+        type: "number",
+      });
+      const minutesSignal = stateSignal(NOW.minutes, {
+        id: "minutes",
+        type: "number",
+      });
+
+      const DayAndTimeForm = ({
+        action,
+        dayProps,
+        hoursProps,
+        minutesProps,
+      }) => (
         <Form action={action} flex="y" className="datetime-panel">
           <Box flex="y" alignX="center" spacing="l" paddingBottom="m">
-            <Field as="label" flex="y" expandX>
-              Jour
-              <DayStepper
-                name="day"
-                value={value.day}
-                expandX
-                borderWidth="0"
-              />
+            <Field flex="y" expandX>
+              <Label>Jour</Label>
+              <DayStepper name="day" expandX borderWidth="0" {...dayProps} />
             </Field>
-            <Field as="label" flex="y" alignX="center">
-              Heure
+            <Field flex="y" alignX="center">
+              <Label>Heure</Label>
               <WheelGroup frameBorder>
-                <Wheel
-                  name="hours"
-                  type="integer"
-                  size="xxl"
-                  value={value.hours}
-                >
+                <Wheel name="hours" type="integer" size="xxl" {...hoursProps}>
                   {HOURS.map((hour) => (
                     <Wheel.Item key={hour} value={hour} paddingX="s">
                       {twoDigits(hour)}
@@ -125,7 +142,7 @@
                   name="minutes"
                   type="integer"
                   size="xxl"
-                  value={value.minutes}
+                  {...minutesProps}
                 >
                   {MINUTES.map((minute) => (
                     <Wheel.Item key={minute} value={minute} paddingX="s">
@@ -145,14 +162,35 @@
         </Form>
       );
 
-      const PanelDemo = () => (
+      const FirstVisitDemo = () => (
         <div class="demo-section">
-          <h2 id="panel">Panneau</h2>
-          <FakeBackend
-            value={{ day: NOW.day, hours: NOW.hours, minutes: NOW.minutes }}
-          >
+          <h2 id="first-visit">Première visite</h2>
+          <FakeBackend>
+            {({ action }) => (
+              <DayAndTimeForm
+                action={action}
+                dayProps={{ signal: daySignal }}
+                hoursProps={{ signal: hoursSignal }}
+                minutesProps={{ signal: minutesSignal }}
+              />
+            )}
+          </FakeBackend>
+        </div>
+      );
+
+      const ALREADY_SET = { day: inDays(2), hours: 9, minutes: 30 };
+
+      const AlreadySetDemo = () => (
+        <div class="demo-section">
+          <h2 id="already-set">Le backend a déjà un rendez-vous</h2>
+          <FakeBackend value={ALREADY_SET}>
             {({ value, action }) => (
-              <DayAndTimeForm value={value} action={action} />
+              <DayAndTimeForm
+                action={action}
+                dayProps={{ value: value.day }}
+                hoursProps={{ value: value.hours }}
+                minutesProps={{ value: value.minutes }}
+              />
             )}
           </FakeBackend>
         </div>
@@ -161,9 +199,20 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader title="Day and time demo" />
-          <PanelDemo />
+          <FirstVisitDemo />
+          <AlreadySetDemo />
         </Box>
       );
+
+      setupRoutes([
+        route("", {
+          searchParams: {
+            day: daySignal,
+            hours: hoursSignal,
+            minutes: minutesSignal,
+          },
+        }),
+      ]);
 
       render(
         <NaviDebug debugAll>

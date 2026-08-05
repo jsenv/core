@@ -78,7 +78,11 @@ const css = /* css */ `
      fills it, so its own ring would be drawn a pixel inside this border and
      two rings that close together read as a mistake. Same offer a dialog and a
      popover answer (data-focus-outline-delegate, see slide_container.jsx), and
-     the same reply — the delegate stands down. */
+     the same reply — the delegate stands down.
+     Said on this box too (the first selector): nothing focuses it for real —
+     it is the container that takes the keyboard — but it is where the ring is
+     drawn, so a demo can hold it there and show what it looks like. */
+  .navi_picker_stepper[data-focus-visible],
   .navi_picker_stepper:has(
     > [data-focus-outline-delegate][data-focus-visible]
   ) {
@@ -372,6 +376,9 @@ export const DayStepper = ({
       baseClassName="navi_picker_stepper"
       flex={vertical ? "y" : "x"}
       alignY="center"
+      // The states this box draws itself: the ring above is the one that is
+      // asked for by hand (pseudoState) as well as held for real.
+      pseudoClasses={PICKER_STEPPER_PSEUDO_CLASSES}
       data-vertical={vertical ? "" : undefined}
       data-readonly={readOnlyResolved ? "" : undefined}
       data-disabled={disabledResolved ? "" : undefined}
@@ -506,6 +513,8 @@ export const DayStepper = ({
     </Box>
   );
 };
+
+const PICKER_STEPPER_PSEUDO_CLASSES = [":hover", ":focus-visible"];
 
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only

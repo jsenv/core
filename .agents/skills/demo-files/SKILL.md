@@ -59,16 +59,26 @@ Shared furniture lives next to the source, not copy-pasted into each demo:
   was called with what, and from which event. Use it for `uiAction`/`action`
   rather than a paragraph describing when they fire.
 
-Shape that has worked out, in order:
+The first three sections are always the same three, in this order — a reader
+opening any component's demo finds the same beginning:
 
-1. `<DemoHeader>`, then a section holding `<DocumentToc>` — and, when the page
-   binds signals to the url, a "reset all" button beside it (set them to
-   `undefined`, which is what empties the url).
-2. The plain case first: the component with nothing on it.
-3. One section per concern, and never two concerns in one section — a section
+1. **`<DemoHeader>` + the table of contents** — a section holding
+   `<DocumentToc>`, and, when the page binds signals to the url, a "reset all"
+   button beside it (set them to `undefined`, which is what empties the url).
+2. **Cas nominal** — the component with nothing on it, doing the thing it is
+   for. Whatever the page goes on to show, this is what it looks like in normal
+   use.
+3. **États** — read-only, disabled, loading, focus visible, side by side. The
+   ones that cannot be obtained by sitting there (a focus ring) are HELD with
+   `pseudoState={{ ":focus-visible": true }}` so they are on the page like the
+   others rather than a Tab press away.
+
+Then the rest, in this shape:
+
+4. One section per concern, and never two concerns in one section — a section
    showing sizes shows nothing else; the one showing styles changes nothing else.
    Sub-headings (h3) for the variations inside it.
-4. The props that bound or drive the thing (`min`, `max`, `step`, `uiAction`)
+5. The props that bound or drive the thing (`min`, `max`, `step`, `uiAction`)
    last, one section each: `min` alone, then `max` alone, so each is seen doing
    its own thing (a `min` set to today makes the left way out unavailable at once).
 
