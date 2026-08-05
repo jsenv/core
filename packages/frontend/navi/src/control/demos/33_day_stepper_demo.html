@@ -146,6 +146,17 @@
         </Box>
       );
 
+      // What sits under the control, so a box that changes height is something
+      // one sees move rather than something one is told about.
+      const UnderText = ({ children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          {children}
+          <Text size="s" color="#666">
+            le texte en dessous
+          </Text>
+        </Box>
+      );
+
       // ── Basics ────────────────────────────────────────────────────────────
 
       const BasicsDemo = () => (
@@ -176,36 +187,61 @@
             Un jour trop long pour la boîte
           </Heading>
           <p class="desc">
-            Étroit, et sans rien d'autre : le nombre de lignes change avec le
-            jour, donc la hauteur aussi. Les flèches, et ce qui suit bouge.
+            Étroit : certains jours tiennent sur une ligne, d'autres non.
           </p>
-          <Box flex="y" spacing="l" alignX="start">
-            <Variant caption='width="180px"'>
-              <Box flex="y" spacing="xs" alignX="start">
-                <DayStepper defaultValue={TODAY} width="180px" />
-                <Text size="s" color="#c62828">
-                  ce texte se fait pousser
-                </Text>
-              </Box>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DayStepper defaultValue={day(4)} width="220px" />
+              </UnderText>
             </Variant>
-            <Variant caption="maxLines={2}">
-              <Box flex="y" spacing="xs" alignX="start">
-                <DayStepper defaultValue={TODAY} width="180px" maxLines={2} />
-                <Text size="s" color="#2e7d32">
-                  ce texte ne bouge pas
-                </Text>
-              </Box>
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DayStepper defaultValue={TODAY} width="220px" />
+              </UnderText>
             </Variant>
-            <Variant caption='height="34px"'>
-              <Box flex="y" spacing="xs" alignX="start">
-                <DayStepper defaultValue={TODAY} width="180px" height="34px" />
-                <Text size="s" color="#2e7d32">
-                  ce texte ne bouge pas
-                </Text>
-              </Box>
+          </Box>
+
+          <p class="desc" style="margin-top: 28px">
+            <code>maxLines={1}</code> : une ligne, coupée au besoin.
+          </p>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DayStepper defaultValue={day(4)} width="220px" maxLines={1} />
+              </UnderText>
             </Variant>
-            <Variant caption="maxLines={1}">
-              <DayStepper defaultValue={TODAY} width="180px" maxLines={1} />
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DayStepper defaultValue={TODAY} width="220px" maxLines={1} />
+              </UnderText>
+            </Variant>
+          </Box>
+
+          <p class="desc" style="margin-top: 28px">
+            <code>maxLines={2}</code> avec <code>height</code> : deux lignes au
+            plus, dans une boîte qui ne bouge pas.
+          </p>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DayStepper
+                  defaultValue={day(4)}
+                  width="220px"
+                  maxLines={2}
+                  height="46px"
+                />
+              </UnderText>
+            </Variant>
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DayStepper
+                  defaultValue={TODAY}
+                  width="220px"
+                  maxLines={2}
+                  height="46px"
+                />
+              </UnderText>
             </Variant>
           </Box>
 
