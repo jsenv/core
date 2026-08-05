@@ -165,7 +165,6 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useRef } from "preact/hooks";
       import { useSignal } from "@preact/signals";
       import {
         Box,
@@ -244,9 +243,6 @@
         // capitalized: JSX reads a lowercase name as an html tag, and props are
         // camelCase — so the prop is createForm and the element is <CreateForm>
         const CreateForm = createForm;
-        // The container itself, for the one travel nothing on screen asks for:
-        // going back to the list once an entry is deleted.
-        const slideContainerRef = useRef();
         const searchSignal = useSignal("");
 
         // Without a search, the ones used recently come first: that is the tap
@@ -323,7 +319,15 @@
               // screen is reached from the list, and it returns there whatever
               // the map looks like.
               command="--navi-back"
-              action={(values) => submitEdit(entry, values)}
+              // One form, two ways to send it: which button asked comes in with
+              // the values (a button carries a name and a value like any
+              // field), and where to go afterwards is that button's own
+              // business — see the Supprimer button's formCommand.
+              action={(values) =>
+                values.intent === "delete"
+                  ? deleteEntry(entry)
+                  : submitEdit(entry, values)
+              }
               flex="y"
               overflow="auto"
               expandY
@@ -342,16 +346,23 @@
                 <CreateForm key={entry?.id} entry={entry} />
               </Box>
               <Box footer padding="m" paddingY="s" className="form-actions">
-                <Button command="--navi-send" paddingY="s">
+                <Button
+                  command="--navi-send"
+                  name="intent"
+                  value="save"
+                  paddingY="s"
+                >
                   Enregistrer
                 </Button>
-                {/* `action`, not a command: this button runs something of its
-                    own, which is not what the form around it is for — an action
-                    is how a button says so, and it gets the loading state and
-                    the error reporting that come with one. Where to go once the
-                    entry is gone is decided in deleteEntry. */}
+                {/* Sends the same form — so the whole screen goes read-only
+                    while it runs, which is what one wants of a deletion — and
+                    says where it goes afterwards, which is not where saving
+                    goes. */}
                 <Button
-                  action={() => deleteEntry(entry)}
+                  command="--navi-send"
+                  name="intent"
+                  value="delete"
+                  formCommand={`--navi-go-to-slide:${id}_pick`}
                   variant="discrete"
                   paddingY="s"
                 >
@@ -367,15 +378,8 @@
           if (value && value.id === entry.id) {
             onChange(null);
           }
-          // Back to the list: nothing follows a deletion on its own, so it is
-          // said here — as a command dispatched at the container, the same one
-          // a button would have carried.
-          slideContainerRef.current?.dispatchEvent(
-            new CustomEvent("navi_slide_go_to", {
-              bubbles: true,
-              detail: { area: `${id}_pick` },
-            }),
-          );
+          // Where to go is not decided here either: the button that sent said
+          // it (formCommand), the same way the form says it for a save.
         };
 
         return (
@@ -417,7 +421,6 @@
                     comes from below; editing is about one entry of the list, so
                     it comes from its side — see slide_container.jsx */}
                 <SlideContainer
-                  ref={slideContainerRef}
                   layout={[`${id}_pick ${id}_edit`, `${id}_create`]}
                   // The arrows walk the list of candidates, not the map: a
                   // screen here is reached by asking for it (the pencil, the
