@@ -629,19 +629,22 @@ const SlideNavButton = ({ ChevronSvg, locked, ...rest }) => (
     data-slide-nav=""
     icon
     variant="discrete"
-    // Never takes the focus: a chevron pressed with the mouse would hold it for
-    // the length of one travel and then lose it to the slide arriving — and,
-    // worse, the slide left behind would REMEMBER the chevron as the last thing
-    // it had (see focusMemory), so the next arrival would land on a way out
-    // instead of on what one was doing. Preventing the mousedown default leaves
-    // the focus where the user put it, which is what makes arrivals
-    // predictable — the same trick a callout uses to stay out of the way of its
-    // input.
+    // Takes the focus like any other button, on purpose. It used to refuse it
+    // (mousedown.preventDefault) to keep the keyboard where the user had put
+    // it — but pressing a way out with nothing focused then left the keyboard
+    // on nothing at all: the travel below only hands the focus to the slide
+    // arriving when it was leaving a slide, so a click from document.body
+    // arrived on document.body, and the next Tab started from the top of the
+    // page rather than from what is on screen.
+    //
+    // Letting it focus is both the plain behaviour of a button and what makes
+    // the rest fall into place: the press lands on the chevron, the slide left
+    // behind remembers it (see focusMemory) and hands the keyboard to the slide
+    // arriving, which prefers anything but its own ways out (see
+    // findFocusTargetInSlide) — so one arrives on what there is to do. Coming
+    // back the other way lands on the chevron one left by, which is where the
+    // eye and the hand already are.
     {...rest}
-    onMouseDown={(e) => {
-      e.preventDefault();
-      rest.onMouseDown?.(e);
-    }}
   >
     {/* An affordance, not a character: it is sized to be aimed at, so it may be
         drawn bigger than the text it sits next to. A slide with no way out
