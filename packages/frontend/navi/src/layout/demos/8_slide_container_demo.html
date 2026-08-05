@@ -774,6 +774,29 @@
         </SizingFrame>
       );
 
+      // Nothing focusable inside, so the slide itself takes the keyboard as soon
+      // as the popup opens — which is the case the popup's own ring is for.
+      const FocusRingSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <Slide id="focus_ring_first" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>first</Text>
+            </Box>
+            <Box body padding="m">
+              <Text>press →</Text>
+            </Box>
+          </Slide>
+          <Slide id="focus_ring_second" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>second</Text>
+            </Box>
+            <Box body padding="m">
+              <Text>press ←</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
       const StateSlide = ({
         rounded,
         borderWidth = "1",
@@ -1165,25 +1188,46 @@
 
           <section class="demo-section" id="states">
             <Heading id="states">What a slide looks like</Heading>
-            <p>A box, plus a ring when it holds the keyboard.</p>
-            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
-              <StateSlide>square</StateSlide>
-              <StateSlide focusVisible>square</StateSlide>
-            </Box>
-            <p>
-              …with a <code>borderRadius</code> on the container:
-            </p>
-            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
-              <StateSlide rounded>rounded</StateSlide>
-              <StateSlide rounded focusVisible>
+            <p>A box: what one sees is what it was given.</p>
+            <Box flex="y" spacing="l" alignX="start">
+              <StateSlide caption="plain">square</StateSlide>
+              <StateSlide rounded caption='borderRadius="12px"'>
                 rounded
               </StateSlide>
-            </Box>
-            <p>…with a border of its own:</p>
-            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide
                 borderWidth="3"
                 borderColor="#f57c00"
+                caption='borderWidth="3"'
+              >
+                bordered
+              </StateSlide>
+              <StateSlide
+                backgroundColor="#fdf1e0"
+                caption='backgroundColor="#fdf1e0" on the slide'
+              >
+                on its own paper
+              </StateSlide>
+            </Box>
+            <p class="demo-note">
+              Round the container, never a slide: two rounded slides passing
+              each other leave a pinched gap for the length of the travel.
+            </p>
+          </section>
+
+          <section class="demo-section" id="focus-outline">
+            <Heading id="focus-outline">The focus outline</Heading>
+            <p>The slide holding the keyboard, ringed by its container.</p>
+            <Box flex="y" spacing="l" alignX="start">
+              <StateSlide focusVisible caption="plain">
+                square
+              </StateSlide>
+              <StateSlide rounded focusVisible caption='borderRadius="12px"'>
+                rounded
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                focusVisible
                 caption='borderWidth="3"'
               >
                 bordered
@@ -1193,32 +1237,32 @@
                 borderColor="#f57c00"
                 rounded
                 focusVisible
-                caption="…rounded, and holding the keyboard"
+                caption='borderWidth="3" + borderRadius="12px"'
               >
-                bordered
+                both
               </StateSlide>
             </Box>
-            <p>…and with a background on the slide:</p>
-            <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
-              <StateSlide
-                backgroundColor="#fdf1e0"
-                caption='backgroundColor="#fdf1e0"'
-              >
-                on its own paper
-              </StateSlide>
-              <StateSlide
-                rounded
-                backgroundColor="#e8f5e9"
-                caption="…rounded, and holding the keyboard"
-                focusVisible
-              >
-                on its own paper
-              </StateSlide>
-            </Box>
-            <p class="demo-note">
-              Round the container, never a slide: two rounded slides passing
-              each other leave a pinched gap for the length of the travel.
-            </p>
+            <p>…and in a popup, where the popup carries it:</p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>In a dialog</h3>
+                <Button command="--navi-open" commandFor="focus_ring_dialog">
+                  Open the dialog
+                </Button>
+                <Dialog id="focus_ring_dialog" minWidth="260px" flex="y">
+                  <FocusRingSlides />
+                </Dialog>
+              </div>
+              <div class="demo-way">
+                <h3>In a popover</h3>
+                <Button command="--navi-toggle" commandFor="focus_ring_popover">
+                  Open the popover
+                </Button>
+                <Popover id="focus_ring_popover" minWidth="260px" flex="y">
+                  <FocusRingSlides />
+                </Popover>
+              </div>
+            </div>
           </section>
 
           <section class="demo-section" id="sizing">

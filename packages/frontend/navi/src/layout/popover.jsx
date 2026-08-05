@@ -240,7 +240,12 @@ const css = /* css */ `
       display: none !important;
     }
 
-    &[data-focus-visible] {
+    &[data-focus-visible],
+    /* …or a slide filling it holds the keyboard: its own container would draw
+       the ring on the very edge this popover already outlines, one pixel in and
+       clipped by it — so the popover draws it instead (see slide_container.jsx,
+       which stands down for this case). */
+    &:has(> .navi_slide_container [data-slide][data-focus-visible]) {
       outline-style: solid;
     }
 

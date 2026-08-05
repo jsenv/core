@@ -90,21 +90,32 @@ const css = /* css */ `
     /* An element of its own (see the JSX), not an outline on this box — same
        shape as the wheel's own ring, drawn the same way (see
        .navi_wheel_focus_ring). It comes after the slides in the DOM, which is
-       what puts it above them; nothing to raise. */
+       what puts it above them; nothing to raise.
+       Its box is the padding box (that is what an absolutely positioned child
+       is placed against), so whatever border this container was given is
+       already out of the way — and it is inset by twice the ring's width on top
+       of that, which is exactly what an outline drawn one width OUTWARD needs
+       to land just inside the box rather than under the border, where this
+       box's own overflow would clip it. */
     > .navi_slide_focus_ring {
       position: absolute;
-      /* A pixel in from the edge, so the ring reads as a ring rather than as a
-         border of the box. */
-      inset: var(--navi-slide-outline-gap, 1px);
+      inset: calc(2 * var(--navi-focus-outline-width));
       border-radius: inherit;
       pointer-events: none;
     }
     &:has([data-slide][data-focus-visible]) > .navi_slide_focus_ring {
-      /* Inward: this box clips its overflow, and an outline drawn outside the
-         ring's own box would land where nothing is painted. */
       outline: var(--navi-focus-outline-width) solid
         var(--navi-focus-outline-color);
-      outline-offset: calc(-1 * var(--navi-focus-outline-width));
+      outline-offset: var(--navi-focus-outline-width);
+    }
+    /* …unless the popup itself draws it: a container filling a dialog or a
+       popover has its ring land on the very edge the popup already outlines,
+       and two rings a pixel apart read as a mistake. The popup takes it over
+       (see dialog.jsx / popover.jsx). */
+    :where(dialog, [popover])
+      > &:has([data-slide][data-focus-visible])
+      > .navi_slide_focus_ring {
+      outline: none;
     }
 
     /* ONE thing moves: the track. The slides are laid out once and for all,

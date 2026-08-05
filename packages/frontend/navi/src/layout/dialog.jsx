@@ -288,7 +288,12 @@ const css = /* css */ `
       }
     }
 
-    &[data-focus-visible] {
+    &[data-focus-visible],
+    /* …or a slide filling it holds the keyboard: its own container would draw
+       the ring on the very edge this dialog already outlines, one pixel in and
+       clipped by it — so the dialog draws it instead (see slide_container.jsx,
+       which stands down for this case). */
+    &:has(> .navi_slide_container [data-slide][data-focus-visible]) {
       outline-style: solid;
     }
 
