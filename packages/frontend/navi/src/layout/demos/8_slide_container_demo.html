@@ -195,54 +195,6 @@
       .in-document-capped > .navi_slide_container {
         height: 260px;
       }
-      /* The map, shown through its own window: what a slide container normally
-         hides (every slide but one, each parked at its place on the map) is
-         made visible here — the window is what clips, and it is deliberately
-         several cells wide instead of one.
-         Exactly 3 cells by 3, so the grid fills it edge to edge: what one sees
-         is the map itself, sliding, with nothing around it to read as part of
-         the box. */
-      .map-window {
-        --map-cell-width: 120px;
-        --map-cell-height: 80px;
-
-        display: flex;
-        width: calc(3 * var(--map-cell-width));
-        height: calc(3 * var(--map-cell-height));
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #cfd8e3;
-        overflow: hidden;
-      }
-      /* The container itself keeps its size (one cell) — only its clipping is
-         given up, so the slides waiting around it are drawn instead of cut. */
-      .map-window .navi_slide_container {
-        overflow: visible;
-      }
-      .map-cell {
-        width: var(--map-cell-width);
-        height: var(--map-cell-height);
-        color: #37474f;
-        font-size: 0.85rem;
-        font-family: ui-monospace, monospace;
-        background: #ffffff;
-        border: 1px solid #b0bec5;
-      }
-      /* The checkerboard: one square in two is tinted, so a move of one cell
-         reads as a move even when both cells are empty. */
-      .map-cell-odd {
-        background: #e8eef7;
-      }
-      /* Waiting its turn: drawn, but plainly not the one being shown. */
-      .map-window [data-slide-displaced] {
-        opacity: 0.35;
-      }
-      .map-window [data-current] {
-        color: white;
-        background: #1a237e;
-        border-color: #1a237e;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-      }
       /* The states row: several small boxes side by side, each showing one
          state of the same slide. */
       .states {
@@ -608,8 +560,10 @@
       // drawn faintly around what is being shown: the arrangement one writes in
       // `layout` IS what one sees, and moving is the map sliding under it.
       const MAP_SIDE = 6;
-      // Where it opens: a cell with neighbours on all four sides, so the window
-      // is full from the start.
+      const MAP_CELL_WIDTH = 64;
+      const MAP_CELL_HEIGHT = 44;
+      // Where it opens: the middle of the map, so there is somewhere to go in
+      // all four directions from the start.
       const MAP_MIDDLE = 2;
       const MAP_CELLS = Array.from({ length: MAP_SIDE }, (_, y) =>
         Array.from({ length: MAP_SIDE }, (_, x) => ({
@@ -623,55 +577,118 @@
         row.map((cell) => cell.area).join(" "),
       );
 
-      const MapReveal = () => (
-        <div>
-          <div class="map-window">
-            {/* Opened on the middle of the map rather than on its corner: with
-                a cell on every side, the window is full and what one sees is
-                the grid, not the grid and the room around it. */}
-            <SlideContainer
-              id="map_reveal"
-              layout={MAP_LAYOUT}
-              defaultCurrent={`cell_${MAP_MIDDLE}_${MAP_MIDDLE}`}
-              duration={useSlideDuration()}
+      const MapReveal = () => {
+        // Driven from here (`current` + `onCurrentChange`) rather than left to
+        // the container: knowing which cell is on show is what lets each one be
+        // told how to look, in props, instead of a stylesheet reaching for
+        // [data-current] behind the demo's back.
+        const [current, setCurrent] = useState(
+          `cell_${MAP_MIDDLE}_${MAP_MIDDLE}`,
+        );
+        return (
+          <div>
+            {/* The window: eleven cells across, which is what it takes for a 6×6
+                map to stay wholly inside it wherever it has slid to (five cells
+                of travel either way, plus the one on show). The map never leaves
+                the frame — one simply watches it move. */}
+            <Box
+              flex
+              alignX="center"
+              alignY="center"
+              width={`${(2 * MAP_SIDE - 1) * MAP_CELL_WIDTH}px`}
+              height={`${(2 * MAP_SIDE - 1) * MAP_CELL_HEIGHT}px`}
+              overflow="hidden"
+              borderWidth="1"
+              borderColor="#cfd8e3"
             >
-              {MAP_CELLS.flat().map(({ x, y, area, label }) => (
-                <Slide
-                  key={area}
-                  id={area}
-                  alignX="center"
-                  alignY="center"
-                  className={`map-cell ${(x + y) % 2 ? "map-cell-odd" : ""}`}
-                >
-                  {label}
-                </Slide>
-              ))}
-            </SlideContainer>
+              {/* Showing what it would normally hide: `overflow="visible"` is
+                  the whole trick — the container keeps its size (one cell, drawn
+                  here as a dashed frame) and simply stops cutting off the slides
+                  parked around it. */}
+              <SlideContainer
+                id="map_reveal"
+                layout={MAP_LAYOUT}
+                current={current}
+                onCurrentChange={setCurrent}
+                duration={useSlideDuration()}
+                overflow="visible"
+                outline="2px dashed #90caf9"
+                outlineOffset="2px"
+              >
+                {MAP_CELLS.flat().map(({ x, y, area, label }) => {
+                  const isCurrent = area === current;
+                  return (
+                    <Slide
+                      key={area}
+                      id={area}
+                      width={`${MAP_CELL_WIDTH}px`}
+                      height={`${MAP_CELL_HEIGHT}px`}
+                      alignX="center"
+                      alignY="center"
+                      borderWidth="1"
+                      borderColor={isCurrent ? "#1a237e" : "#b0bec5"}
+                      // One square in two tinted, so a move of one cell reads as
+                      // a move even between two empty cells.
+                      backgroundColor={
+                        isCurrent
+                          ? "#1a237e"
+                          : (x + y) % 2
+                            ? "#e8eef7"
+                            : "white"
+                      }
+                      color={isCurrent ? "white" : "#37474f"}
+                      // Waiting its turn: drawn, but plainly not the one on show.
+                      opacity={isCurrent ? 1 : 0.35}
+                      bold={isCurrent}
+                      fontSize="0.8rem"
+                      fontFamily="ui-monospace, monospace"
+                    >
+                      {label}
+                    </Slide>
+                  );
+                })}
+              </SlideContainer>
+            </Box>
+            {/* Aimed at the container by id: the same four commands its own
+                chevrons use, said from outside it. */}
+            <div class="demo-row" style="margin-top: 12px">
+              <SlideContainer.Left commandFor="map_reveal" />
+              <SlideContainer.Right commandFor="map_reveal" />
+              <SlideContainer.Up commandFor="map_reveal" />
+              <SlideContainer.Down commandFor="map_reveal" />
+              <span class="demo-note">
+                …or click a cell and use the arrow keys. The dashed frame is the
+                container itself — one cell, the only thing that would be on
+                show if it clipped its overflow as it normally does.
+              </span>
+            </div>
           </div>
-          {/* Aimed at the container by id: the same four commands its own
-              chevrons use, said from outside it. */}
-          <div class="demo-row" style="margin-top: 12px">
-            <SlideContainer.Left commandFor="map_reveal" />
-            <SlideContainer.Right commandFor="map_reveal" />
-            <SlideContainer.Up commandFor="map_reveal" />
-            <SlideContainer.Down commandFor="map_reveal" />
-            <span class="demo-note">
-              …or click a cell and use the arrow keys.
-            </span>
-          </div>
-        </div>
-      );
+        );
+      };
 
       // One box, one state: the same slide shown at rest and showing its focus,
       // so what the ring looks like — and where it is drawn — can be read off
       // the page rather than described.
-      const StateSlide = ({ rounded, focusVisible, children }) => (
+      const StateSlide = ({
+        rounded,
+        focusVisible,
+        backgroundColor,
+        caption,
+        children,
+      }) => (
         <div class="state">
           <div class={`state-frame ${rounded ? "state-frame-rounded" : ""}`}>
             <SlideContainer duration={useSlideDuration()}>
               <Slide
-                id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}`}
+                id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}${backgroundColor ? "_bg" : ""}`}
                 overflow="auto"
+                // A background of its own, when it wants one: a slide is a box,
+                // so it takes the same prop as any other. Worth showing because
+                // it is the one that changes what a travel LOOKS like — a slide
+                // with a background of its own passes in front of what is behind
+                // it, where a transparent one lets the container's own show
+                // through all the way.
+                backgroundColor={backgroundColor}
                 // Held on, not obtained: `pseudoState` overrides what the box
                 // would have worked out for itself (see box.jsx), which is what
                 // puts both states on the page at once, side by side, without
@@ -696,7 +713,7 @@
             </SlideContainer>
           </div>
           <figcaption>
-            {focusVisible ? "holding the keyboard" : "at rest"}
+            {caption ?? (focusVisible ? "holding the keyboard" : "at rest")}
           </figcaption>
         </div>
       );
@@ -1052,6 +1069,26 @@
               <StateSlide rounded>rounded</StateSlide>
               <StateSlide rounded focusVisible>
                 rounded
+              </StateSlide>
+            </div>
+            <p>
+              And a slide given a background of its own — the same prop any box
+              takes:
+            </p>
+            <div class="states">
+              <StateSlide
+                backgroundColor="#fdf1e0"
+                caption='backgroundColor="#fdf1e0"'
+              >
+                on its own paper
+              </StateSlide>
+              <StateSlide
+                rounded
+                backgroundColor="#e8f5e9"
+                caption="…rounded, and holding the keyboard"
+                focusVisible
+              >
+                on its own paper
               </StateSlide>
             </div>
             <p class="demo-note" style="max-width: 46em">
