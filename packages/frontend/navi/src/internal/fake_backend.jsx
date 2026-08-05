@@ -43,13 +43,15 @@ const css = /* css */ `
   }
   .navi_fake_backend_head {
     display: flex;
-    padding: 8px 12px;
+    padding: 8px 12px 26px;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     color: #37474f;
     font-size: 12px;
     background: #eceff1;
+    /* The line the frontier below sits astride. */
+    border-bottom: 1px dashed #b0bec5;
   }
   .navi_fake_backend_label {
     color: #78909c;
@@ -65,13 +67,16 @@ const css = /* css */ `
     background: white;
     border-radius: 4px;
   }
-  /* The line the two sides talk across, drawn rather than implied: what is on
-     it is in flight, and the arrows say which way. Hatched so it reads as a
-     border and not as a third party. */
+  /* Neither side's, so it belongs to both: pulled up by half its height, it
+     sits astride the line between them — a lane over the border rather than a
+     third band under it. What is on it is in flight, and the arrows say which
+     way. Hatched so it reads as a boundary and not as a third party. */
   .navi_fake_backend_frontier {
     display: flex;
-    min-height: 34px;
-    padding: 6px 12px;
+    box-sizing: border-box;
+    height: 34px;
+    margin: -17px 12px 0;
+    padding: 4px 10px;
     align-items: center;
     gap: 8px;
     color: #546e7a;
@@ -83,8 +88,8 @@ const css = /* css */ `
       #eceff1 6px,
       #eceff1 12px
     );
-    border-top: 1px dashed #b0bec5;
-    border-bottom: 1px dashed #b0bec5;
+    border: 1px dashed #b0bec5;
+    border-radius: 999px;
   }
   .navi_fake_backend_sent,
   .navi_fake_backend_answer {
@@ -103,7 +108,7 @@ const css = /* css */ `
   }
   .navi_fake_backend_body {
     display: flex;
-    padding: 8px 12px 16px;
+    padding: 25px 12px 16px;
     flex-direction: column;
     align-items: start;
     gap: 8px;

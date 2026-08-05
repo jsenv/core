@@ -175,12 +175,34 @@
           <Heading level={3} id="too-long">
             Un jour trop long pour la boîte
           </Heading>
+          <p class="desc">
+            Étroit, et sans rien d'autre : le nombre de lignes change avec le
+            jour, donc la hauteur aussi. Les flèches, et ce qui suit bouge.
+          </p>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption='width="180px" : le jour passe à la ligne'>
-              <DayStepper defaultValue={TODAY} width="180px" />
+            <Variant caption='width="180px"'>
+              <Box flex="y" spacing="xs" alignX="start">
+                <DayStepper defaultValue={TODAY} width="180px" />
+                <Text size="s" color="#c62828">
+                  ce texte se fait pousser
+                </Text>
+              </Box>
             </Variant>
             <Variant caption="maxLines={2}">
-              <DayStepper defaultValue={TODAY} width="180px" maxLines={2} />
+              <Box flex="y" spacing="xs" alignX="start">
+                <DayStepper defaultValue={TODAY} width="180px" maxLines={2} />
+                <Text size="s" color="#2e7d32">
+                  ce texte ne bouge pas
+                </Text>
+              </Box>
+            </Variant>
+            <Variant caption='height="34px"'>
+              <Box flex="y" spacing="xs" alignX="start">
+                <DayStepper defaultValue={TODAY} width="180px" height="34px" />
+                <Text size="s" color="#2e7d32">
+                  ce texte ne bouge pas
+                </Text>
+              </Box>
             </Variant>
             <Variant caption="maxLines={1}">
               <DayStepper defaultValue={TODAY} width="180px" maxLines={1} />
