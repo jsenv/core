@@ -211,13 +211,16 @@
         Box,
         Button,
         Dialog,
+        Field,
         Input,
+        Label,
         Link,
         List,
         Popover,
         Slide,
         SlideContainer,
         Text,
+        useSlideValue,
       } from "@jsenv/navi";
 
       // Section heading with a hover anchor link, same shape as the wheel
@@ -899,6 +902,56 @@
         );
       };
 
+      // What a travel carries: a button says where to go AND what it is about
+      // (`value`), and the slide arriving reads it back.
+      const CarriedValueSlides = () => (
+        <SlideContainer duration={useSlideDuration()} keyboardTravel={false}>
+          <Slide id="carried_pick" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>pick one</Text>
+            </Box>
+            <Box body padding="m" flex="y" spacing="s" alignX="start">
+              {["Ada", "Grace", "Katherine"].map((name) => (
+                <Button
+                  key={name}
+                  command="--navi-right"
+                  value={{ name }}
+                  variant="discrete"
+                >
+                  edit {name}
+                </Button>
+              ))}
+            </Box>
+          </Slide>
+          <Slide id="carried_edit" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>edit</Text>
+              <SlideContainer.Left size="l" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <CarriedValueForm />
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+      // Inside the slide, the only place that can ask what the travel here was
+      // about.
+      const CarriedValueForm = () => {
+        const slideValue = useSlideValue();
+        return (
+          <Field vertical>
+            <Label bold>name</Label>
+            {/* keyed by what was handed over: the field is uncontrolled, so
+                arriving about someone else must give it a fresh default */}
+            <Input
+              key={slideValue?.name}
+              name="name"
+              defaultValue={slideValue?.name ?? ""}
+            />
+          </Field>
+        );
+      };
+
       const StateSlide = ({
         rounded,
         borderWidth = "1",
@@ -1315,6 +1368,12 @@
           </section>
 
           <FocusOutlineSection />
+
+          <section class="demo-section" id="carried-value">
+            <Heading id="carried-value">What a travel carries</Heading>
+            <p>The button says where to go and what it is about.</p>
+            <ThreeWays id="carried" Content={CarriedValueSlides} />
+          </section>
 
           <section class="demo-section" id="focus">
             <Heading id="focus">Focus</Heading>
