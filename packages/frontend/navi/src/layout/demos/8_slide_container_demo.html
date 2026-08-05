@@ -634,10 +634,8 @@
               <SlideContainer.Up commandFor="map_reveal" />
               <SlideContainer.Down commandFor="map_reveal" />
               <span class="demo-note">
-                …or click a cell and use the arrow keys. The dashed frame is the
-                container itself — one cell, the only thing that would be on
-                show if it clipped its overflow as it normally does. Everything
-                else is the map, sliding underneath.
+                …or click a cell and use the arrow keys. The dashed frame is
+                what a container normally shows.
               </span>
             </div>
           </div>
@@ -1167,20 +1165,13 @@
 
           <section class="demo-section" id="states">
             <Heading id="states">What a slide looks like</Heading>
-            <p>
-              A slide draws nothing of its own: it is a box like any other, and
-              what one sees at rest is whatever it was given. The one thing it
-              does draw is the ring of the slide holding the keyboard — on the
-              CONTAINER, not on the slide, which is what makes it follow the
-              corners.
-            </p>
+            <p>A box, plus a ring when it holds the keyboard.</p>
             <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide>square</StateSlide>
               <StateSlide focusVisible>square</StateSlide>
             </Box>
             <p>
-              The same, with a <code>border-radius</code> on the box holding the
-              container:
+              …with a <code>borderRadius</code> on the container:
             </p>
             <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide rounded>rounded</StateSlide>
@@ -1188,10 +1179,7 @@
                 rounded
               </StateSlide>
             </Box>
-            <p>
-              A container with a border of its own — the ring is drawn inside
-              it, following the same edges rather than doubling them:
-            </p>
+            <p>…with a border of its own:</p>
             <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide
                 borderWidth="3"
@@ -1210,10 +1198,7 @@
                 bordered
               </StateSlide>
             </Box>
-            <p>
-              And a slide given a background of its own — the same prop any box
-              takes:
-            </p>
+            <p>…and with a background on the slide:</p>
             <Box flex spacing="l" flexWrap alignY="start" marginBottom="m">
               <StateSlide
                 backgroundColor="#fdf1e0"
@@ -1230,16 +1215,9 @@
                 on its own paper
               </StateSlide>
             </Box>
-            <p class="demo-note" style="max-width: 46em">
-              <strong>
-                The radius belongs to the container, never to a slide.
-              </strong>{" "}
-              Two rounded slides passing each other leave a pinched gap between
-              their curves where the page shows through, for the length of the
-              travel — so a slide is kept square and the container clips the
-              corners (<code>overflow: hidden</code>). The ring follows the same
-              rule for the same reason: drawn on a slide it would come out
-              square inside a rounded box, cutting across the curve.
+            <p class="demo-note">
+              Round the container, never a slide: two rounded slides passing
+              each other leave a pinched gap for the length of the travel.
             </p>
           </section>
 
@@ -1248,7 +1226,7 @@
             <p>
               As big as its <strong>largest</strong> slide, in both directions.
             </p>
-            <div class="demo-ways">
+            <Box flex="y" spacing="l" alignX="start">
               <div class="demo-way">
                 <h3>One slide, taller</h3>
                 <SizingTaller />
@@ -1265,24 +1243,17 @@
                 <h3>Two slides, one wider</h3>
                 <SizingTwoWide />
               </div>
-            </div>
-            <p class="demo-note" style="max-width: 46em">
-              Give the container a size of its own (a <code>height</code>, a
-              dialog's own room) and the slides scroll their own body inside it
-              instead — see{" "}
-              <Link href="#taller">Content taller than the box</Link>.
+            </Box>
+            <p class="demo-note">
+              A container given a size of its own scrolls instead:{" "}
+              <Link href="#taller">Content taller than the box</Link>
             </p>
           </section>
 
           <section class="demo-section" id="the-map">
             <Heading id="the-map">Seeing the map</Heading>
             <p>
-              Every slide is laid out once, each at its own place on the map,
-              and one thing moves: the track under the window. Normally the
-              window is one cell wide and hides the rest — here it is made
-              bigger and the clipping given up (<code>overflow: visible</code>),
-              so the slides waiting their turn are drawn faintly all around the
-              one being shown. Moving is the whole map sliding underneath.
+              The map, with the frame widened to show what it usually hides.
             </p>
             <MapReveal />
           </section>

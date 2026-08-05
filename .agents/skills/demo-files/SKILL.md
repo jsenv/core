@@ -5,15 +5,30 @@ description: How to write, run and verify the `*_demo.html` files scattered acro
 
 ## Writing a demo: show, don't explain
 
-A demo is something the reader _uses_. A well-chosen example, split into steps and
-labelled, replaces paragraphs of prose. See
+A demo is something the reader _uses_. The effort goes into the examples, never into
+the commentary around them. See
 [.agents/instructions.md](../../instructions.md#demo-files) for the rule; concretely:
 
-- Each example gets a short `<Label>`/`<legend>` naming the case and the prop that
-  drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) — that is
-  usually the entire explanation needed.
-- Prefer adding a _contrasting_ example over writing a sentence about the
-  difference: default next to opted-out, loading next to loaded.
+- **Default to no prose.** Each example gets a short `<Label>`/`<legend>`/caption
+  naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`,
+  `popupWidthFitContent`) — that is usually the entire explanation needed.
+- **A section intro is one short sentence, or nothing**, in the reader's terms
+  ("As big as its largest slide, in both directions"). Never a paragraph, never a
+  description of how it works.
+- **No implementation talk.** A demo never mentions the CSS properties, the
+  internal mechanics or the tricks that make it work (`overflow: hidden`, a
+  translated track, a grid cell, a layout effect). That is what code comments next
+  to the code are for. Prose that only makes sense to someone reading the source
+  is the mistake to catch.
+- **Repeat the case instead of stating the rule.** Successive examples that build
+  on each other (1 line → 3 → 6, then two slides, then two slides one wider) let
+  the reader induce it; a sentence claiming it does not.
+- **Make the difference visible, then say nothing**: default next to opted-out,
+  loading next to loaded — plus whatever border, background or control it takes to
+  actually _see_ it. That work replaces the paragraph.
+- **One example per row, each clearly separated** (a column with spacing, its own
+  caption) so every case can be tried on its own; examples crammed side by side
+  read as a single picture.
 - Write a paragraph only for what the example genuinely cannot show: an invariant,
   a browser constraint, a rejected approach, a "this looks wrong but isn't".
 - Never narrate what the reader is about to see ("press Load to watch it swap"),
@@ -21,6 +36,9 @@ labelled, replaces paragraphs of prose. See
   the demo doesn't exercise.
 - Interactive behaviour (focus, hover, drag, keys) is shown by something that
   reacts, never described. Reading a paragraph costs as much as trying it.
+
+Before leaving a paragraph in a demo: could an example replace it? does it say
+_how_ rather than _what_? Either way — delete it, build the example.
 
 ## Overview
 

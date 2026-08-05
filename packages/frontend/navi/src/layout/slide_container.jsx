@@ -87,17 +87,15 @@ const css = /* css */ `
     border-radius: inherit;
     overflow: hidden;
 
-    /* An element of its own (see the JSX), not an outline on this box: an
-       outline is painted UNDER the backgrounds of what the slide contains, so a
-       slide with a header — the usual shape — would show the ring everywhere
-       except along its header. Same shape as the wheel's own ring, drawn the
-       same way (see .navi_wheel_focus_ring). */
+    /* An element of its own (see the JSX), not an outline on this box — same
+       shape as the wheel's own ring, drawn the same way (see
+       .navi_wheel_focus_ring). It comes after the slides in the DOM, which is
+       what puts it above them; nothing to raise. */
     > .navi_slide_focus_ring {
       position: absolute;
       /* A pixel in from the edge, so the ring reads as a ring rather than as a
          border of the box. */
       inset: var(--navi-slide-outline-gap, 1px);
-      z-index: 1;
       border-radius: inherit;
       pointer-events: none;
     }
@@ -512,11 +510,6 @@ export const SlideContainer = ({
       }}
       style={{ "--slide-container-duration": duration, ...rest.style }}
     >
-      {/* A ring the slides cannot paint over, the way the wheel does it: an
-          outline on the box itself is drawn under their backgrounds. Rendered
-          whatever the state — it is CSS that decides when it shows, from the
-          slide that holds the keyboard. */}
-      <div className="navi_slide_focus_ring" />
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
           value={{ vertical, answeredAreas, done }}
@@ -524,6 +517,12 @@ export const SlideContainer = ({
           {children}
         </SlideContainerContext.Provider>
       </div>
+      {/* After the slides, so it is painted over them — an outline on the box
+          itself would be drawn under their backgrounds, and a slide with a
+          header would show the ring everywhere except along it. Rendered
+          whatever the state: it is CSS that decides when it shows, from the
+          slide holding the keyboard. */}
+      <div className="navi_slide_focus_ring" />
     </Box>
   );
 };

@@ -108,12 +108,18 @@ Nothing else belongs there. Other sources already cover everything else — the 
 
 #### Demo files
 
-Demos are used, not read. A well-chosen example, cut into steps and carrying a short label, is worth a thousand words — so write the examples, not the commentary around them.
+Demos are used, not read. The work goes into the examples, never into the commentary around them: a case cut into steps, carrying a short label, that the reader can try. **Writing a paragraph instead of building the example that makes the point is the single most common mistake here** — when tempted, build the example.
 
-- Default to **no prose**. A `<Label>`/`<legend>` naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) is normally the whole explanation.
-- When a difference needs making clear, add the **contrasting example** rather than a sentence about it: default beside opted-out, loading beside loaded.
-- Keep a paragraph only for what the example genuinely cannot show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
-- Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo doesn't exercise.
+- **Default to no prose.** A `<Label>`/`<legend>`/caption naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) is normally the whole explanation.
+- **A section intro is one short sentence, or nothing.** It says what the section is about in the reader's terms ("As big as its largest slide, in both directions"), never how it is achieved.
+- **Never explain the implementation in a demo.** No CSS properties, no internal mechanics (`overflow: hidden`, the translated track, the grid cell, the layout effect), no "here we do X so that Y". A demo shows _what_ the thing does; _how_ it is built belongs in code comments next to the code that does it. This is the failure mode to watch for: prose that would only make sense to someone reading the source.
+- **Show a rule by repeating the case, not by stating it.** Successive examples that build on each other (1 line → 3 lines → 6 lines, then two slides, then two slides one wider) let the reader induce the rule; one sentence claiming it does not.
+- **Make differences visible before describing them**: default beside opted-out, loading beside loaded — and give the demo whatever borders, backgrounds or controls it takes for the difference to be _seen_. That work replaces the paragraph.
+- **One example per row, clearly separated** (a column with spacing, each with its own caption): examples crammed side by side read as one picture, and each one should be tryable on its own.
+- Keep a paragraph only for what no example can show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
+- Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo does not exercise.
+
+Before leaving any paragraph in a demo, ask: could an example replace it? Does it talk about _how_ rather than _what_? If yes to either, delete it and build the example.
 
 See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running them.
 
