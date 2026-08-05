@@ -42,8 +42,6 @@
  */
 
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
-import { urlToRelativeUrl } from "@jsenv/urls";
-import { readdirSync } from "node:fs";
 import { getRuntimeFromRequest } from "../../dev/dev_server_plugins/runtime_from_request.js";
 
 // Normalize the dev server's { runtimeName, runtimeVersion } to the { name,
@@ -119,7 +117,7 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
-export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
+export const jsenvPluginClientMonitoring = () => {
   // id -> client record
   const clients = new Map();
 
@@ -361,57 +359,6 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
     };
   };
 
-  // The .html pages served under the source directory, as server-relative URLs,
-  // so the dashboard can offer them as "navigate this client to…" targets. Skips
-  // node_modules, build output and dot-dirs. Cached briefly — one scan per
-  // dialog-open is plenty; it needn't be fresh to the second.
-  const PAGE_SCAN_TTL_MS = 3000;
-  const PAGE_SCAN_SKIP_DIRS = new Set([
-    "node_modules",
-    "dist",
-    "git_ignored",
-    "old",
-  ]);
-  let pageScanCache = null;
-  let pageScanAt = 0;
-  const listNavigablePages = () => {
-    if (!rootDirectoryUrl) {
-      return [];
-    }
-    if (pageScanCache && now() - pageScanAt < PAGE_SCAN_TTL_MS) {
-      return pageScanCache;
-    }
-    const pages = [];
-    const walk = (dirUrl) => {
-      let entries;
-      try {
-        entries = readdirSync(new URL(dirUrl), { withFileTypes: true });
-      } catch {
-        return;
-      }
-      for (const entry of entries) {
-        const name = entry.name;
-        if (name[0] === ".") {
-          continue; // .git, .agents, dot-files…
-        }
-        if (entry.isDirectory()) {
-          if (!PAGE_SCAN_SKIP_DIRS.has(name)) {
-            walk(`${dirUrl}${name}/`);
-          }
-        } else if (name.endsWith(".html")) {
-          pages.push(
-            `/${urlToRelativeUrl(`${dirUrl}${name}`, rootDirectoryUrl)}`,
-          );
-        }
-      }
-    };
-    walk(String(rootDirectoryUrl));
-    pages.sort();
-    pageScanCache = pages;
-    pageScanAt = now();
-    return pages;
-  };
-
   // Desktop pilots a client: validate a { clientId, tabId?, type, url? } command
   // and broadcast it as a "client_command" server event. The reporter runs it
   // only if the id (and tabId, when given) matches. type: "navigate" | "reload".
@@ -535,14 +482,6 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
           "Pilot a client from the dashboard: { clientId, tabId?, type: 'navigate'|'reload', url? }.",
         declarationSource: import.meta.url,
         fetch: (request) => ingestCommand(request),
-      },
-      {
-        endpoint: "GET /.internal/clients/pages.json",
-        description:
-          "The .html pages under the source directory, offered as navigation targets for a client.",
-        availableMediaTypes: ["application/json"],
-        declarationSource: import.meta.url,
-        fetch: () => jsonResponse(listNavigablePages()),
       },
       {
         endpoint: "GET /.internal/clients.json",

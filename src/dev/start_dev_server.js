@@ -18,6 +18,7 @@ import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
 import { jsenvPluginClientMonitoring } from "../plugins/client_monitoring/jsenv_plugin_client_monitoring.js";
+import { jsenvPluginPageSwitcher } from "../plugins/page_switcher/jsenv_plugin_page_switcher.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { devServerPluginChromeDevToolsJson } from "./dev_server_plugins/dev_server_plugin_chrome_devtools_json.js";
@@ -227,7 +228,9 @@ export const startDevServer = async ({
     ...(EXECUTED_BY_TEST_PLAN
       ? []
       : [
-          jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
+          jsenvPluginClientMonitoring(),
+          // cmd+K on any served page to jump to another one.
+          jsenvPluginPageSwitcher(),
         ]),
     ...plugins,
     ...getCorePlugins({

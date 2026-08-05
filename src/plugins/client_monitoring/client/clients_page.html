@@ -511,9 +511,7 @@
           return navigablePages;
         }
         try {
-          navigablePages = await (
-            await fetch("/.internal/clients/pages.json")
-          ).json();
+          navigablePages = await (await fetch("/.internal/pages.json")).json();
         } catch {
           navigablePages = [];
         }
