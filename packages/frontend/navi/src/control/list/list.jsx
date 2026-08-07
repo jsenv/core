@@ -2,7 +2,6 @@ import {
   dispatchPublicCustomEvent,
   getElementSignature,
   scrollIntoViewScoped,
-  startViewTransition,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { cloneElement, createContext } from "preact";
@@ -1800,17 +1799,10 @@ const ListItemReal = (props) => {
   // A row that failed says so in place of its content, and — when the caller
   // gave it somewhere to go — carries the way out with the message: the row
   // stands for something that never happened, so acknowledging the failure is
-  // what makes it leave. It stops rendering itself either way, so the caller's
-  // own state is free to catch up (or not) at its own pace.
-  const [errorDismissed, setErrorDismissed] = useState(false);
-  const dismissError = () => {
-    startViewTransition(() => {
-      setErrorDismissed(true);
-      if (onErrorDismiss) {
-        onErrorDismiss();
-      }
-    });
-  };
+  // what makes it leave. Making it leave is the CALLER's move, not this one's:
+  // the row it stands for is the caller's, and so is whatever animates its
+  // departure (navi starts no view transition of its own — the browser has to
+  // see the state change, which only the caller can arrange).
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1890,10 +1882,6 @@ const ListItemReal = (props) => {
     calloutRef.current = null;
   }, [blocked]);
 
-  if (errorDismissed) {
-    return null;
-  }
-
   return (
     <Box
       as="li"
@@ -1951,9 +1939,9 @@ const ListItemReal = (props) => {
             <button
               type="button"
               className="navi_list_item_error_dismiss"
-              onClick={dismissError}
+              onClick={onErrorDismiss}
             >
-              {naviI18n("button.dismiss", props)}
+              {naviI18n("button.close", props)}
             </button>
           )}
         </>

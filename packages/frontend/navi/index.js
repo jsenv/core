@@ -240,7 +240,7 @@ export {
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";
 
 // Interactions
-export { startDragToReorder, startViewTransition } from "@jsenv/dom";
+export { startDragToReorder } from "@jsenv/dom";
 
 // Other
 export { useDependenciesDiff } from "./src/utils/use_dependencies_diff.js";

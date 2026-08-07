@@ -163,10 +163,12 @@
         Icon,
         Link,
         moveArrayItemByIndex,
+        ensureDocumentStartViewTransition,
         startDragToReorder,
-        startViewTransition,
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+
+      const startViewTransition = ensureDocumentStartViewTransition();
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -2003,7 +2005,9 @@
                   task={{ id: "p3", label: "Shower" }}
                   index={2}
                   error="Le serveur a refusé l'enregistrement."
-                  onErrorDismiss={() => setDismissed(true)}
+                  onErrorDismiss={() =>
+                    startViewTransition(() => setDismissed(true))
+                  }
                 >
                   <Text expandX>Shower</Text>
                 </TaskRow>
@@ -2100,7 +2104,7 @@
           setPendingTask(null);
         };
         const dismissFailedTask = () => {
-          setPendingTask(null);
+          startViewTransition(() => setPendingTask(null));
         };
 
         const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;

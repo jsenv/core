@@ -177,7 +177,6 @@ export { useResizeStatus } from "./src/size/hooks/use_resize_status.js";
 // transition
 export { EASING, cubicBezier } from "./src/transition/easing.js";
 export { createGroupTransitionController } from "./src/transition/group_transition.js";
-export { startViewTransition } from "./src/transition/view_transition.js";
 export {
   createBackgroundColorTransition,
   createBackgroundTransition,
