@@ -490,6 +490,37 @@
         </SlideContainer>
       );
 
+      // Leaving and coming back: a slide holds what one was doing on it — where
+      // it was scrolled, and what the keyboard was on. The fields are numbered
+      // so the one that gets the focus back is nameable, and each slide is
+      // taller than the box so there is a scroll position to lose.
+      const ComeBackSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <Slide id="come_back_form" overflow="auto" maxHeight="220px">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>form</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <Input key={n} name={`field_${n}`} placeholder={`field ${n}`} />
+              ))}
+            </Box>
+          </Slide>
+          <Slide id="come_back_recap" overflow="auto" maxHeight="220px">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>recap</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <FocusPad key={n}>line {n}</FocusPad>
+              ))}
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
       // A list in the middle of a vertical map: the slides go up and down, and so
       // does the list's own selection — so ↑/↓ have two possible readings, and
       // only one of them can be right at a time. Whoever holds the keyboard
@@ -1405,27 +1436,38 @@
                 on its own paper
               </StateSlide>
             </Box>
-            <p class="demo-note">
-              Round the container, never a slide: two rounded slides passing
-              each other leave a pinched gap for the length of the travel.
-            </p>
           </section>
 
           <FocusOutlineSection />
+
+          <section class="demo-section" id="focus">
+            <Heading id="focus">Focus behaviour</Heading>
+            <p>
+              Travel with the chevrons, ← and →, Home and End. The zone holding
+              the keyboard is filled in.
+            </p>
+            <h3>Where the keyboard lands</h3>
+            <p>
+              On what there is to do: <code>navi-autofocus</code> when a slide
+              names it, the first thing that can be used otherwise, the ways out
+              only for want of anything else.
+            </p>
+            <ThreeWays id="focus" Content={FocusSlides} />
+            <h3>Where it is put back</h3>
+            <p>Put the keyboard on a field, travel, and come back.</p>
+            <ThreeWays id="come_back_focus" Content={ComeBackSlides} />
+            <p class="demo-note">
+              A way out never becomes what is restored: pressing → puts the
+              keyboard on the chevron, and coming back puts it on the field one
+              was in. A slide only ever left from its own way out has nothing to
+              restore, and lands where it would have landed the first time.
+            </p>
+          </section>
 
           <section class="demo-section" id="carried-value">
             <Heading id="carried-value">What a travel carries</Heading>
             <p>The button says where to go and what it is about.</p>
             <ThreeWays id="carried" Content={CarriedValueSlides} />
-          </section>
-
-          <section class="demo-section" id="focus">
-            <Heading id="focus">Focus</Heading>
-            <p>
-              Travel with the chevrons, ← and →, Home and End. The zone holding
-              the keyboard is filled in.
-            </p>
-            <ThreeWays id="focus" Content={FocusSlides} />
           </section>
 
           <section class="demo-section" id="sizing">
@@ -1453,7 +1495,7 @@
             </Box>
             <p class="demo-note">
               A container given a size of its own scrolls instead:{" "}
-              <Link href="#taller">Content taller than the box</Link>
+              <Link href="#scroll">Scroll</Link>
             </p>
           </section>
 
@@ -1468,9 +1510,13 @@
             <ThreeWays id="vertical" Content={TwoSlidesVertical} />
           </section>
 
-          <section class="demo-section" id="taller">
-            <Heading id="taller">Content taller than the box</Heading>
-            <p>The slide scrolls its own body; the box keeps its size.</p>
+          <section class="demo-section" id="scroll">
+            <Heading id="scroll">Scroll</Heading>
+            <p>
+              A slide too big for the box scrolls its own content; the box keeps
+              its size.
+            </p>
+            <h3 id="taller">Content taller than the box</h3>
             <ThreeWays
               id="tall"
               Content={TallSlides}
@@ -1482,14 +1528,13 @@
               Content={TallSlidesVertical}
               documentClassName="in-document-capped"
             />
-          </section>
-
-          <section class="demo-section" id="wider">
-            <Heading id="wider">Content wider than the box</Heading>
-            <p>The slide scrolls sideways; the box keeps its size.</p>
+            <h3 id="wider">Content wider than the box</h3>
             <ThreeWays id="wide" Content={WideSlides} />
             <p>…and the same with the travel going up and down:</p>
             <ThreeWays id="wide_vertical" Content={WideSlidesVertical} />
+            <h3 id="scroll-restoration">Scroll restoration</h3>
+            <p>Scroll a slide down, travel, and come back.</p>
+            <ThreeWays id="come_back_scroll" Content={ComeBackSlides} />
           </section>
 
           <section class="demo-section" id="list-in-a-slide">

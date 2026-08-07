@@ -158,6 +158,20 @@ const css = /* css */ `
   }
 `;
 
+// The ways out of a slide: whatever carries a travel command, the built-in
+// chevrons (SlideNavButton) and anything a caller wired by hand alike. They are
+// the container's chrome, not its content — see rememberFocus.
+const WAY_OUT_SELECTOR = [
+  '[command="--navi-left"]',
+  '[command="--navi-right"]',
+  '[command="--navi-up"]',
+  '[command="--navi-down"]',
+  '[command="--navi-back"]',
+  '[command^="--navi-go-to-slide"]',
+].join(",");
+const isWayOut = (element) =>
+  Boolean(element && element.closest && element.closest(WAY_OUT_SELECTOR));
+
 // One object, shared: the areas nothing was ever handed to all read the same
 // empty map, and a re-render changes nothing for them.
 const EMPTY_VALUE_BY_AREA = {};
@@ -356,6 +370,47 @@ export const SlideContainer = ({
     };
   }, [noTravel]);
 
+  // What the user was doing on each slide, so coming back comes back to it. The
+  // ways out are left out on purpose: pressing one is how one LEAVES a slide,
+  // and remembering it would mean coming back to the exit rather than to the
+  // work — press →, press ←, and the keyboard would sit on the chevron one
+  // pressed instead of on the field one was filling. They are chrome, like a
+  // browser's own back button, which never becomes what the page restores.
+  const focusMemoryRef = useRef(new WeakMap());
+  useLayoutEffect(() => {
+    const containerEl = containerRef.current;
+    const onFocusIn = (focusInEvent) => {
+      const focusedElement = focusInEvent.target;
+      if (isWayOut(focusedElement)) {
+        return;
+      }
+      const slideElement = focusedElement.closest?.("[data-slide]");
+      if (slideElement && containerEl.contains(slideElement)) {
+        focusMemoryRef.current.set(slideElement, focusedElement);
+      }
+    };
+    containerEl.addEventListener("focusin", onFocusIn);
+    return () => {
+      containerEl.removeEventListener("focusin", onFocusIn);
+    };
+  }, []);
+  // Written down at the moment a slide is left: what is focused now when that
+  // is content, what was focused before otherwise, and nothing at all when the
+  // slide never held the keyboard anywhere but on its own ways out — the slide
+  // arriving then falls back to its ladder, which lands on what there is to do
+  // (findFocusTarget, and the chevrons' own "last-resort").
+  const rememberFocus = (slideElement, focusedElement) => {
+    if (focusedElement && !isWayOut(focusedElement)) {
+      markAutofocusRestore(slideElement, focusedElement);
+      return;
+    }
+    const remembered = focusMemoryRef.current.get(slideElement);
+    markAutofocusRestore(
+      slideElement,
+      remembered && slideElement.contains(remembered) ? remembered : null,
+    );
+  };
+
   const readMap = () => {
     const slideElements = Array.from(trackRef.current.children);
     const map =
@@ -433,7 +488,18 @@ export const SlideContainer = ({
     }
     const track = trackRef.current;
     const offset = `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`;
-    const offsetBefore = offsetRef.current;
+    // Where the track IS, read before anything is written: a travel asked for
+    // while another is still playing must carry on from what is on screen. The
+    // previous TARGET is where the last travel was going, not where it got to —
+    // starting from it would jump the track to the end of a move that never
+    // finished, and only then slide back. Read while the animation still runs
+    // (it is what the computed value reflects) and in px, which is what the
+    // percentages resolve to anyway.
+    const travelInFlight = trackAnimationRef.current?.playState === "running";
+    const offsetOnScreen = travelInFlight
+      ? getComputedStyle(track).translate
+      : undefined;
+    const offsetBefore = offsetOnScreen ?? offsetRef.current;
     offsetRef.current = offset;
     // Where the track ends up, always — the animation below only covers the way
     // there, and when it is over this is what holds.
@@ -472,6 +538,17 @@ export const SlideContainer = ({
     // the slide on screen instead. No event to read — this travel was asked for
     // by code — so the transfer has nothing but the modality to go on.
     if (focusIsLeaving) {
+      // Nobody pressed anything here, so what is focused is content by
+      // definition — but it is still the slide being left that has to remember
+      // it, and it has to be done before inert takes it away.
+      const leavingElement = slideElements.find(
+        (slideElement) =>
+          slideElement !== currentElement &&
+          slideElement.contains(document.activeElement),
+      );
+      if (leavingElement) {
+        rememberFocus(leavingElement, document.activeElement);
+      }
       handOverFocus(currentElement, undefined);
     }
     // Out of reach LAST, once the keyboard has already moved on: a browser
@@ -538,9 +615,8 @@ export const SlideContainer = ({
         currentElement.contains(focusedElement);
       if (focusIsLoose) {
         // What the slide being left was left on, so coming back comes back to
-        // it — the chevron one pressed included. Written down at the one moment
-        // it is known, rather than watched for at every focusin.
-        markAutofocusRestore(currentElement, focusedElement);
+        // it — the way out one pressed excepted (see rememberFocus).
+        rememberFocus(currentElement, focusedElement);
         arrivingElement.removeAttribute("inert");
         handOverFocus(arrivingElement, event);
       }
