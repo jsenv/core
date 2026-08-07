@@ -2024,19 +2024,25 @@
                     task={task}
                     index={i}
                     loading={pending && !task.error}
-                    error={task.error}
+                    // The error IS the row: what was typed never made it, so
+                    // showing it as an item would be a lie. The way out comes
+                    // with the message.
+                    error={
+                      task.error && (
+                        <Box flex="x" alignY="center" spacing="s" expandX>
+                          <Text expandX>{task.error}</Text>
+                          <Button
+                            variant="discrete"
+                            padding="xs"
+                            action={dismissFailedTask}
+                          >
+                            Dismiss
+                          </Button>
+                        </Box>
+                      )
+                    }
                   >
-                    {task.error ? (
-                      <Button
-                        variant="discrete"
-                        padding="xs"
-                        action={dismissFailedTask}
-                      >
-                        Dismiss
-                      </Button>
-                    ) : (
-                      <Text expandX>{task.label}</Text>
-                    )}
+                    <Text expandX>{task.label}</Text>
                   </TaskRow>
                 );
               })}
