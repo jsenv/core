@@ -15,7 +15,9 @@ const css = /* css */ `
     position: fixed;
     top: var(--drop-hint-y);
     left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    z-index: 9998; /* under the dragged clone, over everything else */
+    /* Over the dragged clone: where the item will land is the one thing the
+       user is looking for, and the clone follows the pointer over it. */
+    z-index: 10000;
     display: none;
     width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
@@ -37,28 +39,29 @@ const css = /* css */ `
       var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
     );
   }
-  /* A cap at each end, pointing in: the line alone is easy to lose against a
-     list of borders and separators, two arrows read as "here" at a glance.
-     They stick out of the line's own box, which is free now that the hint is
-     out of the scrollable area. */
+  /* A chevron at each end, pointing in: the line alone is easy to lose against
+     a list of borders and separators, two arrows read as "here" at a glance
+     (same idea as the table's column drop preview). They overhang the line,
+     which costs nothing now that the hint is out of the scrollable area — and
+     the more they stick out, the easier they are to spot. */
   .navi_drop_hint_cap {
     position: absolute;
     top: 50%;
-    width: 0;
-    height: 0;
-    border-top: var(--drop-hint-arrow-size, 4px) solid transparent;
-    border-bottom: var(--drop-hint-arrow-size, 4px) solid transparent;
+    display: flex;
+    color: var(--drop-hint-background-color, #4476ff);
     translate: 0 -50%;
   }
+  .navi_drop_hint_cap svg {
+    width: var(--drop-hint-arrow-size, 11px);
+    height: var(--drop-hint-arrow-size, 11px);
+  }
   .navi_drop_hint_cap[data-side="start"] {
-    left: calc(-1 * var(--drop-hint-arrow-size, 4px));
-    border-left: var(--drop-hint-arrow-size, 4px) solid
-      var(--drop-hint-background-color, #4476ff);
+    left: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: -90deg;
   }
   .navi_drop_hint_cap[data-side="end"] {
-    right: calc(-1 * var(--drop-hint-arrow-size, 4px));
-    border-right: var(--drop-hint-arrow-size, 4px) solid
-      var(--drop-hint-background-color, #4476ff);
+    right: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: 90deg;
   }
 
   /* WHO CAN START A DRAG, said in the cursor.
@@ -227,14 +230,7 @@ export const startDragToReorder = (
     // Point it at the clone so drop detection tracks the clone's current position.
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
-    const dropHintEl = document.createElement("div");
-    dropHintEl.className = "navi_drop_hint";
-    for (const side of ["start", "end"]) {
-      const capEl = document.createElement("span");
-      capEl.className = "navi_drop_hint_cap";
-      capEl.setAttribute("data-side", side);
-      dropHintEl.appendChild(capEl);
-    }
+    const dropHintEl = createDropHint();
     document.body.appendChild(dropHintEl);
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
@@ -389,6 +385,32 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
+// The chevron is the one the table's column drop preview uses, rotated by the
+// CSS above so each cap points into the line.
+const dropHintTemplate = /* html */ `
+  <div class="navi_drop_hint">
+    <span class="navi_drop_hint_cap" data-side="start">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+    <span class="navi_drop_hint_cap" data-side="end">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+  </div>
+`;
+const createDropHint = () => {
+  const div = document.createElement("div");
+  div.innerHTML = dropHintTemplate.trim();
+  return div.firstElementChild;
+};
+
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 

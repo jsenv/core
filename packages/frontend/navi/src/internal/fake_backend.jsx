@@ -122,6 +122,25 @@ const css = /* css */ `
     align-items: start;
     gap: 8px;
   }
+  .navi_fake_backend_table {
+    font-size: 12px;
+    font-family: monospace;
+    background: white;
+    border-radius: 4px;
+    border-collapse: collapse;
+    overflow: hidden;
+  }
+  .navi_fake_backend_table th,
+  .navi_fake_backend_table td {
+    padding: 2px 8px;
+    text-align: left;
+    border: 1px solid #dce3e6;
+  }
+  .navi_fake_backend_table th {
+    color: #78909c;
+    font-weight: 600;
+  }
+
   /* Right, against the backend's own name on the left: the two labels face each
      other across the frontier. */
   .navi_fake_backend_body > .navi_fake_backend_label {
@@ -160,7 +179,7 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
     <div className="navi_fake_backend">
       <div className="navi_fake_backend_head">
         <span className="navi_fake_backend_label">backend</span>
-        <span className="navi_fake_backend_value">{stringify(value)}</span>
+        <Value value={value} />
       </div>
       <div className="navi_fake_backend_frontier">
         {call ? (
@@ -175,9 +194,7 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
               </button>
             </span>
             <span className="navi_fake_backend_sent">
-              <span className="navi_fake_backend_value">
-                {stringify(call.received)}
-              </span>
+              <Value value={call.received} />
               <span className="navi_fake_backend_arrow">↑</span>
             </span>
           </>
@@ -191,7 +208,60 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
   );
 };
 
+// A collection is shown as a table, everything else as its JSON. A list of
+// records read as one long JSON line is the thing one gives up on reading —
+// which defeats the purpose of putting the backend's own state on the page.
+const Value = ({ value }) => {
+  const columnNames = collectColumnNames(value);
+  if (!columnNames) {
+    return <span className="navi_fake_backend_value">{stringify(value)}</span>;
+  }
+  return (
+    <table className="navi_fake_backend_table">
+      <thead>
+        <tr>
+          {columnNames.map((columnName) => (
+            <th key={columnName}>{columnName}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {value.map((row, index) => (
+          <tr key={index}>
+            {columnNames.map((columnName) => (
+              <td key={columnName}>{stringify(row[columnName])}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+// The columns of an array of plain records, in the order they appear; null for
+// anything else (that is the signal to fall back to JSON).
+const collectColumnNames = (value) => {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  const columnNames = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      return null;
+    }
+    for (const key of Object.keys(row)) {
+      if (!columnNames.includes(key)) {
+        columnNames.push(key);
+      }
+    }
+  }
+  return columnNames;
+};
+
 // Nothing is written as nothing: "undefined" through JSON.stringify comes back
 // as the empty string, which reads as a bug rather than as an empty backend.
 const stringify = (value) =>
-  value === undefined ? "∅" : JSON.stringify(value);
+  value === undefined
+    ? "∅"
+    : typeof value === "string"
+      ? value
+      : JSON.stringify(value);

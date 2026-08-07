@@ -103,10 +103,20 @@
         content: "(none selected)";
       }
 
+      /* Only the rows move. Without this the whole page cross-fades under its
+         own snapshot on every add or remove, which reads as a jump when the
+         list grows and the page scrolls. */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        mix-blend-mode: normal;
+        animation: none;
+      }
       /* A row appearing grows into place, a row leaving shrinks away; the rows
          that stay slide on their own (the browser animates each named row). The
          rules are written against view-transition-class, so one pair of
-         keyframes covers every row without naming them one by one. */
+         keyframes covers every row without naming them one by one.
+         --task-row-anim-duration is set on the root by the demo's slow-motion
+         toggle: these pseudo-elements live on the document, not in the page. */
       @keyframes task-row-in {
         from {
           opacity: 0;
@@ -120,10 +130,13 @@
         }
       }
       ::view-transition-new(.task-row):only-child {
-        animation: task-row-in 220ms ease-out;
+        animation: task-row-in var(--task-row-anim-duration, 220ms) ease-out;
       }
       ::view-transition-old(.task-row):only-child {
-        animation: task-row-out 180ms ease-in;
+        animation: task-row-out var(--task-row-anim-duration, 180ms) ease-in;
+      }
+      ::view-transition-group(.task-row) {
+        animation-duration: var(--task-row-anim-duration, 250ms);
       }
     </style>
   </head>
@@ -132,8 +145,8 @@
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { Fragment, render } from "preact";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -199,12 +212,8 @@
             <Chapter id="search" title="Search">
               <SearchStatesDemo />
               <SearchableExternalInputDemo />
-              <SearchableDemo />
               <GroupedSearchDemo />
               <SplitMatchDemo />
-            </Chapter>
-            <Chapter id="grouping" title="Grouping">
-              <ListItemGroupDemo />
             </Chapter>
             <Chapter id="editing" title="Editing the list">
               <ReorderDemo />
@@ -308,9 +317,6 @@
                     <Link href="#search-external">Input outside the list</Link>
                   </li>
                   <li>
-                    <Link href="#search-inline">Input inside the list</Link>
-                  </li>
-                  <li>
                     <Link href="#search-grouped">
                       Many items, grouped by letter
                     </Link>
@@ -320,13 +326,10 @@
                       Split matches / non-matches
                     </Link>
                   </li>
-                </ol>
-              </li>
-              <li>
-                <Link href="#grouping">Grouping</Link>
-                <ol>
                   <li>
-                    <Link href="#grouped">Grouped suggestions</Link>
+                    <Link href="#search-split-cases">
+                      Split — some match / none match
+                    </Link>
                   </li>
                 </ol>
               </li>
@@ -1239,55 +1242,29 @@
         );
       };
 
-      // ── 4. Searchable list — input inside list ─────────────────────────────────
+      // ── 5. Search — grouped by letter ────────────────────────────────────────
 
-      const SearchableDemo = () => {
-        const [searchText, setSearchText] = useState("");
-        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
-        return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-inline">
-              Input inside the list
-            </Heading>
-            <p>
-              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
-              auto-connects it to the list via context. Keyboard events (arrows,
-              enter, escape) forward from the input to the list automatically.
-            </p>
-            <Input
-              placeholder="Search fruits…"
-              paddingX="10"
-              paddingY="6"
-              size="m"
-              action={(value) => {
-                setSearchText(value);
-              }}
-            />
-            <List>
-              {fruits.map((fruit, i) => {
-                return (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    matchInfo={getItemMatchInfo(fruit)}
-                  >
-                    {fruit}
-                  </ListItem>
-                );
-              })}
-            </List>
-          </div>
+      // A handful of letters, a handful of items each: enough to see groups
+      // rise, thin out, and empty.
+      const GROUPED_FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Cranberry",
+        "Date",
+        "Dragonfruit",
+      ];
+
+      const LetterGroupedList = ({ initialQuery = "" }) => {
+        const [filter, setFilter] = useState(initialQuery);
+        const [sorted, getItemMatchInfo] = useSearchText(
+          filter,
+          GROUPED_FRUITS,
         );
-      };
-
-      // ── 5. Search — many items, grouped by letter ────────────────────────────
-
-      const GroupedSearchDemo = () => {
-        const [filter, setFilter] = useState("");
-        const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
-
         const groupMap = new Map();
         for (const item of sorted) {
           const letter = item[0].toUpperCase();
@@ -1296,153 +1273,61 @@
           }
           groupMap.get(letter).push(item);
         }
-        const groups = [...groupMap.entries()].map(([letter, items]) => ({
-          letter,
-          items,
-        }));
 
-        const matchCount = sorted.filter(
-          (item) => getItemMatchInfo(item).match,
-        ).length;
-
+        let index = 0;
         return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-grouped">
-              Many items, grouped by letter
-            </Heading>
-            <p>
-              Matching items rise to the top, grouped by initial letter. All
-              items remain visible.
-            </p>
+          <Box flex="y" spacing="s" width="260px">
             <Input
               type="search"
               placeholder="Search…"
               value={filter}
-              uiAction={(v) => {
-                setFilter(v);
-              }}
+              uiAction={setFilter}
               expandX
-              border="1px solid #ccc"
-              borderRadius="6px"
-              padding="8"
-              marginBottom="s"
-              size="1rem"
             />
-            {filter && (
-              <div
-                style={{
-                  marginBottom: "8px",
-                  fontSize: "0.85rem",
-                  color: "#555",
-                }}
-              >
-                {matchCount} match{matchCount !== 1 ? "es" : ""} out of{" "}
-                {LARGE_LIST.length}
-              </div>
-            )}
-            <List fallback="No results" style={{ maxHeight: "280px" }}>
-              {(() => {
-                let globalIndex = 0;
-                return groups.map((group) => (
-                  <ListItemGroup key={group.letter} label={group.letter}>
-                    {group.items.map((item) => {
-                      const i = globalIndex++;
-                      // Force match: true — this demo keeps all items visible
-                      // (see above), only the highlight should reflect the
-                      // actual match info, not the match-based filtering.
-                      const matchInfo = {
-                        ...getItemMatchInfo(item),
-                        match: true,
-                      };
-                      return (
-                        <ListItem
-                          key={item}
-                          index={i}
-                          id={item}
-                          matchInfo={matchInfo}
-                          style={{ backgroundColor: SUGGESTION_BG }}
-                        >
-                          {item}
-                        </ListItem>
-                      );
-                    })}
-                  </ListItemGroup>
-                ));
-              })()}
+            <List searchText={filter} borderWidth="1" borderRadius="6" expandX>
+              {[...groupMap.entries()].map(([letter, items]) => (
+                <ListItemGroup key={letter} label={letter} hiddenWhileEmpty>
+                  {items.map((item) => (
+                    <ListItem
+                      key={item}
+                      index={index++}
+                      id={item}
+                      matchInfo={getItemMatchInfo(item)}
+                      paddingX="m"
+                      paddingY="xs"
+                    >
+                      {item}
+                    </ListItem>
+                  ))}
+                </ListItemGroup>
+              ))}
             </List>
-          </div>
+          </Box>
         );
       };
 
-      // ── 6. Grouped suggestions with ListItemGroup ──────────────────────────────
+      const GroupedSearchDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="search-grouped">
+            Grouped by letter
+          </Heading>
+          <Box flex="x" spacing="l" alignY="start">
+            <LetterGroupedList />
+            <LetterGroupedList initialQuery="ap" />
+            <LetterGroupedList initialQuery="berry" />
+          </Box>
+        </div>
+      );
 
-      const GROUPED_ITEMS = [
-        {
-          label: (
-            <Text background="red" flex expand padding="s">
-              Fruits
-            </Text>
-          ),
-          items: ["Apple", "Banana", "Cherry", "Mango", "Strawberry"],
-        },
-        {
-          label: (
-            <Text background="green" flex expand padding="s">
-              Vegetables
-            </Text>
-          ),
-          items: ["Broccoli", "Carrot", "Cucumber", "Spinach", "Tomato"],
-        },
-        {
-          label: "Grains",
-          items: ["Barley", "Oats", "Quinoa", "Rice", "Wheat"],
-        },
-      ];
+      // ── 6. Split matches / non-matches ────────────────────────────────────────
 
-      const ListItemGroupDemo = () => {
-        return (
-          <div className="demo-subsection">
-            <Heading level={3} id="grouped">
-              Grouped suggestions
-            </Heading>
-            <p>Options organized into labeled groups using ListItemGroup.</p>
-            <List fallback="No results" style={{ maxHeight: "280px" }} expandX>
-              <ListItem index={0}>
-                A very large suggestion to test how it behaves when the text is
-                very large and exceeds the width of the list. It should be
-                visible
-              </ListItem>
-              {(() => {
-                let globalIndex = 1;
-                return GROUPED_ITEMS.map((group) => (
-                  <ListItemGroup key={group.label} label={group.label}>
-                    {group.items.map((item) => {
-                      const i = globalIndex++;
-                      return (
-                        <ListItem
-                          key={item}
-                          index={i}
-                          style={{ backgroundColor: SUGGESTION_BG }}
-                        >
-                          {item}
-                        </ListItem>
-                      );
-                    })}
-                  </ListItemGroup>
-                ));
-              })()}
-            </List>
-          </div>
-        );
-      };
+      const SPLIT_FRUITS = FRUITS.slice(0, 10);
 
-      // ── 7. Split matches / non-matches ────────────────────────────────────────
-
-      const SplitMatchDemo = () => {
-        const [filter, setFilter] = useState("");
+      const SplitMatchList = ({ initialQuery = "" }) => {
+        const [filter, setFilter] = useState(initialQuery);
         const [orderedItems, getItemMatchInfo] = useSearchText(
           filter,
-          LARGE_LIST,
+          SPLIT_FRUITS,
         );
         const matches = orderedItems.filter(
           (item) => getItemMatchInfo(item).match,
@@ -1452,34 +1337,21 @@
         );
 
         return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-split">
-              Split matches / non-matches
-            </Heading>
-            <p>
-              Matching items and non-matching items are shown in separate
-              groups, each with a count. When the search is empty, all items are
-              shown as matches.
-            </p>
-            <input
+          <Box flex="y" spacing="s" width="260px">
+            <Input
               type="search"
               placeholder="Search…"
               value={filter}
-              onInput={(e) => {
-                setFilter(e.target.value);
-              }}
-              style={{
-                display: "block",
-                width: "100%",
-                boxSizing: "border-box",
-                marginBottom: "8px",
-                padding: "8px 12px",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "1rem",
-              }}
+              uiAction={setFilter}
+              expandX
             />
-            <List fallback="No results" style={{ maxHeight: "300px" }}>
+            <List
+              fallback="No results"
+              borderWidth="1"
+              borderRadius="6"
+              expandX
+              maxHeight="300"
+            >
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
@@ -1495,21 +1367,18 @@
                   </Box>
                 }
               >
-                {matches.map((item, i) => {
-                  // Safe to pass matchInfo directly: `matches` is already
-                  // filtered to match: true items, so nothing gets hidden.
-                  return (
-                    <ListItem
-                      key={item}
-                      index={i}
-                      id={item}
-                      matchInfo={getItemMatchInfo(item)}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </ListItem>
-                  );
-                })}
+                {matches.map((item, i) => (
+                  <ListItem
+                    key={item}
+                    index={i}
+                    id={item}
+                    matchInfo={getItemMatchInfo(item)}
+                    paddingX="m"
+                    paddingY="xs"
+                  >
+                    {item}
+                  </ListItem>
+                ))}
               </ListItemGroup>
               {nonMatches.length > 0 && (
                 <ListItemGroup
@@ -1532,7 +1401,8 @@
                       key={item}
                       index={matches.length + i}
                       id={item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
+                      paddingX="m"
+                      paddingY="xs"
                     >
                       {item}
                     </ListItem>
@@ -1540,9 +1410,33 @@
                 </ListItemGroup>
               )}
             </List>
-          </div>
+          </Box>
         );
       };
+
+      const SplitMatchDemo = () => (
+        <Fragment>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-split">
+              Split matches / non-matches
+            </Heading>
+            <p>
+              Matching items and non-matching ones are kept apart, each group
+              counted.
+            </p>
+            <SplitMatchList />
+          </div>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-split-cases">
+              Split — some match / none match
+            </Heading>
+            <Box flex="x" spacing="l" alignY="start">
+              <SplitMatchList initialQuery="ap" />
+              <SplitMatchList initialQuery="zzz" />
+            </Box>
+          </div>
+        </Fragment>
+      );
 
       // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -1900,6 +1794,8 @@
                 searchText={searchText}
                 expandX
                 maxHeight="180"
+                borderWidth="1"
+                borderRadius="6"
                 {...listProps}
               >
                 {renderFruitItems(fruits, getItemMatchInfo)}
@@ -2062,15 +1958,41 @@
             Answer or fail the call to see where the new row ends up. Press{" "}
             <em>échouer</em> and it goes away again.
           </p>
+          <SlowMotionToggle />
           <FakeBackend value={TASKS}>
             {({ value, action }) => <AddableList saved={value} save={action} />}
           </FakeBackend>
         </div>
       );
 
+      // The row animations run on ::view-transition pseudo-elements, which hang
+      // off the document — so the knob that slows them down is a var on the root.
+      const SlowMotionToggle = () => {
+        const [slow, setSlow] = useState(false);
+        useEffect(() => {
+          document.documentElement.style.setProperty(
+            "--task-row-anim-duration",
+            slow ? "1600ms" : "",
+          );
+        }, [slow]);
+        return (
+          <label style={{ display: "inline-flex", gap: "6px" }}>
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow motion
+          </label>
+        );
+      };
+
       const AddableList = ({ saved, save }) => {
         const [tasks, setTasks] = useState(saved);
-        // The row being created: present in the list, not yet confirmed.
+        // The row being created: present in the list, not yet confirmed. It
+        // carries its own error, so a refused creation stays where the user put
+        // it and says what happened, instead of vanishing with the message
+        // somewhere else.
         const [pendingTask, setPendingTask] = useState(null);
 
         const add = async (values) => {
@@ -2078,12 +2000,15 @@
           document.startViewTransition(() => setPendingTask(task));
           try {
             await save([...tasks, task]);
-          } catch {
-            document.startViewTransition(() => setPendingTask(null));
+          } catch (e) {
+            setPendingTask({ ...task, error: e.message });
             return;
           }
           setTasks((previous) => [...previous, task]);
           setPendingTask(null);
+        };
+        const dismissFailedTask = () => {
+          document.startViewTransition(() => setPendingTask(null));
         };
 
         const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;
@@ -2098,9 +2023,20 @@
                     listName="add"
                     task={task}
                     index={i}
-                    loading={pending}
+                    loading={pending && !task.error}
+                    error={task.error}
                   >
-                    <Text expandX>{task.label}</Text>
+                    {task.error ? (
+                      <Button
+                        variant="discrete"
+                        padding="xs"
+                        action={dismissFailedTask}
+                      >
+                        Dismiss
+                      </Button>
+                    ) : (
+                      <Text expandX>{task.label}</Text>
+                    )}
                   </TaskRow>
                 );
               })}
@@ -2155,9 +2091,12 @@
           setPendingId(task.id);
           try {
             await save(tasks.filter((candidate) => candidate.id !== task.id));
-          } catch {
+          } catch (e) {
             setPendingId(null);
-            return;
+            // Rethrown, not swallowed: the button that asked for the deletion
+            // is where the refusal belongs, and that is what navi does with an
+            // action that rejects.
+            throw e;
           }
           // Once the server has taken it, and not before: the row leaves in a
           // view transition, and the ones below it slide up.

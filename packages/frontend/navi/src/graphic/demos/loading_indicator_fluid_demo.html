@@ -11,6 +11,7 @@
       import { render } from "preact";
       import { useState, useRef, useEffect } from "preact/hooks";
       import { LoadingIndicatorFluid, LoadingOutline } from "@jsenv/navi";
+      import { networkSpeedSignal } from "@jsenv/navi/src/utils/network_speed.js";
 
       const COLORS = [
         { label: "dark", value: "#383a36" },
@@ -154,6 +155,8 @@
             >
               <LoadingIndicatorFluid color={color} />
             </div>
+
+            <NetworkSpeedDemo color={color} />
 
             <DebounceDemo color={color} />
           </div>
@@ -342,6 +345,58 @@
             >
               {loading ? `loading… (${duration}ms)` : "Start load"}
             </button>
+          </div>
+        );
+      };
+
+      // The indicator travels at a speed the connection sets: the slower the
+      // network, the slower it goes round, so a wait on a bad connection does
+      // not read as a frozen one. Written straight into the signal the
+      // component reads (navigator.connection is not something a demo can
+      // dial), and every indicator on the page follows at once.
+      const NETWORK_SPEEDS = ["slow-2g", "2g", "3g", "4g"];
+      const NetworkSpeedDemo = ({ color }) => {
+        const [speed, setSpeed] = useState(networkSpeedSignal.value);
+        return (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+          >
+            <h3 style={{ margin: 0, fontSize: "15px" }}>Network speed</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {NETWORK_SPEEDS.map((networkSpeed) => (
+                <label
+                  key={networkSpeed}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    fontSize: "13px",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="network-speed"
+                    checked={speed === networkSpeed}
+                    onChange={() => {
+                      networkSpeedSignal.value = networkSpeed;
+                      setSpeed(networkSpeed);
+                    }}
+                  />
+                  {networkSpeed}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+              <Cell label="200×60" width={200} height={60} radius={8}>
+                <LoadingIndicatorFluid color={color} />
+              </Cell>
+              <Cell label="80×80" width={80} height={80} radius={40}>
+                <LoadingIndicatorFluid color={color} />
+              </Cell>
+              <Cell label="300×24" width={300} height={24} radius={12}>
+                <LoadingIndicatorFluid color={color} />
+              </Cell>
+            </div>
           </div>
         );
       };
