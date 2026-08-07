@@ -396,7 +396,7 @@
             <div className="states">
               {[0, 0.25, 0.5, 0.75].map((offset) => (
                 <div key={offset}>
-                  <ParkedWheel offset={offset} />
+                  <ParkedWheel offset={offset} border="1px solid #bbb" />
                   <span className="col-label">+{offset} row</span>
                 </div>
               ))}
@@ -404,7 +404,12 @@
             <div className="states" style={{ marginTop: 24 }}>
               {[0, 0.25, 0.5, 0.75].map((offset) => (
                 <div key={offset}>
-                  <ParkedWheel offset={offset} glass frameBorder />
+                  <ParkedWheel
+                    offset={offset}
+                    glass
+                    frameBorder
+                    border="1px solid #bbb"
+                  />
                   <span className="col-label">+{offset} row, glass</span>
                 </div>
               ))}

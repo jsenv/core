@@ -310,7 +310,14 @@ const css = /* css */ `
         height: 100%;
       }
       .navi_wheel_layer[data-layer="center"] {
-        clip-path: inset(var(--wheel-window-inset) 0);
+        /* Around the GLYPH, not around the row: a row is much taller than the
+           digits it holds (line box + padding), so a row-sized band would keep
+           a value fully emphasised for the first third of a scroll and only
+           then start cutting it. Sized on the glyph, the value starts changing
+           as soon as the wheel moves. Tune via --wheel-emphasis-size. */
+        clip-path: inset(
+          calc((100% - var(--wheel-emphasis-size, round(1em, 1px))) / 2) 0
+        );
       }
       .navi_wheel_list {
         flex-direction: column;
@@ -382,7 +389,14 @@ const css = /* css */ `
         width: 100%;
       }
       .navi_wheel_layer[data-layer="center"] {
-        clip-path: inset(0 var(--wheel-window-inset));
+        /* A cell is about as wide as the value it holds, so the band is the
+           cell (unlike the vertical case — see the note there). */
+        clip-path: inset(
+          0
+            calc(
+              (100% - var(--wheel-emphasis-size, var(--wheel-item-width))) / 2
+            )
+        );
       }
       .navi_wheel_list {
         flex-direction: row;
