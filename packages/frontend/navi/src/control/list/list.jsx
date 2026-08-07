@@ -1792,11 +1792,20 @@ const ListItemReal = (props) => {
   // see the press either: it is the ROW that is unavailable, not one of its
   // parts.
   const blocked = loading || readOnly;
+  // The primary button only: a right (or middle) click asks the browser for its
+  // own menu — copying the row's text, opening a link it holds in a tab — and
+  // none of that acts on the row, so a busy row has no reason to swallow it.
   const blockInteraction = (event) => {
+    if (event.button !== 0) {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
   };
   const explainBlockedInteraction = (event) => {
+    if (event.button !== 0) {
+      return;
+    }
     blockInteraction(event);
     openCallout(
       loading
