@@ -719,11 +719,15 @@ const useWheelInteractions = ({
       });
     };
 
-    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
-    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
-    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
-    // scroller to drive here, so this is the seam external code (e.g. a demo
-    // comparing this wheel against a native scroll-snap list) uses to move it.
+    // Programmatic scroll: move by detail.delta px (and/or detail.items rows,
+    // fractions allowed), then snap — mirroring element.scrollBy. behavior
+    // "smooth" glides then snaps; otherwise it jumps and snaps like a wheel
+    // tick. detail.settle === false skips the snap so the wheel stays parked
+    // wherever it lands, including between two rows — the only way to hold an
+    // in-between rendering still (a demo showing the fade mid-scroll, a visual
+    // test). There is no native scroller to drive here, so this is the seam
+    // external code (e.g. a demo comparing this wheel against a native
+    // scroll-snap list) uses to move it.
     const onNaviScroll = (e) => {
       if (!e.detail) {
         return;
@@ -745,8 +749,12 @@ const useWheelInteractions = ({
             // back); a whole-row/items delta already lands on a row.
             glideTo(vp, snapPosToRow(vp, posRef.current + delta));
           } else {
-            setPos(vp, posRef.current + delta, { live: true });
-            scheduleSettle();
+            setPos(vp, posRef.current + delta, {
+              live: e.detail.settle !== false,
+            });
+            if (e.detail.settle !== false) {
+              scheduleSettle();
+            }
           }
         },
       });

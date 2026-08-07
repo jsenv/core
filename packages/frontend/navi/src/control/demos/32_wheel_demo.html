@@ -268,6 +268,11 @@
             <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
               <li>
                 <Link href="#states">States</Link>
+                <ul>
+                  <li>
+                    <Link href="#states-between">Between two rows</Link>
+                  </li>
+                </ul>
               </li>
               <li>
                 <Link href="#scroll">Scroll behavior</Link>
@@ -338,6 +343,24 @@
         </Wheel>
       );
 
+      // A wheel parked `offset` rows away from a row center (0.5 = exactly
+      // between two rows) and left there. Dispatched a frame after mount, once
+      // the wheel has centered its initial value.
+      const ParkedWheel = ({ offset, ...rest }) => {
+        const wheelRef = useRef(null);
+        useEffect(() => {
+          const rafId = requestAnimationFrame(() => {
+            wheelRef.current.dispatchEvent(
+              new CustomEvent("navi_scroll", {
+                detail: { items: offset, settle: false },
+              }),
+            );
+          });
+          return () => cancelAnimationFrame(rafId);
+        }, [offset]);
+        return <StateWheel ref={wheelRef} {...rest} />;
+      };
+
       const StatesDemo = () => {
         return (
           <div className="demo-section">
@@ -346,6 +369,10 @@
             </Heading>
             <p>The same wheel in its different states.</p>
             <div className="states">
+              <div>
+                <Heading id="states-default">default</Heading>
+                <StateWheel />
+              </div>
               <div>
                 <Heading id="states-focus">focus-visible</Heading>
                 <StateWheel basePseudoState={{ ":focus-visible": true }} />
@@ -362,6 +389,25 @@
                 <Heading id="states-disabled">disabled</Heading>
                 <StateWheel disabled />
               </div>
+            </div>
+
+            <Heading id="states-between">Between two rows</Heading>
+            <p>Held mid-scroll, without and with glass.</p>
+            <div className="states">
+              {[0, 0.25, 0.5, 0.75].map((offset) => (
+                <div key={offset}>
+                  <ParkedWheel offset={offset} />
+                  <span className="col-label">+{offset} row</span>
+                </div>
+              ))}
+            </div>
+            <div className="states" style={{ marginTop: 24 }}>
+              {[0, 0.25, 0.5, 0.75].map((offset) => (
+                <div key={offset}>
+                  <ParkedWheel offset={offset} glass frameBorder />
+                  <span className="col-label">+{offset} row, glass</span>
+                </div>
+              ))}
             </div>
           </div>
         );
