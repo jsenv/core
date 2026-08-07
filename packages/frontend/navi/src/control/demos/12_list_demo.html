@@ -164,6 +164,7 @@
         Link,
         moveArrayItemByIndex,
         startDragToReorder,
+        startViewTransition,
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
@@ -1902,7 +1903,7 @@
             itemSelector: "[data-id]",
             getItemId: (el) => el.dataset.id,
             onReorder: async (fromId, toId, syncClone) => {
-              const viewTransition = document.startViewTransition(() => {
+              const viewTransition = startViewTransition(() => {
                 syncClone();
                 setTasks((previous) => {
                   const fromIndex = previous.findIndex((t) => t.id === fromId);
@@ -1917,7 +1918,7 @@
                   );
                 });
               });
-              await viewTransition.finished;
+              await viewTransition?.finished;
             },
           });
         };
@@ -2001,18 +2002,8 @@
                   listName="add-preview"
                   task={{ id: "p3", label: "Shower" }}
                   index={2}
-                  error={
-                    <Box flex="x" alignY="center" spacing="s" expandX>
-                      <Text expandX>Le serveur a refusé l'enregistrement.</Text>
-                      <Button
-                        variant="discrete"
-                        padding="xs"
-                        action={() => setDismissed(true)}
-                      >
-                        Dismiss
-                      </Button>
-                    </Box>
-                  }
+                  error="Le serveur a refusé l'enregistrement."
+                  onErrorDismiss={() => setDismissed(true)}
                 >
                   <Text expandX>Shower</Text>
                 </TaskRow>
@@ -2061,7 +2052,7 @@
             firstRef.current = false;
             return;
           }
-          document.startViewTransition(() => setTasks(saved));
+          startViewTransition(() => setTasks(saved));
         }, [saved]);
       };
 
@@ -2098,7 +2089,7 @@
 
         const add = async (values) => {
           const task = { id: nextTaskId(), label: values.label };
-          document.startViewTransition(() => setPendingTask(task));
+          startViewTransition(() => setPendingTask(task));
           try {
             await save([...tasks, task]);
           } catch (e) {
@@ -2109,7 +2100,7 @@
           setPendingTask(null);
         };
         const dismissFailedTask = () => {
-          document.startViewTransition(() => setPendingTask(null));
+          setPendingTask(null);
         };
 
         const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;
@@ -2126,22 +2117,10 @@
                     index={i}
                     loading={pending && !task.error && "adding"}
                     // The error IS the row: what was typed never made it, so
-                    // showing it as an item would be a lie. The way out comes
-                    // with the message.
-                    error={
-                      task.error && (
-                        <Box flex="x" alignY="center" spacing="s" expandX>
-                          <Text expandX>{task.error}</Text>
-                          <Button
-                            variant="discrete"
-                            padding="xs"
-                            action={dismissFailedTask}
-                          >
-                            Dismiss
-                          </Button>
-                        </Box>
-                      )
-                    }
+                    // showing it as an item would be a lie. The row draws the
+                    // way out itself, given somewhere to go.
+                    error={task.error}
+                    onErrorDismiss={dismissFailedTask}
                   >
                     <Text expandX>{task.label}</Text>
                   </TaskRow>
@@ -2212,7 +2191,7 @@
           }
           // Once the server has taken it, and not before: the row leaves in a
           // view transition, and the ones below it slide up.
-          document.startViewTransition(() => {
+          startViewTransition(() => {
             setTasks((previous) =>
               previous.filter((candidate) => candidate.id !== task.id),
             );

@@ -2,6 +2,7 @@ import {
   dispatchPublicCustomEvent,
   getElementSignature,
   scrollIntoViewScoped,
+  startViewTransition,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
 import { cloneElement, createContext } from "preact";
@@ -296,7 +297,26 @@ const css = /* css */ `
        parts). Positioned so the loading outline it may draw has a box to sit
        on. */
     /* Same inline callout as the list's own error (.navi_list_error), scoped to
-       one row. */
+       one row. The message takes the room, the way out sits at the end. */
+    .navi_list_item_error_message {
+      flex: 1;
+    }
+    .navi_list_item_error_dismiss {
+      padding: 2px 8px;
+      flex: none;
+      color: inherit;
+      font: inherit;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      opacity: 0.8;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
     &[navi-error] {
       display: flex;
       align-items: flex-start;
@@ -1772,10 +1792,25 @@ const ListItemReal = (props) => {
     loading,
     readOnly,
     error,
+    onErrorDismiss,
     matchInfo,
     children,
     ...rest
   } = props;
+  // A row that failed says so in place of its content, and — when the caller
+  // gave it somewhere to go — carries the way out with the message: the row
+  // stands for something that never happened, so acknowledging the failure is
+  // what makes it leave. It stops rendering itself either way, so the caller's
+  // own state is free to catch up (or not) at its own pace.
+  const [errorDismissed, setErrorDismissed] = useState(false);
+  const dismissError = () => {
+    startViewTransition(() => {
+      setErrorDismissed(true);
+      if (onErrorDismiss) {
+        onErrorDismiss();
+      }
+    });
+  };
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1855,6 +1890,10 @@ const ListItemReal = (props) => {
     calloutRef.current = null;
   }, [blocked]);
 
+  if (errorDismissed) {
+    return null;
+  }
+
   return (
     <Box
       as="li"
@@ -1905,7 +1944,18 @@ const ListItemReal = (props) => {
           <span className="navi_list_error_icon" aria-hidden="true">
             ⚠
           </span>
-          <span>{error === true ? "Something went wrong." : error}</span>
+          <span className="navi_list_item_error_message">
+            {error === true ? "Something went wrong." : error}
+          </span>
+          {onErrorDismiss && (
+            <button
+              type="button"
+              className="navi_list_item_error_dismiss"
+              onClick={dismissError}
+            >
+              {naviI18n("button.dismiss", props)}
+            </button>
+          )}
         </>
       ) : (
         children

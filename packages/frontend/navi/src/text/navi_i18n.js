@@ -54,6 +54,10 @@ naviI18n.addAll({
     en: "Open",
     fr: "Ouvrir",
   },
+  "button.dismiss": {
+    en: "Dismiss",
+    fr: "Ignorer",
+  },
   "button.close": {
     en: "Close",
     fr: "Fermer",
