@@ -116,18 +116,21 @@
          that stay slide on their own (the browser animates each named row). The
          rules are written against view-transition-class, so one pair of
          keyframes covers every row without naming them one by one.
+         Barely a scale — 0.96, enough to feel the row settle in or let go, not
+         enough to see the text resize; the fade does most of the work and the
+         rows below slide on their own (the group animation).
          --task-row-anim-duration is set on the root by the demo's slow-motion
          toggle: these pseudo-elements live on the document, not in the page. */
       @keyframes task-row-in {
         from {
           opacity: 0;
-          transform: scale(0.9);
+          transform: scale(0.96);
         }
       }
       @keyframes task-row-out {
         to {
           opacity: 0;
-          transform: scale(0.9);
+          transform: scale(0.96);
         }
       }
       ::view-transition-new(.task-row):only-child {

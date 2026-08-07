@@ -157,6 +157,28 @@
       .given-name {
         text-transform: capitalize;
       }
+      /* The surface stays put: only the rows that appear or leave move. */
+      :root {
+        view-transition-name: none;
+      }
+      @keyframes entry-row-in {
+        from {
+          opacity: 0;
+          transform: scale(0.96);
+        }
+      }
+      @keyframes entry-row-out {
+        to {
+          opacity: 0;
+          transform: scale(0.96);
+        }
+      }
+      ::view-transition-new(.entry-row):only-child {
+        animation: entry-row-in 220ms ease-out;
+      }
+      ::view-transition-old(.entry-row):only-child {
+        animation: entry-row-out 180ms ease-in;
+      }
     </style>
   </head>
   <body>
@@ -165,7 +187,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useSignal } from "@preact/signals";
+      import { signal, useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -184,11 +206,14 @@
         Text,
         useSearchText,
         useSlideValue,
+        ensureDocumentStartViewTransition,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
+
+      const startViewTransition = ensureDocumentStartViewTransition();
 
       // Name and detail are both searchable: with homonyms allowed, the detail
       // is often the only thing telling two entries apart, so it has to be
@@ -207,8 +232,20 @@
       // follows a send — going back to the list, closing the surface — only
       // runs once the action resolves.
       const SERVER_DELAY = 600;
+      // Flipped by the switch at the top of the page: an action that can only
+      // succeed never shows where its failure would land — on the form for a
+      // save, on the button that asked for a deletion.
+      const serverRefusesSignal = signal(false);
       const reachServer = () =>
-        new Promise((resolve) => setTimeout(resolve, SERVER_DELAY));
+        new Promise((resolve, reject) => {
+          setTimeout(() => {
+            if (serverRefusesSignal.value) {
+              reject(new Error("Le serveur a refusé l'enregistrement."));
+              return;
+            }
+            resolve();
+          }, SERVER_DELAY);
+        });
 
       /*
        * The field is a real search input, readOnly: it looks and reads exactly
@@ -514,6 +551,10 @@
                             selected={value ? value.id === entry.id : false}
                             matchInfo={getMatchInfo(entry)}
                             padding="s"
+                            style={{
+                              viewTransitionName: `${id}-row-${entry.id}`,
+                              viewTransitionClass: "entry-row",
+                            }}
                           >
                             <Box flex="x" alignY="center" spacing="xs" expandX>
                               <Box flex="y" expandX>
@@ -938,8 +979,15 @@
           sideSignal.value = entry ? entry.side || "" : "";
         };
 
+        // Every change to the list goes through a view transition: an entry
+        // that was just created appears rather than being suddenly there, and
+        // the one being deleted leaves while the rest close the gap. The rows
+        // carry a view-transition-name of their own (see List.Item), which is
+        // what lets the browser animate THEM instead of cross-fading the page.
         const addTo = (listSignal) => (entry) => {
-          listSignal.value = [...listSignal.value, entry];
+          startViewTransition(() => {
+            listSignal.value = [...listSignal.value, entry];
+          });
         };
         const updateIn = (listSignal) => (entry) => {
           listSignal.value = listSignal.value.map((candidate) =>
@@ -947,9 +995,11 @@
           );
         };
         const removeFrom = (listSignal) => (entry) => {
-          listSignal.value = listSignal.value.filter(
-            (candidate) => candidate.id !== entry.id,
-          );
+          startViewTransition(() => {
+            listSignal.value = listSignal.value.filter(
+              (candidate) => candidate.id !== entry.id,
+            );
+          });
         };
 
         return (
@@ -1043,10 +1093,33 @@
         );
       };
 
+      const ServerSwitch = () => (
+        <label
+          class="server-switch"
+          style={{
+            display: "flex",
+            gap: "6px",
+            maxWidth: "380px",
+            margin: "0 auto 12px",
+            fontSize: "13px",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={serverRefusesSignal.value}
+            onChange={(e) => {
+              serverRefusesSignal.value = e.target.checked;
+            }}
+          />
+          Le serveur refuse
+        </label>
+      );
+
       // debugAll on purpose: this is a lab file, and the interaction logs are the
       // fastest way to see why a click did or did not reach a control
       const App = () => (
         <NaviDebug debugAll>
+          <ServerSwitch />
           <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
           <div class="frame">
             <Screen idPrefix="local_" popupLayer="local" />
