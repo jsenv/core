@@ -201,6 +201,15 @@
       let idCounter = 0;
       const nextId = () => `e${++idCounter}`;
 
+      // Creating, editing and deleting go to a server, so they take a moment.
+      // The actions below await it: navi keeps the form busy meanwhile (fields
+      // read-only, send button in its loading state) and the command that
+      // follows a send — going back to the list, closing the surface — only
+      // runs once the action resolves.
+      const SERVER_DELAY = 600;
+      const reachServer = () =>
+        new Promise((resolve) => setTimeout(resolve, SERVER_DELAY));
+
       /*
        * The field is a real search input, readOnly: it looks and reads exactly
        * like the search box it opens, but the typing happens in the surface,
@@ -262,10 +271,11 @@
         );
         const typed = searchSignal.value.trim();
 
-        // isNew rather than a save round-trip: the backend sees an entry with no
-        // id of its own when the match is finally submitted, and registers it
-        // then. Nothing to await here, nothing to undo if the user quits.
-        const submitForm = (values) => {
+        // isNew marks what this user added, which is what the pencil is offered
+        // on. The surface stays open until the server answers (reachServer), so
+        // the entry lands in the list already created rather than provisional.
+        const submitForm = async (values) => {
+          await reachServer();
           const entry = { id: nextId(), isNew: true, ...toEntry(values) };
           onCreate(entry);
           onChange(entry);
@@ -275,7 +285,8 @@
         // Only what this user typed in can be edited: an entry that came from
         // the backend is shared with everyone else, and renaming it here would
         // rename it under them.
-        const submitEdit = (edited, values) => {
+        const submitEdit = async (edited, values) => {
+          await reachServer();
           const entry = { ...edited, ...toEntry(values) };
           onUpdate(entry);
           if (value && value.id === entry.id) {
@@ -373,7 +384,8 @@
           );
         };
 
-        const deleteEntry = (entry) => {
+        const deleteEntry = async (entry) => {
+          await reachServer();
           onDelete(entry);
           if (value && value.id === entry.id) {
             onChange(null);

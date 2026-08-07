@@ -102,6 +102,29 @@
         font-style: italic;
         content: "(none selected)";
       }
+
+      /* A row appearing grows into place, a row leaving shrinks away; the rows
+         that stay slide on their own (the browser animates each named row). The
+         rules are written against view-transition-class, so one pair of
+         keyframes covers every row without naming them one by one. */
+      @keyframes task-row-in {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+      }
+      @keyframes task-row-out {
+        to {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+      }
+      ::view-transition-new(.task-row):only-child {
+        animation: task-row-in 220ms ease-out;
+      }
+      ::view-transition-old(.task-row):only-child {
+        animation: task-row-out 180ms ease-in;
+      }
     </style>
   </head>
   <body>
@@ -119,11 +142,16 @@
         Text,
         useSearchText,
         Box,
+        Button,
+        Form,
         LoadingIndicator,
         NaviDebug,
         Icon,
         Link,
+        moveArrayItemByIndex,
+        startDragToReorder,
       } from "@jsenv/navi";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -177,6 +205,11 @@
             </Chapter>
             <Chapter id="grouping" title="Grouping">
               <ListItemGroupDemo />
+            </Chapter>
+            <Chapter id="editing" title="Editing the list">
+              <ReorderDemo />
+              <AddItemDemo />
+              <RemoveItemDemo />
             </Chapter>
           </NaviDebug>
         );
@@ -291,6 +324,20 @@
                 <ol>
                   <li>
                     <Link href="#grouped">Grouped suggestions</Link>
+                  </li>
+                </ol>
+              </li>
+              <li>
+                <Link href="#editing">Editing the list</Link>
+                <ol>
+                  <li>
+                    <Link href="#edit-reorder">Reorder</Link>
+                  </li>
+                  <li>
+                    <Link href="#edit-add">Add an item</Link>
+                  </li>
+                  <li>
+                    <Link href="#edit-remove">Remove an item</Link>
                   </li>
                 </ol>
               </li>
@@ -1850,6 +1897,234 @@
           </Box>
         </div>
       );
+
+      // ── Editing the list — reorder / add / remove ─────────────────────────────
+
+      const TASKS = [
+        { id: "t1", label: "Book the court" },
+        { id: "t2", label: "Bring the balls" },
+        { id: "t3", label: "Warm up" },
+        { id: "t4", label: "Play" },
+      ];
+      let taskCounter = TASKS.length;
+      const nextTaskId = () => `t${++taskCounter}`;
+
+      // Every row carries a view-transition name of its own, so the browser can
+      // animate THIS row rather than cross-fade the whole list, plus a shared
+      // class the CSS animations below are written against (see the <style>).
+      const TaskRow = ({ task, children, ...rest }) => (
+        <ListItem
+          key={task.id}
+          id={task.id}
+          value={task.id}
+          data-id={task.id}
+          flex="x"
+          alignY="center"
+          spacing="s"
+          paddingX="m"
+          paddingY="s"
+          style={{
+            viewTransitionName: `task-${task.id}`,
+            viewTransitionClass: "task-row",
+          }}
+          {...rest}
+        >
+          {children}
+        </ListItem>
+      );
+
+      const ReorderDemo = () => {
+        const [tasks, setTasks] = useState(TASKS);
+
+        const startDrag = (event) => {
+          startDragToReorder(event, {
+            itemSelector: "[data-id]",
+            getItemId: (el) => el.dataset.id,
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = document.startViewTransition(() => {
+                syncClone();
+                setTasks((previous) => {
+                  const fromIndex = previous.findIndex((t) => t.id === fromId);
+                  const toIndex =
+                    toId === null
+                      ? previous.length
+                      : previous.findIndex((t) => t.id === toId);
+                  return moveArrayItemByIndex(
+                    previous,
+                    fromIndex,
+                    fromIndex < toIndex ? toIndex - 1 : toIndex,
+                  );
+                });
+              });
+              await viewTransition.finished;
+            },
+          });
+        };
+
+        return (
+          <div className="demo-subsection">
+            <Heading level={3} id="edit-reorder">
+              Reorder
+            </Heading>
+            <p>Drag a row by its handle.</p>
+            <Box width="320px" style={{ "--drop-hint-margin-y": "4px" }}>
+              <List separator>
+                {tasks.map((task, i) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    index={i}
+                    onPointerDown={startDrag}
+                  >
+                    <Text style={{ cursor: "grab" }} data-drag-handle>
+                      ⠿
+                    </Text>
+                    <Text expandX>{task.label}</Text>
+                  </TaskRow>
+                ))}
+              </List>
+            </Box>
+          </div>
+        );
+      };
+
+      // Creating: the item is known before the server answers, so it is drawn
+      // right away rather than as a skeleton — but read-only and loading until
+      // the answer comes, because until then it is not a row anyone can act on.
+      const AddItemDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="edit-add">
+            Add an item
+          </Heading>
+          <p>
+            Answer or fail the call to see where the new row ends up. Press{" "}
+            <em>échouer</em> and it goes away again.
+          </p>
+          <FakeBackend value={TASKS}>
+            {({ value, action }) => <AddableList saved={value} save={action} />}
+          </FakeBackend>
+        </div>
+      );
+
+      const AddableList = ({ saved, save }) => {
+        const [tasks, setTasks] = useState(saved);
+        // The row being created: present in the list, not yet confirmed.
+        const [pendingTask, setPendingTask] = useState(null);
+
+        const add = async (values) => {
+          const task = { id: nextTaskId(), label: values.label };
+          document.startViewTransition(() => setPendingTask(task));
+          try {
+            await save([...tasks, task]);
+          } catch {
+            document.startViewTransition(() => setPendingTask(null));
+            return;
+          }
+          setTasks((previous) => [...previous, task]);
+          setPendingTask(null);
+        };
+
+        const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;
+        return (
+          <Box flex="y" spacing="m" width="320px">
+            <List separator>
+              {shownTasks.map((task, i) => {
+                const pending = pendingTask && pendingTask.id === task.id;
+                return (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    index={i}
+                    loading={pending}
+                    readOnly={pending}
+                  >
+                    <Text expandX>{task.label}</Text>
+                  </TaskRow>
+                );
+              })}
+            </List>
+            {/* The form goes busy on its own while the action runs: the field
+                turns read-only and the button takes its loading state. */}
+            <Form action={add} flex="x" spacing="s" alignY="end">
+              <Input
+                name="label"
+                required
+                placeholder="Something to do…"
+                expandX
+              />
+              <Button command="--navi-send">Add</Button>
+            </Form>
+          </Box>
+        );
+      };
+
+      const RemoveItemDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="edit-remove">
+            Remove an item
+          </Heading>
+          <p>
+            The row stays, loading and read-only, until the server has taken it.
+          </p>
+          <FakeBackend value={TASKS}>
+            {({ value, action }) => <RemovableList saved={value} save={action} />}
+          </FakeBackend>
+        </div>
+      );
+
+      const RemovableList = ({ saved, save }) => {
+        const [tasks, setTasks] = useState(saved);
+        const [pendingId, setPendingId] = useState(null);
+
+        const remove = async (task) => {
+          setPendingId(task.id);
+          try {
+            await save(tasks.filter((candidate) => candidate.id !== task.id));
+          } catch {
+            setPendingId(null);
+            return;
+          }
+          // Once the server has taken it, and not before: the row leaves in a
+          // view transition, and the ones below it slide up.
+          document.startViewTransition(() => {
+            setTasks((previous) =>
+              previous.filter((candidate) => candidate.id !== task.id),
+            );
+            setPendingId(null);
+          });
+        };
+
+        return (
+          <Box width="320px">
+            <List separator>
+              {tasks.map((task, i) => {
+                const pending = pendingId === task.id;
+                return (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    index={i}
+                    loading={pending}
+                    readOnly={pending}
+                  >
+                    <Text expandX>{task.label}</Text>
+                    <Button
+                      variant="discrete"
+                      padding="xs"
+                      loading={pending}
+                      readOnly={pending}
+                      aria-label={`Remove ${task.label}`}
+                      action={() => remove(task)}
+                    >
+                      ✕
+                    </Button>
+                  </TaskRow>
+                );
+              })}
+            </List>
+          </Box>
+        );
+      };
 
       render(<App />, document.getElementById("app"));
     </script>
