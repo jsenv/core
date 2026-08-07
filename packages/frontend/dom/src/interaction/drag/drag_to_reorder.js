@@ -4,11 +4,18 @@ import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
 
 const css = /* css */ `
+  /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
+     for the last one is the very bottom of the scroll area — drawn inside it,
+     the line would push the scrollable area a few pixels further and make a
+     scrollbar appear (or hide the hint under it) exactly when one is trying to
+     drop at the end. Placed in the body and positioned in viewport
+     coordinates, it can sit anywhere, overhang the list, and cost nothing to
+     the layout. Fixed, like the clone it accompanies. */
   .navi_drop_hint {
-    position: absolute;
+    position: fixed;
     top: var(--drop-hint-y);
     left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    z-index: 10;
+    z-index: 9998; /* under the dragged clone, over everything else */
     display: none;
     width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
@@ -17,17 +24,41 @@ const css = /* css */ `
     transform: translateY(-50%);
     pointer-events: none;
   }
-  [data-drop-edge="top"] > .navi_drop_hint {
+  .navi_drop_hint[data-drop-edge] {
     display: block;
+  }
+  .navi_drop_hint[data-drop-edge="top"] {
     --drop-hint-y: calc(
       var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
     );
   }
-  [data-drop-edge="bottom"] > .navi_drop_hint {
-    display: block;
+  .navi_drop_hint[data-drop-edge="bottom"] {
     --drop-hint-y: calc(
       var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
     );
+  }
+  /* A cap at each end, pointing in: the line alone is easy to lose against a
+     list of borders and separators, two arrows read as "here" at a glance.
+     They stick out of the line's own box, which is free now that the hint is
+     out of the scrollable area. */
+  .navi_drop_hint_cap {
+    position: absolute;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-top: var(--drop-hint-arrow-size, 4px) solid transparent;
+    border-bottom: var(--drop-hint-arrow-size, 4px) solid transparent;
+    translate: 0 -50%;
+  }
+  .navi_drop_hint_cap[data-side="start"] {
+    left: calc(-1 * var(--drop-hint-arrow-size, 4px));
+    border-left: var(--drop-hint-arrow-size, 4px) solid
+      var(--drop-hint-background-color, #4476ff);
+  }
+  .navi_drop_hint_cap[data-side="end"] {
+    right: calc(-1 * var(--drop-hint-arrow-size, 4px));
+    border-right: var(--drop-hint-arrow-size, 4px) solid
+      var(--drop-hint-background-color, #4476ff);
   }
 
   /* WHO CAN START A DRAG, said in the cursor.
@@ -39,9 +70,9 @@ const css = /* css */ `
      its cursor and its selection, and never starts a drag (see the check in
      startDragToReorder).
      Controls inside a source keep their own cursor: cursor is inherited, and
-     anything setting its own (a button's pointer) wins on itself. */
-  /* Only the resting cursor: what it becomes once a drag is under way belongs
-     to the gesture (see the backdrop in drag_gesture.js), which is the only
+     anything setting its own (a button's pointer) wins on itself.
+     Only the resting cursor is set here: what it becomes once a drag is under
+     way belongs to the gesture (see the backdrop in drag_gesture.js), the only
      thing that knows a drag actually started. */
   [data-drag-handle] {
     cursor: grab;
@@ -98,6 +129,7 @@ const dragCSSVars = [
   "--drop-hint-border-radius",
   "--drop-hint-margin-x",
   "--drop-hint-margin-y",
+  "--drop-hint-arrow-size",
   "--drag-clone-scale",
 ];
 
@@ -195,17 +227,15 @@ export const startDragToReorder = (
     // Point it at the clone so drop detection tracks the clone's current position.
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
-    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-    // The hint is placed against the scroll container's own box (the CSS vars
-    // below are offsets within it), so that box has to BE the containing block.
-    // A container left `position: static` would hand the hint to some ancestor
-    // instead and the line would land anywhere — give it a containing block for
-    // the duration of the drag rather than making every caller remember to
-    // position its list.
-    const restoreContainerPosition = ensurePositioned(scrollContainer);
     const dropHintEl = document.createElement("div");
     dropHintEl.className = "navi_drop_hint";
-    scrollContainer.appendChild(dropHintEl);
+    for (const side of ["start", "end"]) {
+      const capEl = document.createElement("span");
+      capEl.className = "navi_drop_hint_cap";
+      capEl.setAttribute("data-side", side);
+      dropHintEl.appendChild(capEl);
+    }
+    document.body.appendChild(dropHintEl);
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
     // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
@@ -213,11 +243,11 @@ export const startDragToReorder = (
     let currentReleaseElement;
 
     const clearDropHintDOM = () => {
-      scrollContainer.removeAttribute("data-drop-edge");
-      scrollContainer.style.removeProperty("--drop-target-top");
-      scrollContainer.style.removeProperty("--drop-target-bottom");
-      scrollContainer.style.removeProperty("--drop-target-left");
-      scrollContainer.style.removeProperty("--drop-target-width");
+      dropHintEl.removeAttribute("data-drop-edge");
+      dropHintEl.style.removeProperty("--drop-target-top");
+      dropHintEl.style.removeProperty("--drop-target-bottom");
+      dropHintEl.style.removeProperty("--drop-target-left");
+      dropHintEl.style.removeProperty("--drop-target-width");
     };
 
     const clearDropHint = () => {
@@ -277,26 +307,21 @@ export const startDragToReorder = (
       // beforeElement = X    → insert before X (hint at top edge of X)
       const anchorEl = beforeElement || items[items.length - 1];
       const anchorEdge = beforeElement !== null ? "top" : "bottom";
-      const containerRect = scrollContainer.getBoundingClientRect();
+      // Viewport coordinates, straight from the anchor row: the hint is fixed
+      // in the page (see its CSS), so there is no container box to be relative
+      // to and no scroll offset to add back.
       const anchorRect = anchorEl.getBoundingClientRect();
-      const isPositioned =
-        getComputedStyle(scrollContainer).position !== "static";
-      const scrollOffsetLeft = isPositioned ? scrollContainer.scrollLeft : 0;
-      const scrollOffsetTop = isPositioned ? scrollContainer.scrollTop : 0;
-      scrollContainer.setAttribute("data-drop-edge", anchorEdge);
-      scrollContainer.style.setProperty(
-        "--drop-target-top",
-        `${anchorRect.top - containerRect.top + scrollOffsetTop}px`,
-      );
-      scrollContainer.style.setProperty(
+      dropHintEl.setAttribute("data-drop-edge", anchorEdge);
+      dropHintEl.style.setProperty("--drop-target-top", `${anchorRect.top}px`);
+      dropHintEl.style.setProperty(
         "--drop-target-bottom",
-        `${anchorRect.bottom - containerRect.top + scrollOffsetTop}px`,
+        `${anchorRect.bottom}px`,
       );
-      scrollContainer.style.setProperty(
+      dropHintEl.style.setProperty(
         "--drop-target-left",
-        `${anchorRect.left - containerRect.left + scrollOffsetLeft}px`,
+        `${anchorRect.left}px`,
       );
-      scrollContainer.style.setProperty(
+      dropHintEl.style.setProperty(
         "--drop-target-width",
         `${anchorRect.width}px`,
       );
@@ -305,7 +330,6 @@ export const startDragToReorder = (
     dragGesture.addReleaseCallback(async (gestureInfo) => {
       clearDropHintDOM();
       dropHintEl.remove();
-      restoreContainerPosition();
       restoreCSSVars();
 
       if (currentBeforeElement !== undefined) {
@@ -365,25 +389,6 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
-// Gives an element a containing block for as long as the drag lasts, and only
-// if it does not already have one. The scroll container may be the page itself
-// (documentElement / body), which already is one — and which must not be
-// rewritten under the application's feet.
-const ensurePositioned = (el) => {
-  if (
-    el === document.documentElement ||
-    el === document.body ||
-    getComputedStyle(el).position !== "static"
-  ) {
-    return () => {};
-  }
-  const positionPrevious = el.style.position;
-  el.style.position = "relative";
-  return () => {
-    el.style.position = positionPrevious;
-  };
-};
-
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 

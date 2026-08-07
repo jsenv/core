@@ -295,6 +295,16 @@ const css = /* css */ `
        which is the whole point (the row is what is read-only, not one of its
        parts). Positioned so the loading outline it may draw has a box to sit
        on. */
+    /* Same inline callout as the list's own error (.navi_list_error), scoped to
+       one row. */
+    &[navi-error] {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: light-dark(#b91c1c, #fca5a5);
+      background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    }
+
     &[navi-readonly] {
       position: relative;
       opacity: 0.6;
@@ -1761,6 +1771,7 @@ const ListItemReal = (props) => {
     muted,
     loading,
     readOnly,
+    error,
     matchInfo,
     children,
     ...rest
@@ -1846,11 +1857,24 @@ const ListItemReal = (props) => {
       navi-readonly={readOnly || loading ? "" : undefined}
       aria-busy={loading ? "true" : undefined}
       aria-readonly={readOnly ? "true" : undefined}
+      navi-error={error ? "" : undefined}
       onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
       onClickCapture={blocked ? blockInteraction : undefined}
       ref={ref}
     >
-      {children}
+      {/* The error IS the row's content: what the row stood for did not
+          happen, so showing it as if it had would be a lie — same choice as
+          the list's own error, one row down. */}
+      {error ? (
+        <>
+          <span className="navi_list_error_icon" aria-hidden="true">
+            ⚠
+          </span>
+          <span>{error === true ? "Something went wrong." : error}</span>
+        </>
+      ) : (
+        children
+      )}
       {/* Drawn on top of the row, taking no space: the row keeps whatever
           layout it was given (a flex row, a grid of columns…) while it waits. */}
       {loading && (
@@ -1926,6 +1950,9 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               `selected.includes(value)` (multiple) from parent state.
  *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
  *               if omitted; prefer `id` for external addressing).
+ *   error     — what this row stood for failed: the message replaces its
+ *               content, styled like the list's own error. `true` shows a
+ *               generic sentence.
  *   loading   — the row is waiting on something (its creation being confirmed,
  *               its deletion going through): it draws a loading outline and,
  *               like readOnly, stops taking clicks. Works on any item, not only
