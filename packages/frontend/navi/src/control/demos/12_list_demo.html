@@ -103,13 +103,14 @@
         content: "(none selected)";
       }
 
-      /* Only the rows move. Without this the whole page cross-fades under its
-         own snapshot on every add or remove, which reads as a jump when the
-         list grows and the page scrolls. */
-      ::view-transition-old(root),
-      ::view-transition-new(root) {
-        mix-blend-mode: normal;
-        animation: none;
+      /* The page itself takes no part in the transitions: only the rows do.
+         Snapshotting the root freezes everything else for the duration — the
+         separators stop being drawn, the sibling lists sit on a stale image,
+         and the page jumps as it scrolls under its own frozen picture. Opting
+         the root out leaves the page rendering live while the named rows
+         animate over it. */
+      :root {
+        view-transition-name: none;
       }
       /* A row appearing grows into place, a row leaving shrinks away; the rows
          that stay slide on their own (the browser animates each named row). The
@@ -1847,6 +1848,13 @@
       ];
       let taskCounter = TASKS.length;
       const nextTaskId = () => `t${++taskCounter}`;
+      // What the backend adds when it changes on its own (the "+ row" in its
+      // table): the frontend has to take it without having asked.
+      const backendNewTask = (rows) => ({
+        id: nextTaskId(),
+        label: MORE_TASKS[rows.length % MORE_TASKS.length],
+      });
+
       // For the "add one, don't make me type" button below.
       const MORE_TASKS = [
         "Stretch",
@@ -1959,7 +1967,7 @@
           <h4>Live</h4>
           <p>Answer or fail the call to see where the new row ends up.</p>
           <SlowMotionToggle />
-          <FakeBackend value={TASKS}>
+          <FakeBackend value={TASKS} newRow={backendNewTask}>
             {({ value, action }) => <AddableList saved={value} save={action} />}
           </FakeBackend>
         </div>
@@ -2043,6 +2051,20 @@
         </Box>
       );
 
+      // What the backend holds, adopted by the list: a change it did not ask for
+      // (the ✕ and "+ row" in the backend's own table) lands the same way as one
+      // it did — in a view transition, so the rows move rather than jump.
+      const useBackendRows = (saved, setTasks) => {
+        const firstRef = useRef(true);
+        useEffect(() => {
+          if (firstRef.current) {
+            firstRef.current = false;
+            return;
+          }
+          document.startViewTransition(() => setTasks(saved));
+        }, [saved]);
+      };
+
       // The row animations run on ::view-transition pseudo-elements, which hang
       // off the document — so the knob that slows them down is a var on the root.
       const SlowMotionToggle = () => {
@@ -2067,6 +2089,7 @@
 
       const AddableList = ({ saved, save }) => {
         const [tasks, setTasks] = useState(saved);
+        useBackendRows(saved, setTasks);
         // The row being created: present in the list, not yet confirmed. It
         // carries its own error, so a refused creation stays where the user put
         // it and says what happened, instead of vanishing with the message
@@ -2163,7 +2186,7 @@
             The row stays, loading and read-only, until the server has taken it.
           </p>
           <SlowMotionToggle />
-          <FakeBackend value={TASKS}>
+          <FakeBackend value={TASKS} newRow={backendNewTask}>
             {({ value, action }) => (
               <RemovableList saved={value} save={action} />
             )}
@@ -2173,6 +2196,7 @@
 
       const RemovableList = ({ saved, save }) => {
         const [tasks, setTasks] = useState(saved);
+        useBackendRows(saved, setTasks);
         const [pendingId, setPendingId] = useState(null);
 
         const remove = async (task) => {

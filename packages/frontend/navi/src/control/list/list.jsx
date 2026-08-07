@@ -1806,8 +1806,15 @@ const ListItemReal = (props) => {
   // The primary button only: a right (or middle) click asks the browser for its
   // own menu — copying the row's text, opening a link it holds in a tab — and
   // none of that acts on the row, so a busy row has no reason to swallow it.
+  // What is layered OVER the row is not part of it: the callout explaining why
+  // the row is blocked is parented to the row (that is how it is anchored), so
+  // a capture-phase block would swallow the press on its own close button — the
+  // callout could then never be dismissed. Anything inside a popover is someone
+  // else's business.
+  const isOverlaidOnRow = (event) =>
+    event.target.closest && event.target.closest("[popover]");
   const blockInteraction = (event) => {
-    if (event.button !== 0) {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
       return;
     }
     event.preventDefault();
@@ -1818,16 +1825,10 @@ const ListItemReal = (props) => {
   // presses its close button, the callout goes away, and the click that follows
   // is delivered to whatever is now under the pointer — this row.
   const pressStartedHereRef = useRef(false);
-  // When the row's own callout was last dismissed. The dismissal itself is a
-  // press, and the browser delivers what follows it to this row — asking for
-  // the callout again straight away, which reads as a flicker rather than as a
-  // dismissal. The cause is outside of us (the callout is gone by the time the
-  // event is routed), so the press right after a dismissal is the one thing
-  // that has to be ignored.
-  const calloutClosedAtRef = useRef(0);
+
   const calloutRef = useRef(null);
   const explainBlockedInteraction = (event) => {
-    if (event.button !== 0) {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
       return;
     }
     blockInteraction(event);
@@ -1836,16 +1837,10 @@ const ListItemReal = (props) => {
     if (calloutRef.current && calloutRef.current.opened) {
       return;
     }
-    if (event.timeStamp - calloutClosedAtRef.current < 300) {
-      return;
-    }
     calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
       anchorElement: event.currentTarget,
       status: "info",
       openingEvent: event,
-      onClose: () => {
-        calloutClosedAtRef.current = performance.now();
-      },
     });
   };
   useLayoutEffect(() => {

@@ -198,6 +198,12 @@ const LoadingRectangleSvg = ({
   // ✅ Calculate correct offset based on actual segment size
   const segmentRatio = segmentLength / pathLength;
   const circleOffset = -animationDuration * segmentRatio;
+  // The dash and the dot are two animations that must stay in phase — the dot
+  // is the head of the dash. SMIL keeps running when its dur is edited, so
+  // changing the speed (or the path) re-times one and leaves the other where it
+  // was, and the dot detaches from the segment. Keyed on what defines their
+  // timing, both are recreated together and start on the same beat.
+  const animationKey = `${animationDuration}-${Math.round(pathLength)}`;
 
   return (
     <svg
@@ -244,6 +250,7 @@ const LoadingRectangleSvg = ({
         pathLength={pathLength}
       >
         <animate
+          key={animationKey}
           attributeName="stroke-dashoffset"
           from={pathLength}
           to="0"
@@ -256,6 +263,7 @@ const LoadingRectangleSvg = ({
       {/* Leading dot that follows the path */}
       <circle r={strokeWidth} fill={color}>
         <animateMotion
+          key={animationKey}
           path={rectPath}
           dur={`${animationDuration}s`}
           repeatCount="indefinite"

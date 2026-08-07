@@ -39,6 +39,12 @@ import { renderIntoCallout } from "./callout.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_callout {
+      /* A callout is parented to what it explains, so it inherits from it — and
+       an element that suppressed text selection (a list row, a drag source)
+       would make its own explanation unselectable. The message is text one
+       copies. */
+      user-select: text;
+
       --callout-success-color: #4caf50;
       --callout-info-color: #2196f3;
       --callout-warning-color: #ff9800;

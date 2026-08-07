@@ -140,6 +140,12 @@ const css = /* css */ `
     color: #78909c;
     font-weight: 600;
   }
+  .navi_fake_backend_table button {
+    padding: 0 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    cursor: pointer;
+  }
 
   /* Right, against the backend's own name on the left: the two labels face each
      other across the frontier. */
@@ -152,9 +158,13 @@ const css = /* css */ `
  * @param {object} props
  * @param {any} [props.value] - what the backend holds to begin with. Nothing,
  *   when nothing is given: a backend that has never been told anything.
+ * @param {(rows: Array) => object} [props.newRow] - makes the backend editable
+ *   from its own side: each row of the table gets a ✕ and the table a "+ row",
+ *   and this builds the row that "+ row" adds. Use it to see the frontend take
+ *   a change it did not ask for.
  * @param {(context: {value: any, action: Function}) => import("preact").ComponentChildren} props.children
  */
-export const FakeBackend = ({ value: valueInitial, children }) => {
+export const FakeBackend = ({ value: valueInitial, newRow, children }) => {
   import.meta.css = css;
   const [value, setValue] = useState(valueInitial);
   // The call in flight, held until someone answers it: what it was given, and
@@ -175,11 +185,25 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
     setCall(null);
   };
 
+  // The backend changing on its own — someone else's edit, a job, a push. No
+  // call is in flight for these: the value simply becomes something else and
+  // the frontend has to notice.
+  const removeRow = (index) => {
+    setValue(value.filter((row, rowIndex) => rowIndex !== index));
+  };
+  const addRow = () => {
+    setValue([...value, newRow(value)]);
+  };
+
   return (
     <div className="navi_fake_backend">
       <div className="navi_fake_backend_head">
         <span className="navi_fake_backend_label">backend</span>
-        <Value value={value} />
+        <Value
+          value={value}
+          onRemoveRow={newRow ? removeRow : undefined}
+          onAddRow={newRow ? addRow : undefined}
+        />
       </div>
       <div className="navi_fake_backend_frontier">
         {call ? (
@@ -211,7 +235,7 @@ export const FakeBackend = ({ value: valueInitial, children }) => {
 // A collection is shown as a table, everything else as its JSON. A list of
 // records read as one long JSON line is the thing one gives up on reading —
 // which defeats the purpose of putting the backend's own state on the page.
-const Value = ({ value }) => {
+const Value = ({ value, onRemoveRow, onAddRow }) => {
   const columnNames = collectColumnNames(value);
   if (!columnNames) {
     return <span className="navi_fake_backend_value">{stringify(value)}</span>;
@@ -223,6 +247,7 @@ const Value = ({ value }) => {
           {columnNames.map((columnName) => (
             <th key={columnName}>{columnName}</th>
           ))}
+          {onRemoveRow && <th aria-hidden="true" />}
         </tr>
       </thead>
       <tbody>
@@ -231,8 +256,32 @@ const Value = ({ value }) => {
             {columnNames.map((columnName) => (
               <td key={columnName}>{stringify(row[columnName])}</td>
             ))}
+            {onRemoveRow && (
+              <td>
+                <button
+                  type="button"
+                  title="Remove this row from the backend"
+                  onClick={() => onRemoveRow(index)}
+                >
+                  ✕
+                </button>
+              </td>
+            )}
           </tr>
         ))}
+        {onAddRow && (
+          <tr>
+            <td colSpan={columnNames.length + 1}>
+              <button
+                type="button"
+                title="Add a row to the backend"
+                onClick={onAddRow}
+              >
+                + row
+              </button>
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
