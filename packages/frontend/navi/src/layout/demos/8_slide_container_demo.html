@@ -206,7 +206,13 @@
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
       import { createContext } from "preact";
-      import { useContext, useEffect, useRef, useState } from "preact/hooks";
+      import {
+        useContext,
+        useEffect,
+        useId,
+        useRef,
+        useState,
+      } from "preact/hooks";
       import {
         Box,
         Button,
@@ -539,8 +545,8 @@
           </Slide>
           <Slide id="the-list" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
-              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
               <Text expandX>the list</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
               <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m" flex="y" spacing="s">
@@ -571,8 +577,8 @@
           </Slide>
           <Slide id="below" overflow="auto">
             <Box header padding="m" flex="x" alignY="center" className="part">
-              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
               <Text expandX>below</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
             </Box>
             <Box body padding="m">
               <Text>↑ goes back to the list</Text>
@@ -1194,36 +1200,49 @@
       // after each travel and the content moves one step with it.
       const LoopSlides = () => {
         const [number, setNumber] = useState(0);
+        // The ways out are OUTSIDE the window, one on each side of it, and
+        // drive it by name (commandFor). Put on a slide they would travel with
+        // it — during a move one sees the slide arriving, which carries its own
+        // pair, so the buttons appear to slide away and back rather than the
+        // window moving under them.
+        const containerId = useId();
         return (
-          <SlideContainer
-            loop
-            defaultCurrent="current"
-            onLoop={({ dx }) => {
-              setNumber(number + dx);
-            }}
-            duration={useSlideDuration()}
-            width="220px"
-            backgroundColor="white"
-            borderWidth="1"
-            borderStyle="solid"
-            borderColor="#90caf9"
-          >
-            <Slide area="previous" padding="m" flex alignX="center">
-              <Text>{number - 1}</Text>
-            </Slide>
-            <Slide area="current" padding="m">
-              <Box flex alignY="center" spacing="s">
-                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
-                <Text expandX align="center">
-                  {number}
-                </Text>
-                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
-              </Box>
-            </Slide>
-            <Slide area="next" padding="m" flex alignX="center">
-              <Text>{number + 1}</Text>
-            </Slide>
-          </SlideContainer>
+          <Box flex="x" alignY="center" spacing="s">
+            <SlideContainer.Left
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+            <SlideContainer
+              id={containerId}
+              loop
+              defaultCurrent="current"
+              onLoop={({ dx }) => {
+                setNumber(number + dx);
+              }}
+              duration={useSlideDuration()}
+              width="220px"
+              backgroundColor="white"
+              borderWidth="1"
+              borderStyle="solid"
+              borderColor="#90caf9"
+            >
+              <Slide area="previous" padding="m" flex alignX="center">
+                <Text>{number - 1}</Text>
+              </Slide>
+              <Slide area="current" padding="m" flex alignX="center">
+                <Text>{number}</Text>
+              </Slide>
+              <Slide area="next" padding="m" flex alignX="center">
+                <Text>{number + 1}</Text>
+              </Slide>
+            </SlideContainer>
+            <SlideContainer.Right
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+          </Box>
         );
       };
 
