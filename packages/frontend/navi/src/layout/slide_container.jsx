@@ -158,6 +158,34 @@ const css = /* css */ `
   }
 `;
 
+// How much of a travel is left to make, as a fraction of the travel that was
+// asked for: 1 for a move starting from rest, less for one picked up while the
+// track was already moving. Everything is measured in px against the track's
+// own box, because that is what its percentages resolve to.
+const ratioOfOneTravel = (track, from, to, targetBefore) => {
+  const box = track.getBoundingClientRect();
+  const readOffset = (offset) => {
+    if (!offset || offset === "none") {
+      return { x: 0, y: 0 };
+    }
+    const [x = "0", y = "0"] = String(offset).trim().split(/\s+/);
+    const toPx = (value, size) =>
+      value.endsWith("%")
+        ? (parseFloat(value) / 100) * size
+        : parseFloat(value) || 0;
+    return { x: toPx(x, box.width), y: toPx(y, box.height) };
+  };
+  const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  const target = readOffset(to);
+  const asked = distance(readOffset(targetBefore), target);
+  if (!asked) {
+    return 1;
+  }
+  const left = distance(readOffset(from), target);
+  const ratio = left / asked;
+  return ratio > 1 ? 1 : ratio;
+};
+
 // The ways out of a slide: whatever carries a travel command, the built-in
 // chevrons (SlideNavButton) and anything a caller wired by hand alike. They are
 // the container's chrome, not its content — see rememberFocus.
@@ -492,14 +520,18 @@ export const SlideContainer = ({
     // while another is still playing must carry on from what is on screen. The
     // previous TARGET is where the last travel was going, not where it got to —
     // starting from it would jump the track to the end of a move that never
-    // finished, and only then slide back. Read while the animation still runs
-    // (it is what the computed value reflects) and in px, which is what the
-    // percentages resolve to anyway.
+    // finished, and only then slide back.
+    // Read, rather than left implicit: an animation with only a "to" keyframe
+    // starts from the UNDERLYING value, which is the resting offset (the CSS
+    // var just below) and not the moving one — the animation being replaced
+    // does not contribute to it. So the position on screen is a thing to go and
+    // fetch, and having it in hand is also what allows the pace below.
     const travelInFlight = trackAnimationRef.current?.playState === "running";
     const offsetOnScreen = travelInFlight
       ? getComputedStyle(track).translate
       : undefined;
     const offsetBefore = offsetOnScreen ?? offsetRef.current;
+    const offsetTargetBefore = offsetRef.current;
     offsetRef.current = offset;
     // Where the track ends up, always — the animation below only covers the way
     // there, and when it is over this is what holds.
@@ -511,12 +543,27 @@ export const SlideContainer = ({
       offsetBefore !== undefined &&
       offsetBefore !== offset;
     if (travels) {
+      // The time it takes is the distance it has left to cover: a travel picked
+      // up a fifth of the way through goes back in a fifth of the time, so what
+      // one sees keeps the speed it already had instead of crawling back over a
+      // short distance for a full duration. One box in `duration` is the pace;
+      // this only ever shortens it (a longer travel is not made slower, which
+      // would make a two-box move drag).
+      const travelRatio = ratioOfOneTravel(
+        track,
+        offsetBefore,
+        offset,
+        offsetTargetBefore,
+      );
+      // Already moving, so no ease-in to play: it would stall the track for an
+      // instant right where the eye is following it.
+      const easing = travelInFlight ? "ease-out" : "ease";
       // Cancelled rather than layered: two animations on the same property
       // would blend, and what one sees then is neither of the two moves.
       trackAnimationRef.current?.cancel();
       trackAnimationRef.current = track.animate(
         [{ translate: offsetBefore }, { translate: offset }],
-        { duration: durationMs, easing: "ease" },
+        { duration: durationMs * travelRatio, easing },
       );
     }
     // A window waiting for its travel to be over (see goToArea's own loop
