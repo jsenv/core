@@ -40,12 +40,11 @@ const css = /* css */ `
      startDragToReorder).
      Controls inside a source keep their own cursor: cursor is inherited, and
      anything setting its own (a button's pointer) wins on itself. */
+  /* Only the resting cursor: what it becomes once a drag is under way belongs
+     to the gesture (see the backdrop in drag_gesture.js), which is the only
+     thing that knows a drag actually started. */
   [data-drag-handle] {
     cursor: grab;
-
-    &:active {
-      cursor: grabbing;
-    }
   }
   [data-drag-source] {
     cursor: default;

@@ -20,6 +20,7 @@ import {
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { openCallout } from "../rules/callout/callout.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
@@ -297,7 +298,11 @@ const css = /* css */ `
     &[navi-readonly] {
       position: relative;
       opacity: 0.6;
-      pointer-events: none;
+      cursor: default;
+      /* NOT pointer-events: none — the press has to reach the row so it can
+         say why it does nothing (see ListItemReal). What the row holds is
+         neutralized by the capture-phase handlers there instead. */
+      user-select: none;
     }
   }
 
@@ -453,6 +458,7 @@ const css = /* css */ `
      and disappear as things load. Targeted on the outline itself rather than
      inherited from the item, so a control nested deeper (which has room around
      it, and does not reach the edges) keeps the outline it asked for. */
+  .navi_list_item > .navi_loading_outline_wrapper,
   .navi_list_item > * > .navi_loading_outline_wrapper,
   .navi_list_item_header > * > .navi_loading_outline_wrapper,
   .navi_list_item_footer > * > .navi_loading_outline_wrapper {
@@ -1779,6 +1785,31 @@ const ListItemReal = (props) => {
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
 
+  // Pressing a row that is busy or read-only must say why nothing happens,
+  // where the press happened — a control does this through its own interaction
+  // gate, and a list row has none (same situation as picker_spin's way-out
+  // buttons). Caught in the capture phase so the buttons the row contains never
+  // see the press either: it is the ROW that is unavailable, not one of its
+  // parts.
+  const blocked = loading || readOnly;
+  const blockInteraction = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const explainBlockedInteraction = (event) => {
+    blockInteraction(event);
+    openCallout(
+      loading
+        ? naviI18n("constraint.busy.default", props)
+        : naviI18n("constraint.readonly.item", props),
+      {
+        anchorElement: event.currentTarget,
+        status: "info",
+        openingEvent: event,
+      },
+    );
+  };
+
   return (
     <Box
       as="li"
@@ -1806,6 +1837,8 @@ const ListItemReal = (props) => {
       navi-readonly={readOnly || loading ? "" : undefined}
       aria-busy={loading ? "true" : undefined}
       aria-readonly={readOnly ? "true" : undefined}
+      onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
+      onClickCapture={blocked ? blockInteraction : undefined}
       ref={ref}
     >
       {children}

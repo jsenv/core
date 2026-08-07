@@ -332,6 +332,10 @@ naviI18n.addAll({
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
   },
+  "constraint.readonly.item": {
+    fr: "Cet élément n'est pas disponible.",
+    en: "This item is not available.",
+  },
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",

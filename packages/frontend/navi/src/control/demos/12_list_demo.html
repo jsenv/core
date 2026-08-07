@@ -291,6 +291,9 @@
                   <li>
                     <Link href="#loading-separator">With separators</Link>
                   </li>
+                  <li>
+                    <Link href="#loading-item">One row at a time</Link>
+                  </li>
                 </ol>
               </li>
               <li>
@@ -1832,9 +1835,49 @@
               With separators
             </Heading>
             <SeparatorExample />
+
+            <Heading level={3} id="loading-item">
+              One row at a time
+            </Heading>
+            <p>
+              A row has the same two states as the list: <code>loading</code>{" "}
+              while something about it is in flight, <code>readOnly</code> when
+              it is not to be acted on. Press one of them to see what it
+              answers.
+            </p>
+            <ItemStatesExample />
           </div>
         );
       };
+
+      const ItemStatesExample = () => (
+        <Box width="260px">
+          <List separator>
+            {[
+              { label: "Plain", props: {} },
+              { label: "loading", props: { loading: true } },
+              { label: "readOnly", props: { readOnly: true } },
+            ].map(({ label, props }, i) => (
+              <ListItem
+                key={label}
+                id={`item-state-${label}`}
+                index={i}
+                flex="x"
+                alignY="center"
+                spacing="s"
+                paddingX="m"
+                paddingY="s"
+                {...props}
+              >
+                <Text expandX>{label}</Text>
+                <Button variant="discrete" padding="xs" action={() => {}}>
+                  Act
+                </Button>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      );
 
       // ── Search states — few / none, with & without searchFallback ──────────────
 
