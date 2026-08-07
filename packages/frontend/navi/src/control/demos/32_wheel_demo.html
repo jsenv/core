@@ -368,17 +368,11 @@
             <Heading level={2} id="nominal">
               Cas nominal
             </Heading>
-            <div className="row">
-              <WheelGroup
-                borderWidth="0"
-                value={time}
-                action={setTime}
-                zoom
-                glass
-              >
+            <Box flex alignX="center" expandX>
+              <WheelGroup borderWidth="0" value={time} action={setTime}>
                 <Wheel name="hours" type="integer" size="xxl">
                   {range(24).map((h) => (
-                    <Wheel.Item key={h} value={h} paddingX="m">
+                    <Wheel.Item key={h} value={h} paddingX="s">
                       {pad2(h)}
                     </Wheel.Item>
                   ))}
@@ -388,16 +382,13 @@
                 </WheelGroup.Separator>
                 <Wheel name="minutes" type="integer" size="xxl">
                   {MINUTES.map((m) => (
-                    <Wheel.Item key={m} value={m} paddingX="m">
+                    <Wheel.Item key={m} value={m} paddingX="s">
                       {pad2(m)}
                     </Wheel.Item>
                   ))}
                 </Wheel>
               </WheelGroup>
-              <span className="col-label">
-                {pad2(time.hours)}:{pad2(time.minutes)}
-              </span>
-            </div>
+            </Box>
           </div>
         );
       };
