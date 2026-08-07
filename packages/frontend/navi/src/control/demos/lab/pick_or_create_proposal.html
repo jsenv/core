@@ -318,94 +318,6 @@
           // Where to go is not decided here: the form says it with its own
           // command (--navi-back), which follows a send that went through.
         };
-        // Same as the edit screen: what to prefill is what the travel here
-        // carried — the "+" button hands over nothing, the "create «typed»" row
-        // hands over what was typed.
-        const CreateSlideForm = () => {
-          const prefill = useSlideValue() ?? "";
-          // keyed by it: the fields are uncontrolled, so arriving with another
-          // name must give them a fresh defaultValue rather than keep the
-          // previous one
-          return <CreateForm key={prefill} prefill={prefill} />;
-        };
-
-        // Inside the slide, which is the only place that can ask what the
-        // travel here was about: the pencil sent { id, name } along with
-        // --navi-right (see its `value`), and this reads it back. Nothing is
-        // stored on the side for it — the entry being edited is what the
-        // command handed over, and it is known here and nowhere else.
-        const EditSlide = () => {
-          const slideValue = useSlideValue();
-          const entry = slideValue
-            ? (entries.find((candidate) => candidate.id === slideValue.id) ??
-              slideValue)
-            : null;
-          return (
-            <Form
-              // Its value is its own: this form lives inside the Picker, and
-              // without this the picker's value would stop being "the chosen
-              // entry" and become the fields of this form — whose constraints
-              // would join the picker's too.
-              standalone
-              // Back where the user came from, which is the list — said as
-              // "back" rather than "left" because that is what it means: this
-              // screen is reached from the list, and it returns there whatever
-              // the map looks like.
-              command="--navi-back"
-              // One form, two ways to send it: which button asked comes in with
-              // the values (a button carries a name and a value like any
-              // field), and where to go afterwards is that button's own
-              // business — see the Supprimer button's formCommand.
-              action={(values) =>
-                values.intent === "delete"
-                  ? deleteEntry(entry)
-                  : submitEdit(entry, values)
-              }
-              flex="y"
-              overflow="auto"
-              expandY
-            >
-              <Box header flex="x" spacing="xs" alignY="center" padding="m">
-                <Text expandX fontSize="1rem">
-                  <strong>{editTitle}</strong>
-                </Text>
-                {/* This screen is beside the list, so the way out points at
-                    it */}
-                <SlideContainer.Left size="xl" padding="xs" marginRight="-xs" />
-              </Box>
-              <Box body padding="m">
-                {/* keyed by the entry: the fields are uncontrolled, so editing
-                    another one must give them fresh defaults */}
-                <CreateForm key={entry?.id} entry={entry} />
-              </Box>
-              <Box footer padding="m" paddingY="s" className="form-actions">
-                <Button
-                  command="--navi-send"
-                  name="intent"
-                  value="save"
-                  paddingY="s"
-                >
-                  Enregistrer
-                </Button>
-                {/* Sends the same form — so the whole screen goes read-only
-                    while it runs, which is what one wants of a deletion — and
-                    says where it goes afterwards, which is not where saving
-                    goes. */}
-                <Button
-                  command="--navi-send"
-                  name="intent"
-                  value="delete"
-                  formCommand={`--navi-go-to-slide:${id}_pick`}
-                  variant="discrete"
-                  paddingY="s"
-                >
-                  Supprimer
-                </Button>
-              </Box>
-            </Form>
-          );
-        };
-
         const deleteEntry = async (entry) => {
           await reachServer();
           onDelete(entry);
@@ -662,7 +574,7 @@
                       {/* body: the fields are what scrolls, so the header above
                           and the footer below stay put */}
                       <Box body padding="m">
-                        <CreateSlideForm />
+                        <CreateSlideForm createForm={CreateForm} />
                       </Box>
                       {/* row-reverse + wrap: with enough width the two sit side
                           by side, cancel on the left and confirm on the right
@@ -692,7 +604,14 @@
                   {/* Third slide, reached only by a pencil: editing is about
                       one entry, so it is not somewhere one walks into */}
                   <Slide id={`${id}_edit`} flex="y">
-                    <EditSlide />
+                    <EditSlide
+                      id={id}
+                      editTitle={editTitle}
+                      entries={entries}
+                      createForm={CreateForm}
+                      onSave={submitEdit}
+                      onDelete={deleteEntry}
+                    />
                   </Slide>
                 </SlideContainer>
               </Picker>
@@ -748,6 +667,110 @@
               )}
             </Box>
           </div>
+        );
+      };
+
+      // Defined here, NOT inside PickOrCreateField: a component declared in
+      // another component's body is a new type on every render, so Preact
+      // throws its subtree away and builds it again — and the button that just
+      // sent the form is detached by the time the action resolves, so the
+      // command that follows the send (going back to the list) finds nothing to
+      // travel and the screen just sits there.
+      //
+      // Same as the edit screen: what to prefill is what the travel here
+      // carried — the "+" button hands over nothing, the "create «typed»" row
+      // hands over what was typed.
+      const CreateSlideForm = ({ createForm }) => {
+        // capitalized: JSX reads a lowercase name as an html tag
+        const CreateForm = createForm;
+        const prefill = useSlideValue() ?? "";
+        // keyed by it: the fields are uncontrolled, so arriving with another
+        // name must give them a fresh defaultValue rather than keep the
+        // previous one
+        return <CreateForm key={prefill} prefill={prefill} />;
+      };
+
+      // Inside the slide, which is the only place that can ask what the travel
+      // here was about: the pencil sent { id, name } along with --navi-right
+      // (see its `value`), and this reads it back. Nothing is stored on the
+      // side for it — the entry being edited is what the command handed over,
+      // and it is known here and nowhere else.
+      const EditSlide = ({
+        id,
+        editTitle,
+        entries,
+        createForm,
+        onSave,
+        onDelete,
+      }) => {
+        // capitalized: JSX reads a lowercase name as an html tag
+        const CreateForm = createForm;
+        const slideValue = useSlideValue();
+        const entry = slideValue
+          ? (entries.find((candidate) => candidate.id === slideValue.id) ??
+            slideValue)
+          : null;
+        return (
+          <Form
+            // Its value is its own: this form lives inside the Picker, and
+            // without this the picker's value would stop being "the chosen
+            // entry" and become the fields of this form — whose constraints
+            // would join the picker's too.
+            standalone
+            // Back where the user came from, which is the list — said as
+            // "back" rather than "left" because that is what it means: this
+            // screen is reached from the list, and it returns there whatever
+            // the map looks like.
+            command="--navi-back"
+            // One form, two ways to send it: which button asked comes in with
+            // the values (a button carries a name and a value like any field),
+            // and where to go afterwards is that button's own business — see
+            // the Supprimer button's formCommand.
+            action={(values) =>
+              values.intent === "delete"
+                ? onDelete(entry)
+                : onSave(entry, values)
+            }
+            flex="y"
+            overflow="auto"
+            expandY
+          >
+            <Box header flex="x" spacing="xs" alignY="center" padding="m">
+              <Text expandX fontSize="1rem">
+                <strong>{editTitle}</strong>
+              </Text>
+              {/* This screen is beside the list, so the way out points at it */}
+              <SlideContainer.Left size="xl" padding="xs" marginRight="-xs" />
+            </Box>
+            <Box body padding="m">
+              {/* keyed by the entry: the fields are uncontrolled, so editing
+                  another one must give them fresh defaults */}
+              <CreateForm key={entry?.id} entry={entry} />
+            </Box>
+            <Box footer padding="m" paddingY="s" className="form-actions">
+              <Button
+                command="--navi-send"
+                name="intent"
+                value="save"
+                paddingY="s"
+              >
+                Enregistrer
+              </Button>
+              {/* Sends the same form — so the whole screen goes read-only while
+                  it runs, which is what one wants of a deletion — and says
+                  where it goes afterwards, which is not where saving goes. */}
+              <Button
+                command="--navi-send"
+                name="intent"
+                value="delete"
+                formCommand={`--navi-go-to-slide:${id}_pick`}
+                variant="discrete"
+                paddingY="s"
+              >
+                Supprimer
+              </Button>
+            </Box>
+          </Form>
         );
       };
 

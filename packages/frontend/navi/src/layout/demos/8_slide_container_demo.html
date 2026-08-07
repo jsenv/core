@@ -183,6 +183,19 @@
         border: 1px solid #90caf9;
         border-radius: 8px;
       }
+      /* The carousel's own bullets: a row of them says how many slides there
+         are and which one is showing, and each is a way to that slide. */
+      .carousel-dot {
+        display: block;
+        width: 8px;
+        height: 8px;
+        background: #cfd8dc;
+        border-radius: 50%;
+      }
+      .carousel-dot[data-current] {
+        background: #1a1a2e;
+      }
+
       .in-document {
         display: flex;
         flex-direction: column;
@@ -393,6 +406,153 @@
           </DemoSlide>
         </SlideContainer>
       );
+
+      // What it is for, with nothing on it: two screens, one after the other,
+      // each with its own way to the next.
+      const NominalSlides = () => (
+        <SlideContainer duration={useSlideDuration()} width="260px">
+          <Slide id="plan">
+            <Box header flex="x" alignY="center" padding="m" className="part">
+              <Text expandX>Plan</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Text>Monthly — 9 € / month</Text>
+              <Text>Yearly — 90 € / year</Text>
+            </Box>
+          </Slide>
+          <Slide id="payment">
+            <Box header flex="x" alignY="center" padding="m" className="part">
+              <Text expandX>Payment</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Input name="card" placeholder="Card number" />
+              <Button>Pay</Button>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // Four "photos": a gradient and a name, which is all a carousel needs to
+      // be one.
+      const PHOTOS = [
+        {
+          name: "Sunrise",
+          background: "linear-gradient(160deg,#ffb74d,#f06292)",
+        },
+        {
+          name: "Lagoon",
+          background: "linear-gradient(160deg,#4dd0e1,#1976d2)",
+        },
+        {
+          name: "Forest",
+          background: "linear-gradient(160deg,#aed581,#2e7d32)",
+        },
+        { name: "Dusk", background: "linear-gradient(160deg,#9575cd,#311b92)" },
+      ];
+      const Photo = ({ photo }) => (
+        <Box
+          flex
+          alignX="center"
+          alignY="center"
+          expandX
+          expandY
+          style={{ background: photo.background }}
+        >
+          <Text style={{ color: "white", fontWeight: 600 }}>{photo.name}</Text>
+        </Box>
+      );
+
+      // A carousel that says where one is: one bullet per photo under the box,
+      // the current one filled in, and each of them a way to its own photo
+      // (--navi-go-to-slide, by name).
+      const CarouselWithBullets = () => {
+        const containerId = useId();
+        const [current, setCurrent] = useState("photo_0");
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <SlideContainer
+              id={containerId}
+              current={current}
+              onCurrentChange={setCurrent}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              {PHOTOS.map((photo, index) => (
+                <Slide key={photo.name} id={`photo_${index}`}>
+                  <Photo photo={photo} />
+                </Slide>
+              ))}
+            </SlideContainer>
+            <Box flex="x" spacing="xs" alignX="center" width="280px">
+              {PHOTOS.map((photo, index) => (
+                <Button
+                  key={photo.name}
+                  command={`--navi-go-to-slide:photo_${index}`}
+                  commandFor={containerId}
+                  variant="discrete"
+                  padding="xs"
+                  aria-label={photo.name}
+                >
+                  <span
+                    class="carousel-dot"
+                    data-current={current === `photo_${index}` ? "" : undefined}
+                  />
+                </Button>
+              ))}
+            </Box>
+          </Box>
+        );
+      };
+
+      // The same photos with no end to them: three slides are the window, the
+      // content moves one step behind each travel (onLoop), so → on the last
+      // photo shows the first.
+      const CarouselLooping = () => {
+        const containerId = useId();
+        const [index, setIndex] = useState(0);
+        const photoAt = (offset) =>
+          PHOTOS[(index + offset + PHOTOS.length) % PHOTOS.length];
+        return (
+          <Box flex="x" alignY="center" spacing="s">
+            <SlideContainer.Left
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+            <SlideContainer
+              id={containerId}
+              loop
+              defaultCurrent="current"
+              onLoop={({ dx }) => {
+                setIndex((index + dx + PHOTOS.length) % PHOTOS.length);
+              }}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              <Slide area="previous">
+                <Photo photo={photoAt(-1)} />
+              </Slide>
+              <Slide area="current">
+                <Photo photo={photoAt(0)} />
+              </Slide>
+              <Slide area="next">
+                <Photo photo={photoAt(1)} />
+              </Slide>
+            </SlideContainer>
+            <SlideContainer.Right
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+          </Box>
+        );
+      };
 
       const TallSlides = () => (
         <SlideContainer duration={useSlideDuration()}>
@@ -1433,6 +1593,11 @@
             </p>
           </div>
 
+          <section class="demo-section" id="nominal">
+            <Heading id="nominal">Cas nominal</Heading>
+            <NominalSlides />
+          </section>
+
           <section class="demo-section" id="states">
             <Heading id="states">What a slide looks like</Heading>
             <p>A box: what one sees is what it was given.</p>
@@ -1583,7 +1748,7 @@
           </section>
 
           <section class="demo-section" id="loop">
-            <Heading id="loop">A window instead of places</Heading>
+            <Heading id="loop">Looping</Heading>
             <p>
               <code>loop</code>: the travel plays, the window comes back to the
               middle, and <code>onLoop</code> moves the content one step — three
@@ -1657,6 +1822,15 @@
               needs nothing said about it anywhere.
             </p>
             <ThreeWays id="three" Content={ThreeSlides} />
+          </section>
+
+          <section class="demo-section" id="practical">
+            <Heading id="practical">Practical examples</Heading>
+            <h3>A carousel, with bullets</h3>
+            <CarouselWithBullets />
+            <h3>A carousel with no end</h3>
+            <p>→ on the last photo shows the first.</p>
+            <CarouselLooping />
           </section>
 
           <section class="demo-section" id="the-map">
