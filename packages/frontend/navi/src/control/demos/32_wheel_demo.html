@@ -317,13 +317,24 @@
                 <Link href="#practical">Practical examples</Link>
                 <ul>
                   <li>
-                    <Link href="#practical-size">Size picker</Link>
-                  </li>
-                  <li>
                     <Link href="#practical-day">Day picker</Link>
                   </li>
                   <li>
-                    <Link href="#practical-duration">Duration picker</Link>
+                    <Link href="#practical-size">Size picker</Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-duration">Duration wheels</Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-duration-picker">
+                      Duration picker
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-time">Time wheels</Link>
+                  </li>
+                  <li>
+                    <Link href="#practical-time-picker">Time picker</Link>
                   </li>
                 </ul>
               </li>
@@ -638,51 +649,83 @@
 
       // ── Practical examples ─────────────────────────────────────────────────
 
-      // Duration picker: two wheels (hours 1–5, minutes every 15) live inside a
-      // Picker popup. Each wheel's value feeds a signal so the trigger UI can
-      // show the current duration; the picker also aggregates the named children
-      // into one { hours, minutes } value (its action/uiAction).
+      // Duration and time are two different things, and the wheels say so
+      // without a word: a duration is counted in units, so its columns are
+      // separated by "h" / "min"; a time is a point on a clock, so its columns
+      // are separated by ":" and the selected value is zoomed. Follow this
+      // pairing everywhere and one look tells the two apart.
       const DURATION_HOURS = [1, 2, 3, 4, 5];
       const DURATION_MINUTES = [0, 15, 30, 45];
       const durationHoursSignal = signal(DURATION_HOURS[0]);
       const durationMinutesSignal = signal(DURATION_MINUTES[0]);
-      const DurationWheelUI = () => {
-        return (
-          <Time type="time">
-            {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
-          </Time>
-        );
-      };
 
-      // The hours/minutes wheels, shared by both picker surfaces. `big` scales
-      // them up for the dialog (taller rows, more room per item). Breathing room
-      // around hours/minutes is set PER ITEM (paddingX), so the padded area
-      // stays scrollable — no group spacing.
-      const DurationWheelsGroup = ({ big }) => (
-        <WheelGroup>
+      const DurationWheels = ({ size, borderless }) => (
+        <WheelGroup borderWidth={borderless ? "0" : undefined}>
           <Wheel
             name="hours"
             type="integer"
             signal={durationHoursSignal}
-            size={big ? "xxl" : undefined}
+            size={size}
           >
             {DURATION_HOURS.map((h) => (
-              <Wheel.Item key={h} value={h} paddingX={big ? "s" : "s"}>
-                {pad2(h)}
+              <Wheel.Item key={h} value={h} paddingX="s">
+                {h}
               </Wheel.Item>
             ))}
           </Wheel>
-          <WheelGroup.Separator size={big ? "xxl" : undefined}>
-            <Unit unit="hour" format="short" size="inherit" />
+          <WheelGroup.Separator size={size}>
+            <Unit unit="hour" format="short" color="#6b7280" />
           </WheelGroup.Separator>
           <Wheel
             name="minutes"
             type="integer"
             signal={durationMinutesSignal}
-            size={big ? "xxl" : undefined}
+            size={size}
           >
             {DURATION_MINUTES.map((m) => (
-              <Wheel.Item key={m} value={m} paddingX={big ? "s" : "s"}>
+              <Wheel.Item key={m} value={m} paddingX="s">
+                {pad2(m)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          {/* The unit on the right too: without it the minutes column is only
+              identifiable by deduction ("3 h 15" vs "3 h 15 min"). */}
+          <WheelGroup.Separator size={size}>
+            <Unit unit="minute" format="short" color="#6b7280" />
+          </WheelGroup.Separator>
+        </WheelGroup>
+      );
+
+      const TIME_HOURS = range(24);
+      const TIME_MINUTES = range(60);
+      const timeHoursSignal = signal(9);
+      const timeMinutesSignal = signal(30);
+
+      const TimeWheels = ({ size, borderless }) => (
+        <WheelGroup zoom borderWidth={borderless ? "0" : undefined}>
+          <Wheel
+            name="hours"
+            type="integer"
+            signal={timeHoursSignal}
+            size={size}
+          >
+            {TIME_HOURS.map((h) => (
+              <Wheel.Item key={h} value={h} paddingX="s">
+                {pad2(h)}
+              </Wheel.Item>
+            ))}
+          </Wheel>
+          <WheelGroup.Separator size={size}>
+            <Wheel.Colon />
+          </WheelGroup.Separator>
+          <Wheel
+            name="minutes"
+            type="integer"
+            signal={timeMinutesSignal}
+            size={size}
+          >
+            {TIME_MINUTES.map((m) => (
+              <Wheel.Item key={m} value={m} paddingX="s">
                 {pad2(m)}
               </Wheel.Item>
             ))}
@@ -690,42 +733,37 @@
         </WheelGroup>
       );
 
+      // What the closed picker shows: the value it holds, rendered as a time
+      // rather than as the raw object the wheels aggregate.
+      const DurationWheelUI = () => (
+        <Time type="time">
+          {`${pad2(durationHoursSignal.value)}:${pad2(durationMinutesSignal.value)}`}
+        </Time>
+      );
+      const TimeWheelUI = () => (
+        <Time type="time">
+          {`${pad2(timeHoursSignal.value)}:${pad2(timeMinutesSignal.value)}`}
+        </Time>
+      );
+
       // Popover and dialog are two different UIs (usePopupMode() is only
       // available to a Picker's children). Popover: compact, spin live and click
       // outside to commit. Dialog: a deliberate modal surface — bigger wheels,
-      // more padding, and explicit Annuler / Define actions (commit via a
-      // button, like the picker in 09_input_duration_demo.html). The dialog case
-      // is a full early return so the two surfaces stay clearly separated.
-      const DurationPickerContent = () => {
+      // more padding, and explicit Annuler / Définir actions.
+      const PickerContent = ({ wheels }) => {
+        // capitalized: JSX reads a lowercase name as an html tag
+        const Wheels = wheels;
         const mode = usePopupMode();
 
         if (mode === "dialog") {
           return (
             <Box flex="y" spacing="l" padding="xl" alignX="center">
-              <DurationWheelsGroup big />
+              <Wheels size="xxl" borderless />
               <Box flex="x" spacing="s" alignX="end" expandX>
-                {/* TEMP: native pointer/click probes to see whether a tap on
-                    these buttons during the wheel's settle actually produces a
-                    click (and thus a command). Remove once the mobile
-                    settle-vs-tap bug is understood. */}
-                <Button
-                  command="--navi-cancel"
-                  variant="discrete"
-                  onPointerDown={() =>
-                    console.debug("[TEMP] Annuler pointerdown")
-                  }
-                  onClick={() => console.debug("[TEMP] Annuler click")}
-                >
+                <Button command="--navi-cancel" variant="discrete">
                   Annuler
                 </Button>
-                <Button
-                  command="--navi-define"
-                  variant="discrete"
-                  onPointerDown={() =>
-                    console.debug("[TEMP] Définir pointerdown")
-                  }
-                  onClick={() => console.debug("[TEMP] Définir click")}
-                >
+                <Button command="--navi-define" variant="discrete">
                   Définir
                 </Button>
               </Box>
@@ -735,79 +773,40 @@
 
         return (
           <Box padding="s">
-            <DurationWheelsGroup />
+            <Wheels borderless />
           </Box>
         );
       };
 
-      // Same wheels, standalone (outside a Picker) — the intended way to use a
-      // duration wheel directly on a deliberately-opened surface.
-      const DurationWheels = () => (
-        <WheelGroup padding="s">
-          <Wheel name="hours" type="integer" signal={durationHoursSignal}>
-            {DURATION_HOURS.map((h) => (
-              <Wheel.Item key={h} value={h} paddingX="s">
-                {pad2(h)}
-              </Wheel.Item>
-            ))}
-          </Wheel>
-          <WheelGroup.Separator>
-            <Wheel.Colon />
-          </WheelGroup.Separator>
-          <Wheel name="minutes" type="integer" signal={durationMinutesSignal}>
-            {DURATION_MINUTES.map((m) => (
-              <Wheel.Item key={m} value={m} paddingX="s">
-                {pad2(m)}
-              </Wheel.Item>
-            ))}
-          </Wheel>
-        </WheelGroup>
-      );
-
-      // Extracted so its `duration` state is colocated: committing the picker
-      // re-renders ONLY this example, not the sibling size/day wheels. (Left
-      // inline it re-rendered the whole PracticalExamplesDemo subtree, which is
-      // why "Définir" felt ~600ms slower here than in the standalone demo.)
-      const DurationPickerExample = () => {
-        const [duration, setDuration] = useState({});
+      // Extracted so its own state is colocated: committing the picker
+      // re-renders ONLY this example, not the sibling wheels. (Left inline it
+      // re-rendered the whole PracticalExamplesDemo subtree, which is why
+      // "Définir" felt ~600ms slower here than in the standalone demo.)
+      const WheelPickerExample = ({
+        ui,
+        wheels,
+        placeholder,
+        hoursSignal,
+        minutesSignal,
+      }) => {
+        const [value, setValue] = useState({});
         return (
-          <Fragment>
-            <Heading id="practical-duration">
-              Duration picker (hours + minutes)
-            </Heading>
-            <p>
-              A wheel belongs inside a deliberately-opened surface (see the
-              warning up top) — a <code>Picker</code> popup is exactly that.
-              Here a duration Picker opens two looping wheels — hours (1–5) and
-              minutes (every 15). <code>WheelGroup</code> is itself a control
-              group, so the picker aggregates the named <code>hours</code> /{" "}
-              <code>minutes</code> wheels into one value with no extra wrapper.
-              In popover mode you spin the wheels live and click outside to
-              validate; the picker's <code>action</code> fires on close only if
-              the value changed.
-            </p>
-            <div className="row">
-              <NaviDebug debugAll>
-                <Picker
-                  type="form"
-                  ui={<DurationWheelUI />}
-                  placeholder="Choisir une durée"
-                  popupWidthFitContent
-                  // animation
-                  scrollCapture="dialog"
-                  action={(v) => {
-                    setDuration(v);
-                  }}
-                >
-                  <DurationPickerContent />
-                </Picker>
-              </NaviDebug>
-              <span className="col-label">
-                {pad2(duration.hours ?? durationHoursSignal.value)}:
-                {pad2(duration.minutes ?? durationMinutesSignal.value)}
-              </span>
-            </div>
-          </Fragment>
+          <div className="row">
+            <Picker
+              type="form"
+              ui={ui}
+              placeholder={placeholder}
+              popupWidthFitContent
+              scrollCapture="dialog"
+              action={setValue}
+            >
+              <PickerContent wheels={wheels} />
+            </Picker>
+            <span className="col-label">
+              {pad2(value.hours ?? hoursSignal.value)}:
+              {pad2(value.minutes ?? minutesSignal.value)}
+            </span>
+          </div>
         );
       };
 
@@ -829,31 +828,12 @@
               Practical examples
             </Heading>
 
-            <Heading id="practical-size">Size picker (no loop)</Heading>
-            <p>Without loop the list has real ends: it stops at XXS / XXL.</p>
-            <div className="row">
-              <Wheel
-                bounded
-                value={size}
-                visibleCount={5}
-                action={(v) => {
-                  setSize(v);
-                }}
-              >
-                {SIZES.map((s) => (
-                  <Wheel.Item key={s} value={s}>
-                    {s}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-            </div>
-
             <Heading id="practical-day">
-              Day picker — today … +5 days (no loop)
+              Pick day between today and 5 days in the future
             </Heading>
             <p>
-              Each row is a <code>&lt;Time type="date" dayLabel&gt;</code>:
-              “Today”, “Tomorrow”, then weekday + date.
+              Loop is disabled here: coming back to today after the last day
+              would be surprising.
             </p>
             <div className="row">
               <Wheel
@@ -865,10 +845,9 @@
                 }}
                 itemHeight={40}
                 minWidth="25ch"
-                border="1px dotted grey"
               >
                 {days.map((iso) => (
-                  <Wheel.Item key={iso} value={iso}>
+                  <Wheel.Item key={iso} value={iso} paddingX="s">
                     <Time type="date" dayLabel>
                       {iso}
                     </Time>
@@ -877,20 +856,56 @@
               </Wheel>
             </div>
 
-            <DurationPickerExample />
-
-            <Heading id="practical-duration-inline">
-              Duration wheels (outside a picker)
-            </Heading>
+            <Heading id="practical-size">Size picker without loop</Heading>
             <p>
-              The same two wheels used directly (no picker). This is how you'd
-              put a duration wheel on any deliberately-opened surface. Breathing
-              room around hours/minutes is <code>paddingX</code> on each{" "}
-              <code>Wheel.Item</code>, so the padded gap stays scrollable.
+              Loop is disabled here too: sizes go from smallest to largest, and
+              that scale is worth keeping visible — XXL is the end of it, not a
+              step before XXS.
             </p>
+            <div className="row">
+              <Wheel
+                bounded
+                value={size}
+                visibleCount={5}
+                action={(v) => {
+                  setSize(v);
+                }}
+              >
+                {SIZES.map((s) => (
+                  <Wheel.Item key={s} value={s} paddingX="s">
+                    {s}
+                  </Wheel.Item>
+                ))}
+              </Wheel>
+            </div>
+
+            <Heading id="practical-duration">Duration wheels</Heading>
             <div className="row">
               <DurationWheels />
             </div>
+
+            <Heading id="practical-duration-picker">Duration picker</Heading>
+            <WheelPickerExample
+              ui={<DurationWheelUI />}
+              wheels={DurationWheels}
+              placeholder="Choisir une durée"
+              hoursSignal={durationHoursSignal}
+              minutesSignal={durationMinutesSignal}
+            />
+
+            <Heading id="practical-time">Time wheels</Heading>
+            <div className="row">
+              <TimeWheels />
+            </div>
+
+            <Heading id="practical-time-picker">Time picker</Heading>
+            <WheelPickerExample
+              ui={<TimeWheelUI />}
+              wheels={TimeWheels}
+              placeholder="Choisir une heure"
+              hoursSignal={timeHoursSignal}
+              minutesSignal={timeMinutesSignal}
+            />
           </div>
         );
       };

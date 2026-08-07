@@ -1912,10 +1912,15 @@
       // Every row carries a view-transition name of its own, so the browser can
       // animate THIS row rather than cross-fade the whole list, plus a shared
       // class the CSS animations below are written against (see the <style>).
-      const TaskRow = ({ task, children, ...rest }) => (
+      // A name has to be unique in the whole document, hence `listName`: the
+      // three lists below hold the same tasks, and sharing a name aborts the
+      // transition ("duplicate view-transition-name").
+      // Opaque, because a row being dragged is lifted out of the list: over the
+      // rows it flies past, a transparent one would show them through itself.
+      const TaskRow = ({ listName, task, pending, children, ...rest }) => (
         <ListItem
           key={task.id}
-          id={task.id}
+          id={`${listName}-${task.id}`}
           value={task.id}
           data-id={task.id}
           flex="x"
@@ -1923,8 +1928,13 @@
           spacing="s"
           paddingX="m"
           paddingY="s"
+          backgroundColor="light-dark(#fff, #1e1e1e)"
+          // A row waiting on the server is not one to act on: it says so to
+          // assistive tech and reads as muted until the answer comes.
+          aria-busy={pending ? "true" : undefined}
+          color={pending ? "secondary" : undefined}
           style={{
-            viewTransitionName: `task-${task.id}`,
+            viewTransitionName: `${listName}-${task.id}`,
             viewTransitionClass: "task-row",
           }}
           {...rest}
@@ -1972,6 +1982,7 @@
                 {tasks.map((task, i) => (
                   <TaskRow
                     key={task.id}
+                    listName="reorder"
                     task={task}
                     index={i}
                     onPointerDown={startDrag}
@@ -2033,12 +2044,15 @@
                 return (
                   <TaskRow
                     key={task.id}
+                    listName="add"
                     task={task}
                     index={i}
-                    loading={pending}
-                    readOnly={pending}
+                    pending={pending}
                   >
                     <Text expandX>{task.label}</Text>
+                    {/* Nothing else in this row is a control, so the wait is
+                        shown here rather than on one. */}
+                    {pending && <LoadingIndicator />}
                   </TaskRow>
                 );
               })}
@@ -2067,7 +2081,9 @@
             The row stays, loading and read-only, until the server has taken it.
           </p>
           <FakeBackend value={TASKS}>
-            {({ value, action }) => <RemovableList saved={value} save={action} />}
+            {({ value, action }) => (
+              <RemovableList saved={value} save={action} />
+            )}
           </FakeBackend>
         </div>
       );
@@ -2102,10 +2118,10 @@
                 return (
                   <TaskRow
                     key={task.id}
+                    listName="remove"
                     task={task}
                     index={i}
-                    loading={pending}
-                    readOnly={pending}
+                    pending={pending}
                   >
                     <Text expandX>{task.label}</Text>
                     <Button
