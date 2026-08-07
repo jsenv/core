@@ -36,14 +36,33 @@
         border-bottom: 2px solid #ddd;
         scroll-margin-top: 12px;
       }
-      /* Subsections read as headings (not tiny labels): larger, darker, spaced. */
+      /* Subsections read as headings (not tiny labels): larger, darker, spaced.
+         A rule and generous top margin so a new subsection cannot be mistaken
+         for another example inside the previous one. */
       .demo-section h3 {
         position: relative;
-        margin: 28px 0 10px;
+        margin: 44px 0 12px;
+        padding-top: 14px;
         color: #1a1a1a;
         font-weight: 700;
         font-size: 1.08rem;
+        border-top: 1px solid #e6e6e6;
         scroll-margin-top: 12px;
+      }
+      /* A heading captioning one example inside a row of examples is not a
+         subsection: no rule, no extra space. */
+      .demo-section .states h3 {
+        margin: 0;
+        padding-top: 0;
+        border-top: none;
+      }
+      /* Variations WITHIN a subsection: no rule, smaller, so the nesting is
+         visible at a glance. */
+      .demo-section h4 {
+        margin: 24px 0 10px;
+        color: #444;
+        font-weight: 600;
+        font-size: 0.92rem;
       }
       .demo-section p {
         margin: 0 0 16px;
@@ -267,6 +286,9 @@
             </div>
             <ol className="toc" style={{ margin: 0, paddingLeft: "20px" }}>
               <li>
+                <Link href="#nominal">Cas nominal</Link>
+              </li>
+              <li>
                 <Link href="#states">States</Link>
                 <ul>
                   <li>
@@ -321,11 +343,61 @@
                     <Link href="#cust-glass">glass</Link>
                   </li>
                   <li>
+                    <Link href="#cust-zoom">zoom</Link>
+                  </li>
+                  <li>
                     <Link href="#cust-frame">frameBorder</Link>
+                  </li>
+                  <li>
+                    <Link href="#cust-colors">Colors</Link>
                   </li>
                 </ul>
               </li>
             </ol>
+          </div>
+        );
+      };
+
+      // ── Cas nominal ────────────────────────────────────────────────────────
+
+      const MINUTES = range(60);
+      const NominalDemo = () => {
+        const [time, setTime] = useState({ hours: 9, minutes: 30 });
+        return (
+          <div className="demo-section">
+            <Heading level={2} id="nominal">
+              Cas nominal
+            </Heading>
+            <div className="row">
+              <WheelGroup
+                borderWidth="0"
+                value={time}
+                action={setTime}
+                zoom
+                glass
+              >
+                <Wheel name="hours" type="integer" size="xxl">
+                  {range(24).map((h) => (
+                    <Wheel.Item key={h} value={h} paddingX="m">
+                      {pad2(h)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+                <WheelGroup.Separator size="xxl">
+                  <Wheel.Colon />
+                </WheelGroup.Separator>
+                <Wheel name="minutes" type="integer" size="xxl">
+                  {MINUTES.map((m) => (
+                    <Wheel.Item key={m} value={m} paddingX="m">
+                      {pad2(m)}
+                    </Wheel.Item>
+                  ))}
+                </Wheel>
+              </WheelGroup>
+              <span className="col-label">
+                {pad2(time.hours)}:{pad2(time.minutes)}
+              </span>
+            </div>
           </div>
         );
       };
@@ -361,6 +433,19 @@
         return <StateWheel ref={wheelRef} {...rest} />;
       };
 
+      // The same wheel parked at four positions across one row.
+      const SCROLL_OFFSETS = [0, 0.25, 0.5, 0.75];
+      const ScrolledRow = (props) => (
+        <div className="states">
+          {SCROLL_OFFSETS.map((offset) => (
+            <div key={offset}>
+              <ParkedWheel offset={offset} {...props} />
+              <span className="col-label">+{offset} row</span>
+            </div>
+          ))}
+        </div>
+      );
+
       const StatesDemo = () => {
         return (
           <div className="demo-section">
@@ -392,28 +477,8 @@
             </div>
 
             <Heading id="states-between">Between two rows</Heading>
-            <p>Held mid-scroll, without and with glass.</p>
-            <div className="states">
-              {[0, 0.25, 0.5, 0.75].map((offset) => (
-                <div key={offset}>
-                  <ParkedWheel offset={offset} border="1px solid #bbb" />
-                  <span className="col-label">+{offset} row</span>
-                </div>
-              ))}
-            </div>
-            <div className="states" style={{ marginTop: 24 }}>
-              {[0, 0.25, 0.5, 0.75].map((offset) => (
-                <div key={offset}>
-                  <ParkedWheel
-                    offset={offset}
-                    glass
-                    frameBorder
-                    border="1px solid #bbb"
-                  />
-                  <span className="col-label">+{offset} row, glass</span>
-                </div>
-              ))}
-            </div>
+            <p>Held mid-scroll.</p>
+            <ScrolledRow />
           </div>
         );
       };
@@ -1097,12 +1162,12 @@
 
       const CustomizationDemo = () => {
         const [a, setA] = useState(9);
-        const [b, setB] = useState(9);
         const [vc, setVc] = useState(9);
         const [hz, setHz] = useState(9);
         const [hzH, setHzH] = useState(9);
         const [hzM, setHzM] = useState(30);
         const [g, setG] = useState(9);
+        const [z, setZ] = useState(9);
         const [gf, setGf] = useState(9);
         const [gh, setGh] = useState(9);
         const [gm, setGm] = useState(30);
@@ -1114,39 +1179,57 @@
               Customization
             </Heading>
             <p>
-              Wheel is a <code>Box</code>, so style props work directly. The
-              text colour is <code>--wheel-color</code>.
+              Wheel is a <code>Box</code>, so style props work directly.
             </p>
             <div style={{ marginBottom: 24 }}>
-              <Heading id="cust-border">border="1px solid grey"</Heading>
-              <Wheel
-                type="integer"
-                value={a}
-                action={setA}
-                border="1px solid grey"
-                padding="0 6px"
-              >
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
-            </div>
-            <div style={{ marginBottom: 24 }}>
-              <Heading id="cust-color">accent color (--wheel-color)</Heading>
-              <Wheel
-                type="integer"
-                value={b}
-                action={setB}
-                style={{ "--wheel-color": "#d6336c" }}
-              >
-                {range(24).map((h) => (
-                  <Wheel.Item key={h} value={h}>
-                    {pad2(h)}
-                  </Wheel.Item>
-                ))}
-              </Wheel>
+              <Heading id="cust-border">border</Heading>
+              <div className="states">
+                <div>
+                  <Wheel type="integer" value={a} action={setA}>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h} paddingX="s">
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">default</span>
+                </div>
+                <div>
+                  <Wheel type="integer" value={a} action={setA} borderWidth="0">
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h} paddingX="s">
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">borderWidth="0"</span>
+                </div>
+                <div>
+                  <Wheel
+                    type="integer"
+                    value={a}
+                    action={setA}
+                    border="2px dashed #d6336c"
+                  >
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h} paddingX="s">
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">border="2px dashed #d6336c"</span>
+                </div>
+                <div>
+                  <WheelGroup>
+                    <HourWheel itemProps={{ paddingX: "s" }} />
+                    <WheelGroup.Separator>
+                      <Wheel.Colon />
+                    </WheelGroup.Separator>
+                    <QuarterWheel itemProps={{ paddingX: "s" }} />
+                  </WheelGroup>
+                  <span className="col-label">WheelGroup</span>
+                </div>
+              </div>
             </div>
             <div style={{ marginBottom: 24 }}>
               <Heading id="cust-size">size</Heading>
@@ -1411,6 +1494,57 @@
                   <span className="col-label">stronger blur</span>
                 </div>
               </div>
+              <h4>Between two rows</h4>
+              <ScrolledRow glass />
+            </div>
+            <div style={{ marginTop: 24 }}>
+              <Heading id="cust-zoom">
+                zoom (the centered value stands out by size)
+              </Heading>
+              <div className="states">
+                <div>
+                  <Wheel type="integer" value={z} action={setZ}>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">default</span>
+                </div>
+                <div>
+                  <Wheel type="integer" value={z} action={setZ} zoom>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">zoom</span>
+                </div>
+                <div>
+                  <Wheel type="integer" value={z} action={setZ} zoom={1.8}>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">zoom={1.8}</span>
+                </div>
+                <div>
+                  <Wheel type="integer" value={z} action={setZ} zoom glass>
+                    {range(24).map((h) => (
+                      <Wheel.Item key={h} value={h}>
+                        {pad2(h)}
+                      </Wheel.Item>
+                    ))}
+                  </Wheel>
+                  <span className="col-label">zoom + glass</span>
+                </div>
+              </div>
+              <h4>Between two rows</h4>
+              <ScrolledRow zoom />
             </div>
             <div style={{ marginTop: 24 }}>
               <Heading id="cust-frame">
@@ -1494,13 +1628,87 @@
                 </div>
               </div>
             </div>
+            <div style={{ marginTop: 24 }}>
+              <Heading id="cust-colors">Colors</Heading>
+              <p>
+                <code>--wheel-color</code> is the wheel's colour; the neighbours
+                are a washed-out version of it, or{" "}
+                <code>--wheel-neighbor-color</code> of their own.
+              </p>
+              <div className="states">
+                <div>
+                  <ColorWheel />
+                  <span className="col-label">default</span>
+                </div>
+                <div>
+                  <ColorWheel style={{ "--wheel-color": "#d6336c" }} />
+                  <span className="col-label">--wheel-color: #d6336c</span>
+                </div>
+                <div>
+                  <ColorWheel
+                    style={{
+                      "--wheel-color": "#1971c2",
+                      "--wheel-neighbor-color": "#ffa94d",
+                    }}
+                  />
+                  <span className="col-label">+ --wheel-neighbor-color</span>
+                </div>
+              </div>
+              <h4>On a dark surface</h4>
+              <div
+                className="states"
+                style={{
+                  padding: 20,
+                  background: "#15181c",
+                  borderRadius: 8,
+                  colorScheme: "dark",
+                }}
+              >
+                <div>
+                  <ColorWheel
+                    style={{
+                      "--wheel-color": "#f1f3f5",
+                      "--navi-control-border-color": "#495057",
+                    }}
+                  />
+                  <span className="col-label" style={{ color: "#adb5bd" }}>
+                    light on dark
+                  </span>
+                </div>
+                <div>
+                  <ColorWheel
+                    glass
+                    zoom
+                    style={{
+                      "--wheel-color": "#63e6be",
+                      "--wheel-neighbor-color": "#37796a",
+                      "--navi-control-border-color": "#2f6355",
+                    }}
+                  />
+                  <span className="col-label" style={{ color: "#adb5bd" }}>
+                    accent, glass + zoom
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         );
       };
 
+      const ColorWheel = (props) => (
+        <Wheel type="integer" defaultValue={9} {...props}>
+          {range(24).map((h) => (
+            <Wheel.Item key={h} value={h} paddingX="s">
+              {pad2(h)}
+            </Wheel.Item>
+          ))}
+        </Wheel>
+      );
+
       const App = () => (
         <NaviDebug>
           <TableOfContents />
+          <NominalDemo />
           <StatesDemo />
           <ScrollBehaviorDemo />
           <SeparatorAlignmentDemo />

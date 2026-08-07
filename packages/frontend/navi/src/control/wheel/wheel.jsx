@@ -14,8 +14,9 @@
  * immediately while the selection glides to center.
  *
  * TWO LAYERS. The rows are rendered twice, one copy over the other, moved by the
- * same offset: a base layer wearing the fade, and a center layer clipped to the
- * center window and painted in the selected colour. The emphasis therefore
+ * same offset: a base layer wearing the fade (and, with `zoom`, scaled down),
+ * and a center layer clipped to the emphasis band, painted in the wheel's own
+ * colour. The emphasis therefore
  * belongs to the WINDOW rather than to a row — a row is emphasised over the part
  * of it that is inside the window, so it gains emphasis progressively as it
  * slides in, and a wheel resting between two rows still shows an emphasised
@@ -85,14 +86,27 @@ const css = /* css */ `
     --wheel-emphasis-size: round(1.5em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
-    --wheel-color: light-dark(#777, #888);
-    --wheel-selected-color: light-dark(#111, #eee);
+    /* ONE colour to set: --wheel-color is the wheel's colour, worn by the value
+       in the window. The neighbours are a washed-out version of it (blended
+       toward transparent, then dimmed further by the fade), so tinting the
+       wheel takes a single declaration and stays coherent. Override
+       --wheel-neighbor-color for a neighbour colour of its own. */
+    --wheel-color: light-dark(#111, #eee);
+    --wheel-neighbor-color: color-mix(
+      in srgb,
+      var(--wheel-color) 45%,
+      transparent
+    );
 
     position: relative; /* for the loading outline */
     display: inline-flex;
     color: var(--wheel-color);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
+    /* Bordered like every other control: the box a user can interact with is
+       visible without having to hover or guess. border="none" opts out. */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
@@ -109,20 +123,17 @@ const css = /* css */ `
         outline: var(--navi-focus-outline-width) solid
           var(--navi-focus-outline-color);
         /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-        outline-offset: calc(-0.5 * var(--navi-focus-outline-width));
+        outline-offset: calc(0.5 * var(--navi-focus-outline-width));
       }
     }
 
-    /* Readonly & disabled dim the neighbour text identically; disabled dims the
-       centered value further so the state reads on the value itself. */
+    /* Readonly dims the whole wheel; disabled dims it further. Both go through
+       --wheel-color, so the neighbours follow along (they are mixed from it). */
     &[data-readonly] {
-      --wheel-selected-color: light-dark(#666, #999);
+      --wheel-color: light-dark(#666, #999);
     }
     &[data-disabled] {
-      --wheel-selected-color: light-dark(
-        rgba(0, 0, 0, 0.32),
-        rgba(255, 255, 255, 0.38)
-      );
+      --wheel-color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
     }
     &[data-readonly],
     &[data-disabled] {
@@ -158,16 +169,16 @@ const css = /* css */ `
     overflow: hidden;
   }
   /* TWO COPIES OF THE SAME ROWS, stacked and moved together. The base layer
-     paints every row in the neighbour colour and wears the fade; the center
-     layer is clipped to the center window (see the orientation branches) and
-     paints the same rows in the selected colour, so what is inside the window
-     is emphasised and nothing else is.
+     paints every row in the neighbour colour and wears the fade (and, with
+     [data-zoom], is the one scaled down); the center layer paints the same rows
+     in the wheel's colour, clipped to the emphasis band — so what is inside the
+     band is emphasised and nothing else is.
      Emphasis is thus a property of the WINDOW, not of a row: a row gains it
      progressively as it slides in — half in, half emphasised — which no
      per-row style could do, and it survives resting between two rows (where a
      fade alone leaves nothing emphasised at all). */
   .navi_wheel_layer[data-layer="base"] {
-    color: var(--wheel-color);
+    color: var(--wheel-neighbor-color);
     /* In flow: this copy is what gives the viewport (and so the whole wheel,
        which is fit-content) its size — the center layer is an overlay on top of
        it and measures nothing.
@@ -185,7 +196,7 @@ const css = /* css */ `
   .navi_wheel_layer[data-layer="center"] {
     position: absolute;
     inset: 0;
-    color: var(--wheel-selected-color);
+    color: var(--wheel-color);
     /* The base rows underneath take the clicks (this copy sits on top of them). */
     pointer-events: none;
   }
@@ -236,16 +247,24 @@ const css = /* css */ `
     content-visibility: auto;
   }
 
-  /* Orientation-specific sizing/layout. The fade worn by the base layer: the
+  /* Orientation-specific sizing/layout. The mask worn by the base layer: the
      neighbours dissolve progressively toward the edges, like a physical wheel
-     curving away. It is a function of position, so a row dissolves smoothly as
-     it travels out — no per-row style flip. */
+     curving away, and the emphasis band is cut clean out of it — inside the
+     band only the center layer paints. Both jobs are one gradient because they
+     run along the same axis; a second mask layer composited out would need
+     mask-composite, whose prefixed Safari form takes different keywords.
+     Cutting the band matters as soon as the two layers draw a row differently
+     ([data-zoom] shrinks the base one): the glyphs no longer coincide, and the
+     one underneath would show through as a grey ghost around the other. */
   .navi_wheel_container {
     --wheel-fade: linear-gradient(
       var(--wheel-fade-direction),
       transparent 0%,
       rgba(0, 0, 0, 0.6) 32%,
-      #000 50%,
+      #000 var(--wheel-band-inset),
+      transparent var(--wheel-band-inset),
+      transparent calc(100% - var(--wheel-band-inset)),
+      #000 calc(100% - var(--wheel-band-inset)),
       rgba(0, 0, 0, 0.6) 68%,
       transparent 100%
     );
@@ -284,6 +303,20 @@ const css = /* css */ `
       pointer-events: none;
     }
 
+    /* Zoom: the size difference is obtained by SHRINKING the base layer, never
+       by growing the center one — the centered value keeps its natural size, so
+       it can't spill over the wheel's border or into a neighbouring column, and
+       the wheel needs no extra room to be zoomed. --wheel-zoom stays the ratio
+       between centered and neighbour (1.3 = the center reads 30% bigger).
+       Only the base layer is scaled, so a value is shrunk exactly over the part
+       of it that is OUTSIDE the band: sliding into the center it grows from the
+       edge inwards. The scale property (not transform) leaves the track's
+       translate3d alone, and scaling each row about its own center keeps the row
+       grid intact, so nothing in the geometry or the wrap math sees it. */
+    &[data-zoom] .navi_wheel_layer[data-layer="base"] .navi_wheel_item {
+      scale: calc(1 / var(--wheel-zoom, 1.3));
+    }
+
     &[data-glass] .navi_wheel_pane {
       /* A faint frost tint under the blur flattens the halo a bare
          backdrop-filter leaves around dark glyphs; saturate revives the colours
@@ -300,8 +333,10 @@ const css = /* css */ `
 
     &:not([data-horizontal]) {
       --wheel-fade-direction: to bottom;
-      /* Distance from a viewport edge to the center window. */
+      /* Distance from a viewport edge to the center window / to the emphasis
+         band (the band is the narrower of the two, see --wheel-emphasis-size). */
       --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
+      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
 
       width: fit-content;
 
@@ -322,7 +357,7 @@ const css = /* css */ `
            fully emphasised for the first third of a scroll and only then start
            cutting it. Sized on the glyph, it starts changing as soon as the
            wheel moves. */
-        clip-path: inset(calc((100% - var(--wheel-emphasis-size)) / 2) 0);
+        clip-path: inset(var(--wheel-band-inset) 0);
       }
       .navi_wheel_list {
         flex-direction: column;
@@ -382,8 +417,10 @@ const css = /* css */ `
       /* A cell is about as wide as the value it holds, so the band is the whole
          cell (unlike the vertical case — see the note there). */
       --wheel-emphasis-size: var(--wheel-item-width);
-      /* Distance from a viewport edge to the center window. */
+      /* Distance from a viewport edge to the center window / to the emphasis
+         band (see the vertical branch). */
       --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
+      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
 
       height: fit-content;
 
@@ -397,7 +434,7 @@ const css = /* css */ `
         width: 100%;
       }
       .navi_wheel_layer[data-layer="center"] {
-        clip-path: inset(0 calc((100% - var(--wheel-emphasis-size)) / 2));
+        clip-path: inset(0 var(--wheel-band-inset));
       }
       .navi_wheel_list {
         flex-direction: row;
@@ -453,6 +490,16 @@ const css = /* css */ `
   .navi_wheel_group {
     display: inline-flex;
     align-items: center;
+    /* ONE border around the whole group — hours, ":" and minutes are read as a
+       single control, so each wheel drops its own (a box per column would cut
+       the group into pieces and box the separator out of it). */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
+
+    .navi_wheel_container {
+      border: none;
+    }
 
     &:not([data-horizontal]) {
       /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
@@ -585,6 +632,7 @@ const WheelGroupContext = createContext(null);
  *   itemWidth?: number | string,
  *   bounded?: boolean,
  *   horizontal?: boolean,
+ *   zoom?: boolean | number,
  *   glideSpeed?: number,
  *   type?: string,
  *   name?: string,
@@ -603,6 +651,7 @@ const WheelGroupContext = createContext(null);
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
+ * @param {boolean|number} [props.zoom] - Make the centered value stand out by size: the neighbours are drawn smaller, so a value grows as it slides into the window and shrinks as it leaves (the centered one keeps its natural size). `true` uses the default ratio (1.3); a number is the ratio itself (1.8 = the center reads 80% bigger than its neighbours). Inherited from a WheelGroup.
  * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
@@ -622,6 +671,7 @@ const WHEEL_OWN_PROP_KEYS = [
   "horizontal",
   "glass",
   "frameBorder",
+  "zoom",
   "glideSpeed",
   "type",
 ];
@@ -1140,6 +1190,7 @@ function WheelUI(props) {
     horizontal,
     glass,
     frameBorder,
+    zoom,
     glideSpeed = WHEEL_GLIDE_SPEED,
     type,
     style,
@@ -1153,6 +1204,12 @@ function WheelUI(props) {
   // Both inherited from a WheelGroup so a whole group is styled with one prop.
   const showGlass = Boolean(glass ?? group?.glass);
   const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
+  // zoom: true takes the default factor, a number IS the factor (1.6 = 60%
+  // bigger); either way it is inherited from a WheelGroup when not set here.
+  const zoomResolved = zoom ?? group?.zoom;
+  const showZoom = Boolean(zoomResolved);
+  const zoomFactor =
+    typeof zoomResolved === "number" ? zoomResolved : undefined;
 
   // Collect every Wheel.Item's {value, label, itemProps} in order, robustly
   // (children may be wrapped). This ordered list is the source of truth for the
@@ -1348,6 +1405,7 @@ function WheelUI(props) {
           "--wheel-item-width":
             typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth,
         }),
+    ...(zoomFactor === undefined ? {} : { "--wheel-zoom": zoomFactor }),
     ...style,
   };
 
@@ -1865,6 +1923,7 @@ function WheelUI(props) {
       data-horizontal={isHorizontal ? "" : undefined}
       data-glass={showGlass ? "" : undefined}
       data-frame-border={showFrameBorder ? "" : undefined}
+      data-zoom={showZoom ? "" : undefined}
       data-wheel-type={type || undefined}
       pseudoClasses={WHEEL_PSEUDO_CLASSES}
       basePseudoState={basePseudoState}
@@ -2045,6 +2104,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
+ * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 export const WheelGroup = (props) => {
   import.meta.css = css;
@@ -2054,7 +2114,7 @@ export const WheelGroup = (props) => {
   // props are consumed here; the rest flow into the group hook.
   // `spacing` is NOT consumed here — it flows through to the underlying Box as a
   // plain flex gap between the wheels/separators (not a wheel concept).
-  const { horizontal, glass, frameBorder, style } = props;
+  const { horizontal, glass, frameBorder, zoom, style } = props;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
@@ -2134,6 +2194,7 @@ export const WheelGroup = (props) => {
       horizontal={undefined}
       glass={undefined}
       frameBorder={undefined}
+      zoom={undefined}
       aggregateChildStates={undefined}
       distributeChildUIState={undefined}
       baseClassName="navi_wheel_group"
@@ -2141,7 +2202,9 @@ export const WheelGroup = (props) => {
       style={groupStyle}
       pseudoClasses={WHEEL_GROUP_PSEUDO_CLASSES}
     >
-      <WheelGroupContext.Provider value={{ glass, frameBorder, horizontal }}>
+      <WheelGroupContext.Provider
+        value={{ glass, frameBorder, zoom, horizontal }}
+      >
         <ControlgroupChildrenWrapper
           {...childrenWrapperProps}
           // Don't propagate the group name to children (an anonymous wheel would

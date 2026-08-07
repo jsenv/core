@@ -5,11 +5,9 @@ description: How the jsenv dev server works — plugins, server events, internal
 
 ## Running from source (do this first)
 
-The dev server lives in `src/` but `@jsenv/core` resolves to the built `dist/` bundle by default. Always launch node with the `dev:jsenv` export condition, or you run the **stale bundle** and your edits do nothing:
-
-```sh
-node --conditions=dev:jsenv <file>
-```
+Launch node with `--conditions=dev:jsenv` — see the rule in
+[.agents/instructions.md](../../instructions.md#running-jsenv-source--always-use---conditionsdevjsenv)
+for why. Without it you exercise the stale `dist/` bundle and your edits do nothing.
 
 For a throwaway check, import from `./src/main.js` and run from the repo root (so `@jsenv/core` and deps like `ws` resolve). Verify HTTP routes with `fetch`; the WebSocket transport may crash under some Node versions in a bare harness (bundled `ws`), so don't conclude a socket route is broken from that alone — check it in a real browser.
 

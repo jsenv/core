@@ -28,6 +28,7 @@
 - **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
 - **Don't run the test suite defensively**: only run it (`npm run test`, `npm run test:packages`, etc.) when the task is actually about tests — writing new ones or working on existing ones. The goal of a session is to iterate quickly, not necessarily to reach zero errors; time-consuming verification should happen when it concretely makes sense for the task, not by default. Same spirit as the "never verify on your own initiative" rule above.
 - **Never run the whole test suite on your own initiative**: it's long and expensive. Run a single test file, or at most a narrow subset (`npm run test -- ./tests/<some_directory>/`) targeted at what you changed. The full run (`npm run test` with no argument, `npm run test:packages`) only happens when the user explicitly asks for it.
+- **Skills own their specifics; this file stays general**: guidance that only applies while doing one kind of task (writing a demo, publishing, updating dependencies, working on the dev server) lives in that skill and must NOT be restated here — this file may point at the skill, nothing more. Conversely a skill points back here for a rule that applies everywhere instead of copying it. When the same rule is found in both places, delete the copy that is in the wrong place; two copies drift, and the reader then can't tell which one is current.
 - **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
 - **Disabling a lint rule is allowed**: a targeted `// eslint-disable-next-line <rule>` with a comment saying why beats contorting the code to please a rule that does not apply to this line. Use it when you know why the rule is wrong here — never to silence something you have not understood.
 - **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
@@ -109,20 +110,10 @@ Nothing else belongs there. Other sources already cover everything else — the 
 
 #### Demo files
 
-Demos are used, not read. The work goes into the examples, never into the commentary around them: a case cut into steps, carrying a short label, that the reader can try. **Writing a paragraph instead of building the example that makes the point is the single most common mistake here** — when tempted, build the example.
-
-- **Default to no prose.** A `<Label>`/`<legend>`/caption naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) is normally the whole explanation.
-- **A section intro is one short sentence, or nothing.** It says what the section is about in the reader's terms ("As big as its largest slide, in both directions"), never how it is achieved.
-- **Never explain the implementation in a demo.** No CSS properties, no internal mechanics (`overflow: hidden`, the translated track, the grid cell, the layout effect), no "here we do X so that Y". A demo shows _what_ the thing does; _how_ it is built belongs in code comments next to the code that does it. This is the failure mode to watch for: prose that would only make sense to someone reading the source.
-- **Show a rule by repeating the case, not by stating it.** Successive examples that build on each other (1 line → 3 lines → 6 lines, then two slides, then two slides one wider) let the reader induce the rule; one sentence claiming it does not.
-- **Make differences visible before describing them**: default beside opted-out, loading beside loaded — and give the demo whatever borders, backgrounds or controls it takes for the difference to be _seen_. That work replaces the paragraph.
-- **One example per row, clearly separated** (a column with spacing, each with its own caption): examples crammed side by side read as one picture, and each one should be tryable on its own.
-- Keep a paragraph only for what no example can show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
-- Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo does not exercise.
-
-Before leaving any paragraph in a demo, ask: could an example replace it? Does it talk about _how_ rather than _what_? If yes to either, delete it and build the example.
-
-See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running them.
+Demos are used, not read: the work goes into the examples, never into the commentary
+around them. Read [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md)
+before writing or editing one — it holds the writing rules, the page structure and
+how to run them.
 
 ### CSS
 
