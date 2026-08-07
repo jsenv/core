@@ -75,7 +75,14 @@ import { useDisplayedLayoutEffect } from "../../utils/use_displayed_layout_effec
 
 const css = /* css */ `
   .navi_wheel_container {
-    --wheel-item-height: round(2.2em, 1px);
+    /* Row size and emphasis band are read together: the band is what a value
+       must cross to lose its emphasis, and the row is how far it has to travel
+       to swap with its neighbour. A row much taller than the band leaves a dead
+       zone — a wheel resting between two rows emphasises NEITHER value, since
+       both glyphs are outside the band. Keeping the row within ~1.2× the band
+       removes it: whatever the position, something is always inside. */
+    --wheel-item-height: round(1.8em, 1px);
+    --wheel-emphasis-size: round(1.5em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
     --wheel-color: light-dark(#777, #888);
@@ -310,14 +317,12 @@ const css = /* css */ `
         height: 100%;
       }
       .navi_wheel_layer[data-layer="center"] {
-        /* Around the GLYPH, not around the row: a row is much taller than the
-           digits it holds (line box + padding), so a row-sized band would keep
-           a value fully emphasised for the first third of a scroll and only
-           then start cutting it. Sized on the glyph, the value starts changing
-           as soon as the wheel moves. Tune via --wheel-emphasis-size. */
-        clip-path: inset(
-          calc((100% - var(--wheel-emphasis-size, round(1em, 1px))) / 2) 0
-        );
+        /* Around the GLYPH, not around the row: a row is taller than the digits
+           it holds (line box + padding), so a row-sized band would keep a value
+           fully emphasised for the first third of a scroll and only then start
+           cutting it. Sized on the glyph, it starts changing as soon as the
+           wheel moves. */
+        clip-path: inset(calc((100% - var(--wheel-emphasis-size)) / 2) 0);
       }
       .navi_wheel_list {
         flex-direction: column;
@@ -374,6 +379,9 @@ const css = /* css */ `
 
     &[data-horizontal] {
       --wheel-fade-direction: to right;
+      /* A cell is about as wide as the value it holds, so the band is the whole
+         cell (unlike the vertical case — see the note there). */
+      --wheel-emphasis-size: var(--wheel-item-width);
       /* Distance from a viewport edge to the center window. */
       --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
 
@@ -389,14 +397,7 @@ const css = /* css */ `
         width: 100%;
       }
       .navi_wheel_layer[data-layer="center"] {
-        /* A cell is about as wide as the value it holds, so the band is the
-           cell (unlike the vertical case — see the note there). */
-        clip-path: inset(
-          0
-            calc(
-              (100% - var(--wheel-emphasis-size, var(--wheel-item-width))) / 2
-            )
-        );
+        clip-path: inset(0 calc((100% - var(--wheel-emphasis-size)) / 2));
       }
       .navi_wheel_list {
         flex-direction: row;
@@ -472,8 +473,9 @@ const css = /* css */ `
     /* Stretch to the group height (= the wheels' height) and center the content,
        landing it on the middle (selected) row and sharing the numbers' baseline
        (right for words / letters like "ZZ"). A sibling of the wheels, so it does
-       NOT inherit their --wheel-item-height — re-expose it here. */
-    --wheel-item-height: round(2.2em, 1px);
+       NOT inherit their --wheel-item-height — re-expose it here (same value as
+       .navi_wheel_container). */
+    --wheel-item-height: round(1.8em, 1px);
 
     display: flex;
     align-items: center;
