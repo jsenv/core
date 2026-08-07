@@ -1954,12 +1954,93 @@
           <Heading level={3} id="edit-add">
             Add an item
           </Heading>
+          <h4>The three rows, held</h4>
+          <AddStatesPreview />
+          <h4>Live</h4>
           <p>Answer or fail the call to see where the new row ends up.</p>
           <SlowMotionToggle />
           <FakeBackend value={TASKS}>
             {({ value, action }) => <AddableList saved={value} save={action} />}
           </FakeBackend>
         </div>
+      );
+
+      // The states an add goes through, side by side and standing still: the
+      // interactive example below shows how one leads to the other, this shows
+      // what each of them looks like without having to catch it.
+      const AddStatesPreview = () => {
+        const [dismissed, setDismissed] = useState(false);
+        return (
+          <Box width="320px">
+            <List separator>
+              <TaskRow
+                listName="add-preview"
+                task={{ id: "p1", label: "Book the court" }}
+                index={0}
+              >
+                <Text expandX>Book the court</Text>
+              </TaskRow>
+              <TaskRow
+                listName="add-preview"
+                task={{ id: "p2", label: "Warm up" }}
+                index={1}
+                loading="adding"
+              >
+                <Text expandX>Warm up</Text>
+              </TaskRow>
+              {!dismissed && (
+                <TaskRow
+                  listName="add-preview"
+                  task={{ id: "p3", label: "Shower" }}
+                  index={2}
+                  error={
+                    <Box flex="x" alignY="center" spacing="s" expandX>
+                      <Text expandX>Le serveur a refusé l'enregistrement.</Text>
+                      <Button
+                        variant="discrete"
+                        padding="xs"
+                        action={() => setDismissed(true)}
+                      >
+                        Dismiss
+                      </Button>
+                    </Box>
+                  }
+                >
+                  <Text expandX>Shower</Text>
+                </TaskRow>
+              )}
+            </List>
+          </Box>
+        );
+      };
+
+      const RemoveStatesPreview = () => (
+        <Box width="320px">
+          <List separator>
+            {[
+              { id: "q1", label: "Book the court", loading: false },
+              { id: "q2", label: "Warm up", loading: "removing" },
+            ].map((task, i) => (
+              <TaskRow
+                key={task.id}
+                listName="remove-preview"
+                task={task}
+                index={i}
+                loading={task.loading}
+              >
+                <Text expandX>{task.label}</Text>
+                <Button
+                  variant="discrete"
+                  padding="xs"
+                  aria-label={`Remove ${task.label}`}
+                  action={() => {}}
+                >
+                  ✕
+                </Button>
+              </TaskRow>
+            ))}
+          </List>
+        </Box>
       );
 
       // The row animations run on ::view-transition pseudo-elements, which hang
@@ -2075,6 +2156,9 @@
           <Heading level={3} id="edit-remove">
             Remove an item
           </Heading>
+          <h4>The two rows, held</h4>
+          <RemoveStatesPreview />
+          <h4>Live</h4>
           <p>
             The row stays, loading and read-only, until the server has taken it.
           </p>
