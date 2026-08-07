@@ -30,6 +30,32 @@ const css = /* css */ `
     );
   }
 
+  /* WHO CAN START A DRAG, said in the cursor.
+     A handle drags on the spot, so it shows the hand. A source only drags once
+     the pointer has travelled a few pixels — a plain click stays a click — but
+     the text inside it can no longer be selected (the gesture takes the
+     pointer), so an I-beam over it would promise something that does not
+     happen: it reads as a plain surface instead. An opted-out area keeps both
+     its cursor and its selection, and never starts a drag (see the check in
+     startDragToReorder).
+     Controls inside a source keep their own cursor: cursor is inherited, and
+     anything setting its own (a button's pointer) wins on itself. */
+  [data-drag-handle] {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+  [data-drag-source] {
+    cursor: default;
+    user-select: none;
+  }
+  [data-drag-ignore] {
+    cursor: auto;
+    user-select: auto;
+  }
+
   [navi-drag-clone-source] {
     visibility: hidden;
   }
@@ -63,6 +89,9 @@ const css = /* css */ `
     }
   }
 `;
+// At module scope, not inside startDragToReorder: the cursor rules above say who
+// can start a drag, and they have to be true BEFORE anyone drags anything.
+import.meta.css = css;
 
 const dragCSSVars = [
   "--drop-hint-size",
@@ -137,7 +166,11 @@ export const startDragToReorder = (
     ...options
   },
 ) => {
-  import.meta.css = css;
+  // An area that opted out of dragging (a text one wants to select, a control
+  // that owns the gesture): the press there is none of our business.
+  if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+    return undefined;
+  }
   event.preventDefault();
   return dragAfterThreshold(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
@@ -164,6 +197,13 @@ export const startDragToReorder = (
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
     const scrollContainer = dragGesture.gestureInfo.scrollContainer;
+    // The hint is placed against the scroll container's own box (the CSS vars
+    // below are offsets within it), so that box has to BE the containing block.
+    // A container left `position: static` would hand the hint to some ancestor
+    // instead and the line would land anywhere — give it a containing block for
+    // the duration of the drag rather than making every caller remember to
+    // position its list.
+    const restoreContainerPosition = ensurePositioned(scrollContainer);
     const dropHintEl = document.createElement("div");
     dropHintEl.className = "navi_drop_hint";
     scrollContainer.appendChild(dropHintEl);
@@ -266,6 +306,7 @@ export const startDragToReorder = (
     dragGesture.addReleaseCallback(async (gestureInfo) => {
       clearDropHintDOM();
       dropHintEl.remove();
+      restoreContainerPosition();
       restoreCSSVars();
 
       if (currentBeforeElement !== undefined) {
@@ -325,6 +366,25 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
+// Gives an element a containing block for as long as the drag lasts, and only
+// if it does not already have one. The scroll container may be the page itself
+// (documentElement / body), which already is one — and which must not be
+// rewritten under the application's feet.
+const ensurePositioned = (el) => {
+  if (
+    el === document.documentElement ||
+    el === document.body ||
+    getComputedStyle(el).position !== "static"
+  ) {
+    return () => {};
+  }
+  const positionPrevious = el.style.position;
+  el.style.position = "relative";
+  return () => {
+    el.style.position = positionPrevious;
+  };
+};
+
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 

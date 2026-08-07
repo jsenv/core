@@ -19,6 +19,7 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
@@ -286,6 +287,17 @@ const css = /* css */ `
 
     &[navi-muted] {
       opacity: 0.35;
+    }
+
+    /* A row that cannot be acted on right now (see ListItemReal): it says so
+       by dimming, and stops taking clicks — including on the buttons it holds,
+       which is the whole point (the row is what is read-only, not one of its
+       parts). Positioned so the loading outline it may draw has a box to sit
+       on. */
+    &[navi-readonly] {
+      position: relative;
+      opacity: 0.6;
+      pointer-events: none;
     }
   }
 
@@ -1736,7 +1748,17 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const { ref, id, hidden, muted, matchInfo, children, ...rest } = props;
+  const {
+    ref,
+    id,
+    hidden,
+    muted,
+    loading,
+    readOnly,
+    matchInfo,
+    children,
+    ...rest
+  } = props;
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1776,9 +1798,22 @@ const ListItemReal = (props) => {
       aria-hidden={hidden}
       inert={hidden ? true : undefined}
       navi-muted={muted ? "" : undefined}
+      // A row of a list is edited row by row — created, saved, deleted — so
+      // waiting on a server and being untouchable are states of the ROW, not
+      // only of a control inside it. Loading implies read-only: a row whose
+      // fate is in flight must not take another order in the meantime.
+      navi-loading={loading ? "" : undefined}
+      navi-readonly={readOnly || loading ? "" : undefined}
+      aria-busy={loading ? "true" : undefined}
+      aria-readonly={readOnly ? "true" : undefined}
       ref={ref}
     >
       {children}
+      {/* Drawn on top of the row, taking no space: the row keeps whatever
+          layout it was given (a flex row, a grid of columns…) while it waits. */}
+      {loading && (
+        <LoadingOutline loading color="var(--navi-loader-color)" inset={-1} />
+      )}
     </Box>
   );
 };
@@ -1849,6 +1884,12 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               `selected.includes(value)` (multiple) from parent state.
  *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
  *               if omitted; prefer `id` for external addressing).
+ *   loading   — the row is waiting on something (its creation being confirmed,
+ *               its deletion going through): it draws a loading outline and,
+ *               like readOnly, stops taking clicks. Works on any item, not only
+ *               a selectable one — a list is edited row by row.
+ *   readOnly  — the row cannot be acted on: dimmed and click-through-proof,
+ *               buttons inside it included.
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute

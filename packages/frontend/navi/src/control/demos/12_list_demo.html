@@ -1908,6 +1908,14 @@
       ];
       let taskCounter = TASKS.length;
       const nextTaskId = () => `t${++taskCounter}`;
+      // For the "add one, don't make me type" button below.
+      const MORE_TASKS = [
+        "Stretch",
+        "Fill the bottles",
+        "Check the net",
+        "Shower",
+        "Pay the court",
+      ];
 
       // Every row carries a view-transition name of its own, so the browser can
       // animate THIS row rather than cross-fade the whole list, plus a shared
@@ -1917,7 +1925,7 @@
       // transition ("duplicate view-transition-name").
       // Opaque, because a row being dragged is lifted out of the list: over the
       // rows it flies past, a transparent one would show them through itself.
-      const TaskRow = ({ listName, task, pending, children, ...rest }) => (
+      const TaskRow = ({ listName, task, children, ...rest }) => (
         <ListItem
           key={task.id}
           id={`${listName}-${task.id}`}
@@ -1929,10 +1937,6 @@
           paddingX="m"
           paddingY="s"
           backgroundColor="light-dark(#fff, #1e1e1e)"
-          // A row waiting on the server is not one to act on: it says so to
-          // assistive tech and reads as muted until the answer comes.
-          aria-busy={pending ? "true" : undefined}
-          color={pending ? "secondary" : undefined}
           style={{
             viewTransitionName: `${listName}-${task.id}`,
             viewTransitionClass: "task-row",
@@ -1976,8 +1980,8 @@
             <Heading level={3} id="edit-reorder">
               Reorder
             </Heading>
-            <p>Drag a row by its handle.</p>
-            <Box width="320px" style={{ "--drop-hint-margin-y": "4px" }}>
+            <p>Drag a row by its handle, or from anywhere on the row.</p>
+            <Box width="320px">
               <List separator>
                 {tasks.map((task, i) => (
                   <TaskRow
@@ -1986,11 +1990,15 @@
                     task={task}
                     index={i}
                     onPointerDown={startDrag}
+                    data-drag-source
                   >
-                    <Text style={{ cursor: "grab" }} data-drag-handle>
-                      ⠿
-                    </Text>
+                    <Text data-drag-handle>⠿</Text>
                     <Text expandX>{task.label}</Text>
+                    {/* Opted out: this one is meant to be read and copied, so
+                        it keeps its text cursor and its selection. */}
+                    <Text color="secondary" data-drag-ignore>
+                      #{task.id}
+                    </Text>
                   </TaskRow>
                 ))}
               </List>
@@ -2047,12 +2055,9 @@
                     listName="add"
                     task={task}
                     index={i}
-                    pending={pending}
+                    loading={pending}
                   >
                     <Text expandX>{task.label}</Text>
-                    {/* Nothing else in this row is a control, so the wait is
-                        shown here rather than on one. */}
-                    {pending && <LoadingIndicator />}
                   </TaskRow>
                 );
               })}
@@ -2068,6 +2073,17 @@
               />
               <Button command="--navi-send">Add</Button>
             </Form>
+            <Button
+              variant="discrete"
+              alignX="start"
+              action={() =>
+                add({
+                  label: MORE_TASKS[shownTasks.length % MORE_TASKS.length],
+                })
+              }
+            >
+              Add one for me
+            </Button>
           </Box>
         );
       };
@@ -2121,14 +2137,12 @@
                     listName="remove"
                     task={task}
                     index={i}
-                    pending={pending}
+                    loading={pending}
                   >
                     <Text expandX>{task.label}</Text>
                     <Button
                       variant="discrete"
                       padding="xs"
-                      loading={pending}
-                      readOnly={pending}
                       aria-label={`Remove ${task.label}`}
                       action={() => remove(task)}
                     >
