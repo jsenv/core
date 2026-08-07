@@ -13,8 +13,16 @@
  * between rows, which is what makes keyboard nav cheap); the value updates
  * immediately while the selection glides to center.
  *
+ * TWO LAYERS. The rows are rendered twice, one copy over the other, moved by the
+ * same offset: a base layer wearing the fade, and a center layer clipped to the
+ * center window and painted in the selected colour. The emphasis therefore
+ * belongs to the WINDOW rather than to a row — a row is emphasised over the part
+ * of it that is inside the window, so it gains emphasis progressively as it
+ * slides in, and a wheel resting between two rows still shows an emphasised
+ * center. See .navi_wheel_layer in the CSS.
+ *
  * VIRTUALIZED. The DOM is NOT the source of truth — the ordered tracked-item list
- * is. Only visibleCount + 2 <li> slots are rendered (WheelWindow) and recycled: as
+ * is. Only visibleCount + 2 <li> slots are rendered per layer (WheelWindow) and recycled: as
  * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
  * re-render on demand — only when the wheel crosses a row (the window base index
  * changes) — never per frame; the per-frame motion is a single imperative
@@ -70,7 +78,8 @@ const css = /* css */ `
     --wheel-item-height: round(2.2em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
-    --wheel-color: light-dark(#111, #eee);
+    --wheel-color: light-dark(#777, #888);
+    --wheel-selected-color: light-dark(#111, #eee);
 
     position: relative; /* for the loading outline */
     display: inline-flex;
@@ -100,14 +109,13 @@ const css = /* css */ `
     /* Readonly & disabled dim the neighbour text identically; disabled dims the
        centered value further so the state reads on the value itself. */
     &[data-readonly] {
-      --wheel-color: light-dark(#666, #999);
+      --wheel-selected-color: light-dark(#666, #999);
     }
     &[data-disabled] {
-      --wheel-color: light-dark(#666, #999);
-
-      .navi_wheel_item[data-wheel-current] {
-        color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
-      }
+      --wheel-selected-color: light-dark(
+        rgba(0, 0, 0, 0.32),
+        rgba(255, 255, 255, 0.38)
+      );
     }
     &[data-readonly],
     &[data-disabled] {
@@ -142,14 +150,48 @@ const css = /* css */ `
        drags to our pointer handlers instead of the browser's scroll. */
     overflow: hidden;
   }
+  /* TWO COPIES OF THE SAME ROWS, stacked and moved together. The base layer
+     paints every row in the neighbour colour and wears the fade; the center
+     layer is clipped to the center window (see the orientation branches) and
+     paints the same rows in the selected colour, so what is inside the window
+     is emphasised and nothing else is.
+     Emphasis is thus a property of the WINDOW, not of a row: a row gains it
+     progressively as it slides in — half in, half emphasised — which no
+     per-row style could do, and it survives resting between two rows (where a
+     fade alone leaves nothing emphasised at all). */
+  .navi_wheel_layer[data-layer="base"] {
+    color: var(--wheel-color);
+    /* In flow: this copy is what gives the viewport (and so the whole wheel,
+       which is fit-content) its size — the center layer is an overlay on top of
+       it and measures nothing.
+       The fade belongs to this layer, not to the viewport: on the viewport it
+       would dim the center layer too, and the window edges (where the gradient
+       is already partly transparent) would wash the selected value out —
+       exactly where it must be at full strength. no-repeat so the rows
+       overflowing this box are masked out rather than showing a repeated
+       gradient tile. */
+    -webkit-mask-image: var(--wheel-fade);
+    mask-image: var(--wheel-fade);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  .navi_wheel_layer[data-layer="center"] {
+    position: absolute;
+    inset: 0;
+    color: var(--wheel-selected-color);
+    /* The base rows underneath take the clicks (this copy sits on top of them). */
+    pointer-events: none;
+  }
   .navi_wheel_list {
     display: flex;
     margin: 0;
     padding: 0;
     list-style: none;
     /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
-       whole pixel) each frame and CSS decides how to apply it. translate3d keeps
-       the track on its own composited layer for smooth momentum/glide. */
+       whole pixel) on the viewport each frame — one write, inherited by both
+       layers, so they can never drift apart — and CSS decides how to apply it.
+       translate3d keeps the track on its own composited layer for smooth
+       momentum/glide. */
     transform: translate3d(0, var(--wheel-offset, 0px), 0);
     /* NO will-change: transform. translate3d already composites the track;
        will-change additionally pins it to its own layer, which the glass panes'
@@ -168,10 +210,9 @@ const css = /* css */ `
     flex: none;
     align-items: center;
     justify-content: center;
-    /* Every row is identical: same colour, same weight. What makes the center
-       stand out is the veil over the neighbours (see "Center window"), not any
-       per-row style — so a row emphasises smoothly as it scrolls into place. */
-    color: var(--wheel-color);
+    /* NO colour here: a row takes it from the layer it belongs to (see
+       .navi_wheel_layer), which is what makes the same row read as neighbour
+       below and as selected above. */
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
@@ -188,20 +229,17 @@ const css = /* css */ `
     content-visibility: auto;
   }
 
-  /* Orientation-specific sizing/layout. The emphasis fade: opacity peaks on the
-     center row and falls off progressively toward the edges (like a physical
-     wheel curving away). Because it is a function of position, a row emphasises
-     smoothly as it scrolls into the middle — no per-row style flip — and a
-     half-scrolled row is half-faded. The center number keeps a small fully-opaque
-     plateau so it stays crisp. */
+  /* Orientation-specific sizing/layout. The fade worn by the base layer: the
+     neighbours dissolve progressively toward the edges, like a physical wheel
+     curving away. It is a function of position, so a row dissolves smoothly as
+     it travels out — no per-row style flip. */
   .navi_wheel_container {
     --wheel-fade: linear-gradient(
       var(--wheel-fade-direction),
       transparent 0%,
-      rgba(0, 0, 0, 0.4) 34%,
-      #000 45%,
-      #000 55%,
-      rgba(0, 0, 0, 0.4) 66%,
+      rgba(0, 0, 0, 0.6) 32%,
+      #000 50%,
+      rgba(0, 0, 0, 0.6) 68%,
       transparent 100%
     );
 
@@ -255,13 +293,24 @@ const css = /* css */ `
 
     &:not([data-horizontal]) {
       --wheel-fade-direction: to bottom;
+      /* Distance from a viewport edge to the center window. */
+      --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
+
       width: fit-content;
 
       .navi_wheel_viewport {
         width: 100%;
         height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
-        -webkit-mask-image: var(--wheel-fade);
-        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_layer[data-layer="base"] {
+        /* The fade must span the VIEWPORT, so the layer wearing it is the size
+           of the viewport — its track (taller: visibleCount + 2 rows) overflows
+           it and is clipped by the viewport. Only the cross axis (width) is left
+           to the content, since that is what sizes the wheel. */
+        height: 100%;
+      }
+      .navi_wheel_layer[data-layer="center"] {
+        clip-path: inset(var(--wheel-window-inset) 0);
       }
       .navi_wheel_list {
         flex-direction: column;
@@ -290,7 +339,7 @@ const css = /* css */ `
       .navi_wheel_pane {
         right: 0;
         left: 0;
-        height: calc((100% - var(--wheel-item-height)) / 2);
+        height: var(--wheel-window-inset);
         &[data-side="start"] {
           top: 0;
         }
@@ -300,9 +349,9 @@ const css = /* css */ `
       }
       .navi_wheel_focus_ring,
       .navi_wheel_outline_wrapper {
-        top: calc((100% - var(--wheel-item-height)) / 2);
+        top: var(--wheel-window-inset);
         right: 0;
-        bottom: calc((100% - var(--wheel-item-height)) / 2);
+        bottom: var(--wheel-window-inset);
         left: 0;
         height: auto;
       }
@@ -318,13 +367,22 @@ const css = /* css */ `
 
     &[data-horizontal] {
       --wheel-fade-direction: to right;
+      /* Distance from a viewport edge to the center window. */
+      --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
+
       height: fit-content;
 
       .navi_wheel_viewport {
         width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
         height: 100%;
-        -webkit-mask-image: var(--wheel-fade);
-        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_layer[data-layer="base"] {
+        /* Viewport-sized along the scroll axis so the fade spans it (see the
+           vertical branch); the cross axis (height) follows the content. */
+        width: 100%;
+      }
+      .navi_wheel_layer[data-layer="center"] {
+        clip-path: inset(0 var(--wheel-window-inset));
       }
       .navi_wheel_list {
         flex-direction: row;
@@ -344,7 +402,7 @@ const css = /* css */ `
       .navi_wheel_pane {
         top: 0;
         bottom: 0;
-        width: calc((100% - var(--wheel-item-width)) / 2);
+        width: var(--wheel-window-inset);
         &[data-side="start"] {
           left: 0;
         }
@@ -355,9 +413,9 @@ const css = /* css */ `
       .navi_wheel_focus_ring,
       .navi_wheel_outline_wrapper {
         top: 0;
-        right: calc((100% - var(--wheel-item-width)) / 2);
+        right: var(--wheel-window-inset);
         bottom: 0;
-        left: calc((100% - var(--wheel-item-width)) / 2);
+        left: var(--wheel-window-inset);
         width: auto;
       }
       &[data-frame-border] .navi_wheel_pane {
@@ -1112,8 +1170,6 @@ function WheelUI(props) {
   }
   const centerRowSignal = useSignal(0);
   const renderedBaseRef = useRef(0);
-  // Which window slot currently carries data-wheel-current (the center row).
-  const markedSlotRef = useRef(-1);
   // Row size in px, measured once from a rendered slot (rows are uniform).
   const itemSizeRef = useRef(0);
 
@@ -1303,7 +1359,6 @@ function WheelUI(props) {
   };
 
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
-  const getTrack = (vp) => vp.querySelector(".navi_wheel_list");
 
   const clampNumber = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
   // An index wrapped into [0, count) when looping, else clamped.
@@ -1329,9 +1384,8 @@ function WheelUI(props) {
   // off a static element at a half-pixel; the separators share this line-height to
   // match the grid).
   const applyOffset = (vp) => {
-    const track = getTrack(vp);
     const size = getItemSize(vp);
-    if (!track || size === 0) {
+    if (size === 0) {
       return;
     }
     const t =
@@ -1339,25 +1393,8 @@ function WheelUI(props) {
       size / 2 -
       posRef.current +
       renderedBaseRef.current * size;
-    track.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
-    // Mark the row currently in the center window (its value is the selection).
-    // The slot recycles, so the marked node changes as we scroll — move the
-    // attribute only when the center slot index actually changes. Only [disabled]
-    // styling reads it; the fade/focus-ring center is geometric (CSS).
-    const centerSlot =
-      Math.round(posRef.current / size) - renderedBaseRef.current;
-    if (centerSlot !== markedSlotRef.current) {
-      const slots = track.children;
-      const previous = slots[markedSlotRef.current];
-      if (previous) {
-        previous.removeAttribute("data-wheel-current");
-      }
-      const current = slots[centerSlot];
-      if (current) {
-        current.setAttribute("data-wheel-current", "");
-      }
-      markedSlotRef.current = centerSlot;
-    }
+    // On the viewport, so both layers' tracks read the same value.
+    vp.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
   };
   const renderPos = (vp) => {
     const size = getItemSize(vp);
@@ -1850,15 +1887,34 @@ function WheelUI(props) {
             {children}
           </ControlFacadeChildrenWrapper>
         </WheelItemTrackerContext.Provider>
-        <ul className="navi_wheel_list">
-          <WheelWindow
-            centerRowSignal={centerRowSignal}
-            windowSize={windowSize}
-            trackedItems={trackedItems}
-            isLoop={isLoop}
-            onBaseCommit={commitRenderedBase}
-          />
-        </ul>
+        {/* The same rows twice (see .navi_wheel_layer): the base layer is what
+            the user points at and what the fade dims; the center layer repeats
+            them clipped to the center window, in the selected colour. */}
+        <div className="navi_wheel_layer" data-layer="base">
+          <ul className="navi_wheel_list">
+            <WheelWindow
+              centerRowSignal={centerRowSignal}
+              windowSize={windowSize}
+              trackedItems={trackedItems}
+              isLoop={isLoop}
+              onBaseCommit={commitRenderedBase}
+            />
+          </ul>
+        </div>
+        <div
+          className="navi_wheel_layer"
+          data-layer="center"
+          aria-hidden="true"
+        >
+          <ul className="navi_wheel_list">
+            <WheelWindow
+              centerRowSignal={centerRowSignal}
+              windowSize={windowSize}
+              trackedItems={trackedItems}
+              isLoop={isLoop}
+            />
+          </ul>
+        </div>
         <div className="navi_wheel_pane" data-side="end" />
       </div>
       {/* Outside the viewport: the viewport's fade mask + glass panes must not
@@ -1900,7 +1956,9 @@ const WheelWindow = ({
     base = base < 0 ? 0 : base > count - windowSize ? count - windowSize : base;
   }
   useLayoutEffect(() => {
-    onBaseCommit(base);
+    // Only the base layer reports; the center layer renders the same window
+    // from the same inputs, so one report keeps the transform in sync for both.
+    onBaseCommit?.(base);
   });
   const slots = [];
   for (let slot = 0; slot < windowSize; slot++) {
