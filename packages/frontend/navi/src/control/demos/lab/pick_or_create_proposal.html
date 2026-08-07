@@ -157,27 +157,12 @@
       .given-name {
         text-transform: capitalize;
       }
-      /* The surface stays put: only the rows that appear or leave move. */
+      /* The surface stays put: only the rows that appear or leave move. The UA
+         names the root `root`, so taking the name away is what keeps the page
+         out of the transition (what a row does is List's own, see
+         itemTransition). */
       :root {
         view-transition-name: none;
-      }
-      @keyframes entry-row-in {
-        from {
-          opacity: 0;
-          transform: scale(0.96);
-        }
-      }
-      @keyframes entry-row-out {
-        to {
-          opacity: 0;
-          transform: scale(0.96);
-        }
-      }
-      ::view-transition-new(.entry-row):only-child {
-        animation: entry-row-in 220ms ease-out;
-      }
-      ::view-transition-old(.entry-row):only-child {
-        animation: entry-row-out 180ms ease-in;
       }
     </style>
   </head>
@@ -534,6 +519,7 @@
 
                       <List
                         selectable
+                        itemTransition
                         id={`${id}_list`}
                         command="--navi-send"
                         searchText={searchSignal.value}
@@ -551,10 +537,6 @@
                             selected={value ? value.id === entry.id : false}
                             matchInfo={getMatchInfo(entry)}
                             padding="s"
-                            style={{
-                              viewTransitionName: `${id}-row-${entry.id}`,
-                              viewTransitionClass: "entry-row",
-                            }}
                           >
                             <Box flex="x" alignY="center" spacing="xs" expandX>
                               <Box flex="y" expandX>
@@ -981,9 +963,9 @@
 
         // Every change to the list goes through a view transition: an entry
         // that was just created appears rather than being suddenly there, and
-        // the one being deleted leaves while the rest close the gap. The rows
-        // carry a view-transition-name of their own (see List.Item), which is
-        // what lets the browser animate THEM instead of cross-fading the page.
+        // the one being deleted leaves while the rest close the gap. What a row
+        // does then belongs to the list (<List itemTransition>); starting the
+        // transition is the caller's, because only the caller owns the change.
         const addTo = (listSignal) => (entry) => {
           startViewTransition(() => {
             listSignal.value = [...listSignal.value, entry];

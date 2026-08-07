@@ -67,6 +67,9 @@ const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
+// Set by <List itemTransition>: each row then gets a view-transition-name of
+// its own, so a change wrapped in a view transition animates row by row.
+const ItemTransitionContext = createContext(false);
 
 const css = /* css */ `
   @layer navi {
@@ -566,6 +569,7 @@ const ListUI = (props) => {
     fallback,
     searchFallback,
     separator,
+    itemTransition,
     children,
     popover,
     expandX,
@@ -802,6 +806,7 @@ const ListUI = (props) => {
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
+        itemTransition={itemTransition}
         expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
@@ -877,6 +882,7 @@ const ListContent = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   expandX,
   horizontal,
   spacing,
@@ -899,6 +905,7 @@ const ListContent = ({
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
+        itemTransition={itemTransition}
         expandX={expandX}
         // Deliberately not expandY here (unlike expandX above): the outer
         // .navi_list_container already gets its own expandY treatment (see
@@ -1448,6 +1455,7 @@ const UnorderedList = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   horizontal,
   spacing,
   columns,
@@ -1485,11 +1493,13 @@ const UnorderedList = ({
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
-            <ListItemTrackerContext.Provider value={tracker}>
-              <ListColumnsContext.Provider value={columns || null}>
-                {children}
-              </ListColumnsContext.Provider>
-            </ListItemTrackerContext.Provider>
+            <ItemTransitionContext.Provider value={Boolean(itemTransition)}>
+              <ListItemTrackerContext.Provider value={tracker}>
+                <ListColumnsContext.Provider value={columns || null}>
+                  {children}
+                </ListColumnsContext.Provider>
+              </ListItemTrackerContext.Provider>
+            </ItemTransitionContext.Provider>
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
       </SearchNoMatchModeContext.Provider>
@@ -1822,6 +1832,12 @@ const ListItemReal = (props) => {
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+  // <List itemTransition>: the row is named, so a change wrapped in a view
+  // transition animates it rather than cross-fading the list. Through the Box
+  // prop and not through style, because Box turns the name off again while the
+  // row is only partly visible (see usePartiallyHidden) — a row half-scrolled
+  // out of its container would otherwise animate from a clipped snapshot.
+  const itemTransition = useContext(ItemTransitionContext);
 
   // Pressing a row that is busy or read-only must say why nothing happens,
   // where the press happened — a control does this through its own interaction
@@ -1910,6 +1926,12 @@ const ListItemReal = (props) => {
       aria-busy={loading ? "true" : undefined}
       aria-readonly={readOnly ? "true" : undefined}
       navi-error={error ? "" : undefined}
+      viewTransitionName={
+        itemTransition ? `navi_list_item_${id}` : rest.viewTransitionName
+      }
+      viewTransitionClass={
+        itemTransition ? "navi_list_item" : rest.viewTransitionClass
+      }
       onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
       onClickCapture={
         blocked

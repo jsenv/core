@@ -102,6 +102,7 @@ const OUTER_PROPS = {
   // not really related to flow but should be on the container element if any
   pointerEvents: PASS_THROUGH,
   viewTransitionName: PASS_THROUGH,
+  viewTransitionClass: PASS_THROUGH,
 };
 const INNER_PROPS = {
   // expanded into longhands for the same reason as "margin" above: the

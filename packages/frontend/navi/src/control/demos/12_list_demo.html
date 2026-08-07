@@ -106,41 +106,11 @@
       /* The page itself takes no part in the transitions: only the rows do.
          Snapshotting the root freezes everything else for the duration — the
          separators stop being drawn, the sibling lists sit on a stale image,
-         and the page jumps as it scrolls under its own frozen picture. Opting
-         the root out leaves the page rendering live while the named rows
-         animate over it. */
+         and the page jumps as it scrolls under its own frozen picture. The UA
+         names the root `root`; taking the name away is what leaves the page
+         rendering live while the named rows animate over it. */
       :root {
         view-transition-name: none;
-      }
-      /* A row appearing grows into place, a row leaving shrinks away; the rows
-         that stay slide on their own (the browser animates each named row). The
-         rules are written against view-transition-class, so one pair of
-         keyframes covers every row without naming them one by one.
-         Barely a scale — 0.96, enough to feel the row settle in or let go, not
-         enough to see the text resize; the fade does most of the work and the
-         rows below slide on their own (the group animation).
-         --task-row-anim-duration is set on the root by the demo's slow-motion
-         toggle: these pseudo-elements live on the document, not in the page. */
-      @keyframes task-row-in {
-        from {
-          opacity: 0;
-          transform: scale(0.96);
-        }
-      }
-      @keyframes task-row-out {
-        to {
-          opacity: 0;
-          transform: scale(0.96);
-        }
-      }
-      ::view-transition-new(.task-row):only-child {
-        animation: task-row-in var(--task-row-anim-duration, 220ms) ease-out;
-      }
-      ::view-transition-old(.task-row):only-child {
-        animation: task-row-out var(--task-row-anim-duration, 180ms) ease-in;
-      }
-      ::view-transition-group(.task-row) {
-        animation-duration: var(--task-row-anim-duration, 250ms);
       }
     </style>
   </head>
@@ -1870,12 +1840,9 @@
         "Pay the court",
       ];
 
-      // Every row carries a view-transition name of its own, so the browser can
-      // animate THIS row rather than cross-fade the whole list, plus a shared
-      // class the CSS animations below are written against (see the <style>).
-      // A name has to be unique in the whole document, hence `listName`: the
-      // three lists below hold the same tasks, and sharing a name aborts the
-      // transition ("duplicate view-transition-name").
+      // Row ids are unique per list (`listName`): the three lists below hold the
+      // same tasks, and <List itemTransition> names each row after its id — two
+      // rows sharing a name abort the transition.
       // Opaque, because a row being dragged is lifted out of the list: over the
       // rows it flies past, a transparent one would show them through itself.
       const TaskRow = ({ listName, task, children, ...rest }) => (
@@ -1890,10 +1857,6 @@
           paddingX="m"
           paddingY="s"
           backgroundColor="light-dark(#fff, #1e1e1e)"
-          style={{
-            viewTransitionName: `${listName}-${task.id}`,
-            viewTransitionClass: "task-row",
-          }}
           {...rest}
         >
           {children}
@@ -1935,7 +1898,7 @@
             </Heading>
             <p>Drag a row by its handle, or from anywhere on the row.</p>
             <Box width="320px">
-              <List separator>
+              <List separator itemTransition>
                 {tasks.map((task, i) => (
                   <TaskRow
                     key={task.id}
@@ -1986,7 +1949,7 @@
         const [dismissed, setDismissed] = useState(false);
         return (
           <Box width="320px">
-            <List separator>
+            <List separator itemTransition>
               <TaskRow
                 listName="add-preview"
                 task={{ id: "p1", label: "Book the court" }}
@@ -2022,7 +1985,7 @@
 
       const RemoveStatesPreview = () => (
         <Box width="320px">
-          <List separator>
+          <List separator itemTransition>
             {[
               { id: "q1", label: "Book the court", loading: false },
               { id: "q2", label: "Warm up", loading: "removing" },
@@ -2069,7 +2032,7 @@
         const [slow, setSlow] = useState(false);
         useEffect(() => {
           document.documentElement.style.setProperty(
-            "--task-row-anim-duration",
+            "--navi-list-item-transition-duration",
             slow ? "1600ms" : "",
           );
         }, [slow]);
@@ -2113,7 +2076,7 @@
         const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;
         return (
           <Box flex="y" spacing="m" width="320px">
-            <List separator>
+            <List separator itemTransition>
               {shownTasks.map((task, i) => {
                 const pending = pendingTask && pendingTask.id === task.id;
                 return (
@@ -2208,7 +2171,7 @@
 
         return (
           <Box width="320px">
-            <List separator>
+            <List separator itemTransition>
               {tasks.map((task, i) => {
                 const pending = pendingId === task.id;
                 return (
