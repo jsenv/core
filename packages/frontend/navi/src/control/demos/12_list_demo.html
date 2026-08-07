@@ -1954,10 +1954,7 @@
           <Heading level={3} id="edit-add">
             Add an item
           </Heading>
-          <p>
-            Answer or fail the call to see where the new row ends up. Press{" "}
-            <em>échouer</em> and it goes away again.
-          </p>
+          <p>Answer or fail the call to see where the new row ends up.</p>
           <SlowMotionToggle />
           <FakeBackend value={TASKS}>
             {({ value, action }) => <AddableList saved={value} save={action} />}
@@ -2023,7 +2020,7 @@
                     listName="add"
                     task={task}
                     index={i}
-                    loading={pending && !task.error}
+                    loading={pending && !task.error && "adding"}
                     // The error IS the row: what was typed never made it, so
                     // showing it as an item would be a lie. The way out comes
                     // with the message.
@@ -2081,6 +2078,7 @@
           <p>
             The row stays, loading and read-only, until the server has taken it.
           </p>
+          <SlowMotionToggle />
           <FakeBackend value={TASKS}>
             {({ value, action }) => (
               <RemovableList saved={value} save={action} />
@@ -2125,7 +2123,7 @@
                     listName="remove"
                     task={task}
                     index={i}
-                    loading={pending}
+                    loading={pending && "removing"}
                   >
                     <Text expandX>{task.label}</Text>
                     <Button

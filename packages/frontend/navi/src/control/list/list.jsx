@@ -1813,22 +1813,52 @@ const ListItemReal = (props) => {
     event.preventDefault();
     event.stopPropagation();
   };
+  // Whether the click about to arrive belongs to a press that started on this
+  // row. A click can be delivered here without one: dismissing the callout
+  // presses its close button, the callout goes away, and the click that follows
+  // is delivered to whatever is now under the pointer — this row.
+  const pressStartedHereRef = useRef(false);
+  // When the row's own callout was last dismissed. The dismissal itself is a
+  // press, and the browser delivers what follows it to this row — asking for
+  // the callout again straight away, which reads as a flicker rather than as a
+  // dismissal. The cause is outside of us (the callout is gone by the time the
+  // event is routed), so the press right after a dismissal is the one thing
+  // that has to be ignored.
+  const calloutClosedAtRef = useRef(0);
+  const calloutRef = useRef(null);
   const explainBlockedInteraction = (event) => {
     if (event.button !== 0) {
       return;
     }
     blockInteraction(event);
-    openCallout(
-      loading
-        ? naviI18n("constraint.busy.default", props)
-        : naviI18n("constraint.readonly.item", props),
-      {
-        anchorElement: event.currentTarget,
-        status: "info",
-        openingEvent: event,
+    pressStartedHereRef.current = true;
+    // One at a time, and not the one that just dismissed it (see the refs).
+    if (calloutRef.current && calloutRef.current.opened) {
+      return;
+    }
+    if (event.timeStamp - calloutClosedAtRef.current < 300) {
+      return;
+    }
+    calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
+      anchorElement: event.currentTarget,
+      status: "info",
+      openingEvent: event,
+      onClose: () => {
+        calloutClosedAtRef.current = performance.now();
       },
-    );
+    });
   };
+  useLayoutEffect(() => {
+    if (blocked) {
+      return;
+    }
+    // The wait is over, so the sentence explaining it has nothing left to say.
+    const callout = calloutRef.current;
+    if (callout && callout.opened) {
+      callout.close();
+    }
+    calloutRef.current = null;
+  }, [blocked]);
 
   return (
     <Box
@@ -1853,13 +1883,23 @@ const ListItemReal = (props) => {
       // waiting on a server and being untouchable are states of the ROW, not
       // only of a control inside it. Loading implies read-only: a row whose
       // fate is in flight must not take another order in the meantime.
-      navi-loading={loading ? "" : undefined}
+      navi-loading={loading ? (loading === true ? "" : loading) : undefined}
       navi-readonly={readOnly || loading ? "" : undefined}
       aria-busy={loading ? "true" : undefined}
       aria-readonly={readOnly ? "true" : undefined}
       navi-error={error ? "" : undefined}
       onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
-      onClickCapture={blocked ? blockInteraction : undefined}
+      onClickCapture={
+        blocked
+          ? (event) => {
+              if (!pressStartedHereRef.current) {
+                return;
+              }
+              pressStartedHereRef.current = false;
+              blockInteraction(event);
+            }
+          : undefined
+      }
       ref={ref}
     >
       {/* The error IS the row's content: what the row stood for did not
@@ -1883,6 +1923,19 @@ const ListItemReal = (props) => {
     </Box>
   );
 };
+// Why the row cannot be acted on, in the row's own terms. `loading` may say
+// what it is waiting for ("adding", "removing"): a row being created is not
+// simply "busy", and saying which one it is tells the user what to expect.
+const blockedMessage = (loading, readOnly, props) => {
+  if (!loading) {
+    return naviI18n("constraint.readonly.item", props);
+  }
+  if (loading === "adding" || loading === "removing") {
+    return naviI18n(`constraint.busy.item.${loading}`, props);
+  }
+  return naviI18n("constraint.busy.item", props);
+};
+
 const LIST_ITEM_STYLE_CSS_VARS = {
   "borderRadius": "--list-item-border-radius",
   "borderWidth": "--list-item-border-width",
@@ -1953,10 +2006,11 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *   error     — what this row stood for failed: the message replaces its
  *               content, styled like the list's own error. `true` shows a
  *               generic sentence.
- *   loading   — the row is waiting on something (its creation being confirmed,
- *               its deletion going through): it draws a loading outline and,
+ *   loading   — the row is waiting on something: it draws a loading outline and,
  *               like readOnly, stops taking clicks. Works on any item, not only
- *               a selectable one — a list is edited row by row.
+ *               a selectable one — a list is edited row by row. Pass "adding" or
+ *               "removing" rather than true to say WHAT it is waiting for, which
+ *               is what a press on it then answers.
  *   readOnly  — the row cannot be acted on: dimmed and click-through-proof,
  *               buttons inside it included.
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely

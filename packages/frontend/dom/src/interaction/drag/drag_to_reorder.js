@@ -12,21 +12,31 @@ const css = /* css */ `
      coordinates, it can sit anywhere, overhang the list, and cost nothing to
      the layout. Fixed, like the clone it accompanies. */
   .navi_drop_hint {
+    /* A popover, so it lands in the top layer: no z-index to bid against the
+       page, and nothing it can be hidden behind. Shown BEFORE the clone, which
+       is what puts the clone above it — the top layer stacks in the order
+       things are shown, and the item being carried should pass over the line
+       rather than under it. The UA styles for [popover] have to be undone:
+       inset:0, margin:auto, a border and a background of its own. */
     position: fixed;
+    inset: auto;
     top: var(--drop-hint-y);
     left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    /* Over the dragged clone: where the item will land is the one thing the
-       user is looking for, and the clone follows the pointer over it. */
-    z-index: 10000;
     display: none;
+    box-sizing: border-box;
     width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
+    margin: 0;
+    padding: 0;
+    color: inherit;
     background: var(--drop-hint-background-color, #4476ff);
+    border: none;
     border-radius: var(--drop-hint-border-radius, 2px);
     transform: translateY(-50%);
     pointer-events: none;
+    overflow: visible;
   }
-  .navi_drop_hint[data-drop-edge] {
+  .navi_drop_hint[data-drop-edge]:popover-open {
     display: block;
   }
   .navi_drop_hint[data-drop-edge="top"] {
@@ -94,16 +104,27 @@ const css = /* css */ `
   }
 
   [navi-drag-clone-wrapper] {
-    position: absolute;
+    /* Also a popover (see .navi_drop_hint): in the top layer it is over the
+       page whatever the page's own stacking is, and the coordinates it is
+       given are viewport ones — which is what the pointer carrying it works
+       in. Same UA-style reset as the hint. */
+    position: fixed;
+    inset: auto;
     top: var(--clone-top);
     left: var(--clone-left);
-    z-index: 9999;
+    box-sizing: border-box;
     width: var(--clone-width);
     height: var(--clone-height);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: none;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
     opacity: 0.95;
     transition: box-shadow 0.15s ease;
     pointer-events: none;
+    overflow: visible;
   }
 
   [navi-drag-clone] {
@@ -232,6 +253,10 @@ export const startDragToReorder = (
 
     const dropHintEl = createDropHint();
     document.body.appendChild(dropHintEl);
+    // The hint first, the clone second: that order is what stacks them in the
+    // top layer.
+    dropHintEl.showPopover();
+    cloneWrapper.showPopover();
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
     // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
@@ -332,7 +357,7 @@ export const startDragToReorder = (
         const clone = cloneWrapper.firstElementChild;
         // Bake the current visual position (transform included) into the CSS vars
         // so the clone stays where the user released it when we clear the transform.
-        setCloneDocumentRect(cloneWrapper, cloneWrapper);
+        setCloneViewportRect(cloneWrapper, cloneWrapper);
         gestureInfo.cancelPosition();
         const fromId = getItemId(draggedElement);
         const toId = currentBeforeElement
@@ -343,7 +368,7 @@ export const startDragToReorder = (
         const syncCloneWithDropTarget = () => {
           // Snap the CSS-var position to the drop target rect so the browser
           // captures the "new" state at the landing position.
-          setCloneDocumentRect(cloneWrapper, currentReleaseElement);
+          setCloneViewportRect(cloneWrapper, currentReleaseElement);
           // Removing this attr drops the CSS scale(1.15), so the browser
           // captures the clone at scale 1 as the "new" state.
           clone.removeAttribute("navi-drag-clone");
@@ -358,15 +383,13 @@ export const startDragToReorder = (
   });
 };
 
-// getBoundingClientRect() returns viewport-relative coords.
-// The clone wrapper is position:absolute inside document.body, so we need
-// document-relative coords (viewport coords + current page scroll).
-const setCloneDocumentRect = (cloneWrapper, el) => {
+// Viewport coordinates, as getBoundingClientRect gives them: the clone is a
+// fixed-position popover, so that is the space it lives in — and the one the
+// pointer dragging it works in too.
+const setCloneViewportRect = (cloneWrapper, el) => {
   const rect = el.getBoundingClientRect();
-  const scrollLeft = document.documentElement.scrollLeft;
-  const scrollTop = document.documentElement.scrollTop;
-  cloneWrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
-  cloneWrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
+  cloneWrapper.style.setProperty("--clone-top", `${rect.top}px`);
+  cloneWrapper.style.setProperty("--clone-left", `${rect.left}px`);
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
 };
@@ -388,7 +411,10 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 // The chevron is the one the table's column drop preview uses, rotated by the
 // CSS above so each cap points into the line.
 const dropHintTemplate = /* html */ `
-  <div class="navi_drop_hint">
+  <div
+    class="navi_drop_hint"
+    popover="manual"
+  >
     <span class="navi_drop_hint_cap" data-side="start">
       <svg fill="currentColor" viewBox="0 0 30.727 30.727">
         <path
@@ -416,8 +442,11 @@ const createDragClone = (element, pointerEvent) => {
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
+  // Manual: it is opened and closed with the drag, and must survive an Escape
+  // or a click elsewhere (light dismiss would take it away mid-gesture).
+  wrapper.setAttribute("popover", "manual");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
-  setCloneDocumentRect(wrapper, element);
+  setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale(1.15) expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.

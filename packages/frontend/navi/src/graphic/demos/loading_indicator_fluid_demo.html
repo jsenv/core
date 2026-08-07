@@ -49,6 +49,40 @@
         </div>
       );
 
+      // The page's own connection speed, the one every indicator that was not
+      // told otherwise follows. Written straight into the signal the component
+      // reads: navigator.connection is not something a demo can dial.
+      const NetworkSpeedControl = () => {
+        const [speed, setSpeed] = useState(networkSpeedSignal.value);
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <span style={{ fontSize: "14px" }}>Network:</span>
+            {NETWORK_SPEEDS.map((networkSpeed) => (
+              <label
+                key={networkSpeed}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "13px",
+                }}
+              >
+                <input
+                  type="radio"
+                  name="network-speed"
+                  checked={speed === networkSpeed}
+                  onChange={() => {
+                    networkSpeedSignal.value = networkSpeed;
+                    setSpeed(networkSpeed);
+                  }}
+                />
+                {networkSpeed}
+              </label>
+            ))}
+          </div>
+        );
+      };
+
       const Demo = () => {
         const [color, setColor] = useState(COLORS[0].value);
 
@@ -63,6 +97,8 @@
             }}
           >
             <h2 style={{ margin: 0 }}>LoadingIndicatorFluid</h2>
+
+            <NetworkSpeedControl />
 
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
               <span style={{ fontSize: "14px" }}>Color:</span>
@@ -351,55 +387,31 @@
 
       // The indicator travels at a speed the connection sets: the slower the
       // network, the slower it goes round, so a wait on a bad connection does
-      // not read as a frozen one. Written straight into the signal the
-      // component reads (navigator.connection is not something a demo can
-      // dial), and every indicator on the page follows at once.
+      // not read as a frozen one. Each cell forces its own speed, so the four
+      // are comparable at a glance; the control at the top of the page sets the
+      // real one, which is what every other indicator here follows.
       const NETWORK_SPEEDS = ["slow-2g", "2g", "3g", "4g"];
-      const NetworkSpeedDemo = ({ color }) => {
-        const [speed, setSpeed] = useState(networkSpeedSignal.value);
-        return (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
-            <h3 style={{ margin: 0, fontSize: "15px" }}>Network speed</h3>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {NETWORK_SPEEDS.map((networkSpeed) => (
-                <label
-                  key={networkSpeed}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    fontSize: "13px",
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="network-speed"
-                    checked={speed === networkSpeed}
-                    onChange={() => {
-                      networkSpeedSignal.value = networkSpeed;
-                      setSpeed(networkSpeed);
-                    }}
-                  />
-                  {networkSpeed}
-                </label>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-              <Cell label="200×60" width={200} height={60} radius={8}>
-                <LoadingIndicatorFluid color={color} />
+      const NetworkSpeedDemo = ({ color }) => (
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <h3 style={{ margin: 0, fontSize: "15px" }}>Network speed</h3>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+            {NETWORK_SPEEDS.map((networkSpeed) => (
+              <Cell
+                key={networkSpeed}
+                label={networkSpeed}
+                width={160}
+                height={56}
+                radius={8}
+              >
+                <LoadingIndicatorFluid
+                  color={color}
+                  networkSpeed={networkSpeed}
+                />
               </Cell>
-              <Cell label="80×80" width={80} height={80} radius={40}>
-                <LoadingIndicatorFluid color={color} />
-              </Cell>
-              <Cell label="300×24" width={300} height={24} radius={12}>
-                <LoadingIndicatorFluid color={color} />
-              </Cell>
-            </div>
+            ))}
           </div>
-        );
-      };
+        </div>
+      );
 
       render(<Demo />, document.getElementById("app"));
     </script>

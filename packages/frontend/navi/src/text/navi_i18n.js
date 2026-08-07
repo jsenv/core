@@ -348,6 +348,18 @@ naviI18n.addAll({
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
   },
+  "constraint.busy.item": {
+    fr: "Cet élément est en cours de synchronisation.",
+    en: "This item is being synchronized.",
+  },
+  "constraint.busy.item.adding": {
+    fr: "Cet élément est en cours d'ajout.",
+    en: "This item is being added.",
+  },
+  "constraint.busy.item.removing": {
+    fr: "Cet élément est en cours de suppression.",
+    en: "This item is being removed.",
+  },
   "constraint.busy.default": {
     fr: "Cet élément est occupé.",
     en: "This element is busy.",
