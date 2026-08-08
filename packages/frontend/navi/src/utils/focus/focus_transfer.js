@@ -1,4 +1,4 @@
-import { findFocusable, getElementSignature } from "@jsenv/dom";
+import { findEvent, findFocusable, getElementSignature } from "@jsenv/dom";
 
 import { isKeyboardModality } from "@jsenv/navi/src/box/pseudo_styles.js";
 
@@ -8,8 +8,7 @@ import { isKeyboardModality } from "@jsenv/navi/src/box/pseudo_styles.js";
  *
  * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
  * focus lands. Candidates are tried in this order:
- * 1. The element that held focus when the container was last closed, if it
- *    opted into that
+ * 1. The element that held focus when the container was last closed
  * 2. [navi-autofocus] asking for it ("" for a plain `autoFocus`)
  * 3. The first focusable element
  * 4. [navi-autofocus="last-resort"], the container itself included
@@ -69,22 +68,42 @@ export const markAutofocusRestore = (containerEl, element) => {
   element.setAttribute("navi-autofocus-last-focused", restoreId);
 };
 
-// A popup closing remembers only what asked to be remembered: reopening a
-// dialog on whatever the mouse last touched inside it would be surprising,
-// while a field marked "restore" (or anything marked "last-resort") has said
-// that is what it wants. A slide has the opposite need and says so itself —
-// coming back to a slide is coming back to what one was doing, whatever that
-// was (see slide_container.jsx).
-export const markAutofocusRestoreOnClose = (containerEl) => {
+// A popup closing remembers what held the focus, so reopening comes back to
+// it — re-focusing where the user was takes priority over any autofocus the
+// contents declare (see transferFocus). One exception: the element the closing
+// pointer itself pressed (a close button, an option whose click dismissed the
+// popup) is remembered only if it asked to be (restorable) — reopening a
+// dialog on the button one pressed to leave it would be surprising. A keyboard
+// close (Escape) designates no element, so whatever holds the focus is
+// remembered as where the user was.
+export const markAutofocusRestoreOnClose = (
+  containerEl,
+  closeEvent,
+  // Received rather than read here: by the time the close cleanups run, the
+  // closing itself may have moved the focus already (a native <dialog>.close()
+  // hands it back to what held it at showModal() time) — the caller captured
+  // it when the close was decided.
+  focused = document.activeElement,
+) => {
   clearAutofocusRestore(containerEl);
-  const focused = document.activeElement;
-  if (
-    focused &&
-    (containerEl === focused || containerEl.contains(focused)) &&
-    isRestorableAutofocus(focused)
-  ) {
-    markAutofocusRestore(containerEl, focused);
+  if (!focused || !(containerEl === focused || containerEl.contains(focused))) {
+    return;
   }
+  if (!isRestorableAutofocus(focused)) {
+    const pointerEvent = closeEvent
+      ? findEvent(closeEvent, "mousedown") || findEvent(closeEvent, "click")
+      : null;
+    if (pointerEvent) {
+      const pointerTarget = pointerEvent.target;
+      if (
+        pointerTarget &&
+        (focused === pointerTarget || focused.contains(pointerTarget))
+      ) {
+        return;
+      }
+    }
+  }
+  markAutofocusRestore(containerEl, focused);
 };
 
 /**

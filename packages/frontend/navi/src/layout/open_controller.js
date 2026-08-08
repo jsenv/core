@@ -52,6 +52,7 @@ export const createOpenController = (
 ) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+  let focusedAtClose = null; // what held the focus when the close was decided, see performClose
 
   // Set true while we're waiting to see whether the click that follows a
   // mousedown-close will land back on whatever would reopen us — see
@@ -109,6 +110,11 @@ export const createOpenController = (
 
   const performClose = (closeEvent) => {
     controller.opened = false;
+    // Read before any close effect touches the DOM: closing a native <dialog>
+    // hands the focus back to whatever held it at showModal() time, so by the
+    // time the close cleanup runs, the popup's content has already lost the
+    // focus and could not be remembered for the next open.
+    focusedAtClose = document.activeElement;
 
     prevent_reopen: {
       const mousedownEvent = findEvent(closeEvent, "mousedown");
@@ -229,7 +235,7 @@ export const createOpenController = (
 
         focusTransfer.transferFocus(e, el);
         return (closeEvent) => {
-          markAutofocusRestoreOnClose(el);
+          markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
           const focusoutEvent = findEvent(closeEvent, "focusout");
           if (focusoutEvent) {
             debugInteraction(

@@ -460,6 +460,15 @@ focus_classes: {
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    // No ring inheritance without a keyboard: an editable target draws its own
+    // ring on any focus (see isMatchingFocusVisible), but propagating that ring
+    // to a controlled element (aria-controls) is a promise that keyboard
+    // shortcuts will drive it — a promise that holds only once a physical
+    // keyboard has actually been used. On touch devices the flag stays false
+    // and a focused search input keeps its ring to itself.
+    if (requireFocusVisible && !keyboardNavigationUsed) {
+      return false;
+    }
     // A controller/proxy counts as focused for inheritance via the same rule
     // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
     // the focus-visible variant (so a mouse-focused controller doesn't propagate
