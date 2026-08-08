@@ -394,6 +394,11 @@
                         padding="xs"
                         size="xl"
                         aria-label={createTitle}
+                        // A way into another screen, not what this screen is
+                        // about: the surface opens on the list (the search box
+                        // says the same of itself), and this takes the
+                        // keyboard only when there is nothing else.
+                        autoFocus="last-resort"
                       >
                         <Icon color="#6b7280">
                           <PlusSvg />
@@ -410,6 +415,10 @@
                           searchSignal.value = next;
                         }}
                         autoComplete="off"
+                        // Searching is optional, choosing is the point: the
+                        // surface opens on the list, and a text input taking
+                        // the focus would also raise the keyboard on mobile.
+                        autoFocus="last-resort"
                         // grey at rest, white once focused
                         discrete
                         slotSpacing="s"

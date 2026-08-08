@@ -96,6 +96,15 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
     }
   }
 
+  // The traversal is bounded to rootNode's subtree: the root's own siblings
+  // are not part of it. Without this, a rootNode with no children (asking
+  // findDescendant about an <input>, say) steps to its next sibling and walks
+  // the rest of the document from there — the parentNode guard below never
+  // catches it because the walk is already outside the root.
+  if (node === rootNode) {
+    return null;
+  }
+
   const nextSibling = node.nextSibling;
   if (nextSibling) {
     // If next sibling is skipRoot, skip it entirely
