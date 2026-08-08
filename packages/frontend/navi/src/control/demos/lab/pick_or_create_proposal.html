@@ -722,15 +722,7 @@
             // screen is reached from the list, and it returns there whatever
             // the map looks like.
             command="--navi-back"
-            // One form, two ways to send it: which button asked comes in with
-            // the values (a button carries a name and a value like any field),
-            // and where to go afterwards is that button's own business — see
-            // the Supprimer button's formCommand.
-            action={(values) =>
-              values.intent === "delete"
-                ? onDelete(entry)
-                : onSave(entry, values)
-            }
+            action={(values) => onSave(entry, values)}
             flex="y"
             overflow="auto"
             expandY
@@ -748,21 +740,19 @@
               <CreateForm key={entry?.id} entry={entry} />
             </Box>
             <Box footer padding="m" paddingY="s" className="form-actions">
-              <Button
-                command="--navi-send"
-                name="intent"
-                value="save"
-                paddingY="s"
-              >
+              <Button command="--navi-send" paddingY="s">
                 Enregistrer
               </Button>
-              {/* Sends the same form — so the whole screen goes read-only while
-                  it runs, which is what one wants of a deletion — and says
-                  where it goes afterwards, which is not where saving goes. */}
+              {/* Its OWN action, not a field of the form. Two buttons named
+                  the same inside one form both end up in its value — the last
+                  one wins — so the form could not tell which of them had asked:
+                  pressing Enter (which sends through the first submit button,
+                  Enregistrer) deleted the entry. A button that means something
+                  else than "send this form" carries what it means itself, and
+                  the loading then shows on the button one pressed. */}
               <Button
                 command="--navi-send"
-                name="intent"
-                value="delete"
+                action={() => onDelete(entry)}
                 formCommand={`--navi-go-to-slide:${id}_pick`}
                 variant="discrete"
                 paddingY="s"

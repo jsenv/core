@@ -451,16 +451,20 @@
         },
         { name: "Dusk", background: "linear-gradient(160deg,#9575cd,#311b92)" },
       ];
-      const Photo = ({ photo }) => (
+      // The number, not the name: what one needs to read off a picture going
+      // past is where it sits in the row.
+      const Photo = ({ index }) => (
         <Box
           flex
           alignX="center"
           alignY="center"
           expandX
           expandY
-          style={{ background: photo.background }}
+          style={{ background: PHOTOS[index].background }}
         >
-          <Text style={{ color: "white", fontWeight: 600 }}>{photo.name}</Text>
+          <Text style={{ color: "white", fontWeight: 700, fontSize: "2.5rem" }}>
+            {index + 1}
+          </Text>
         </Box>
       );
 
@@ -483,7 +487,7 @@
             >
               {PHOTOS.map((photo, index) => (
                 <Slide key={photo.name} id={`photo_${index}`}>
-                  <Photo photo={photo} />
+                  <Photo index={index} />
                 </Slide>
               ))}
             </SlideContainer>
@@ -493,7 +497,10 @@
                   key={photo.name}
                   command={`--navi-go-to-slide:photo_${index}`}
                   commandFor={containerId}
-                  variant="discrete"
+                  // Nothing but the bullet: no box lighting up under the
+                  // pointer, no shrink when pressed — what one aims at is the
+                  // dot itself.
+                  variant="bare"
                   padding="xs"
                   aria-label={photo.name}
                 >
@@ -511,11 +518,14 @@
       // The same photos with no end to them: three slides are the window, the
       // content moves one step behind each travel (onLoop), so → on the last
       // photo shows the first.
+      // Three photos, three slides: enough for a window with no end — a fourth
+      // would make the row longer, not show anything new.
+      const LOOP_PHOTO_COUNT = 3;
       const CarouselLooping = () => {
         const containerId = useId();
         const [index, setIndex] = useState(0);
         const photoAt = (offset) =>
-          PHOTOS[(index + offset + PHOTOS.length) % PHOTOS.length];
+          (index + offset + LOOP_PHOTO_COUNT) % LOOP_PHOTO_COUNT;
         return (
           <Box flex="x" alignY="center" spacing="s">
             <SlideContainer.Left
@@ -528,7 +538,7 @@
               loop
               defaultCurrent="current"
               onLoop={({ dx }) => {
-                setIndex((index + dx + PHOTOS.length) % PHOTOS.length);
+                setIndex((index + dx + LOOP_PHOTO_COUNT) % LOOP_PHOTO_COUNT);
               }}
               duration={useSlideDuration()}
               width="280px"
@@ -536,13 +546,13 @@
               borderRadius="8px"
             >
               <Slide area="previous">
-                <Photo photo={photoAt(-1)} />
+                <Photo index={photoAt(-1)} />
               </Slide>
               <Slide area="current">
-                <Photo photo={photoAt(0)} />
+                <Photo index={photoAt(0)} />
               </Slide>
               <Slide area="next">
-                <Photo photo={photoAt(1)} />
+                <Photo index={photoAt(1)} />
               </Slide>
             </SlideContainer>
             <SlideContainer.Right
@@ -550,6 +560,95 @@
               size="xl"
               padding="xs"
             />
+          </Box>
+        );
+      };
+
+      // A full bar: the two ends, the two steps, and one button per photo. All
+      // of them outside the box and driving it by name (commandFor), so nothing
+      // in the bar travels with what it commands.
+      const CarouselWithBar = ({ text }) => {
+        const containerId = useId();
+        const [current, setCurrent] = useState("bar_photo_0");
+        const ends = text
+          ? [
+              { command: "--navi-first", label: "First" },
+              { command: "--navi-left", label: "Previous" },
+            ]
+          : null;
+        const nexts = text
+          ? [
+              { command: "--navi-right", label: "Next" },
+              { command: "--navi-last", label: "Last" },
+            ]
+          : null;
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <SlideContainer
+              id={containerId}
+              current={current}
+              onCurrentChange={setCurrent}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              {PHOTOS.map((photo, index) => (
+                <Slide key={photo.name} id={`bar_photo_${index}`}>
+                  <Photo index={index} />
+                </Slide>
+              ))}
+            </SlideContainer>
+            <Box flex="x" spacing="xs" alignY="center">
+              {text ? (
+                ends.map(({ command, label }) => (
+                  <Button
+                    key={command}
+                    command={command}
+                    commandFor={containerId}
+                    variant="text"
+                  >
+                    {label}
+                  </Button>
+                ))
+              ) : (
+                <>
+                  <SlideContainer.First commandFor={containerId} padding="xs" />
+                  <SlideContainer.Left commandFor={containerId} padding="xs" />
+                </>
+              )}
+              {PHOTOS.map((photo, index) => (
+                <Button
+                  key={photo.name}
+                  command={`--navi-go-to-slide:bar_photo_${index}`}
+                  commandFor={containerId}
+                  variant={text ? "text" : "discrete"}
+                  padding="xs"
+                  aria-current={
+                    current === `bar_photo_${index}` ? "true" : undefined
+                  }
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              {text ? (
+                nexts.map(({ command, label }) => (
+                  <Button
+                    key={command}
+                    command={command}
+                    commandFor={containerId}
+                    variant="text"
+                  >
+                    {label}
+                  </Button>
+                ))
+              ) : (
+                <>
+                  <SlideContainer.Right commandFor={containerId} padding="xs" />
+                  <SlideContainer.Last commandFor={containerId} padding="xs" />
+                </>
+              )}
+            </Box>
           </Box>
         );
       };
@@ -1828,6 +1927,10 @@
             <Heading id="practical">Practical examples</Heading>
             <h3>A carousel, with bullets</h3>
             <CarouselWithBullets />
+            <h3>A carousel, with a bar</h3>
+            <CarouselWithBar />
+            <h3>The same bar, in words</h3>
+            <CarouselWithBar text />
             <h3>A carousel with no end</h3>
             <p>→ on the last photo shows the first.</p>
             <CarouselLooping />

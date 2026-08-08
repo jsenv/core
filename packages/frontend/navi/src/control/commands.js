@@ -511,6 +511,30 @@ registerSlideCommand("--navi-left", -1, 0);
 registerSlideCommand("--navi-down", 0, 1);
 registerSlideCommand("--navi-up", 0, -1);
 
+// The ends of the walk, which no direction can say either: "all the way that
+// way" is one press whatever the number of slides between, and a map reads its
+// own order to know which one that is.
+const registerSlideEndCommand = (command, last) => {
+  registerNaviCommand(command, (source, event) => {
+    const target =
+      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+    if (!target) {
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () =>
+        dispatchCustomEvent(target, "navi_slide_end", {
+          event,
+          last,
+          value: resolveCommandValue(source, event),
+        }),
+    };
+  });
+};
+registerSlideEndCommand("--navi-first", false);
+registerSlideEndCommand("--navi-last", true);
+
 // By name, when a direction cannot say it: a screen reached from several
 // places, or from one that is not next to it on the map. The name is part of
 // the command — `command="--navi-go-to-slide:edit"` — which leaves `value` for

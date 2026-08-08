@@ -46,6 +46,8 @@ import { useDebugFocus } from "../navi_debug.jsx";
 import { Button } from "../control/input/button.jsx";
 import {
   ChevronDownSvg,
+  ChevronFirstSvg,
+  ChevronLastSvg,
   ChevronLeftSvg,
   ChevronRightSvg,
   ChevronUpSvg,
@@ -356,6 +358,10 @@ export const SlideContainer = ({
   // frame after, or the travel after that would jump too.
   const [noTravel, setNoTravel] = useState(true);
   const rollingRef = useRef(false);
+  // The presses that arrived while the window was rolling: kept rather than
+  // refused, and taken one per roll (see the effect below) — three quick
+  // presses on a carousel are three steps, not one.
+  const pendingRollsRef = useRef([]);
   // Where the track was left, so the next move knows what to travel FROM: an
   // animation is written as two ends, and reading the first one off the DOM
   // mid-travel would read a moving value.
@@ -558,12 +564,19 @@ export const SlideContainer = ({
       // Already moving, so no ease-in to play: it would stall the track for an
       // instant right where the eye is following it.
       const easing = travelInFlight ? "ease-out" : "ease";
+      // And faster still when presses are waiting: someone pressing → four
+      // times is asking to be four slides further, not to watch four travels.
+      // Each waiting press divides what is left, so the track catches up with
+      // the hand instead of playing a queue at its own pace — the same idea as
+      // the wheel, whose glide speeds up when the target moves away from it.
+      const pressesWaiting = pendingRollsRef.current.length;
+      const catchUp = 1 / (pressesWaiting + 1);
       // Cancelled rather than layered: two animations on the same property
       // would blend, and what one sees then is neither of the two moves.
       trackAnimationRef.current?.cancel();
       trackAnimationRef.current = track.animate(
         [{ translate: offsetBefore }, { translate: offset }],
-        { duration: durationMs * travelRatio, easing },
+        { duration: durationMs * travelRatio * catchUp, easing },
       );
     }
     // A window waiting for its travel to be over (see goToArea's own loop
@@ -612,11 +625,14 @@ export const SlideContainer = ({
    *   which is what lets a key that changes nothing keep its own meaning.
    */
   const goToArea = (area, { forward, event, value, dx = 0, dy = 0 } = {}) => {
-    // A window mid-roll answers to nothing: it is on its way somewhere and the
-    // content that goes with it has not moved yet, so a second travel would be
-    // about a picture nobody is looking at.
+    // A window mid-roll cannot travel yet: it is on its way somewhere and the
+    // content that goes with it has not moved, so a second travel would be
+    // about a picture nobody is looking at. The press is not lost though — it
+    // waits for the roll to end, which is what makes three quick presses on a
+    // carousel move three steps instead of one.
     if (rollingRef.current) {
-      return false;
+      pendingRollsRef.current.push({ area, forward, event, value, dx, dy });
+      return true;
     }
     const { slideElements, placeOf } = readMap();
     const currentElement =
@@ -695,6 +711,22 @@ export const SlideContainer = ({
     onCurrentChange?.(area);
     return true;
   };
+
+  // The press kept during a roll, taken once the window rests and the travel is
+  // given back (noTravel off): by direction when there was one, so it is read
+  // against the map as it is NOW — the content moved one step under the window
+  // in between.
+  useLayoutEffect(() => {
+    if (noTravel || rollingRef.current || !pendingRollsRef.current.length) {
+      return;
+    }
+    const { area, dx, dy, event, value } = pendingRollsRef.current.shift();
+    if (dx || dy) {
+      move(dx, dy, event, value);
+      return;
+    }
+    goToArea(area, { event, value });
+  }, [noTravel]);
 
   // Hand the focus to a slide: what it was left on if it remembers something,
   // and otherwise the ladder every container uses — which passes over the ways
@@ -893,6 +925,11 @@ export const SlideContainer = ({
       onnavi_slide_go_to={(e) => {
         const { area, value } = e.detail;
         goToArea(area, { event: e, value });
+      }}
+      // …the ends of the walk (--navi-first / --navi-last): the same jump
+      // Home and End make, said as a command so a nav bar can offer it.
+      onnavi_slide_end={(e) => {
+        goToEnd(e.detail.last, e);
       }}
       // …and back where one came from (--navi-back).
       onnavi_slide_back={(e) => {
@@ -1139,6 +1176,20 @@ const SlideMove = ({ direction, ...rest }) => {
   );
 };
 
+// "All the way that way": the first slide of the walk, or the last one. Not a
+// direction — a map reads its own order — so it is its own component rather
+// than a fifth arrow.
+const SlideEnd = ({ last, ...rest }) => (
+  <SlideNavButton
+    command={last ? "--navi-last" : "--navi-first"}
+    ChevronSvg={last ? ChevronLastSvg : ChevronFirstSvg}
+    aria-label={last ? "Last slide" : "First slide"}
+    {...rest}
+  />
+);
+const SlideFirst = (props) => <SlideEnd {...props} last={false} />;
+const SlideLast = (props) => <SlideEnd {...props} last />;
+
 const SlideLeft = (props) => <SlideMove {...props} direction="left" />;
 const SlideRight = (props) => <SlideMove {...props} direction="right" />;
 const SlideUp = (props) => <SlideMove {...props} direction="up" />;
@@ -1149,3 +1200,5 @@ SlideContainer.Left = SlideLeft;
 SlideContainer.Right = SlideRight;
 SlideContainer.Up = SlideUp;
 SlideContainer.Down = SlideDown;
+SlideContainer.First = SlideFirst;
+SlideContainer.Last = SlideLast;

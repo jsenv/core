@@ -263,6 +263,27 @@ const css = /* css */ `
         --x-button-background-color: transparent;
       }
     }
+    /* bare: the content and nothing else — no box at rest, none on hover, and
+       no shrink when pressed. For a control whose own drawing IS the button (a
+       carousel bullet, a swatch): a background lighting up around it, or the
+       whole thing shrinking under the finger, would be the button showing
+       through what is supposed to be the only thing one sees. It stays a
+       button in every other way: focusable, ringed on focus, commandable. */
+    &[data-variant="bare"] {
+      --button-border-width: 0;
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: transparent;
+        --x-button-border-color: transparent;
+      }
+      &[data-pressed] {
+        .navi_button_content {
+          transform: none;
+        }
+      }
+    }
     /* discrete-border: border on hover */
     &[data-variant="discrete-border"] {
       --x-button-background-color: transparent;
