@@ -4,11 +4,7 @@
  * It is meant to be used inside "requestToResponse"
  */
 
-import {
-  urlIsOrIsInsideOf,
-  urlToExtension,
-  urlToPathname,
-} from "@jsenv/urls";
+import { urlIsOrIsInsideOf, urlToExtension, urlToPathname } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createReadStream, readFile, statSync } from "node:fs";
 

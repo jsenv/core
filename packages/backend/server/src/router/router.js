@@ -279,6 +279,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       let statusMessage;
       let headers;
       let body;
+      // measures the route hands back, merged into the server-timing header
+      // when serverTiming is enabled (see finalizeResponseProperties)
+      let timing;
 
       if (fetchReturnValue instanceof Response) {
         status = fetchReturnValue.status;
@@ -294,6 +297,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         statusMessage = fetchReturnValue.statusMessage;
         headers = fetchReturnValue.headers || {};
         body = fetchReturnValue.body;
+        timing = fetchReturnValue.timing;
       } else {
         throw new TypeError(
           `response must be a Response, or an Object, received ${fetchReturnValue}`,
@@ -326,7 +330,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
       onRouteMatch(route);
       onResponseHeaders(request, route, headers);
-      return { status, statusText, statusMessage, headers, body };
+      return { status, statusText, statusMessage, headers, body, timing };
     };
 
     const matchRoutes = async (request) => {

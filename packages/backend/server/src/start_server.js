@@ -149,6 +149,10 @@ export const startServer = async ({
   // This param should be enabled ONLY during development on your machine
   canExposeSensitiveData = false,
   nagle = true,
+  // false | true | { minDuration }: server-timing response headers.
+  // minDuration (ms) drops entries that took less — 0 keeps everything, which
+  // is what a test wants; a human reading devtools usually wants the noise
+  // gone (the jsenv dev server passes 0.5 for that).
   serverTiming = false,
   requestWaitingMs = 0,
   requestWaitingCallback = ({ request, requestWaitingMs }) => {
@@ -502,6 +506,10 @@ export const startServer = async ({
     sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
     return [receiveRequestOperation, sendResponseOperation];
   };
+  const serverTimingMinDuration =
+    serverTiming && typeof serverTiming === "object"
+      ? serverTiming.minDuration || 0
+      : 0;
   const getResponseProperties = async (request, { pushResponse }) => {
     const timings = {};
     const timing = serverTiming
@@ -543,14 +551,27 @@ export const startServer = async ({
     const finalizeResponseProperties = (responseProperties) => {
       if (serverTiming) {
         startRespondingTiming.end();
-        // Only what took actual time (plus the overall "time to start
-        // responding", which is the summary the rest details): a request
-        // crosses every registered route, and a wall of sub-millisecond
-        // ".routing" entries would bury the measures worth reading.
+        // A response can hand back measures of its own (a `timing` property —
+        // durations keyed by description, null for a plain marker): they join
+        // the server's own in the same server-timing header.
+        if (responseProperties.timing) {
+          Object.assign(timings, responseProperties.timing);
+          delete responseProperties.timing;
+        }
+        // serverTiming.minDuration drops what took less: a request crosses
+        // every registered route, and a wall of sub-millisecond ".routing"
+        // entries buries the measures worth reading. Markers (null) and the
+        // overall "time to start responding" — the summary the rest details —
+        // always stay.
         const timingsWorthReading = {};
         for (const name of Object.keys(timings)) {
-          if (name === startRespondingTiming.name || timings[name] >= 0.5) {
-            timingsWorthReading[name] = timings[name];
+          const duration = timings[name];
+          if (
+            name === startRespondingTiming.name ||
+            typeof duration !== "number" ||
+            duration >= serverTimingMinDuration
+          ) {
+            timingsWorthReading[name] = duration;
           }
         }
         responseProperties.headers = composeTwoHeaders(

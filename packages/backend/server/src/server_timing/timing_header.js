@@ -12,11 +12,19 @@ import {
 export const timingToServerTimingResponseHeaders = (timing) => {
   const serverTimingHeader = {};
   Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key],
-    };
+    // "a".."z" then "aa", "ab", …: names must be unique — they are the keys of
+    // the header object, so a shared fallback would overwrite every entry past
+    // it with the last one.
+    const name =
+      index < letters.length
+        ? letters[index]
+        : letters[Math.floor(index / letters.length) - 1] +
+          letters[index % letters.length];
+    const dur = timing[key];
+    // a non-number duration is a marker ("served from memory cache"): it has
+    // something to say (desc) but nothing to measure
+    serverTimingHeader[name] =
+      typeof dur === "number" ? { desc: key, dur } : { desc: key };
   });
   const serverTimingHeaderString =
     stringifyServerTimingHeader(serverTimingHeader);

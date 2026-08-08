@@ -427,6 +427,17 @@ const createUrlInfo = (url, context) => {
         if (referenceFromOther.gotInlined()) {
           const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
           considerModified(urlInfoReferencingThisOne);
+          continue;
+        }
+        // A reference with a versioning effect writes this url's VERSION into
+        // its owner's cooked content (the ?v= param, read from package.json):
+        // this url modified means that content now embeds a stale version, so
+        // the owner is as modified as an owner of inlined content. Without
+        // this, the owner's cooked content survives the modification and a
+        // validity check that "heals" this url (see isValid re-reading files
+        // from disk) leaves the graph claiming the owner is fresh.
+        if (referenceFromOther.hasVersioningEffect) {
+          considerModified(referenceFromOther.ownerUrlInfo);
         }
       }
       for (const searchParamVariant of urlInfo.searchParamVariantSet) {

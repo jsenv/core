@@ -340,20 +340,19 @@ export const devServerPluginServeSourceFiles = ({
                       // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
                       eTag,
                     }),
-                // Where the time went, readable in devtools (Network > Timing).
-                // Served from memory: one entry saying so, since nothing was
-                // cooked for this request. Cooked: the phase durations the
-                // kitchen measured (see urlInfo.timing in kitchen.js).
-                ...(servableFromMemory
-                  ? { "server-timing": `memory;desc="served from memory cache"` }
-                  : stringifyCookTiming(urlInfo.timing)
-                    ? { "server-timing": stringifyCookTiming(urlInfo.timing) }
-                    : {}),
                 ...urlInfo.headers,
                 "content-type": urlInfo.contentType,
                 "content-length": urlInfo.contentLength,
               },
               body: urlInfo.content,
+              // Where the time went, readable in devtools (Network > Timing):
+              // the server merges this into the server-timing header. Served
+              // from memory: a marker saying so, since nothing was cooked for
+              // this request. Cooked: what the kitchen measured (each plugin
+              // hook, and the fetch/transform/finalize roll-ups).
+              timing: servableFromMemory
+                ? { "served from memory cache": null }
+                : urlInfo.timing,
             };
             const augmentResponseInfo = {
               ...kitchen.context,
@@ -452,24 +451,6 @@ export const devServerPluginServeSourceFiles = ({
   };
 
   return [devServerPluginRoutes, ...devServerJsenvPluginStore.allServerPlugins];
-};
-
-// "transformurlcontent-babel;dur=54.8, transform;dur=66.5, …" — the
-// server-timing value for what the kitchen measured cooking this file: every
-// plugin hook (measured by the plugins controller) plus the phase roll-ups
-// (fetch/transform/finalize, measured in kitchen.js). Only what took actual
-// time: a cook crosses dozens of hooks that do nothing for a given file, and
-// a wall of dur=0.0 entries would bury the two that matter.
-const TIMING_MIN_DURATION_MS = 0.5;
-const stringifyCookTiming = (timing) => {
-  const parts = [];
-  for (const name of Object.keys(timing)) {
-    const duration = timing[name];
-    if (duration >= TIMING_MIN_DURATION_MS) {
-      parts.push(`${name};dur=${duration.toFixed(1)}`);
-    }
-  }
-  return parts.length ? parts.join(", ") : undefined;
 };
 
 const cacheIsDisabledInResponseHeader = (urlInfo) => {

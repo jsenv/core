@@ -47,6 +47,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
  * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
  * @param {boolean|object} [params.clientAutoreload=true] - Live reload; also gates the server-events channel.
+ * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
@@ -89,6 +90,11 @@ export const startDevServer = async ({
   sourceFilesConfig = {},
   clientAutoreload = true,
   clientAutoreloadOnServerRestart = true,
+  // server-timing response headers: devtools show how the time to answer is
+  // spent (cook measures come from the kitchen, see urlInfo.timing). Entries
+  // under minDuration are dropped so a human reads the measures that matter;
+  // a test wants them all, hence 0 there.
+  serverTiming = { minDuration: EXECUTED_BY_TEST_PLAN ? 0 : 0.5 },
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -327,9 +333,7 @@ export const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
-    // server-timing response headers: devtools show how the time to answer
-    // is spent (cook phases come from the kitchen, see urlInfo.timing).
-    serverTiming: true,
+    serverTiming,
     plugins: finalServerPlugins,
     // will allow to open file, provide more context on each route
     canExposeSensitiveData: true,

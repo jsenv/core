@@ -18,6 +18,8 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
+  // every timing entry, whatever it took: the assertions below read the header
+  serverTiming: { minDuration: 0 },
   port: 0,
 });
 try {
@@ -31,11 +33,13 @@ try {
   {
     const serverTiming = await fetchServerTiming();
     const actual = {
-      hasTransformPhase: serverTiming.includes("transform;dur="),
+      hasTransformPhase: serverTiming.includes(`desc="transform";dur=`),
       hasTimeToStartResponding: serverTiming.includes(
         `desc="time to start responding"`,
       ),
-      servedFromMemory: serverTiming.includes("memory;"),
+      servedFromMemory: serverTiming.includes(
+        `desc="served from memory cache"`,
+      ),
     };
     const expect = {
       hasTransformPhase: true,
@@ -52,7 +56,9 @@ try {
       hasTimeToStartResponding: serverTiming.includes(
         `desc="time to start responding"`,
       ),
-      servedFromMemory: serverTiming.includes("memory;"),
+      servedFromMemory: serverTiming.includes(
+        `desc="served from memory cache"`,
+      ),
     };
     const expect = {
       hasTimeToStartResponding: true,

@@ -30,6 +30,8 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
+  // every timing entry, whatever it took: the assertions below read the header
+  serverTiming: { minDuration: 0 },
   port: 0,
 });
 const browser = await chromium.launch({ headless: true });
@@ -60,7 +62,9 @@ try {
     const serverTiming = (await response.allHeaders())["server-timing"] || "";
     return {
       status: response.status(),
-      servedFromMemory: serverTiming.includes("memory;"),
+      servedFromMemory: serverTiming.includes(
+        `desc="served from memory cache"`,
+      ),
     };
   };
 
