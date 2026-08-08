@@ -98,11 +98,11 @@ And within a section:
 - **States are part of the demo**: `readOnly`, `disabled`, `loading` side by side
   say more than any sentence about them.
 
-## Overview
+## Running a demo
 
-Many packages (especially `@jsenv/navi`) ship standalone `*_demo.html` files next to the source they demonstrate, e.g. `packages/frontend/navi/src/control/demos/00_field_demo.html`. These are plain HTML files loaded through jsenv's dev server — no build step, no bundler config to write.
+Many packages (especially `@jsenv/navi`) ship standalone `*_demo.html` files next to the source they demonstrate, e.g. `packages/frontend/navi/src/control/demos/00_field_demo.html`. These are plain HTML files loaded through jsenv's dev server — no build step, no bundler config to write. And since they import the package's source directly (e.g. `@jsenv/navi`), edits to source are reflected on browser reload.
 
-## 1. The dev server
+### The dev server
 
 Started with:
 
@@ -120,7 +120,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3456/ --max-time 2
 
 A `200` means it's already up; don't start a second instance (the port is fixed, a second `dev.mjs` will just fail to bind).
 
-## 2. Opening a demo
+### Opening one
 
 URLs mirror the repo path directly under the server root:
 
@@ -130,9 +130,16 @@ http://127.0.0.1:3456/packages/frontend/navi/src/control/demos/00_field_demo.htm
 
 No routing/registration needed — any `.html` file under the repo is reachable this way as soon as it exists on disk.
 
-## 3. Verifying with Playwright
+## Verifying with Playwright
 
-`playwright` is a repo-root dependency (see other `*.test.mjs` files under `packages/*/tests/` for the same pattern: `import { chromium } from "playwright"`). To actually drive a demo instead of just reading the code:
+Only when the user asks — the "never verify on your own initiative" constraint
+in [.agents/instructions.md](../../instructions.md#constraints) applies to a
+demo just written AND to regression checks against unrelated demos after
+touching shared code. When they do ask, prefer driving the demo over trusting
+the JSX by inspection, especially for events, focus, or async (Suspense/lazy)
+— exactly the class of bugs these files exist to catch.
+
+`playwright` is a repo-root dependency (see other `*.test.mjs` files under `packages/*/tests/` for the same pattern: `import { chromium } from "playwright"`):
 
 ```js
 import { chromium } from "playwright";
@@ -157,9 +164,3 @@ await browser.close();
 ```
 
 Run it with plain `node` from anywhere inside the repo tree (so `playwright` resolves from the root `node_modules`) — no special flags needed.
-
-## Notes
-
-- Demo files import from the package's source directly (e.g. `@jsenv/navi`), so edits to source are reflected on browser reload — no rebuild step.
-- When the user does ask for verification, prefer checking a demo actually renders/behaves correctly over trusting the JSX by inspection alone, especially for anything involving events, focus, or async (Suspense/lazy) — those are exactly the class of bugs these demo files exist to catch.
-- Do NOT run this on your own initiative — not for a demo you just wrote, not as a "regression check" against unrelated existing demos after touching shared code (e.g. Popover/Dialog). The user drives when verification happens; wait for an explicit ask.

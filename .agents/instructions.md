@@ -4,6 +4,7 @@
 - [Constraints](#constraints)
 - [Writing Skill Files](#writing-skill-files)
 - [Project Overview](#project-overview)
+- [Running jsenv source](#running-jsenv-source--always-use---conditionsdevjsenv)
 - [Key Architectural Principles](#key-architectural-principles)
 - [File Naming](#file-naming)
 - [Coding Conventions](#coding-conventions)
@@ -56,16 +57,6 @@ Mentioning a particular case is fine; _opening_ with it, or letting it stand
 in for the rule, is not. When a rule and its example live at the same level of
 detail, the example has taken over — cut it down to a pointer.
 
-## Running jsenv source — always use `--conditions=dev:jsenv`
-
-**Any** `node` process that imports a `@jsenv/*` package from this repo (a test, a scratch script, `startDevServer`, `startServer`, a build) MUST be launched with `--conditions=dev:jsenv`:
-
-```sh
-node --conditions=dev:jsenv <file>
-```
-
-These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
-
 ## Project Overview
 
 **@jsenv/core** is a comprehensive JavaScript development toolkit that prioritizes web standards and simplicity. Organized as a monorepo with packages in `packages/`:
@@ -76,6 +67,16 @@ These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to thei
 - `private/*`: Private projects using jsenv
 - `related/*`: Complementary packages to @jsenv/core
 - `tooling/*`: Development and build tooling
+
+## Running jsenv source — always use `--conditions=dev:jsenv`
+
+**Any** `node` process that imports a `@jsenv/*` package from this repo (a test, a scratch script, `startDevServer`, `startServer`, a build) MUST be launched with `--conditions=dev:jsenv`:
+
+```sh
+node --conditions=dev:jsenv <file>
+```
+
+These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
 
 ## Key Architectural Principles
 

@@ -16,8 +16,10 @@ and match it rather than inventing.
 1. **Start with Basic Version**: Implement the component without actions first
 2. **Add Action Support**: Use the `renderActionableComponent` pattern to wire up data fetching
 3. **Include Accessibility**: Add ARIA attributes and keyboard navigation support
-4. **Add Tests**: Only if requested — never on your initiative
-5. **Document Usage**: Only if requested — never on your initiative
+
+Tests and documentation are not part of the workflow — they happen only on
+request (see the constraints in
+[.agents/instructions.md](../../instructions.md#constraints)).
 
 ## Patterns to Follow
 
