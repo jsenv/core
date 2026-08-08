@@ -516,15 +516,24 @@ export const SlideContainer = ({
       x: 0,
       y: 0,
     };
+    // A transfer waiting for a travel that never happened — a controlled
+    // `current` the caller chose not to move: dropped, the focus has no
+    // business going anywhere. The one for a travel that DID happen stays,
+    // and lands when the slide it is for says it is settled (see settleFocus).
+    if (
+      focusHandOverRef.current &&
+      focusHandOverRef.current.area !== readArea(currentElement)
+    ) {
+      focusHandOverRef.current = null;
+    }
     // Read before anything is marked: setting inert below moves the focus out by
     // itself, so afterwards there is no way to tell whether it was inside. What
     // this is for is the travel nobody asked for — a `current` prop moved from
     // outside, with the keyboard still on the slide about to go out of reach. A
-    // travel someone asked for has its own transfer waiting (focusHandOverRef,
-    // read below), and that one knows what was pressed.
-    const focusHandOver = focusHandOverRef.current;
+    // travel someone asked for has its own transfer waiting (focusHandOverRef),
+    // and that one knows what was pressed.
     const focusIsLeaving =
-      !focusHandOver &&
+      !focusHandOverRef.current &&
       slideElements.some(
         (slideElement) =>
           slideElement !== currentElement &&
@@ -639,30 +648,6 @@ export const SlideContainer = ({
         prepareFocusTransfer(undefined, debugFocus),
         undefined,
       );
-    }
-    // The travel someone asked for: prepared when it was asked for, landed once
-    // the slide arriving holds its final DOM — one flush later than this one,
-    // hence the microtask (see handOverFocus). Preact re-renders the slides from
-    // the context change before it, so by then what they show is settled.
-    if (focusHandOver) {
-      focusHandOverRef.current = null;
-      queueMicrotask(() => {
-        // Asked again rather than taken on trust: a container can have moved on
-        // in between (a queued press taken, a controlled `current` the caller
-        // chose not to move), and the focus then belongs to that travel, not to
-        // this one.
-        const arrivedElement = readMap().slideElements.find(
-          (slideElement) => readArea(slideElement) === focusHandOver.area,
-        );
-        if (!arrivedElement || !arrivedElement.hasAttribute("data-current")) {
-          return;
-        }
-        handOverFocus(
-          arrivedElement,
-          focusHandOver.focusTransfer,
-          focusHandOver.event,
-        );
-      });
     }
     // Out of reach LAST, once the keyboard has already moved on: a browser
     // takes the focus off an element the moment it becomes inert, and on its
@@ -798,11 +783,13 @@ export const SlideContainer = ({
   // that is what this box is for: it takes the keyboard itself (see its own
   // tabIndex), so the arrows keep working and the ring says where one is.
   //
-  // In two steps, and they are two different moments. `prepareFocusTransfer`
-  // has to read the interaction — which element a mousedown landed on, whether
-  // the modality is the keyboard — while the event is still being dispatched.
-  // The landing waits for the arriving slide to hold its final DOM, which is
-  // one flush later than one would think: a travel hands the slide a value
+  // In two steps, and they are two different moments — the same split every
+  // openable surface makes (a dialog's openEffect transfers focus once the
+  // dialog is OPEN, not when it was asked to open). `prepareFocusTransfer` has
+  // to read the interaction — which element a mousedown landed on, whether the
+  // modality is the keyboard — while the event is still being dispatched. The
+  // landing waits for the slide to say its DOM is settled (settleFocus below),
+  // which is later than one would think: a travel hands the slide a value
   // (useSlideValue) and that value reaches it through context, so Preact
   // re-renders the slide in a flush of its own — the container's own layout
   // effect runs BEFORE its children have seen the value. A screen keyed by it,
@@ -831,6 +818,29 @@ export const SlideContainer = ({
         focusVisible: focusTransfer.focusVisible,
       });
     }
+  };
+
+  // A slide reporting that its DOM is settled (its own layout effect, see
+  // Slide) — the moment the transfer prepared in goToArea can land. Every
+  // slide reports on every commit; only the one a transfer is waiting for,
+  // and only while it is the current one, takes it.
+  const settleFocus = (slideArea) => {
+    const focusHandOver = focusHandOverRef.current;
+    if (!focusHandOver || focusHandOver.area !== slideArea) {
+      return;
+    }
+    const slideElement = readMap().slideElements.find(
+      (slideElement) => readArea(slideElement) === slideArea,
+    );
+    if (!slideElement || !slideElement.hasAttribute("data-current")) {
+      return;
+    }
+    focusHandOverRef.current = null;
+    handOverFocus(
+      slideElement,
+      focusHandOver.focusTransfer,
+      focusHandOver.event,
+    );
   };
 
   /**
@@ -1039,7 +1049,7 @@ export const SlideContainer = ({
     >
       <div data-slide-track="" ref={trackRef}>
         <SlideContainerContext.Provider
-          value={{ vertical, answeredAreas, done, valueByArea }}
+          value={{ vertical, answeredAreas, done, valueByArea, settleFocus }}
         >
           {children}
         </SlideContainerContext.Provider>
@@ -1093,6 +1103,15 @@ export const Slide = ({
   );
   // What the travel into this slide carried, if anything (see useSlideValue).
   const slideValue = container?.valueByArea?.[slideArea];
+  // This slide's DOM is settled — said after EVERY commit, no dependency
+  // array, because it is a fact about the render that just happened, not a
+  // reaction to a particular prop. The container is the one holding a focus
+  // transfer waiting for it (see settleFocus): a travel's value reaches this
+  // slide through context one flush after the container moved, and what it
+  // shows (a form keyed by a prefill) is only final here.
+  useLayoutEffect(() => {
+    container?.settleFocus?.(slideArea);
+  });
   return (
     <SlideContext.Provider value={locks}>
       <SlideValueContext.Provider value={slideValue}>

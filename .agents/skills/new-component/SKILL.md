@@ -3,9 +3,13 @@ name: new-component
 description: Workflow for creating a new UI component in @jsenv/navi. Use when implementing a new frontend component from scratch.
 ---
 
-## Overview
+## What we want
 
-New components in `@jsenv/navi` follow a consistent pattern: start simple, layer in action support, then add accessibility.
+A new component must feel like it was always part of navi: same layering
+(plain rendering first, actions on top, accessibility throughout), same
+wrappers, same prop conventions as its siblings. The steps below exist to
+produce that consistency — when in doubt, open the closest existing component
+and match it rather than inventing.
 
 ## Steps
 

@@ -75,16 +75,18 @@ export const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    // Only autofocus when genuinely mounted directly on the document, or
-    // when *this* element is itself the expandable ancestor that just
-    // opened (e.g. Dialog's own self-targeting "last-resort" autofocus).
-    // Any other case means some *other* ancestor (popover, dialog, …) just
-    // opened and revealed this element as one of its descendants — that
-    // ancestor's own opening logic (transferFocus/openEffect) already
-    // placed focus, so we must not steal it back here.
-    const { ancestor, ancestorType } = e.detail;
+    // When an ancestor (popover, dialog, …) just OPENED and revealed this
+    // element among everything else it holds, the opening has an owner: that
+    // ancestor's own transferFocus/openEffect already placed focus, and a
+    // per-element autofocus must not steal it back. Mounting is the other way
+    // of appearing, and it is the element's own: mounted into a surface
+    // already on screen (a screen rebuilding itself around a new value, a row
+    // added to a visible list), nothing else speaks for it — an autofocus it
+    // declares is the only word there is, exactly like dialog content saying
+    // where the keyboard goes when the dialog's transfer looks for it.
+    const { ancestor, ancestorType, becauseAncestorOpened } = e.detail;
     const isSelfAncestor = ancestor === focusableElement;
-    if (ancestorType !== "document" && !isSelfAncestor) {
+    if (becauseAncestorOpened && !isSelfAncestor) {
       return () => {};
     }
     if (autoFocus === "last-resort" && !isSelfAncestor) {

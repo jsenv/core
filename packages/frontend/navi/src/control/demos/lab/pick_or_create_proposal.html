@@ -886,10 +886,15 @@
           {/* A place needs a name or an address to be recognizable again;
               demanding both would be a lie, and demanding "one of the two" is
               not something a form says well — so only the name is required */}
+          {/* autoFocus: this screen rebuilds itself around the value the
+              travel carried (see the key on CreateForm), so the keyboard's
+              place in it is its own to declare — the same word dialog content
+              says, and the slide's own hand-over yields to it. */}
           <TextField
             label="Nom"
             name="name"
             required
+            autoFocus
             defaultValue={entry ? entry.name : prefill}
           />
           <TextField
@@ -907,6 +912,7 @@
             label="Prénom"
             name="firstName"
             required
+            autoFocus
             defaultValue={entry ? entry.firstName : prefill}
           />
           {/* Not required: a first name is enough to name someone, and the

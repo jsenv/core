@@ -2,6 +2,7 @@
 
 - [Communication Style](#communication-style)
 - [Constraints](#constraints)
+- [Writing Skill Files](#writing-skill-files)
 - [Project Overview](#project-overview)
 - [Key Architectural Principles](#key-architectural-principles)
 - [File Naming](#file-naming)
@@ -32,6 +33,28 @@
 - **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
 - **Disabling a lint rule is allowed**: a targeted `// eslint-disable-next-line <rule>` with a comment saying why beats contorting the code to please a rule that does not apply to this line. Use it when you know why the rule is wrong here — never to silence something you have not understood.
 - **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
+
+## Writing Skill Files
+
+A skill teaches how to make decisions in situations that have not happened
+yet — it is not a log of one situation that did. Structure every skill
+accordingly:
+
+1. **Start with what we want, and why.** The need, the feeling, the invariant —
+   stated on its own, before any mechanism. A reader (human or AI) who only
+   retains this part should still make the right call in a case the skill never
+   mentions.
+2. **Then how to obtain it**, as principles that hold across cases.
+3. **Examples come last and are labelled as reference** — a file, a function
+   name, a demo — to anchor the principle, never to define it.
+
+The failure mode this guards against: a skill written around one particular
+fix (its function names, its constants, its exact scenario) reads as "always
+do exactly this". The reader copies the mechanics — the 1/5 ratio, the
+specific helper — without the concept, and applies them where they don't fit.
+Mentioning a particular case is fine; _opening_ with it, or letting it stand
+in for the rule, is not. When a rule and its example live at the same level of
+detail, the example has taken over — cut it down to a pointer.
 
 ## Running jsenv source — always use `--conditions=dev:jsenv`
 
