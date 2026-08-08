@@ -41,7 +41,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {string} [params.sourceMainFilePath="./index.html"] - File served for "/".
  * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
  * @param {string} [params.hostname] - Hostname to bind to.
- * @param {boolean} [params.acceptAnyIp=true] - Also accept connections on the machine's IPs.
+ * @param {boolean} [params.acceptAnyIp=false] - Also accept connections on the machine's IPs (so other devices on the network — a phone — can reach the server). Off by default: exposing the dev server beyond localhost is an explicit choice, not something a dev tool decides.
  * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
  * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
@@ -71,7 +71,7 @@ export const startDevServer = async ({
   ignore,
   port = 3456,
   hostname,
-  acceptAnyIp = true,
+  acceptAnyIp = false,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors

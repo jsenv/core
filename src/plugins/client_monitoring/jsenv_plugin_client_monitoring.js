@@ -6,6 +6,15 @@
  * cooked one of our pages and reports back; we can only see clients that execute
  * our injected script, not arbitrary HTTP clients of the dev server.
  *
+ * The MAIN client — the machine the dev server runs on, browsing via
+ * localhost — is listed but not watched: it reports presence only (heartbeat,
+ * tabs), no console logs and no activity. Its devtools are already at hand,
+ * and the person reading the dashboard is that client. Watching is for the
+ * clients that reach the server over the network (a phone on the LAN address,
+ * acceptAnyIp: true), and every client record carries the ip it reports from —
+ * that ip is what tells the two kinds apart. See isLocalClient in
+ * client_reporter.js (the client side of the same rule).
+ *
  * Transport reuses what the dev server already has instead of opening a second
  * websocket:
  * - server → clients uses the jsenv "server events" channel (the same websocket
@@ -129,6 +138,13 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
+// The machine the dev server runs on, talking to itself: the main client. A
+// phone (or any other device) reaching the server over the network reports
+// with the machine's LAN address instead — which is why the ip is kept on
+// every client record: it is what tells the main client from the others.
+const isLocalIp = (ip) =>
+  ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+
 export const jsenvPluginClientMonitoring = () => {
   // id -> client record
   const clients = new Map();
@@ -155,6 +171,9 @@ export const jsenvPluginClientMonitoring = () => {
         userAgent,
         runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
+        // The address the reports come from; request.ipForwarded when a proxy
+        // sits in between, so the client's own address is kept, not the proxy's.
+        ip: request.ipForwarded || request.ip,
         firstSeen: now(),
         lastSeen: now(),
         everSeen: false,
@@ -166,10 +185,17 @@ export const jsenvPluginClientMonitoring = () => {
         tabs: new Map(),
       };
       clients.set(id, client);
-    } else if (userAgent && userAgent !== client.userAgent) {
-      client.userAgent = userAgent;
-      client.runtime = runtimeFromRequest(request);
-      client.os = osFromUserAgent(userAgent);
+    } else {
+      if (userAgent && userAgent !== client.userAgent) {
+        client.userAgent = userAgent;
+        client.runtime = runtimeFromRequest(request);
+        client.os = osFromUserAgent(userAgent);
+      }
+      // A device changes address (wifi drop, DHCP): the record follows it.
+      const ip = request.ipForwarded || request.ip;
+      if (ip && ip !== client.ip) {
+        client.ip = ip;
+      }
     }
     return client;
   };
@@ -282,6 +308,10 @@ export const jsenvPluginClientMonitoring = () => {
       // parsed { name, version } so pages can show a friendly browser/OS
       runtime: client.runtime,
       os: client.os,
+      ip: client.ip,
+      // The main client — the machine the dev server runs on, talking to
+      // itself over localhost.
+      local: isLocalIp(client.ip),
       firstSeen: client.firstSeen,
       lastSeen: client.lastSeen,
       online: isOnline(client),

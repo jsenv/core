@@ -249,12 +249,12 @@
       }
 
       const headHtml = `<tr>
-        <th>First seen</th><th>OS</th><th>Browser</th><th>Active tab</th>
+        <th>First seen</th><th>OS</th><th>Browser</th><th>IP</th><th>Active tab</th>
         <th>Last activity</th><th>Logs</th><th></th>
       </tr>`;
       document.getElementById("head").innerHTML = headHtml;
       document.getElementById("head2").innerHTML = headHtml;
-      const COLSPAN = 7;
+      const COLSPAN = 8;
 
       const ago = (ts) => {
         const s = Math.round((Date.now() - ts) / 1000);
@@ -394,11 +394,21 @@
           <a class="monitor" href="/.internal/client?id=${encodeURIComponent(d.id)}">Monitor →</a>
         </div>`;
       };
+      // The ip says how the client reaches the server, which is what tells the
+      // main client (this machine, via localhost) from a device on the network.
+      const ipCell = (d) => {
+        if (!d.ip) {
+          return '<span class="muted">—</span>';
+        }
+        const label = d.local ? "localhost" : d.ip;
+        return `<span title="${escapeHtml(d.ip)}">${escapeHtml(label)}</span>`;
+      };
       const rowHtml = (d) => {
         return `<tr>
           <td>${firstSeenCell(d)}</td>
           <td>${named(d.os)}</td>
           <td>${named(d.runtime)}</td>
+          <td>${ipCell(d)}</td>
           <td>${tabCell(d)}</td>
           <td>${activityCell(d)}</td>
           <td>${d.logCount}</td>
