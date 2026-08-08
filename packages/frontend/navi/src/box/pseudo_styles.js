@@ -299,17 +299,57 @@ let keyboardNavigationUsed = false;
 //
 // `keyboardNavigationUsed` has no such blind spot — it is set by navigation
 // keydowns and cleared by pointerdown, whatever anyone prevents afterwards — so
-// it is the authority here. It used to gate only elements marked
-// data-prevent-eager-focus-visible; that marker is gone, the rule is now the
-// same for every element.
+// it is the authority here, with one exception: editable targets (text inputs,
+// textarea, contenteditable — anything whose whole point is keyboard input)
+// show their focus ring on any focus, mouse included, exactly as native
+// :focus-visible does. For them the native match alone is enough.
 export const isMatchingFocusVisible = (el) => {
   if (!el.matches(":focus-visible")) {
     return false;
+  }
+  if (isEditableTarget(el)) {
+    return true;
   }
   if (!keyboardNavigationUsed) {
     return false;
   }
   return true;
+};
+
+// Elements that invite keyboard input: focusing one — even with the mouse —
+// means the user is about to type, so they always warrant a visible focus.
+// Also used to ignore the Space key as a navigation key while typing.
+const EDITABLE_INPUT_TYPE_SET = new Set([
+  "text",
+  "search",
+  "url",
+  "email",
+  "password",
+  "tel",
+  "number",
+  "date",
+  "time",
+  "datetime-local",
+  "month",
+  "week",
+]);
+const isEditableTarget = (target) => {
+  if (!target) {
+    return false;
+  }
+  const tag = target.tagName;
+  if (tag === "TEXTAREA") {
+    return !target.readOnly;
+  }
+  if (tag === "INPUT") {
+    if (!target.type || EDITABLE_INPUT_TYPE_SET.has(target.type)) {
+      return !target.readOnly;
+    }
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  return false;
 };
 
 // The current modality, for code deciding whether something it is about to
@@ -372,37 +412,6 @@ focus_classes: {
     " ",
     "Tab",
   ]);
-  const isEditableTarget = (target) => {
-    if (!target) {
-      return false;
-    }
-    const tag = target.tagName;
-    if (tag === "TEXTAREA") {
-      return true;
-    }
-    if (tag === "INPUT") {
-      const type = target.type;
-      if (
-        !type ||
-        type === "text" ||
-        type === "search" ||
-        type === "url" ||
-        type === "email" ||
-        type === "password" ||
-        type === "tel" ||
-        type === "number"
-      ) {
-        if (target.readOnly) {
-          return false;
-        }
-        return true;
-      }
-    }
-    if (target.isContentEditable) {
-      return true;
-    }
-    return false;
-  };
   document.addEventListener(
     "keydown",
     (e) => {
@@ -451,12 +460,6 @@ focus_classes: {
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
-    // Same answer isMatchingFocusVisible would give below, reached without
-    // touching the DOM: nothing can inherit a ring while the modality is the
-    // pointer.
-    if (requireFocusVisible && !keyboardNavigationUsed) {
-      return false;
-    }
     // A controller/proxy counts as focused for inheritance via the same rule
     // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
     // the focus-visible variant (so a mouse-focused controller doesn't propagate

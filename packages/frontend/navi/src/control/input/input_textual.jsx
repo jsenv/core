@@ -211,6 +211,19 @@ const css = /* css */ `
 
       .navi_button {
         font-size: inherit;
+
+        /* A button in a slot (e.g. the clear cross) is drawn small but must
+           not be small to hit: the spacing around it — the slot margins on the
+           sides, the input padding above and below — belongs to its clickable
+           zone. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-padding-top));
+          right: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          bottom: calc(-1 * var(--x-padding-bottom));
+          left: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          content: "";
+        }
       }
     }
 
