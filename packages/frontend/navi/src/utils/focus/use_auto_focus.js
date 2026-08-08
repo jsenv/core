@@ -31,12 +31,19 @@ import { useDisplayedLayoutEffect } from "../use_displayed_layout_effect.js";
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
- * @param {boolean|"fallback"|"restore"} autoFocus
- *   When false the hook is a no-op. `"fallback"` claims focus only when nothing
- *   more specific already did. `"restore"` never claims focus on open; it only
- *   gets focus back from an ancestor that closed while it was focused (see
- *   focus_transfer.js) — typically a text input that must not pop the mobile
- *   keyboard open every time, but should stay where the user left it.
+ * @param {boolean|"last-resort"|"restore"} autoFocus
+ *   When false the hook is a no-op. The other values say WHEN this element is
+ *   the right place for the keyboard (the whole ladder lives in
+ *   findFocusTarget, see focus_transfer.js):
+ *   - `"last-resort"` — "not me, unless you have nothing else". Said by a
+ *     focusable that is a poor place to arrive (a picker's search box, a
+ *     panel's close button, a slide's chevron) and by a container about its own
+ *     contents (a dialog, a popover, a slide take the keyboard only when they
+ *     hold nothing that can).
+ *   - `"restore"` never claims focus on open; it only gets it back from an
+ *     ancestor that closed while it was focused — typically a text input that
+ *     must not pop the mobile keyboard open every time, but should stay where
+ *     the user left it.
  * @param {object} [options]
  * @param {boolean} [options.preventScroll]
  *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
@@ -68,30 +75,43 @@ export const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    // Only autofocus when genuinely mounted directly on the document, or
-    // when *this* element is itself the expandable ancestor that just
-    // opened (e.g. Dialog's own self-targeting "fallback" autofocus below).
-    // Any other case means some *other* ancestor (popover, dialog, …) just
-    // opened and revealed this element as one of its descendants — that
-    // ancestor's own opening logic (transferFocus/openEffect) already
-    // placed focus, so we must not steal it back here.
-    const { ancestor, ancestorType } = e.detail;
+    // When an ancestor (popover, dialog, …) just OPENED and revealed this
+    // element among everything else it holds, the opening has an owner: that
+    // ancestor's own transferFocus/openEffect already placed focus, and a
+    // per-element autofocus must not steal it back. Mounting is the other way
+    // of appearing, and it is the element's own: mounted into a surface
+    // already on screen (a screen rebuilding itself around a new value, a row
+    // added to a visible list), nothing else speaks for it — an autofocus it
+    // declares is the only word there is, exactly like dialog content saying
+    // where the keyboard goes when the dialog's transfer looks for it.
+    const { ancestor, ancestorType, becauseAncestorOpened } = e.detail;
     const isSelfAncestor = ancestor === focusableElement;
-    if (ancestorType !== "document" && !isSelfAncestor) {
+    if (becauseAncestorOpened && !isSelfAncestor) {
+      return () => {};
+    }
+    if (autoFocus === "last-resort" && !isSelfAncestor) {
+      // "not me, unless you have nothing else" is a question only whoever hands
+      // out the focus can answer, and appearing in the document is nobody
+      // handing out anything: a page loading has no arrival to place, and a
+      // chevron or a search box saying this would take the keyboard from the
+      // document for no reason. The one case that IS an answer is a container
+      // saying it about itself as it opens — there the transfer already tried
+      // everything inside and came back empty.
       return () => {};
     }
     const activeElement = document.activeElement;
     if (
-      autoFocus === "fallback" &&
+      autoFocus === "last-resort" &&
       activeElement !== focusableElement &&
       focusableElement.contains(activeElement)
     ) {
-      // "fallback" only ever claims focus when nothing more specific
-      // already did. A descendant with its own real navi-autofocus (or one
-      // focused synchronously by transferFocus, see focus_transfer.js) has
-      // already run by the time this fires — Preact commits a child's own
-      // layout effects before its parent's, so this parent-level "fallback"
-      // effect would otherwise unconditionally steal focus back from it.
+      // "last-resort" said by a container: its contents come first, so it never
+      // claims focus when something inside it already has it. A descendant with
+      // its own real navi-autofocus (or one focused synchronously by
+      // transferFocus, see focus_transfer.js) has already run by the time this
+      // fires — Preact commits a child's own layout effects before its
+      // parent's, so this parent-level effect would otherwise unconditionally
+      // steal focus back from it.
       return () => {};
     }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;

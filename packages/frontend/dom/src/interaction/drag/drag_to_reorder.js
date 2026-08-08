@@ -4,30 +4,99 @@ import { getDropTargetInfo } from "./drop_target_detection.js";
 import { moveCSSVars } from "./move_css_vars.js";
 
 const css = /* css */ `
+  /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
+     for the last one is the very bottom of the scroll area — drawn inside it,
+     the line would push the scrollable area a few pixels further and make a
+     scrollbar appear (or hide the hint under it) exactly when one is trying to
+     drop at the end. Placed in the body and positioned in viewport
+     coordinates, it can sit anywhere, overhang the list, and cost nothing to
+     the layout. Fixed, like the clone it accompanies. */
   .navi_drop_hint {
-    position: absolute;
+    /* A popover, so it lands in the top layer: no z-index to bid against the
+       page, and nothing it can be hidden behind. Shown BEFORE the clone, which
+       is what puts the clone above it — the top layer stacks in the order
+       things are shown, and the item being carried should pass over the line
+       rather than under it. The UA styles for [popover] have to be undone:
+       inset:0, margin:auto, a border and a background of its own. */
+    position: fixed;
+    inset: auto;
     top: var(--drop-hint-y);
     left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    z-index: 10;
     display: none;
+    box-sizing: border-box;
     width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
+    margin: 0;
+    padding: 0;
+    color: inherit;
     background: var(--drop-hint-background-color, #4476ff);
+    border: none;
     border-radius: var(--drop-hint-border-radius, 2px);
     transform: translateY(-50%);
     pointer-events: none;
+    overflow: visible;
   }
-  [data-drop-edge="top"] > .navi_drop_hint {
+  .navi_drop_hint[data-drop-edge]:popover-open {
     display: block;
+  }
+  .navi_drop_hint[data-drop-edge="top"] {
     --drop-hint-y: calc(
       var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
     );
   }
-  [data-drop-edge="bottom"] > .navi_drop_hint {
-    display: block;
+  .navi_drop_hint[data-drop-edge="bottom"] {
     --drop-hint-y: calc(
       var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
     );
+  }
+  /* A chevron at each end, pointing in: the line alone is easy to lose against
+     a list of borders and separators, two arrows read as "here" at a glance
+     (same idea as the table's column drop preview). They overhang the line,
+     which costs nothing now that the hint is out of the scrollable area — and
+     the more they stick out, the easier they are to spot. */
+  .navi_drop_hint_cap {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    color: var(--drop-hint-background-color, #4476ff);
+    translate: 0 -50%;
+  }
+  .navi_drop_hint_cap svg {
+    width: var(--drop-hint-arrow-size, 11px);
+    height: var(--drop-hint-arrow-size, 11px);
+  }
+  .navi_drop_hint_cap[data-side="start"] {
+    left: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: -90deg;
+  }
+  .navi_drop_hint_cap[data-side="end"] {
+    right: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: 90deg;
+  }
+
+  /* WHO CAN START A DRAG, said in the cursor.
+     A handle drags on the spot, so it shows the hand. A source only drags once
+     the pointer has travelled a few pixels — a plain click stays a click — but
+     the text inside it can no longer be selected (the gesture takes the
+     pointer), so an I-beam over it would promise something that does not
+     happen: it reads as a plain surface instead. An opted-out area keeps both
+     its cursor and its selection, and never starts a drag (see the check in
+     startDragToReorder).
+     Controls inside a source keep their own cursor: cursor is inherited, and
+     anything setting its own (a button's pointer) wins on itself.
+     Only the resting cursor is set here: what it becomes once a drag is under
+     way belongs to the gesture (see the backdrop in drag_gesture.js), the only
+     thing that knows a drag actually started. */
+  [data-drag-handle] {
+    cursor: grab;
+  }
+  [data-drag-source] {
+    cursor: default;
+    user-select: none;
+  }
+  [data-drag-ignore] {
+    cursor: auto;
+    user-select: auto;
   }
 
   [navi-drag-clone-source] {
@@ -35,16 +104,27 @@ const css = /* css */ `
   }
 
   [navi-drag-clone-wrapper] {
-    position: absolute;
+    /* Also a popover (see .navi_drop_hint): in the top layer it is over the
+       page whatever the page's own stacking is, and the coordinates it is
+       given are viewport ones — which is what the pointer carrying it works
+       in. Same UA-style reset as the hint. */
+    position: fixed;
+    inset: auto;
     top: var(--clone-top);
     left: var(--clone-left);
-    z-index: 9999;
+    box-sizing: border-box;
     width: var(--clone-width);
     height: var(--clone-height);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: none;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
     opacity: 0.95;
     transition: box-shadow 0.15s ease;
     pointer-events: none;
+    overflow: visible;
   }
 
   [navi-drag-clone] {
@@ -63,6 +143,9 @@ const css = /* css */ `
     }
   }
 `;
+// At module scope, not inside startDragToReorder: the cursor rules above say who
+// can start a drag, and they have to be true BEFORE anyone drags anything.
+import.meta.css = css;
 
 const dragCSSVars = [
   "--drop-hint-size",
@@ -70,6 +153,7 @@ const dragCSSVars = [
   "--drop-hint-border-radius",
   "--drop-hint-margin-x",
   "--drop-hint-margin-y",
+  "--drop-hint-arrow-size",
   "--drag-clone-scale",
 ];
 
@@ -137,7 +221,11 @@ export const startDragToReorder = (
     ...options
   },
 ) => {
-  import.meta.css = css;
+  // An area that opted out of dragging (a text one wants to select, a control
+  // that owns the gesture): the press there is none of our business.
+  if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+    return undefined;
+  }
   event.preventDefault();
   return dragAfterThreshold(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
@@ -163,10 +251,12 @@ export const startDragToReorder = (
     // Point it at the clone so drop detection tracks the clone's current position.
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
 
-    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-    const dropHintEl = document.createElement("div");
-    dropHintEl.className = "navi_drop_hint";
-    scrollContainer.appendChild(dropHintEl);
+    const dropHintEl = createDropHint();
+    document.body.appendChild(dropHintEl);
+    // The hint first, the clone second: that order is what stacks them in the
+    // top layer.
+    dropHintEl.showPopover();
+    cloneWrapper.showPopover();
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
     // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
@@ -174,11 +264,11 @@ export const startDragToReorder = (
     let currentReleaseElement;
 
     const clearDropHintDOM = () => {
-      scrollContainer.removeAttribute("data-drop-edge");
-      scrollContainer.style.removeProperty("--drop-target-top");
-      scrollContainer.style.removeProperty("--drop-target-bottom");
-      scrollContainer.style.removeProperty("--drop-target-left");
-      scrollContainer.style.removeProperty("--drop-target-width");
+      dropHintEl.removeAttribute("data-drop-edge");
+      dropHintEl.style.removeProperty("--drop-target-top");
+      dropHintEl.style.removeProperty("--drop-target-bottom");
+      dropHintEl.style.removeProperty("--drop-target-left");
+      dropHintEl.style.removeProperty("--drop-target-width");
     };
 
     const clearDropHint = () => {
@@ -238,26 +328,21 @@ export const startDragToReorder = (
       // beforeElement = X    → insert before X (hint at top edge of X)
       const anchorEl = beforeElement || items[items.length - 1];
       const anchorEdge = beforeElement !== null ? "top" : "bottom";
-      const containerRect = scrollContainer.getBoundingClientRect();
+      // Viewport coordinates, straight from the anchor row: the hint is fixed
+      // in the page (see its CSS), so there is no container box to be relative
+      // to and no scroll offset to add back.
       const anchorRect = anchorEl.getBoundingClientRect();
-      const isPositioned =
-        getComputedStyle(scrollContainer).position !== "static";
-      const scrollOffsetLeft = isPositioned ? scrollContainer.scrollLeft : 0;
-      const scrollOffsetTop = isPositioned ? scrollContainer.scrollTop : 0;
-      scrollContainer.setAttribute("data-drop-edge", anchorEdge);
-      scrollContainer.style.setProperty(
-        "--drop-target-top",
-        `${anchorRect.top - containerRect.top + scrollOffsetTop}px`,
-      );
-      scrollContainer.style.setProperty(
+      dropHintEl.setAttribute("data-drop-edge", anchorEdge);
+      dropHintEl.style.setProperty("--drop-target-top", `${anchorRect.top}px`);
+      dropHintEl.style.setProperty(
         "--drop-target-bottom",
-        `${anchorRect.bottom - containerRect.top + scrollOffsetTop}px`,
+        `${anchorRect.bottom}px`,
       );
-      scrollContainer.style.setProperty(
+      dropHintEl.style.setProperty(
         "--drop-target-left",
-        `${anchorRect.left - containerRect.left + scrollOffsetLeft}px`,
+        `${anchorRect.left}px`,
       );
-      scrollContainer.style.setProperty(
+      dropHintEl.style.setProperty(
         "--drop-target-width",
         `${anchorRect.width}px`,
       );
@@ -272,7 +357,7 @@ export const startDragToReorder = (
         const clone = cloneWrapper.firstElementChild;
         // Bake the current visual position (transform included) into the CSS vars
         // so the clone stays where the user released it when we clear the transform.
-        setCloneDocumentRect(cloneWrapper, cloneWrapper);
+        setCloneViewportRect(cloneWrapper, cloneWrapper);
         gestureInfo.cancelPosition();
         const fromId = getItemId(draggedElement);
         const toId = currentBeforeElement
@@ -283,7 +368,7 @@ export const startDragToReorder = (
         const syncCloneWithDropTarget = () => {
           // Snap the CSS-var position to the drop target rect so the browser
           // captures the "new" state at the landing position.
-          setCloneDocumentRect(cloneWrapper, currentReleaseElement);
+          setCloneViewportRect(cloneWrapper, currentReleaseElement);
           // Removing this attr drops the CSS scale(1.15), so the browser
           // captures the clone at scale 1 as the "new" state.
           clone.removeAttribute("navi-drag-clone");
@@ -298,15 +383,13 @@ export const startDragToReorder = (
   });
 };
 
-// getBoundingClientRect() returns viewport-relative coords.
-// The clone wrapper is position:absolute inside document.body, so we need
-// document-relative coords (viewport coords + current page scroll).
-const setCloneDocumentRect = (cloneWrapper, el) => {
+// Viewport coordinates, as getBoundingClientRect gives them: the clone is a
+// fixed-position popover, so that is the space it lives in — and the one the
+// pointer dragging it works in too.
+const setCloneViewportRect = (cloneWrapper, el) => {
   const rect = el.getBoundingClientRect();
-  const scrollLeft = document.documentElement.scrollLeft;
-  const scrollTop = document.documentElement.scrollTop;
-  cloneWrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
-  cloneWrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
+  cloneWrapper.style.setProperty("--clone-top", `${rect.top}px`);
+  cloneWrapper.style.setProperty("--clone-left", `${rect.left}px`);
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
 };
@@ -325,13 +408,45 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
+// The chevron is the one the table's column drop preview uses, rotated by the
+// CSS above so each cap points into the line.
+const dropHintTemplate = /* html */ `
+  <div
+    class="navi_drop_hint"
+    popover="manual"
+  >
+    <span class="navi_drop_hint_cap" data-side="start">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+    <span class="navi_drop_hint_cap" data-side="end">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+  </div>
+`;
+const createDropHint = () => {
+  const div = document.createElement("div");
+  div.innerHTML = dropHintTemplate.trim();
+  return div.firstElementChild;
+};
+
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
 
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
+  // Manual: it is opened and closed with the drag, and must survive an Escape
+  // or a click elsewhere (light dismiss would take it away mid-gesture).
+  wrapper.setAttribute("popover", "manual");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
-  setCloneDocumentRect(wrapper, element);
+  setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale(1.15) expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.

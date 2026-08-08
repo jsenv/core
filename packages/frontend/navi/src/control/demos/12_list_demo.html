@@ -102,6 +102,16 @@
         font-style: italic;
         content: "(none selected)";
       }
+
+      /* The page itself takes no part in the transitions: only the rows do.
+         Snapshotting the root freezes everything else for the duration — the
+         separators stop being drawn, the sibling lists sit on a stale image,
+         and the page jumps as it scrolls under its own frozen picture. The UA
+         names the root `root`; taking the name away is what leaves the page
+         rendering live while the named rows animate over it. */
+      :root {
+        view-transition-name: none;
+      }
     </style>
   </head>
   <body>
@@ -109,8 +119,8 @@
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
-      import { render } from "preact";
-      import { useRef, useState } from "preact/hooks";
+      import { Fragment, render } from "preact";
+      import { useEffect, useRef, useState } from "preact/hooks";
       import {
         List,
         ListItem,
@@ -119,11 +129,19 @@
         Text,
         useSearchText,
         Box,
+        Button,
+        Form,
         LoadingIndicator,
         NaviDebug,
         Icon,
         Link,
+        moveArrayItemByIndex,
+        ensureDocumentStartViewTransition,
+        startDragToReorder,
       } from "@jsenv/navi";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+
+      const startViewTransition = ensureDocumentStartViewTransition();
 
       // 200 auto-generated items
       const LARGE_LIST = Array.from({ length: 200 }, (_, i) => {
@@ -171,12 +189,13 @@
             <Chapter id="search" title="Search">
               <SearchStatesDemo />
               <SearchableExternalInputDemo />
-              <SearchableDemo />
               <GroupedSearchDemo />
               <SplitMatchDemo />
             </Chapter>
-            <Chapter id="grouping" title="Grouping">
-              <ListItemGroupDemo />
+            <Chapter id="editing" title="Editing the list">
+              <ReorderDemo />
+              <AddItemDemo />
+              <RemoveItemDemo />
             </Chapter>
           </NaviDebug>
         );
@@ -258,6 +277,9 @@
                   <li>
                     <Link href="#loading-separator">With separators</Link>
                   </li>
+                  <li>
+                    <Link href="#loading-item">One row at a time</Link>
+                  </li>
                 </ol>
               </li>
               <li>
@@ -272,9 +294,6 @@
                     <Link href="#search-external">Input outside the list</Link>
                   </li>
                   <li>
-                    <Link href="#search-inline">Input inside the list</Link>
-                  </li>
-                  <li>
                     <Link href="#search-grouped">
                       Many items, grouped by letter
                     </Link>
@@ -284,13 +303,24 @@
                       Split matches / non-matches
                     </Link>
                   </li>
+                  <li>
+                    <Link href="#search-split-cases">
+                      Split — some match / none match
+                    </Link>
+                  </li>
                 </ol>
               </li>
               <li>
-                <Link href="#grouping">Grouping</Link>
+                <Link href="#editing">Editing the list</Link>
                 <ol>
                   <li>
-                    <Link href="#grouped">Grouped suggestions</Link>
+                    <Link href="#edit-reorder">Reorder</Link>
+                  </li>
+                  <li>
+                    <Link href="#edit-add">Add an item</Link>
+                  </li>
+                  <li>
+                    <Link href="#edit-remove">Remove an item</Link>
                   </li>
                 </ol>
               </li>
@@ -1189,55 +1219,29 @@
         );
       };
 
-      // ── 4. Searchable list — input inside list ─────────────────────────────────
+      // ── 5. Search — grouped by letter ────────────────────────────────────────
 
-      const SearchableDemo = () => {
-        const [searchText, setSearchText] = useState("");
-        const [fruits, getItemMatchInfo] = useSearchText(searchText, FRUITS);
-        return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-inline">
-              Input inside the list
-            </Heading>
-            <p>
-              Placing an <code>Input</code> inside a <code>ListItemHeader</code>{" "}
-              auto-connects it to the list via context. Keyboard events (arrows,
-              enter, escape) forward from the input to the list automatically.
-            </p>
-            <Input
-              placeholder="Search fruits…"
-              paddingX="10"
-              paddingY="6"
-              size="m"
-              action={(value) => {
-                setSearchText(value);
-              }}
-            />
-            <List>
-              {fruits.map((fruit, i) => {
-                return (
-                  <ListItem
-                    key={fruit}
-                    index={i}
-                    id={fruit}
-                    value={fruit}
-                    matchInfo={getItemMatchInfo(fruit)}
-                  >
-                    {fruit}
-                  </ListItem>
-                );
-              })}
-            </List>
-          </div>
+      // A handful of letters, a handful of items each: enough to see groups
+      // rise, thin out, and empty.
+      const GROUPED_FRUITS = [
+        "Apple",
+        "Apricot",
+        "Avocado",
+        "Banana",
+        "Blueberry",
+        "Cherry",
+        "Coconut",
+        "Cranberry",
+        "Date",
+        "Dragonfruit",
+      ];
+
+      const LetterGroupedList = ({ initialQuery = "" }) => {
+        const [filter, setFilter] = useState(initialQuery);
+        const [sorted, getItemMatchInfo] = useSearchText(
+          filter,
+          GROUPED_FRUITS,
         );
-      };
-
-      // ── 5. Search — many items, grouped by letter ────────────────────────────
-
-      const GroupedSearchDemo = () => {
-        const [filter, setFilter] = useState("");
-        const [sorted, getItemMatchInfo] = useSearchText(filter, LARGE_LIST);
-
         const groupMap = new Map();
         for (const item of sorted) {
           const letter = item[0].toUpperCase();
@@ -1246,153 +1250,61 @@
           }
           groupMap.get(letter).push(item);
         }
-        const groups = [...groupMap.entries()].map(([letter, items]) => ({
-          letter,
-          items,
-        }));
 
-        const matchCount = sorted.filter(
-          (item) => getItemMatchInfo(item).match,
-        ).length;
-
+        let index = 0;
         return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-grouped">
-              Many items, grouped by letter
-            </Heading>
-            <p>
-              Matching items rise to the top, grouped by initial letter. All
-              items remain visible.
-            </p>
+          <Box flex="y" spacing="s" width="260px">
             <Input
               type="search"
               placeholder="Search…"
               value={filter}
-              uiAction={(v) => {
-                setFilter(v);
-              }}
+              uiAction={setFilter}
               expandX
-              border="1px solid #ccc"
-              borderRadius="6px"
-              padding="8"
-              marginBottom="s"
-              size="1rem"
             />
-            {filter && (
-              <div
-                style={{
-                  marginBottom: "8px",
-                  fontSize: "0.85rem",
-                  color: "#555",
-                }}
-              >
-                {matchCount} match{matchCount !== 1 ? "es" : ""} out of{" "}
-                {LARGE_LIST.length}
-              </div>
-            )}
-            <List fallback="No results" style={{ maxHeight: "280px" }}>
-              {(() => {
-                let globalIndex = 0;
-                return groups.map((group) => (
-                  <ListItemGroup key={group.letter} label={group.letter}>
-                    {group.items.map((item) => {
-                      const i = globalIndex++;
-                      // Force match: true — this demo keeps all items visible
-                      // (see above), only the highlight should reflect the
-                      // actual match info, not the match-based filtering.
-                      const matchInfo = {
-                        ...getItemMatchInfo(item),
-                        match: true,
-                      };
-                      return (
-                        <ListItem
-                          key={item}
-                          index={i}
-                          id={item}
-                          matchInfo={matchInfo}
-                          style={{ backgroundColor: SUGGESTION_BG }}
-                        >
-                          {item}
-                        </ListItem>
-                      );
-                    })}
-                  </ListItemGroup>
-                ));
-              })()}
+            <List searchText={filter} borderWidth="1" borderRadius="6" expandX>
+              {[...groupMap.entries()].map(([letter, items]) => (
+                <ListItemGroup key={letter} label={letter} hiddenWhileEmpty>
+                  {items.map((item) => (
+                    <ListItem
+                      key={item}
+                      index={index++}
+                      id={item}
+                      matchInfo={getItemMatchInfo(item)}
+                      paddingX="m"
+                      paddingY="xs"
+                    >
+                      {item}
+                    </ListItem>
+                  ))}
+                </ListItemGroup>
+              ))}
             </List>
-          </div>
+          </Box>
         );
       };
 
-      // ── 6. Grouped suggestions with ListItemGroup ──────────────────────────────
+      const GroupedSearchDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="search-grouped">
+            Grouped by letter
+          </Heading>
+          <Box flex="x" spacing="l" alignY="start">
+            <LetterGroupedList />
+            <LetterGroupedList initialQuery="ap" />
+            <LetterGroupedList initialQuery="berry" />
+          </Box>
+        </div>
+      );
 
-      const GROUPED_ITEMS = [
-        {
-          label: (
-            <Text background="red" flex expand padding="s">
-              Fruits
-            </Text>
-          ),
-          items: ["Apple", "Banana", "Cherry", "Mango", "Strawberry"],
-        },
-        {
-          label: (
-            <Text background="green" flex expand padding="s">
-              Vegetables
-            </Text>
-          ),
-          items: ["Broccoli", "Carrot", "Cucumber", "Spinach", "Tomato"],
-        },
-        {
-          label: "Grains",
-          items: ["Barley", "Oats", "Quinoa", "Rice", "Wheat"],
-        },
-      ];
+      // ── 6. Split matches / non-matches ────────────────────────────────────────
 
-      const ListItemGroupDemo = () => {
-        return (
-          <div className="demo-subsection">
-            <Heading level={3} id="grouped">
-              Grouped suggestions
-            </Heading>
-            <p>Options organized into labeled groups using ListItemGroup.</p>
-            <List fallback="No results" style={{ maxHeight: "280px" }} expandX>
-              <ListItem index={0}>
-                A very large suggestion to test how it behaves when the text is
-                very large and exceeds the width of the list. It should be
-                visible
-              </ListItem>
-              {(() => {
-                let globalIndex = 1;
-                return GROUPED_ITEMS.map((group) => (
-                  <ListItemGroup key={group.label} label={group.label}>
-                    {group.items.map((item) => {
-                      const i = globalIndex++;
-                      return (
-                        <ListItem
-                          key={item}
-                          index={i}
-                          style={{ backgroundColor: SUGGESTION_BG }}
-                        >
-                          {item}
-                        </ListItem>
-                      );
-                    })}
-                  </ListItemGroup>
-                ));
-              })()}
-            </List>
-          </div>
-        );
-      };
+      const SPLIT_FRUITS = FRUITS.slice(0, 10);
 
-      // ── 7. Split matches / non-matches ────────────────────────────────────────
-
-      const SplitMatchDemo = () => {
-        const [filter, setFilter] = useState("");
+      const SplitMatchList = ({ initialQuery = "" }) => {
+        const [filter, setFilter] = useState(initialQuery);
         const [orderedItems, getItemMatchInfo] = useSearchText(
           filter,
-          LARGE_LIST,
+          SPLIT_FRUITS,
         );
         const matches = orderedItems.filter(
           (item) => getItemMatchInfo(item).match,
@@ -1402,34 +1314,21 @@
         );
 
         return (
-          <div className="demo-subsection">
-            <Heading level={3} id="search-split">
-              Split matches / non-matches
-            </Heading>
-            <p>
-              Matching items and non-matching items are shown in separate
-              groups, each with a count. When the search is empty, all items are
-              shown as matches.
-            </p>
-            <input
+          <Box flex="y" spacing="s" width="260px">
+            <Input
               type="search"
               placeholder="Search…"
               value={filter}
-              onInput={(e) => {
-                setFilter(e.target.value);
-              }}
-              style={{
-                display: "block",
-                width: "100%",
-                boxSizing: "border-box",
-                marginBottom: "8px",
-                padding: "8px 12px",
-                border: "1px solid #ccc",
-                borderRadius: "6px",
-                fontSize: "1rem",
-              }}
+              uiAction={setFilter}
+              expandX
             />
-            <List fallback="No results" style={{ maxHeight: "300px" }}>
+            <List
+              fallback="No results"
+              borderWidth="1"
+              borderRadius="6"
+              expandX
+              maxHeight="300"
+            >
               <ListItemGroup
                 style={{ backgroundColor: "#f0faf3" }}
                 label={
@@ -1445,21 +1344,18 @@
                   </Box>
                 }
               >
-                {matches.map((item, i) => {
-                  // Safe to pass matchInfo directly: `matches` is already
-                  // filtered to match: true items, so nothing gets hidden.
-                  return (
-                    <ListItem
-                      key={item}
-                      index={i}
-                      id={item}
-                      matchInfo={getItemMatchInfo(item)}
-                      style={{ backgroundColor: SUGGESTION_BG }}
-                    >
-                      {item}
-                    </ListItem>
-                  );
-                })}
+                {matches.map((item, i) => (
+                  <ListItem
+                    key={item}
+                    index={i}
+                    id={item}
+                    matchInfo={getItemMatchInfo(item)}
+                    paddingX="m"
+                    paddingY="xs"
+                  >
+                    {item}
+                  </ListItem>
+                ))}
               </ListItemGroup>
               {nonMatches.length > 0 && (
                 <ListItemGroup
@@ -1482,7 +1378,8 @@
                       key={item}
                       index={matches.length + i}
                       id={item}
-                      style={{ backgroundColor: SUGGESTION_BG }}
+                      paddingX="m"
+                      paddingY="xs"
                     >
                       {item}
                     </ListItem>
@@ -1490,9 +1387,33 @@
                 </ListItemGroup>
               )}
             </List>
-          </div>
+          </Box>
         );
       };
+
+      const SplitMatchDemo = () => (
+        <Fragment>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-split">
+              Split matches / non-matches
+            </Heading>
+            <p>
+              Matching items and non-matching ones are kept apart, each group
+              counted.
+            </p>
+            <SplitMatchList />
+          </div>
+          <div className="demo-subsection">
+            <Heading level={3} id="search-split-cases">
+              Split — some match / none match
+            </Heading>
+            <Box flex="x" spacing="l" alignY="start">
+              <SplitMatchList initialQuery="ap" />
+              <SplitMatchList initialQuery="zzz" />
+            </Box>
+          </div>
+        </Fragment>
+      );
 
       // ── Loading state ──────────────────────────────────────────────────────────
 
@@ -1785,9 +1706,49 @@
               With separators
             </Heading>
             <SeparatorExample />
+
+            <Heading level={3} id="loading-item">
+              One row at a time
+            </Heading>
+            <p>
+              A row has the same two states as the list: <code>loading</code>{" "}
+              while something about it is in flight, <code>readOnly</code> when
+              it is not to be acted on. Press one of them to see what it
+              answers.
+            </p>
+            <ItemStatesExample />
           </div>
         );
       };
+
+      const ItemStatesExample = () => (
+        <Box width="260px">
+          <List separator>
+            {[
+              { label: "Plain", props: {} },
+              { label: "loading", props: { loading: true } },
+              { label: "readOnly", props: { readOnly: true } },
+            ].map(({ label, props }, i) => (
+              <ListItem
+                key={label}
+                id={`item-state-${label}`}
+                index={i}
+                flex="x"
+                alignY="center"
+                spacing="s"
+                paddingX="m"
+                paddingY="s"
+                {...props}
+              >
+                <Text expandX>{label}</Text>
+                <Button variant="discrete" padding="xs" action={() => {}}>
+                  Act
+                </Button>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      );
 
       // ── Search states — few / none, with & without searchFallback ──────────────
 
@@ -1810,6 +1771,8 @@
                 searchText={searchText}
                 expandX
                 maxHeight="180"
+                borderWidth="1"
+                borderRadius="6"
                 {...listProps}
               >
                 {renderFruitItems(fruits, getItemMatchInfo)}
@@ -1850,6 +1813,391 @@
           </Box>
         </div>
       );
+
+      // ── Editing the list — reorder / add / remove ─────────────────────────────
+
+      const TASKS = [
+        { id: "t1", label: "Book the court" },
+        { id: "t2", label: "Bring the balls" },
+        { id: "t3", label: "Warm up" },
+        { id: "t4", label: "Play" },
+      ];
+      let taskCounter = TASKS.length;
+      const nextTaskId = () => `t${++taskCounter}`;
+      // What the backend adds when it changes on its own (the "+ row" in its
+      // table): the frontend has to take it without having asked.
+      const backendNewTask = (rows) => ({
+        id: nextTaskId(),
+        label: MORE_TASKS[rows.length % MORE_TASKS.length],
+      });
+
+      // For the "add one, don't make me type" button below.
+      const MORE_TASKS = [
+        "Stretch",
+        "Fill the bottles",
+        "Check the net",
+        "Shower",
+        "Pay the court",
+      ];
+
+      // Row ids are unique per list (`listName`): the three lists below hold the
+      // same tasks, and <List itemTransition> names each row after its id — two
+      // rows sharing a name abort the transition.
+      // Opaque, because a row being dragged is lifted out of the list: over the
+      // rows it flies past, a transparent one would show them through itself.
+      const TaskRow = ({ listName, task, children, ...rest }) => (
+        <ListItem
+          key={task.id}
+          id={`${listName}-${task.id}`}
+          value={task.id}
+          data-id={task.id}
+          flex="x"
+          alignY="center"
+          spacing="s"
+          paddingX="m"
+          paddingY="s"
+          backgroundColor="light-dark(#fff, #1e1e1e)"
+          {...rest}
+        >
+          {children}
+        </ListItem>
+      );
+
+      const ReorderDemo = () => {
+        const [tasks, setTasks] = useState(TASKS);
+
+        const startDrag = (event) => {
+          startDragToReorder(event, {
+            itemSelector: "[data-id]",
+            getItemId: (el) => el.dataset.id,
+            onReorder: async (fromId, toId, syncClone) => {
+              const viewTransition = startViewTransition(() => {
+                syncClone();
+                setTasks((previous) => {
+                  const fromIndex = previous.findIndex((t) => t.id === fromId);
+                  const toIndex =
+                    toId === null
+                      ? previous.length
+                      : previous.findIndex((t) => t.id === toId);
+                  return moveArrayItemByIndex(
+                    previous,
+                    fromIndex,
+                    fromIndex < toIndex ? toIndex - 1 : toIndex,
+                  );
+                });
+              });
+              await viewTransition?.finished;
+            },
+          });
+        };
+
+        return (
+          <div className="demo-subsection">
+            <Heading level={3} id="edit-reorder">
+              Reorder
+            </Heading>
+            <p>Drag a row by its handle, or from anywhere on the row.</p>
+            <Box width="320px">
+              <List separator itemTransition>
+                {tasks.map((task, i) => (
+                  <TaskRow
+                    key={task.id}
+                    listName="reorder"
+                    task={task}
+                    index={i}
+                    onPointerDown={startDrag}
+                    data-drag-source
+                  >
+                    <Text data-drag-handle>⠿</Text>
+                    <Text expandX>{task.label}</Text>
+                    {/* Opted out: this one is meant to be read and copied, so
+                        it keeps its text cursor and its selection. */}
+                    <Text color="secondary" data-drag-ignore>
+                      #{task.id}
+                    </Text>
+                  </TaskRow>
+                ))}
+              </List>
+            </Box>
+          </div>
+        );
+      };
+
+      // Creating: the item is known before the server answers, so it is drawn
+      // right away rather than as a skeleton — but read-only and loading until
+      // the answer comes, because until then it is not a row anyone can act on.
+      const AddItemDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="edit-add">
+            Add an item
+          </Heading>
+          <h4>The three rows, held</h4>
+          <AddStatesPreview />
+          <h4>Live</h4>
+          <p>Answer or fail the call to see where the new row ends up.</p>
+          <SlowMotionToggle />
+          <FakeBackend value={TASKS} newRow={backendNewTask}>
+            {({ value, action }) => <AddableList saved={value} save={action} />}
+          </FakeBackend>
+        </div>
+      );
+
+      // The states an add goes through, side by side and standing still: the
+      // interactive example below shows how one leads to the other, this shows
+      // what each of them looks like without having to catch it.
+      const AddStatesPreview = () => {
+        const [dismissed, setDismissed] = useState(false);
+        return (
+          <Box width="320px">
+            <List separator itemTransition>
+              <TaskRow
+                listName="add-preview"
+                task={{ id: "p1", label: "Book the court" }}
+                index={0}
+              >
+                <Text expandX>Book the court</Text>
+              </TaskRow>
+              <TaskRow
+                listName="add-preview"
+                task={{ id: "p2", label: "Warm up" }}
+                index={1}
+                loading="adding"
+              >
+                <Text expandX>Warm up</Text>
+              </TaskRow>
+              {!dismissed && (
+                <TaskRow
+                  listName="add-preview"
+                  task={{ id: "p3", label: "Shower" }}
+                  index={2}
+                  error="Le serveur a refusé l'enregistrement."
+                  onErrorDismiss={() =>
+                    startViewTransition(() => setDismissed(true))
+                  }
+                >
+                  <Text expandX>Shower</Text>
+                </TaskRow>
+              )}
+            </List>
+          </Box>
+        );
+      };
+
+      const RemoveStatesPreview = () => (
+        <Box width="320px">
+          <List separator itemTransition>
+            {[
+              { id: "q1", label: "Book the court", loading: false },
+              { id: "q2", label: "Warm up", loading: "removing" },
+            ].map((task, i) => (
+              <TaskRow
+                key={task.id}
+                listName="remove-preview"
+                task={task}
+                index={i}
+                loading={task.loading}
+              >
+                <Text expandX>{task.label}</Text>
+                <Button
+                  variant="discrete"
+                  padding="xs"
+                  aria-label={`Remove ${task.label}`}
+                  action={() => {}}
+                >
+                  ✕
+                </Button>
+              </TaskRow>
+            ))}
+          </List>
+        </Box>
+      );
+
+      // What the backend holds, adopted by the list: a change it did not ask for
+      // (the ✕ and "+ row" in the backend's own table) lands the same way as one
+      // it did — in a view transition, so the rows move rather than jump.
+      const useBackendRows = (saved, setTasks) => {
+        const firstRef = useRef(true);
+        useEffect(() => {
+          if (firstRef.current) {
+            firstRef.current = false;
+            return;
+          }
+          startViewTransition(() => setTasks(saved));
+        }, [saved]);
+      };
+
+      // The row animations run on ::view-transition pseudo-elements, which hang
+      // off the document — so the knob that slows them down is a var on the root.
+      const SlowMotionToggle = () => {
+        const [slow, setSlow] = useState(false);
+        useEffect(() => {
+          document.documentElement.style.setProperty(
+            "--navi-list-item-transition-duration",
+            slow ? "1600ms" : "",
+          );
+        }, [slow]);
+        return (
+          <label style={{ display: "inline-flex", gap: "6px" }}>
+            <input
+              type="checkbox"
+              checked={slow}
+              onChange={(e) => setSlow(e.target.checked)}
+            />
+            Slow motion
+          </label>
+        );
+      };
+
+      const AddableList = ({ saved, save }) => {
+        const [tasks, setTasks] = useState(saved);
+        useBackendRows(saved, setTasks);
+        // The row being created: present in the list, not yet confirmed. It
+        // carries its own error, so a refused creation stays where the user put
+        // it and says what happened, instead of vanishing with the message
+        // somewhere else.
+        const [pendingTask, setPendingTask] = useState(null);
+
+        const add = async (values) => {
+          const task = { id: nextTaskId(), label: values.label };
+          startViewTransition(() => setPendingTask(task));
+          try {
+            await save([...tasks, task]);
+          } catch (e) {
+            setPendingTask({ ...task, error: e.message });
+            return;
+          }
+          setTasks((previous) => [...previous, task]);
+          setPendingTask(null);
+        };
+        const dismissFailedTask = () => {
+          startViewTransition(() => setPendingTask(null));
+        };
+
+        const shownTasks = pendingTask ? [...tasks, pendingTask] : tasks;
+        return (
+          <Box flex="y" spacing="m" width="320px">
+            <List separator itemTransition>
+              {shownTasks.map((task, i) => {
+                const pending = pendingTask && pendingTask.id === task.id;
+                return (
+                  <TaskRow
+                    key={task.id}
+                    listName="add"
+                    task={task}
+                    index={i}
+                    loading={pending && !task.error && "adding"}
+                    // The error IS the row: what was typed never made it, so
+                    // showing it as an item would be a lie. The row draws the
+                    // way out itself, given somewhere to go.
+                    error={task.error}
+                    onErrorDismiss={dismissFailedTask}
+                  >
+                    <Text expandX>{task.label}</Text>
+                  </TaskRow>
+                );
+              })}
+            </List>
+            {/* The form goes busy on its own while the action runs: the field
+                turns read-only and the button takes its loading state. */}
+            <Form action={add} flex="x" spacing="s" alignY="end">
+              <Input
+                name="label"
+                required
+                placeholder="Something to do…"
+                expandX
+              />
+              <Button command="--navi-send">Add</Button>
+            </Form>
+            <Button
+              variant="discrete"
+              alignX="start"
+              action={() =>
+                add({
+                  label: MORE_TASKS[shownTasks.length % MORE_TASKS.length],
+                })
+              }
+            >
+              Add one for me
+            </Button>
+          </Box>
+        );
+      };
+
+      const RemoveItemDemo = () => (
+        <div className="demo-subsection">
+          <Heading level={3} id="edit-remove">
+            Remove an item
+          </Heading>
+          <h4>The two rows, held</h4>
+          <RemoveStatesPreview />
+          <h4>Live</h4>
+          <p>
+            The row stays, loading and read-only, until the server has taken it.
+          </p>
+          <SlowMotionToggle />
+          <FakeBackend value={TASKS} newRow={backendNewTask}>
+            {({ value, action }) => (
+              <RemovableList saved={value} save={action} />
+            )}
+          </FakeBackend>
+        </div>
+      );
+
+      const RemovableList = ({ saved, save }) => {
+        const [tasks, setTasks] = useState(saved);
+        useBackendRows(saved, setTasks);
+        const [pendingId, setPendingId] = useState(null);
+
+        const remove = async (task) => {
+          setPendingId(task.id);
+          try {
+            await save(tasks.filter((candidate) => candidate.id !== task.id));
+          } catch (e) {
+            setPendingId(null);
+            // Rethrown, not swallowed: the button that asked for the deletion
+            // is where the refusal belongs, and that is what navi does with an
+            // action that rejects.
+            throw e;
+          }
+          // Once the server has taken it, and not before: the row leaves in a
+          // view transition, and the ones below it slide up.
+          startViewTransition(() => {
+            setTasks((previous) =>
+              previous.filter((candidate) => candidate.id !== task.id),
+            );
+            setPendingId(null);
+          });
+        };
+
+        return (
+          <Box width="320px">
+            <List separator itemTransition>
+              {tasks.map((task, i) => {
+                const pending = pendingId === task.id;
+                return (
+                  <TaskRow
+                    key={task.id}
+                    listName="remove"
+                    task={task}
+                    index={i}
+                    loading={pending && "removing"}
+                  >
+                    <Text expandX>{task.label}</Text>
+                    <Button
+                      variant="discrete"
+                      padding="xs"
+                      aria-label={`Remove ${task.label}`}
+                      action={() => remove(task)}
+                    >
+                      ✕
+                    </Button>
+                  </TaskRow>
+                );
+              })}
+            </List>
+          </Box>
+        );
+      };
 
       render(<App />, document.getElementById("app"));
     </script>

@@ -9,6 +9,7 @@ import {
   closestOpenableAncestor,
   isAncestorOpen,
   observeAncestorOpenState,
+  selfOrClosestOpenableAncestor,
 } from "./ancestor_open.js";
 import { getPositioningScrollOffset } from "./dom_coords.js";
 import { getPositionedParent } from "./offset_parent.js";
@@ -61,7 +62,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  */
 // The event type observeSize() reports with — recognized by check() as "the
 // change is in another element, not in the tracked rect".
-const OBSERVED_ELEMENT_SIZE_CHANGE = "observed_element_size_change";
+// Exported: a caller that resized the element itself (a callout whose message
+// just changed, say) has to re-check with this rather than with nothing — its
+// own rect may not have moved at all, and the dedup would drop the check.
+export const ELEMENT_SIZE_CHANGE = "observed_element_size_change";
 
 export const visibleRectEffect = (
   element,
@@ -131,7 +135,12 @@ export const visibleRectEffect = (
     resizeWatchingPaused = false;
     publishResizeWatchingPausedChange(false);
   };
-  const check = (event) => {
+  // Only so the reads below have something to read: a caller that describes
+  // nothing gets no special treatment, it goes through the same dedup as any
+  // other check. A caller that needs the dedup bypassed says so by passing the
+  // event that means it (ELEMENT_SIZE_CHANGE).
+  const UNSET_EVENT = { type: "unset" };
+  const check = (event = UNSET_EVENT) => {
     if (DEBUG) {
       console.group(`visibleRect.check("${event.type}")`);
     }
@@ -318,7 +327,7 @@ export const visibleRectEffect = (
     // defeating the whole point of observeSize (a popover reconsidering its
     // placement once its own content shrinks/grows, a callout re-measuring
     // against its message body).
-    if (event.type === OBSERVED_ELEMENT_SIZE_CHANGE) {
+    if (event.type === ELEMENT_SIZE_CHANGE) {
       lastVisibleRect = visibleRect;
       lastViewportRect = viewportRect;
       notify("observed element size changed");
@@ -559,7 +568,12 @@ export const visibleRectEffect = (
       });
     }
     on_ancestor_events: {
-      let currentOpenableAncestor = closestOpenableAncestor(element);
+      // Self-inclusive on the first step only: `element` can itself be the
+      // dialog/popover that closes (a callout anchored to a dialog rather than
+      // to a field inside it), and its own close hides it just as much as an
+      // ancestor's would. The walk up below starts from parentElement, so the
+      // chain still advances.
+      let currentOpenableAncestor = selfOrClosestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {
@@ -732,7 +746,7 @@ export const visibleRectEffect = (
       pendingFrame = requestAnimationFrame(() => {
         pendingFrame = null;
         check(
-          new CustomEvent(OBSERVED_ELEMENT_SIZE_CHANGE, {
+          new CustomEvent(ELEMENT_SIZE_CHANGE, {
             detail: { width, height },
           }),
         );
@@ -994,7 +1008,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable }}
  */
 export const pickPositionRelativeTo = (
   element,
@@ -1507,22 +1521,34 @@ export const pickPositionRelativeTo = (
   // so the usable space includes the anchor dimension.
   // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
-  const effectiveSpaceAbove =
-    (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "top" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceBelow =
-    (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "bottom" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceLeft =
-    (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
-    (finalX === "left" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceRight =
-    (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
-    (finalX === "right" ? marginWithAnchor : 0) -
-    marginWithContainer;
+  const containerWidthAvailable = availableWidth - 2 * marginWithContainer;
+  const containerHeightAvailable = availableHeight - 2 * marginWithContainer;
+  // Docked to a container (no real anchor): the element is kept inside the
+  // container's margin on BOTH sides — that is what the !hasValidAnchor clamp
+  // above enforces — so what it has to work with is the container net of both.
+  // The anchor-relative formulas below count the margin once, which is right
+  // when the space really is bounded by the anchor on the other side, and
+  // wrong here: it would let the far edge grow flush against the container.
+  const effectiveSpaceAbove = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
+      (finalY === "top" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceBelow = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
+      (finalY === "bottom" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceLeft = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
+      (finalX === "left" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceRight = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
+      (finalX === "right" ? marginWithAnchor : 0) -
+      marginWithContainer;
 
   return {
     // Whether a real anchor actually ended up used — false when there's no
@@ -1545,6 +1571,12 @@ export const pickPositionRelativeTo = (
     spaceRight: effectiveSpaceRight,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
+    // What a centered axis has to work with: the whole container, net of the
+    // margin kept on both sides. spaceLeft/spaceRight can't answer that — they
+    // are measured from the anchor, which for a container-docked element is
+    // the container itself, so they collapse to -marginWithContainer.
+    containerWidthAvailable,
+    containerHeightAvailable,
   };
 };
 
@@ -1665,8 +1697,16 @@ export const applyNewPosition = (
     spaceRight,
     spaceAbove,
     spaceBelow,
+    containerWidthAvailable,
+    containerHeightAvailable,
   },
 ) => {
+  // A centered axis is published too, from the container's own extent: leaving
+  // the property unset lets the consumer's size cap fall back to its viewport
+  // default, which overflows any container smaller than the viewport (a
+  // dialog/popover confined to a positioned ancestor). It stays a "remaining
+  // space" either way — docked: what is left on that side, centered: the whole
+  // container minus its margins.
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(
       "--container-position-remaining-height",
@@ -1677,8 +1717,13 @@ export const applyNewPosition = (
       "--container-position-remaining-height",
       `${spaceBelow}px`,
     );
-  } else {
+  } else if (containerHeightAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-height");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${containerHeightAvailable}px`,
+    );
   }
   if (positionX === "left" || positionX === "inset-right") {
     element.style.setProperty(
@@ -1690,8 +1735,13 @@ export const applyNewPosition = (
       "--container-position-remaining-width",
       `${spaceRight}px`,
     );
-  } else {
+  } else if (containerWidthAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-width");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${containerWidthAvailable}px`,
+    );
   }
 
   // A single implicit keyframe turned out not to work here: the WAAPI

@@ -1,4 +1,4 @@
-import { mergeOneStyle, normalizeStyle } from "@jsenv/dom";
+import { getPositionedParent, mergeOneStyle, normalizeStyle } from "@jsenv/dom";
 
 import {
   visualViewportHeightSignal,
@@ -102,6 +102,7 @@ const OUTER_PROPS = {
   // not really related to flow but should be on the container element if any
   pointerEvents: PASS_THROUGH,
   viewTransitionName: PASS_THROUGH,
+  viewTransitionClass: PASS_THROUGH,
 };
 const INNER_PROPS = {
   // expanded into longhands for the same reason as "margin" above: the
@@ -757,10 +758,39 @@ const resolveViewportLength = (size) => {
   return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
 };
 
+// "3cqw"/"2cqh" — a share of the container the given element lives in, the way
+// vvw/vvh are a share of the viewport. The caller passes the element, not the
+// container: which box actually contains it is a question with one answer
+// (getPositionedParent), and asking every caller to answer it themselves is how
+// two of them end up disagreeing. Resolved here rather than left to CSS because
+// a caller asking for a number (a placement, a slot) cannot wait for the
+// cascade, and a container query unit means nothing to getComputedStyle.
+const CONTAINER_LENGTH_REGEX = /^(-?[0-9.]+)cq([wh])$/;
+const resolveContainerLength = (size, element) => {
+  if (typeof size !== "string") {
+    return null;
+  }
+  const match = CONTAINER_LENGTH_REGEX.exec(size.trim());
+  if (!match) {
+    return null;
+  }
+  const [, amount, axis] = match;
+  const container = element
+    ? getPositionedParent(element)
+    : document.documentElement;
+  const containerSize =
+    axis === "w" ? container.clientWidth : container.clientHeight;
+  return (parseFloat(amount) / 100) * containerSize;
+};
+
 export const resolveSpacingSize = (size, element, property = "padding") => {
   const viewportLength = resolveViewportLength(size);
   if (viewportLength !== null) {
     return viewportLength;
+  }
+  const containerLength = resolveContainerLength(size, element);
+  if (containerLength !== null) {
+    return containerLength;
   }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };

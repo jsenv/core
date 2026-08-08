@@ -3,7 +3,19 @@
 // directions: hide when a container closes, recheck when it reopens) — the
 // selector/open-detection/timing primitives are identical for both, only
 // what each does with a transition differs.
-const ANCESTOR_OPEN_SELECTOR = "dialog, details, [popover], [aria-expanded]";
+const OPENABLE_SELECTOR = "dialog, details, [popover], [aria-expanded]";
+
+// An element that IS openable is closed in exactly the same way an element
+// inside one is — which matters for anything positioned against it, e.g. a
+// callout anchored to a dialog rather than to a field inside it. Same selector
+// as the walk up: whatever counts as openable above counts as openable here,
+// custom [aria-expanded] nodes included.
+export const selfOrClosestOpenableAncestor = (element) => {
+  if (element.matches?.(OPENABLE_SELECTOR)) {
+    return element;
+  }
+  return closestOpenableAncestor(element);
+};
 
 export const closestOpenableAncestor = (element) => {
   const parentElement = element.parentElement;
@@ -13,7 +25,7 @@ export const closestOpenableAncestor = (element) => {
   if (!parentElement.closest) {
     return null;
   }
-  return parentElement.closest(ANCESTOR_OPEN_SELECTOR);
+  return parentElement.closest(OPENABLE_SELECTOR);
 };
 
 export const isAncestorOpen = (ancestor) => {

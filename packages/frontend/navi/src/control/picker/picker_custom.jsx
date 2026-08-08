@@ -7,15 +7,16 @@ import { useDebugFocus, useDebugPopup } from "@jsenv/navi/src/navi_debug.jsx";
 import {
   useOpenController,
   useOpenPropsEffectOnOpenController,
-} from "@jsenv/navi/src/popup/open_controller.js";
+} from "@jsenv/navi/src/layout/open_controller.js";
 import {
   PopupModeContext,
   useResolvedPopupMode,
-} from "@jsenv/navi/src/popup/popup_mode.jsx";
-import { Popup } from "@jsenv/navi/src/popup/popup.jsx";
+} from "@jsenv/navi/src/layout/popup_mode.jsx";
+import { Popup } from "@jsenv/navi/src/layout/popup.jsx";
 import { useNextResolver } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { compareTwoJsValues } from "../../utils/compare_two_js_values.js";
 import { ControlIdContext } from "../control_context.js";
+import { commitUIStateAsAnswer, isUIStateHeld } from "../held_ui_state.js";
 import { dispatchRequestAction } from "../rules/control_action.js";
 import { dispatchRequestInteraction } from "../rules/control_interaction.js";
 import {
@@ -285,7 +286,19 @@ const PickerCustom = (props) => {
       enterExpanded();
 
       const valueAtOpen = getPickerInputUIState(ref.current);
-      debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
+      // Whether that value is an ANSWER or only a suggestion. A picker showing
+      // a defaultValue holds nothing, so closing on it untouched IS the answer
+      // ("yes, 2h15") — the same rule Form applies to an untouched field (see
+      // isUIStateHeld). Read at open, before anything inside can change it.
+      const heldAtOpen = isUIStateHeld(
+        getPickerInput(ref.current)?.__uiStateController__,
+      );
+      debugPopup(
+        openEvent,
+        `picker opened, store value at open`,
+        valueAtOpen,
+        heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`,
+      );
 
       return {
         onRequestClose: (requestCloseEvent) => {
@@ -296,8 +309,9 @@ const PickerCustom = (props) => {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
           const valueAtClose = getUIStateFromElement(inputEl);
-          if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-            // Value unchanged — no action to run, but still allow the close.
+          if (heldAtOpen && compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            // Value unchanged and already held — closing on it says nothing
+            // new. No action to run, but still allow the close.
             return;
           }
 
@@ -326,6 +340,17 @@ const PickerCustom = (props) => {
             dispatchRequestSetUIState(inputEl, valueAtOpen, {
               event: closeEvent,
             });
+          } else if (!heldAtOpen) {
+            // Confirmed a suggestion: nothing changed, so nothing has told the
+            // control's own bound signal / uiAction that this is now the
+            // answer. Say it here — this is the moment the suggestion becomes
+            // one. Harmless when the value did change on the way: the state is
+            // already what it is, and this only re-runs the same reaction.
+            debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
+            commitUIStateAsAnswer(
+              getPickerInput(ref.current)?.__uiStateController__,
+              closeEvent,
+            );
           }
           leaveExpanded({ isBack: closeEvent.detail.isCancel });
           // Reset so the next opening re-evaluates screen size
@@ -571,10 +596,14 @@ const PickerContentInsidePopup = (props) => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
+    // Popup documents its own `layer` as forwarded as-is to Dialog/Popover,
+    // but popupProps is built explicitly here, so it only travels if named.
+    // "popupLayer" rather than "layer": the picker itself is not the popup.
+    popupLayer,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    marginWithContainer = 10,
+    marginWithContainer,
     closeOnFocusOut = false,
     // Clicking outside the popup closes it and COMMITS by default (fires the
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
@@ -583,12 +612,15 @@ const PickerContentInsidePopup = (props) => {
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
+    // Named like the Dialog prop it forwards, not prefixed like dialogExpand*
+    // above: those exist because "expand" already means something on the picker
+    // itself, and this one does not. Popover ignores it, same as Dialog ignores
+    // marginWithAnchor.
+    dockedOnTouch,
     animation,
     ...rest
   } = props;
   const isPopover = mode === "popover";
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
 
   return (
     <Next
@@ -623,6 +655,7 @@ const PickerContentInsidePopup = (props) => {
       <Popup
         {...popupProps}
         mode={mode}
+        layer={popupLayer}
         animation={animation}
         positionArea={
           isPopover
@@ -631,20 +664,22 @@ const PickerContentInsidePopup = (props) => {
             : positionArea
         }
         marginWithAnchor={isPopover ? popoverSpacing : undefined}
-        marginWithContainer={isPopover ? marginWithContainer : undefined}
-        scrollCapture={
-          scrollCapture === "dialog"
-            ? !isPopover
-            : scrollCapture === "popover"
-              ? isPopover
-              : scrollCapture
+        marginWithContainer={
+          marginWithContainer === undefined && isPopover
+            ? popoverSpacing
+            : marginWithContainer
+              ? 10
+              : marginWithContainer
         }
+        scrollCapture={scrollCapture}
         pointerInteractionOutsideEffect={
           pointerLock ? "capture" : pointerInteractionOutsideEffect
         }
         focusCapture={isPopover ? focusCapture : undefined}
-        expandX={!isPopover ? expandX : undefined}
-        expandY={!isPopover ? expandY : undefined}
+        expand={isPopover ? undefined : dialogExpand}
+        expandX={isPopover ? undefined : dialogExpandX}
+        expandY={isPopover ? undefined : dialogExpandY}
+        dockedOnTouch={isPopover ? undefined : dockedOnTouch}
       >
         {/* Let the popup content branch on the mode via usePopupMode(). */}
         <PopupModeContext.Provider value={mode}>

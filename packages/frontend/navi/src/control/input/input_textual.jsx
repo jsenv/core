@@ -45,6 +45,7 @@
 import { useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
@@ -65,7 +66,7 @@ const css = /* css */ `
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(var(--outline-width) / 2 * -1);
+      --outline-offset: calc(-0.5 * var(--outline-width));
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
@@ -198,10 +199,8 @@ const css = /* css */ `
     }
 
     .navi_input_slot {
-      --slot-spacing: calc(2px + 0.1em);
-
-      margin-right: var(--slot-spacing);
-      margin-left: var(--slot-spacing);
+      margin-right: var(--slot-spacing, calc(2px + 0.1em));
+      margin-left: var(--slot-spacing, calc(2px + 0.1em));
       color: #5e4e4e;
 
       &[data-left] {
@@ -212,6 +211,19 @@ const css = /* css */ `
 
       .navi_button {
         font-size: inherit;
+
+        /* A button in a slot (e.g. the clear cross) is drawn small but must
+           not be small to hit: the spacing around it — the slot margins on the
+           sides, the input padding above and below — belongs to its clickable
+           zone. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-padding-top));
+          right: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          bottom: calc(-1 * var(--x-padding-bottom));
+          left: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          content: "";
+        }
       }
     }
 
@@ -247,12 +259,19 @@ const css = /* css */ `
 
     &[data-discrete] {
       --x-background-color: transparent;
+      --x-background-color-hover: transparent;
+      /* The border is part of what makes a field look like a field, so a
+         discrete one does without it until it is interacted with — same idea
+         as the background above, and the two come back together. */
+      --border-color: transparent;
 
-      &[data-hover] {
-        --x-background-color: white;
-      }
       &[data-focus] {
         --x-background-color: white;
+        --x-border-color: color-mix(
+          in srgb,
+          var(--border-color) 55%,
+          transparent
+        );
       }
       &[data-readonly] {
         --x-background-color: transparent;
@@ -343,6 +362,10 @@ const useInputTextualProps = (props) => {
 };
 const InputTextualUI = (props) => {
   import.meta.css = css;
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes the
+  // declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const { ui, discrete, variant, width = "maxLength" } = props;
   const [
     inputControlRootProps,
@@ -457,6 +480,7 @@ const RealInput = ({ maxLength, ...domProps }) => {
 };
 
 const InputStyleCSSVars = {
+  "slotSpacing": "--slot-spacing",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",

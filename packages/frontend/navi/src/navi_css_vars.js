@@ -100,6 +100,10 @@ const css = /* css */ `
          discrete:  unobtrusive elements that shouldn't compete for attention
          hint:      barely-there color, watermarks, ghost placeholders */
       --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
+      /* The line that separates two regions of one surface — a scrolling area's
+         header from what scrolls under it, for instance. Not a border: the
+         separation belongs to the layout, not to the box that draws it. */
+      --navi-separator-color-default: #d1d9e0;
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);

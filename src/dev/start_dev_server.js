@@ -18,6 +18,7 @@ import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createPackageDirectory } from "../kitchen/package_directory.js";
 import { createJsenvPluginStore } from "../plugins/jsenv_plugins_controller.js";
 import { jsenvPluginClientMonitoring } from "../plugins/client_monitoring/jsenv_plugin_client_monitoring.js";
+import { jsenvPluginPageSwitcher } from "../plugins/page_switcher/jsenv_plugin_page_switcher.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { devServerPluginChromeDevToolsJson } from "./dev_server_plugins/dev_server_plugin_chrome_devtools_json.js";
@@ -40,12 +41,13 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {string} [params.sourceMainFilePath="./index.html"] - File served for "/".
  * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
  * @param {string} [params.hostname] - Hostname to bind to.
- * @param {boolean} [params.acceptAnyIp=true] - Also accept connections on the machine's IPs.
+ * @param {boolean} [params.acceptAnyIp=false] - Also accept connections on the machine's IPs (so other devices on the network — a phone — can reach the server). Off by default: exposing the dev server beyond localhost is an explicit choice, not something a dev tool decides.
  * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
  * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
  * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
  * @param {boolean|object} [params.clientAutoreload=true] - Live reload; also gates the server-events channel.
+ * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
@@ -70,7 +72,7 @@ export const startDevServer = async ({
   ignore,
   port = 3456,
   hostname,
-  acceptAnyIp = true,
+  acceptAnyIp = false,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
@@ -88,6 +90,11 @@ export const startDevServer = async ({
   sourceFilesConfig = {},
   clientAutoreload = true,
   clientAutoreloadOnServerRestart = true,
+  // server-timing response headers: devtools show how the time to answer is
+  // spent (cook measures come from the kitchen, see urlInfo.timing). Entries
+  // under minDuration are dropped so a human reads the measures that matter;
+  // a test wants them all, hence 0 there.
+  serverTiming = { minDuration: EXECUTED_BY_TEST_PLAN ? 0 : 0.5 },
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -227,7 +234,9 @@ export const startDevServer = async ({
     ...(EXECUTED_BY_TEST_PLAN
       ? []
       : [
-          jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
+          jsenvPluginClientMonitoring(),
+          // cmd+K on any served page to jump to another one.
+          jsenvPluginPageSwitcher(),
         ]),
     ...plugins,
     ...getCorePlugins({
@@ -324,6 +333,7 @@ export const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
+    serverTiming,
     plugins: finalServerPlugins,
     // will allow to open file, provide more context on each route
     canExposeSensitiveData: true,

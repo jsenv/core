@@ -13,29 +13,96 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { useMemo, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useMemo, useRef } from "preact/hooks";
 
 import { Box } from "../box/box.jsx";
+import { compareTwoJsValues } from "../utils/compare_two_js_values.js";
 import {
   ControlgroupChildrenWrapper,
   useControlgroupProps,
 } from "./control_hooks.jsx";
 import { FormContext } from "./form_context.js";
 import { dispatchRequestAction } from "./rules/control_action.js";
+import { ParentUIStateControllerContext } from "./ui_state_controller.js";
 import { dispatchRequestResetUIState } from "./ui_state_dom.js";
 
+/**
+ * @param {object} props
+ * @param {boolean} [props.standalone] - Its value is its own: the form does not
+ *   register with the control group around it (a Picker, another form…), so
+ *   what is typed in it never becomes part of that group's value. For a form
+ *   that lives INSIDE something else while answering a different question —
+ *   "create the thing I am about to pick" inside a picker, say.
+ * @param {boolean} [props.canSendWhileUnchanged] - Send even when nothing changed. By
+ *   default a form only acts on an answer that is actually new: submitting a
+ *   form nobody touched — one just rendered, one whose fields still hold their
+ *   defaults, one reopened and left alone — runs no action, and after the first
+ *   submission it is that value the next one is compared against. Everything
+ *   around the action still happens either way: the constraints are checked,
+ *   and what follows the send still follows it (the slide moves on, the popup
+ *   closes) — the user is done regardless of whether there was anything to
+ *   send. Set this for a form where sending the same thing twice is the point —
+ *   a single button that fires off a notification, an action whose duplicates
+ *   are fine. See also `readOnlyWhileFormUnchanged` on `Button`, for a submit that
+ *   should say it is waiting rather than accept a press that sends nothing.
+ * @param {string} [props.command] - What follows a submission that went
+ *   through: the form has answered its question, and this says what the screen
+ *   does about it. Nothing runs when the submission is refused — the form then
+ *   stays in front of the user, showing what it is waiting for.
+ *
+ *   `"--navi-close"` dismisses the popup the form is in,
+ *   `"--navi-left"`/`"--navi-right"`/`"--navi-up"`/`"--navi-down"` move on the
+ *   slide map it is in, `"--navi-void"` stays put.
+ *   Any navi command, really: it is triggered from the form, so it finds its
+ *   target the way that command always does.
+ *
+ *   Left out, the surface the form sits in decides (see resolveAfterSend in
+ *   commands.js): a popup closes, a slide goes on to the next one — or back to
+ *   the one it came from when there is no next — and a form on a page does
+ *   nothing.
+ */
 export const Form = (props) => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const form = <FormControl {...props} />;
-
+  // A <form> cannot contain a <form> — the parser closes the first one at the
+  // second's opening tag, so the inner fields would silently belong to the
+  // outer form. Rather than forbidding the shape (a form inside a picker inside
+  // a form is a legitimate thing to want), a form that finds itself inside one
+  // is a different component: same group, no <form> element and none of the
+  // browser machinery that comes with it.
+  const isNested = Boolean(useContext(FormContext));
+  const form = isNested ? (
+    <FormNested {...props} />
+  ) : (
+    <FormControl {...props} />
+  );
+  if (props.standalone) {
+    // Nothing above to register with: the group hooks read the parent from
+    // this context, so emptying it here is the whole opt-out.
+    return (
+      <ParentUIStateControllerContext.Provider value={undefined}>
+        {form}
+      </ParentUIStateControllerContext.Provider>
+    );
+  }
   return form;
 };
 
-const FormControl = (props) => {
-  const { ref, method = "GET" } = props;
+// What both forms are made of: one group, one context for what is inside it.
+// standalone is read by Form above and never goes further — least of all to the
+// DOM.
+const useFormGroup = (props) => {
+  const propsForGroup = { ...props };
+  delete propsForGroup.standalone;
+  delete propsForGroup.canSendWhileUnchanged;
+  // Not the generic control `command`, which a control triggers on its own ui
+  // actions — here it is what follows a SUCCESSFUL submission. So it is kept
+  // out of the control machinery and left in the DOM for the send to read
+  // (resolveAfterSend in commands.js).
+  delete propsForGroup.command;
+  propsForGroup["data-after-send"] = props.command;
   const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(
-    props,
+    propsForGroup,
     {
       allowCapture: true,
       wantRequesterButtonState: true,
@@ -44,18 +111,79 @@ const FormControl = (props) => {
       cascadeValidationToChildren: true,
     },
   );
+  const uiStateController = childrenWrapperProps.uiGroupStateController;
+  // The signal, not the plain property: reading it here is what re-renders the
+  // form as its fields change, which is what turns the submit button below
+  // interactive the moment there is something to send.
+  const uiState = uiStateController.uiStateSignal.value;
+  // False until a field differs from what was last sent, true while it does,
+  // and false again the moment it comes back to it — the plain fact about the
+  // value, with no opinion about what a submit would do with it.
+  const changed = !compareTwoJsValues(
+    withoutEmptyFields(uiState),
+    uiStateController.sentUIState,
+  );
+  // Read by READONLY_CONSTRAINT from a submit button held back by this form,
+  // which has to be able to say what it is waiting for.
+  uiStateController.changed = changed;
+  // Asked by the action gate at submit time, whichever way the submit came in —
+  // a submit event, a --navi-send command, requestSubmit() (see
+  // control_action.js). The value it is given, not `changed` above: a
+  // field changing updates the state synchronously while the re-render is a
+  // microtask away, so typing and pressing Enter right after must not be read
+  // against the state of the previous frame.
+  uiStateController.shouldRequestAction = (value) =>
+    Boolean(props.canSendWhileUnchanged) ||
+    !compareTwoJsValues(
+      withoutEmptyFields(value),
+      uiStateController.sentUIState,
+    );
+  useFirstUIStateAsSent(uiStateController);
+
   const { basePseudoState, children } = formProps;
   // const disabled = basePseudoState[":disabled"];
   // const readOnly = basePseudoState[":read-only"];
   const loading = basePseudoState[":-navi-loading"];
   const formContextValue = useMemo(() => {
-    return { loading };
-  }, [loading]);
+    return { loading, changed };
+  }, [loading, changed]);
+
+  return {
+    formRootProps,
+    formProps,
+    // What was sent is what the next submit is measured against. On success
+    // only: an action that failed has not been sent, and the user must be able
+    // to try the same value again.
+    onnavi_action_end: () => {
+      uiStateController.sentUIState = withoutEmptyFields(
+        uiStateController.uiState,
+      );
+    },
+    inside: (
+      <FormContext.Provider value={formContextValue}>
+        <ControlgroupChildrenWrapper
+          {...childrenWrapperProps}
+          // do not propagate name to children like radio group or checkbox group does
+          // (otherwise anonymous button end up using that name)
+          name={undefined}
+        >
+          {children}
+        </ControlgroupChildrenWrapper>
+      </FormContext.Provider>
+    ),
+  };
+};
+
+const FormControl = (props) => {
+  const { ref, method = "GET" } = props;
+  const { formRootProps, formProps, onnavi_action_end, inside } =
+    useFormGroup(props);
 
   return (
     <Box
       {...formRootProps}
       {...formProps}
+      onnavi_action_end={onnavi_action_end}
       as="form"
       data-method={method}
       novalidate="" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -79,19 +207,82 @@ const FormControl = (props) => {
         e.preventDefault();
       }}
     >
-      <FormContext.Provider value={formContextValue}>
-        <ControlgroupChildrenWrapper
-          {...childrenWrapperProps}
-          // do not propagate name to children like radio group or checkbox group does
-          // (otherwise anonymous button end up using that name)
-          name={undefined}
-        >
-          {children}
-        </ControlgroupChildrenWrapper>
-      </FormContext.Provider>
+      {inside}
     </Box>
   );
 };
+
+// A form inside a form: the group, without the element. There is no submit
+// event to intercept and no requestSubmit() to go through, so it is driven the
+// way every other group is — a command, or an action requested on it. method
+// belongs to the browser's own submission, so it means nothing here either.
+const FormNested = (props) => {
+  const { formRootProps, formProps, onnavi_action_end, inside } =
+    useFormGroup(props);
+
+  return (
+    <Box
+      {...formRootProps}
+      {...formProps}
+      onnavi_action_end={onnavi_action_end}
+      pseudoClasses={FormPseudoClasses}
+    >
+      {inside}
+    </Box>
+  );
+};
+
+// What the form HOLDS, as opposed to what it is showing. A `value` is held: the
+// form was given it, and sending it back says nothing new. A `defaultValue` is
+// only a suggestion — an age that is usually 18, a duration that is usually
+// 1h30 — so the form holds nothing for that field, and sending the suggestion
+// back IS an answer ("yes, 18"). A field bound to a signal falls on whichever
+// side the signal put it: one carrying a default seeds `defaultValue`, one
+// without controls the field outright.
+const readHeldUIState = (uiStateController) => {
+  const uiState = uiStateController.uiState;
+  // A form given a value holds all of it, whatever its fields say.
+  if (uiStateController.hasValueProp) {
+    return withoutEmptyFields(uiState);
+  }
+  const held = { ...uiState };
+  for (const child of uiStateController.getChildControllers?.() || []) {
+    if (child.name && !child.hasStateProp) {
+      delete held[child.name];
+    }
+  }
+  return withoutEmptyFields(held);
+};
+
+// A field holding nothing is a field the form has nothing to say about, and
+// whether it is absent or present-and-empty is an accident of when it
+// registered — the baseline is taken before the fields have had their say, the
+// value at submit after. Compared as they are, an empty form would look changed
+// by the mere existence of an empty field.
+const withoutEmptyFields = (uiState) => {
+  if (!uiState || typeof uiState !== "object") {
+    return {};
+  }
+  const kept = {};
+  for (const key of Object.keys(uiState)) {
+    const value = uiState[key];
+    if (value !== undefined && value !== "") {
+      kept[key] = value;
+    }
+  }
+  return kept;
+};
+
+// Taken in a layout effect rather than during render because the fields
+// register themselves in their own effects, which run first — this is the
+// earliest moment the form knows what it holds. Everything after this baseline
+// is a real send moving it forward (see useFormGroup's own onnavi_action_end).
+const useFirstUIStateAsSent = (uiStateController) => {
+  useLayoutEffect(() => {
+    uiStateController.sentUIState = readHeldUIState(uiStateController);
+  }, [uiStateController]);
+};
+
 const FormPseudoClasses = [
   ":hover",
   ":active",

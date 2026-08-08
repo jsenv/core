@@ -2,7 +2,9 @@
 
 - [Communication Style](#communication-style)
 - [Constraints](#constraints)
+- [Writing Skill Files](#writing-skill-files)
 - [Project Overview](#project-overview)
+- [Running jsenv source](#running-jsenv-source--always-use---conditionsdevjsenv)
 - [Key Architectural Principles](#key-architectural-principles)
 - [File Naming](#file-naming)
 - [Coding Conventions](#coding-conventions)
@@ -22,22 +24,38 @@
 - **Never write tests on your initiative**
 - **Never write documentation on your initiative**
 - **Never verify on your own initiative**: don't run regression checks against unrelated demos/features, and don't open a demo file you just wrote/edited in Playwright or a browser to confirm it works. The user drives verification and will explicitly ask (e.g. "test this in the browser", "run the demo") when they want it. This applies even when a skill (e.g. demo-files) says to prefer checking behavior over reading code — that guidance only kicks in once the user has asked for verification.
+- **Keep Playwright for the genuinely tricky cases**: driving a browser with Playwright to inspect/measure/screenshot is heavy and breaks the iterative rhythm, so it is not the default way to check work. Be optimistic about what you just wrote and hand it back. Reach for Playwright when the situation has earned it: the user came back a second time about the same thing, the iteration has been going on for a while and the behavior is subtle (positioning, animation, focus, keyboard), or reading the code genuinely cannot answer the question. A quick measurement then beats another wrong guess — but not on the first pass.
+- **Fix the cause, never the symptom**: when something happens twice, arrives in the wrong order, or shows up where it should not, find out WHY before touching anything. A guard that swallows the second occurrence ("already handled, skip"), a flag that remembers what was done, a check for the exact shape of the bad case — those hide the bug instead of removing it, and the next one of the same family lands quietly. Follow it back to the place where two things ask for the same work (two listeners on one event, two owners of one state, a value computed in two places) and make that place right, so there IS no second occurrence to guard against. A defensive guard is acceptable only once the cause is understood and named, and only when the cause genuinely cannot be removed — say so in a comment, next to the guard.
 - **Backward Compatibility**: Do not try to maintain it. Breaking changes are fine and desired. Always. So always write code targeting what we want even if that means renaming usages in the codebase.
 - **Migration Guides**: Do not proactively document upgrade paths for breaking changes — only on request
 - **Don't run the test suite defensively**: only run it (`npm run test`, `npm run test:packages`, etc.) when the task is actually about tests — writing new ones or working on existing ones. The goal of a session is to iterate quickly, not necessarily to reach zero errors; time-consuming verification should happen when it concretely makes sense for the task, not by default. Same spirit as the "never verify on your own initiative" rule above.
 - **Never run the whole test suite on your own initiative**: it's long and expensive. Run a single test file, or at most a narrow subset (`npm run test -- ./tests/<some_directory>/`) targeted at what you changed. The full run (`npm run test` with no argument, `npm run test:packages`) only happens when the user explicitly asks for it.
+- **Skills own their specifics; this file stays general**: guidance that only applies while doing one kind of task (writing a demo, publishing, updating dependencies, working on the dev server) lives in that skill and must NOT be restated here — this file may point at the skill, nothing more. Conversely a skill points back here for a rule that applies everywhere instead of copying it. When the same rule is found in both places, delete the copy that is in the wrong place; two copies drift, and the reader then can't tell which one is current.
 - **Persistent preferences belong in this repo, not in agent-specific memory**: when a durable preference, workflow rule, or constraint is established, write it into `.agents/instructions.md` or a relevant file under `.agents/skills/` and get it committed — don't rely solely on a tool-specific memory/notes system tied to one machine or one agent. This repo is worked on by multiple agents/tools across machines; instructions written here are the ones that actually persist and apply everywhere.
+- **Disabling a lint rule is allowed**: a targeted `// eslint-disable-next-line <rule>` with a comment saying why beats contorting the code to please a rule that does not apply to this line. Use it when you know why the rule is wrong here — never to silence something you have not understood.
 - **Run prettier/eslint silently**: after editing files, running `prettier --write`/`eslint` to check/fix them is fine and expected, but don't report on it in chat (no "ran prettier, all clean" messages) — it's a mechanical detail the user doesn't want to see.
 
-## Running jsenv source — always use `--conditions=dev:jsenv`
+## Writing Skill Files
 
-**Any** `node` process that imports a `@jsenv/*` package from this repo (a test, a scratch script, `startDevServer`, `startServer`, a build) MUST be launched with `--conditions=dev:jsenv`:
+A skill teaches how to make decisions in situations that have not happened
+yet — it is not a log of one situation that did. Structure every skill
+accordingly:
 
-```sh
-node --conditions=dev:jsenv <file>
-```
+1. **Start with what we want, and why.** The need, the feeling, the invariant —
+   stated on its own, before any mechanism. A reader (human or AI) who only
+   retains this part should still make the right call in a case the skill never
+   mentions.
+2. **Then how to obtain it**, as principles that hold across cases.
+3. **Examples come last and are labelled as reference** — a file, a function
+   name, a demo — to anchor the principle, never to define it.
 
-These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
+The failure mode this guards against: a skill written around one particular
+fix (its function names, its constants, its exact scenario) reads as "always
+do exactly this". The reader copies the mechanics — the 1/5 ratio, the
+specific helper — without the concept, and applies them where they don't fit.
+Mentioning a particular case is fine; _opening_ with it, or letting it stand
+in for the rule, is not. When a rule and its example live at the same level of
+detail, the example has taken over — cut it down to a pointer.
 
 ## Project Overview
 
@@ -49,6 +67,16 @@ These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to thei
 - `private/*`: Private projects using jsenv
 - `related/*`: Complementary packages to @jsenv/core
 - `tooling/*`: Development and build tooling
+
+## Running jsenv source — always use `--conditions=dev:jsenv`
+
+**Any** `node` process that imports a `@jsenv/*` package from this repo (a test, a scratch script, `startDevServer`, `startServer`, a build) MUST be launched with `--conditions=dev:jsenv`:
+
+```sh
+node --conditions=dev:jsenv <file>
+```
+
+These packages resolve `@jsenv/core` (and siblings like `@jsenv/server`) to their built `dist/` bundle by default; the `dev:jsenv` export condition points imports at `src/` instead. Without the flag you silently run and test the **stale dist bundle**, so your source edits appear to have no effect (routes 404, changes missing, etc.). The repo's own `npm run dev`/`test`/`build` scripts all pass it — match that whenever you run node yourself. The mechanism and dev-server specifics are detailed in [.agents/skills/dev-server/SKILL.md](skills/dev-server/SKILL.md).
 
 ## Key Architectural Principles
 
@@ -106,14 +134,10 @@ Nothing else belongs there. Other sources already cover everything else — the 
 
 #### Demo files
 
-Demos are used, not read. A well-chosen example, cut into steps and carrying a short label, is worth a thousand words — so write the examples, not the commentary around them.
-
-- Default to **no prose**. A `<Label>`/`<legend>` naming the case and the prop that drives it (`minWidth="140"`, `maxLines=3`, `popupWidthFitContent`) is normally the whole explanation.
-- When a difference needs making clear, add the **contrasting example** rather than a sentence about it: default beside opted-out, loading beside loaded.
-- Keep a paragraph only for what the example genuinely cannot show: a non-obvious invariant, a browser constraint, an approach that must not be reintroduced.
-- Never narrate what the reader is about to see, restate what a label already says, or describe machinery the demo doesn't exercise.
-
-See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running them.
+Demos are used, not read: the work goes into the examples, never into the commentary
+around them. Read [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md)
+before writing or editing one — it holds the writing rules, the page structure and
+how to run them.
 
 ### CSS
 
@@ -126,6 +150,7 @@ See [.agents/skills/demo-files/SKILL.md](skills/demo-files/SKILL.md) for running
   - **Gate on actually-displayed, not merely mounted**: only arm the entrance transition when the element becomes displayed, so it doesn't replay when something already open just re-renders. `useDisplayedLayoutEffect` runs an effect once the element is really on screen; popover.jsx suppresses transitions until it has measured/positioned the element, then arms them.
   - **Simplest of all — no transition at all**: if the emphasis can be positional/compositional (e.g. a fixed overlay the content moves under) rather than a per-element state flip, there's nothing to animate on mount by construction. Prefer this when it fits.
     This applies to color/opacity/transform transitions and keyframe animations alike.
+- **Anything that moves over time**: read [.agents/skills/animations/SKILL.md](skills/animations/SKILL.md) — who owns the state while something animates, how an interrupted movement picks up, how it keeps up with a user faster than it, and where view transitions may live.
 
 ## @jsenv/navi Specifics
 

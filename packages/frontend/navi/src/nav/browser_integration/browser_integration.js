@@ -85,6 +85,11 @@ const applyRouting = (
 const browserIntegration = setupBrowserIntegrationViaHistory({
   applyActions,
   applyRouting,
+  // Routes are declared by the consumer and registered through
+  // setOnAllRouteReady below, so "does this document route at all?" is only
+  // answerable once that has run — hence a function, read at click time rather
+  // than a value read at setup time.
+  isRouting: () => Boolean(updateRoutes),
 });
 
 setOnAllRouteReady((v) => {

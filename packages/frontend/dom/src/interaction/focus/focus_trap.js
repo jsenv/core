@@ -96,9 +96,15 @@ export const trapFocusInside = (
           // A backdrop click is detected when the target is a <dialog> element —
           // the ::backdrop pseudo-element is not in the DOM, so the event target
           // becomes the dialog element itself when its content area is not hit.
+          // Read through getAttribute rather than .className: on an SVG element
+          // className is an SVGAnimatedString, not a string, and asking it for
+          // .includes throws — which is how clicking an icon inside the trap
+          // used to break. Still a substring test, because the real class names
+          // are navi_dialog_backdrop / navi_popover_backdrop / ….
+          const targetClass = event.target.getAttribute?.("class") || "";
           const isBackdropClick =
             event.target.tagName === "DIALOG" ||
-            event.target.className.includes("backdrop");
+            targetClass.includes("backdrop");
           if (!isBackdropClick) {
             event.stopImmediatePropagation();
           }

@@ -115,8 +115,14 @@ export const devServerPluginServeSourceFiles = ({
             //   was compared using etag and it has changed
             return false;
           }
-          if (!urlInfo.isWatched) {
-            // file is not watched, check the filesystem
+          // Watched files trust the watcher — except the ones marked
+          // revalidateOnFileSystem (package.json files, see node_esm_resolver):
+          // the watcher fires a beat AFTER a change, and what these files
+          // decide (a package version, hence the ?v= the importer embeds) is
+          // cached as immutable by the browser — a request racing the watcher
+          // must not win a stale answer it would then keep forever.
+          if (!urlInfo.isWatched || urlInfo.revalidateOnFileSystem) {
+            // check the filesystem
             let fileContentAsBuffer;
             try {
               fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
@@ -278,7 +284,27 @@ export const devServerPluginServeSourceFiles = ({
                 return respondWithNotModified();
               }
             }
-            await urlInfo.cook({ request, reference });
+            // Cooking is not memoized in dev (see cookGuard in kitchen.js): a
+            // request that reaches cook() re-fetches and re-transforms the file
+            // even when nothing changed. The 304 path above already avoids that
+            // for a browser that revalidates — but a browser with its cache
+            // disabled (devtools open, the common way to reload during dev)
+            // sends no if-none-match and would re-cook the entire graph on
+            // every reload, turning a warm reload into seconds of transform
+            // work. Same validity check as the 304 path, same trust: when the
+            // graph's in-memory content is still valid, it IS the response —
+            // only the status differs (200 with content, since there is no
+            // client etag to match).
+            const servableFromMemory =
+              !urlInfo.error &&
+              !inlineParentUrlInfo &&
+              !urlInfo.response &&
+              urlInfo.content !== undefined &&
+              !cacheIsDisabledInResponseHeader(urlInfo) &&
+              urlInfo.isValid();
+            if (!servableFromMemory) {
+              await urlInfo.cook({ request, reference });
+            }
             let { response } = urlInfo;
             if (response) {
               return response;
@@ -319,7 +345,14 @@ export const devServerPluginServeSourceFiles = ({
                 "content-length": urlInfo.contentLength,
               },
               body: urlInfo.content,
-              timing: urlInfo.timing, // TODO: use something else
+              // Where the time went, readable in devtools (Network > Timing):
+              // the server merges this into the server-timing header. Served
+              // from memory: a marker saying so, since nothing was cooked for
+              // this request. Cooked: what the kitchen measured (each plugin
+              // hook, and the fetch/transform/finalize roll-ups).
+              timing: servableFromMemory
+                ? { "served from memory cache": null }
+                : urlInfo.timing,
             };
             const augmentResponseInfo = {
               ...kitchen.context,

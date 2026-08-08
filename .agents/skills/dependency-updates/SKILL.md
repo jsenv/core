@@ -1,6 +1,6 @@
 ---
 name: dependency-updates
-description: How dependencies, package versions, and publishing are handled in this monorepo. Use when updating npm dependencies, bumping a package's version, syncing versions across packages, or publishing to npm.
+description: How npm dependencies are updated in this monorepo, and how a dependency bump affects our own packages' versions. Use when updating npm dependencies. For version syncing and publishing, see the publish skill.
 ---
 
 ## Updating dependencies — the steps, in order
@@ -16,7 +16,7 @@ description: How dependencies, package versions, and publishing are handled in t
 4. **Stop here and hand off to the human.** Don't run builds or the test suite
    yourself at this point — say the updates are applied and ask them to review
    the diff and verify things still work (builds, some or all tests) before
-   going further. Also flag explicitly that `eslint`/`babel` were *not*
+   going further. Also flag explicitly that `eslint`/`babel` were _not_
    auto-updated: bringing those forward is its own dedicated, longer task (their
    plugin ecosystems usually aren't ready yet, so it has a good chance of not
    working outright) — not something to fold into a routine dependency bump.
@@ -27,25 +27,10 @@ description: How dependencies, package versions, and publishing are handled in t
 
 If a package's dependency got bumped to a newer version, bump that package's own patch version too. Not needed if it was only a devDependency.
 
-## Syncing versions across the monorepo
+## Syncing and publishing
 
-```sh
-npm run monorepo:sync_versions
-```
-
-Bumps the version of any package that hasn't been published yet at its current number, along with everything that depends on it.
-
-## Publishing
-
-```sh
-npm run monorepo:publish
-```
-
-Publishes every package that isn't already published at its current version.
-
-Requires a valid npm token in `secrets.json` at the repo root (`{ "NPM_TOKEN": "..." }`, gitignored — never commit it). Refresh it roughly every 3 months; an expired token is the usual cause of a failed publish run.
-
-Publishing itself is the human's call: they either run `monorepo:publish` themselves, or ask the AI to publish a new version, in which case this is the command to use.
+Both belong to the release flow, not to a dependency update — steps, cascade
+behavior and commands are in [the publish skill](../publish/SKILL.md).
 
 ## Why there's no package-lock.json
 

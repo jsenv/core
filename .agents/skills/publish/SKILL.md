@@ -5,7 +5,7 @@ description: How to publish new versions of this monorepo's packages to npm (bum
 
 ## How publishing works here
 
-- **Publishing is local**, not CI. No GitHub workflow publishes; `npm run monorepo:publish` runs on your machine using tokens from `secrets.json` (git-ignored) at the repo root. Never commit that file.
+- **Publishing is local**, not CI. No GitHub workflow publishes; `npm run monorepo:publish` runs on your machine using tokens from `secrets.json` (git-ignored) at the repo root (`{ "NPM_TOKEN": "..." }`). Never commit that file. The token expires roughly every 3 months — an expired token is the usual cause of a failed publish run.
 - **A package publishes when its `package.json` `version` is ahead of the npm registry.** `publishPackages` (from `@jsenv/monorepo`) compares each workspace package to npm and publishes only the ones that differ. It's **idempotent**: an already-published version is skipped (an `EPUBLISHCONFLICT` is treated as success), so re-running is safe.
 - **`npm publish --no-workspaces` is run per package.** So each package's own `prepublishOnly` fires — notably `@jsenv/core`'s runs a **full build** (`npm run build`). That's the slow one.
 - **Versions are bumped by hand** in `package.json`, then `monorepo:sync_versions` propagates them (see cascade below). There is no automatic "detect changed packages and bump" step.

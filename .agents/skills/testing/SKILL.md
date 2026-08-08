@@ -3,40 +3,39 @@ name: testing
 description: How to write and run tests in @jsenv/core. Use when adding, running, or understanding tests in any package of this monorepo.
 ---
 
-## Overview
+## What we want
 
-Testing in @jsenv/core focuses on **behavior verification** and **regression prevention** rather than exhaustive coverage. Tests capture actual behavior to ensure changes don't break existing functionality.
+Tests here exist to **catch regressions** and **document expected behavior** —
+never to reach a coverage number. A test captures what actually happens, so a
+change that alters behavior is seen and judged, not discovered by a user.
 
-## Running Tests
-
-Run tests from the repo root to ensure the correct Node.js version (26.5.0):
+## Running tests
 
 ```sh
 node --conditions=dev:jsenv <test-file>
 ```
 
-The `dev:jsenv` export condition uses source files directly — no build step needed. For packages like `@jsenv/server`, this avoids rebuilding `dist/` after every source change.
+Run from the repo root (correct Node version, root `node_modules`). The flag is
+the repo-wide rule — see
+[.agents/instructions.md](../../instructions.md#running-jsenv-source--always-use---conditionsdevjsenv):
+without it you test the stale `dist/` bundle instead of your source edits.
 
-## Snapshot Testing (Primary Method)
+## Snapshot testing (primary method)
 
-- Tests generate markdown files containing inputs, outputs, and debug logs
-- Snapshots live in `_test-name.test.js/` directories alongside test files
-- **Important**: Snapshot tests do not "fail" in the traditional sense — they always pass and update snapshots automatically. You must manually read and verify snapshot files to ensure results haven't changed unexpectedly
-- Review snapshot diffs to verify intended behavior changes
+- Tests generate markdown files containing inputs, outputs, and debug logs.
+- Snapshots live in `_test-name.test.js/` directories alongside test files.
+- **Snapshot tests do not "fail"** — they pass and update their snapshots
+  automatically. The verification IS reading the snapshot diff: expected
+  changes are kept, an unexplained one is a regression to fix before moving on.
 
-## Debug Logging in Tests
+## Debug logging in tests
 
-- `DEBUG=true` output appears in snapshot markdown files, not the terminal
-- Use targeted logging to trace complex behaviors during development
-- Clean up debug logs once issues are resolved
+- `DEBUG=true` output appears in the snapshot markdown files, not the terminal.
+- Use targeted logging to trace complex behaviors; clean it up once resolved.
 
-## Test Organization
+## Test organization
 
-- Co-locate tests with source code or place in dedicated `tests/` directories
-- Browser tests use Playwright for real browser behavior
-- Node.js tests for server-side and CLI functionality
-- Integration tests for cross-package interactions
-
-## Goal
-
-Write tests that **catch regressions** and **document expected behavior**, not to achieve high coverage metrics.
+- Co-locate tests with source code or place them in dedicated `tests/` directories.
+- Browser tests use Playwright for real browser behavior.
+- Node.js tests cover server-side and CLI functionality.
+- Integration tests cover cross-package interactions.

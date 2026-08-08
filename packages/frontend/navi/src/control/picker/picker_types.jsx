@@ -8,6 +8,12 @@ import { Text } from "@jsenv/navi/src/text/text.jsx";
 import { Time } from "@jsenv/navi/src/text/time.jsx";
 import { renderSafe } from "@jsenv/navi/src/utils/render_safe.js";
 import { PickerContext } from "./picker_context.jsx";
+import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
+import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
+import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
+import { DurationSvg } from "../../graphic/icons/duration_svg.jsx";
+import { FileSvg } from "../../graphic/icons/file_svg.jsx";
+import { PencilSvg } from "../../graphic/icons/pencil_svg.jsx";
 
 export const PickerTypeResolver = (props) => {
   const Next = useNextResolver();
@@ -42,8 +48,8 @@ export const PickerTypeResolver = (props) => {
   if (props.type === "array") {
     return <PickerArray {...props} />;
   }
-  if (props.type === "controlgroup") {
-    return <PickerControlGroup {...props} />;
+  if (props.type === "form") {
+    return <PickerForm {...props} />;
   }
   return <Next {...props} />;
 };
@@ -54,12 +60,16 @@ const PickerText = (props) => {
   return <Next icon={<PencilSvg />} {...props} />;
 };
 
-const PickerControlGroup = (props) => {
+// The popup holds a group of named controls — a `<Form>`, or a `<ControlGroup>`
+// when the group is only a shape and has no submit — and this picker's value is
+// whatever that group aggregates. The popup itself holds nothing: it is a
+// surface (see dialog.jsx), so there is nothing to tell it about the shape.
+const PickerForm = (props) => {
   const Next = useNextResolver();
 
-  return <Next ui={<PickerControlGroupUI />} {...props} type="navi_js" />;
+  return <Next ui={<PickerFormUI />} {...props} type="navi_js" />;
 };
-export const PickerControlGroupUI = () => {
+export const PickerFormUI = () => {
   const { value, placeholder } = useContext(PickerContext);
 
   if (!value || Object.keys(value).length === 0) {
@@ -314,71 +324,4 @@ export const PickerFileUI = () => {
   }
   // value is a FileList-like string from the input; display file names
   return String(value);
-};
-
-export const PencilSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
-    </svg>
-  );
-};
-export const CalendarSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z" />
-    </svg>
-  );
-};
-export const ClockSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z" />
-    </svg>
-  );
-};
-export const DurationSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M6 2v6l4 4-4 4v6h12v-6l-4-4 4-4V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z" />
-    </svg>
-  );
-};
-export const ColorSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z" />
-    </svg>
-  );
-};
-export const FileSvg = () => {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-    >
-      <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
-    </svg>
-  );
 };

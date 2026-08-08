@@ -71,8 +71,13 @@ const canInteract = (element) => {
   if (element.disabled) {
     return false;
   }
-  if (element.hasAttribute("inert")) {
-    // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+  // closest, not hasAttribute: inert is inherited by the whole subtree — the
+  // element itself may carry nothing and still be untouchable because something
+  // above it is inert (a slide waiting off screen, the page behind a modal).
+  // Focusing one of those does nothing at all, silently: the browser refuses and
+  // the focus stays where it was, which reads as "the popup opened on nothing".
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+  if (element.closest("[inert]")) {
     return false;
   }
   return true;

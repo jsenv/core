@@ -13,7 +13,12 @@ export const InputRightSlot = (props) => {
 export const InputIconSlot = ({ children, side = "right", ...props }) => {
   return (
     <InputSlot side={side}>
-      <Icon {...props}>{children}</Icon>
+      {/* fillLine: what sits in a slot stands on its own — the magnifier of a
+          search input reads as small and lost at the size of a letter, so it
+          takes the height of the line rather than that of a character */}
+      <Icon fillLine {...props}>
+        {children}
+      </Icon>
     </InputSlot>
   );
 };

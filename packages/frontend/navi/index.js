@@ -116,6 +116,7 @@ export {
 export { Field, Label } from "./src/control/field.jsx";
 export { Form } from "./src/control/form.jsx";
 export { Group } from "./src/control/group.jsx";
+export { DaySpin } from "./src/control/picker/picker_spin.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
@@ -210,21 +211,30 @@ export { Svg } from "./src/graphic/svg.jsx";
 export { SVGMaskOverlay } from "./src/graphic/svg_mask_overlay.jsx";
 
 // Layout
-export { DialogLayout } from "./src/layout/dialog_layout.jsx";
+export { CardLayout } from "./src/layout/card_layout.jsx";
 export { Separator } from "./src/layout/separator.jsx";
+export {
+  Slide,
+  SlideContainer,
+  useSlideValue,
+} from "./src/layout/slide_container.jsx";
 export { ViewportLayout } from "./src/layout/viewport_layout.jsx";
 export { useDisplayedLayoutEffect } from "./src/utils/use_displayed_layout_effect.js";
 
 // Popup (popover, dialog, tooltip, side panel ...)
-export { Dialog } from "./src/popup/dialog.jsx";
-export { Popover } from "./src/popup/popover.jsx";
-export { Popup } from "./src/popup/popup.jsx";
-export { usePopupMode } from "./src/popup/popup_mode.jsx";
-export { SidePanel } from "./src/popup/side_panel.jsx";
-export { createSlot } from "./src/popup/slot.jsx";
+export { Dialog } from "./src/layout/dialog.jsx";
+
+export { Popover } from "./src/layout/popover.jsx";
+export { Popup } from "./src/layout/popup.jsx";
+export { usePopupMode } from "./src/layout/popup_mode.jsx";
+export { SidePanel } from "./src/layout/side_panel.jsx";
+export { createSlot } from "./src/layout/slot.jsx";
 
 // Responsivness
-export { windowWidthSignal } from "./src/layout/responsive.js";
+export {
+  windowWidthSignal,
+  coarsePointerSignal,
+} from "./src/layout/responsive.js";
 
 // Focus helpers
 export { useFocusGroup } from "./src/utils/focus/use_focus_group.js";

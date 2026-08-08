@@ -645,14 +645,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     if (!urlInfo.url.startsWith("ignore:")) {
       try {
         await urlInfo.dependencies.startCollecting(async () => {
+          // Each phase timed into urlInfo.timing: the dev server turns it into
+          // a server-timing response header, so devtools show where the time
+          // to cook a file goes (fetch vs transform vs finalize).
+          const timePhase = async (name, phase) => {
+            const start = performance.now();
+            await phase();
+            urlInfo.timing[name] = performance.now() - start;
+          };
+
           // "fetchUrlContent" hook
-          await urlInfo.fetchContent();
+          await timePhase("fetch", () => urlInfo.fetchContent());
 
           // "transform" hook
-          await urlInfo.transformContent();
+          await timePhase("transform", () => urlInfo.transformContent());
 
           // "finalize" hook
-          await urlInfo.finalizeContent();
+          await timePhase("finalize", () => urlInfo.finalizeContent());
         });
       } catch (e) {
         urlInfo.error = e;

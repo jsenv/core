@@ -63,6 +63,7 @@ import {
   ReadOnlyContext,
   RequiredContext,
 } from "./control_context.js";
+import { findControlHost } from "./control_dom.js";
 import { findControlProxyTarget } from "./control_proxy.js";
 import { readControlValue } from "./control_value.js";
 import {
@@ -80,6 +81,7 @@ import {
 import {
   dispatchRequestResetUIState,
   dispatchRequestSetUIState,
+  getUIStateFromElement,
 } from "./ui_state_dom.js";
 
 // Sentinel used as the initial value of lastActionValueRef.
@@ -311,10 +313,23 @@ export const useControlProps = (
         return null;
       };
 
+      // Space activates a control — unless the key already means something
+      // where it was pressed. Typing a space into a text field is not an
+      // interaction anything else may claim: the field is what the user is
+      // aiming at, and a control ABOVE it (a picker holding a search box, a
+      // link wrapping one) stealing that key would swallow the character.
+      const isSpaceToActivate = (e) => {
+        if (e.key !== " ") {
+          return false;
+        }
+        const defaultAction = getKeyboardEventDefaultAction(e);
+        return defaultAction !== "type" && defaultAction !== "value_change";
+      };
+
       if (controlType === "link") {
         return {
           keyDown: (e) => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
@@ -375,7 +390,7 @@ export const useControlProps = (
       if (controlType === "picker") {
         return {
           keyDown: (e) => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
@@ -398,7 +413,17 @@ export const useControlProps = (
             return {
               name: "navi_change",
               allowed: () => {
-                syncUIStateWithDOM(e);
+                // The state, but only when nobody has read it yet. navi_change
+                // is dispatched by input_effect, which listens to the very
+                // "input" event the reaction above already answered — syncing
+                // again there is the same gesture read twice, and uiAction fired
+                // twice with it. Everything else it reports (a "change" with no
+                // input before it: autocomplete, a value set from code, a form
+                // restored; a paste; a reset) never reached that reaction, so
+                // this is where those get in.
+                if (e.type !== "input") {
+                  syncUIStateWithDOM(e);
+                }
                 requestActionOnAllowed(e);
               },
             };
@@ -839,7 +864,15 @@ const createControlInfo = (props, { controlType }) => {
         // so an input+signal is uncontrolled-with-default; the signal only
         // receives write-backs (onUIAction).
         hasStateProp = false;
-        stateInitial = props.defaultValue;
+        // A signal holding something wins over the default: `defaultValue` is a
+        // suggestion of what to start from (and what a reset goes back to), not
+        // an answer — while the signal's value IS the answer, restored from the
+        // url or set by whoever owns it. Taking the default here would show a
+        // suggestion in place of the value on every reload.
+        stateInitial =
+          signal && signal.value !== undefined
+            ? signal.value
+            : props.defaultValue;
       } else if (signal) {
         // A plain bound signal with no default (e.g. Wheel): its live value
         // seeds and controls the state.
@@ -876,7 +909,12 @@ const createControlInfo = (props, { controlType }) => {
       stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
       hasStateProp = false;
-      stateInitial = props.defaultValue;
+      // Same precedence as an input above: the signal's value is the answer,
+      // defaultValue only the suggestion to start from.
+      stateInitial =
+        signal && signal.value !== undefined
+          ? signal.value
+          : props.defaultValue;
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;
@@ -995,6 +1033,7 @@ export const useControlgroupProps = (
   },
 ) => {
   const { action } = props;
+
   const uiGroupStateController = useUIGroupStateController(props, controlType, {
     stateType,
     childControlFilter,
@@ -1099,6 +1138,53 @@ export const useControlgroupProps = (
  * </ControlFacadeChildrenWrapper>
  * ```
  */
+/**
+ * What a control holds, read from the control itself.
+ *
+ * For a component built AROUND a control rather than instead of one — a
+ * stepper wrapping a picker, a preview beside a field: the control keeps the
+ * whole value story (`value` vs `defaultValue` vs `signal`, and what a form
+ * makes of each), and this is how the wrapper knows what is in it without
+ * having to tell that story a second time.
+ *
+ * Read from the DOM rather than from props on purpose: a value set from
+ * anywhere — the control's own popup, a signal moved elsewhere, a paste —
+ * comes back the same way, because every one of them ends in the same
+ * navi_ui_state_change.
+ *
+ * @param {{current: HTMLElement}} ref - the control's own ref (the element
+ *   given the `ref` prop, whatever the control renders around it).
+ * @param {any} [uiStateInitial] - what to say before the control has mounted,
+ *   which is the one moment the DOM cannot be asked.
+ */
+export const useControlUIState = (ref, uiStateInitial) => {
+  const [uiState, setUIState] = useState(uiStateInitial);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    // The host, not the box around it: a control is a whole little tree (a
+    // picker is a box holding an input) and the state is announced on the one
+    // element that holds it. Same resolution every request goes through, see
+    // ui_state_dom.js.
+    const host = findControlHost(element) || element;
+    // Asked once here rather than trusted from the props above: between the
+    // first render and this effect the control has read its own value prop, its
+    // defaultValue and any signal it was bound to, and settled which of them
+    // wins — the answer to that is on the element, not in what we were handed.
+    setUIState(getUIStateFromElement(host));
+    const onUIStateChange = (e) => {
+      setUIState(e.detail.value);
+    };
+    host.addEventListener("navi_ui_state_change", onUIStateChange);
+    return () => {
+      host.removeEventListener("navi_ui_state_change", onUIStateChange);
+    };
+  }, [ref]);
+  return uiState;
+};
+
 export const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, { uiStateController }] =
     useControlProps(props, options);
@@ -1179,8 +1265,13 @@ const useInteractiveProps = (
 
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
-    const loadingBase =
-      loading || (controlLoading && parentActionRequester === ref.current);
+    // Busy because the group above is running the action THIS control asked
+    // for (a submit button wearing its form's submission), as opposed to busy
+    // on its own say-so.
+    const loadingFromParent = Boolean(
+      controlLoading && parentActionRequester === ref.current,
+    );
+    const loadingBase = loading || loadingFromParent;
     const readOnlyBase =
       readOnly ||
       controlReadOnly ||
@@ -1188,6 +1279,12 @@ const useInteractiveProps = (
       controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;
+    // Both halves of "busy" that do not come from the bound action, kept apart
+    // from each other and from it: BUSY_CONSTRAINT answers each from its own
+    // live source rather than from the rendered aria-busy, which conflates all
+    // three and is a frame behind. See its own comment.
+    uiStateController.loadingFromOwnProp = Boolean(loading);
+    uiStateController.loadingFromParent = loadingFromParent;
 
     Object.assign(controlHostProps, {
       "required": requiredResolved,
@@ -1212,7 +1309,9 @@ const useInteractiveProps = (
         controlHostProps["inert"] = "";
       }
     }
-    // inform any associated label of our state (connected, disabled, readOnly)
+    // inform any associated label of our state (connected, disabled, readOnly,
+    // required — a Label with requiredIndicator marks itself from it rather
+    // than being told twice what the control already knows)
     // dispatched directly on the label — works whether the label wraps the control
     // (Field as label) or is a separate element linked via htmlFor (Label component)
     useLayoutEffect(() => {
@@ -1229,11 +1328,12 @@ const useInteractiveProps = (
             detail: {
               disabled: disabledResolved,
               readOnly,
+              required: requiredResolved,
             },
           }),
         );
       }
-    }, [disabledResolved, readOnlyResolved, ref]);
+    }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
@@ -1259,8 +1359,13 @@ const useInteractiveProps = (
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: (e) => {
-        const uiState = uiStateController.uiStateSignal.peek();
-        e.detail.respondWith(uiState);
+        // `own`: what this control holds by itself, ignoring what a button
+        // inherits from the control around it (see ownUIStateSignal).
+        const uiStateSignal =
+          e.detail.own && uiStateController.ownUIStateSignal
+            ? uiStateController.ownUIStateSignal
+            : uiStateController.uiStateSignal;
+        e.detail.respondWith(uiStateSignal.peek());
       },
       onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
@@ -1455,6 +1560,13 @@ const useInteractiveProps = (
   // keeps those reads current without any extra bookkeeping.
   const firstRender = uiStateController.controlHostProps === undefined;
   uiStateController.controlHostProps = controlHostProps;
+  // The action itself, not just what the last render made of it: its running
+  // state is a signal and changes the instant the action settles, while
+  // controlHostProps above is a snapshot of the render before that. Anything
+  // asked "is this control busy?" in that same tick — the interaction gate, on
+  // an action's own completion side effect — has to read the signal to get an
+  // answer that is not one frame late (see BUSY_CONSTRAINT).
+  uiStateController.boundAction = boundAction;
   if (firstRender) {
     // Deferred from the factory so these run after controlHostProps is set.
     // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
