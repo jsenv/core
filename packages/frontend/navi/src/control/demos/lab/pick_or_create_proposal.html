@@ -185,6 +185,7 @@
         useSearchText,
         useSlideValue,
       } from "@jsenv/navi";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
@@ -234,6 +235,9 @@
        */
       const PickOrCreateField = ({
         id,
+        // What the surrounding form will receive the choice under — the id
+        // stays unique per variant, the name is the payload's business
+        name,
         popupLayer,
         label,
         placeholder,
@@ -254,17 +258,27 @@
         onCreate,
         onUpdate,
         onDelete,
-        value,
-        onChange,
-        // undefined when the entity has no such notion (a place); a string when
-        // it does, so the field knows to offer it
-        sideOverride,
-        onSideChange,
+        // The choice, as a signal holding the picked entry's id: the picker
+        // writes it, the page reads it — and anything else may write it too
+        // (creating an entry selects it by writing here)
+        signal,
+        // undefined when the entity has no such notion (a place); a signal when
+        // it does, so the field knows to offer it. Kept beside the choice, not
+        // inside the entry: overriding the side for tonight must not rewrite
+        // the player's own habit, so picking another player starts again from
+        // that player's default.
+        sideSignal,
       }) => {
         // capitalized: JSX reads a lowercase name as an html tag, and props are
         // camelCase — so the prop is createForm and the element is <CreateForm>
         const CreateForm = createForm;
         const searchSignal = useSignal("");
+        // Derived, never copied: the signal holds an id and the entry it names
+        // is looked up at render time, so an edit or a deletion elsewhere
+        // cannot leave a stale copy of the entry behind
+        const selectedEntry = signal.value
+          ? (entries.find((e) => e.id === signal.value) ?? null)
+          : null;
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
@@ -290,29 +304,25 @@
           await reachServer();
           const entry = { id: nextId(), isNew: true, ...toEntry(values) };
           onCreate(entry);
-          onChange(entry);
+          signal.value = entry.id;
           searchSignal.value = "";
         };
 
         // Only what this user typed in can be edited: an entry that came from
         // the backend is shared with everyone else, and renaming it here would
-        // rename it under them.
+        // rename it under them. Nothing to do for the selection: it is derived
+        // from the id, so it shows the edit by itself.
         const submitEdit = async (edited, values) => {
           await reachServer();
-          const entry = { ...edited, ...toEntry(values) };
-          onUpdate(entry);
-          if (value && value.id === entry.id) {
-            // the selection is a copy of the entry, so it goes stale otherwise
-            onChange(entry);
-          }
+          onUpdate({ ...edited, ...toEntry(values) });
           // Where to go is not decided here: the form says it with its own
           // command (--navi-back), which follows a send that went through.
         };
         const deleteEntry = async (entry) => {
           await reachServer();
           onDelete(entry);
-          if (value && value.id === entry.id) {
-            onChange(null);
+          if (signal.value === entry.id) {
+            signal.value = undefined;
           }
           // Where to go is not decided here either: the button that sent said
           // it (formCommand), the same way the form says it for a save.
@@ -333,10 +343,10 @@
                 // generated one neither survives a reload nor stays clear of
                 // another component's own
                 id={id}
-                name={id}
+                name={name}
                 placeholder={placeholder}
-                value={value ? value.id : undefined}
-                ui={value ? value.name : undefined}
+                signal={signal}
+                ui={selectedEntry ? selectedEntry.name : undefined}
                 clearable
                 borderRadius="s"
                 mode="dialog"
@@ -345,11 +355,18 @@
                 dialogExpand
                 padding="m"
                 expandX
+                // The value itself travels through the signal; what is left to
+                // do on a pick is the side effects around it
                 action={(entryId) => {
-                  onChange(
-                    entryId ? entries.find((e) => e.id === entryId) : null,
-                  );
                   searchSignal.value = "";
+                  if (sideSignal) {
+                    const entry = entryId
+                      ? entries.find((e) => e.id === entryId)
+                      : null;
+                    sideSignal.value = entry
+                      ? entry.side || undefined
+                      : undefined;
+                  }
                 }}
               >
                 {/* One surface, three screens placed rather than ordered:
@@ -444,7 +461,7 @@
                             id={`${id}_${entry.id}`}
                             index={i}
                             value={entry.id}
-                            selected={value ? value.id === entry.id : false}
+                            selected={entry.id === signal.value}
                             matchInfo={getMatchInfo(entry)}
                             padding="s"
                           >
@@ -618,12 +635,12 @@
                 Beside the selection rather than inside the entry — overriding
                 the side for tonight must not rewrite the player's own habit, so
                 picking another player starts again from that player's default. */}
-              {sideOverride !== undefined && (
+              {sideSignal && (
                 <Picker
                   id={`${id}_side`}
-                  name={`${id}_side`}
-                  value={sideOverride || undefined}
-                  ui={sideLabel(sideOverride)}
+                  name={`${name}_side`}
+                  signal={sideSignal}
+                  ui={sideLabel(sideSignal.value)}
                   placeholder="—"
                   borderRadius="s"
                   mode="popover"
@@ -634,7 +651,6 @@
                   // would jiggle every time the side changes
                   minWidth={SIDE_COLUMN_WIDTH}
                   maxWidth={SIDE_COLUMN_WIDTH}
-                  action={onSideChange}
                 >
                   <List selectable command="--navi-send" separator>
                     {SIDES.map((side, i) => (
@@ -644,7 +660,7 @@
                         id={`${id}_side_${side.value}`}
                         index={i}
                         value={side.value}
-                        selected={sideOverride === side.value}
+                        selected={sideSignal.value === side.value}
                         padding="s"
                       >
                         <Box flex="x" spacing="xs" alignY="center">
@@ -652,11 +668,12 @@
                           {/* The player's own side, marked: it says whether
                               tonight is an override, and it is the way back to
                               the habit once you have left it */}
-                          {value && value.side === side.value && (
-                            <Icon size="0.9em" color="#b42318">
-                              <HeartSvg />
-                            </Icon>
-                          )}
+                          {selectedEntry &&
+                            selectedEntry.side === side.value && (
+                              <Icon size="0.9em" color="#b42318">
+                                <HeartSvg />
+                              </Icon>
+                            )}
                         </Box>
                       </List.Item>
                     ))}
@@ -977,18 +994,29 @@
       const Screen = ({ idPrefix, popupLayer }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
-        const clubSignal = useSignal(null);
-        const playerSignal = useSignal(null);
-        const player2Signal = useSignal(null);
-        // Kept beside the selection, not inside the entry: overriding the side
-        // for tonight's match must not rewrite the player's own habit. Picking
-        // another player therefore starts again from that player's default.
-        const sideSignal = useSignal("");
-        const side2Signal = useSignal("");
-        const selectPlayer = (playerSignal, sideSignal) => (entry) => {
-          playerSignal.value = entry;
-          sideSignal.value = entry ? entry.side || "" : "";
-        };
+        const clubSignal = useSignal();
+        // Four slots at most, none of them required: a match can be created
+        // before anyone has signed up for it
+        const playerSignals = [
+          useSignal(),
+          useSignal(),
+          useSignal(),
+          useSignal(),
+        ];
+        const sideSignals = [
+          useSignal(),
+          useSignal(),
+          useSignal(),
+          useSignal(),
+        ];
+        // What the mature app would know per slot; here it just puts different
+        // players above the fold of each picker
+        const recentIdsBySlot = [
+          [INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id],
+          [INITIAL_PLAYERS[2].id],
+          [],
+          [],
+        ];
 
         // No view transition on these two, and it is not an oversight: both
         // happen while ANOTHER screen is showing (creating from the create
@@ -1016,46 +1044,46 @@
         };
 
         return (
-          <>
-            <div class="screen">
-              <p class="screen-title">‹ Créer une partie</p>
+          <div class="screen">
+            <p class="screen-title">‹ Créer une partie</p>
 
-              <PickOrCreateField
-                popupLayer={popupLayer}
-                id={`${idPrefix}club`}
-                label="Lieu"
-                placeholder="Choisir un lieu"
-                searchPlaceholder="Rechercher un lieu…"
-                surfaceTitle="Choisir un lieu"
-                createLabel="ajouter ce lieu"
-                createTitle="Ajouter un lieu"
-                editTitle="Modifier un lieu"
-                createForm={PlaceForm}
-                toEntry={(values) => ({
-                  name: text(values.name),
-                  detail: text(values.address),
-                })}
-                entries={clubsSignal.value}
-                recentIds={[INITIAL_CLUBS[0].id]}
-                onCreate={addTo(clubsSignal)}
-                onUpdate={updateIn(clubsSignal)}
-                onDelete={removeFrom(clubsSignal)}
-                value={clubSignal.value}
-                onChange={(entry) => {
-                  clubSignal.value = entry;
-                }}
-              />
+            <PickOrCreateField
+              popupLayer={popupLayer}
+              id={`${idPrefix}club`}
+              name="club"
+              label="Lieu"
+              placeholder="Choisir un lieu"
+              searchPlaceholder="Rechercher un lieu…"
+              surfaceTitle="Choisir un lieu"
+              createLabel="ajouter ce lieu"
+              createTitle="Ajouter un lieu"
+              editTitle="Modifier un lieu"
+              createForm={PlaceForm}
+              toEntry={(values) => ({
+                name: text(values.name),
+                detail: text(values.address),
+              })}
+              entries={clubsSignal.value}
+              recentIds={[INITIAL_CLUBS[0].id]}
+              onCreate={addTo(clubsSignal)}
+              onUpdate={updateIn(clubsSignal)}
+              onDelete={removeFrom(clubsSignal)}
+              signal={clubSignal}
+            />
 
-              {/* "Côté" is said once, at the head of the column it names: the
-                  rows below are all the same shape, so repeating it on each of
-                  them would be three times the words for one meaning */}
-              <p class="field-title field-title--row">
-                <span>Joueurs</span>
-                <span style={{ width: SIDE_COLUMN_WIDTH }}>Côté</span>
-              </p>
+            {/* "Côté" is said once, at the head of the column it names: the
+                rows below are all the same shape, so repeating it on each of
+                them would be four times the words for one meaning */}
+            <p class="field-title field-title--row">
+              <span>Joueurs</span>
+              <span style={{ width: SIDE_COLUMN_WIDTH }}>Côté</span>
+            </p>
+            {playerSignals.map((playerSignal, i) => (
               <PickOrCreateField
+                key={i}
                 popupLayer={popupLayer}
-                id={`${idPrefix}player`}
+                id={`${idPrefix}player${i + 1}`}
+                name={`player${i + 1}`}
                 // no placeholder on purpose: an empty row reads as empty, which
                 // is exactly what it is — a player slot nobody has to fill
                 searchPlaceholder="Rechercher un joueur…"
@@ -1066,43 +1094,19 @@
                 createForm={PlayerForm}
                 toEntry={playerToEntry}
                 entries={playersSignal.value}
-                recentIds={[INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id]}
+                recentIds={recentIdsBySlot[i]}
                 onCreate={addTo(playersSignal)}
                 onUpdate={updateIn(playersSignal)}
                 onDelete={removeFrom(playersSignal)}
-                value={playerSignal.value}
-                onChange={selectPlayer(playerSignal, sideSignal)}
-                sideOverride={sideSignal.value}
-                onSideChange={(next) => {
-                  sideSignal.value = next;
-                }}
+                signal={playerSignal}
+                sideSignal={sideSignals[i]}
               />
+            ))}
 
-              <PickOrCreateField
-                popupLayer={popupLayer}
-                id={`${idPrefix}player2`}
-                searchPlaceholder="Rechercher un joueur…"
-                surfaceTitle="Choisir un joueur"
-                createLabel="ajouter ce joueur"
-                createTitle="Ajouter un joueur"
-                editTitle="Modifier un joueur"
-                createForm={PlayerForm}
-                toEntry={playerToEntry}
-                entries={playersSignal.value}
-                recentIds={[INITIAL_PLAYERS[2].id]}
-                onCreate={addTo(playersSignal)}
-                onUpdate={updateIn(playersSignal)}
-                onDelete={removeFrom(playersSignal)}
-                value={player2Signal.value}
-                onChange={selectPlayer(player2Signal, side2Signal)}
-                sideOverride={side2Signal.value}
-                onSideChange={(next) => {
-                  side2Signal.value = next;
-                }}
-              />
-            </div>
-            <div class="keyboard">clavier</div>
-          </>
+            <Button type="submit" paddingY="s" expandX marginTop="m">
+              Créer la partie
+            </Button>
+          </div>
         );
       };
 
@@ -1133,14 +1137,31 @@
       const App = () => (
         <NaviDebug debugAll>
           <ServerSwitch />
-          <h2 class="variant-title">1. popupLayer="local" — dans le cadre</h2>
-          <div class="frame">
-            <Screen idPrefix="local_" popupLayer="local" />
-          </div>
+          {/* Full page first: it is the real case, the frame below is the
+              laboratory one. Each variant sits in its own fake backend so what
+              a submit sends — a club and up to four players, sides included —
+              is on the page next to the screen that sent it. */}
           <h2 class="variant-title">
-            2. top layer — lié au viewport (à voir en émulation d'appareil)
+            1. Pleine page — top layer (à voir en émulation d'appareil)
           </h2>
-          <Screen idPrefix="top_" />
+          <FakeBackend>
+            {({ action }) => (
+              <Form action={action}>
+                <Screen idPrefix="top_" />
+              </Form>
+            )}
+          </FakeBackend>
+          <h2 class="variant-title">2. popupLayer="local" — dans le cadre</h2>
+          <FakeBackend>
+            {({ action }) => (
+              <Form action={action}>
+                <div class="frame">
+                  <Screen idPrefix="local_" popupLayer="local" />
+                </div>
+              </Form>
+            )}
+          </FakeBackend>
+          <div class="keyboard">clavier</div>
         </NaviDebug>
       );
 
