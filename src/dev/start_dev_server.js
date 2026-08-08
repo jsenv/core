@@ -327,6 +327,9 @@ export const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
+    // server-timing response headers: devtools show how the time to answer
+    // is spent (cook phases come from the kitchen, see urlInfo.timing).
+    serverTiming: true,
     plugins: finalServerPlugins,
     // will allow to open file, provide more context on each route
     canExposeSensitiveData: true,

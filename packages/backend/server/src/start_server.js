@@ -543,9 +543,19 @@ export const startServer = async ({
     const finalizeResponseProperties = (responseProperties) => {
       if (serverTiming) {
         startRespondingTiming.end();
+        // Only what took actual time (plus the overall "time to start
+        // responding", which is the summary the rest details): a request
+        // crosses every registered route, and a wall of sub-millisecond
+        // ".routing" entries would bury the measures worth reading.
+        const timingsWorthReading = {};
+        for (const name of Object.keys(timings)) {
+          if (name === startRespondingTiming.name || timings[name] >= 0.5) {
+            timingsWorthReading[name] = timings[name];
+          }
+        }
         responseProperties.headers = composeTwoHeaders(
           responseProperties.headers,
-          timingToServerTimingResponseHeaders(timings),
+          timingToServerTimingResponseHeaders(timingsWorthReading),
         );
       }
       if (requestWaitingMs) {
