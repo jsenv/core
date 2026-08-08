@@ -243,6 +243,31 @@ const css = /* css */ `
          intention (clear, the opposite of open), so it takes its clicks back. */
       .navi_button {
         pointer-events: auto;
+
+        /* Drawn small but not small to hit: the spacing around the cross — the
+           slot margins on the sides, the picker padding above and below —
+           belongs to its clickable zone, the same zone the clear cross of an
+           input claims. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-picker-padding-top));
+          right: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          bottom: calc(-1 * var(--x-picker-padding-bottom));
+          left: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          content: "";
+        }
       }
     }
     &[navi-single-line] {
