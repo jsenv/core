@@ -1,3 +1,11 @@
+/**
+ * First ancestor of `node` matching `predicate`, walking parent by parent.
+ * Starts at the parent — `node` itself is never a candidate.
+ *
+ * @param {Node} node
+ * @param {(ancestor: Node) => boolean} predicate
+ * @returns {Node|null}
+ */
 export const findAncestor = (node, predicate) => {
   let ancestor = node.parentNode;
   while (ancestor) {
@@ -9,6 +17,21 @@ export const findAncestor = (node, predicate) => {
   return null;
 };
 
+/**
+ * First descendant of `rootNode` matching `fn`, in document order (depth
+ * first). The walk is bounded to the subtree: `rootNode` itself is not a
+ * candidate, and a root with no children yields nothing — never the root's
+ * siblings.
+ *
+ * @param {Node} rootNode
+ * @param {(node: Node, skip: () => void) => boolean} fn - Return true to stop
+ *   on `node`. Call `skip()` to not descend into `node`'s children (the walk
+ *   goes on with its siblings).
+ * @param {object} [options]
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included.
+ * @returns {Node|null}
+ */
 export const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
   let { done, value: node } = iterator.next();
@@ -29,6 +52,18 @@ export const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   return null;
 };
 
+/**
+ * Last descendant of `rootNode` matching `fn` in document order — the walk
+ * starts at the subtree's deepest final node and moves backwards, so the
+ * first match it meets is the last one the document holds.
+ *
+ * @param {Node} rootNode
+ * @param {(node: Node) => boolean} fn
+ * @param {object} [options]
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included.
+ * @returns {Node|null}
+ */
 export const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
@@ -48,6 +83,23 @@ export const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   return null;
 };
 
+/**
+ * First node after `from` in document order matching `predicate`. Unlike
+ * findDescendant this is anchored to a position, not a container: the walk
+ * leaves `from`'s subtree and goes on through its siblings and its ancestors'
+ * siblings, until `root`'s subtree is exhausted.
+ *
+ * @param {Node} from - The position to search from; not a candidate itself.
+ * @param {(node: Node) => boolean} predicate
+ * @param {object} [options]
+ * @param {Node} [options.root] - Bounds the walk to its subtree; null walks to
+ *   the end of the tree `from` belongs to.
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included. A `from` inside it starts right after it.
+ * @param {boolean} [options.skipChildren] - Do not look inside `from`; start
+ *   at what follows it.
+ * @returns {Node|null}
+ */
 export const findAfter = (
   from,
   predicate,
@@ -64,6 +116,21 @@ export const findAfter = (
   return null;
 };
 
+/**
+ * First node before `from` in reverse document order matching `predicate` —
+ * what findAfter is to "next", this is to "previous". A step back lands on
+ * the previous sibling's DEEPEST last node (document order walked backwards),
+ * not on the sibling itself.
+ *
+ * @param {Node} from - The position to search from; not a candidate itself.
+ * @param {(node: Node) => boolean} predicate
+ * @param {object} [options]
+ * @param {Node} [options.root] - Bounds the walk to its subtree; null walks
+ *   back to the start of the tree `from` belongs to.
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included. A `from` inside it starts right before it.
+ * @returns {Node|null}
+ */
 export const findBefore = (
   from,
   predicate,
