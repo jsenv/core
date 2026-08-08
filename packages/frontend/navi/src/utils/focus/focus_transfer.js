@@ -1,6 +1,9 @@
 import { findEvent, findFocusable, getElementSignature } from "@jsenv/dom";
 
-import { isKeyboardModality } from "@jsenv/navi/src/box/pseudo_styles.js";
+import {
+  isEditableTarget,
+  isKeyboardModality,
+} from "@jsenv/navi/src/box/pseudo_styles.js";
 
 /**
  * Decides which element receives focus when a container (popover, dialog, …)
@@ -235,13 +238,17 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
       if (!target) {
         return;
       }
+      // The modality speaks for the transfer, but an editable target outranks
+      // it: it draws its ring on any focus (see isMatchingFocusVisible), so
+      // the native :focus-visible is told the same.
+      const targetFocusVisible = focusVisible || isEditableTarget(target);
       debugFocus(
         transferEvent,
-        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${focusVisible} }) (reason: ${reason})`,
+        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
       );
       target.focus({
         preventScroll: true,
-        focusVisible,
+        focusVisible: targetFocusVisible,
       });
       if (target.hasAttribute("navi-autofocus-select")) {
         target.select();
@@ -255,7 +262,8 @@ export const prepareFocusTransfer = (prepareEvent, debugFocus) => {
         `restore focus to previously focused element`,
         focusedElement,
       );
-      const restoreFocusVisible = isKeyboardModality();
+      const restoreFocusVisible =
+        isKeyboardModality() || isEditableTarget(focusedElement);
       focusedElement.focus({
         preventScroll: true,
         focusVisible: restoreFocusVisible,

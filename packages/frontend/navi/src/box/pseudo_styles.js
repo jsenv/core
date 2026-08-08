@@ -283,30 +283,49 @@ definePseudoClass(":active", {
 // here and in control_hooks.jsx) can read it.
 let keyboardNavigationUsed = false;
 
-// Whether `el` should be treated as :focus-visible: the native match AND the
-// current modality being keyboard. Use this instead of a bare
-// el.matches(":focus-visible") wherever focus-visible is evaluated.
+// HOW FOCUS-VISIBLE IS DECIDED (the details behind isMatchingFocusVisible)
 //
-// The native match alone cannot be trusted, because we routinely take the
-// pointer out of the browser's hands: a picker opens on mousedown and calls
-// preventDefault() so the browser does not move focus itself (see
-// picker_custom.jsx). The browser therefore never registers that a pointer was
-// what moved focus, and whatever focus-visible state the previous keyboard
-// interaction left behind stays true — even across the programmatic
-// focus({ focusVisible: false }) that follows. Close a picker with Escape (ring
-// on the trigger, rightly) and click it open again: the popup's own focusable
-// would come up ringed, from a mouse press.
+// Two rules, depending on what `el` is:
 //
-// `keyboardNavigationUsed` has no such blind spot — it is set by navigation
-// keydowns and cleared by pointerdown, whatever anyone prevents afterwards — so
-// it is the authority here, with one exception: editable targets (text inputs,
-// textarea, contenteditable — anything whose whole point is keyboard input)
-// show their focus ring whenever they hold the focus, however it arrived —
-// mouse, programmatic, even a focus({ focusVisible: false }): being focused
-// means being about to type, and that is what the ring announces. Their check
-// is on :focus rather than :focus-visible for that reason — the native
-// :focus-visible obeys the focusVisible option, which callers set from the
-// modality without knowing what they are focusing.
+// 1. An EDITABLE target (text-ish input, textarea, contenteditable — anything
+//    whose whole point is keyboard input, see isEditableTarget) shows its ring
+//    whenever it holds the focus, however the focus arrived — mouse,
+//    programmatic, even a focus({ focusVisible: false }). Being focused, for
+//    such a field, means being about to type, and that is what the ring
+//    announces. Its check is on :focus rather than :focus-visible on purpose:
+//    the native :focus-visible obeys the focusVisible option, which callers
+//    set from the modality without knowing what they are focusing.
+//
+// 2. Anything else needs BOTH the native :focus-visible match AND the current
+//    modality being keyboard (`keyboardNavigationUsed`).
+//
+//    The native match alone cannot be trusted, because we routinely take the
+//    pointer out of the browser's hands: a picker opens on mousedown and calls
+//    preventDefault() so the browser does not move focus itself (see
+//    picker_custom.jsx). The browser therefore never registers that a pointer
+//    was what moved focus, and whatever focus-visible state the previous
+//    keyboard interaction left behind stays true — even across the
+//    programmatic focus({ focusVisible: false }) that follows. Close a picker
+//    with Escape (ring on the trigger, rightly) and click it open again: the
+//    popup's own focusable would come up ringed, from a mouse press.
+//
+//    `keyboardNavigationUsed` has no such blind spot — it is set by navigation
+//    keydowns and cleared by pointerdown, whatever anyone prevents afterwards
+//    — so it is the authority for everything rule 1 does not cover.
+//
+// Ring INHERITANCE (a controlled element ringing because its aria-controls
+// controller is focused) stays gated on the keyboard modality even for an
+// editable controller — see hasIndirectFocus: propagating a ring promises
+// keyboard shortcuts will drive the controlled element, a promise that only
+// holds once a physical keyboard has actually been used.
+/**
+ * Whether `el` should currently show a focus ring — the enriched
+ * :focus-visible behind every [data-focus-visible] navi renders.
+ * Use this instead of a bare el.matches(":focus-visible") wherever
+ * focus-visible is evaluated; the comment above details the rules.
+ * @param {Element} el
+ * @returns {boolean}
+ */
 export const isMatchingFocusVisible = (el) => {
   if (isEditableTarget(el)) {
     return el.matches(":focus");
@@ -322,7 +341,9 @@ export const isMatchingFocusVisible = (el) => {
 
 // Elements that invite keyboard input: focusing one — even with the mouse —
 // means the user is about to type, so they always warrant a visible focus.
-// Also used to ignore the Space key as a navigation key while typing.
+// Also used to ignore the Space key as a navigation key while typing, and by
+// programmatic focus (focus_transfer.js) to pass focusVisible: true so the
+// native :focus-visible agrees with the ring rule 1 above draws.
 const EDITABLE_INPUT_TYPE_SET = new Set([
   "text",
   "search",
@@ -337,7 +358,7 @@ const EDITABLE_INPUT_TYPE_SET = new Set([
   "month",
   "week",
 ]);
-const isEditableTarget = (target) => {
+export const isEditableTarget = (target) => {
   if (!target) {
     return false;
   }
