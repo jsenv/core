@@ -301,14 +301,18 @@ let keyboardNavigationUsed = false;
 // keydowns and cleared by pointerdown, whatever anyone prevents afterwards — so
 // it is the authority here, with one exception: editable targets (text inputs,
 // textarea, contenteditable — anything whose whole point is keyboard input)
-// show their focus ring on any focus, mouse included, exactly as native
-// :focus-visible does. For them the native match alone is enough.
+// show their focus ring whenever they hold the focus, however it arrived —
+// mouse, programmatic, even a focus({ focusVisible: false }): being focused
+// means being about to type, and that is what the ring announces. Their check
+// is on :focus rather than :focus-visible for that reason — the native
+// :focus-visible obeys the focusVisible option, which callers set from the
+// modality without knowing what they are focusing.
 export const isMatchingFocusVisible = (el) => {
+  if (isEditableTarget(el)) {
+    return el.matches(":focus");
+  }
   if (!el.matches(":focus-visible")) {
     return false;
-  }
-  if (isEditableTarget(el)) {
-    return true;
   }
   if (!keyboardNavigationUsed) {
     return false;
