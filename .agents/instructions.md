@@ -126,6 +126,7 @@ how to run them.
   - **Gate on actually-displayed, not merely mounted**: only arm the entrance transition when the element becomes displayed, so it doesn't replay when something already open just re-renders. `useDisplayedLayoutEffect` runs an effect once the element is really on screen; popover.jsx suppresses transitions until it has measured/positioned the element, then arms them.
   - **Simplest of all — no transition at all**: if the emphasis can be positional/compositional (e.g. a fixed overlay the content moves under) rather than a per-element state flip, there's nothing to animate on mount by construction. Prefer this when it fits.
     This applies to color/opacity/transform transitions and keyframe animations alike.
+- **Anything that moves over time**: read [.agents/skills/animations/SKILL.md](skills/animations/SKILL.md) — who owns the state while something animates, how an interrupted movement picks up, how it keeps up with a user faster than it, and where view transitions may live.
 
 ## @jsenv/navi Specifics
 
