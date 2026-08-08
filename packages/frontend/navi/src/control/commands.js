@@ -551,7 +551,7 @@ const registerWalkCommand = (command, goal) => {
         // where they are — which the container decides, not this.
         return dispatchCustomEvent(target, "navi_slide_step", {
           event,
-          forward: goal === "next",
+          goal,
           value: resolveCommandValue(source, event),
         });
       },

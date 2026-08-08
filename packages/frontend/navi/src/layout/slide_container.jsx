@@ -632,6 +632,15 @@ export const SlideContainer = ({
     // carousel move three steps instead of one.
     if (rollingRef.current) {
       pendingRollsRef.current.push({ area, forward, event, value, dx, dy });
+      // And the one in flight is played faster: pressing again while it moves
+      // is asking to get there sooner, and waiting out a travel at its own pace
+      // before the next one starts is what makes a carousel feel unresponsive.
+      // Sped up rather than cut short — ending it on the spot would jump.
+      const animation = trackAnimationRef.current;
+      if (animation && animation.playState === "running") {
+        const faster = animation.playbackRate * 1.8;
+        animation.playbackRate = faster > 8 ? 8 : faster;
+      }
       return true;
     }
     const { slideElements, placeOf } = readMap();
@@ -930,6 +939,17 @@ export const SlideContainer = ({
       // Home and End make, said as a command so a nav bar can offer it.
       onnavi_slide_end={(e) => {
         goToEnd(e.detail.last, e);
+      }}
+      // …and a step along it (--navi-previous / --navi-next), for a container
+      // laid out as a line: which direction that is is this container's own
+      // business (a row goes right, a column goes down), which is exactly what
+      // a command saying "onwards" leaves to it.
+      onnavi_slide_step={(e) => {
+        if (e.detail.goal === "next") {
+          moveNext(e);
+        } else {
+          movePrevious(e);
+        }
       }}
       // …and back where one came from (--navi-back).
       onnavi_slide_back={(e) => {

@@ -590,7 +590,7 @@
             ]
           : null;
         return (
-          <Box flex="y" spacing="s" alignX="start">
+          <Box flex="y" spacing="s" alignX="center" width="fit-content">
             <SlideContainer
               id={containerId}
               current={current}
@@ -606,20 +606,14 @@
                 </Slide>
               ))}
             </SlideContainer>
-            <Box
-              flex="x"
-              spacing="xs"
-              alignY="center"
-              alignX="center"
-              width="280px"
-            >
+            <Box flex="x" spacing="xs" alignY="center">
               {text ? (
                 ends.map(({ command, label }) => (
                   <Button
                     key={command}
                     command={command}
                     commandFor={containerId}
-                    variant="text"
+                    variant="discrete"
                   >
                     {label}
                   </Button>
@@ -635,7 +629,7 @@
                   key={photo.name}
                   command={`--navi-go-to-slide:bar_photo_${index}`}
                   commandFor={containerId}
-                  variant={text ? "text" : "discrete"}
+                  variant="discrete"
                   padding="xs"
                   // Which one is showing, said on the button that leads to it:
                   // a bar of numbers with none of them marked says how many
@@ -654,7 +648,7 @@
                     key={command}
                     command={command}
                     commandFor={containerId}
-                    variant="text"
+                    variant="discrete"
                   >
                     {label}
                   </Button>
@@ -1948,7 +1942,7 @@
             <CarouselWithBar />
             <h3>The same bar, in words</h3>
             <CarouselWithBar text />
-            <h3>A carousel with no end</h3>
+            <h3>Looping</h3>
             <p>→ on the last photo shows the first.</p>
             <CarouselLooping />
           </section>
