@@ -30,6 +30,10 @@
          layer, and a layer="local" one would be confined to the trigger's own
          box, which is the height of a single line. */
       .screen {
+        box-sizing: border-box;
+        /* width, not only max-width: the fake backend's body is a start-aligned
+           flex column, so without it the screen shrinks to its content */
+        width: 100%;
         max-width: 380px;
         min-height: 100%;
         margin: 0 auto;
@@ -73,7 +77,7 @@
         height: 320px;
         margin: 0 auto 32px;
         border-radius: 12px;
-        overflow: hidden;
+        overflow: auto;
       }
       .variant-title {
         max-width: 380px;
@@ -165,7 +169,7 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { signal, useSignal } from "@preact/signals";
+      import { useSignal } from "@preact/signals";
       import {
         Box,
         Button,
@@ -179,8 +183,11 @@
         NaviDebug,
         Picker,
         RadioGroup,
+        route,
+        setupRoutes,
         Slide,
         SlideContainer,
+        stateSignal,
         Text,
         useSearchText,
         useSlideValue,
@@ -208,20 +215,40 @@
       // follows a send — going back to the list, closing the surface — only
       // runs once the action resolves.
       const SERVER_DELAY = 600;
-      // Flipped by the switch at the top of the page: an action that can only
-      // succeed never shows where its failure would land — on the form for a
-      // save, on the button that asked for a deletion.
-      const serverRefusesSignal = signal(false);
       const reachServer = () =>
-        new Promise((resolve, reject) => {
-          setTimeout(() => {
-            if (serverRefusesSignal.value) {
-              reject(new Error("Le serveur a refusé l'enregistrement."));
-              return;
-            }
-            resolve();
-          }, SERVER_DELAY);
+        new Promise((resolve) => {
+          setTimeout(resolve, SERVER_DELAY);
         });
+
+      // Everything the page holds as state lives in the URL: the picked ids,
+      // the side overrides, even what is typed in the search boxes. Nobody
+      // writes these signals by hand — each is handed to the control that owns
+      // it (Picker, Input), whose ui state controller keeps signal and control
+      // in sync — and the route mirrors them into search params, so a reload
+      // or a shared link restores the whole screen.
+      const SEARCH_PARAMS = {};
+      const urlSignal = (name) => {
+        const urlStateSignal = stateSignal(undefined, {
+          id: name,
+          type: "string",
+        });
+        SEARCH_PARAMS[name] = urlStateSignal;
+        return urlStateSignal;
+      };
+      const createScreenSignals = (idPrefix) => ({
+        club: {
+          signal: urlSignal(`${idPrefix}club`),
+          searchSignal: urlSignal(`${idPrefix}club_search`),
+        },
+        players: [1, 2, 3, 4].map((n) => ({
+          signal: urlSignal(`${idPrefix}player${n}`),
+          searchSignal: urlSignal(`${idPrefix}player${n}_search`),
+          sideSignal: urlSignal(`${idPrefix}player${n}_side`),
+        })),
+      });
+      const TOP_SCREEN_SIGNALS = createScreenSignals("top_");
+      const LOCAL_SCREEN_SIGNALS = createScreenSignals("local_");
+      setupRoutes([route("", { searchParams: SEARCH_PARAMS })]);
 
       /*
        * The field is a real search input, readOnly: it looks and reads exactly
@@ -258,21 +285,24 @@
         onCreate,
         onUpdate,
         onDelete,
-        // The choice, as a signal holding the picked entry's id: the picker
-        // writes it, the page reads it — and anything else may write it too
-        // (creating an entry selects it by writing here)
+        // The choice, as a signal holding the picked entry's id. Nobody writes
+        // it by hand: it is handed to the Picker, whose ui state controller
+        // keeps it in sync with what is selected — and the route keeps it in
+        // the URL.
         signal,
+        // What the search box holds, same regime: the Input owns the writes
+        searchSignal,
         // undefined when the entity has no such notion (a place); a signal when
         // it does, so the field knows to offer it. Kept beside the choice, not
         // inside the entry: overriding the side for tonight must not rewrite
-        // the player's own habit, so picking another player starts again from
-        // that player's default.
+        // the player's own habit.
         sideSignal,
       }) => {
         // capitalized: JSX reads a lowercase name as an html tag, and props are
         // camelCase — so the prop is createForm and the element is <CreateForm>
         const CreateForm = createForm;
-        const searchSignal = useSignal("");
+        // a search box nobody typed in holds undefined, not ""
+        const searchText = searchSignal.value || "";
         // Derived, never copied: the signal holds an id and the entry it names
         // is looked up at render time, so an edit or a deletion elsewhere
         // cannot leave a stale copy of the entry behind
@@ -282,7 +312,7 @@
 
         // Without a search, the ones used recently come first: that is the tap
         // the mature app is optimized for, and it must land above the fold
-        const orderedEntries = searchSignal.value
+        const orderedEntries = searchText
           ? entries
           : [
               ...recentIds
@@ -291,21 +321,18 @@
               ...entries.filter((e) => !recentIds.includes(e.id)),
             ];
         const [matchingEntries, getMatchInfo] = useSearchText(
-          searchSignal.value,
+          searchText,
           orderedEntries,
           searchEntry,
         );
-        const typed = searchSignal.value.trim();
+        const typed = searchText.trim();
 
         // isNew marks what this user added, which is what the pencil is offered
         // on. The surface stays open until the server answers (reachServer), so
         // the entry lands in the list already created rather than provisional.
         const submitForm = async (values) => {
           await reachServer();
-          const entry = { id: nextId(), isNew: true, ...toEntry(values) };
-          onCreate(entry);
-          signal.value = entry.id;
-          searchSignal.value = "";
+          onCreate({ id: nextId(), isNew: true, ...toEntry(values) });
         };
 
         // Only what this user typed in can be edited: an entry that came from
@@ -321,9 +348,6 @@
         const deleteEntry = async (entry) => {
           await reachServer();
           onDelete(entry);
-          if (signal.value === entry.id) {
-            signal.value = undefined;
-          }
           // Where to go is not decided here either: the button that sent said
           // it (formCommand), the same way the form says it for a save.
         };
@@ -355,19 +379,6 @@
                 dialogExpand
                 padding="m"
                 expandX
-                // The value itself travels through the signal; what is left to
-                // do on a pick is the side effects around it
-                action={(entryId) => {
-                  searchSignal.value = "";
-                  if (sideSignal) {
-                    const entry = entryId
-                      ? entries.find((e) => e.id === entryId)
-                      : null;
-                    sideSignal.value = entry
-                      ? entry.side || undefined
-                      : undefined;
-                  }
-                }}
               >
                 {/* One surface, three screens placed rather than ordered:
                     creating is a step further into the same decision, so it
@@ -427,10 +438,7 @@
                         navi-list={`${id}_list`}
                         type="search"
                         placeholder={searchPlaceholder}
-                        value={searchSignal.value}
-                        uiAction={(next) => {
-                          searchSignal.value = next;
-                        }}
+                        signal={searchSignal}
                         autoComplete="off"
                         // Searching is optional, choosing is the point: the
                         // surface opens on the list, and a text input taking
@@ -449,7 +457,7 @@
                         selectable
                         id={`${id}_list`}
                         command="--navi-send"
-                        searchText={searchSignal.value}
+                        searchText={searchText}
                         separator
                         searchFallback={null}
                         expandY
@@ -557,10 +565,9 @@
                     <Form
                       standalone
                       // Back to the list rather than closing: the entry shows
-                      // up there, already selected, so what just happened is
-                      // visible — and one more tap chooses it or another. The
-                      // list is above this screen on the map, so that is the
-                      // direction said.
+                      // up there, so what just happened is visible — and one
+                      // tap chooses it or another. The list is above this
+                      // screen on the map, so that is the direction said.
                       command="--navi-up"
                       action={submitForm}
                       flex="y"
@@ -599,7 +606,7 @@
                       <Box footer padding="m" className="form-actions">
                         {/* --navi-send: it submits the form and, once that is
                             valid, closes the surface it is in — the entry is
-                            created and chosen in one move */}
+                            created and the surface dismissed in one move */}
                         <Button command="--navi-send" paddingY="s">
                           Confirmer
                         </Button>
@@ -633,8 +640,7 @@
               {/* Always on the row, not conditional on a selection: it is part of
                 what the field is, and appearing later would shift the layout.
                 Beside the selection rather than inside the entry — overriding
-                the side for tonight must not rewrite the player's own habit, so
-                picking another player starts again from that player's default. */}
+                the side for tonight must not rewrite the player's own habit. */}
               {sideSignal && (
                 <Picker
                   id={`${id}_side`}
@@ -991,24 +997,12 @@
         };
       };
 
-      const Screen = ({ idPrefix, popupLayer }) => {
+      // `signals` are the URL-backed state signals of this screen (see
+      // createScreenSignals); the entry lists stay local, they stand in for
+      // what the backend would hold
+      const Screen = ({ idPrefix, popupLayer, signals }) => {
         const clubsSignal = useSignal(INITIAL_CLUBS);
         const playersSignal = useSignal(INITIAL_PLAYERS);
-        const clubSignal = useSignal();
-        // Four slots at most, none of them required: a match can be created
-        // before anyone has signed up for it
-        const playerSignals = [
-          useSignal(),
-          useSignal(),
-          useSignal(),
-          useSignal(),
-        ];
-        const sideSignals = [
-          useSignal(),
-          useSignal(),
-          useSignal(),
-          useSignal(),
-        ];
         // What the mature app would know per slot; here it just puts different
         // players above the fold of each picker
         const recentIdsBySlot = [
@@ -1068,7 +1062,8 @@
               onCreate={addTo(clubsSignal)}
               onUpdate={updateIn(clubsSignal)}
               onDelete={removeFrom(clubsSignal)}
-              signal={clubSignal}
+              signal={signals.club.signal}
+              searchSignal={signals.club.searchSignal}
             />
 
             {/* "Côté" is said once, at the head of the column it names: the
@@ -1078,7 +1073,9 @@
               <span>Joueurs</span>
               <span style={{ width: SIDE_COLUMN_WIDTH }}>Côté</span>
             </p>
-            {playerSignals.map((playerSignal, i) => (
+            {/* Four slots at most, none of them required: a match can be
+                created before anyone has signed up for it */}
+            {signals.players.map((slotSignals, i) => (
               <PickOrCreateField
                 key={i}
                 popupLayer={popupLayer}
@@ -1098,8 +1095,9 @@
                 onCreate={addTo(playersSignal)}
                 onUpdate={updateIn(playersSignal)}
                 onDelete={removeFrom(playersSignal)}
-                signal={playerSignal}
-                sideSignal={sideSignals[i]}
+                signal={slotSignals.signal}
+                searchSignal={slotSignals.searchSignal}
+                sideSignal={slotSignals.sideSignal}
               />
             ))}
 
@@ -1110,33 +1108,10 @@
         );
       };
 
-      const ServerSwitch = () => (
-        <label
-          class="server-switch"
-          style={{
-            display: "flex",
-            gap: "6px",
-            maxWidth: "380px",
-            margin: "0 auto 12px",
-            fontSize: "13px",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={serverRefusesSignal.value}
-            onChange={(e) => {
-              serverRefusesSignal.value = e.target.checked;
-            }}
-          />
-          Le serveur refuse
-        </label>
-      );
-
       // debugAll on purpose: this is a lab file, and the interaction logs are the
       // fastest way to see why a click did or did not reach a control
       const App = () => (
         <NaviDebug debugAll>
-          <ServerSwitch />
           {/* Full page first: it is the real case, the frame below is the
               laboratory one. Each variant sits in its own fake backend so what
               a submit sends — a club and up to four players, sides included —
@@ -1146,17 +1121,21 @@
           </h2>
           <FakeBackend>
             {({ action }) => (
-              <Form action={action}>
-                <Screen idPrefix="top_" />
+              <Form action={action} expandX>
+                <Screen idPrefix="top_" signals={TOP_SCREEN_SIGNALS} />
               </Form>
             )}
           </FakeBackend>
           <h2 class="variant-title">2. popupLayer="local" — dans le cadre</h2>
           <FakeBackend>
             {({ action }) => (
-              <Form action={action}>
+              <Form action={action} expandX>
                 <div class="frame">
-                  <Screen idPrefix="local_" popupLayer="local" />
+                  <Screen
+                    idPrefix="local_"
+                    popupLayer="local"
+                    signals={LOCAL_SCREEN_SIGNALS}
+                  />
                 </div>
               </Form>
             )}
