@@ -278,7 +278,27 @@ export const devServerPluginServeSourceFiles = ({
                 return respondWithNotModified();
               }
             }
-            await urlInfo.cook({ request, reference });
+            // Cooking is not memoized in dev (see cookGuard in kitchen.js): a
+            // request that reaches cook() re-fetches and re-transforms the file
+            // even when nothing changed. The 304 path above already avoids that
+            // for a browser that revalidates — but a browser with its cache
+            // disabled (devtools open, the common way to reload during dev)
+            // sends no if-none-match and would re-cook the entire graph on
+            // every reload, turning a warm reload into seconds of transform
+            // work. Same validity check as the 304 path, same trust: when the
+            // graph's in-memory content is still valid, it IS the response —
+            // only the status differs (200 with content, since there is no
+            // client etag to match).
+            const servableFromMemory =
+              !urlInfo.error &&
+              !inlineParentUrlInfo &&
+              !urlInfo.response &&
+              urlInfo.content !== undefined &&
+              !cacheIsDisabledInResponseHeader(urlInfo) &&
+              urlInfo.isValid();
+            if (!servableFromMemory) {
+              await urlInfo.cook({ request, reference });
+            }
             let { response } = urlInfo;
             if (response) {
               return response;
