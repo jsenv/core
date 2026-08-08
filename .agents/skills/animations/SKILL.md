@@ -56,11 +56,18 @@ Two multipliers, in this order:
    distance in a fifth of the time. That keeps the speed constant instead of
    crawling back over a short distance for a full duration. Only ever shortens
    — a longer-than-usual move is not made slower.
-2. **The input rate.** When presses are waiting (a queue, a target that keeps
-   moving), what is left is divided again: someone pressing → four times is
-   asking to be four slides further, not to watch four travels. The wheel does
-   the same with a spring whose stiffness grows with the distance to the target,
-   so a second press mid-glide reads as accelerating rather than restarting.
+2. **The input rate.** A press landing mid-travel sends what is playing home
+   (`hurryTravel`: a fifth of the time it has left) and sets off again at once.
+   Someone pressing → four times is asking to be four slides further, not to
+   watch four travels.
+
+   Sending it home rather than nudging its speed up is the point, and it took a
+   round to get right: a travel is already moving when the second press lands,
+   so making it move _somewhat faster_ is invisible — the press reads as
+   ignored. What is felt is **arriving and leaving again**, which is the same
+   thing the first press gave. Played out fast, never cancelled: cutting it
+   short jumps. The wheel gets the same feel from a spring whose stiffness grows
+   with the distance to the target.
 
 An already-moving element gets `ease-out` rather than `ease`: an ease-in from a
 moving state stalls it for an instant right where the eye is following it.
@@ -107,6 +114,19 @@ Two more facts worth knowing before reaching for one:
   layout: the document height jumps the moment the callback runs, and no scroll
   follows a row shrinking. Wanting the scroll to follow means animating the real
   height (WAAPI), not a snapshot.
+- **It holds the frame, so nothing else may move during it.** A transition and
+  another movement asked for in the same breath do not run side by side: the
+  other one is stalled for the transition's whole duration, and what one sees is
+  the layout already changed on the old picture. That is what a slide travel
+  following a list change looked like — the popup took the height of the list it
+  was travelling to, revealing it for ~60ms, before anything moved. Measure it
+  by sampling `getComputedStyle(track).translate` against the box height across
+  frames: the gap between "the box grew" and "the translate started" IS the
+  flash.
+- **Do not transition a change nobody is looking at.** The row created from a
+  create screen appears in a list that is off screen — the transition animates
+  nothing, and costs the travel back. Start one only when what changes is what
+  the user is looking at.
 
 ## Which tool for which movement
 

@@ -157,13 +157,6 @@
       .given-name {
         text-transform: capitalize;
       }
-      /* The surface stays put: only the rows that appear or leave move. The UA
-         names the root `root`, so taking the name away is what keeps the page
-         out of the transition (what a row does is List's own, see
-         itemTransition). */
-      :root {
-        view-transition-name: none;
-      }
     </style>
   </head>
   <body>
@@ -191,14 +184,11 @@
         Text,
         useSearchText,
         useSlideValue,
-        ensureDocumentStartViewTransition,
       } from "@jsenv/navi";
       import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
       import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
       import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
       import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
-
-      const startViewTransition = ensureDocumentStartViewTransition();
 
       // Name and detail are both searchable: with homonyms allowed, the detail
       // is often the only thing telling two entries apart, so it has to be
@@ -431,7 +421,6 @@
 
                       <List
                         selectable
-                        itemTransition
                         id={`${id}_list`}
                         command="--navi-send"
                         searchText={searchSignal.value}
@@ -986,15 +975,19 @@
           sideSignal.value = entry ? entry.side || "" : "";
         };
 
-        // Every change to the list goes through a view transition: an entry
-        // that was just created appears rather than being suddenly there, and
-        // the one being deleted leaves while the rest close the gap. What a row
-        // does then belongs to the list (<List itemTransition>); starting the
-        // transition is the caller's, because only the caller owns the change.
+        // No view transition on these two, and it is not an oversight: both
+        // happen while ANOTHER screen is showing (creating from the create
+        // slide, deleting from the edit one), so the row appearing or leaving
+        // is not something anybody is looking at — and each is followed by a
+        // travel back to the list. A view transition holds the frame for its
+        // whole duration, so the travel asked for in the same breath does not
+        // start: the box takes its new height on the picture of the screen one
+        // is still on, and the list one is travelling TO shows through for an
+        // instant before anything moves. A transition for a change nobody can
+        // see, at the cost of the movement they can — see
+        // .agents/skills/animations/SKILL.md.
         const addTo = (listSignal) => (entry) => {
-          startViewTransition(() => {
-            listSignal.value = [...listSignal.value, entry];
-          });
+          listSignal.value = [...listSignal.value, entry];
         };
         const updateIn = (listSignal) => (entry) => {
           listSignal.value = listSignal.value.map((candidate) =>
@@ -1002,11 +995,9 @@
           );
         };
         const removeFrom = (listSignal) => (entry) => {
-          startViewTransition(() => {
-            listSignal.value = listSignal.value.filter(
-              (candidate) => candidate.id !== entry.id,
-            );
-          });
+          listSignal.value = listSignal.value.filter(
+            (candidate) => candidate.id !== entry.id,
+          );
         };
 
         return (

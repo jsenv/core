@@ -186,6 +186,13 @@ export const useUIStateController = (
         state: stateInitial,
         uiState: stateInitial,
         uiStateSignal,
+        // What this control holds by ITSELF — the same signal as above unless
+        // it is a button inheriting from the control around it (see `inherit`).
+        // "The value I am about" and "the value I was given" are two different
+        // questions, and a button answering the first with the second is how a
+        // travel command ended up carrying a picker's selection: see
+        // resolveCommandValue in commands.js.
+        ownUIStateSignal,
         value: controlInfo.value,
 
         facadeChild: null,

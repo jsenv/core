@@ -162,7 +162,12 @@ const resolveCommandValue = (source, event) => {
     // wrong when the command needs to propagate the selected item's identity.
     return readControlValue(source);
   }
-  return getUIStateFromElement(source);
+  // What the SOURCE says, not what the control around it holds. A button with
+  // no value of its own inherits one from the control it sits in — right for
+  // `--navi-send` ("send what is around me"), wrong for a travel: a "+" button
+  // inside a picker would say the travel is about the entry that picker has
+  // selected, and the screen it opens would prefill a new entry with it.
+  return getUIStateFromElement(source, { own: true });
 };
 
 export const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {

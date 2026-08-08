@@ -188,6 +188,25 @@ const ratioOfOneTravel = (track, from, to, targetBefore) => {
   return ratio > 1 ? 1 : ratio;
 };
 
+// A press landing while the track is already travelling: what is playing is
+// sent home in a fifth of the time it has left, and the press it could not take
+// yet is taken as soon as it lands. A press has to be FELT — nudging the pace
+// of a travel already in flight (what this used to do) reads as "nothing
+// happened", because the thing was moving before the click too. Getting there
+// almost at once and setting off again is the click being answered.
+// Played out fast rather than cut short: ending it on the spot would jump.
+// Compounds, so two presses during one travel bring it home twice as sharply,
+// up to a rate past which nobody sees the difference anyway.
+const HURRY_FACTOR = 5;
+const HURRY_RATE_MAX = 25;
+const hurryTravel = (animation) => {
+  if (!animation || animation.playState !== "running") {
+    return;
+  }
+  const rate = animation.playbackRate * HURRY_FACTOR;
+  animation.playbackRate = rate > HURRY_RATE_MAX ? HURRY_RATE_MAX : rate;
+};
+
 // The ways out of a slide: whatever carries a travel command, the built-in
 // chevrons (SlideNavButton) and anything a caller wired by hand alike. They are
 // the container's chrome, not its content — see rememberFocus.
@@ -370,6 +389,9 @@ export const SlideContainer = ({
   // What to do once the travel now starting is over, handed to the animation as
   // soon as there is one.
   const rollBackRef = useRef(null);
+  // A focus transfer read off the interaction that asked for the travel, kept
+  // until the slide it is meant for holds its final DOM (see handOverFocus).
+  const focusHandOverRef = useRef(null);
   const current = rollingArea ?? currentProp ?? currentAreaState;
   const vertical = layout === "column";
   // Which required slides have been answered (see Slide's own `required`). Held
@@ -495,16 +517,19 @@ export const SlideContainer = ({
       y: 0,
     };
     // Read before anything is marked: setting inert below moves the focus out by
-    // itself, so afterwards there is no way to tell whether it was inside. A
-    // travel asked for from inside has already handed the focus over (see
-    // goToArea) and this is false by then; what is left here is the travel
-    // nobody asked for — a `current` prop moved from outside, with the keyboard
-    // still on the slide about to go out of reach.
-    const focusIsLeaving = slideElements.some(
-      (slideElement) =>
-        slideElement !== currentElement &&
-        slideElement.contains(document.activeElement),
-    );
+    // itself, so afterwards there is no way to tell whether it was inside. What
+    // this is for is the travel nobody asked for — a `current` prop moved from
+    // outside, with the keyboard still on the slide about to go out of reach. A
+    // travel someone asked for has its own transfer waiting (focusHandOverRef,
+    // read below), and that one knows what was pressed.
+    const focusHandOver = focusHandOverRef.current;
+    const focusIsLeaving =
+      !focusHandOver &&
+      slideElements.some(
+        (slideElement) =>
+          slideElement !== currentElement &&
+          slideElement.contains(document.activeElement),
+      );
     for (const slideElement of slideElements) {
       const { x, y } = placeOf.get(readArea(slideElement)) || { x: 0, y: 0 };
       slideElement.style.setProperty(
@@ -564,20 +589,20 @@ export const SlideContainer = ({
       // Already moving, so no ease-in to play: it would stall the track for an
       // instant right where the eye is following it.
       const easing = travelInFlight ? "ease-out" : "ease";
-      // And faster still when presses are waiting: someone pressing → four
-      // times is asking to be four slides further, not to watch four travels.
-      // Each waiting press divides what is left, so the track catches up with
-      // the hand instead of playing a queue at its own pace — the same idea as
-      // the wheel, whose glide speeds up when the target moves away from it.
-      const pressesWaiting = pendingRollsRef.current.length;
-      const catchUp = 1 / (pressesWaiting + 1);
       // Cancelled rather than layered: two animations on the same property
       // would blend, and what one sees then is neither of the two moves.
       trackAnimationRef.current?.cancel();
       trackAnimationRef.current = track.animate(
         [{ translate: offsetBefore }, { translate: offset }],
-        { duration: durationMs * travelRatio * catchUp, easing },
+        { duration: durationMs * travelRatio, easing },
       );
+      // Presses still waiting behind this one: it is already late, so it is
+      // sent home at once rather than played out at the pace of someone who
+      // has stopped pressing. Someone pressing → four times is asking to be
+      // four slides further, not to watch four travels.
+      if (pendingRollsRef.current.length) {
+        hurryTravel(trackAnimationRef.current);
+      }
     }
     // A window waiting for its travel to be over (see goToArea's own loop
     // branch): the animation says when, and says it about the move that just
@@ -609,7 +634,35 @@ export const SlideContainer = ({
       if (leavingElement) {
         rememberFocus(leavingElement, document.activeElement);
       }
-      handOverFocus(currentElement, undefined);
+      handOverFocus(
+        currentElement,
+        prepareFocusTransfer(undefined, debugFocus),
+        undefined,
+      );
+    }
+    // The travel someone asked for: prepared when it was asked for, landed once
+    // the slide arriving holds its final DOM — one flush later than this one,
+    // hence the microtask (see handOverFocus). Preact re-renders the slides from
+    // the context change before it, so by then what they show is settled.
+    if (focusHandOver) {
+      focusHandOverRef.current = null;
+      queueMicrotask(() => {
+        // Asked again rather than taken on trust: a container can have moved on
+        // in between (a queued press taken, a controlled `current` the caller
+        // chose not to move), and the focus then belongs to that travel, not to
+        // this one.
+        const arrivedElement = readMap().slideElements.find(
+          (slideElement) => readArea(slideElement) === focusHandOver.area,
+        );
+        if (!arrivedElement || !arrivedElement.hasAttribute("data-current")) {
+          return;
+        }
+        handOverFocus(
+          arrivedElement,
+          focusHandOver.focusTransfer,
+          focusHandOver.event,
+        );
+      });
     }
     // Out of reach LAST, once the keyboard has already moved on: a browser
     // takes the focus off an element the moment it becomes inert, and on its
@@ -632,15 +685,11 @@ export const SlideContainer = ({
     // carousel move three steps instead of one.
     if (rollingRef.current) {
       pendingRollsRef.current.push({ area, forward, event, value, dx, dy });
-      // And the one in flight is played faster: pressing again while it moves
-      // is asking to get there sooner, and waiting out a travel at its own pace
-      // before the next one starts is what makes a carousel feel unresponsive.
-      // Sped up rather than cut short — ending it on the spot would jump.
-      const animation = trackAnimationRef.current;
-      if (animation && animation.playState === "running") {
-        const faster = animation.playbackRate * 1.8;
-        animation.playbackRate = faster > 8 ? 8 : faster;
-      }
+      // And the one in flight is sent home: waiting out a travel at its own
+      // pace before the next one starts is what makes a carousel feel
+      // unresponsive — the press has to show on screen while the finger is
+      // still down, and here that means arriving, then setting off again.
+      hurryTravel(trackAnimationRef.current);
       return true;
     }
     const { slideElements, placeOf } = readMap();
@@ -690,7 +739,11 @@ export const SlideContainer = ({
         // it — the way out one pressed excepted (see rememberFocus).
         rememberFocus(currentElement, focusedElement);
         arrivingElement.removeAttribute("inert");
-        handOverFocus(arrivingElement, event);
+        focusHandOverRef.current = {
+          area,
+          focusTransfer: prepareFocusTransfer(event, debugFocus),
+          event,
+        };
       }
     }
     if (value !== undefined) {
@@ -744,8 +797,19 @@ export const SlideContainer = ({
   // A slide with nothing focusable in it leaves the ladder empty-handed, and
   // that is what this box is for: it takes the keyboard itself (see its own
   // tabIndex), so the arrows keep working and the ring says where one is.
-  const handOverFocus = (slideElement, event) => {
-    const focusTransfer = prepareFocusTransfer(event, debugFocus);
+  //
+  // In two steps, and they are two different moments. `prepareFocusTransfer`
+  // has to read the interaction — which element a mousedown landed on, whether
+  // the modality is the keyboard — while the event is still being dispatched.
+  // The landing waits for the arriving slide to hold its final DOM, which is
+  // one flush later than one would think: a travel hands the slide a value
+  // (useSlideValue) and that value reaches it through context, so Preact
+  // re-renders the slide in a flush of its own — the container's own layout
+  // effect runs BEFORE its children have seen the value. A screen keyed by it,
+  // a form whose uncontrolled fields must start again from a new prefill,
+  // replaces its whole subtree there. Landing before that took the focus to a
+  // node about to be thrown away, and the focus went to document.body with it.
+  const handOverFocus = (slideElement, focusTransfer, event) => {
     focusTransfer.transferFocus(event, slideElement);
     // Asked of the SLIDE, not of this box: the box contains itself, so asking
     // it would answer "yes, it is here" for the very case this is about — a

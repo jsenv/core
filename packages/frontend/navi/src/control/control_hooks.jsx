@@ -1359,8 +1359,13 @@ const useInteractiveProps = (
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: (e) => {
-        const uiState = uiStateController.uiStateSignal.peek();
-        e.detail.respondWith(uiState);
+        // `own`: what this control holds by itself, ignoring what a button
+        // inherits from the control around it (see ownUIStateSignal).
+        const uiStateSignal =
+          e.detail.own && uiStateController.ownUIStateSignal
+            ? uiStateController.ownUIStateSignal
+            : uiStateController.uiStateSignal;
+        e.detail.respondWith(uiStateSignal.peek());
       },
       onnavi_set_ui_state: (e) => {
         uiStateController.setUIState(e.detail.value, e);
