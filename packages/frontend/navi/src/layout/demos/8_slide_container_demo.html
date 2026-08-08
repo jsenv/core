@@ -195,6 +195,13 @@
       .carousel-dot[data-current] {
         background: #1a1a2e;
       }
+      /* The number one is on, marked where it is read: same size, so the row
+         does not reflow as one walks it. */
+      .carousel-number[aria-current="true"] {
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
 
       .in-document {
         display: flex;
@@ -599,7 +606,13 @@
                 </Slide>
               ))}
             </SlideContainer>
-            <Box flex="x" spacing="xs" alignY="center">
+            <Box
+              flex="x"
+              spacing="xs"
+              alignY="center"
+              alignX="center"
+              width="280px"
+            >
               {text ? (
                 ends.map(({ command, label }) => (
                   <Button
@@ -624,9 +637,13 @@
                   commandFor={containerId}
                   variant={text ? "text" : "discrete"}
                   padding="xs"
+                  // Which one is showing, said on the button that leads to it:
+                  // a bar of numbers with none of them marked says how many
+                  // there are and nothing about where one stands.
                   aria-current={
                     current === `bar_photo_${index}` ? "true" : undefined
                   }
+                  className="carousel-number"
                 >
                   {index + 1}
                 </Button>

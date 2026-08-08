@@ -511,29 +511,73 @@ registerSlideCommand("--navi-left", -1, 0);
 registerSlideCommand("--navi-down", 0, 1);
 registerSlideCommand("--navi-up", 0, -1);
 
-// The ends of the walk, which no direction can say either: "all the way that
-// way" is one press whatever the number of slides between, and a map reads its
-// own order to know which one that is.
-const registerSlideEndCommand = (command, last) => {
+// A step along a line, and the two ends of it. Said without an axis on purpose:
+// a list is a line of items whichever way it is laid out, and a container of
+// slides on a single row (or a single column) is one too — so the same four
+// commands drive both, and the thing being driven reads them in its own terms.
+// A map with two axes cannot answer "next" with a straight face: the four
+// directions (--navi-left and friends) are what it is driven by.
+//
+// Two kinds of target, whichever is nearer: a list walks its items, a slide
+// container walks its slides.
+const resolveWalkableTarget = (source) =>
+  resolveExplicitTarget(source) ||
+  source.closest("[navi-selectable], [data-slide-container]");
+
+const registerWalkCommand = (command, goal) => {
   registerNaviCommand(command, (source, event) => {
-    const target =
-      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+    const target = resolveWalkableTarget(source);
     if (!target) {
       return undefined;
     }
+    const isList = target.hasAttribute("navi-selectable");
     return {
       target,
-      implementation: () =>
-        dispatchCustomEvent(target, "navi_slide_end", {
+      implementation: () => {
+        if (isList) {
+          return dispatchCustomEvent(target, "navi_request_nav", {
+            event,
+            goal,
+          });
+        }
+        if (goal === "first" || goal === "last") {
+          return dispatchCustomEvent(target, "navi_slide_end", {
+            event,
+            last: goal === "last",
+            value: resolveCommandValue(source, event),
+          });
+        }
+        // A line of slides: onwards is to the right, or downwards when that is
+        // where they are — which the container decides, not this.
+        return dispatchCustomEvent(target, "navi_slide_step", {
           event,
-          last,
+          forward: goal === "next",
           value: resolveCommandValue(source, event),
-        }),
+        });
+      },
     };
   });
 };
-registerSlideEndCommand("--navi-first", false);
-registerSlideEndCommand("--navi-last", true);
+registerWalkCommand("--navi-previous", "previous");
+registerWalkCommand("--navi-next", "next");
+registerWalkCommand("--navi-first", "first");
+registerWalkCommand("--navi-last", "last");
+
+// "Take the thing one is on": choosing the item a list is pointing at, without
+// naming it — the keyboard's own Enter, said as a command so a button can offer
+// it too.
+registerNaviCommand("--navi-activate", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[navi-selectable]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_request_activate", { event }),
+  };
+});
 
 // By name, when a direction cannot say it: a screen reached from several
 // places, or from one that is not next to it on the map. The name is part of

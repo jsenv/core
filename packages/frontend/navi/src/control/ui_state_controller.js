@@ -782,6 +782,17 @@ const GROUP_DEFAULTS = {
     distributeChildUIState: (newUIState) => newUIState,
   },
   object: {
+    // Buttons are not fields. HTML has always been clear about it: a submit
+    // button's name/value is sent only when it is the one that submitted, which
+    // is how a form offers two ways out ("save" / "delete") and still knows
+    // which was pressed. Left in the group's own value, every button would be
+    // in it at once and the last one would win — pressing Enter (which submits
+    // through the FIRST submit button) would then carry the LAST button's
+    // meaning. The submitter's own name/value is merged back in at send time,
+    // see control_action.js.
+    childControlFilter: (child) => {
+      return child.controlType !== "button" && child.controlType !== "link";
+    },
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {

@@ -388,6 +388,10 @@ const ListSelectable = (props) => {
           allowed: () => childController.setUIState(undefined, e),
         });
       }}
+      // "previous"/"next", not "up"/"down": a list is a line of items whichever
+      // way it is laid out, and a horizontal one walks sideways. The keys that
+      // drive it (arrows, Home/End) map onto that here, and so do the commands
+      // (--navi-previous / --navi-next / --navi-first / --navi-last).
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;
         const navigableEls = getNavigableElements();
@@ -404,7 +408,7 @@ const ListSelectable = (props) => {
           targetEl = navigableEls[0];
         } else if (goal === "last") {
           targetEl = navigableEls[navigableEls.length - 1];
-        } else if (goal === "down") {
+        } else if (goal === "next") {
           if (currentIndex === -1) {
             targetEl = navigableEls[0];
           } else if (currentIndex < navigableEls.length - 1) {
@@ -412,7 +416,7 @@ const ListSelectable = (props) => {
           } else {
             targetEl = navigableEls[navigableEls.length - 1];
           }
-        } else if (goal === "up") {
+        } else if (goal === "previous") {
           if (currentIndex === -1) {
             targetEl = navigableEls[0];
           } else if (currentIndex > 0) {
