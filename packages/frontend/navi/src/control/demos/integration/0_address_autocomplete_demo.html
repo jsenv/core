@@ -238,9 +238,14 @@
                 // pour éviter l'auto-complete naturel du browser
                 id="demo"
               />
-              <Button type="submit" paddingY="s" alignX="start">
-                Envoyer
-              </Button>
+              <Box flex="x" spacing="s">
+                <Button type="submit" paddingY="s">
+                  Envoyer
+                </Button>
+                <Button type="reset" variant="discrete" paddingY="s">
+                  Réinitialiser
+                </Button>
+              </Box>
             </Form>
           )}
         </FakeBackend>
