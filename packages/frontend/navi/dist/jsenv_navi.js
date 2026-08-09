@@ -35088,6 +35088,9 @@ installImportMetaCssBuild(import.meta);/**
  *   a solid surface. variant="discrete-border" does the same but keeps the border.
  * - variant="discrete" + backgroundColor: the color applies at rest and hover,
  *   and the field goes transparent while focused.
+ *
+ * variant="text" is the odd one: it renders no <input> at all, just the value
+ * as text — see InputTextualAsText below for what it is for and what it drops.
  */
 const inputCss = /* css */`
   @layer navi {
@@ -35184,7 +35187,12 @@ const inputCss = /* css */`
     cursor: inherit;
     pointer-events: auto;
 
-    .navi_control_input {
+    /* The text of variant="text" is measured with the real thing rather than
+       beside it: same padding, same margins, same room — so the two are the
+       same box and a field's style can move without one of them staying
+       behind. */
+    .navi_control_input,
+    .navi_input_text {
       box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
@@ -35196,6 +35204,10 @@ const inputCss = /* css */`
       flex-grow: 1;
       color: inherit;
       font-size: inherit;
+      /* A form control does not inherit the font on its own — the browser has
+         one of its own for it, monospace for a <textarea> — so the box's font
+         (--navi-control-font-family) is handed down by hand. */
+      font-family: inherit;
       text-align: inherit;
       background: none;
       border: none;
@@ -35226,6 +35238,34 @@ const inputCss = /* css */`
           display: none;
         }
       }
+    }
+
+    .navi_input_text {
+      /* Nothing to read yet is still a line: the box may not collapse just
+         because the value is empty. */
+      min-height: 1lh;
+      /* A form control keeps a line of its own whatever line-height the page
+         is written in; the text that stands in for one has to say the same
+         number, or the box it is meant to match changes height. */
+      line-height: normal;
+    }
+    /* The value is cut by a box of its own, and that is the whole reason it
+       exists: a field ends its text at the content edge, while an overflow set
+       on the padded box would let it run through the padding — the same value
+       would then lose a character on one side and not on the other. This box
+       IS the content edge, so both stop on the same letter.
+       Cut rather than wrapped (a second line would be taller than the field),
+       and cut rather than ellipsed (an ellipsis costs a character the field
+       does not lose). */
+    .navi_input_text_value {
+      display: block;
+      /* The whole content box, short value or not: a field's text is laid out
+         in the full width whatever it holds, so text-align lands in the same
+         place on both. */
+      width: 100%;
+      text-overflow: clip;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .navi_input_slot {
@@ -35335,6 +35375,16 @@ const inputCss = /* css */`
           transparent
         );
       }
+    }
+
+    /* The box of a field, without a field in it: the border is kept and made
+       invisible rather than dropped, and the background goes with it, so what
+       is left is text sitting exactly where the value would be — swap one for
+       the other and nothing on the page moves. */
+    &[data-variant="text"] {
+      --x-background-color: transparent;
+      --x-border-color: transparent;
+      cursor: inherit;
     }
 
     &[data-variant="underline"] {
@@ -35462,12 +35512,9 @@ const InputTextualUI = props => {
   // when remainingProps contains expandX which would try to set width to 100%
   delete inputControlRootProps.width;
   if (width === "maxLength") {
-    const {
-      maxLength
-    } = inputControlHostProps;
-    if (maxLength !== undefined) {
-      const isNumeric = props.inputMode === "numeric";
-      inputControlHostProps.width = isNumeric ? `${maxLength}ch` : `calc(${maxLength} * 1.5ch)`;
+    const widthFromMaxLength = resolveWidthFromMaxLength(inputControlHostProps.maxLength, props.inputMode);
+    if (widthFromMaxLength !== undefined) {
+      inputControlHostProps.width = widthFromMaxLength;
     }
   } else if (width === "content") {
     inputControlHostProps.fieldSizing = "content";
@@ -35510,6 +35557,96 @@ const InputTextualUI = props => {
     }), childrenWithContext]
   });
 };
+// How wide a field is when its width is left to what it accepts: a value that
+// cannot exceed maxLength characters needs no more room than that. Shared with
+// the text variant, which must land on the same number or the two would not be
+// the same box.
+const resolveWidthFromMaxLength = (maxLength, inputMode) => {
+  if (maxLength === undefined) {
+    return undefined;
+  }
+  if (inputMode === "numeric") {
+    return `${maxLength}ch`;
+  }
+  return `calc(${maxLength} * 1.5ch)`;
+};
+
+/**
+ * variant="text" — the value, written where the field would be and taking
+ * exactly its room: same paddings, same font, same line, and the border kept
+ * but made invisible, so a value one only reads and the same value being
+ * edited are one box. What it is for: an information that is sometimes known
+ * (a name already on the profile) and sometimes asked for. Swapping the field
+ * for its text must move nothing under it.
+ *
+ * It is text, and nothing else: no <input>, so nothing to focus, nothing in
+ * the tab order, and nothing sent when the form is submitted — a value the
+ * form must carry goes in an <Input type="hidden"> beside this one. Not a
+ * disabled control either: `disabled`/`aria-disabled` would announce a field
+ * one cannot use, where there is no field at all.
+ *
+ * The field's own props are dropped rather than half-honoured (placeholder,
+ * the guards, the slots): they all describe an edition that does not happen
+ * here. What is kept is what decides the box.
+ */
+// Everything a field takes that a text does not: what the value is said with,
+// what the box is measured from (read below, then dropped too), and all the
+// rest — the guards, the slots, the constraints — which describe an edition
+// that does not happen here. What survives is what a Box understands: width,
+// spacing, colors, className, style.
+const INPUT_ONLY_PROPS = ["value", "defaultValue", "signal", "id", "maxLength", "inputMode", "width", "variant", "type", "name", "placeholder", "required", "readOnly", "disabled", "loading", "error", "min", "max", "step", "pattern", "autoComplete", "autoCorrect", "spellcheck", "charGuard", "maxLengthGuard", "list", "suggestions", "headless", "fieldSizing", "action", "uiAction", "ui", "children"];
+const InputTextualAsText = props => {
+  import.meta.css = [inputCss, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  // The id a Field handed down, which is what its Label points at.
+  const controlId = useContext(ControlIdContext);
+  const {
+    value,
+    defaultValue,
+    signal,
+    id,
+    maxLength,
+    inputMode,
+    width = "maxLength"
+  } = props;
+  const valueShown = signal ? signal.value : value ?? defaultValue;
+  const textWidth = width === "maxLength" ? resolveWidthFromMaxLength(maxLength, inputMode) : width === "content" ? undefined : width;
+  const boxProps = {
+    ...props
+  };
+  for (const inputOnlyProp of INPUT_ONLY_PROPS) {
+    delete boxProps[inputOnlyProp];
+  }
+  return jsx(Box, {
+    as: "span",
+    inline: true,
+    flex: true,
+    baseClassName: "navi_input",
+    "data-variant": "text",
+    styleCSSVars: InputStyleCSSVars,
+    ...boxProps,
+    children: jsx(Box, {
+      as: "span",
+      baseClassName: "navi_input_text",
+      id: id || controlId,
+      width: textWidth,
+      children: jsx("span", {
+        className: "navi_input_text_value",
+        children: valueShown
+      })
+    })
+  });
+};
+const InputTextualAsTextResolver = props => {
+  const Next = useNextResolver();
+  if (props.variant === "text") {
+    return jsx(InputTextualAsText, {
+      ...props
+    });
+  }
+  return jsx(Next, {
+    ...props
+  });
+};
 const InputTextualFirstResolver = props => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
@@ -35518,7 +35655,7 @@ const InputTextualFirstResolver = props => {
     ...props
   });
 };
-const InputTextual = createComponentResolver([InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputTypeResolver, InputModeResolver, InputHeadlessResolver, InputTextualUI]);
+const InputTextual = createComponentResolver([InputTextualAsTextResolver, InputTextualFirstResolver, InputWithListResolver, InputWithSuggestionsResolver, InputTypeResolver, InputModeResolver, InputHeadlessResolver, InputTextualUI]);
 const RealInput = ({
   maxLength,
   ...domProps
@@ -48356,7 +48493,49 @@ installImportMetaCssBuild(import.meta);/**
  * slide that is about to leave.
  */
 const css$p = /* css */`
+  @layer navi {
+    .navi_picker_spin {
+      /* A picker one steps through is still a picker: what themes every picker
+         padding themes this one too. */
+      --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
+      --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
+    }
+  }
+
   .navi_picker_spin {
+    /* The padding is written on what is inside the box rather than on the box
+       — the day takes all four sides, the two chevrons only the vertical ones
+       — so the four sides are resolved once here, in the side-then-axis-then
+       -shorthand order a Box resolves them in. What writes them: the padding
+       props, through PICKER_SPIN_STYLE_CSS_VARS below. */
+    --x-picker-spin-padding-top: var(
+      --picker-spin-padding-top,
+      var(
+        --picker-spin-padding-y,
+        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
+      )
+    );
+    --x-picker-spin-padding-right: var(
+      --picker-spin-padding-right,
+      var(
+        --picker-spin-padding-x,
+        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
+      )
+    );
+    --x-picker-spin-padding-bottom: var(
+      --picker-spin-padding-bottom,
+      var(
+        --picker-spin-padding-y,
+        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
+      )
+    );
+    --x-picker-spin-padding-left: var(
+      --picker-spin-padding-left,
+      var(
+        --picker-spin-padding-x,
+        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
+      )
+    );
     /* What the loading outline is drawn around. */
     position: relative;
     /* Written in the control font, like the picker it wraps: the day and its
@@ -48437,17 +48616,19 @@ const css$p = /* css */`
     width: min(100%, var(--picker-spin-picker-width, 12ch));
     translate: -50% 0;
   }
-  /* The value takes it as padding; the two chevrons take it as their own
-     --button-padding-y (a button's padding lives on its content, see
-     button_ui.jsx), which is why it is said as a variable rather than applied
-     here. Same number on all three: it is what makes them one line rather than
-     three boxes. */
-  .navi_picker_spin [data-slide] {
-    padding-block: var(--picker-spin-padding-y);
-  }
-  /* Centred, always: the middle holds three values of three different lengths,
+  /* Where the padding lands: all four sides on the value, the two vertical
+     ones on the chevrons below — the same number above and below is what makes
+     the three one line rather than three boxes, while sideways it is the room
+     between the value and the chevron it would otherwise touch. Not on the box
+     itself: that would push the chevrons off the corners they are rounded by.
+
+     Centred, always: the middle holds three values of three different lengths,
      and a value that starts where the last one ended reads as a jump. */
   .navi_picker_spin [data-slide] {
+    padding-top: var(--x-picker-spin-padding-top);
+    padding-right: var(--x-picker-spin-padding-right);
+    padding-bottom: var(--x-picker-spin-padding-bottom);
+    padding-left: var(--x-picker-spin-padding-left);
     text-align: center;
     overflow: hidden;
   }
@@ -48474,8 +48655,12 @@ const css$p = /* css */`
      around it, so "one line" means the same on both sides. */
   .navi_picker_spin > .navi_picker_spin_way_out {
     box-sizing: border-box;
-    height: calc(1lh + 2 * var(--picker-spin-padding-y));
-    padding-block: var(--picker-spin-padding-y);
+    height: calc(
+      1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom)
+    );
+    padding-top: var(--x-picker-spin-padding-top);
+    padding-bottom: var(--x-picker-spin-padding-bottom);
     color: inherit;
     background: none;
     border: none;
@@ -48556,8 +48741,13 @@ const css$p = /* css */`
  * @param {"long"|"short"|"numeric"} [format="long"] How the date is written.
  *   Long by default, since this is a control one reads rather than a column
  *   one scans; `short` where the room is not there.
- * @param {string} [paddingY="xs"] Above and below, on the day AND on the two
- *   chevrons: it is what makes the three the same height.
+ * @param {string} [padding] The room around the value, `paddingX`/`paddingY`
+ *   and the four sides included. It goes on what is inside the box rather than
+ *   on the box: above and below it is taken by the day AND by the two chevrons,
+ *   which is what makes the three the same height; sideways it is the room
+ *   between the day and the chevron beside it. Left unsaid it is the padding
+ *   every picker takes (`--navi-picker-padding-x-default` and its `-y` twin),
+ *   so a theme that spaces its fields spaces this one with them.
  * @param {number} [maxLines] How many lines the day may take before it is cut
  *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a day
  *   too long for the box wraps, and the box grows.
@@ -48583,7 +48773,6 @@ const DaySpin = ({
   duration = 250,
   lang,
   format = "long",
-  paddingY = "xs",
   vertical,
   readOnly,
   disabled,
@@ -48727,13 +48916,10 @@ const DaySpin = ({
     ,
 
     pseudoClasses: PICKER_SPIN_PSEUDO_CLASSES,
+    styleCSSVars: PICKER_SPIN_STYLE_CSS_VARS,
     "data-vertical": vertical ? "" : undefined,
     "data-readonly": readOnlyResolved ? "" : undefined,
     "data-disabled": disabledResolved ? "" : undefined,
-    style: {
-      "--picker-spin-padding-y": resolveSpacingSize(paddingY),
-      ...rest.style
-    },
     children: [jsx(LoadingOutline, {
       loading: loading,
       color: "var(--navi-loader-color)",
@@ -48914,6 +49100,20 @@ const WayOut = ({
   })
 });
 const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+
+// A padding written on this box would sit between its border and the chevrons,
+// which are meant to reach the corners they are rounded by — so each padding
+// prop becomes a variable instead, and the CSS above hands it to the day and to
+// the chevrons themselves. Same trick, and same var chain, as Picker's.
+const PICKER_SPIN_STYLE_CSS_VARS = {
+  padding: "--picker-spin-padding",
+  paddingX: "--picker-spin-padding-x",
+  paddingY: "--picker-spin-padding-y",
+  paddingTop: "--picker-spin-padding-top",
+  paddingRight: "--picker-spin-padding-right",
+  paddingBottom: "--picker-spin-padding-bottom",
+  paddingLeft: "--picker-spin-padding-left"
+};
 
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only
