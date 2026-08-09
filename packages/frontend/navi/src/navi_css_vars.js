@@ -66,6 +66,10 @@ const css = /* css */ `
          Override this single variable to apply a consistent brand color across
          all components that need to stand out. */
       --navi-accent-color: rgb(3, 30, 60);
+      /* The surface a control's content sits on — the "paper" behind the text.
+         Fields use it whenever they need a solid background (their default
+         background, a transparent field being edited, …). */
+      --navi-surface-color: light-dark(#ffffff, #1c1c1e);
       --navi-color-white: white;
       --navi-color-dark: rgb(55, 60, 69);
 

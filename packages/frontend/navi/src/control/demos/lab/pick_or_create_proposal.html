@@ -56,14 +56,6 @@
         color: #444;
         font-size: 0.95rem;
       }
-      /* navi's own `discrete` resolves to a transparent background, which reads
-         as plain white on a white surface. Same mechanism, grey at rest. */
-      .navi_dialog .navi_input[data-discrete] {
-        --x-background-color: #f1f3f5;
-      }
-      .navi_dialog .navi_input[data-discrete][data-focus] {
-        --x-background-color: #fff;
-      }
       .screen-title {
         margin: 0 0 18px;
         font-weight: 600;
@@ -425,7 +417,7 @@
                         // the focus would also raise the keyboard on mobile.
                         autoFocus="last-resort"
                         // grey at rest, white once focused
-                        discrete
+                        variant="discrete"
                         slotSpacing="s"
                         borderRadius="m"
                         paddingX="m"

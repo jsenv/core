@@ -40,6 +40,14 @@
  *   Blocks keydown when the limit is reached; truncates on paste/set with an info callout.
  *   The maxLength constraint remains active for form validation at submit.
  *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
+ *
+ * Background color:
+ * - backgroundColor="transparent" applies at rest and hover; a focused field
+ *   turns solid (--navi-surface-color) so text is not typed over what sits behind.
+ * - variant="discrete" drops background and border at rest; focus brings back
+ *   a solid surface.
+ * - variant="discrete" + backgroundColor: the color applies at rest and hover,
+ *   and the field goes transparent while focused.
  */
 
 import { useRef } from "preact/hooks";
@@ -73,7 +81,7 @@ const css = /* css */ `
       --font-family: var(--navi-control-font-family);
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
-      --background-color: white;
+      --background-color: var(--navi-surface-color);
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       --placeholder-color: var(--color-dimmed);
@@ -257,16 +265,30 @@ const css = /* css */ `
       --x-outline-color: var(--callout-color);
     }
 
-    &[data-discrete] {
-      --x-background-color: transparent;
-      --x-background-color-hover: transparent;
+    /* A transparent background is a resting look, not an editing one: while
+       the field has focus it turns solid so text is not typed over whatever
+       sits behind it. */
+    &[data-background-transparent] {
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
+
+      &[data-focus] {
+        --x-background-color: var(--background-color-focus);
+      }
+    }
+
+    &[data-variant="discrete"] {
+      /* An inline backgroundColor prop overrides this default */
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
       /* The border is part of what makes a field look like a field, so a
          discrete one does without it until it is interacted with — same idea
          as the background above, and the two come back together. */
       --border-color: transparent;
 
       &[data-focus] {
-        --x-background-color: white;
+        --x-background-color: var(--background-color-focus);
         --x-border-color: color-mix(
           in srgb,
           var(--border-color) 55%,
@@ -274,10 +296,15 @@ const css = /* css */ `
         );
       }
       &[data-readonly] {
-        --x-background-color: transparent;
+        --x-background-color: var(--background-color);
       }
       &[data-disabled] {
-        --x-background-color: transparent;
+        --x-background-color: var(--background-color);
+      }
+      /* With an explicit background color the movement flips: colored at
+         rest and on hover, back to transparent while being edited. */
+      &[data-background] {
+        --background-color-focus: transparent;
       }
     }
 
@@ -366,7 +393,7 @@ const InputTextualUI = (props) => {
   // keywords have to become lengths here — "s" reaching CSS untouched makes the
   // declaration invalid, silently, and the gap just goes away.
   props.slotSpacing = resolveSpacingSize(props.slotSpacing);
-  const { ui, discrete, variant, width = "maxLength" } = props;
+  const { ui, variant, backgroundColor, width = "maxLength" } = props;
   const [
     inputControlRootProps,
     inputControlHostProps,
@@ -413,9 +440,15 @@ const InputTextualUI = (props) => {
       {...inputControlRootProps}
       basePseudoState={basePseudoState}
       ui={undefined}
-      data-discrete={discrete ? "" : undefined}
-      discrete={undefined} // handled via data attribute
       data-variant={variant || undefined}
+      data-background={
+        backgroundColor !== undefined && backgroundColor !== "transparent"
+          ? ""
+          : undefined
+      }
+      data-background-transparent={
+        backgroundColor === "transparent" ? "" : undefined
+      }
       styleCSSVars={InputStyleCSSVars}
       pseudoStateSelector=".navi_control_input"
       pseudoClasses={InputPseudoClasses}
