@@ -17,6 +17,7 @@
           
         });
       </script>
+      <script src="/@fs@jsenv/core/src/plugins/page_switcher/client/page_switcher.js" jsenv-injected-by="jsenv:page_switcher"></script>
       <script src="/@fs@jsenv/core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
       <script jsenv-injected-by="jsenv:supervisor" content-indented="">
         window.__supervisor__.setup({
@@ -44,6 +45,13 @@
             
         initAutoreload({
           "mainFilePath": "/index.html"
+        });
+      </script>
+      <script type="module" jsenv-injected-by="jsenv:dependency_status" content-indented="">
+        import { initDependencyStatus } from "/@fs@jsenv/core/src/plugins/dependency_status/client/dependency_status.js";
+            
+        initDependencyStatus({
+          "problems": []
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
