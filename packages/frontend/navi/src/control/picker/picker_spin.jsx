@@ -226,7 +226,10 @@ const css = /* css */ `
     color: inherit;
     background: none;
     border: none;
-    border-radius: var(--navi-control-border-radius);
+    /* Square by default, and rounded back only where the box is rounded (see
+       below): the corners that give onto the value have nothing to follow, and
+       a radius there would show as a notch in the pressed background. */
+    border-radius: 0;
     cursor: pointer;
   }
   .navi_picker_spin > .navi_picker_spin_way_out:hover {
@@ -252,9 +255,10 @@ const css = /* css */ `
     justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner
-     of a rounded spin is rounded there too, and nowhere else. Said with
-     inherit rather than clipped away with overflow, which would cut the focus
-     ring of the very button it rounds. */
+     of a rounded spin is rounded there too, and nowhere else — the two corners
+     it does not own stay at the 0 above. Said with inherit rather than clipped
+     away with overflow, which would cut the focus ring of the very button it
+     rounds. */
   .navi_picker_spin:not([data-vertical])
     > .navi_picker_spin_way_out:first-of-type {
     border-start-start-radius: inherit;
