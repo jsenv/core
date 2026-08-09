@@ -48,9 +48,12 @@
  *   a solid surface. variant="discrete-border" does the same but keeps the border.
  * - variant="discrete" + backgroundColor: the color applies at rest and hover,
  *   and the field goes transparent while focused.
+ *
+ * variant="text" is the odd one: it renders no <input> at all, just the value
+ * as text — see InputTextualAsText below for what it is for and what it drops.
  */
 
-import { useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
 import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
@@ -59,6 +62,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { ControlIdContext } from "../control_context.js";
 import { ControlChildrenWrapper, useControlProps } from "../control_hooks.jsx";
 import { InputModeResolver } from "./input_resolver_mode.jsx";
 import { InputTypeResolver } from "./input_resolver_type.jsx";
@@ -165,7 +169,12 @@ export const inputCss = /* css */ `
     cursor: inherit;
     pointer-events: auto;
 
-    .navi_control_input {
+    /* The text of variant="text" is measured with the real thing rather than
+       beside it: same padding, same margins, same room — so the two are the
+       same box and a field's style can move without one of them staying
+       behind. */
+    .navi_control_input,
+    .navi_input_text {
       box-sizing: content-box;
       min-width: 1ch;
       margin-top: calc(-1 * var(--x-padding-top));
@@ -211,6 +220,21 @@ export const inputCss = /* css */ `
           display: none;
         }
       }
+    }
+
+    .navi_input_text {
+      /* Nothing to read yet is still a line: the box may not collapse just
+         because the value is empty. */
+      min-height: 1lh;
+      text-overflow: ellipsis;
+      /* A form control keeps a line of its own whatever line-height the page
+         is written in; the text that stands in for one has to say the same
+         number, or the box it is meant to match changes height. */
+      line-height: normal;
+      /* Cut rather than wrapped, the way a field shows the start of a value
+         too long for it — a second line would be taller than the field. */
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     .navi_input_slot {
@@ -320,6 +344,16 @@ export const inputCss = /* css */ `
           transparent
         );
       }
+    }
+
+    /* The box of a field, without a field in it: the border is kept and made
+       invisible rather than dropped, and the background goes with it, so what
+       is left is text sitting exactly where the value would be — swap one for
+       the other and nothing on the page moves. */
+    &[data-variant="text"] {
+      --x-background-color: transparent;
+      --x-border-color: transparent;
+      cursor: inherit;
     }
 
     &[data-variant="underline"] {
@@ -432,12 +466,12 @@ const InputTextualUI = (props) => {
   // when remainingProps contains expandX which would try to set width to 100%
   delete inputControlRootProps.width;
   if (width === "maxLength") {
-    const { maxLength } = inputControlHostProps;
-    if (maxLength !== undefined) {
-      const isNumeric = props.inputMode === "numeric";
-      inputControlHostProps.width = isNumeric
-        ? `${maxLength}ch`
-        : `calc(${maxLength} * 1.5ch)`;
+    const widthFromMaxLength = resolveWidthFromMaxLength(
+      inputControlHostProps.maxLength,
+      props.inputMode,
+    );
+    if (widthFromMaxLength !== undefined) {
+      inputControlHostProps.width = widthFromMaxLength;
     }
   } else if (width === "content") {
     inputControlHostProps.fieldSizing = "content";
@@ -488,6 +522,133 @@ const InputTextualUI = (props) => {
     </Box>
   );
 };
+// How wide a field is when its width is left to what it accepts: a value that
+// cannot exceed maxLength characters needs no more room than that. Shared with
+// the text variant, which must land on the same number or the two would not be
+// the same box.
+const resolveWidthFromMaxLength = (maxLength, inputMode) => {
+  if (maxLength === undefined) {
+    return undefined;
+  }
+  if (inputMode === "numeric") {
+    return `${maxLength}ch`;
+  }
+  return `calc(${maxLength} * 1.5ch)`;
+};
+
+/**
+ * variant="text" — the value, written where the field would be and taking
+ * exactly its room: same paddings, same font, same line, and the border kept
+ * but made invisible, so a value one only reads and the same value being
+ * edited are one box. What it is for: an information that is sometimes known
+ * (a name already on the profile) and sometimes asked for. Swapping the field
+ * for its text must move nothing under it.
+ *
+ * It is text, and nothing else: no <input>, so nothing to focus, nothing in
+ * the tab order, and nothing sent when the form is submitted — a value the
+ * form must carry goes in an <Input type="hidden"> beside this one. Not a
+ * disabled control either: `disabled`/`aria-disabled` would announce a field
+ * one cannot use, where there is no field at all.
+ *
+ * The field's own props are dropped rather than half-honoured (placeholder,
+ * the guards, the slots): they all describe an edition that does not happen
+ * here. What is kept is what decides the box.
+ */
+// Everything a field takes that a text does not: what the value is said with,
+// what the box is measured from (read below, then dropped too), and all the
+// rest — the guards, the slots, the constraints — which describe an edition
+// that does not happen here. What survives is what a Box understands: width,
+// spacing, colors, className, style.
+const INPUT_ONLY_PROPS = [
+  "value",
+  "defaultValue",
+  "signal",
+  "id",
+  "maxLength",
+  "inputMode",
+  "width",
+  "variant",
+  "type",
+  "name",
+  "placeholder",
+  "required",
+  "readOnly",
+  "disabled",
+  "loading",
+  "error",
+  "min",
+  "max",
+  "step",
+  "pattern",
+  "autoComplete",
+  "autoCorrect",
+  "spellcheck",
+  "charGuard",
+  "maxLengthGuard",
+  "list",
+  "suggestions",
+  "headless",
+  "fieldSizing",
+  "action",
+  "uiAction",
+  "ui",
+  "children",
+];
+
+const InputTextualAsText = (props) => {
+  import.meta.css = inputCss;
+  // The id a Field handed down, which is what its Label points at.
+  const controlId = useContext(ControlIdContext);
+  const {
+    value,
+    defaultValue,
+    signal,
+    id,
+    maxLength,
+    inputMode,
+    width = "maxLength",
+  } = props;
+  const valueShown = signal ? signal.value : (value ?? defaultValue);
+  const textWidth =
+    width === "maxLength"
+      ? resolveWidthFromMaxLength(maxLength, inputMode)
+      : width === "content"
+        ? undefined
+        : width;
+  const boxProps = { ...props };
+  for (const inputOnlyProp of INPUT_ONLY_PROPS) {
+    delete boxProps[inputOnlyProp];
+  }
+
+  return (
+    <Box
+      as="span"
+      inline
+      flex
+      baseClassName="navi_input"
+      data-variant="text"
+      styleCSSVars={InputStyleCSSVars}
+      {...boxProps}
+    >
+      <Box
+        as="span"
+        baseClassName="navi_input_text"
+        id={id || controlId}
+        width={textWidth}
+      >
+        {valueShown}
+      </Box>
+    </Box>
+  );
+};
+const InputTextualAsTextResolver = (props) => {
+  const Next = useNextResolver();
+
+  if (props.variant === "text") {
+    return <InputTextualAsText {...props} />;
+  }
+  return <Next {...props} />;
+};
 const InputTextualFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
@@ -496,6 +657,7 @@ const InputTextualFirstResolver = (props) => {
   return <Next {...props} />;
 };
 export const InputTextual = createComponentResolver([
+  InputTextualAsTextResolver,
   InputTextualFirstResolver,
   InputWithListResolver,
   InputWithSuggestionsResolver,
