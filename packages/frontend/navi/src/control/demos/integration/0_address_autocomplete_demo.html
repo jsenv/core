@@ -151,7 +151,6 @@
                 type="search"
                 list={`${id}_options`}
                 placeholder="12 rue de la Paix Paris"
-                autoComplete="nope"
                 signal={searchSignal}
                 action={searchAddress}
                 actionDebounce={300}
@@ -234,7 +233,11 @@
         <FakeBackend>
           {({ action }) => (
             <Form action={action} flex="y" spacing="m" expandX alignX="start">
-              <AddressFields id="address" />
+              <AddressFields
+                // Il est important de passer un id que le browser ne va pas interpréter comme une adresse
+                // pour éviter l'auto-complete naturel du browser
+                id="demo"
+              />
               <Button type="submit" paddingY="s" alignX="start">
                 Envoyer
               </Button>
