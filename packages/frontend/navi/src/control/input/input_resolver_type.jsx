@@ -77,7 +77,10 @@ const InputSearchUI = ({ icon }) => {
         icon
         variant="discrete"
       >
-        <Icon>
+        {/* fillLine, like the search icon in InputIconSlot: the two take turns
+            in the same slot, so they must occupy the same box (1lh square) or
+            the input's fit-content width shifts when one replaces the other. */}
+        <Icon fillLine>
           <CloseSvg />
         </Icon>
       </Button>

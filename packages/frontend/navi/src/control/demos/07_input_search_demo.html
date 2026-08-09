@@ -121,17 +121,17 @@
           <div className="demo-section">
             <Heading id="states">States</Heading>
 
-            <Box column spacing="sm">
+            <Box flex spacing="m" flexWrap>
               <fieldset>
                 <legend>Default — navi vs native</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input type="search" placeholder="Search..." />
                   <input type="search" placeholder="Search..." />
                 </Box>
               </fieldset>
               <fieldset>
                 <legend>:focus-visible</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input
                     type="search"
                     placeholder="Search..."
@@ -142,7 +142,7 @@
               </fieldset>
               <fieldset>
                 <legend>With value</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input
                     type="search"
                     placeholder="Search..."
@@ -155,7 +155,7 @@
               </fieldset>
               <fieldset>
                 <legend>:read-only</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input
                     type="search"
                     action={() => {}}
@@ -167,7 +167,7 @@
               </fieldset>
               <fieldset>
                 <legend>:disabled</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input
                     type="search"
                     disabled
@@ -179,7 +179,7 @@
               </fieldset>
               <fieldset>
                 <legend>Loading</legend>
-                <Box row spacing="sm" alignX="start">
+                <Box flex="y" spacing="xs" alignX="start">
                   <Input type="search" loading value="test" action={() => {}} />
                 </Box>
               </fieldset>
@@ -399,8 +399,8 @@
 
             <fieldset>
               <legend>Filter Product List</legend>
-              <Box column spacing="m">
-                <Box row spacing="md" alignX="start">
+              <Box flex="y" spacing="l">
+                <Box flex="y" spacing="s" alignX="start">
                   <Caption>Regular action</Caption>
 
                   <Input
@@ -415,7 +415,7 @@
                   <FilteredItems searchTerm={searchTerm} />
                 </Box>
 
-                <Box row spacing="md" alignX="start">
+                <Box flex="y" spacing="s" alignX="start">
                   <Caption>action debounced 1s</Caption>
 
                   <Input
