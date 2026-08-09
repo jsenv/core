@@ -622,6 +622,11 @@ const WayOut = ({
     aria-label={label}
     aria-disabled={unavailableMessage ? "true" : undefined}
     data-unavailable={unavailableMessage ? "" : undefined}
+    // At the chevron, not beside it: a callout aims its arrow at where the
+    // anchor's text starts, and there is no text here — only a glyph in the
+    // middle of the box, which is what one pressed and what the answer is
+    // about.
+    data-callout-arrow-x="center"
     // Read by triggerNaviCommand below the same way it reads a button's own.
     commandfor={containerId}
     flex

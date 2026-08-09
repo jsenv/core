@@ -48664,7 +48664,10 @@ const css$p = /* css */`
     color: inherit;
     background: none;
     border: none;
-    border-radius: var(--navi-control-border-radius);
+    /* Square by default, and rounded back only where the box is rounded (see
+       below): the corners that give onto the value have nothing to follow, and
+       a radius there would show as a notch in the pressed background. */
+    border-radius: 0;
     cursor: pointer;
   }
   .navi_picker_spin > .navi_picker_spin_way_out:hover {
@@ -48690,9 +48693,10 @@ const css$p = /* css */`
     justify-content: center;
   }
   /* The corners of the box belong to what sits in them: a chevron in the corner
-     of a rounded spin is rounded there too, and nowhere else. Said with
-     inherit rather than clipped away with overflow, which would cut the focus
-     ring of the very button it rounds. */
+     of a rounded spin is rounded there too, and nowhere else — the two corners
+     it does not own stay at the 0 above. Said with inherit rather than clipped
+     away with overflow, which would cut the focus ring of the very button it
+     rounds. */
   .navi_picker_spin:not([data-vertical])
     > .navi_picker_spin_way_out:first-of-type {
     border-start-start-radius: inherit;
@@ -49059,6 +49063,13 @@ const WayOut = ({
   "aria-label": label,
   "aria-disabled": unavailableMessage ? "true" : undefined,
   "data-unavailable": unavailableMessage ? "" : undefined
+  // At the chevron, not beside it: a callout aims its arrow at where the
+  // anchor's text starts, and there is no text here — only a glyph in the
+  // middle of the box, which is what one pressed and what the answer is
+  // about.
+  ,
+
+  "data-callout-arrow-x": "center"
   // Read by triggerNaviCommand below the same way it reads a button's own.
   ,
 
