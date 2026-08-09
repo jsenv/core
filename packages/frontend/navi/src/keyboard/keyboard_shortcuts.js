@@ -329,6 +329,11 @@ const generateCrossPlatformCombination = (combination) => {
   return crossPlatform;
 };
 const keyboardEventIsMatchingKeyCombination = (event, keyCombination) => {
+  if (!event.key) {
+    // Some keydown events carry no key at all — the browser synthesizes one
+    // when a native autofill/search suggestion is clicked. No key, no match.
+    return false;
+  }
   const keys = keyCombination.toLowerCase().split("+");
   const activeModifiers = new Set();
   for (const eventProperty of Object.keys(modifierKeyMapping)) {
