@@ -436,7 +436,10 @@ const css = /* css */ `
  * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
  *   `focus_transfer.js` — `"last-resort"` focuses the popover itself only if it
  *   has no other focusable descendant, `"restore"` keeps it out of the
- *   opening focus chain unless it held focus when the popover closed.
+ *   opening focus chain unless it held focus when the popover closed. `false`
+ *   disables the open-time focus transfer entirely: nothing inside the popover
+ *   receives focus, whoever had the keyboard keeps it — the combobox case,
+ *   where suggestions open under an input being typed in.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
@@ -1181,7 +1184,15 @@ const usePopoverProps = (props) => {
       !silent && hasCssTransitionAnimation
         ? suppressPointerEventsDuringTransition(popoverEl)
         : null;
-    const restoreFocus = openController.transferFocusOnOpen(popoverEl);
+    // autoFocus={false}: opening moves no focus at all — whoever has the
+    // keyboard keeps it (combobox-style suggestions under an input being
+    // typed in). The element-level useAutoFocus hook is already a no-op for
+    // false; this skips the open transfer too, and with no transfer there is
+    // nothing to restore on close.
+    const restoreFocus =
+      autoFocus === false
+        ? null
+        : openController.transferFocusOnOpen(popoverEl);
     debugPopup(
       e,
       isTopLayer
@@ -1227,7 +1238,7 @@ const usePopoverProps = (props) => {
           },
         );
       }
-      restoreFocus(closeEvent);
+      restoreFocus?.(closeEvent);
 
       // pickPositionRelativeTo (visible_rect.js) writes data-position-y/x-
       // current unconditionally on every call, and treats their mere

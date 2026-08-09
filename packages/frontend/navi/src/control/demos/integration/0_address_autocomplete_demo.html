@@ -31,17 +31,16 @@
     <h1>Adresse avec autocomplete</h1>
     <p class="intro">
       On tape, l'API adresse.data.gouv.fr suggère; choisir une suggestion
-      remplit des champs cachés (street_number, street_type, street_name,
-      postal_code, city) que le formulaire envoie — visibles dans le backend
-      simulé à l'envoi. Une adresse tapée sans passer par une suggestion est
-      découpée au mieux.
+      remplit les composants structurés en dessous, qui restent modifiables et
+      sont ce que le formulaire envoie. Une adresse tapée sans passer par une
+      suggestion est découpée au mieux.
     </p>
     <div id="app"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useSignal } from "@preact/signals";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -135,7 +134,12 @@
 
       const AddressField = ({ id }) => {
         const textSignal = useSignal("");
-        const [suggestions, setSuggestions] = useState([]);
+        // null: rien à montrer, popover fermé; []: recherche faite, aucun
+        // résultat — le popover reste ouvert pour le dire
+        const [suggestions, setSuggestions] = useState(null);
+        const [searching, setSearching] = useState(false);
+        // la requête en vol, annulée dès qu'une frappe la rend obsolète
+        const abortRef = useRef(null);
         // Un signal par composant: chacun est un champ nommé du formulaire,
         // c'est le formulaire qui les envoie — rien à collecter à la main
         const componentSignals = {
@@ -151,32 +155,53 @@
           }
         };
 
-        // actionDebounce fait le debounce, l'action reçoit un signal d'abort
-        // (la frappe suivante annule la requête en cours), et l'input montre
-        // son état loading pendant que ça tourne
-        const searchAddress = async (value, { signal }) => {
+        // Sync exprès: une action async passerait l'input en loading — donc
+        // read-only — pendant la recherche, alors qu'on veut continuer à
+        // taper. C'est la liste de suggestions qui porte l'état loading, et
+        // l'abort de la requête en vol est géré ici (le signal d'abort d'une
+        // action ne couvre que la durée de son run, fini immédiatement en
+        // sync). actionDebounce fait toujours le debounce.
+        const searchAddress = (value) => {
           const typed = (value || "").trim();
           // ce qui avait été choisi ne décrit plus le texte: on retombe sur
           // le découpage au mieux jusqu'au prochain choix
           writeComponents(typed ? parseAddress(typed) : {});
+          abortRef.current?.abort();
           if (typed.length < SUGGESTION_MIN_CHARS) {
-            setSuggestions([]);
+            setSearching(false);
+            setSuggestions(null);
             return;
           }
-          try {
-            const url = `${GEO_API_URL}?q=${encodeURIComponent(typed)}&limit=5&autocomplete=1`;
-            const response = await fetch(url, { signal });
-            const geoJson = await response.json();
-            setSuggestions(geoJson.features || []);
-          } catch {
-            // autocomplete en panne = pas de suggestions, le champ reste un
-            // champ texte qui marche
-            setSuggestions([]);
-          }
+          const abortController = new AbortController();
+          abortRef.current = abortController;
+          // la liste s'affiche tout de suite, en loading, sans attendre la
+          // réponse
+          setSearching(true);
+          const search = async () => {
+            try {
+              const url = `${GEO_API_URL}?q=${encodeURIComponent(typed)}&limit=5&autocomplete=1`;
+              const response = await fetch(url, {
+                signal: abortController.signal,
+              });
+              const geoJson = await response.json();
+              setSuggestions(geoJson.features || []);
+              setSearching(false);
+            } catch {
+              if (abortController.signal.aborted) {
+                // une frappe plus récente a repris la main
+                return;
+              }
+              // autocomplete en panne = pas de suggestions, le champ reste
+              // un champ texte qui marche
+              setSuggestions(null);
+              setSearching(false);
+            }
+          };
+          search();
         };
 
         const pickSuggestion = (featureId) => {
-          const feature = suggestions.find(
+          const feature = (suggestions || []).find(
             (candidate) => candidate.properties.id === featureId,
           );
           if (!feature) {
@@ -187,76 +212,129 @@
           // écrire le signal ne repasse pas par l'action de recherche: elle
           // ne se déclenche que sur une frappe, la liste ne se rouvre pas
           textSignal.value = formatAddress(components);
-          setSuggestions([]);
+          abortRef.current?.abort();
+          setSearching(false);
+          setSuggestions(null);
         };
 
         return (
-          <Field flex="y" spacingWithControl="s" alignX="start">
-            <Label>Adresse</Label>
-            <Input
-              id={id}
-              type="search"
-              navi-list={`${id}_suggestions`}
-              placeholder="12 rue de la Paix, Antibes"
-              signal={textSignal}
-              action={searchAddress}
-              actionDebounce={300}
-              autoComplete="off"
-              borderRadius="s"
-              paddingX="s"
-              paddingY="s"
-              width="320px"
-            />
-            {/* anchor + minWidth="var(--anchor-width)": le popover est posé
-                sous l'input et fait au moins sa largeur */}
-            <Popover
-              anchor={id}
-              open={suggestions.length > 0}
-              minWidth="var(--anchor-width)"
-              autoFocus={false}
-            >
-              <List
-                selectable
-                id={`${id}_suggestions`}
-                uiAction={pickSuggestion}
-                separator
-                expandX
-              >
-                {suggestions.map((feature, index) => (
-                  <List.Item
-                    selectable
-                    key={feature.properties.id || index}
-                    id={`${id}_suggestion_${index}`}
-                    index={index}
-                    value={feature.properties.id}
-                    padding="s"
-                  >
-                    <Box flex="y">
-                      <Text size="m">{feature.properties.label}</Text>
-                      {feature.properties.context && (
-                        <Text size="xs" color="secondary">
-                          {feature.properties.context}
-                        </Text>
-                      )}
-                    </Box>
-                  </List.Item>
-                ))}
-              </List>
-            </Popover>
-
-            {/* Les composants structurés ne se voient pas: ce sont des champs
-                cachés du formulaire, qui les envoie avec le reste */}
-            {Object.keys(componentSignals).map((name) => (
+          <Box flex="y" spacing="m" alignX="start">
+            <Field flex="y" spacingWithControl="s">
+              <Label>Adresse</Label>
               <Input
-                key={name}
-                type="hidden"
-                name={name}
-                signal={componentSignals[name]}
+                id={id}
+                type="search"
+                navi-list={`${id}_suggestions`}
+                placeholder="12 rue de la Paix, Antibes"
+                signal={textSignal}
+                action={searchAddress}
+                actionDebounce={300}
+                autoComplete="off"
+                borderRadius="s"
+                paddingX="s"
+                paddingY="s"
+                width="320px"
               />
-            ))}
-          </Field>
+              {/* anchor + minWidth="var(--anchor-width)": le popover est posé
+                  sous l'input et fait au moins sa largeur.
+                  autoFocus={false}: l'ouverture ne déplace pas le focus, on
+                  est en train de taper dans l'input et on y reste */}
+              <Popover
+                anchor={id}
+                open={searching || suggestions !== null}
+                minWidth="var(--anchor-width)"
+                autoFocus={false}
+              >
+                <List
+                  selectable
+                  id={`${id}_suggestions`}
+                  uiAction={pickSuggestion}
+                  loading={searching}
+                  fallback="Aucune adresse trouvée"
+                  separator
+                  expandX
+                >
+                  {(suggestions || []).map((feature, index) => (
+                    <List.Item
+                      selectable
+                      key={feature.properties.id || index}
+                      id={`${id}_suggestion_${index}`}
+                      index={index}
+                      value={feature.properties.id}
+                      padding="s"
+                    >
+                      <Box flex="y">
+                        <Text size="m">{feature.properties.label}</Text>
+                        {feature.properties.context && (
+                          <Text size="xs" color="secondary">
+                            {feature.properties.context}
+                          </Text>
+                        )}
+                      </Box>
+                    </List.Item>
+                  ))}
+                </List>
+              </Popover>
+            </Field>
+
+            <Box flex="y" spacing="xs" alignX="start">
+              <Text size="xs" color="secondary">
+                Remplis par la recherche ci-dessus, modifiables
+              </Text>
+              <Box flex="x" spacing="s" flexWrap>
+                <ComponentField
+                  label="N°"
+                  name="street_number"
+                  signal={componentSignals.street_number}
+                  width="60px"
+                />
+                <ComponentField
+                  label="Type de voie"
+                  name="street_type"
+                  signal={componentSignals.street_type}
+                  width="110px"
+                />
+                <ComponentField
+                  label="Nom de voie"
+                  name="street_name"
+                  signal={componentSignals.street_name}
+                  width="180px"
+                />
+                <ComponentField
+                  label="Code postal"
+                  name="postal_code"
+                  signal={componentSignals.postal_code}
+                  width="90px"
+                />
+                <ComponentField
+                  label="Ville"
+                  name="city"
+                  signal={componentSignals.city}
+                  width="140px"
+                />
+              </Box>
+            </Box>
+          </Box>
         );
       };
+
+      const ComponentField = ({ label, name, signal, width }) => (
+        <Field flex="y" spacingWithControl="xs">
+          <Label>
+            <Text size="xs" color="secondary">
+              {label}
+            </Text>
+          </Label>
+          <Input
+            name={name}
+            signal={signal}
+            borderRadius="s"
+            paddingX="s"
+            paddingY="s"
+            width={width}
+          />
+        </Field>
+      );
 
       const App = () => (
         <FakeBackend>
