@@ -67,7 +67,10 @@ import { InputWithListResolver } from "./input_with_list.jsx";
 import { InputWithSuggestionsResolver } from "./input_with_suggestions.jsx";
 import { useAutoSelectReadOnly } from "./use_autoselect_read_only.js";
 
-const css = /* css */ `
+// Exported for textarea.jsx: a textarea is styled as a .navi_input box, and
+// registers this sheet itself — a page may render a Textarea without any
+// Input, so it cannot rely on InputTextualUI having run.
+export const inputCss = /* css */ `
   @layer navi {
     .navi_input {
       --border-radius: var(--navi-control-border-radius);
@@ -395,7 +398,7 @@ const useInputTextualProps = (props) => {
   });
 };
 const InputTextualUI = (props) => {
-  import.meta.css = css;
+  import.meta.css = inputCss;
   // Spacing props travel to CSS as a raw custom property value, so the size
   // keywords have to become lengths here — "s" reaching CSS untouched makes the
   // declaration invalid, silently, and the gap just goes away.

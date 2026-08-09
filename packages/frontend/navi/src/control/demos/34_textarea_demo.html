@@ -45,7 +45,19 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Link, Text, Textarea } from "@jsenv/navi";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Label,
+        Link,
+        Text,
+        Textarea,
+        TextareaCharCount,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
@@ -89,6 +101,8 @@ et la troisième`;
           <StatesDemo />
           <RowsDemo />
           <CharCountDemo />
+          <ActionDemo />
+          <FormDemo />
         </Box>
       );
 
@@ -133,11 +147,14 @@ et la troisième`;
         <div class="demo-section">
           <Heading id="rows">minRows / maxRows</Heading>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="par défaut (minRows=2)">
-              <Textarea placeholder="Deux lignes de haut" />
+            <Variant caption="par défaut (minRows=1.5) : une ligne et demie, assez pour lire « multiligne »">
+              <Textarea placeholder="Écrire quelque chose…" />
             </Variant>
             <Variant caption="minRows={1}">
               <Textarea minRows={1} placeholder="Une ligne" />
+            </Variant>
+            <Variant caption="minRows={2}">
+              <Textarea minRows={2} placeholder="Deux lignes" />
             </Variant>
             <Variant caption="minRows={4}">
               <Textarea minRows={4} placeholder="Quatre lignes" />
@@ -153,36 +170,140 @@ cinq
 six`}
               />
             </Variant>
+            <Variant caption="resizable : la poignée verticale du navigateur">
+              <Textarea resizable defaultValue={THREE_LINES} />
+            </Variant>
           </Box>
         </div>
       );
 
-      // ── charCount ─────────────────────────────────────────────────────────
+      // ── TextareaCharCount ─────────────────────────────────────────────────
+
+      const CharCountExample = ({ maxLength, maxLengthGuard, placement }) => {
+        const [text, setText] = useState("Déjà un début de message.");
+        const textarea = (
+          <Textarea
+            value={text}
+            uiAction={(v) => {
+              setText(v);
+            }}
+            maxLength={maxLength}
+            maxLengthGuard={maxLengthGuard}
+          />
+        );
+        const count = (
+          <TextareaCharCount
+            value={text}
+            maxLength={maxLength ?? maxLengthGuard}
+          />
+        );
+        if (placement === "beside") {
+          return (
+            <Box flex spacing="m" alignY="start">
+              {textarea}
+              <Box flex spacing="xs" alignY="center">
+                <Text size="s" color="#666">
+                  restants :
+                </Text>
+                {count}
+              </Box>
+            </Box>
+          );
+        }
+        return (
+          <Box inline flex="y" alignX="end" spacing="xxs">
+            {textarea}
+            {count}
+          </Box>
+        );
+      };
 
       const CharCountDemo = () => (
         <div class="demo-section">
-          <Heading id="char-count">charCount</Heading>
+          <Heading id="char-count">TextareaCharCount</Heading>
+          <p class="desc">
+            Le compteur est un composant à part : c'est l'appelant qui le place
+            et le nourrit de la même valeur que le textarea.
+          </p>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="charCount avec maxLength={100} : les caractères restants">
-              <Textarea
-                charCount
-                maxLength={100}
-                defaultValue="Déjà un début de message."
-              />
+            <Variant caption="sous la boîte à droite, avec maxLength={100} : les caractères restants">
+              <CharCountExample maxLength={100} />
             </Variant>
-            <Variant caption="charCount + maxLengthGuard={100} : taper au-delà est bloqué">
-              <Textarea
-                charCount
-                maxLengthGuard={100}
-                defaultValue="Déjà un début de message."
-              />
+            <Variant caption="avec maxLengthGuard={100} : taper au-delà est bloqué">
+              <CharCountExample maxLengthGuard={100} />
             </Variant>
-            <Variant caption="charCount sans maxLength : les caractères tapés">
-              <Textarea charCount defaultValue="Déjà un début de message." />
+            <Variant caption="sans maxLength : les caractères tapés">
+              <CharCountExample />
+            </Variant>
+            <Variant caption="posé ailleurs : à côté du champ">
+              <CharCountExample maxLength={100} placement="beside" />
             </Variant>
           </Box>
         </div>
       );
+
+      // ── uiAction / action ─────────────────────────────────────────────────
+
+      const ActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <div class="demo-section">
+            <Heading id="actions">uiAction / action</Heading>
+            <Box flex="y" spacing="s" alignX="start">
+              <Textarea
+                placeholder="Taper, puis quitter le champ…"
+                uiAction={(value, event) => {
+                  push("uiAction", value, event);
+                }}
+                action={(value) => {
+                  push("action", value);
+                }}
+              />
+              <CallLog entries={entries} onClear={clear} />
+            </Box>
+          </div>
+        );
+      };
+
+      // ── Dans un formulaire ────────────────────────────────────────────────
+
+      const FormDemo = () => {
+        const [result, setResult] = useState(null);
+        return (
+          <div class="demo-section">
+            <Heading id="form">Dans un formulaire</Heading>
+            <p class="desc">
+              <code>required</code> et <code>maxLength=20</code> : soumettre tel
+              quel (trop long), puis vidé, montre les deux refus.
+            </p>
+            <Form
+              name="textarea_form"
+              action={({ message }) => `Envoyé : ${message}`}
+              onActionEnd={(value) => {
+                setResult(value);
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Field>
+                  <Label>Message</Label>
+                  <Textarea
+                    name="message"
+                    required
+                    maxLength={20}
+                    defaultValue="Un message beaucoup trop long pour la limite"
+                  />
+                </Field>
+                <Button type="submit">Envoyer</Button>
+              </Box>
+            </Form>
+            {result && (
+              <Text size="s" color="#2e7d32">
+                {result}
+              </Text>
+            )}
+          </div>
+        );
+      };
 
       render(<App />, document.querySelector("#app"));
     </script>
