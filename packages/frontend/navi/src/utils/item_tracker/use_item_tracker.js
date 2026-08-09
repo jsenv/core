@@ -56,6 +56,10 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *
  *   getTrackedItemByIndex(index): synchronous O(1) lookup of a visible item by
  *   its visible rank. Returns undefined when index is out of range.
+ *
+ *   peekItems(): the items as they stand right now, without waiting for the
+ *   deferred notification — what a sibling rendering after the items must read
+ *   to paint them in the same commit.
  */
 
 export const useItemTracker = ({ onChange } = {}) => {
@@ -158,7 +162,8 @@ const createItemTracker = (onChange) => {
         visibleItemsSignal.value = visibleItems;
         someChange = true;
       }
-      const noMatchCountModified = noMatchCountSignal.peek() !== newNoMatchCount;
+      const noMatchCountModified =
+        noMatchCountSignal.peek() !== newNoMatchCount;
       if (noMatchCountModified) {
         noMatchCountSignal.value = newNoMatchCount;
         someChange = true;
@@ -352,9 +357,32 @@ const createItemTracker = (onChange) => {
     return registrations.get(key);
   };
 
+  // The items as they stand right now, notification pending or not — same
+  // content as itemsSignal, minus the wait.
+  //
+  // Items register during their own render, while the signal is only updated
+  // on a deferred microtask (see notify): a sibling rendering after them would
+  // otherwise paint from an empty list and correct itself a frame later. That
+  // frame is visible whenever the painted size feeds a layout decision — a
+  // dialog sizing itself on its content measures the empty version and shifts
+  // once the real one lands. Reading this instead makes the first paint the
+  // right one. Callers must still subscribe to itemsSignal to re-render on
+  // LATER changes; this is the value to display, not the notification.
+  const peekItems = () => {
+    if (!notifyScheduled) {
+      return itemsSignal.peek();
+    }
+    const items = [];
+    for (const key of allOrderedKeys) {
+      items.push(allRegistrations.get(key));
+    }
+    return items;
+  };
+
   return {
     useTrackItem,
     getTrackedItemByIndex,
+    peekItems,
     itemsSignal,
     visibleItemsSignal,
     countSignal,

@@ -1232,23 +1232,16 @@ function WheelUI(props) {
   const trackedItems = tracker.itemsSignal.value;
   const trackedItemsRef = useRef(trackedItems);
   trackedItemsRef.current = trackedItems;
-  const itemCount = trackedItems.length;
 
   // Virtualization: render only visibleCount + 2 rows (one buffer each side to
   // cover the partial rows a scroll reveals + a re-render's one-frame lag) and
-  // recycle them, filling each from trackedItems. `centerRowSignal` holds the row
-  // currently at the center (round(pos / itemSize)); it changes only when the
-  // wheel crosses a row (not every frame), so the window re-renders on demand, not
-  // per frame. WheelWindow derives its top slot (base) from that row and its own
-  // windowSize — so a windowSize change (items still registering) recomputes base
-  // instead of leaving the top rows unrendered. The per-frame transform is
-  // imperative (--wheel-offset); renderedBaseRef mirrors the base the DOM shows so
-  // the transform stays consistent with it.
-  // visibleCount + 2, but never more rows than there are values.
-  let windowSize = visibleCount + 2;
-  if (windowSize > itemCount) {
-    windowSize = itemCount;
-  }
+  // recycle them. `centerRowSignal` holds the row currently at the center
+  // (round(pos / itemSize)); it changes only when the wheel crosses a row (not
+  // every frame), so the window re-renders on demand, not per frame. WheelWindow
+  // owns both its size and its top slot (base), derived from that row and from the
+  // items it reads off the tracker itself — see its own comment. The per-frame
+  // transform is imperative (--wheel-offset); renderedBaseRef mirrors the base the
+  // DOM shows so the transform stays consistent with it.
   const centerRowSignal = useSignal(0);
   const renderedBaseRef = useRef(0);
   // Row size in px, measured once from a rendered slot (rows are uniform).
@@ -1977,8 +1970,8 @@ function WheelUI(props) {
           <ul className="navi_wheel_list">
             <WheelWindow
               centerRowSignal={centerRowSignal}
-              windowSize={windowSize}
-              trackedItems={trackedItems}
+              visibleCount={visibleCount}
+              tracker={tracker}
               isLoop={isLoop}
               onBaseCommit={commitRenderedBase}
             />
@@ -1992,8 +1985,8 @@ function WheelUI(props) {
           <ul className="navi_wheel_list">
             <WheelWindow
               centerRowSignal={centerRowSignal}
-              windowSize={windowSize}
-              trackedItems={trackedItems}
+              visibleCount={visibleCount}
+              tracker={tracker}
               isLoop={isLoop}
             />
           </ul>
@@ -2016,21 +2009,38 @@ const WHEEL_PSEUDO_CLASSES = [
 
 // The recycled window: a fixed set of `windowSize` <li> slots (one per visible
 // row + 2 buffer), keyed by slot position so each DOM node is reused and only its
-// content re-renders. `base` (the top slot's value index) is derived here from the
-// center row + windowSize — computing it here, not upstream, means a windowSize
-// change (items still registering) recomputes base correctly. Each slot shows
-// trackedItems[base + slot] (wrapped when looping). It reads centerRowSignal, so
-// it re-renders ONLY when the wheel crosses a row, not every frame — the per-frame
-// motion is the imperative transform in applyOffset. On each new base it calls
-// onBaseCommit so the transform re-syncs to the freshly rendered rows same-frame.
+// content re-renders. `base` (the top slot's value index) and windowSize are both
+// derived here rather than upstream, from the items read straight off the tracker:
+// this component renders right after the Wheel.Item children, which register
+// during their own render, so it can draw the real rows in the very first commit.
+// Taking them from the parent instead would mean drawing an empty wheel first (the
+// parent renders before its children, and the tracker's signal only lands on a
+// microtask) — a wheel with no width, which is enough to misplace whatever sizes
+// itself on it, e.g. a dialog centered on its content.
+// Each slot shows items[base + slot] (wrapped when looping). It reads
+// centerRowSignal, so it re-renders ONLY when the wheel crosses a row, not every
+// frame — the per-frame motion is the imperative transform in applyOffset. On each
+// new base it calls onBaseCommit so the transform re-syncs to the freshly rendered
+// rows same-frame.
 const WheelWindow = ({
   centerRowSignal,
-  windowSize,
-  trackedItems,
+  visibleCount,
+  tracker,
   isLoop,
   onBaseCommit,
 }) => {
+  // Subscribing is what re-renders this window when items are added or removed
+  // later; what to draw right now is read synchronously below.
+  // eslint-disable-next-line no-unused-expressions
+  tracker.itemsSignal.value;
+  const trackedItems = tracker.peekItems();
   const count = trackedItems.length;
+  // visibleCount + 2 (one buffer row each side), but never more rows than there
+  // are values.
+  let windowSize = visibleCount + 2;
+  if (windowSize > count) {
+    windowSize = count;
+  }
   let base = centerRowSignal.value - Math.floor(windowSize / 2);
   // Non-loop: keep the window inside the value range so every slot maps to a real
   // value; the transform then leaves the blank runway above the first / below the
