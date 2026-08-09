@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adresse avec autocomplete</title>
+    <style>
+      body {
+        max-width: 660px;
+        margin: 0 auto;
+        padding: 20px;
+        color: #1a1a2e;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #eef1f5;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      .intro {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Adresse avec autocomplete</h1>
+    <p class="intro">
+      On tape, l'API adresse.data.gouv.fr suggère; choisir une suggestion
+      remplit les composants structurés en dessous. Une adresse tapée sans
+      passer par une suggestion est découpée au mieux.
+    </p>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Field,
+        Form,
+        Input,
+        Label,
+        List,
+        Text,
+      } from "@jsenv/navi";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+
+      const GEO_API_URL = "https://api-adresse.data.gouv.fr/search/";
+      const SUGGESTION_MIN_CHARS = 3;
+
+      const STREET_TYPES = [
+        "rue",
+        "avenue",
+        "boulevard",
+        "chemin",
+        "place",
+        "impasse",
+        "allée",
+        "route",
+        "quai",
+        "cours",
+      ];
+      const parseStreetLine = (line) => {
+        let streetNumber = "";
+        let streetType = "";
+        let rest = line.trim();
+        const numberMatch = rest.match(/^(\d+\s?(?:bis|ter)?)\s+(.*)$/i);
+        if (numberMatch) {
+          streetNumber = numberMatch[1];
+          rest = numberMatch[2];
+        }
+        const firstWord = rest.split(" ")[0]?.toLowerCase();
+        if (STREET_TYPES.includes(firstWord)) {
+          streetType = firstWord;
+          rest = rest.slice(firstWord.length).trim();
+        }
+        return {
+          street_number: streetNumber,
+          street_type: streetType,
+          street_name: rest,
+        };
+      };
+      const parseAddress = (text) => {
+        const match = text.match(/^(.*?)[,\s]+(\d{5})\s+(.+)$/);
+        if (!match) {
+          return { ...parseStreetLine(text), postal_code: "", city: "" };
+        }
+        return {
+          ...parseStreetLine(match[1]),
+          postal_code: match[2],
+          city: match[3].trim(),
+        };
+      };
+      const formatAddress = (components) => {
+        const streetLine = [
+          components.street_number,
+          components.street_type,
+          components.street_name,
+        ]
+          .filter(Boolean)
+          .join(" ");
+        const cityLine = [components.postal_code, components.city]
+          .filter(Boolean)
+          .join(" ");
+        return [streetLine, cityLine].filter(Boolean).join(", ");
+      };
+
+      const addressComponentsFromGeoFeature = (feature) => {
+        const { housenumber, street, name, postcode, city } =
+          feature.properties;
+        // street manque sur certains résultats (lieux-dits): name porte alors
+        // toute la ligne, numéro compris
+        const streetLine = street
+          ? `${housenumber ? `${housenumber} ` : ""}${street}`
+          : name;
+        const parsed = parseStreetLine(streetLine);
+        return {
+          street_number: housenumber || parsed.street_number,
+          street_type: parsed.street_type,
+          street_name: parsed.street_name,
+          postal_code: postcode || "",
+          city: city || "",
+        };
+      };
+
+      const AddressField = ({ id }) => {
+        const textSignal = useSignal("");
+        const [suggestions, setSuggestions] = useState([]);
+        // Un signal par composant: chacun est un champ nommé du formulaire,
+        // c'est le formulaire qui les envoie — rien à collecter à la main
+        const componentSignals = {
+          street_number: useSignal(""),
+          street_type: useSignal(""),
+          street_name: useSignal(""),
+          postal_code: useSignal(""),
+          city: useSignal(""),
+        };
+        const writeComponents = (components) => {
+          for (const key of Object.keys(componentSignals)) {
+            componentSignals[key].value = components[key] || "";
+          }
+        };
+
+        // actionDebounce fait le debounce, l'action reçoit un signal d'abort
+        // (la frappe suivante annule la requête en cours), et l'input montre
+        // son état loading pendant que ça tourne
+        const searchAddress = async (value, { signal }) => {
+          const typed = (value || "").trim();
+          // ce qui avait été choisi ne décrit plus le texte: on retombe sur
+          // le découpage au mieux jusqu'au prochain choix
+          writeComponents(typed ? parseAddress(typed) : {});
+          if (typed.length < SUGGESTION_MIN_CHARS) {
+            setSuggestions([]);
+            return;
+          }
+          try {
+            const url = `${GEO_API_URL}?q=${encodeURIComponent(typed)}&limit=5&autocomplete=1`;
+            const response = await fetch(url, { signal });
+            const geoJson = await response.json();
+            setSuggestions(geoJson.features || []);
+          } catch {
+            // autocomplete en panne = pas de suggestions, le champ reste un
+            // champ texte qui marche
+            setSuggestions([]);
+          }
+        };
+
+        const pickSuggestion = (featureId) => {
+          const feature = suggestions.find(
+            (candidate) => candidate.properties.id === featureId,
+          );
+          if (!feature) {
+            return;
+          }
+          const components = addressComponentsFromGeoFeature(feature);
+          writeComponents(components);
+          // écrire le signal ne repasse pas par l'action de recherche: elle
+          // ne se déclenche que sur une frappe, la liste ne se rouvre pas
+          textSignal.value = formatAddress(components);
+          setSuggestions([]);
+        };
+
+        return (
+          <Box flex="y" spacing="m">
+            <Field flex="y" spacingWithControl="s">
+              <Label>Adresse</Label>
+              <Input
+                id={id}
+                type="search"
+                navi-list={`${id}_suggestions`}
+                placeholder="12 rue de la Paix, Antibes"
+                signal={textSignal}
+                action={searchAddress}
+                actionDebounce={300}
+                autoComplete="off"
+                borderRadius="s"
+                paddingX="s"
+                paddingY="s"
+                expandX
+              />
+              {suggestions.length > 0 && (
+                <List
+                  selectable
+                  id={`${id}_suggestions`}
+                  uiAction={pickSuggestion}
+                  border="1px solid #eee"
+                  borderRadius="s"
+                  separator
+                >
+                  {suggestions.map((feature, index) => (
+                    <List.Item
+                      selectable
+                      key={feature.properties.id || index}
+                      id={`${id}_suggestion_${index}`}
+                      index={index}
+                      value={feature.properties.id}
+                      padding="s"
+                    >
+                      <Box flex="y">
+                        <Text size="m">{feature.properties.label}</Text>
+                        {feature.properties.context && (
+                          <Text size="xs" color="secondary">
+                            {feature.properties.context}
+                          </Text>
+                        )}
+                      </Box>
+                    </List.Item>
+                  ))}
+                </List>
+              )}
+            </Field>
+
+            {/* Éditables: le découpage au mieux est une proposition, l'utilisateur
+                peut corriger — et c'est ce que le formulaire enverra */}
+            <Box flex="x" spacing="s" flexWrap>
+              <ComponentField
+                label="N°"
+                name="street_number"
+                signal={componentSignals.street_number}
+                width="60px"
+              />
+              <ComponentField
+                label="Type de voie"
+                name="street_type"
+                signal={componentSignals.street_type}
+                width="110px"
+              />
+              <ComponentField
+                label="Nom de voie"
+                name="street_name"
+                signal={componentSignals.street_name}
+                width="180px"
+              />
+              <ComponentField
+                label="Code postal"
+                name="postal_code"
+                signal={componentSignals.postal_code}
+                width="90px"
+              />
+              <ComponentField
+                label="Ville"
+                name="city"
+                signal={componentSignals.city}
+                width="140px"
+              />
+            </Box>
+          </Box>
+        );
+      };
+
+      const ComponentField = ({ label, name, signal, width }) => (
+        <Field flex="y" spacingWithControl="xs">
+          <Label>
+            <Text size="xs" color="secondary">
+              {label}
+            </Text>
+          </Label>
+          <Input
+            name={name}
+            signal={signal}
+            borderRadius="s"
+            paddingX="s"
+            paddingY="s"
+            width={width}
+          />
+        </Field>
+      );
+
+      const App = () => (
+        <FakeBackend>
+          {({ action }) => (
+            <Form action={action} flex="y" spacing="m" expandX>
+              <AddressField id="address" />
+              <Button type="submit" paddingY="s" alignX="start">
+                Envoyer
+              </Button>
+            </Form>
+          )}
+        </FakeBackend>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>
