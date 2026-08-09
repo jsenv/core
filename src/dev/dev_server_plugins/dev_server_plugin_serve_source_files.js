@@ -309,6 +309,15 @@ export const devServerPluginServeSourceFiles = ({
               !urlInfo.response &&
               urlInfo.content !== undefined &&
               !cacheIsDisabledInResponseHeader(urlInfo) &&
+              // a "?hot" request exists to bypass every cache, this one
+              // included: it must be cooked, because cooking is what rewrites
+              // its references so "?hot" cascades to the modified files below
+              // (see jsenv_plugin_hot_search_param) — the memory content was
+              // cooked before the change and its references carry nothing.
+              // The urlInfo itself often IS valid here (hot reload of a
+              // dependency: the file re-requested did not change, one below
+              // it did), so isValid() alone cannot catch this.
+              !request.searchParams.has("hot") &&
               urlInfo.isValid();
             if (!servableFromMemory) {
               await urlInfo.cook({ request, reference });
