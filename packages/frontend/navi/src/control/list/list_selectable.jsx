@@ -119,6 +119,18 @@ const css = /* css */ `
         cursor: var(--x-list-item-cursor);
         pointer-events: auto;
       }
+
+      /* A popup opened from the row is not part of the row: it is shown over
+         the page — in the browser's own top layer for a modal one — and only
+         happens to be declared here. pointer-events is inherited, so without
+         this it inherits the row's own "none" and nothing inside it can be
+         clicked, however far from the row it is painted. Matched on what makes
+         an element a popup to the browser rather than on navi's own attribute:
+         anything shown over the page has the same claim, navi's or not. */
+      dialog,
+      [popover] {
+        pointer-events: auto;
+      }
     }
 
     &[data-interactive] {
@@ -376,6 +388,10 @@ const ListSelectable = (props) => {
           allowed: () => childController.setUIState(undefined, e),
         });
       }}
+      // "previous"/"next", not "up"/"down": a list is a line of items whichever
+      // way it is laid out, and a horizontal one walks sideways. The keys that
+      // drive it (arrows, Home/End) map onto that here, and so do the commands
+      // (--navi-previous / --navi-next / --navi-first / --navi-last).
       onnavi_request_nav={(e) => {
         const { goal } = e.detail;
         const navigableEls = getNavigableElements();
@@ -392,7 +408,7 @@ const ListSelectable = (props) => {
           targetEl = navigableEls[0];
         } else if (goal === "last") {
           targetEl = navigableEls[navigableEls.length - 1];
-        } else if (goal === "down") {
+        } else if (goal === "next") {
           if (currentIndex === -1) {
             targetEl = navigableEls[0];
           } else if (currentIndex < navigableEls.length - 1) {
@@ -400,7 +416,7 @@ const ListSelectable = (props) => {
           } else {
             targetEl = navigableEls[navigableEls.length - 1];
           }
-        } else if (goal === "up") {
+        } else if (goal === "previous") {
           if (currentIndex === -1) {
             targetEl = navigableEls[0];
           } else if (currentIndex > 0) {

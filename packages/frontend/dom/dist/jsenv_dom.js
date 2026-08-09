@@ -146,6 +146,14 @@ const getElementSignature = (element) => {
       return `${tagName}#${elementId}`;
     }
     if (tagName === "button") {
+      // The label BEFORE the text: an icon button has no text worth reading
+      // (an svg, a zero-width space), and its aria-label is the one thing that
+      // says which button it is — which is the whole point of a signature in a
+      // log. A labelled button says so even when it also has text.
+      const label = element.getAttribute("aria-label");
+      if (label) {
+        return `button[aria-label="${label}"]`;
+      }
       const text = element.textContent.trim();
       if (text) {
         const excerpt = text.length > 10 ? `${text.slice(0, 10)}…` : text;
@@ -3904,6 +3912,14 @@ const getLuminance = (r, g, b) => {
   return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
 };
 
+/**
+ * First ancestor of `node` matching `predicate`, walking parent by parent.
+ * Starts at the parent — `node` itself is never a candidate.
+ *
+ * @param {Node} node
+ * @param {(ancestor: Node) => boolean} predicate
+ * @returns {Node|null}
+ */
 const findAncestor = (node, predicate) => {
   let ancestor = node.parentNode;
   while (ancestor) {
@@ -3915,6 +3931,21 @@ const findAncestor = (node, predicate) => {
   return null;
 };
 
+/**
+ * First descendant of `rootNode` matching `fn`, in document order (depth
+ * first). The walk is bounded to the subtree: `rootNode` itself is not a
+ * candidate, and a root with no children yields nothing — never the root's
+ * siblings.
+ *
+ * @param {Node} rootNode
+ * @param {(node: Node, skip: () => void) => boolean} fn - Return true to stop
+ *   on `node`. Call `skip()` to not descend into `node`'s children (the walk
+ *   goes on with its siblings).
+ * @param {object} [options]
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included.
+ * @returns {Node|null}
+ */
 const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const iterator = createNextNodeIterator(rootNode, rootNode, skipRoot);
   let { done, value: node } = iterator.next();
@@ -3935,6 +3966,18 @@ const findDescendant = (rootNode, fn, { skipRoot } = {}) => {
   return null;
 };
 
+/**
+ * Last descendant of `rootNode` matching `fn` in document order — the walk
+ * starts at the subtree's deepest final node and moves backwards, so the
+ * first match it meets is the last one the document holds.
+ *
+ * @param {Node} rootNode
+ * @param {(node: Node) => boolean} fn
+ * @param {object} [options]
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included.
+ * @returns {Node|null}
+ */
 const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   const deepestNode = getDeepestNode(rootNode, skipRoot);
   if (deepestNode) {
@@ -3954,6 +3997,23 @@ const findLastDescendant = (rootNode, fn, { skipRoot } = {}) => {
   return null;
 };
 
+/**
+ * First node after `from` in document order matching `predicate`. Unlike
+ * findDescendant this is anchored to a position, not a container: the walk
+ * leaves `from`'s subtree and goes on through its siblings and its ancestors'
+ * siblings, until `root`'s subtree is exhausted.
+ *
+ * @param {Node} from - The position to search from; not a candidate itself.
+ * @param {(node: Node) => boolean} predicate
+ * @param {object} [options]
+ * @param {Node} [options.root] - Bounds the walk to its subtree; null walks to
+ *   the end of the tree `from` belongs to.
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included. A `from` inside it starts right after it.
+ * @param {boolean} [options.skipChildren] - Do not look inside `from`; start
+ *   at what follows it.
+ * @returns {Node|null}
+ */
 const findAfter = (
   from,
   predicate,
@@ -3970,6 +4030,21 @@ const findAfter = (
   return null;
 };
 
+/**
+ * First node before `from` in reverse document order matching `predicate` —
+ * what findAfter is to "next", this is to "previous". A step back lands on
+ * the previous sibling's DEEPEST last node (document order walked backwards),
+ * not on the sibling itself.
+ *
+ * @param {Node} from - The position to search from; not a candidate itself.
+ * @param {(node: Node) => boolean} predicate
+ * @param {object} [options]
+ * @param {Node} [options.root] - Bounds the walk to its subtree; null walks
+ *   back to the start of the tree `from` belongs to.
+ * @param {Node} [options.skipRoot] - A subtree to leave out entirely, itself
+ *   included. A `from` inside it starts right before it.
+ * @returns {Node|null}
+ */
 const findBefore = (
   from,
   predicate,
@@ -4000,6 +4075,15 @@ const getNextNode = (node, rootNode, skipChild = false, skipRoot = null) => {
       }
       return firstChild;
     }
+  }
+
+  // The traversal is bounded to rootNode's subtree: the root's own siblings
+  // are not part of it. Without this, a rootNode with no children (asking
+  // findDescendant about an <input>, say) steps to its next sibling and walks
+  // the rest of the document from there — the parentNode guard below never
+  // catches it because the walk is already outside the root.
+  if (node === rootNode) {
+    return null;
   }
 
   const nextSibling = node.nextSibling;
@@ -4410,8 +4494,13 @@ const canInteract = (element) => {
   if (element.disabled) {
     return false;
   }
-  if (element.hasAttribute("inert")) {
-    // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+  // closest, not hasAttribute: inert is inherited by the whole subtree — the
+  // element itself may carry nothing and still be untouchable because something
+  // above it is inert (a slide waiting off screen, the page behind a modal).
+  // Focusing one of those does nothing at all, silently: the browser refuses and
+  // the focus stays where it was, which reads as "the popup opened on nothing".
+  // https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+  if (element.closest("[inert]")) {
     return false;
   }
   return true;
@@ -4509,7 +4598,12 @@ const findFocusable = (element, { exclude } = {}) => {
  * - `"value_change"` — key increments/decrements the field value (range, number, date…)
  * - `"cursor_move"`  — key moves the text cursor within the field
  * - `"type"`         — key produces or deletes text content
- * - `"scroll"`       — key scrolls the page or a scrollable container
+ * - `"scroll"`       — key would scroll the page: nothing on the element itself
+ *                      claims it, so it is safe to intercept
+ * - `"scroll_self"`   — the focused element scrolls ITSELF that way (it really
+ *                      overflows on that axis): the key is spoken for, and
+ *                      taking it would leave a scrollable region no way to be
+ *                      scrolled from the keyboard
  * - `""`             — no meaningful browser default; safe to intercept freely
  */
 const normalizeKeyboardKey = (rawKey) => {
@@ -4581,6 +4675,23 @@ const isTypingIntent = (e) => {
     return true;
   }
   return false;
+};
+
+// Whether this element is what scrolls on that axis: it says it may (overflow)
+// and it has somewhere to go (it overflows). Both are needed — an "auto" box
+// whose content fits scrolls nothing, and the keys are then free.
+const canScrollSelf = (element, axis) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  const style = getComputedStyle(element);
+  const overflow = axis === "x" ? style.overflowX : style.overflowY;
+  if (overflow !== "auto" && overflow !== "scroll") {
+    return false;
+  }
+  return axis === "x"
+    ? element.scrollWidth > element.clientWidth
+    : element.scrollHeight > element.clientHeight;
 };
 
 const DEFAULT_BEHAVIORS = [
@@ -4752,6 +4863,31 @@ const DEFAULT_BEHAVIORS = [
     keys: {
       escape: "dismiss",
     },
+  },
+  {
+    // An element that really scrolls — a slide's own body, a scrollable panel:
+    // the browser gives it the arrows (and Home/End/PageUp/PageDown) so it can
+    // be read from the keyboard, and that is not a key to take. Asked per axis
+    // and per element, not from a class or an attribute: what makes it true is
+    // that it overflows right now.
+    test: (el) => canScrollSelf(el, "y") || canScrollSelf(el, "x"),
+    keys: {
+      arrowup: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      arrowdown: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      arrowleft: (e) =>
+        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
+      arrowright: (e) =>
+        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
+      pageup: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      pagedown: (e) =>
+        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
+      home: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      end: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      space: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+    },
+    // no fallback: only these keys are claimed, everything else keeps looking
   },
   {
     // Non-interactive elements: browser scrolls on Space and arrow keys
@@ -6033,9 +6169,15 @@ const trapFocusInside = (
           // A backdrop click is detected when the target is a <dialog> element —
           // the ::backdrop pseudo-element is not in the DOM, so the event target
           // becomes the dialog element itself when its content area is not hit.
+          // Read through getAttribute rather than .className: on an SVG element
+          // className is an SVGAnimatedString, not a string, and asking it for
+          // .includes throws — which is how clicking an icon inside the trap
+          // used to break. Still a substring test, because the real class names
+          // are navi_dialog_backdrop / navi_popover_backdrop / ….
+          const targetClass = event.target.getAttribute?.("class") || "";
           const isBackdropClick =
             event.target.tagName === "DIALOG" ||
-            event.target.className.includes("backdrop");
+            targetClass.includes("backdrop");
           if (!isBackdropClick) {
             event.stopImmediatePropagation();
           }
@@ -7229,9 +7371,14 @@ const getPaddingSizes = (element) => {
  *
  * @param {HTMLElement} element - The overlay element being shown. Its preceding
  *   siblings and all ancestor scroll containers will be scroll-locked.
+ * @param {Object} [options]
+ * @param {HTMLElement} [options.boundaryElement] - Only lock scroll containers
+ *   inside this element (itself included). For an overlay confined to a local
+ *   container rather than the viewport: the container's own scroll must stop,
+ *   the rest of the page keeps scrolling as usual.
  * @returns {() => void} Cleanup function that restores all modified styles.
  */
-const trapScrollInside = (element) => {
+const trapScrollInside = (element, { boundaryElement } = {}) => {
   const cleanupCallbackSet = new Set();
 
   // Collect every element to lock first (preceding scrollable siblings + all
@@ -7245,7 +7392,11 @@ const trapScrollInside = (element) => {
     previous = previous.previousSibling;
   }
   for (const selfOrAncestorScroll of getSelfAndAncestorScrolls(element)) {
-    elementsToLock.push(selfOrAncestorScroll.scrollContainer);
+    const { scrollContainer } = selfOrAncestorScroll;
+    if (boundaryElement && !boundaryElement.contains(scrollContainer)) {
+      continue;
+    }
+    elementsToLock.push(scrollContainer);
   }
 
   // Phase 1 — MEASURE. Batch every layout/style read (scrollTop, scrollbar
@@ -10635,30 +10786,99 @@ const moveCSSVars = (vars, fromEl, toEl) => {
 };
 
 installImportMetaCssBuild(import.meta);const css$1 = /* css */`
+  /* IN THE PAGE, NOT IN THE LIST: the hint lands on the edge of a row, which
+     for the last one is the very bottom of the scroll area — drawn inside it,
+     the line would push the scrollable area a few pixels further and make a
+     scrollbar appear (or hide the hint under it) exactly when one is trying to
+     drop at the end. Placed in the body and positioned in viewport
+     coordinates, it can sit anywhere, overhang the list, and cost nothing to
+     the layout. Fixed, like the clone it accompanies. */
   .navi_drop_hint {
-    position: absolute;
+    /* A popover, so it lands in the top layer: no z-index to bid against the
+       page, and nothing it can be hidden behind. Shown BEFORE the clone, which
+       is what puts the clone above it — the top layer stacks in the order
+       things are shown, and the item being carried should pass over the line
+       rather than under it. The UA styles for [popover] have to be undone:
+       inset:0, margin:auto, a border and a background of its own. */
+    position: fixed;
+    inset: auto;
     top: var(--drop-hint-y);
     left: calc(var(--drop-target-left) + var(--drop-hint-margin-x, 0px));
-    z-index: 10;
     display: none;
+    box-sizing: border-box;
     width: calc(var(--drop-target-width) - 2 * var(--drop-hint-margin-x, 0px));
     height: var(--drop-hint-size, 3px);
+    margin: 0;
+    padding: 0;
+    color: inherit;
     background: var(--drop-hint-background-color, #4476ff);
+    border: none;
     border-radius: var(--drop-hint-border-radius, 2px);
     transform: translateY(-50%);
     pointer-events: none;
+    overflow: visible;
   }
-  [data-drop-edge="top"] > .navi_drop_hint {
+  .navi_drop_hint[data-drop-edge]:popover-open {
     display: block;
+  }
+  .navi_drop_hint[data-drop-edge="top"] {
     --drop-hint-y: calc(
       var(--drop-target-top) - var(--drop-hint-margin-y, 0px)
     );
   }
-  [data-drop-edge="bottom"] > .navi_drop_hint {
-    display: block;
+  .navi_drop_hint[data-drop-edge="bottom"] {
     --drop-hint-y: calc(
       var(--drop-target-bottom) + var(--drop-hint-margin-y, 0px)
     );
+  }
+  /* A chevron at each end, pointing in: the line alone is easy to lose against
+     a list of borders and separators, two arrows read as "here" at a glance
+     (same idea as the table's column drop preview). They overhang the line,
+     which costs nothing now that the hint is out of the scrollable area — and
+     the more they stick out, the easier they are to spot. */
+  .navi_drop_hint_cap {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    color: var(--drop-hint-background-color, #4476ff);
+    translate: 0 -50%;
+  }
+  .navi_drop_hint_cap svg {
+    width: var(--drop-hint-arrow-size, 11px);
+    height: var(--drop-hint-arrow-size, 11px);
+  }
+  .navi_drop_hint_cap[data-side="start"] {
+    left: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: -90deg;
+  }
+  .navi_drop_hint_cap[data-side="end"] {
+    right: calc(-1 * var(--drop-hint-arrow-size, 11px));
+    rotate: 90deg;
+  }
+
+  /* WHO CAN START A DRAG, said in the cursor.
+     A handle drags on the spot, so it shows the hand. A source only drags once
+     the pointer has travelled a few pixels — a plain click stays a click — but
+     the text inside it can no longer be selected (the gesture takes the
+     pointer), so an I-beam over it would promise something that does not
+     happen: it reads as a plain surface instead. An opted-out area keeps both
+     its cursor and its selection, and never starts a drag (see the check in
+     startDragToReorder).
+     Controls inside a source keep their own cursor: cursor is inherited, and
+     anything setting its own (a button's pointer) wins on itself.
+     Only the resting cursor is set here: what it becomes once a drag is under
+     way belongs to the gesture (see the backdrop in drag_gesture.js), the only
+     thing that knows a drag actually started. */
+  [data-drag-handle] {
+    cursor: grab;
+  }
+  [data-drag-source] {
+    cursor: default;
+    user-select: none;
+  }
+  [data-drag-ignore] {
+    cursor: auto;
+    user-select: auto;
   }
 
   [navi-drag-clone-source] {
@@ -10666,16 +10886,27 @@ installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   }
 
   [navi-drag-clone-wrapper] {
-    position: absolute;
+    /* Also a popover (see .navi_drop_hint): in the top layer it is over the
+       page whatever the page's own stacking is, and the coordinates it is
+       given are viewport ones — which is what the pointer carrying it works
+       in. Same UA-style reset as the hint. */
+    position: fixed;
+    inset: auto;
     top: var(--clone-top);
     left: var(--clone-left);
-    z-index: 9999;
+    box-sizing: border-box;
     width: var(--clone-width);
     height: var(--clone-height);
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    background: transparent;
+    border: none;
     box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
     opacity: 0.95;
     transition: box-shadow 0.15s ease;
     pointer-events: none;
+    overflow: visible;
   }
 
   [navi-drag-clone] {
@@ -10694,7 +10925,10 @@ installImportMetaCssBuild(import.meta);const css$1 = /* css */`
     }
   }
 `;
-const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop-hint-border-radius", "--drop-hint-margin-x", "--drop-hint-margin-y", "--drag-clone-scale"];
+// At module scope, not inside startDragToReorder: the cursor rules above say who
+// can start a drag, and they have to be true BEFORE anyone drags anything.
+import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to_reorder.js"];
+const dragCSSVars = ["--drop-hint-size", "--drop-hint-background-color", "--drop-hint-border-radius", "--drop-hint-margin-x", "--drop-hint-margin-y", "--drop-hint-arrow-size", "--drag-clone-scale"];
 
 /**
  * Starts a drag-to-reorder interaction on a list item.
@@ -10760,7 +10994,11 @@ const startDragToReorder = (event, {
   },
   ...options
 }) => {
-  import.meta.css = [css$1, "@jsenv/dom/src/interaction/drag/drag_to_reorder.js"];
+  // An area that opted out of dragging (a text one wants to select, a control
+  // that owns the gesture): the press there is none of our business.
+  if (event.target.closest && event.target.closest("[data-drag-ignore]")) {
+    return undefined;
+  }
   event.preventDefault();
   return dragAfterThreshold(event, () => {
     const cloneWrapper = createDragClone(draggedElement, event);
@@ -10780,21 +11018,23 @@ const startDragToReorder = (event, {
     // getDropTargetInfo uses gestureInfo.elementImpacted to compute the dragged rect.
     // Point it at the clone so drop detection tracks the clone's current position.
     dragGesture.gestureInfo.elementImpacted = cloneWrapper;
-    const scrollContainer = dragGesture.gestureInfo.scrollContainer;
-    const dropHintEl = document.createElement("div");
-    dropHintEl.className = "navi_drop_hint";
-    scrollContainer.appendChild(dropHintEl);
+    const dropHintEl = createDropHint();
+    document.body.appendChild(dropHintEl);
+    // The hint first, the clone second: that order is what stacks them in the
+    // top layer.
+    dropHintEl.showPopover();
+    cloneWrapper.showPopover();
 
     // currentBeforeElement: element before which the grabbed item will be inserted (null = end)
     // currentReleaseElement: the actual hovered drop target — used to snap the clone on release
     let currentBeforeElement;
     let currentReleaseElement;
     const clearDropHintDOM = () => {
-      scrollContainer.removeAttribute("data-drop-edge");
-      scrollContainer.style.removeProperty("--drop-target-top");
-      scrollContainer.style.removeProperty("--drop-target-bottom");
-      scrollContainer.style.removeProperty("--drop-target-left");
-      scrollContainer.style.removeProperty("--drop-target-width");
+      dropHintEl.removeAttribute("data-drop-edge");
+      dropHintEl.style.removeProperty("--drop-target-top");
+      dropHintEl.style.removeProperty("--drop-target-bottom");
+      dropHintEl.style.removeProperty("--drop-target-left");
+      dropHintEl.style.removeProperty("--drop-target-width");
     };
     const clearDropHint = () => {
       currentBeforeElement = undefined;
@@ -10845,16 +11085,15 @@ const startDragToReorder = (event, {
       // beforeElement = X    → insert before X (hint at top edge of X)
       const anchorEl = beforeElement || items[items.length - 1];
       const anchorEdge = beforeElement !== null ? "top" : "bottom";
-      const containerRect = scrollContainer.getBoundingClientRect();
+      // Viewport coordinates, straight from the anchor row: the hint is fixed
+      // in the page (see its CSS), so there is no container box to be relative
+      // to and no scroll offset to add back.
       const anchorRect = anchorEl.getBoundingClientRect();
-      const isPositioned = getComputedStyle(scrollContainer).position !== "static";
-      const scrollOffsetLeft = isPositioned ? scrollContainer.scrollLeft : 0;
-      const scrollOffsetTop = isPositioned ? scrollContainer.scrollTop : 0;
-      scrollContainer.setAttribute("data-drop-edge", anchorEdge);
-      scrollContainer.style.setProperty("--drop-target-top", `${anchorRect.top - containerRect.top + scrollOffsetTop}px`);
-      scrollContainer.style.setProperty("--drop-target-bottom", `${anchorRect.bottom - containerRect.top + scrollOffsetTop}px`);
-      scrollContainer.style.setProperty("--drop-target-left", `${anchorRect.left - containerRect.left + scrollOffsetLeft}px`);
-      scrollContainer.style.setProperty("--drop-target-width", `${anchorRect.width}px`);
+      dropHintEl.setAttribute("data-drop-edge", anchorEdge);
+      dropHintEl.style.setProperty("--drop-target-top", `${anchorRect.top}px`);
+      dropHintEl.style.setProperty("--drop-target-bottom", `${anchorRect.bottom}px`);
+      dropHintEl.style.setProperty("--drop-target-left", `${anchorRect.left}px`);
+      dropHintEl.style.setProperty("--drop-target-width", `${anchorRect.width}px`);
     });
     dragGesture.addReleaseCallback(async gestureInfo => {
       clearDropHintDOM();
@@ -10864,7 +11103,7 @@ const startDragToReorder = (event, {
         const clone = cloneWrapper.firstElementChild;
         // Bake the current visual position (transform included) into the CSS vars
         // so the clone stays where the user released it when we clear the transform.
-        setCloneDocumentRect(cloneWrapper, cloneWrapper);
+        setCloneViewportRect(cloneWrapper, cloneWrapper);
         gestureInfo.cancelPosition();
         const fromId = getItemId(draggedElement);
         const toId = currentBeforeElement ? getItemId(currentBeforeElement) : null;
@@ -10873,7 +11112,7 @@ const startDragToReorder = (event, {
         const syncCloneWithDropTarget = () => {
           // Snap the CSS-var position to the drop target rect so the browser
           // captures the "new" state at the landing position.
-          setCloneDocumentRect(cloneWrapper, currentReleaseElement);
+          setCloneViewportRect(cloneWrapper, currentReleaseElement);
           // Removing this attr drops the CSS scale(1.15), so the browser
           // captures the clone at scale 1 as the "new" state.
           clone.removeAttribute("navi-drag-clone");
@@ -10887,15 +11126,13 @@ const startDragToReorder = (event, {
   });
 };
 
-// getBoundingClientRect() returns viewport-relative coords.
-// The clone wrapper is position:absolute inside document.body, so we need
-// document-relative coords (viewport coords + current page scroll).
-const setCloneDocumentRect = (cloneWrapper, el) => {
+// Viewport coordinates, as getBoundingClientRect gives them: the clone is a
+// fixed-position popover, so that is the space it lives in — and the one the
+// pointer dragging it works in too.
+const setCloneViewportRect = (cloneWrapper, el) => {
   const rect = el.getBoundingClientRect();
-  const scrollLeft = document.documentElement.scrollLeft;
-  const scrollTop = document.documentElement.scrollTop;
-  cloneWrapper.style.setProperty("--clone-top", `${rect.top + scrollTop}px`);
-  cloneWrapper.style.setProperty("--clone-left", `${rect.left + scrollLeft}px`);
+  cloneWrapper.style.setProperty("--clone-top", `${rect.top}px`);
+  cloneWrapper.style.setProperty("--clone-left", `${rect.left}px`);
   cloneWrapper.style.setProperty("--clone-width", `${rect.width}px`);
   cloneWrapper.style.setProperty("--clone-height", `${rect.height}px`);
 };
@@ -10914,12 +11151,43 @@ const setCloneDocumentRect = (cloneWrapper, el) => {
 //   so the element expands naturally from where the user clicked.
 //   On release, the `navi-drag-clone` attribute is removed inside
 //   startViewTransition to drop the scale back to 1 as the "new" state.
+// The chevron is the one the table's column drop preview uses, rotated by the
+// CSS above so each cap points into the line.
+const dropHintTemplate = /* html */`
+  <div
+    class="navi_drop_hint"
+    popover="manual"
+  >
+    <span class="navi_drop_hint_cap" data-side="start">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+    <span class="navi_drop_hint_cap" data-side="end">
+      <svg fill="currentColor" viewBox="0 0 30.727 30.727">
+        <path
+          d="M29.994,10.183L15.363,24.812L0.733,10.184c-0.977-0.978-0.977-2.561,0-3.536c0.977-0.977,2.559-0.976,3.536,0l11.095,11.093L26.461,6.647c0.977-0.976,2.559-0.976,3.535,0C30.971,7.624,30.971,9.206,29.994,10.183z"
+        />
+      </svg>
+    </span>
+  </div>
+`;
+const createDropHint = () => {
+  const div = document.createElement("div");
+  div.innerHTML = dropHintTemplate.trim();
+  return div.firstElementChild;
+};
 const createDragClone = (element, pointerEvent) => {
   const rect = element.getBoundingClientRect();
   const wrapper = document.createElement("div");
   wrapper.setAttribute("navi-drag-clone-wrapper", "");
+  // Manual: it is opened and closed with the drag, and must survive an Escape
+  // or a click elsewhere (light dismiss would take it away mid-gesture).
+  wrapper.setAttribute("popover", "manual");
   wrapper.viewTransitionName = "navi-drag-clone-wrapper";
-  setCloneDocumentRect(wrapper, element);
+  setCloneViewportRect(wrapper, element);
   // Grab point within the element — used as transform-origin so the
   // scale(1.15) expands from where the user clicked, not the element center.
   // These offsets are element-relative so viewport coords are correct here.
@@ -11013,7 +11281,19 @@ const getResizeDirection = (element) => {
 // directions: hide when a container closes, recheck when it reopens) — the
 // selector/open-detection/timing primitives are identical for both, only
 // what each does with a transition differs.
-const ANCESTOR_OPEN_SELECTOR = "dialog, details, [popover], [aria-expanded]";
+const OPENABLE_SELECTOR = "dialog, details, [popover], [aria-expanded]";
+
+// An element that IS openable is closed in exactly the same way an element
+// inside one is — which matters for anything positioned against it, e.g. a
+// callout anchored to a dialog rather than to a field inside it. Same selector
+// as the walk up: whatever counts as openable above counts as openable here,
+// custom [aria-expanded] nodes included.
+const selfOrClosestOpenableAncestor = (element) => {
+  if (element.matches?.(OPENABLE_SELECTOR)) {
+    return element;
+  }
+  return closestOpenableAncestor(element);
+};
 
 const closestOpenableAncestor = (element) => {
   const parentElement = element.parentElement;
@@ -11023,7 +11303,7 @@ const closestOpenableAncestor = (element) => {
   if (!parentElement.closest) {
     return null;
   }
-  return parentElement.closest(ANCESTOR_OPEN_SELECTOR);
+  return parentElement.closest(OPENABLE_SELECTOR);
 };
 
 const isAncestorOpen = (ancestor) => {
@@ -11575,7 +11855,10 @@ const MIN_CONTENT_VISIBILITY_RATIO = 0.6;
  */
 // The event type observeSize() reports with — recognized by check() as "the
 // change is in another element, not in the tracked rect".
-const OBSERVED_ELEMENT_SIZE_CHANGE = "observed_element_size_change";
+// Exported: a caller that resized the element itself (a callout whose message
+// just changed, say) has to re-check with this rather than with nothing — its
+// own rect may not have moved at all, and the dedup would drop the check.
+const ELEMENT_SIZE_CHANGE = "observed_element_size_change";
 
 const visibleRectEffect = (
   element,
@@ -11645,7 +11928,12 @@ const visibleRectEffect = (
     resizeWatchingPaused = false;
     publishResizeWatchingPausedChange(false);
   };
-  const check = (event) => {
+  // Only so the reads below have something to read: a caller that describes
+  // nothing gets no special treatment, it goes through the same dedup as any
+  // other check. A caller that needs the dedup bypassed says so by passing the
+  // event that means it (ELEMENT_SIZE_CHANGE).
+  const UNSET_EVENT = { type: "unset" };
+  const check = (event = UNSET_EVENT) => {
 
     // visualViewport, not window.innerWidth/Height: the layout viewport
     // doesn't shrink when the on-screen keyboard opens (same reasoning as
@@ -11825,7 +12113,7 @@ const visibleRectEffect = (
     // defeating the whole point of observeSize (a popover reconsidering its
     // placement once its own content shrinks/grows, a callout re-measuring
     // against its message body).
-    if (event.type === OBSERVED_ELEMENT_SIZE_CHANGE) {
+    if (event.type === ELEMENT_SIZE_CHANGE) {
       lastVisibleRect = visibleRect;
       lastViewportRect = viewportRect;
       notify();
@@ -12062,7 +12350,12 @@ const visibleRectEffect = (
       });
     }
     {
-      let currentOpenableAncestor = closestOpenableAncestor(element);
+      // Self-inclusive on the first step only: `element` can itself be the
+      // dialog/popover that closes (a callout anchored to a dialog rather than
+      // to a field inside it), and its own close hides it just as much as an
+      // ancestor's would. The walk up below starts from parentElement, so the
+      // chain still advances.
+      let currentOpenableAncestor = selfOrClosestOpenableAncestor(element);
       while (currentOpenableAncestor) {
         const openableAncestor = currentOpenableAncestor;
         if (!isAncestorOpen(openableAncestor)) {
@@ -12235,7 +12528,7 @@ const visibleRectEffect = (
       pendingFrame = requestAnimationFrame(() => {
         pendingFrame = null;
         check(
-          new CustomEvent(OBSERVED_ELEMENT_SIZE_CHANGE, {
+          new CustomEvent(ELEMENT_SIZE_CHANGE, {
             detail: { width, height },
           }),
         );
@@ -12497,7 +12790,7 @@ const toContainerAlignedPosition = (value) => {
  *   edges instead of the page viewport's, on both axes (the Y axis otherwise has no such
  *   clamp at all — see the clamp's own comment) — that part *is* gated on `hasValidAnchor`,
  *   unlike the coordinate-space conversion itself.
- * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow }}
+ * @returns {{ hasValidAnchor, shouldTransition, positionX, positionY, left, top, width, height, anchorLeft, anchorTop, anchorRight, anchorBottom, spaceLeft, spaceRight, spaceAbove, spaceBelow, containerWidthAvailable, containerHeightAvailable }}
  */
 const pickPositionRelativeTo = (
   element,
@@ -13010,22 +13303,34 @@ const pickPositionRelativeTo = (
   // so the usable space includes the anchor dimension.
   // marginWithAnchor (gap between anchor and element) and marginWithContainer are subtracted
   // so callers get the net usable space directly.
-  const effectiveSpaceAbove =
-    (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
-    (finalY === "top" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceBelow =
-    (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
-    (finalY === "bottom" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceLeft =
-    (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
-    (finalX === "left" ? marginWithAnchor : 0) -
-    marginWithContainer;
-  const effectiveSpaceRight =
-    (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
-    (finalX === "right" ? marginWithAnchor : 0) -
-    marginWithContainer;
+  const containerWidthAvailable = availableWidth - 2 * marginWithContainer;
+  const containerHeightAvailable = availableHeight - 2 * marginWithContainer;
+  // Docked to a container (no real anchor): the element is kept inside the
+  // container's margin on BOTH sides — that is what the !hasValidAnchor clamp
+  // above enforces — so what it has to work with is the container net of both.
+  // The anchor-relative formulas below count the margin once, which is right
+  // when the space really is bounded by the anchor on the other side, and
+  // wrong here: it would let the far edge grow flush against the container.
+  const effectiveSpaceAbove = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-bottom" ? spaceAbove + anchorHeight : spaceAbove) -
+      (finalY === "top" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceBelow = !hasValidAnchor
+    ? containerHeightAvailable
+    : (finalY === "inset-top" ? spaceBelow + anchorHeight : spaceBelow) -
+      (finalY === "bottom" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceLeft = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-right" ? spaceLeft + anchorWidth : spaceLeft) -
+      (finalX === "left" ? marginWithAnchor : 0) -
+      marginWithContainer;
+  const effectiveSpaceRight = !hasValidAnchor
+    ? containerWidthAvailable
+    : (finalX === "inset-left" ? spaceRight + anchorWidth : spaceRight) -
+      (finalX === "right" ? marginWithAnchor : 0) -
+      marginWithContainer;
 
   return {
     // Whether a real anchor actually ended up used — false when there's no
@@ -13048,6 +13353,12 @@ const pickPositionRelativeTo = (
     spaceRight: effectiveSpaceRight,
     spaceAbove: effectiveSpaceAbove,
     spaceBelow: effectiveSpaceBelow,
+    // What a centered axis has to work with: the whole container, net of the
+    // margin kept on both sides. spaceLeft/spaceRight can't answer that — they
+    // are measured from the anchor, which for a container-docked element is
+    // the container itself, so they collapse to -marginWithContainer.
+    containerWidthAvailable,
+    containerHeightAvailable,
   };
 };
 
@@ -13168,8 +13479,16 @@ const applyNewPosition = (
     spaceRight,
     spaceAbove,
     spaceBelow,
+    containerWidthAvailable,
+    containerHeightAvailable,
   },
 ) => {
+  // A centered axis is published too, from the container's own extent: leaving
+  // the property unset lets the consumer's size cap fall back to its viewport
+  // default, which overflows any container smaller than the viewport (a
+  // dialog/popover confined to a positioned ancestor). It stays a "remaining
+  // space" either way — docked: what is left on that side, centered: the whole
+  // container minus its margins.
   if (positionY === "top" || positionY === "inset-bottom") {
     element.style.setProperty(
       "--container-position-remaining-height",
@@ -13180,8 +13499,13 @@ const applyNewPosition = (
       "--container-position-remaining-height",
       `${spaceBelow}px`,
     );
-  } else {
+  } else if (containerHeightAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-height");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-height",
+      `${containerHeightAvailable}px`,
+    );
   }
   if (positionX === "left" || positionX === "inset-right") {
     element.style.setProperty(
@@ -13193,8 +13517,13 @@ const applyNewPosition = (
       "--container-position-remaining-width",
       `${spaceRight}px`,
     );
-  } else {
+  } else if (containerWidthAvailable === undefined) {
     element.style.removeProperty("--container-position-remaining-width");
+  } else {
+    element.style.setProperty(
+      "--container-position-remaining-width",
+      `${containerWidthAvailable}px`,
+    );
   }
 
   // A single implicit keyframe turned out not to work here: the WAAPI
@@ -16484,4 +16813,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };

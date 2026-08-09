@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page layout demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 24px 0 8px;
+        color: #1a1a1a;
+        font-size: 1.05rem;
+        scroll-margin-top: 12px;
+      }
+      .toc {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      /* Every example is shown inside a screen-shaped box rather than taking
+         over the page: what both components do is fill what holds them, and
+         two of them side by side is the whole comparison. */
+      .demo-screen {
+        width: 100%;
+        max-width: 460px;
+        height: 260px;
+        border: 1px dashed #999;
+        border-radius: 8px;
+        resize: both;
+        overflow: hidden;
+      }
+      .demo-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .demo-note {
+        margin: 4px 0 0;
+        color: #666;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import {
+        Button,
+        CardLayout,
+        Field,
+        Form,
+        Input,
+        Label,
+        Link,
+        NaviDebug,
+        Separator,
+        Text,
+        ViewportLayout,
+      } from "@jsenv/navi";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // Each box is resizable (see .demo-screen): drag its corner to watch the
+      // room around the card survive a narrow window, which is what the padding
+      // — rather than a margin — is there for.
+      const Screen = ({ children }) => (
+        <div class="demo-screen">{children}</div>
+      );
+
+      const ViewportSection = () => (
+        <section class="demo-section">
+          <Heading id="viewport">ViewportLayout</Heading>
+          <div class="demo-row">
+            <div>
+              <Screen>
+                <ViewportLayout>
+                  <Text>content</Text>
+                </ViewportLayout>
+              </Screen>
+              <p class="demo-note">default</p>
+            </div>
+            <div>
+              <Screen>
+                <ViewportLayout padding="0" background="#eef3fb">
+                  <Text>content</Text>
+                </ViewportLayout>
+              </Screen>
+              <p class="demo-note">padding="0" background</p>
+            </div>
+          </div>
+        </section>
+      );
+
+      const SignInCard = () => (
+        <Form
+          flex="y"
+          spacing="m"
+          action={() => undefined}
+          style={{ minWidth: "200px" }}
+        >
+          <Text>Sign in</Text>
+          <Separator />
+          <Field vertical>
+            <Label requiredIndicator>Email</Label>
+            <Input name="email" type="email" required />
+          </Field>
+          <Button type="submit">Continue</Button>
+        </Form>
+      );
+
+      const CardSection = () => (
+        <section class="demo-section">
+          <Heading id="card">CardLayout</Heading>
+          <div class="demo-row">
+            <div>
+              <Screen>
+                <CardLayout>
+                  <SignInCard />
+                </CardLayout>
+              </Screen>
+              <p class="demo-note">default</p>
+            </div>
+            <div>
+              <Screen>
+                <CardLayout margin="0" borderRadius="0">
+                  <SignInCard />
+                </CardLayout>
+              </Screen>
+              <p class="demo-note">margin="0" borderRadius="0"</p>
+            </div>
+          </div>
+
+          <Heading level={3} id="card-in-viewport">
+            Inside a ViewportLayout
+          </Heading>
+          <div class="demo-row">
+            <div>
+              <Screen>
+                <ViewportLayout padding="0" background="#1a237e">
+                  <CardLayout>
+                    <SignInCard />
+                  </CardLayout>
+                </ViewportLayout>
+              </Screen>
+              <p class="demo-note">the page paints, the card sits on it</p>
+            </div>
+          </div>
+        </section>
+      );
+
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <Heading id="page-layout">Page layout</Heading>
+          <p>
+            What a screen is built out of before anything is opened over it:{" "}
+            <code>ViewportLayout</code> is the page — it fills what holds it and
+            paints the background — and <code>CardLayout</code> centers one
+            bordered surface in it. It looks like a dialog and is deliberately
+            not one: it lives in the document, nothing opens or closes it, and
+            nothing behind it is made inert. For the ones that do open, see{" "}
+            <Link href="./1_dialog_demo.html">Dialog</Link>.
+          </p>
+          <DocumentToc />
+        </div>
+      );
+
+      const App = () => (
+        <NaviDebug>
+          <DemoHeader
+            title="Page layout demo"
+            previous={{ href: "./9_separator_demo.html", label: "Separator" }}
+          />
+          <TableOfContents />
+          <ViewportSection />
+          <CardSection />
+        </NaviDebug>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

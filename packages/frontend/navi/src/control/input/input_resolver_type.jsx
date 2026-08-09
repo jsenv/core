@@ -12,6 +12,13 @@ import { InputTextualContext } from "./input_textual_context.js";
 
 export const InputTypeResolver = (props) => {
   const Next = useNextResolver();
+  // Opt-in for any other type: type="search" gets this shape for free, but a
+  // control whose value is picked rather than typed (a picker façade) wants the
+  // very same "icon while empty, clear button once filled" affordance without
+  // pretending to be a search box.
+  if (props.clearable && props.type !== "search") {
+    return <InputClearable {...props} />;
+  }
   if (props.type === "search") {
     return <InputSearch {...props} />;
   }
@@ -38,6 +45,17 @@ const InputSearch = (props) => {
 
   return <Next ui={<InputSearchUI icon={props.icon} />} {...props} />;
 };
+const InputClearable = (props) => {
+  const Next = useNextResolver();
+
+  return (
+    <Next
+      ui={<InputSearchUI icon={props.icon === undefined ? null : props.icon} />}
+      {...props}
+      clearable={undefined}
+    />
+  );
+};
 const InputSearchUI = ({ icon }) => {
   const { value, id } = useContext(InputTextualContext);
   const searchIcon = icon === undefined ? <SearchSvg /> : icon;
@@ -59,7 +77,10 @@ const InputSearchUI = ({ icon }) => {
         icon
         variant="discrete"
       >
-        <Icon>
+        {/* fillLine, like the search icon in InputIconSlot: the two take turns
+            in the same slot, so they must occupy the same box (1lh square) or
+            the input's fit-content width shifts when one replaces the other. */}
+        <Icon fillLine>
           <CloseSvg />
         </Icon>
       </Button>

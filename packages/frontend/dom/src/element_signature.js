@@ -143,6 +143,14 @@ export const getElementSignature = (element) => {
       return `${tagName}#${elementId}`;
     }
     if (tagName === "button") {
+      // The label BEFORE the text: an icon button has no text worth reading
+      // (an svg, a zero-width space), and its aria-label is the one thing that
+      // says which button it is — which is the whole point of a signature in a
+      // log. A labelled button says so even when it also has text.
+      const label = element.getAttribute("aria-label");
+      if (label) {
+        return `button[aria-label="${label}"]`;
+      }
       const text = element.textContent.trim();
       if (text) {
         const excerpt = text.length > 10 ? `${text.slice(0, 10)}…` : text;

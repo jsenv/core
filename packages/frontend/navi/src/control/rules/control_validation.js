@@ -195,10 +195,10 @@ export const createControlValidation = (
       ...dynamicConstraintSet,
     ]);
     const elementSig = getElementSignature(controller.ref.current);
-    debugUIState(
-      event,
-      `check ${elementSig}: ${constraintSet.size} constraints`,
-    );
+    // Not logged: every control checks its constraints on every interaction and
+    // almost always passes, so this line alone was most of the debug output —
+    // and with devtools open, formatting it costs a frame. What matters is a
+    // constraint that FAILS, which says so below.
     validityInfoMap.clear();
     failedConstraintInfo = null;
     failingManagedControlValidity = null;
@@ -374,10 +374,8 @@ export const createControlValidation = (
       if (ci) {
         ci.checkInteractivity({ event });
       }
-      debugUIState(
-        event,
-        `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
-      );
+      // Same reason as the check above: "nothing was wrong" is the normal
+      // case and does not need saying.
       callout.removeOpenToken(VALIDATION_TOKEN, event);
     }
     // Propagate a silent validity update up the controller chain.

@@ -8,6 +8,8 @@ import { extractMessageAndRemainingProps } from "./rules/constraint_message.js";
 const css = /* css */ `
   @layer navi {
     .navi_label {
+      --label-required-indicator-color: var(--navi-color-danger, #b42318);
+
       &[data-control-connected] {
         cursor: pointer;
         user-select: none;
@@ -16,6 +18,13 @@ const css = /* css */ `
       &[data-disabled] {
         color: rgba(0, 0, 0, 0.5);
         cursor: default;
+      }
+
+      .navi_label_required_indicator {
+        /* not a space in the text: it would be part of what a double-click
+           selects, and would collapse differently depending on the markup */
+        padding-left: 0.25em;
+        color: var(--label-required-indicator-color);
       }
     }
 
@@ -112,7 +121,10 @@ const FieldAsContainer = (props) => {
   const { children } = props;
   props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
   const isVertical = props.flex === "y";
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps({
+    ...props,
+    requiredIndicator: undefined,
+  });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
   const idDefault = useId();
@@ -148,10 +160,18 @@ const FIELD_PSEUDO_CLASSES = [
 
 export const Label = (props) => {
   import.meta.css = css;
-  const { children } = props;
+  const {
+    children,
+    // Marks the label when its control is required. Takes what to show, or
+    // true for the usual asterisk. The control is the one that knows it is
+    // required — it tells its labels — so a form never has to say it twice,
+    // and the mark cannot drift from the constraint it announces.
+    requiredIndicator,
+  } = props;
   const controlId = useContext(ControlIdContext);
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [required, setRequired] = useState(false);
   const [connected, setConnected] = useState(false);
   // Set htmlFor only when we know the correct target id:
   //   - caller explicitly provided one (even undefined to opt out)
@@ -162,7 +182,10 @@ export const Label = (props) => {
   if (!Object.hasOwn(props, "htmlFor") && controlId) {
     props.htmlFor = controlId;
   }
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps({
+    ...props,
+    requiredIndicator: undefined,
+  });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
 
@@ -181,16 +204,25 @@ export const Label = (props) => {
         setConnected(true);
         setDisabled(e.detail.disabled);
         setReadOnly(e.detail.readOnly);
+        setRequired(Boolean(e.detail.required));
       }}
       onnavi_control_disconnected={() => {
         setConnected(false);
         setDisabled(false);
         setReadOnly(false);
+        setRequired(false);
       }}
     >
       <MessagePropsRefContext.Provider value={messagePropsRef}>
         <ControlIdContext.Provider value={props.htmlFor}>
           {children}
+          {requiredIndicator && required && (
+            // aria-hidden: the control carries `required`, which is what a
+            // screen reader announces — the mark is there for the eye
+            <span className="navi_label_required_indicator" aria-hidden="true">
+              {requiredIndicator === true ? "*" : requiredIndicator}
+            </span>
+          )}
         </ControlIdContext.Provider>
       </MessagePropsRefContext.Provider>
     </Box>

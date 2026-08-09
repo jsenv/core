@@ -303,8 +303,11 @@ button:hover {
           const v = version && version !== "unknown" ? ` ${version}` : "";
           return `${label}${v}`;
         };
+        // The ip is part of who a client is: it tells the main client
+        // (localhost — this machine) from a device on the network.
+        const ipLabel = client.local ? "localhost" : client.ip;
         return (
-          [part(client.runtime, RUNTIME_LABELS), part(client.os)]
+          [part(client.runtime, RUNTIME_LABELS), part(client.os), ipLabel]
             .filter(Boolean)
             .join(" · ") || clientId.slice(0, 8)
         );

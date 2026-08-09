@@ -19,6 +19,8 @@ import {
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingIndicator } from "../../graphic/loading/loading_indicator.jsx";
+import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { openCallout } from "../rules/callout/callout.js";
 import { Separator } from "../../layout/separator.jsx";
 import { useDebugScroll } from "../../navi_debug.jsx";
 import { naviI18n } from "../../text/navi_i18n.js";
@@ -65,6 +67,9 @@ const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
+// Set by <List itemTransition>: each row then gets a view-transition-name of
+// its own, so a change wrapped in a view transition animates row by row.
+const ItemTransitionContext = createContext(false);
 
 const css = /* css */ `
   @layer navi {
@@ -168,7 +173,14 @@ const css = /* css */ `
         flex: 1;
       }
     }
-    &[navi-nothing-to-display] {
+    /* :not(:has(...)) — a header or a footer is content of its own (a title, a
+       count, an "add" call to action) and is often most useful exactly when the
+       items are gone, so a list carrying one is never "nothing to display".
+       nothingToDisplay only ever counts items, which is right for it: this is
+       the one place that knows the chrome is there too. */
+    &[navi-nothing-to-display]:not(
+        :has(.navi_list_item_header, .navi_list_item_footer)
+      ) {
       display: none;
     }
     &[popover] {
@@ -279,6 +291,50 @@ const css = /* css */ `
 
     &[navi-muted] {
       opacity: 0.35;
+    }
+
+    /* A row that cannot be acted on right now (see ListItemReal): it says so
+       by dimming, and stops taking clicks — including on the buttons it holds,
+       which is the whole point (the row is what is read-only, not one of its
+       parts). Positioned so the loading outline it may draw has a box to sit
+       on. */
+    /* Same inline callout as the list's own error (.navi_list_error), scoped to
+       one row. The message takes the room, the way out sits at the end. */
+    .navi_list_item_error_message {
+      flex: 1;
+    }
+    .navi_list_item_error_dismiss {
+      padding: 2px 8px;
+      flex: none;
+      color: inherit;
+      font: inherit;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      opacity: 0.8;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &[navi-error] {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: light-dark(#b91c1c, #fca5a5);
+      background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    }
+
+    &[navi-readonly] {
+      position: relative;
+      opacity: 0.6;
+      cursor: default;
+      /* NOT pointer-events: none — the press has to reach the row so it can
+         say why it does nothing (see ListItemReal). What the row holds is
+         neutralized by the capture-phase handlers there instead. */
+      user-select: none;
     }
   }
 
@@ -427,6 +483,20 @@ const css = /* css */ `
      after the list items */
     order: 1;
   }
+  /* A control that IS the row — a direct child of the item, so it spans it —
+     must keep its loading outline within its own box: the scroll container is
+     overflow:auto, and the couple pixels the outline normally draws outside
+     the control are enough to make it scrollable, so a scrollbar would appear
+     and disappear as things load. Targeted on the outline itself rather than
+     inherited from the item, so a control nested deeper (which has room around
+     it, and does not reach the edges) keeps the outline it asked for. */
+  .navi_list_item > .navi_loading_outline_wrapper,
+  .navi_list_item > * > .navi_loading_outline_wrapper,
+  .navi_list_item_header > * > .navi_loading_outline_wrapper,
+  .navi_list_item_footer > * > .navi_loading_outline_wrapper {
+    --loading-outline-min-inset: 0px;
+  }
+
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
@@ -499,6 +569,7 @@ const ListUI = (props) => {
     fallback,
     searchFallback,
     separator,
+    itemTransition,
     children,
     popover,
     expandX,
@@ -735,6 +806,7 @@ const ListUI = (props) => {
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
+        itemTransition={itemTransition}
         expandX={expandX || expand}
         horizontal={horizontal}
         spacing={spacing}
@@ -810,6 +882,7 @@ const ListContent = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   expandX,
   horizontal,
   spacing,
@@ -832,6 +905,7 @@ const ListContent = ({
         error={error}
         searchNoMatchMode={searchNoMatchMode}
         separator={separator}
+        itemTransition={itemTransition}
         expandX={expandX}
         // Deliberately not expandY here (unlike expandX above): the outer
         // .navi_list_container already gets its own expandY treatment (see
@@ -1381,6 +1455,7 @@ const UnorderedList = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   horizontal,
   spacing,
   columns,
@@ -1418,11 +1493,13 @@ const UnorderedList = ({
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
-            <ListItemTrackerContext.Provider value={tracker}>
-              <ListColumnsContext.Provider value={columns || null}>
-                {children}
-              </ListColumnsContext.Provider>
-            </ListItemTrackerContext.Provider>
+            <ItemTransitionContext.Provider value={Boolean(itemTransition)}>
+              <ListItemTrackerContext.Provider value={tracker}>
+                <ListColumnsContext.Provider value={columns || null}>
+                  {children}
+                </ListColumnsContext.Provider>
+              </ListItemTrackerContext.Provider>
+            </ItemTransitionContext.Provider>
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
       </SearchNoMatchModeContext.Provider>
@@ -1716,7 +1793,26 @@ const ListItemVoid = () => {
   return null;
 };
 const ListItemReal = (props) => {
-  const { ref, id, hidden, muted, matchInfo, children, ...rest } = props;
+  const {
+    ref,
+    id,
+    hidden,
+    muted,
+    loading,
+    readOnly,
+    error,
+    onErrorDismiss,
+    matchInfo,
+    children,
+    ...rest
+  } = props;
+  // A row that failed says so in place of its content, and — when the caller
+  // gave it somewhere to go — carries the way out with the message: the row
+  // stands for something that never happened, so acknowledging the failure is
+  // what makes it leave. Making it leave is the CALLER's move, not this one's:
+  // the row it stands for is the caller's, and so is whatever animates its
+  // departure (navi starts no view transition of its own — the browser has to
+  // see the state change, which only the caller can arrange).
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -1736,6 +1832,71 @@ const ListItemReal = (props) => {
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
 
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
+  // <List itemTransition>: the row is named, so a change wrapped in a view
+  // transition animates it rather than cross-fading the list. Through the Box
+  // prop and not through style, because Box turns the name off again while the
+  // row is only partly visible (see usePartiallyHidden) — a row half-scrolled
+  // out of its container would otherwise animate from a clipped snapshot.
+  const itemTransition = useContext(ItemTransitionContext);
+
+  // Pressing a row that is busy or read-only must say why nothing happens,
+  // where the press happened — a control does this through its own interaction
+  // gate, and a list row has none (same situation as picker_spin's way-out
+  // buttons). Caught in the capture phase so the buttons the row contains never
+  // see the press either: it is the ROW that is unavailable, not one of its
+  // parts.
+  const blocked = loading || readOnly;
+  // The primary button only: a right (or middle) click asks the browser for its
+  // own menu — copying the row's text, opening a link it holds in a tab — and
+  // none of that acts on the row, so a busy row has no reason to swallow it.
+  // What is layered OVER the row is not part of it: the callout explaining why
+  // the row is blocked is parented to the row (that is how it is anchored), so
+  // a capture-phase block would swallow the press on its own close button — the
+  // callout could then never be dismissed. Anything inside a popover is someone
+  // else's business.
+  const isOverlaidOnRow = (event) =>
+    event.target.closest && event.target.closest("[popover]");
+  const blockInteraction = (event) => {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  // Whether the click about to arrive belongs to a press that started on this
+  // row. A click can be delivered here without one: dismissing the callout
+  // presses its close button, the callout goes away, and the click that follows
+  // is delivered to whatever is now under the pointer — this row.
+  const pressStartedHereRef = useRef(false);
+
+  const calloutRef = useRef(null);
+  const explainBlockedInteraction = (event) => {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
+      return;
+    }
+    blockInteraction(event);
+    pressStartedHereRef.current = true;
+    // One at a time, and not the one that just dismissed it (see the refs).
+    if (calloutRef.current && calloutRef.current.opened) {
+      return;
+    }
+    calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
+      anchorElement: event.currentTarget,
+      status: "info",
+      openingEvent: event,
+    });
+  };
+  useLayoutEffect(() => {
+    if (blocked) {
+      return;
+    }
+    // The wait is over, so the sentence explaining it has nothing left to say.
+    const callout = calloutRef.current;
+    if (callout && callout.opened) {
+      callout.close();
+    }
+    calloutRef.current = null;
+  }, [blocked]);
 
   return (
     <Box
@@ -1756,12 +1917,80 @@ const ListItemReal = (props) => {
       aria-hidden={hidden}
       inert={hidden ? true : undefined}
       navi-muted={muted ? "" : undefined}
+      // A row of a list is edited row by row — created, saved, deleted — so
+      // waiting on a server and being untouchable are states of the ROW, not
+      // only of a control inside it. Loading implies read-only: a row whose
+      // fate is in flight must not take another order in the meantime.
+      navi-loading={loading ? (loading === true ? "" : loading) : undefined}
+      navi-readonly={readOnly || loading ? "" : undefined}
+      aria-busy={loading ? "true" : undefined}
+      aria-readonly={readOnly ? "true" : undefined}
+      navi-error={error ? "" : undefined}
+      viewTransitionName={
+        itemTransition ? `navi_list_item_${id}` : rest.viewTransitionName
+      }
+      viewTransitionClass={
+        itemTransition ? "navi_list_item" : rest.viewTransitionClass
+      }
+      onPointerDownCapture={blocked ? explainBlockedInteraction : undefined}
+      onClickCapture={
+        blocked
+          ? (event) => {
+              if (!pressStartedHereRef.current) {
+                return;
+              }
+              pressStartedHereRef.current = false;
+              blockInteraction(event);
+            }
+          : undefined
+      }
       ref={ref}
     >
-      {children}
+      {/* The error IS the row's content: what the row stood for did not
+          happen, so showing it as if it had would be a lie — same choice as
+          the list's own error, one row down. */}
+      {error ? (
+        <>
+          <span className="navi_list_error_icon" aria-hidden="true">
+            ⚠
+          </span>
+          <span className="navi_list_item_error_message">
+            {error === true ? "Something went wrong." : error}
+          </span>
+          {onErrorDismiss && (
+            <button
+              type="button"
+              className="navi_list_item_error_dismiss"
+              onClick={onErrorDismiss}
+            >
+              {naviI18n("button.close", props)}
+            </button>
+          )}
+        </>
+      ) : (
+        children
+      )}
+      {/* Drawn on top of the row, taking no space: the row keeps whatever
+          layout it was given (a flex row, a grid of columns…) while it waits. */}
+      {loading && (
+        <LoadingOutline loading color="var(--navi-loader-color)" inset={-1} />
+      )}
     </Box>
   );
 };
+// Why the row cannot be acted on, in the row's own terms. `loading` may say
+// what it is waiting for ("adding", "removing"): a row being created is not
+// simply "busy", and saying which one it is tells the user what to expect.
+const blockedMessage = (loading, readOnly, props) => {
+  if (!loading) {
+    return naviI18n("constraint.readonly.item", props);
+  }
+  if (loading === "adding" || loading === "removing") {
+    return naviI18n(`constraint.busy.item.${loading}`, props);
+  }
+  return naviI18n("constraint.busy.item", props);
+};
+
 const LIST_ITEM_STYLE_CSS_VARS = {
   "borderRadius": "--list-item-border-radius",
   "borderWidth": "--list-item-border-width",
@@ -1829,6 +2058,16 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               `selected.includes(value)` (multiple) from parent state.
  *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
  *               if omitted; prefer `id` for external addressing).
+ *   error     — what this row stood for failed: the message replaces its
+ *               content, styled like the list's own error. `true` shows a
+ *               generic sentence.
+ *   loading   — the row is waiting on something: it draws a loading outline and,
+ *               like readOnly, stops taking clicks. Works on any item, not only
+ *               a selectable one — a list is edited row by row. Pass "adding" or
+ *               "removing" rather than true to say WHAT it is waiting for, which
+ *               is what a press on it then answers.
+ *   readOnly  — the row cannot be acted on: dimmed and click-through-proof,
+ *               buttons inside it included.
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute

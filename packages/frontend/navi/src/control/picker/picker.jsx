@@ -2,7 +2,9 @@ import { performTabNavigation } from "@jsenv/dom";
 import { useContext, useEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
+import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
 import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+import { CloseSvg } from "@jsenv/navi/src/graphic/icons/close_svg.jsx";
 import { LoadingOutline } from "@jsenv/navi/src/graphic/loading/loading_outline.jsx";
 import {
   createComponentResolver,
@@ -16,6 +18,7 @@ import {
   useControlFacadeProps,
 } from "../control_hooks.jsx";
 import { getUIStateControllerById } from "../controller_registry.js";
+import { Button } from "../input/button.jsx";
 import { resolveInputProps } from "../input/resolve_input_props.js";
 import { useAutoSelectReadOnly } from "../input/use_autoselect_read_only.js";
 import { createOpenToken } from "../rules/control_callout.js";
@@ -28,15 +31,9 @@ import { PickerContext } from "./picker_context.jsx";
 import { PickerCustomResolver } from "./picker_custom.jsx";
 import { PickerPresetResolver } from "./picker_preset.jsx";
 import {
-  CalendarSvg,
-  ClockSvg,
-  ColorSvg,
-  DurationSvg,
-  FileSvg,
-  PencilSvg,
   PickerArrayUI,
   PickerColorUI,
-  PickerControlGroupUI,
+  PickerFormUI,
   PickerDatetimeUI,
   PickerDateUI,
   PickerDurationUI,
@@ -45,6 +42,12 @@ import {
   PickerTypeResolver,
   PickerWeekUI,
 } from "./picker_types.jsx";
+import { CalendarSvg } from "../../graphic/icons/calendar_svg.jsx";
+import { ClockSvg } from "../../graphic/icons/clock_svg.jsx";
+import { ColorSvg } from "../../graphic/icons/color_svg.jsx";
+import { DurationSvg } from "../../graphic/icons/duration_svg.jsx";
+import { FileSvg } from "../../graphic/icons/file_svg.jsx";
+import { PencilSvg } from "../../graphic/icons/pencil_svg.jsx";
 
 const css = /* css */ `
   @layer navi {
@@ -53,7 +56,7 @@ const css = /* css */ `
       --picker-border-width: var(--navi-control-border-width);
       /* Focus outline */
       --picker-outline-width: var(--navi-focus-outline-width);
-      --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
+      --picker-outline-offset: calc(-0.5 * var(--picker-outline-width));
       --picker-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
@@ -142,36 +145,54 @@ const css = /* css */ `
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
 
-    position: relative;
+    /* Deliberately NOT positioned: the popup children live in here, and a
+       layer="local" Popover/Dialog takes its nearest positioned ancestor as
+       containing block — the trigger would cap it at the height of one line and
+       clip it. Everything that needs a containing block (the custom-UI input
+       overlay, the loading outline) lives in .navi_picker_box below instead.
+       This element stays a real box so the sizing props a caller puts on the
+       picker (minWidth, expandX…) still apply; the box just fills it. */
     display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
-    min-height: calc(
-      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-    );
-    padding-top: var(--x-picker-padding-top);
-    padding-right: 0;
-    padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: 0;
-    flex-direction: row;
-    align-items: center;
+    /* Inherited properties stay here: a caller's own size/color lands on this
+       element, and re-declaring them on the box below would override what it
+       would otherwise inherit. */
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    background-color: var(--x-picker-background-color);
-    border-width: var(--picker-border-width);
-    border-style: solid;
-    border-color: var(--x-picker-border-color);
-    border-radius: var(--picker-border-radius);
-    outline-width: var(--picker-outline-width);
-    outline-style: none;
-    outline-color: var(--picker-outline-color);
-    outline-offset: var(--picker-outline-offset);
-    cursor: var(--x-picker-cursor, pointer);
-    pointer-events: auto;
-    /* user-select: none; */
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+
+    .navi_picker_box {
+      position: relative;
+      display: inline-flex;
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+      min-height: calc(
+        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+      );
+      padding-top: var(--x-picker-padding-top);
+      padding-right: 0;
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: 0;
+      flex: 1 1 auto;
+      flex-direction: row;
+      align-items: center;
+      background-color: var(--x-picker-background-color);
+      border-width: var(--picker-border-width);
+      border-style: solid;
+      border-color: var(--x-picker-border-color);
+      border-radius: var(--picker-border-radius);
+      outline-width: var(--picker-outline-width);
+      outline-style: none;
+      outline-color: var(--picker-outline-color);
+      outline-offset: var(--picker-outline-offset);
+      cursor: var(--x-picker-cursor, pointer);
+      pointer-events: auto;
+      /* user-select: none; */
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    }
 
     .navi_picker_value {
       display: inline-block;
@@ -193,21 +214,60 @@ const css = /* css */ `
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: calc(var(--x-picker-padding-right) * 0.5);
-
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-right: var(--slot-spacing);
+      /* Half the horizontal padding by default, so what sits in the slot lines
+         up with the gutter the value already has; slotSpacing overrides it */
+      margin-right: var(
+        --picker-slot-spacing,
+        calc(var(--x-picker-padding-right) * 0.5)
+      );
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      /* Transparent to the pointer: the chevron is decoration, and a click on
+         it means "open the picker", which is what the input underneath does. */
       pointer-events: none;
 
-      .navi_icon {
+      /* :not(...) — the slot is one line tall, and an icon fills it rather than
+         stretching it. An icon that opted out of that cap (Icon's lineOverflow,
+         which the slot's own icons use) is asking to be bigger than the line,
+         so this must not put the cap back. */
+      .navi_icon:not([data-line-overflow="allow"]) {
         max-height: 100%;
+      }
+      /* The clear button is the exception — it is a real target with its own
+         intention (clear, the opposite of open), so it takes its clicks back. */
+      .navi_button {
+        pointer-events: auto;
+
+        /* Drawn small but not small to hit: the spacing around the cross — the
+           slot margins on the sides, the picker padding above and below —
+           belongs to its clickable zone, the same zone the clear cross of an
+           input claims. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-picker-padding-top));
+          right: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          bottom: calc(-1 * var(--x-picker-padding-bottom));
+          left: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          content: "";
+        }
       }
     }
     &[navi-single-line] {
@@ -268,7 +328,10 @@ const css = /* css */ `
     /* Focus */
     &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
       --x-picker-border-color: transparent;
-      outline-style: solid;
+
+      .navi_picker_box {
+        outline-style: solid;
+      }
     }
     /* Disabled */
     &[data-disabled] {
@@ -303,9 +366,11 @@ const css = /* css */ `
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
 
-      position: absolute;
-      inset: 0;
-      z-index: -1;
+      .navi_picker_box {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+      }
     }
   }
 `;
@@ -315,6 +380,10 @@ const PickerButton = (props) => {
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes
+  // the declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const {
     ref,
     variant,
@@ -328,6 +397,10 @@ const PickerButton = (props) => {
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
     popupWidthFitContent,
+    // Adds a clear button to the right slot, the same one type="search" puts at
+    // the end of an input: a picker holds a value the user chose, and unsetting
+    // it should not require reopening the popup to hunt for a "none" entry.
+    clearable,
     error,
   } = props;
   const isSingleLine = maxLines === 1;
@@ -378,122 +451,152 @@ const PickerButton = (props) => {
       onnavi_request_open={inputProps.onnavi_request_open}
       onnavi_request_close={inputProps.onnavi_request_close}
     >
-      {variant === "headless" ? null : (
-        <LoadingOutline
-          loading={loading}
-          color="var(--picker-loader-color)"
-          inset={-2}
-        />
-      )}
-      <PickerInput
-        tabIndex={variant === "headless" ? -1 : undefined}
-        aria-hidden={variant === "headless" ? "true" : undefined}
-        {...inputProps}
-        // eslint-disable-next-line react/no-children-prop
-        children={undefined} // we will render children into the div
-        ui={ui}
-        onFocus={(e) => {
-          inputProps.onFocus?.(e);
-          e.target.select();
-        }}
-        onCopy={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          e.preventDefault();
-          const displayText =
-            pickerEl.querySelector(".navi_picker_value")?.textContent ??
-            String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
-        }}
-        onCut={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            return;
-          }
-          const uiState = uiStateController.uiState;
-          if (uiState === undefined) {
-            return;
-          }
-          // the copy part don't need control to be interactable
-          const displayText =
-            pickerEl.querySelector(".navi_picker_value")?.textContent ??
-            String(uiState);
-          e.clipboardData.setData("text/plain", displayText);
-          e.clipboardData.setData(
-            "application/x-navi",
-            JSON.stringify(uiState),
-          );
-          // the clear ui state part need control to be interactable
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "cut",
-            allowed: () => {
-              dispatchRequestClearUIState(inputRef.current, e);
-            },
-          });
-          e.preventDefault();
-        }}
-        onPaste={(e) => {
-          const pickerEl = ref.current;
-          if (isWithinPickerContent(e.target, pickerEl)) {
-            // Don't intercept inside the picker popup content.
-            return;
-          }
-          const naviData = e.clipboardData.getData("application/x-navi");
-          let pasteValue;
-          if (naviData) {
-            try {
-              pasteValue = JSON.parse(naviData);
-            } catch {
-              pasteValue = naviData;
+      <span className="navi_picker_box">
+        {variant === "headless" ? null : (
+          <LoadingOutline
+            loading={loading}
+            color="var(--picker-loader-color)"
+            inset={-2}
+          />
+        )}
+        <PickerInput
+          tabIndex={variant === "headless" ? -1 : undefined}
+          aria-hidden={variant === "headless" ? "true" : undefined}
+          {...inputProps}
+          // eslint-disable-next-line react/no-children-prop
+          children={undefined} // we will render children into the div
+          ui={ui}
+          onFocus={(e) => {
+            inputProps.onFocus?.(e);
+            e.target.select();
+          }}
+          onCopy={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              return;
             }
-          } else {
-            pasteValue = e.clipboardData.getData("text/plain");
-          }
-          dispatchRequestInteraction(pickerEl, {
-            event: e,
-            name: "paste",
-            allowed: () => {
-              dispatchRequestSetUIState(inputRef.current, pasteValue, {
-                event: e,
-              });
-            },
-          });
-          e.preventDefault();
-        }}
-      />
-      {variant === "icon" ||
-      variant === "headless" ||
-      ui === "default" ? null : (
-        <Text
-          className="navi_picker_value"
-          navi-placeholder={
-            value === undefined || value === "" ? "" : undefined
-          }
-          maxLines={maxLines}
-        >
-          <PickerContext.Provider value={{ value, placeholder, maxLines }}>
-            {ui === undefined ? <PickerDefaultUI /> : ui}
-          </PickerContext.Provider>
-        </Text>
-      )}
-      {variant === "headless" || ui === "default" ? null : (
-        <span className="navi_picker_right_slot">
-          <Icon size={iconSize}>
-            {icon === undefined ? <ChevronDownSvg /> : icon}
-          </Icon>
-        </span>
-      )}
+            const uiState = uiStateController.uiState;
+            if (uiState === undefined) {
+              return;
+            }
+            e.preventDefault();
+            const displayText =
+              pickerEl.querySelector(".navi_picker_value")?.textContent ??
+              String(uiState);
+            e.clipboardData.setData("text/plain", displayText);
+            e.clipboardData.setData(
+              "application/x-navi",
+              JSON.stringify(uiState),
+            );
+          }}
+          onCut={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              return;
+            }
+            const uiState = uiStateController.uiState;
+            if (uiState === undefined) {
+              return;
+            }
+            // the copy part don't need control to be interactable
+            const displayText =
+              pickerEl.querySelector(".navi_picker_value")?.textContent ??
+              String(uiState);
+            e.clipboardData.setData("text/plain", displayText);
+            e.clipboardData.setData(
+              "application/x-navi",
+              JSON.stringify(uiState),
+            );
+            // the clear ui state part need control to be interactable
+            dispatchRequestInteraction(pickerEl, {
+              event: e,
+              name: "cut",
+              allowed: () => {
+                dispatchRequestClearUIState(inputRef.current, e);
+              },
+            });
+            e.preventDefault();
+          }}
+          onPaste={(e) => {
+            const pickerEl = ref.current;
+            if (isWithinPickerContent(e.target, pickerEl)) {
+              // Don't intercept inside the picker popup content.
+              return;
+            }
+            const naviData = e.clipboardData.getData("application/x-navi");
+            let pasteValue;
+            if (naviData) {
+              try {
+                pasteValue = JSON.parse(naviData);
+              } catch {
+                pasteValue = naviData;
+              }
+            } else {
+              pasteValue = e.clipboardData.getData("text/plain");
+            }
+            dispatchRequestInteraction(pickerEl, {
+              event: e,
+              name: "paste",
+              allowed: () => {
+                dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                  event: e,
+                });
+              },
+            });
+            e.preventDefault();
+          }}
+        />
+        {variant === "icon" ||
+        variant === "headless" ||
+        ui === "default" ? null : (
+          <Text
+            className="navi_picker_value"
+            navi-placeholder={
+              value === undefined || value === "" ? "" : undefined
+            }
+            maxLines={maxLines}
+          >
+            <PickerContext.Provider value={{ value, placeholder, maxLines }}>
+              {ui === undefined ? <PickerDefaultUI /> : ui}
+            </PickerContext.Provider>
+          </Text>
+        )}
+        {variant === "headless" || ui === "default" ? null : (
+          <span className="navi_picker_right_slot">
+            {clearable && value !== undefined && value !== "" ? (
+              <Button
+                command="--navi-clear"
+                commandFor={inputProps.id}
+                tabIndex="-1"
+                // No navi-focus-delegate, unlike the identical button inside an
+                // input: handing focus back to the picker's own input is what
+                // opens the popup, and clearing is the opposite intention.
+                icon
+                variant="discrete"
+                // preventDefault, not just tabIndex="-1": a mousedown focuses
+                // its target before any click happens, and this button should
+                // never hold focus at all — the field keeps it.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                }}
+                flex
+                align="center"
+              >
+                <Icon size={iconSize} lineOverflow="allow">
+                  <CloseSvg />
+                </Icon>
+              </Button>
+            ) : (
+              // lineOverflow: what sits in the slot is an affordance, not a
+              // character — a caller asking for a bigger one wants it bigger,
+              // not capped at the height of the line it sits on
+              <Icon size={iconSize} lineOverflow="allow">
+                {icon === undefined ? <ChevronDownSvg /> : icon}
+              </Icon>
+            )}
+          </span>
+        )}
+      </span>
       <ControlFacadeChildrenWrapper {...facadeChildrenProps}>
         <div className="navi_picker_content">{children}</div>
       </ControlFacadeChildrenWrapper>
@@ -546,11 +649,6 @@ const PickerInput = (props) => {
       {...props}
       readOnly={readOnlyForced ? true : readOnly}
       data-readonly-forced={readOnlyForced ? "" : undefined}
-      // A forced-readonly picker trigger is button-like — it can't be typed
-      // into, so it shouldn't get the browser's eager text-input focus ring on
-      // mouse. Gate the ring on keyboard use instead (see pseudo_styles.js). An
-      // editable picker (readOnlyForced false) keeps native input focus-visible.
-      data-prevent-eager-focus-visible=""
       ui={undefined}
       className="navi_picker_input"
       pseudoClasses={PickerInputPseudoClasses}
@@ -615,6 +713,7 @@ const PickerStyleCSSVars = {
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
+  "slotSpacing": "--picker-slot-spacing",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
@@ -692,9 +791,12 @@ const PickerFirstResolver = (props) => {
  *   variant?: "icon" | "headless",
  *   icon?: import("preact").ComponentChildren,
  *   maxLines?: number,
+ *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
+ *   clearable?: boolean,
+ *   popupLayer?: "top" | "local",
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -717,6 +819,11 @@ const PickerFirstResolver = (props) => {
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
+ * @param {number|string} [slotSpacing] Gap kept between what sits in the right
+ *   slot (the chevron, or the clear button) and the picker's own edge — same
+ *   prop name Input uses for its own slots. Accepts a spacing token ("s",
+ *   "m"…) like any other spacing prop, or a length. Defaults to half the
+ *   horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
  */
@@ -737,7 +844,7 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
-Picker.UI.ControlGroup = PickerControlGroupUI;
+Picker.UI.Form = PickerFormUI;
 Picker.UI.Multiple = PickerArrayUI;
 
 Picker.UI.PencilSvg = PencilSvg;

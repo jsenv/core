@@ -15,6 +15,7 @@ import {
   createValueEffect,
   dispatchCustomEvent,
   dispatchPublicCustomEvent,
+  ELEMENT_SIZE_CHANGE,
   findEvent,
   findFocusable,
   findFocusDelegateTarget,
@@ -38,6 +39,12 @@ import { renderIntoCallout } from "./callout.jsx";
 const css = /* css */ `
   @layer navi {
     .navi_callout {
+      /* A callout is parented to what it explains, so it inherits from it — and
+       an element that suppressed text selection (a list row, a drag source)
+       would make its own explanation unselectable. The message is text one
+       copies. */
+      user-select: text;
+
       --callout-success-color: #4caf50;
       --callout-info-color: #2196f3;
       --callout-warning-color: #ff9800;
@@ -64,6 +71,10 @@ const css = /* css */ `
     inset: auto;
     top: 0;
     left: 0;
+    /* For some reason callout could end up behing elements when it's redisplayed in a dialog
+    (behind button relatively positioned in dialog footer while callout is appended into dialog body)
+    To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
+    z-index: 1;
     /* Callout styles */
     display: block;
     height: auto; /* User agent reset */
@@ -793,7 +804,10 @@ export const openCallout = (
   addTeardown(() => {
     positioner.stop();
   });
-  callout.updatePosition = () => positioner.update();
+  // The content it just rendered changed its own size, so the check must not be
+  // deduped away on the grounds that the anchor did not move.
+  callout.updatePosition = () =>
+    positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
 
   return callout;
 };

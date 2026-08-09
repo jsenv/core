@@ -13,6 +13,17 @@
  * - buffered console logs
  */
 
+// The main client is the machine the dev server runs on, talking to itself
+// via 127.0.0.1. Watching it makes no sense — its devtools are one keystroke
+// away, and the person reading the dashboard IS this client — so it only
+// reports presence (heartbeat + tab info, so the dashboard lists it and can
+// pilot it) and watches nothing: no console capture, no activity tracking, no
+// fetch/history patching. A client reaching the server over the network (a
+// phone on the LAN ip, acceptAnyIp: true) is the one being monitored, and
+// reports everything.
+const LOCAL_HOSTNAMES = ["127.0.0.1", "127.0.0.1", "[::1]"];
+const isLocalClient = LOCAL_HOSTNAMES.includes(window.location.hostname);
+
 const CLIENT_ID_STORAGE_KEY = "jsenv_client_id";
 const TAB_ID_STORAGE_KEY = "jsenv_tab_id";
 const REPORT_ENDPOINT = "/.internal/clients/report";
@@ -25,6 +36,12 @@ const HEARTBEAT_MS = 15000;
 // Continuous activities (mousemove, scroll) only need to refresh "what the tab
 // is doing" occasionally, not on every event.
 const CONTINUOUS_THROTTLE_MS = 2000;
+// A single log line is worth reading, not storing whole: one console.log of a
+// big object serializes to megabytes, and that string is then kept by the
+// buffer here, by the dev server's own per-client buffer, and by the
+// server-events history — three copies of something nobody will read past the
+// first screen. Cut at the source, once, where the size is known.
+const LOG_TEXT_MAX = 10_000;
 
 const randomId = () =>
   typeof window.crypto !== "undefined" && window.crypto.randomUUID
@@ -191,19 +208,47 @@ const setup = () => {
     }
   };
 
+  // A page can declare itself perf critical (window.__jsenv_perf_critical__()):
+  // measuring an animation means nothing if the thing measuring it steals a
+  // frame. Monitoring then holds everything back until the page has been
+  // genuinely idle — no interaction for a while — instead of flushing on its
+  // own schedule.
+  let perfCritical = false;
+  let lastInteractionMs = 0;
+  const PERF_CRITICAL_QUIET_MS = 2000;
+  const isQuiet = () =>
+    !perfCritical || Date.now() - lastInteractionMs > PERF_CRITICAL_QUIET_MS;
+  const onInteraction = () => {
+    lastInteractionMs = Date.now();
+  };
+  if (!isLocalClient) {
+    for (const eventName of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+      window.addEventListener(eventName, onInteraction, {
+        capture: true,
+        passive: true,
+      });
+    }
+  }
+
   let flushScheduled = false;
   const scheduleFlush = () => {
     if (flushScheduled) {
       return;
     }
     flushScheduled = true;
-    setTimeout(() => {
+    const attempt = () => {
+      if (!isQuiet()) {
+        // Still being used: come back later rather than take the frame now.
+        setTimeout(attempt, PERF_CRITICAL_QUIET_MS);
+        return;
+      }
       flushScheduled = false;
       if (!pendingLogs.length && !pendingActivities.length) {
         return;
       }
       post();
-    }, FLUSH_INTERVAL_MS);
+    };
+    setTimeout(attempt, FLUSH_INTERVAL_MS);
   };
 
   const pushLog = (entry) => {
@@ -224,15 +269,35 @@ const setup = () => {
   let consoleProcessScheduled = false;
   // requestIdleCallback is missing on Safari/iOS (our main mobile target), so
   // fall back to setTimeout there; either way each run is time-boxed below.
+  // Named on window rather than exported: the page that needs it is a plain
+  // html file, and it must be able to ask before anything else has loaded.
+  window.__jsenv_perf_critical__ = () => {
+    perfCritical = true;
+  };
+
   const scheduleIdle =
     typeof requestIdleCallback === "function"
       ? (fn) => requestIdleCallback(fn, { timeout: 1000 })
       : (fn) => setTimeout(fn, 0);
+  const truncate = (text) =>
+    typeof text === "string" && text.length > LOG_TEXT_MAX
+      ? `${text.slice(0, LOG_TEXT_MAX)}… (${text.length - LOG_TEXT_MAX} more characters)`
+      : text;
   const formatOne = (captured) => {
+    const formatted = formatConsole(captured.args);
     pushLog({
       level: captured.level,
       ts: captured.ts,
-      ...formatConsole(captured.args),
+      ...formatted,
+      text: truncate(formatted.text),
+      // The styled runs carry the same text a second time (see formatConsole),
+      // so they are cut the same way.
+      segments: formatted.segments
+        ? formatted.segments.map((segment) => ({
+            ...segment,
+            text: truncate(segment.text),
+          }))
+        : undefined,
     });
   };
   const processConsoleQueue = (deadline) => {
@@ -281,121 +346,128 @@ const setup = () => {
     scheduleFlush();
   };
 
-  // Forward console.* while keeping the original behavior intact.
-  const LEVELS = ["log", "info", "warn", "error", "debug"];
-  for (const level of LEVELS) {
-    const original = console[level];
-    if (typeof original !== "function") {
-      continue;
+  // Everything that WATCHES the page — console, errors, activity, requests,
+  // navigations — is what the main client does without (see isLocalClient).
+  if (!isLocalClient) {
+    // Forward console.* while keeping the original behavior intact.
+    const LEVELS = ["log", "info", "warn", "error", "debug"];
+    for (const level of LEVELS) {
+      const original = console[level];
+      if (typeof original !== "function") {
+        continue;
+      }
+      console[level] = (...args) => {
+        original.apply(console, args);
+        captureConsole(level, args);
+      };
     }
-    console[level] = (...args) => {
-      original.apply(console, args);
-      captureConsole(level, args);
-    };
-  }
-  window.addEventListener("error", (event) => {
-    const location = event.filename
-      ? ` (${event.filename}:${event.lineno})`
-      : "";
-    pushLog({ level: "error", text: `${event.message}${location}` });
-  });
-  window.addEventListener("unhandledrejection", (event) => {
-    pushLog({
-      level: "error",
-      text: `Unhandled rejection: ${formatArg(event.reason)}`,
+    window.addEventListener("error", (event) => {
+      const location = event.filename
+        ? ` (${event.filename}:${event.lineno})`
+        : "";
+      pushLog({ level: "error", text: `${event.message}${location}` });
     });
-  });
+    window.addEventListener("unhandledrejection", (event) => {
+      pushLog({
+        level: "error",
+        text: `Unhandled rejection: ${formatArg(event.reason)}`,
+      });
+    });
 
-  // Qualified activity so the dashboard can say what the tab was last doing.
-  // The detail is kept short enough to read inline (e.g. "mousemove: 40/120").
-  window.addEventListener(
-    "click",
-    (event) => recordActivity("click", `${event.clientX}/${event.clientY}`),
-    { passive: true },
-  );
-  window.addEventListener(
-    "keydown",
-    (event) => recordActivity("keydown", event.key),
-    { passive: true },
-  );
-  let lastMove = 0;
-  let lastScroll = 0;
-  window.addEventListener(
-    "mousemove",
-    (event) => {
-      const t = Date.now();
-      if (t - lastMove < CONTINUOUS_THROTTLE_MS) {
-        return;
-      }
-      lastMove = t;
-      recordActivity("mousemove", `${event.clientX}/${event.clientY}`);
-    },
-    { passive: true },
-  );
-  window.addEventListener(
-    "scroll",
-    () => {
-      const t = Date.now();
-      if (t - lastScroll < CONTINUOUS_THROTTLE_MS) {
-        return;
-      }
-      lastScroll = t;
-      recordActivity("scroll", `${window.scrollX}/${window.scrollY}`);
-    },
-    { passive: true },
-  );
-  document.addEventListener("visibilitychange", () => {
-    // Spell out the direction so the activity reads meaningfully on its own,
-    // rather than a bare "visibility" whose value you have to interpret.
-    recordActivity(
-      document.visibilityState === "visible"
-        ? "document_becomes_visible"
-        : "document_becomes_hidden",
+    // Qualified activity so the dashboard can say what the tab was last doing.
+    // The detail is kept short enough to read inline (e.g. "mousemove: 40/120").
+    window.addEventListener(
+      "click",
+      (event) => recordActivity("click", `${event.clientX}/${event.clientY}`),
+      { passive: true },
     );
+    window.addEventListener(
+      "keydown",
+      (event) => recordActivity("keydown", event.key),
+      { passive: true },
+    );
+    let lastMove = 0;
+    let lastScroll = 0;
+    window.addEventListener(
+      "mousemove",
+      (event) => {
+        const t = Date.now();
+        if (t - lastMove < CONTINUOUS_THROTTLE_MS) {
+          return;
+        }
+        lastMove = t;
+        recordActivity("mousemove", `${event.clientX}/${event.clientY}`);
+      },
+      { passive: true },
+    );
+    window.addEventListener(
+      "scroll",
+      () => {
+        const t = Date.now();
+        if (t - lastScroll < CONTINUOUS_THROTTLE_MS) {
+          return;
+        }
+        lastScroll = t;
+        recordActivity("scroll", `${window.scrollX}/${window.scrollY}`);
+      },
+      { passive: true },
+    );
+
+    // Report outgoing HTTP requests (skipping our own internal traffic).
+    const isInternal = (url) => String(url).includes("/.internal/");
+    window.fetch = (input, init) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof Request
+            ? input.url
+            : String(input);
+      if (!isInternal(url)) {
+        const method =
+          (init && init.method) ||
+          (input instanceof Request ? input.method : "GET");
+        recordActivity("request", `${method} ${url}`);
+      }
+      return nativeFetch(input, init);
+    };
+    // SPA navigations (history API + back/forward).
+    const reportNavigation = () =>
+      recordActivity("navigation", window.location.href);
+    const patchHistory = (method) => {
+      const original = window.history[method];
+      if (typeof original !== "function") {
+        return;
+      }
+      window.history[method] = (...args) => {
+        const result = original.apply(window.history, args);
+        reportNavigation();
+        return result;
+      };
+    };
+    patchHistory("pushState");
+    patchHistory("replaceState");
+    window.addEventListener("popstate", reportNavigation);
+
+    // Record the page load itself as an activity: after a reload the tab goes
+    // hidden (pagehide on the old page) then loads again here, and without this
+    // the dashboard would only ever show the "hidden" side of a reload. Sent
+    // with the first heartbeat below.
+    recordActivity("load", window.location.href);
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!isLocalClient) {
+      // Spell out the direction so the activity reads meaningfully on its own,
+      // rather than a bare "visibility" whose value you have to interpret.
+      recordActivity(
+        document.visibilityState === "visible"
+          ? "document_becomes_visible"
+          : "document_becomes_hidden",
+      );
+    }
     // push promptly so the dashboard's "active tab" tracks focus changes
     post();
   });
-
-  // Report outgoing HTTP requests (skipping our own internal traffic).
-  const isInternal = (url) => String(url).includes("/.internal/");
-  window.fetch = (input, init) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof Request
-          ? input.url
-          : String(input);
-    if (!isInternal(url)) {
-      const method =
-        (init && init.method) ||
-        (input instanceof Request ? input.method : "GET");
-      recordActivity("request", `${method} ${url}`);
-    }
-    return nativeFetch(input, init);
-  };
-  // SPA navigations (history API + back/forward).
-  const reportNavigation = () =>
-    recordActivity("navigation", window.location.href);
-  const patchHistory = (method) => {
-    const original = window.history[method];
-    if (typeof original !== "function") {
-      return;
-    }
-    window.history[method] = (...args) => {
-      const result = original.apply(window.history, args);
-      reportNavigation();
-      return result;
-    };
-  };
-  patchHistory("pushState");
-  patchHistory("replaceState");
-  window.addEventListener("popstate", reportNavigation);
-
-  // Record the page load itself as an activity: after a reload the tab goes
-  // hidden (pagehide on the old page) then loads again here, and without this the
-  // dashboard would only ever show the "hidden" side of a reload. Sent with the
-  // first heartbeat below.
-  recordActivity("load", window.location.href);
 
   // Heartbeat keeps the client "online", refreshes tab info, and lets the server
   // detect a resume.
@@ -438,6 +510,9 @@ const setup = () => {
     // full reload navigates away before this flushes and surfaces as "load" on
     // the next page; a hot update stays on the page, so this is what records it.
     reload: (event) => {
+      if (isLocalClient) {
+        return; // the main client records no activity
+      }
       const data = event.data || {};
       const reason =
         (typeof data.reason === "string" && data.reason) ||
@@ -486,7 +561,8 @@ const showClientToast = ({ client, reason }) => {
   const link = document.createElement("a");
   link.href = `/.internal/client?id=${encodeURIComponent(client.id)}`;
   link.target = "_blank";
-  link.textContent = "Monitor →";
+  link.rel = "noopener";
+  link.textContent = "Monitor ↗";
   link.style.cssText = "color:#93c5fd;text-decoration:none;font-weight:600";
   el.appendChild(link);
   const close = document.createElement("button");

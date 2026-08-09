@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form integration demo</title>
+    <style>
+      body {
+        margin: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      .demo-section h2 {
+        position: relative;
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+        scroll-margin-top: 12px;
+      }
+      .demo-section h3 {
+        position: relative;
+        margin: 24px 0 8px;
+        color: #1a1a1a;
+        font-size: 1.05rem;
+        scroll-margin-top: 12px;
+      }
+      .toc {
+        margin: 0;
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      .demo-row {
+        display: flex;
+        margin-top: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+      }
+      /* The panel that settles a pending action. Deliberately outside every
+         form below, so it stays operable while the form it settles is busy. */
+      .demo-settle {
+        display: flex;
+        margin: 10px 0;
+        padding: 8px 12px;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        background: #f4f7fb;
+        border: 1px solid #d6e2f2;
+        border-radius: 6px;
+      }
+      .demo-settle-state {
+        color: #666;
+        font-family: monospace;
+      }
+      .demo-inside-note {
+        margin: 8px 0 0;
+        padding: 8px 12px;
+        color: #7a5b00;
+        font-size: 13px;
+        background: #fff8e1;
+        border: 1px solid #f0dca0;
+        border-radius: 6px;
+      }
+      .demo_form_box {
+        max-width: 340px;
+        padding: 16px 18px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+      .demo-popup-box {
+        width: 320px;
+        background: white;
+        border-radius: 10px;
+      }
+      .demo-slide-box {
+        width: 340px;
+        height: 260px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      .demo-dialog-slides {
+        height: 260px;
+      }
+      .demo-slide-header {
+        color: white;
+        background: #1a237e;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Field,
+        Form,
+        Input,
+        ControlGroup,
+        Label,
+        Link,
+        List,
+        NaviDebug,
+        Picker,
+        Popover,
+        SlideContainer,
+        Text,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+
+      // An action that never settles on its own: it hands its resolve/reject to
+      // the panel below, so "how long does submitting take" and "does it work"
+      // are answered by the demo, one submission at a time. Everything a form
+      // does while its action runs (loading outline on the submit button, its
+      // own fields going read-only, the popup around it refusing to close) is
+      // then observable for as long as needed instead of flashing past.
+      const useSettlableAction = () => {
+        const [pending, setPending] = useState(null);
+        return {
+          pending: Boolean(pending),
+          action: () =>
+            new Promise((resolve, reject) => {
+              setPending({ resolve, reject });
+            }),
+          succeed: () => {
+            pending.resolve();
+            setPending(null);
+          },
+          fail: () => {
+            pending.reject(new Error("Server refused this value"));
+            setPending(null);
+          },
+        };
+      };
+
+      const SettlePanel = ({ pending, succeed, fail, children }) => (
+        <div class="demo-settle">
+          <span class="demo-settle-state">
+            action: {pending ? "pending" : "idle"}
+          </span>
+          <Button disabled={!pending} onClick={succeed}>
+            Succeed
+          </Button>
+          <Button disabled={!pending} onClick={fail}>
+            Fail
+          </Button>
+          {children}
+        </div>
+      );
+
+      const NameEmailFields = () => (
+        <>
+          <Field vertical>
+            <Label requiredIndicator>Name</Label>
+            <Input name="name" required />
+          </Field>
+          <Field vertical>
+            <Label>Email</Label>
+            <Input name="email" type="email" />
+          </Field>
+        </>
+      );
+
+      // ── In the document ───────────────────────────────────────────────────
+
+      const InDocumentSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="document">In the document</Heading>
+            <p>A sent form stays where it is.</p>
+            <SettlePanel {...settle} />
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              action={async (value) => {
+                push("action start", value);
+                await settle.action();
+                push("action end", value);
+              }}
+            >
+              <NameEmailFields />
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── In one slide ──────────────────────────────────────────────────────
+
+      const InSlideSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="slide">In a slide</Heading>
+            <SettlePanel {...settle} />
+            <SlideContainer
+              layout="row"
+              duration="400ms"
+              className="demo-slide-box"
+            >
+              <SlideContainer.Item id="slide_form" overflow="auto">
+                <Box
+                  header
+                  padding="s"
+                  flex="x"
+                  alignY="center"
+                  className="demo-slide-header"
+                >
+                  <Text expandX>form</Text>
+                  <SlideContainer.Right size="l" padding="xs" />
+                </Box>
+                <Form
+                  body
+                  flex="y"
+                  spacing="m"
+                  padding="m"
+                  action={async (value) => {
+                    push("action start", value);
+                    await settle.action();
+                    push("action end", value);
+                  }}
+                >
+                  <NameEmailFields />
+                  <Button type="submit">Submit</Button>
+                </Form>
+              </SlideContainer.Item>
+              <SlideContainer.Item id="slide_done" overflow="auto">
+                <Box
+                  header
+                  padding="s"
+                  flex="x"
+                  alignY="center"
+                  className="demo-slide-header"
+                >
+                  <SlideContainer.Left size="l" padding="xs" />
+                  <Text expandX>done</Text>
+                </Box>
+                <Box body padding="m">
+                  A submission that went through moves on by itself — nothing
+                  here says <code>--navi-right</code>.
+                </Box>
+              </SlideContainer.Item>
+            </SlideContainer>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── One form per slide ────────────────────────────────────────────────
+
+      const QUESTIONS = [
+        { id: "who", label: "Your name", name: "name" },
+        { id: "where", label: "Your city", name: "city" },
+        { id: "what", label: "Your favourite colour", name: "colour" },
+      ];
+
+      // Each step commits on its own — the slide it sits in is what it answers
+      // to, so submitting walks to the next one with nothing said about it.
+      // `required` is what keeps that walk honest: a step nobody answered holds
+      // the user, so the summary at the end can only be reached by going
+      // through them, and answering a step again puts it back out of reach.
+      const MultiStepFlow = ({ idPrefix, perform, push }) => {
+        const [answers, setAnswers] = useState({});
+        const [summary, setSummary] = useState(null);
+        // Read inside an async action, where the state captured at render time
+        // is one step out of date by the time the step before it settles.
+        const answersRef = useRef({});
+
+        const submitStep = async (index, value) => {
+          push(`step ${index + 1}`, value);
+          await perform(value);
+          const merged = { ...answersRef.current, ...value };
+          answersRef.current = merged;
+          setAnswers(merged);
+          // Only the last step produces the thing the summary talks about —
+          // any earlier one invalidates it, exactly as it un-answers the steps
+          // after it.
+          setSummary(
+            index === QUESTIONS.length - 1
+              ? { reference: `REF-${merged.name}-${merged.city}`, ...merged }
+              : null,
+          );
+        };
+
+        return (
+          <SlideContainer
+            layout="row"
+            duration="400ms"
+            className="demo-slide-box"
+          >
+            {QUESTIONS.map((question, index) => (
+              <SlideContainer.Item
+                key={question.id}
+                id={`${idPrefix}_${question.id}`}
+                required
+                overflow="auto"
+              >
+                <Box
+                  header
+                  padding="s"
+                  flex="x"
+                  alignY="center"
+                  className="demo-slide-header"
+                >
+                  {index > 0 && <SlideContainer.Left size="l" padding="xs" />}
+                  <Text expandX>
+                    {index + 1} / {QUESTIONS.length}
+                  </Text>
+                </Box>
+                <Form
+                  body
+                  flex="y"
+                  spacing="m"
+                  padding="m"
+                  action={(value) => submitStep(index, value)}
+                >
+                  <Field vertical>
+                    <Label requiredIndicator>{question.label}</Label>
+                    <Input name={question.name} required />
+                  </Field>
+                  <Button type="submit">
+                    {index === QUESTIONS.length - 1 ? "Finish" : "Next"}
+                  </Button>
+                </Form>
+              </SlideContainer.Item>
+            ))}
+            <SlideContainer.Item id={`${idPrefix}_done`} overflow="auto">
+              <Box
+                header
+                padding="s"
+                flex="x"
+                alignY="center"
+                className="demo-slide-header"
+              >
+                <SlideContainer.Left size="l" padding="xs" />
+                <Text expandX>done</Text>
+              </Box>
+              <Box body padding="m" flex="y" spacing="s">
+                <strong>All set.</strong>
+                {summary ? (
+                  <>
+                    <span>
+                      Reference <code>{summary.reference}</code>
+                    </span>
+                    <span>
+                      {summary.name}, {summary.city}, {summary.colour}
+                    </span>
+                  </>
+                ) : (
+                  <span>Nothing sent yet.</span>
+                )}
+                <span style={{ fontSize: "12px", color: "#666" }}>
+                  answers: <code>{JSON.stringify(answers)}</code>
+                </span>
+              </Box>
+            </SlideContainer.Item>
+          </SlideContainer>
+        );
+      };
+
+      const MultiStepSection = () => {
+        const [syncEntries, pushSync, clearSync] = useCallLog();
+        const [asyncEntries, pushAsync, clearAsync] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="multi-step">One form per slide</Heading>
+
+            <Heading level={3} id="multi-step-sync">
+              Steps that commit right away
+            </Heading>
+            <MultiStepFlow
+              idPrefix="sync"
+              push={pushSync}
+              perform={() => undefined}
+            />
+            <CallLog entries={syncEntries} onClear={clearSync} />
+
+            <Heading level={3} id="multi-step-async">
+              Steps that take time
+            </Heading>
+            <SettlePanel {...settle} />
+            <MultiStepFlow
+              idPrefix="async"
+              push={pushAsync}
+              perform={() => settle.action()}
+            />
+            <CallLog entries={asyncEntries} onClear={clearAsync} />
+          </section>
+        );
+      };
+
+      // ── A picker in a form ────────────────────────────────────────────────
+
+      const FRUITS = ["Apple", "Banana", "Cherry", "Date"];
+
+      // A picker is a control, not a surface: its popup is its own business and
+      // the form never sees it. What the form gets is one named value, the same
+      // way an input gives one — so a picker in a form needs nothing said about
+      // the popup it opens, in the document or inside a dialog.
+      const PickerInFormSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        const fruitList = (idPrefix) => (
+          <List selectable command="--navi-send">
+            {FRUITS.map((fruit, index) => (
+              <List.Item
+                selectable
+                key={fruit}
+                id={`${idPrefix}_${fruit}`}
+                index={index}
+                value={fruit}
+                padding="s"
+              >
+                {fruit}
+              </List.Item>
+            ))}
+          </List>
+        );
+
+        return (
+          <section class="demo-section">
+            <Heading id="picker">A picker in a form</Heading>
+            <SettlePanel {...settle} />
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              alignX="start"
+              action={async (value) => {
+                push("action start", value);
+                await settle.action();
+                push("action end", value);
+              }}
+            >
+              <Field vertical>
+                <Label requiredIndicator>Fruit</Label>
+                <Picker
+                  name="fruit"
+                  placeholder="Pick one…"
+                  required
+                  minWidth="200"
+                >
+                  {fruitList("doc")}
+                </Picker>
+              </Field>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+
+            <Heading level={3} id="picker-in-dialog">
+              …inside a dialog
+            </Heading>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="picker_form_dialog">
+                Open
+              </Button>
+            </div>
+            <Dialog id="picker_form_dialog" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                alignX="start"
+                action={(value) => {
+                  push("dialog action", value);
+                }}
+              >
+                <Field vertical>
+                  <Label requiredIndicator>Fruit</Label>
+                  <Picker
+                    name="fruit"
+                    placeholder="Pick one…"
+                    required
+                    minWidth="200"
+                  >
+                    {fruitList("dlg")}
+                  </Picker>
+                </Field>
+                <Box flex="x" spacing="s">
+                  <Button command="--navi-cancel">Cancel</Button>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+            </Dialog>
+            <p class="demo-inside-note">
+              The picker's own popup opens over the dialog and closes on its
+              own; only the form's submit closes the dialog.
+            </p>
+          </section>
+        );
+      };
+
+      // ── A form in a picker ────────────────────────────────────────────────
+
+      // The other way round from the section above: here the popup belongs to
+      // the picker and the form is what is inside it. `type="form"`
+      // says the picker's value is whatever the group in its popup aggregates —
+      // a Form or a ControlGroup, both of which are that group.
+      const FormInPickerSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [address, setAddress] = useState({
+          street: "Rue de la paix",
+          city: "Paris",
+        });
+        return (
+          <section class="demo-section">
+            <Heading id="form-in-picker">A form in a picker</Heading>
+            <div class="demo-row">
+              <span>
+                address: <code>{JSON.stringify(address)}</code>
+              </span>
+            </div>
+            <Field vertical>
+              <Label>Address</Label>
+              <Picker
+                name="address"
+                type="form"
+                placeholder="Enter an address…"
+                value={address}
+                minWidth="260"
+                action={(value) => {
+                  push("picker action", value);
+                  setAddress(value);
+                }}
+              >
+                <Form
+                  flex="y"
+                  spacing="m"
+                  padding="m"
+                  action={(value) => {
+                    push("form action", value);
+                  }}
+                >
+                  <Field vertical>
+                    <Label requiredIndicator>Street</Label>
+                    <Input name="street" required />
+                  </Field>
+                  <Field vertical>
+                    <Label>City</Label>
+                    <Input name="city" />
+                  </Field>
+                  <Button type="submit">Done</Button>
+                </Form>
+              </Picker>
+            </Field>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── A control group in a form ─────────────────────────────────────────
+
+      // What a ControlGroup is still for now that a Form nests: a name. The
+      // fields inside it land under that name in the form's own value instead of
+      // next to the form's other fields.
+      const ControlGroupInFormSection = () => {
+        const [entries, push, clear] = useCallLog();
+        return (
+          <section class="demo-section">
+            <Heading id="control-group">A control group in a form</Heading>
+            <Form
+              className="demo_form_box"
+              flex="y"
+              spacing="m"
+              action={(value) => {
+                push("action", value);
+              }}
+            >
+              <Field vertical>
+                <Label requiredIndicator>Name</Label>
+                <Input name="name" required defaultValue="Ada" />
+              </Field>
+              {/* fieldset so the grouping is visible: what it draws a box
+                  around is exactly what lands under the "address" key. */}
+              <ControlGroup name="address" as="fieldset" flex="y" spacing="s">
+                <legend>address</legend>
+                <Field vertical>
+                  <Label>Street</Label>
+                  <Input name="street" defaultValue="Rue de la paix" />
+                </Field>
+                <Field vertical>
+                  <Label>City</Label>
+                  <Input name="city" defaultValue="Paris" />
+                </Field>
+              </ControlGroup>
+              <Button type="submit">Submit</Button>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── In a dialog ───────────────────────────────────────────────────────
+
+      const InDialogSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="dialog">In a dialog</Heading>
+            <SettlePanel {...settle} />
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="form_in_dialog">
+                Open
+              </Button>
+            </div>
+            <Dialog id="form_in_dialog" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                action={async (value) => {
+                  push("action start", value);
+                  await settle.action();
+                  push("action end", value);
+                }}
+              >
+                <NameEmailFields />
+                <Box flex="x" spacing="s">
+                  <Button command="--navi-cancel">Cancel</Button>
+                  <Button type="submit">Submit</Button>
+                </Box>
+              </Form>
+              {/* Inside the dialog, outside the form: read-only stops at the
+                  form's own edge, so these stay usable while it submits —
+                  unlike Cancel and Submit, which are in the form. */}
+              <Box padding="m" flex="x" spacing="s">
+                <Button disabled={!settle.pending} onClick={settle.succeed}>
+                  Succeed (in dialog)
+                </Button>
+                <Button disabled={!settle.pending} onClick={settle.fail}>
+                  Fail (in dialog)
+                </Button>
+              </Box>
+            </Dialog>
+            <p class="demo-inside-note">
+              While the form sends, every way out of the dialog (Escape, a
+              backdrop click, Cancel) answers that it is busy.
+            </p>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── Slides in a dialog ────────────────────────────────────────────────
+
+      const INITIAL_COLOURS = [
+        { id: "red", name: "Red" },
+        { id: "green", name: "Green" },
+        { id: "blue", name: "Blue" },
+      ];
+
+      // Two forms, two surfaces, one dialog. The pick form answers the question
+      // the dialog was opened for, so it talks past the slide it happens to sit
+      // in and closes the dialog. The rename form answers a question of its own,
+      // so it goes back to the slide it came from and the dialog stays open.
+      // Neither default would have done: a form in a slide reports to its slide,
+      // so both say where they report with `command`.
+      const SlidesInDialogSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const [colours, setColours] = useState(INITIAL_COLOURS);
+        const [chosen, setChosen] = useState(null);
+        const [renamedId, setRenamedId] = useState(INITIAL_COLOURS[0].id);
+        // One per form, and settled from inside its own slide (below): both
+        // take time, and each has to be watchable without the other.
+        const chooseSettle = useSettlableAction();
+        const renameSettle = useSettlableAction();
+        const renamed = colours.find((colour) => colour.id === renamedId);
+
+        return (
+          <section class="demo-section">
+            <Heading id="slides-in-dialog">Slides in a dialog</Heading>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="colour_dialog">
+                Pick a colour
+              </Button>
+              <span>
+                chosen: <code>{JSON.stringify(chosen)}</code>
+              </span>
+            </div>
+            <Dialog id="colour_dialog" className="demo-popup-box">
+              <SlideContainer
+                layout="row"
+                duration="400ms"
+                className="demo-dialog-slides"
+              >
+                <SlideContainer.Item id="colour_pick" overflow="auto">
+                  <Box
+                    header
+                    padding="s"
+                    className="demo-slide-header"
+                    flex="x"
+                    alignY="center"
+                  >
+                    <Text expandX>Pick</Text>
+                  </Box>
+                  <Form
+                    body
+                    flex="y"
+                    spacing="m"
+                    padding="m"
+                    // past the slide, to the dialog: choosing a colour is what
+                    // this dialog was opened for, so it is over once it is done
+                    command="--navi-close"
+                    action={async (value) => {
+                      push("choose", value);
+                      await chooseSettle.action();
+                      setChosen(value.colour);
+                    }}
+                  >
+                    {colours.map((colour) => (
+                      <Box key={colour.id} flex="x" alignY="center" spacing="s">
+                        <Field expandX>
+                          <Input
+                            type="radio"
+                            name="colour"
+                            value={colour.id}
+                            marginRight="3"
+                          />
+                          <Label>{colour.name}</Label>
+                        </Field>
+                        <Button
+                          command="--navi-right"
+                          onClick={() => setRenamedId(colour.id)}
+                        >
+                          Rename
+                        </Button>
+                      </Box>
+                    ))}
+                    <Button type="submit">Choose</Button>
+                  </Form>
+                  {/* In the slide, outside the form: still usable while the
+                      form it settles is sending. */}
+                  <Box footer padding="s">
+                    <SettlePanel {...chooseSettle} />
+                  </Box>
+                </SlideContainer.Item>
+
+                <SlideContainer.Item id="colour_rename" overflow="auto">
+                  <Box
+                    header
+                    padding="s"
+                    className="demo-slide-header"
+                    flex="x"
+                    alignY="center"
+                  >
+                    <SlideContainer.Left size="l" padding="xs" />
+                    <Text expandX>Rename</Text>
+                  </Box>
+                  <Form
+                    // Remounted per colour, so the field shows the name of the
+                    // one being renamed and counts as untouched again.
+                    key={renamedId}
+                    body
+                    flex="y"
+                    spacing="m"
+                    padding="m"
+                    // back where it came from: renaming is a detour, not the
+                    // answer the dialog is waiting for
+                    command="--navi-left"
+                    action={async (value) => {
+                      push("rename", { id: renamedId, ...value });
+                      await renameSettle.action();
+                      setColours((previous) =>
+                        previous.map((colour) =>
+                          colour.id === renamedId
+                            ? { ...colour, name: value.name }
+                            : colour,
+                        ),
+                      );
+                    }}
+                  >
+                    <Field vertical>
+                      <Label requiredIndicator>Name</Label>
+                      <Input name="name" required defaultValue={renamed.name} />
+                    </Field>
+                    <Button type="submit">Rename</Button>
+                  </Form>
+                  <Box footer padding="s">
+                    <SettlePanel {...renameSettle} />
+                  </Box>
+                </SlideContainer.Item>
+              </SlideContainer>
+            </Dialog>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      // ── In a popover ──────────────────────────────────────────────────────
+
+      const InPopoverSection = () => {
+        const [entries, push, clear] = useCallLog();
+        const settle = useSettlableAction();
+        return (
+          <section class="demo-section">
+            <Heading id="popover">In a popover</Heading>
+            <SettlePanel {...settle} />
+            <div class="demo-row">
+              <Button command="--navi-toggle" commandFor="form_in_popover">
+                Open
+              </Button>
+            </div>
+            <Popover id="form_in_popover" className="demo-popup-box">
+              <Form
+                flex="y"
+                spacing="m"
+                padding="m"
+                action={async (value) => {
+                  push("action start", value);
+                  await settle.action();
+                  push("action end", value);
+                }}
+              >
+                <NameEmailFields />
+                <Button type="submit">Submit</Button>
+              </Form>
+            </Popover>
+            <CallLog entries={entries} onClear={clear} />
+          </section>
+        );
+      };
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <Heading id="form">Form integration</Heading>
+          <p>
+            Where a form lives is what decides what a successful submission does
+            next, and what a submission in flight holds still. The form itself
+            is the same one every time — see{" "}
+            <Link href="./16_form_demo.html">16_form_demo.html</Link> for what a
+            form does with fields and constraints.
+          </p>
+          <ol className="toc">
+            <li>
+              <Link href="#document">In the document</Link>
+            </li>
+            <li>
+              <Link href="#slide">In a slide</Link>
+            </li>
+            <li>
+              <Link href="#multi-step">One form per slide</Link>
+              <ul>
+                <li>
+                  <Link href="#multi-step-sync">
+                    Steps that commit right away
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#multi-step-async">Steps that take time</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <Link href="#picker">A picker in a form</Link>
+              <ul>
+                <li>
+                  <Link href="#picker-in-dialog">…inside a dialog</Link>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <Link href="#dialog">In a dialog</Link>
+            </li>
+            <li>
+              <Link href="#popover">In a popover</Link>
+            </li>
+            <li>
+              <Link href="#slides-in-dialog">Slides in a dialog</Link>
+            </li>
+          </ol>
+        </div>
+      );
+
+      const App = () => (
+        <NaviDebug debugAll>
+          <h1>Form integration demo</h1>
+          <TableOfContents />
+          <InDocumentSection />
+          <InSlideSection />
+          <MultiStepSection />
+          <PickerInFormSection />
+          <FormInPickerSection />
+          <ControlGroupInFormSection />
+          <InDialogSection />
+          <InPopoverSection />
+          <SlidesInDialogSection />
+        </NaviDebug>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

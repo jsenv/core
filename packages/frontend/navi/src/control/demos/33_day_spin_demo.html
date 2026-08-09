@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Day spin demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        Box,
+        Button,
+        DaySpin,
+        Field,
+        Form,
+        Label,
+        Link,
+        Text,
+        NaviDebug,
+        route,
+        setupRoutes,
+        stateSignal,
+      } from "@jsenv/navi";
+      import { CallLog, useCallLog } from "./utils/call_log.jsx";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { FakeBackend } from "../../internal/fake_backend.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const today = new Date();
+      const day = (offset) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() + offset);
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        return `${date.getFullYear()}-${month}-${String(date.getDate()).padStart(2, "0")}`;
+      };
+      const TODAY = day(0);
+      const YESTERDAY = day(-1);
+
+      // The days this page keeps in the url, and what "Tout réinitialiser"
+      // puts back.
+      const daySignal = stateSignal(TODAY, { id: "day", type: "date" });
+      const boundedDaySignal = stateSignal(TODAY, {
+        id: "bounded_day",
+        type: "date",
+      });
+      const DEMO_SIGNALS = [daySignal, boundedDaySignal];
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Day spin"
+            previous={{ href: "./32_wheel_demo.html", label: "Wheel" }}
+          />
+          <TableOfContents />
+          <BasicsDemo />
+          <StatesDemo />
+          <DimensionsDemo />
+          <CustomizationDemo />
+          <ValueDemo />
+          <MinDemo />
+          <MaxDemo />
+          <StepDemo />
+          <UIActionDemo />
+        </Box>
+      );
+
+      const TableOfContents = () => (
+        <div class="demo-section">
+          <Box flex alignY="center" spacing="m">
+            <h2 style="margin: 0; flex: 1">Sommaire</h2>
+            <Button
+              onClick={() => {
+                // undefined, not their defaults: a signal back at its
+                // default is a signal with nothing to say, which is what
+                // empties the url.
+                for (const signal of DEMO_SIGNALS) {
+                  signal.value = undefined;
+                }
+              }}
+            >
+              Tout réinitialiser
+            </Button>
+          </Box>
+          <DocumentToc />
+        </div>
+      );
+
+      // The prop being shown, then what it does: one reads the caption and
+      // looks for its effect, never the other way round.
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      // What sits under the control, so a box that changes height is something
+      // one sees move rather than something one is told about.
+      const UnderText = ({ children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          {children}
+          <Text size="s" color="#666">
+            le texte en dessous
+          </Text>
+        </Box>
+      );
+
+      // ── Basics ────────────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="desc">
+            Les flèches changent de jour, le centre ouvre le calendrier.
+          </p>
+          <DaySpin signal={daySignal} width="300px" />
+        </div>
+      );
+
+      // ── Dimensions ────────────────────────────────────────────────────────
+
+      const DimensionsDemo = () => (
+        <div class="demo-section">
+          <Heading id="dimensions">Dimensions</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="sans width : la largeur suit le jour affiché">
+              <DaySpin defaultValue={TODAY} />
+            </Variant>
+            <Variant caption='width="300px"'>
+              <DaySpin defaultValue={TODAY} width="300px" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="too-long">
+            Un jour trop long pour la boîte
+          </Heading>
+          <p class="desc">
+            Étroit : certains jours tiennent sur une ligne, d'autres non.
+          </p>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DaySpin defaultValue={day(4)} width="220px" />
+              </UnderText>
+            </Variant>
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DaySpin defaultValue={TODAY} width="220px" />
+              </UnderText>
+            </Variant>
+          </Box>
+
+          <p class="desc" style="margin-top: 28px">
+            <code>maxLines={1}</code> : une ligne, coupée au besoin.
+          </p>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DaySpin defaultValue={day(4)} width="220px" maxLines={1} />
+              </UnderText>
+            </Variant>
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DaySpin defaultValue={TODAY} width="220px" maxLines={1} />
+              </UnderText>
+            </Variant>
+          </Box>
+
+          <p class="desc" style="margin-top: 28px">
+            <code>maxLines={2}</code> avec <code>height</code> : deux lignes au
+            plus, dans une boîte qui ne bouge pas.
+          </p>
+          <Box flex spacing="xl" alignY="start">
+            <Variant caption={`defaultValue="${day(4)}"`}>
+              <UnderText>
+                <DaySpin
+                  defaultValue={day(4)}
+                  width="220px"
+                  maxLines={2}
+                  height="46px"
+                />
+              </UnderText>
+            </Variant>
+            <Variant caption={`defaultValue="${TODAY}"`}>
+              <UnderText>
+                <DaySpin
+                  defaultValue={TODAY}
+                  width="220px"
+                  maxLines={2}
+                  height="46px"
+                />
+              </UnderText>
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="size">
+            size
+          </Heading>
+          <p class="desc">
+            Tous en <code>width="300px"</code>.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='size="xxs"'>
+              <DaySpin defaultValue={TODAY} size="xxs" width="300px" />
+            </Variant>
+            <Variant caption="par défaut">
+              <DaySpin defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='size="xxl"'>
+              <DaySpin defaultValue={TODAY} size="xxl" width="300px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Customization ─────────────────────────────────────────────────────
+
+      const CustomizationDemo = () => (
+        <div class="demo-section">
+          <Heading id="customization">Customization</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <DaySpin defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='borderWidth="0"'>
+              <DaySpin defaultValue={TODAY} width="300px" borderWidth="0" />
+            </Variant>
+            <Variant caption='borderColor="#1a73e8" borderRadius="10px"'>
+              <DaySpin
+                defaultValue={TODAY}
+                width="300px"
+                borderColor="#1a73e8"
+                borderRadius="10px"
+              />
+            </Variant>
+            {/* Wider than the others on purpose: a taller padding makes the
+                two chevrons taller, and therefore wider (they are square), so
+                at 300px the day would be cut and one would be looking at that
+                instead of at the padding. */}
+            <Variant caption='paddingY="m", width="380px"'>
+              <DaySpin defaultValue={TODAY} width="380px" paddingY="m" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="text">
+            Le texte
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut">
+              <DaySpin defaultValue={TODAY} width="300px" />
+            </Variant>
+            <Variant caption='format="short"'>
+              <DaySpin defaultValue={TODAY} width="300px" format="short" />
+            </Variant>
+            <Variant caption='format="numeric"'>
+              <DaySpin defaultValue={TODAY} width="300px" format="numeric" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="vertical">
+            vertical
+          </Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption='vertical, format="short"'>
+              <DaySpin
+                defaultValue={TODAY}
+                vertical
+                width="220px"
+                format="short"
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── States ────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="readOnly">
+              <DaySpin defaultValue={TODAY} width="300px" readOnly />
+            </Variant>
+            <Variant caption="disabled">
+              <DaySpin defaultValue={TODAY} width="300px" disabled />
+            </Variant>
+            <Variant caption="loading">
+              <DaySpin defaultValue={TODAY} width="300px" loading />
+            </Variant>
+            {/* Held rather than obtained: the ring is what one sees when the
+                days have the keyboard, and here it is on the page next to the
+                other states instead of only under a Tab press. */}
+            <Variant caption="focus visible">
+              <DaySpin
+                defaultValue={TODAY}
+                width="300px"
+                pseudoState={{ ":focus-visible": true }}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Value ─────────────────────────────────────────────────────────────
+
+      const BackendCase = ({ id, title, value, children }) => (
+        <>
+          <Heading level={3} id={id}>
+            {title}
+          </Heading>
+          <FakeBackend value={value}>
+            {({ value: backendValue, action }) => (
+              <Form action={action}>
+                <Box flex spacing="m" alignY="end">
+                  <Field flex="y">
+                    <Label>Jour</Label>
+                    {children(backendValue)}
+                  </Field>
+                  <Button type="submit">Enregistrer</Button>
+                </Box>
+              </Form>
+            )}
+          </FakeBackend>
+        </>
+      );
+
+      const ValueDemo = () => (
+        <div class="demo-section">
+          <Heading id="value">
+            Simulation backend : ce qui part, et quand
+          </Heading>
+          <BackendCase id="value-nothing" title="Rien de part et d'autre">
+            {() => <DaySpin name="day" width="300px" />}
+          </BackendCase>
+          <BackendCase
+            id="value-default"
+            title={`Backend vide, defaultValue="${day(-3)}"`}
+          >
+            {() => <DaySpin name="day" defaultValue={day(-3)} width="300px" />}
+          </BackendCase>
+          <BackendCase
+            id="value-held"
+            title="Le backend a déjà un jour (value)"
+            value={{ day: day(-3) }}
+          >
+            {(backendValue) => (
+              <DaySpin name="day" value={backendValue.day} width="300px" />
+            )}
+          </BackendCase>
+        </div>
+      );
+
+      // ── min ───────────────────────────────────────────────────────────────
+
+      const MinDemo = () => (
+        <div class="demo-section">
+          <Heading id="min">min</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption={`min="${TODAY}" (aujourd'hui)`}>
+              <DaySpin signal={boundedDaySignal} min={TODAY} width="300px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── max ───────────────────────────────────────────────────────────────
+
+      const MaxDemo = () => (
+        <div class="demo-section">
+          <Heading id="max">max</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption={`max="${TODAY}" (aujourd'hui)`}>
+              <DaySpin defaultValue={TODAY} max={TODAY} width="300px" />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── step ──────────────────────────────────────────────────────────────
+
+      const StepDemo = () => (
+        <div class="demo-section">
+          <Heading id="step">step</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="step={7}">
+              <DaySpin
+                defaultValue={TODAY}
+                step={7}
+                width="300px"
+                previousLabel="Semaine précédente"
+                nextLabel="Semaine suivante"
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── uiAction ──────────────────────────────────────────────────────────
+
+      const UIActionDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section">
+            <Heading id="ui-action">uiAction</Heading>
+            <p class="desc">
+              L'événement dit d'où vient le jour : une flèche, ou le calendrier.
+            </p>
+            <DaySpin
+              defaultValue={TODAY}
+              width="300px"
+              uiAction={(dayPicked, event) => {
+                push("uiAction", dayPicked, event);
+              }}
+            />
+            <CallLog entries={entries} onClear={clear} />
+          </div>
+        );
+      };
+
+      // ── The page itself ──────────────────────────────────────────────────
+
+      setupRoutes([
+        route("", {
+          searchParams: {
+            day: daySignal,
+            bounded_day: boundedDaySignal,
+          },
+        }),
+      ]);
+
+      render(
+        <NaviDebug debugAll>
+          <App />
+        </NaviDebug>,
+        document.getElementById("app"),
+      );
+    </script>
+  </body>
+</html>

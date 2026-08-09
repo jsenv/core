@@ -412,8 +412,9 @@ const createEventHistory = (limit) => {
 
   const add = (data) => {
     events.push(data);
-
-    if (events.length >= limit) {
+    // Strictly above, not "as many as": shifting at `>= limit` keeps one less
+    // than asked for.
+    if (events.length > limit) {
       events.shift();
     }
   };

@@ -25,6 +25,17 @@ import {
  *   readOnly   — propagates to all children
  *   as         — HTML element to render (default "div")
  *   children   — the controls that belong to this group
+ *
+ *   aggregateChildStates / distributeChildUIState
+ *              — what the group is worth, in both directions, when that is not
+ *                simply "one key per child": two wheels that add up to a number
+ *                of minutes, three fields that make one date. With them the
+ *                group takes and hands back a single value, so it can be driven
+ *                by one `value`/`signal` like any other control. Same mechanism
+ *                InputDuration uses for its own hour/minute/second fields (see
+ *                input_duration.jsx). `name` is unaffected: it still says under
+ *                which key the group's value — whatever shape it now has —
+ *                lands in the form around it.
  */
 export const ControlGroup = (props) => {
   const defaultRef = useRef();
@@ -37,6 +48,8 @@ export const ControlGroup = (props) => {
       controlType: props.type || "control_group",
       stateType: "object",
       cascadeValidationToChildren: true,
+      aggregateChildStates: props.aggregateChildStates,
+      distributeChildUIState: props.distributeChildUIState,
     });
   const { children } = controlgroupProps;
 
@@ -45,6 +58,10 @@ export const ControlGroup = (props) => {
       {...controlgroupRootProps}
       {...controlgroupProps}
       type={undefined}
+      // consumed by the group hook above; blanked after the spreads so they
+      // don't reach the DOM as unknown attributes
+      aggregateChildStates={undefined}
+      distributeChildUIState={undefined}
       pseudoClasses={CONTROL_GROUP_PSEUDO_CLASSES}
     >
       <ControlgroupChildrenWrapper

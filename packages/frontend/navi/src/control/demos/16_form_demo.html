@@ -66,22 +66,37 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import {
+        Box,
         Form,
         Button,
         Input,
         Field,
         Label,
         NaviDebug,
+        Slide,
+        SlideContainer,
+        stateSignal,
+        Text,
       } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
 
       const App = () => {
         return (
           <NaviDebug debugAction debugInteraction>
             <div>
-              <h1>Form Demo</h1>
+              <DemoHeader
+                title="Form demo"
+                next={{
+                  href: "./18_form_integration_demo.html",
+                  label: "Form integration",
+                }}
+              />
               <TableOfContents />
               <BasicFormDemo />
+              <UnchangedDemo />
               <FormWithButtonActionDemo />
+              <TwoSubmitButtonsDemo />
               <MultiFieldValidationTest />
               <h2 style={{ margin: "40px 20px 0" }}>Input types in forms</h2>
               <FormTextDemo />
@@ -103,55 +118,7 @@
       const TableOfContents = () => (
         <div className="test-container">
           <h2>Table of contents</h2>
-          <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-            <li>
-              <a href="#basic">Basic form</a>
-            </li>
-            <li>
-              <a href="#button-action">Form with button action</a>
-            </li>
-            <li>
-              <a href="#multi-field">Multi-field validation</a>
-            </li>
-            <li>
-              Input types in forms
-              <ol style={{ margin: 0, paddingLeft: "20px", lineHeight: "2" }}>
-                <li>
-                  <a href="#form-text">text</a>
-                </li>
-                <li>
-                  <a href="#form-email">email</a>
-                </li>
-                <li>
-                  <a href="#form-password">password</a>
-                </li>
-                <li>
-                  <a href="#form-number">number</a>
-                </li>
-                <li>
-                  <a href="#form-date">date</a>
-                </li>
-                <li>
-                  <a href="#form-datetime">datetime-local</a>
-                </li>
-                <li>
-                  <a href="#form-time">time</a>
-                </li>
-                <li>
-                  <a href="#form-search">search</a>
-                </li>
-                <li>
-                  <a href="#form-tel">tel</a>
-                </li>
-                <li>
-                  <a href="#form-range">range</a>
-                </li>
-                <li>
-                  <a href="#form-checkbox">checkbox</a>
-                </li>
-              </ol>
-            </li>
-          </ol>
+          <DocumentToc />
         </div>
       );
 
@@ -187,6 +154,154 @@
           </div>
         );
       };
+
+      // ── Submitting an unchanged form ──────────────────────────────────────
+
+      // Four forms, one question: does the action run when submit is pressed
+      // without touching anything? What separates them is only where the field's
+      // starting content comes from — nothing, a value, a suggestion.
+      const UnchangedCase = ({
+        id,
+        title,
+        note,
+        children,
+        expectation,
+        formProps,
+        submitProps,
+      }) => {
+        const [log, setLog] = useState([]);
+        return (
+          <div className="test-container" id={id}>
+            <h3>{title}</h3>
+            <p className="desc">{note}</p>
+            <Form
+              name={id}
+              flex="y"
+              spacing="m"
+              alignX="start"
+              // --navi-void: a command that does nothing but say it ran. It is
+              // what a dialog's own close (or a slide's move) would be here, so
+              // the log shows the two halves apart — "the action ran" and "what
+              // follows a send ran".
+              command="--navi-void"
+              action={(value) => {
+                setLog((previous) => [
+                  ...previous,
+                  `action ← ${JSON.stringify(value)}`,
+                ]);
+              }}
+              {...formProps}
+            >
+              {children}
+              <Button type="submit" {...submitProps}>
+                Submit
+              </Button>
+            </Form>
+            <div className="form-params" data-toc-ignore>
+              <h3>{expectation}</h3>
+              <pre>{log.length ? log.join("\n") : "— nothing yet —"}</pre>
+            </div>
+          </div>
+        );
+      };
+
+      // A signal carrying a default: navi seeds the input's defaultValue from
+      // it, so the field is uncontrolled-with-a-suggestion — the same shape as
+      // the defaultValue case above it, said with a signal.
+      const ageSignal = stateSignal(18, { id: "age" });
+
+      const UnchangedDemo = () => (
+        <div className="test-container" id="unchanged">
+          <h2>Submitting an unchanged form</h2>
+          <p className="desc">
+            A form only acts on an answer that is actually new. What counts as
+            "new" is the point of the four cases below: a <code>value</code> is
+            what the form <em>holds</em>, a <code>defaultValue</code> (from the
+            prop or from a signal's default) is only a <em>suggestion</em> — and
+            sending a suggestion back is a real answer.
+          </p>
+          <p className="desc">
+            Every form carries <code>command="--navi-void"</code>, which logs
+            nothing but always runs: in a dialog that command would be the
+            close. So a press that logs no action still went through — which is
+            why a dialog closes on it.
+          </p>
+
+          <UnchangedCase
+            id="unchanged-empty"
+            title="1. An empty field"
+            note="No value, no defaultValue: the form holds nothing and shows nothing."
+            expectation="Expected: the log below does not grow when you submit without modifying anything"
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-value"
+            title="2. A field with a value"
+            note='value="Ada": the form holds it, so submitting it back says nothing new.'
+            expectation="Expected: the log below does not grow when you submit without modifying anything"
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" readOnly={false} />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-default-value"
+            title="3. A field with a defaultValue"
+            note='defaultValue="18": a suggestion the form does not hold — "yes, 18" is an answer.'
+            expectation="Expected: the log below grows on the FIRST submit even without modifying anything — then stops, since that value has now been sent"
+          >
+            <Field vertical>
+              <Label>Age</Label>
+              <Input name="age" defaultValue="18" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-signal-default"
+            title="4. A field bound to a signal that has a default"
+            note="Same as 3, said with a signal: the signal carries the default, so the field is uncontrolled-with-a-suggestion."
+            expectation="Expected: the log below grows on the FIRST submit even without modifying anything — then stops, since that value has now been sent"
+          >
+            <Field vertical>
+              <Label>Age</Label>
+              <Input name="age" signal={ageSignal} />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-read-only-button"
+            title="5. readOnlyWhileFormUnchanged, on the submit button"
+            note="Case 2 again, with a button that would rather say it is waiting than accept a press that sends nothing. Press it as is to hear why, then type."
+            expectation="Expected: the button is read-only until you modify the field"
+            submitProps={{ readOnlyWhileFormUnchanged: true }}
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" />
+            </Field>
+          </UnchangedCase>
+
+          <UnchangedCase
+            id="unchanged-can-send"
+            title="6. canSendWhileUnchanged, on the form"
+            note="Case 2 again, for a form where sending the same thing twice is the point — a notification, an action whose duplicates are fine."
+            expectation="Expected: the log below grows on every press"
+            formProps={{ canSendWhileUnchanged: true }}
+          >
+            <Field vertical>
+              <Label>Name</Label>
+              <Input name="name" value="Ada" />
+            </Field>
+          </UnchangedCase>
+        </div>
+      );
 
       const FormWithButtonActionDemo = () => {
         const [formResult, setFormResult] = useState(null);
@@ -244,6 +359,87 @@
                 {formResult.value}
               </div>
             )}
+          </div>
+        );
+      };
+
+      // Two ways to send the same form: the action is told which button asked
+      // (it carries a name and a value, like any field), and what follows the
+      // send is that button's own business too — `formCommand`, next to the
+      // form's `command`, the way the browser's own formaction sits next to
+      // action.
+      const TwoSubmitButtonsDemo = () => {
+        const [log, setLog] = useState([]);
+        const append = (line) => setLog((previous) => [...previous, line]);
+        return (
+          <div className="test-container" id="two-submits">
+            <h2>Two submit buttons in one form</h2>
+            <p>
+              Both send the form and both put it in loading while the action
+              runs — save stays on the slide, delete moves on to the next one. A
+              button with an action of its own is the other way round: only it
+              goes loading, and the form is left alone —{" "}
+              <a href="#button-action">see above</a>, and{" "}
+              <a href="./01_button_demo.html#interactivity-form-own-action">
+                in the button demo
+              </a>
+              .
+            </p>
+            <div style={{ width: "320px", border: "1px solid #90caf9" }}>
+              <SlideContainer>
+                <Slide id="two_submits_edit" overflow="auto">
+                  <Form
+                    name="two-submits"
+                    action={async ({ name, intent }) => {
+                      await new Promise((r) => setTimeout(r, 700));
+                      append(`${intent}: "${name}"`);
+                      return intent;
+                    }}
+                  >
+                    <Box padding="m" flex="y" spacing="s">
+                      <Field>
+                        <Label>Name</Label>
+                        <Input type="text" name="name" defaultValue="Ada" />
+                      </Field>
+                      <Box flex spacing="s">
+                        {/* Stays here: --navi-void is how one says "nothing
+                            follows my send" — without it the form would do what
+                            a form in a slide does, and move on. */}
+                        <Button
+                          type="submit"
+                          name="intent"
+                          value="save"
+                          formCommand="--navi-void"
+                        >
+                          Save
+                        </Button>
+                        {/* Goes: this button says what follows ITS own send. */}
+                        <Button
+                          type="submit"
+                          name="intent"
+                          value="delete"
+                          formCommand="--navi-go-to-slide:two_submits_gone"
+                          variant="discrete"
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </Box>
+                  </Form>
+                </Slide>
+                <Slide id="two_submits_gone" overflow="auto">
+                  <Box padding="m" flex="y" spacing="s" alignX="start">
+                    <Text>Deleted.</Text>
+                    <Button command="--navi-back" variant="discrete">
+                      back
+                    </Button>
+                  </Box>
+                </Slide>
+              </SlideContainer>
+            </div>
+            <div className="status success" style={{ minHeight: "1.5em" }}>
+              {log.join(" · ")}
+            </div>
           </div>
         );
       };
@@ -377,8 +573,10 @@
 
             {/* ✅ Affichage des paramètres du formulaire */}
             {formParams && (
-              <div className="form-params">
-                <h3>📋 Paramètres du formulaire soumis :</h3>
+              <div className="form-params" data-toc-ignore>
+                <div className="panel-title">
+                  📋 Paramètres du formulaire soumis :
+                </div>
                 <pre>{JSON.stringify(formParams, null, 2)}</pre>
               </div>
             )}
@@ -450,7 +648,7 @@
           return null;
         }
         return (
-          <div className="form-params">
+          <div className="form-params" data-toc-ignore>
             <strong>Submitted:</strong>
             <pre>{JSON.stringify(result, null, 2)}</pre>
           </div>

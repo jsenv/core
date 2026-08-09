@@ -1,0 +1,1963 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Slide container demo</title>
+    <style>
+      .demo-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-header h1 {
+        margin: 0;
+      }
+      .demo-nav {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .demo-nav > * {
+        display: flex;
+        width: 32px;
+        height: 32px;
+        align-items: center;
+        justify-content: center;
+        color: #1a237e;
+        font-size: 1.1rem;
+        text-decoration: none;
+        background: #eaf2fd;
+        border-radius: 6px;
+      }
+      .demo-nav > a:hover {
+        background: #d3e5fb;
+      }
+      .demo-nav > .demo-nav-none {
+        color: #b6bdc9;
+        background: #f1f3f6;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        background: #f5f5f5;
+      }
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin: 0 0 12px;
+        padding-bottom: 10px;
+        font-size: 1.3rem;
+        border-bottom: 2px solid #ddd;
+      }
+      .demo-section p {
+        margin: 0 0 16px;
+        color: #444;
+        font-size: 0.95rem;
+      }
+      .toc {
+        margin: 8px 0 0;
+        padding-left: 20px;
+        line-height: 1.9;
+      }
+      .toc ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: circle;
+      }
+      .toc ul a {
+        color: #555;
+        font-size: 0.9rem;
+      }
+      .demo-see-also {
+        margin: 16px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid #eee;
+      }
+      .demo-settings {
+        display: flex;
+        margin: 0 0 16px;
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.9rem;
+        background: #f4f7fc;
+        border-radius: 8px;
+      }
+      .demo-section {
+        scroll-margin-top: 16px;
+      }
+      /* Focus shown by what the element becomes, not by a ring around it */
+      .focus-pad {
+        display: grid;
+        padding: 14px 10px;
+        place-items: center;
+        color: #4a5568;
+        font-size: 0.9rem;
+        background: #eef3fb;
+        border: 2px dashed #b9cdea;
+        border-radius: 8px;
+      }
+      .focus-pad:focus {
+        color: black;
+        background: yellow;
+        border-style: solid;
+        border-color: yellow;
+      }
+      .demo-note {
+        max-width: 300px;
+        margin: 0;
+        color: #666;
+        font-size: 0.85rem;
+      }
+      .demo-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .demo-option {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+      }
+      .demo-ways {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 24px;
+      }
+      .demo-way {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .demo-way > h3 {
+        margin: 0;
+        color: #666;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .part {
+        color: white;
+        background: #1a237e;
+      }
+      .part-create {
+        background: #4527a0;
+      }
+      .part-edit {
+        background: #00695c;
+      }
+      .filler {
+        padding: 8px 12px;
+        background: #eef3fb;
+        border-bottom: 1px solid #cfe0f5;
+      }
+      .wide {
+        width: 900px;
+        padding: 8px 12px;
+        background: #fdf1e0;
+        border-bottom: 1px solid #f0d7ae;
+      }
+      /* In the document there is no popup to take a size from, so the container
+         is given one here — same as any box would be. On the CONTAINER itself,
+         not on a wrapper around it: it is the box one sees, so it is the box
+         that carries the border, the corners and the background, and its focus
+         ring then follows the same edges. Only the width is said; the height is
+         whatever the slides need, which is the behaviour worth showing. */
+      .in-document > .navi_slide_container {
+        width: 300px;
+        background: white;
+        border: 1px solid #90caf9;
+        border-radius: 8px;
+      }
+      /* The carousel's own bullets: a row of them says how many slides there
+         are and which one is showing, and each is a way to that slide. */
+      .carousel-dot {
+        display: block;
+        width: 8px;
+        height: 8px;
+        background: #cfd8dc;
+        border-radius: 50%;
+      }
+      .carousel-dot[data-current] {
+        background: #1a1a2e;
+      }
+      /* The number one is on, marked where it is read: same size, so the row
+         does not reflow as one walks it. */
+      .carousel-number[aria-current="true"] {
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .in-document {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      /* Very tall content: a height here and now the slides scroll instead —
+         without it the box would be as tall as its tallest slide, which is
+         exactly what we do NOT want to see in a page that also has other
+         sections. Forced on the container for the same reason as above. */
+      .in-document-capped > .navi_slide_container {
+        height: 260px;
+      }
+      /* The states row: several small boxes side by side, each showing one
+         state of the same slide. */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+      import { createContext } from "preact";
+      import {
+        useContext,
+        useEffect,
+        useId,
+        useRef,
+        useState,
+      } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Dialog,
+        Field,
+        Input,
+        Label,
+        Link,
+        List,
+        Popover,
+        Slide,
+        SlideContainer,
+        Text,
+        useSlideValue,
+      } from "@jsenv/navi";
+
+      // Section heading with a hover anchor link, same shape as the wheel
+      // demo's: <Link anchor> owns the id, the "#" is the visible affordance.
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const useStoredBoolean = (key, defaultValue) => {
+        const [value, setValue] = useState(() => {
+          const stored = localStorage.getItem(key);
+          return stored === null ? defaultValue : stored === "true";
+        });
+        useEffect(() => {
+          localStorage.setItem(key, String(value));
+        }, [key, value]);
+        return [value, setValue];
+      };
+      const useStoredString = (key, defaultValue) => {
+        const [value, setValue] = useState(
+          () => localStorage.getItem(key) ?? defaultValue,
+        );
+        useEffect(() => {
+          localStorage.setItem(key, value);
+        }, [key, value]);
+        return [value, setValue];
+      };
+
+      // One setting for every list on the page, kept across reloads: comparing
+      // sections is only fair when they all travel at the same speed.
+      const SPEEDS = [
+        { label: "fast (150ms)", value: "150ms" },
+        { label: "normal (300ms — default)", value: "300ms" },
+        { label: "slow (1s)", value: "1s" },
+      ];
+      const SettingsContext = createContext(null);
+      const useSlideDuration = () => {
+        const settings = useContext(SettingsContext);
+        // No animation is a travel that takes no time — the same code path, so
+        // nothing else has to know about the setting.
+        return settings.animated ? settings.speed : "0s";
+      };
+      const SlideSettings = () => {
+        const { animated, setAnimated, speed, setSpeed } =
+          useContext(SettingsContext);
+        return (
+          <div class="demo-settings">
+            <label class="demo-option">
+              <input
+                type="checkbox"
+                checked={animated}
+                onChange={(e) => setAnimated(e.target.checked)}
+              />
+              Animate the travel
+            </label>
+            <label class="demo-option">
+              Speed{" "}
+              <select
+                value={speed}
+                disabled={!animated}
+                onChange={(e) => setSpeed(e.target.value)}
+              >
+                {SPEEDS.map(({ label, value }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        );
+      };
+
+      const Filler = ({ count, className = "filler" }) =>
+        Array.from({ length: count }, (_, i) => (
+          <div key={i} class={className}>
+            {i + 1}
+          </div>
+        ));
+
+      // One slide: a header that stays and a body that scrolls, plus the button
+      // that leaves it. SlideContainer.Right/.Previous say where to go — which slide
+      // that is, and which way the chevron points, is the list's business.
+      const DemoSlide = ({ id, title, direction, vertical, children }) => {
+        // Four ways out, so a slide says which one it offers rather than
+        // "next": the container's own axis is what picks the pair here.
+        const Back = vertical ? SlideContainer.Up : SlideContainer.Left;
+        const On = vertical ? SlideContainer.Down : SlideContainer.Right;
+        return (
+          <SlideContainer.Item id={id} overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              {/* Title first, then the ways out of it, side by side: a slide in
+                the middle needs both, and neither button needs to know it is
+                in the middle — each says one word */}
+              <Text expandX>{title}</Text>
+              {direction !== "next" && (
+                <Back size="xl" padding="xs" marginY="-xs" />
+              )}
+              {direction !== "previous" && (
+                <On size="xl" padding="xs" marginY="-xs" />
+              )}
+            </Box>
+            <Box body padding="m">
+              {children}
+            </Box>
+          </SlideContainer.Item>
+        );
+      };
+
+      // Every section shows the same thing three times: in the document, in a
+      // dialog, in a popover. Taking a component rather than the slides
+      // themselves, because each of the three needs its own copy of them.
+      // eslint-disable-next-line no-unused-vars -- Content IS used, as <Content />
+      const ThreeWays = ({ id, Content, documentClassName = "" }) => (
+        <div class="demo-ways">
+          <div class="demo-way">
+            <h3>In the document</h3>
+            <div class={`in-document ${documentClassName}`}>
+              <Content />
+            </div>
+          </div>
+          <div class="demo-way">
+            <h3>In a dialog</h3>
+            <Button command="--navi-open" commandFor={`${id}_dialog`}>
+              Open the dialog
+            </Button>
+            {/* flex="y" on the popup, so a list asking for the leftover
+                room (expandY) can be given it: without a column to grow in,
+                a tall list simply overflows the popup and the popup itself
+                becomes what scrolls — header included */}
+            <Dialog id={`${id}_dialog`} minWidth="300px" flex="y">
+              <Content />
+            </Dialog>
+          </div>
+          <div class="demo-way">
+            <h3>In a popover</h3>
+            <Button command="--navi-toggle" commandFor={`${id}_popover`}>
+              Open the popover
+            </Button>
+            <Popover id={`${id}_popover`} minWidth="300px" flex="y">
+              <Content />
+            </Popover>
+          </div>
+        </div>
+      );
+
+      const TwoSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={3} />
+          </DemoSlide>
+          {/* Taller than the first on purpose: the box is as tall as this one,
+              and the first simply leaves room under itself */}
+          <DemoSlide id="second" title="second" direction="previous">
+            <Filler count={8} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      // What it is for, with nothing on it: two screens, one after the other,
+      // each with its own way to the next.
+      const NominalSlides = () => (
+        <SlideContainer duration={useSlideDuration()} width="260px">
+          <Slide id="plan">
+            <Box header flex="x" alignY="center" padding="m" className="part">
+              <Text expandX>Plan</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Text>Monthly — 9 € / month</Text>
+              <Text>Yearly — 90 € / year</Text>
+            </Box>
+          </Slide>
+          <Slide id="payment">
+            <Box header flex="x" alignY="center" padding="m" className="part">
+              <Text expandX>Payment</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Input name="card" placeholder="Card number" />
+              <Button>Pay</Button>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // Four "photos": a gradient and a name, which is all a carousel needs to
+      // be one.
+      const PHOTOS = [
+        {
+          name: "Sunrise",
+          background: "linear-gradient(160deg,#ffb74d,#f06292)",
+        },
+        {
+          name: "Lagoon",
+          background: "linear-gradient(160deg,#4dd0e1,#1976d2)",
+        },
+        {
+          name: "Forest",
+          background: "linear-gradient(160deg,#aed581,#2e7d32)",
+        },
+        { name: "Dusk", background: "linear-gradient(160deg,#9575cd,#311b92)" },
+      ];
+      // The number, not the name: what one needs to read off a picture going
+      // past is where it sits in the row.
+      const Photo = ({ index }) => (
+        <Box
+          flex
+          alignX="center"
+          alignY="center"
+          expandX
+          expandY
+          style={{ background: PHOTOS[index].background }}
+        >
+          <Text style={{ color: "white", fontWeight: 700, fontSize: "2.5rem" }}>
+            {index + 1}
+          </Text>
+        </Box>
+      );
+
+      // A carousel that says where one is: one bullet per photo under the box,
+      // the current one filled in, and each of them a way to its own photo
+      // (--navi-go-to-slide, by name).
+      const CarouselWithBullets = () => {
+        const containerId = useId();
+        const [current, setCurrent] = useState("photo_0");
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <SlideContainer
+              id={containerId}
+              current={current}
+              onCurrentChange={setCurrent}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              {PHOTOS.map((photo, index) => (
+                <Slide key={photo.name} id={`photo_${index}`}>
+                  <Photo index={index} />
+                </Slide>
+              ))}
+            </SlideContainer>
+            <Box flex="x" spacing="xs" alignX="center" width="280px">
+              {PHOTOS.map((photo, index) => (
+                <Button
+                  key={photo.name}
+                  command={`--navi-go-to-slide:photo_${index}`}
+                  commandFor={containerId}
+                  // Nothing but the bullet: no box lighting up under the
+                  // pointer, no shrink when pressed — what one aims at is the
+                  // dot itself.
+                  variant="bare"
+                  padding="xs"
+                  aria-label={photo.name}
+                >
+                  <span
+                    class="carousel-dot"
+                    data-current={current === `photo_${index}` ? "" : undefined}
+                  />
+                </Button>
+              ))}
+            </Box>
+          </Box>
+        );
+      };
+
+      // The same photos with no end to them: three slides are the window, the
+      // content moves one step behind each travel (onLoop), so → on the last
+      // photo shows the first.
+      // Three photos, three slides: enough for a window with no end — a fourth
+      // would make the row longer, not show anything new.
+      const LOOP_PHOTO_COUNT = 3;
+      const CarouselLooping = () => {
+        const containerId = useId();
+        const [index, setIndex] = useState(0);
+        const photoAt = (offset) =>
+          (index + offset + LOOP_PHOTO_COUNT) % LOOP_PHOTO_COUNT;
+        return (
+          <Box flex="x" alignY="center" spacing="s">
+            <SlideContainer.Left
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+            <SlideContainer
+              id={containerId}
+              loop
+              defaultCurrent="current"
+              onLoop={({ dx }) => {
+                setIndex((index + dx + LOOP_PHOTO_COUNT) % LOOP_PHOTO_COUNT);
+              }}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              <Slide area="previous">
+                <Photo index={photoAt(-1)} />
+              </Slide>
+              <Slide area="current">
+                <Photo index={photoAt(0)} />
+              </Slide>
+              <Slide area="next">
+                <Photo index={photoAt(1)} />
+              </Slide>
+            </SlideContainer>
+            <SlideContainer.Right
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+          </Box>
+        );
+      };
+
+      // A full bar: the two ends, the two steps, and one button per photo. All
+      // of them outside the box and driving it by name (commandFor), so nothing
+      // in the bar travels with what it commands.
+      const CarouselWithBar = ({ text }) => {
+        const containerId = useId();
+        const [current, setCurrent] = useState("bar_photo_0");
+        const ends = text
+          ? [
+              { command: "--navi-first", label: "First" },
+              { command: "--navi-left", label: "Previous" },
+            ]
+          : null;
+        const nexts = text
+          ? [
+              { command: "--navi-right", label: "Next" },
+              { command: "--navi-last", label: "Last" },
+            ]
+          : null;
+        return (
+          <Box flex="y" spacing="s" alignX="center" width="fit-content">
+            <SlideContainer
+              id={containerId}
+              current={current}
+              onCurrentChange={setCurrent}
+              duration={useSlideDuration()}
+              width="280px"
+              height="160px"
+              borderRadius="8px"
+            >
+              {PHOTOS.map((photo, index) => (
+                <Slide key={photo.name} id={`bar_photo_${index}`}>
+                  <Photo index={index} />
+                </Slide>
+              ))}
+            </SlideContainer>
+            <Box flex="x" spacing="xs" alignY="center">
+              {text ? (
+                ends.map(({ command, label }) => (
+                  <Button
+                    key={command}
+                    command={command}
+                    commandFor={containerId}
+                    variant="discrete"
+                  >
+                    {label}
+                  </Button>
+                ))
+              ) : (
+                <>
+                  <SlideContainer.First commandFor={containerId} padding="xs" />
+                  <SlideContainer.Left commandFor={containerId} padding="xs" />
+                </>
+              )}
+              {PHOTOS.map((photo, index) => (
+                <Button
+                  key={photo.name}
+                  command={`--navi-go-to-slide:bar_photo_${index}`}
+                  commandFor={containerId}
+                  variant="discrete"
+                  padding="xs"
+                  // Which one is showing, said on the button that leads to it:
+                  // a bar of numbers with none of them marked says how many
+                  // there are and nothing about where one stands.
+                  aria-current={
+                    current === `bar_photo_${index}` ? "true" : undefined
+                  }
+                  className="carousel-number"
+                >
+                  {index + 1}
+                </Button>
+              ))}
+              {text ? (
+                nexts.map(({ command, label }) => (
+                  <Button
+                    key={command}
+                    command={command}
+                    commandFor={containerId}
+                    variant="discrete"
+                  >
+                    {label}
+                  </Button>
+                ))
+              ) : (
+                <>
+                  <SlideContainer.Right commandFor={containerId} padding="xs" />
+                  <SlideContainer.Last commandFor={containerId} padding="xs" />
+                </>
+              )}
+            </Box>
+          </Box>
+        );
+      };
+
+      const TallSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={40} />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
+            <Filler count={60} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      const TallSlidesVertical = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <DemoSlide id="first" title="first" direction="next" vertical>
+            <Filler count={40} />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous" vertical>
+            <Filler count={60} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      const TwoSlidesVertical = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <DemoSlide id="first" title="first" direction="next" vertical>
+            <Filler count={3} />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous" vertical>
+            <Filler count={8} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      const WideSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={3} className="wide" />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous">
+            <Filler count={5} className="wide" />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      const WideSlidesVertical = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <DemoSlide id="first" title="first" direction="next" vertical>
+            <Filler count={3} className="wide" />
+          </DemoSlide>
+          <DemoSlide id="second" title="second" direction="previous" vertical>
+            <Filler count={5} className="wide" />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      // Focus, shown rather than described: each slide holds something to do,
+      // so one can watch where the keyboard lands, what it does NOT land on,
+      // and where it is put back.
+      // A zone that says what to do and shows, by filling up, that it holds
+      // the keyboard: where the focus is and where it comes back is then read
+      // off the slides themselves.
+      const FocusPad = ({ children, ...rest }) => (
+        <div class="focus-pad" tabIndex={0} {...rest}>
+          {children}
+        </div>
+      );
+
+      const FocusSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <Slide id="who" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>who</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              <FocusPad>press → </FocusPad>
+              <Input name="note" placeholder="→ moves the caret in here" />
+            </Box>
+          </Slide>
+          <Slide id="where" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>where</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              <FocusPad>press → or ←</FocusPad>
+              <FocusPad navi-autofocus>navi-autofocus</FocusPad>
+            </Box>
+          </Slide>
+          <Slide id="done" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>done</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Text>(nothing focusable here)</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // Leaving and coming back: a slide holds what one was doing on it — where
+      // it was scrolled, and what the keyboard was on. The fields are numbered
+      // so the one that gets the focus back is nameable, and each slide is
+      // taller than the box so there is a scroll position to lose.
+      const ComeBackSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <Slide id="come_back_form" overflow="auto" maxHeight="220px">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>form</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <Input key={n} name={`field_${n}`} placeholder={`field ${n}`} />
+              ))}
+            </Box>
+          </Slide>
+          <Slide id="come_back_recap" overflow="auto" maxHeight="220px">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>recap</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="m">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <FocusPad key={n}>line {n}</FocusPad>
+              ))}
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // A list in the middle of a vertical map: the slides go up and down, and so
+      // does the list's own selection — so ↑/↓ have two possible readings, and
+      // only one of them can be right at a time. Whoever holds the keyboard
+      // decides: on a list item they walk the list, anywhere else on the slide
+      // they travel.
+      const ListInSlides = () => (
+        <SlideContainer duration={useSlideDuration()} layout="column">
+          <Slide id="above" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>above</Text>
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Text>↓ travels from here (nothing else wants the key)</Text>
+            </Box>
+          </Slide>
+          <Slide id="the-list" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>the list</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m" flex="y" spacing="s">
+              <Text size="s" color="#666">
+                Click an item, then press ↑/↓: the selection should move inside
+                the list, not the slide. Press ↑/↓ with the focus outside the
+                list (the text below, a chevron) and the slide travels.
+              </Text>
+              {/* No ids on purpose: this section is rendered three times over
+                  (in the document, in a dialog, in a popover) and navi would
+                  rightly complain about three lists sharing one */}
+              <List selectable name="fruit" border="none">
+                {["apple", "banana", "cherry", "date"].map((fruit, index) => (
+                  <List.Item
+                    selectable
+                    key={fruit}
+                    index={index}
+                    value={fruit}
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    {fruit}
+                  </List.Item>
+                ))}
+              </List>
+              <Text size="s">outside the list — ↑/↓ travels</Text>
+            </Box>
+          </Slide>
+          <Slide id="below" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>below</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Text>↑ goes back to the list</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // The map, made visible. A slide container shows one slide and hides the
+      // rest — each is already laid out at its own place, and the track slides
+      // the whole map under a window one cell wide. Here the window is made
+      // bigger and the clipping given up, so what is normally out of sight is
+      // drawn faintly around what is being shown: the arrangement one writes in
+      // `layout` IS what one sees, and moving is the map sliding under it.
+      const MAP_SIDE = 6;
+      const MAP_CELL_WIDTH = 64;
+      const MAP_CELL_HEIGHT = 44;
+      // Where it opens: the middle of the map, so there is somewhere to go in
+      // all four directions from the start.
+      const MAP_MIDDLE = 2;
+      const MAP_CELLS = Array.from({ length: MAP_SIDE }, (_, y) =>
+        Array.from({ length: MAP_SIDE }, (_, x) => ({
+          x,
+          y,
+          area: `cell_${x}_${y}`,
+          label: `${String.fromCharCode(97 + x)}${y + 1}`,
+        })),
+      );
+      const MAP_LAYOUT = MAP_CELLS.map((row) =>
+        row.map((cell) => cell.area).join(" "),
+      );
+
+      const MapReveal = () => {
+        // Driven from here (`current` + `onCurrentChange`) rather than left to
+        // the container: knowing which cell is on show is what lets each one be
+        // told how to look, in props, instead of a stylesheet reaching for
+        // [data-current] behind the demo's back.
+        const [current, setCurrent] = useState(
+          `cell_${MAP_MIDDLE}_${MAP_MIDDLE}`,
+        );
+        return (
+          <div>
+            {/* The window: the size of the map itself, 6 cells by 6. The
+                container sits at its centre (the dashed frame) and the map
+                slides UNDER it — going one cell to the right slides the whole
+                grid one cell to the left, and whatever ends up outside the
+                window is cut off. That is the mechanism itself: one thing
+                moves, the track, and an ordinary container is this same window
+                shrunk to a single cell. */}
+            <Box
+              flex
+              alignX="center"
+              alignY="center"
+              width={`${MAP_SIDE * MAP_CELL_WIDTH}px`}
+              height={`${MAP_SIDE * MAP_CELL_HEIGHT}px`}
+              overflow="hidden"
+              borderWidth="1"
+              borderStyle="solid"
+              borderColor="#cfd8e3"
+            >
+              {/* Showing what it would normally hide: `overflow="visible"` is
+                  the whole trick — the container keeps its size (one cell, drawn
+                  here as a dashed frame) and simply stops cutting off the slides
+                  parked around it. */}
+              <SlideContainer
+                id="map_reveal"
+                layout={MAP_LAYOUT}
+                current={current}
+                onCurrentChange={setCurrent}
+                duration={useSlideDuration()}
+                overflow="visible"
+                outline="2px dashed #90caf9"
+                outlineOffset="2px"
+              >
+                {MAP_CELLS.flat().map(({ x, y, area, label }) => {
+                  const isCurrent = area === current;
+                  return (
+                    <Slide
+                      key={area}
+                      id={area}
+                      width={`${MAP_CELL_WIDTH}px`}
+                      height={`${MAP_CELL_HEIGHT}px`}
+                      alignX="center"
+                      alignY="center"
+                      borderWidth="1"
+                      borderStyle="solid"
+                      borderColor={isCurrent ? "#1a237e" : "#b0bec5"}
+                      // One square in two tinted, so a move of one cell reads as
+                      // a move even between two empty cells.
+                      backgroundColor={
+                        isCurrent
+                          ? "#1a237e"
+                          : (x + y) % 2
+                            ? "#e8eef7"
+                            : "white"
+                      }
+                      color={isCurrent ? "white" : "#37474f"}
+                      // Waiting its turn: drawn, but plainly not the one on show.
+                      opacity={isCurrent ? 1 : 0.35}
+                      bold={isCurrent}
+                      fontSize="0.8rem"
+                      fontFamily="ui-monospace, monospace"
+                    >
+                      {label}
+                    </Slide>
+                  );
+                })}
+              </SlideContainer>
+            </Box>
+            {/* Aimed at the container by id: the same four commands its own
+                chevrons use, said from outside it. */}
+            <div class="demo-row" style="margin-top: 12px">
+              <SlideContainer.Left commandFor="map_reveal" />
+              <SlideContainer.Right commandFor="map_reveal" />
+              <SlideContainer.Up commandFor="map_reveal" />
+              <SlideContainer.Down commandFor="map_reveal" />
+              <span class="demo-note">
+                …or click a cell and use the arrow keys. The dashed frame is
+                what a container normally shows.
+              </span>
+            </div>
+          </div>
+        );
+      };
+
+      // One box, one state: the same slide shown at rest and showing its focus,
+      // so what the ring looks like — and where it is drawn — can be read off
+      // the page rather than described.
+      // How big a slide container is: as big as its LARGEST slide, in both
+      // directions, whatever is on show. Four little demos rather than a
+      // paragraph — one slide growing taller, one growing wider, then the same
+      // two cases with a second slide that is bigger than the one on screen.
+      //
+      // The container carries a border and the slides a background of their
+      // own, so the two sizes can be told apart: what the box is, and what the
+      // slide inside it fills.
+      const SizingFrame = ({ children, ...rest }) => (
+        <SlideContainer
+          backgroundColor="white"
+          borderWidth="1"
+          borderStyle="solid"
+          borderColor="#90caf9"
+          duration={useSlideDuration()}
+          {...rest}
+        >
+          {children}
+        </SlideContainer>
+      );
+      // Its way out always in the same corner, whichever direction it points:
+      // a chevron that moves from one side to the other between two screens is
+      // a chevron one has to look for.
+      const SizingSlide = ({ id, title, direction, children }) => (
+        <Slide id={id} overflow="auto" backgroundColor="#f4f7fc">
+          <Box header padding="m" flex="x" alignY="center" className="part">
+            <Text expandX noWrap>
+              {title}
+            </Text>
+            {/* Always in the same corner, whichever way it goes — and nothing
+                at all when there is nowhere to go. */}
+            {direction === "next" && (
+              <SlideContainer.Right size="l" padding="xs" marginY="-xs" />
+            )}
+            {direction === "previous" && (
+              <SlideContainer.Left size="l" padding="xs" marginY="-xs" />
+            )}
+          </Box>
+          <Box body padding="m">
+            {children}
+          </Box>
+        </Slide>
+      );
+
+      const SizingTaller = () => {
+        const [lineCount, setLineCount] = useState(1);
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex spacing="xs" alignY="center">
+              {[1, 3, 6].map((count) => (
+                <Button
+                  key={count}
+                  variant={count === lineCount ? undefined : "discrete"}
+                  onClick={() => setLineCount(count)}
+                >
+                  {count} line{count > 1 ? "s" : ""}
+                </Button>
+              ))}
+            </Box>
+            <SizingFrame width="240px">
+              <SizingSlide id="sizing_taller" title="alone">
+                <Filler count={lineCount} />
+              </SizingSlide>
+            </SizingFrame>
+          </Box>
+        );
+      };
+
+      const SizingWider = () => {
+        const [itemCount, setItemCount] = useState(1);
+        return (
+          <Box flex="y" spacing="s" alignX="start">
+            <Box flex spacing="xs" alignY="center">
+              {[1, 3, 5].map((count) => (
+                <Button
+                  key={count}
+                  variant={count === itemCount ? undefined : "discrete"}
+                  onClick={() => setItemCount(count)}
+                >
+                  {count} tag{count > 1 ? "s" : ""}
+                </Button>
+              ))}
+            </Box>
+            {/* No width this time: sideways too, the box is what the slide
+                needs. */}
+            <SizingFrame>
+              <SizingSlide id="sizing_wider" title="alone">
+                <Box flex spacing="xs" noWrap>
+                  {Array.from({ length: itemCount }, (_, i) => (
+                    <Text
+                      key={i}
+                      paddingX="s"
+                      paddingY="xxs"
+                      backgroundColor="#e8eef7"
+                      borderRadius="s"
+                      noWrap
+                    >
+                      tag {i + 1}
+                    </Text>
+                  ))}
+                </Box>
+              </SizingSlide>
+            </SizingFrame>
+          </Box>
+        );
+      };
+
+      const SizingTwoTall = () => (
+        <SizingFrame width="240px">
+          <SizingSlide id="sizing_short" title="short" direction="next">
+            <Filler count={1} />
+          </SizingSlide>
+          <SizingSlide id="sizing_tall" title="tall" direction="previous">
+            <Filler count={3} />
+          </SizingSlide>
+        </SizingFrame>
+      );
+
+      const SizingTwoWide = () => (
+        <SizingFrame>
+          <SizingSlide id="sizing_narrow" title="narrow" direction="next">
+            <Text noWrap>a word</Text>
+          </SizingSlide>
+          <SizingSlide id="sizing_wide" title="wide" direction="previous">
+            <Text noWrap>a rather longer sentence than the other one</Text>
+          </SizingSlide>
+        </SizingFrame>
+      );
+
+      // Nothing focusable inside, so the slide itself takes the keyboard as soon
+      // as the popup opens — which is the case the popup's own ring is for.
+      const FocusRingSlides = ({ focusVisible }) => (
+        <SlideContainer
+          duration={useSlideDuration()}
+          // Held on, as in StateSlide: what the popup answers is the container's
+          // data-focus-visible, so forcing it shows the ring without having to
+          // open anything from the keyboard.
+          pseudoState={focusVisible ? { ":focus-visible": true } : undefined}
+        >
+          <Slide id="focus_ring_first" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>first</Text>
+            </Box>
+            <Box body padding="m">
+              <Text>press →</Text>
+            </Box>
+          </Slide>
+          <Slide id="focus_ring_second" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>second</Text>
+            </Box>
+            <Box body padding="m">
+              <Text>press ←</Text>
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // Held on by default so the ring is simply there to look at; unticked, the
+      // same examples answer to what one actually does — Tab onto a container,
+      // Space on a button that opens a popup, a click that shows nothing.
+      const FocusOutlineSection = () => {
+        const [forced, setForced] = useStoredBoolean(
+          "slide_container_demo_force_focus_visible",
+          true,
+        );
+        return (
+          <section class="demo-section" id="focus-outline">
+            <Heading id="focus-outline">The focus outline</Heading>
+            <p>The slide holding the keyboard, ringed by its container.</p>
+            <label class="demo-option">
+              <input
+                type="checkbox"
+                checked={forced}
+                onChange={(e) => setForced(e.target.checked)}
+              />
+              force focus-visible
+            </label>
+            <Box flex="y" spacing="l" alignX="start" marginTop="m">
+              <StateSlide focusVisible={forced} caption="plain">
+                square
+              </StateSlide>
+              <StateSlide
+                rounded
+                focusVisible={forced}
+                caption='borderRadius="12px"'
+              >
+                rounded
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                focusVisible={forced}
+                caption='borderWidth="3"'
+              >
+                bordered
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                rounded
+                focusVisible={forced}
+                caption='borderWidth="3" + borderRadius="12px"'
+              >
+                both
+              </StateSlide>
+            </Box>
+            <p>…and in a popup, where the popup carries it:</p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>In a dialog</h3>
+                <Button command="--navi-open" commandFor="focus_ring_dialog">
+                  Open the dialog
+                </Button>
+                <Dialog id="focus_ring_dialog" minWidth="260px" flex="y">
+                  <FocusRingSlides focusVisible={forced} />
+                </Dialog>
+              </div>
+              <div class="demo-way">
+                <h3>In a popover</h3>
+                <Button command="--navi-toggle" commandFor="focus_ring_popover">
+                  Open the popover
+                </Button>
+                <Popover id="focus_ring_popover" minWidth="260px" flex="y">
+                  <FocusRingSlides focusVisible={forced} />
+                </Popover>
+              </div>
+            </div>
+          </section>
+        );
+      };
+
+      // What a travel carries: a button says where to go AND what it is about
+      // (`value`), and the slide arriving reads it back.
+      const CarriedValueSlides = () => (
+        <SlideContainer duration={useSlideDuration()} keyboardTravel={false}>
+          <Slide id="carried_pick" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>pick one</Text>
+            </Box>
+            <Box body padding="m" flex="y" spacing="s" alignX="start">
+              {["Ada", "Grace", "Katherine"].map((name) => (
+                <Button
+                  key={name}
+                  // By name rather than by direction: this button knows which
+                  // screen it opens, not where that screen sits on the map —
+                  // and `value` stays free to say what the travel is about.
+                  command="--navi-go-to-slide:carried_edit"
+                  value={{ name }}
+                  variant="discrete"
+                >
+                  edit {name}
+                </Button>
+              ))}
+            </Box>
+          </Slide>
+          <Slide id="carried_edit" overflow="auto">
+            <Box header padding="m" flex="x" alignY="center" className="part">
+              <Text expandX>edit</Text>
+              {/* Back where one came from, whichever screen that was */}
+              <Button command="--navi-back" variant="discrete" padding="xs">
+                back
+              </Button>
+            </Box>
+            <Box body padding="m">
+              <CarriedValueForm />
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+      // Inside the slide, the only place that can ask what the travel here was
+      // about.
+      const CarriedValueForm = () => {
+        const slideValue = useSlideValue();
+        return (
+          <Field vertical>
+            <Label bold>name</Label>
+            {/* keyed by what was handed over: the field is uncontrolled, so
+                arriving about someone else must give it a fresh default */}
+            <Input
+              key={slideValue?.name}
+              name="name"
+              defaultValue={slideValue?.name ?? ""}
+            />
+          </Field>
+        );
+      };
+
+      const StateSlide = ({
+        rounded,
+        borderWidth = "1",
+        borderColor = "#90caf9",
+        focusVisible,
+        backgroundColor,
+        caption,
+        children,
+      }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          {/* Everything one sees is said HERE, on the container: it is the box
+              on the page, so it carries the width, the border, the corners and
+              its own background — and its focus ring then lands on those very
+              edges. Written as props rather than as a rule reaching for
+              .navi_slide_container from a stylesheet: the box takes them like
+              any other Box. */}
+          <SlideContainer
+            duration={useSlideDuration()}
+            width="220px"
+            backgroundColor="white"
+            borderWidth={borderWidth}
+            // Without a style there is nothing to draw: border-width alone
+            // leaves border-style at "none".
+            borderStyle="solid"
+            borderColor={borderColor}
+            borderRadius={rounded ? "12px" : undefined}
+            // Held on, not obtained: `pseudoState` overrides what the box
+            // would have worked out for itself (see box.jsx), which is what
+            // puts both states on the page at once, side by side, without
+            // anything having to be focused.
+            pseudoState={focusVisible ? { ":focus-visible": true } : undefined}
+          >
+            <Slide
+              id={`state_${rounded ? "rounded" : "square"}_${focusVisible ? "focus" : "rest"}${backgroundColor ? "_bg" : ""}${borderWidth === "1" ? "" : "_bordered"}`}
+              overflow="auto"
+              // A background of its own, when it wants one: a slide is a box, so
+              // it takes the same prop as any other. Worth showing because it is
+              // the one that changes what a travel LOOKS like — a slide with a
+              // background of its own passes in front of what is behind it,
+              // where a transparent one lets the container's own show through
+              // all the way.
+              backgroundColor={backgroundColor}
+            >
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>a slide</Text>
+              </Box>
+              <Box body padding="m">
+                <Text>{children}</Text>
+              </Box>
+            </Slide>
+          </SlideContainer>
+          <Text size="s" color="#666">
+            {caption ?? (focusVisible ? "holding the keyboard" : "at rest")}
+          </Text>
+        </Box>
+      );
+
+      const ThreeSlides = () => (
+        <SlideContainer duration={useSlideDuration()}>
+          <DemoSlide id="first" title="first" direction="next">
+            <Filler count={3} />
+          </DemoSlide>
+          <DemoSlide id="middle" title="middle" direction="both">
+            <Filler count={5} />
+          </DemoSlide>
+          <DemoSlide id="last" title="last" direction="previous">
+            <Filler count={3} />
+          </DemoSlide>
+        </SlideContainer>
+      );
+
+      // Two slides one can always walk out of: press → on the first and you are
+      // on the second, whether or not you did anything there.
+      const FreeSlides = () => {
+        const [agreed, setAgreed] = useState(false);
+        return (
+          <SlideContainer duration={useSlideDuration()}>
+            <Slide id="terms" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>terms</Text>
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <label class="demo-option">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  I agree
+                </label>
+              </Box>
+            </Slide>
+            <Slide id="signed" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>signed</Text>
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>
+                  {agreed ? "…and you agreed." : "…without agreeing."}
+                </Text>
+              </Box>
+            </Slide>
+          </SlideContainer>
+        );
+      };
+
+      // The same two, with the first one holding on to the user until the box
+      // is ticked: preventNavNext is read wherever a travel is asked for, so
+      // the chevron goes read-only and → does nothing.
+      const LockedSlides = () => {
+        const [agreed, setAgreed] = useState(false);
+        return (
+          <SlideContainer duration={useSlideDuration()}>
+            <Slide id="terms" preventNavNext={!agreed} overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>terms</Text>
+                <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <label class="demo-option">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                  />
+                  I agree
+                </label>
+              </Box>
+            </Slide>
+            <Slide id="signed" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>signed</Text>
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>…and you agreed.</Text>
+              </Box>
+            </Slide>
+          </SlideContainer>
+        );
+      };
+
+      // Same lock, no chevron at all: the action itself moves the list on, by
+      // dispatching the event a --navi-right command would have dispatched.
+      // In an effect, not in the change handler: the lock lifts with the
+      // render, and a travel asked for before that would be refused by it.
+      const ActionThenNextSlides = () => {
+        // How MANY times it was signed, not whether it was: coming back and
+        // signing again has to move on again, and a boolean that is already
+        // true is a state that never changes twice.
+        const [signCount, setSignCount] = useState(0);
+        const listRef = useRef();
+        useEffect(() => {
+          if (signCount === 0) {
+            return;
+          }
+          listRef.current.dispatchEvent(
+            new CustomEvent("navi_slide_move", {
+              detail: { dx: 1, dy: 0 },
+              bubbles: true,
+            }),
+          );
+        }, [signCount]);
+        return (
+          <SlideContainer duration={useSlideDuration()} ref={listRef}>
+            <Slide id="sign" preventNav={signCount === 0} overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>sign</Text>
+                {/* No way out here, but its room is kept: inert + hidden, so
+                    the header is the same height as the next slide's and the
+                    top of the box does not jump as one travels */}
+                <SlideContainer.Right
+                  size="xl"
+                  padding="xs"
+                  marginY="-xs"
+                  style={{ visibility: "hidden" }}
+                  inert
+                />
+              </Box>
+              <Box body padding="m">
+                <Button onClick={() => setSignCount((count) => count + 1)}>
+                  Sign
+                </Button>
+              </Box>
+            </Slide>
+            <Slide id="done" overflow="auto">
+              <Box header padding="m" flex="x" alignY="center" className="part">
+                <Text expandX>done</Text>
+                <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+              </Box>
+              <Box body padding="m">
+                <Text>Signed — and the list moved on by itself.</Text>
+              </Box>
+            </Slide>
+          </SlideContainer>
+        );
+      };
+
+      // A window over something endless: three slides are enough for a row
+      // that never runs out, because the container comes back to the middle
+      // after each travel and the content moves one step with it.
+      const LoopSlides = () => {
+        const [number, setNumber] = useState(0);
+        // The ways out are OUTSIDE the window, one on each side of it, and
+        // drive it by name (commandFor). Put on a slide they would travel with
+        // it — during a move one sees the slide arriving, which carries its own
+        // pair, so the buttons appear to slide away and back rather than the
+        // window moving under them.
+        const containerId = useId();
+        return (
+          <Box flex="x" alignY="center" spacing="s">
+            <SlideContainer.Left
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+            <SlideContainer
+              id={containerId}
+              loop
+              defaultCurrent="current"
+              onLoop={({ dx }) => {
+                setNumber(number + dx);
+              }}
+              duration={useSlideDuration()}
+              width="220px"
+              backgroundColor="white"
+              borderWidth="1"
+              borderStyle="solid"
+              borderColor="#90caf9"
+            >
+              <Slide area="previous" padding="m" flex alignX="center">
+                <Text>{number - 1}</Text>
+              </Slide>
+              <Slide area="current" padding="m" flex alignX="center">
+                <Text>{number}</Text>
+              </Slide>
+              <Slide area="next" padding="m" flex alignX="center">
+                <Text>{number + 1}</Text>
+              </Slide>
+            </SlideContainer>
+            <SlideContainer.Right
+              commandFor={containerId}
+              size="xl"
+              padding="xs"
+            />
+          </Box>
+        );
+      };
+
+      // A map instead of a line: "create" is a step further into the decision
+      // so it sits below, "edit" is about one entry of the list so it sits
+      // beside it. Same component, same travel — only where the slides are
+      // changes.
+      const MAP = ["pick   edit", "create"];
+      const MapSlides = () => (
+        <SlideContainer layout={MAP} duration={useSlideDuration()}>
+          <Slide id="pick" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              spacing="xs"
+              className="part"
+            >
+              <Text expandX>pick</Text>
+              <SlideContainer.Right size="xl" padding="xs" marginY="-xs" />
+              <SlideContainer.Down size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Filler count={6} />
+            </Box>
+          </Slide>
+          <Slide id="create" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="part part-create"
+            >
+              <Text expandX>create (below)</Text>
+              <SlideContainer.Up size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Filler count={3} />
+            </Box>
+          </Slide>
+          <Slide id="edit" overflow="auto">
+            <Box
+              header
+              padding="m"
+              flex="x"
+              alignY="center"
+              className="part part-edit"
+            >
+              <Text expandX>edit (on the right)</Text>
+              <SlideContainer.Left size="xl" padding="xs" marginY="-xs" />
+            </Box>
+            <Box body padding="m">
+              <Filler count={4} />
+            </Box>
+          </Slide>
+        </SlideContainer>
+      );
+
+      // The dialog case of its own: the dialog is the only popup that can be
+      // asked to take the whole document, so it is the only one where the list
+      // is given room rather than taking it from its slides.
+      const ExpandDialogSection = () => {
+        const [flush, setFlush] = useState(false);
+        const [vertical, setVertical] = useState(false);
+        return (
+          <section class="demo-section" id="dialog">
+            <Heading id="dialog">
+              Specific to dialog: filling the document
+            </Heading>
+            <p>
+              A dialog with <code>expand</code> takes the whole screen, so the
+              list has room given to it rather than taken from its slides:{" "}
+              <code>expandY</code> makes it fill the dialog, and each slide then
+              fills the list whatever it contains.
+            </p>
+            <div class="demo-row">
+              <Button command="--navi-open" commandFor="expand_dialog">
+                Open the dialog
+              </Button>
+              {/* marginWithContainer 0: the dialog then reaches the edges of
+                  the document, which is the shape a full-screen flow wants —
+                  and the one where a travelling slide has nothing to peek
+                  through beside it */}
+              <label class="demo-option">
+                <input
+                  type="checkbox"
+                  checked={flush}
+                  onChange={(e) => setFlush(e.target.checked)}
+                />
+                marginWithContainer=0
+              </label>
+              <label class="demo-option">
+                <input
+                  type="checkbox"
+                  checked={vertical}
+                  onChange={(e) => setVertical(e.target.checked)}
+                />
+                vertical
+              </label>
+            </div>
+            <Dialog
+              id="expand_dialog"
+              expand
+              marginWithContainer={flush ? 0 : undefined}
+            >
+              <SlideContainer
+                duration={useSlideDuration()}
+                expandY
+                layout={vertical ? "column" : "row"}
+              >
+                <DemoSlide
+                  id="first"
+                  title="first"
+                  direction="next"
+                  vertical={vertical}
+                >
+                  <Filler count={3} />
+                </DemoSlide>
+                <DemoSlide
+                  id="second"
+                  title="second"
+                  direction="previous"
+                  vertical={vertical}
+                >
+                  <Filler count={8} />
+                </DemoSlide>
+              </SlideContainer>
+            </Dialog>
+          </section>
+        );
+      };
+
+      const App = () => {
+        const [animated, setAnimated] = useStoredBoolean(
+          "slide_container_demo_animated",
+          true,
+        );
+        const [speed, setSpeed] = useStoredString(
+          "slide_container_demo_speed",
+          "300ms",
+        );
+        const settings = { animated, setAnimated, speed, setSpeed };
+        return (
+          <SettingsContext.Provider value={settings}>
+            <AppContent />
+          </SettingsContext.Provider>
+        );
+      };
+
+      const AppContent = () => (
+        <div>
+          <DemoHeader
+            title="Slide container demo"
+            previous={{ href: "./7_slot_demo.html", label: "Slot" }}
+            next={{ href: "./9_separator_demo.html", label: "Separator" }}
+          />
+
+          <div class="demo-section">
+            <p>
+              Slides that replace one another inside one box. The box takes the
+              size of its largest slide, so nothing grows or shrinks as one
+              moves through them; a slide travels by exactly one box. Where the
+              slides are is said by <code>layout</code>: <code>"row"</code> (the
+              default), <code>"column"</code>, or a map of named areas.
+            </p>
+            <SlideSettings />
+            <strong>On this page</strong>
+            {/* Sections only: the h3s below them are the three ways each one is
+                shown (in the document, in a dialog, in a popover), repeated
+                section after section — a table of contents listing them says
+                nothing about where anything is. */}
+            <DocumentToc to={2} />
+            <p class="demo-see-also">
+              <strong>See also:</strong>{" "}
+              <Link href="./1_dialog_demo.html#slides">
+                Dialog demo — Slides
+              </Link>{" "}
+              ·{" "}
+              <Link href="./2_popover_demo.html#slides">
+                Popover demo — Slides
+              </Link>{" "}
+              ·{" "}
+              <Link href="./lab/slide_container_perf.html">
+                Slide container — perf
+              </Link>
+            </p>
+          </div>
+
+          <section class="demo-section" id="nominal">
+            <Heading id="nominal">Cas nominal</Heading>
+            <NominalSlides />
+          </section>
+
+          <section class="demo-section" id="states">
+            <Heading id="states">What a slide looks like</Heading>
+            <p>A box: what one sees is what it was given.</p>
+            <Box flex="y" spacing="l" alignX="start">
+              <StateSlide caption="plain">square</StateSlide>
+              <StateSlide rounded caption='borderRadius="12px"'>
+                rounded
+              </StateSlide>
+              <StateSlide
+                borderWidth="3"
+                borderColor="#f57c00"
+                caption='borderWidth="3"'
+              >
+                bordered
+              </StateSlide>
+              <StateSlide
+                backgroundColor="#fdf1e0"
+                caption='backgroundColor="#fdf1e0" on the slide'
+              >
+                on its own paper
+              </StateSlide>
+            </Box>
+          </section>
+
+          <FocusOutlineSection />
+
+          <section class="demo-section" id="focus">
+            <Heading id="focus">Focus behaviour</Heading>
+            <p>
+              Travel with the chevrons, ← and →, Home and End. The zone holding
+              the keyboard is filled in.
+            </p>
+            <h3>Where the keyboard lands</h3>
+            <p>
+              On what there is to do: <code>navi-autofocus</code> when a slide
+              names it, the first thing that can be used otherwise, the ways out
+              only for want of anything else.
+            </p>
+            <ThreeWays id="focus" Content={FocusSlides} />
+            <h3>Where it is put back</h3>
+            <p>Put the keyboard on a field, travel, and come back.</p>
+            <ThreeWays id="come_back_focus" Content={ComeBackSlides} />
+            <p class="demo-note">
+              A way out never becomes what is restored: pressing → puts the
+              keyboard on the chevron, and coming back puts it on the field one
+              was in. A slide only ever left from its own way out has nothing to
+              restore, and lands where it would have landed the first time.
+            </p>
+          </section>
+
+          <section class="demo-section" id="carried-value">
+            <Heading id="carried-value">What a travel carries</Heading>
+            <p>The button says where to go and what it is about.</p>
+            <ThreeWays id="carried" Content={CarriedValueSlides} />
+          </section>
+
+          <section class="demo-section" id="sizing">
+            <Heading id="sizing">How big it is</Heading>
+            <p>
+              As big as its <strong>largest</strong> slide, in both directions.
+            </p>
+            <Box flex="y" spacing="l" alignX="start">
+              <div class="demo-way">
+                <h3>One slide, taller</h3>
+                <SizingTaller />
+              </div>
+              <div class="demo-way">
+                <h3>One slide, wider</h3>
+                <SizingWider />
+              </div>
+              <div class="demo-way">
+                <h3>Two slides, one taller</h3>
+                <SizingTwoTall />
+              </div>
+              <div class="demo-way">
+                <h3>Two slides, one wider</h3>
+                <SizingTwoWide />
+              </div>
+            </Box>
+            <p class="demo-note">
+              A container given a size of its own scrolls instead:{" "}
+              <Link href="#scroll">Scroll</Link>
+            </p>
+          </section>
+
+          <section class="demo-section" id="vertical">
+            <Heading id="vertical">Vertical</Heading>
+            <p>
+              The same two slides with <code>layout="column"</code>: they arrive
+              from below instead of from the side. The travel is the only
+              difference — the box is still sized on its largest slide, in both
+              directions.
+            </p>
+            <ThreeWays id="vertical" Content={TwoSlidesVertical} />
+          </section>
+
+          <section class="demo-section" id="scroll">
+            <Heading id="scroll">Scroll</Heading>
+            <p>
+              A slide too big for the box scrolls its own content; the box keeps
+              its size.
+            </p>
+            <h3 id="taller">Content taller than the box</h3>
+            <ThreeWays
+              id="tall"
+              Content={TallSlides}
+              documentClassName="in-document-capped"
+            />
+            <p>…and the same going up and down:</p>
+            <ThreeWays
+              id="tall_vertical"
+              Content={TallSlidesVertical}
+              documentClassName="in-document-capped"
+            />
+            <h3 id="wider">Content wider than the box</h3>
+            <ThreeWays id="wide" Content={WideSlides} />
+            <p>…and the same with the travel going up and down:</p>
+            <ThreeWays id="wide_vertical" Content={WideSlidesVertical} />
+            <h3 id="scroll-restoration">Scroll restoration</h3>
+            <p>Scroll a slide down, travel, and come back.</p>
+            <ThreeWays id="come_back_scroll" Content={ComeBackSlides} />
+          </section>
+
+          <section class="demo-section" id="list-in-a-slide">
+            <Heading id="list-in-a-slide">A list inside a slide</Heading>
+            <p>
+              ↑/↓ mean two things here: walk the list, or travel the map. The
+              focused element decides — a list item answers the key itself, and
+              only a press nothing else wants reaches the container.
+            </p>
+            <ThreeWays
+              id="list_in_slide"
+              Content={ListInSlides}
+              documentClassName="in-document-capped"
+            />
+          </section>
+
+          <section class="demo-section" id="map">
+            <Heading id="map">A map instead of a line</Heading>
+            <p>
+              <code>layout={JSON.stringify(MAP)}</code> — one string per row,
+              spelled like <code>grid-template-areas</code>: “.” is a hole, a
+              name repeated spans. Each slide says which area it is, so moving a
+              screen is an edit to the map and nothing else. A direction with
+              nothing there is simply not offered — try ← → ↑ ↓.
+            </p>
+            <ThreeWays id="map" Content={MapSlides} />
+          </section>
+
+          <section class="demo-section" id="loop">
+            <Heading id="loop">Looping</Heading>
+            <p>
+              <code>loop</code>: the travel plays, the window comes back to the
+              middle, and <code>onLoop</code> moves the content one step — three
+              slides for a row with no end. Press ← →.
+            </p>
+            <LoopSlides />
+          </section>
+
+          <ExpandDialogSection />
+
+          <section class="demo-section" id="locking">
+            <Heading id="locking">Locking the way out</Heading>
+            <p>
+              A step one must not skip: <code>preventNavNext</code> (and{" "}
+              <code>preventNavPrevious</code>, or <code>preventNav</code> for
+              both) on a <code>Slide</code> holds the user there. It is read
+              where the travel is decided, so it holds against every way of
+              asking — the chevron, the keyboard, a <code>--navi-right</code>{" "}
+              command, an event dispatched by hand.
+            </p>
+            <div class="demo-ways">
+              <div class="demo-way">
+                <h3>Without a lock</h3>
+                <p class="demo-note">
+                  Press → (or the chevron): you are on the second slide, box
+                  ticked or not.
+                </p>
+                <div class="in-document">
+                  <FreeSlides />
+                </div>
+              </div>
+              <div class="demo-way">
+                <h3>preventNavNext</h3>
+                <p class="demo-note">
+                  The chevron is read-only and → does nothing until the box is
+                  ticked.
+                </p>
+                <div class="in-document">
+                  <LockedSlides />
+                </div>
+              </div>
+              <div class="demo-way">
+                <h3>The action moves on</h3>
+                <p class="demo-note">
+                  No chevron at all: signing dispatches{" "}
+                  <code>navi_slide_move</code>.
+                </p>
+                <div class="in-document">
+                  <ActionThenNextSlides />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="demo-section" id="two-slides">
+            <Heading id="two-slides">Two slides</Heading>
+            <p>
+              The plain case: a slide arrives from the right, the one it
+              replaces leaves to the left. The second slide is taller than the
+              first, and the box is as tall as it from the start.
+            </p>
+            <ThreeWays id="basic" Content={TwoSlides} />
+          </section>
+
+          <section class="demo-section" id="three-slides">
+            <Heading id="three-slides">Three slides</Heading>
+            <p>
+              Nothing changes past two: the middle slide simply carries both
+              buttons, each still saying one word. The list walks the DOM to
+              find where “one further” is, so a slide added between two others
+              needs nothing said about it anywhere.
+            </p>
+            <ThreeWays id="three" Content={ThreeSlides} />
+          </section>
+
+          <section class="demo-section" id="practical">
+            <Heading id="practical">Practical examples</Heading>
+            <h3>A carousel, with bullets</h3>
+            <CarouselWithBullets />
+            <h3>A carousel, with a bar</h3>
+            <CarouselWithBar />
+            <h3>The same bar, in words</h3>
+            <CarouselWithBar text />
+            <h3>Looping</h3>
+            <p>→ on the last photo shows the first.</p>
+            <CarouselLooping />
+          </section>
+
+          <section class="demo-section" id="the-map">
+            <Heading id="the-map">Seeing the map</Heading>
+            <p>
+              The map, with the frame widened to show what it usually hides.
+            </p>
+            <MapReveal />
+          </section>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#root"));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,457 @@
+import {
+  chainEvent,
+  findEvent,
+  getKeyboardEventDefaultAction,
+} from "@jsenv/dom";
+import { useLayoutEffect, useRef } from "preact/hooks";
+
+import { useDebugInteraction } from "@jsenv/navi/src/navi_debug.jsx";
+import {
+  prepareFocusTransfer,
+  markAutofocusRestoreOnClose,
+} from "../utils/focus/focus_transfer.js";
+import { useStableCallback } from "../utils/use_stable_callback.js";
+
+/**
+ * Owns open/close decision-making for a popup (Dialog or Popover): guards
+ * against duplicate requests and notifies the popup owner's own reactions.
+ *
+ * `controller.openEffect` is implemented by the controlled element (Dialog or
+ * Popover), reassigned on every render so it always closes over the latest
+ * props (scrollCapture, anchor, etc.). It performs whatever DOM side effects
+ * are needed to make the element actually open (`showModal()`/`showPopover()`,
+ * focus transfer, positioning, traps...) and returns its cleanup —
+ * the matching side effects to sync back to closed (`close()`/
+ * `hidePopover()`, releasing traps...). That cleanup is kept private to the
+ * controller (not exposed as a property) and invoked when the popup actually
+ * closes, however that happens.
+ *
+ * Dialog/Popover also call `openController.requestClose(e, { isCancel })` for
+ * their own internal triggers (backdrop click, Escape).
+ *
+ * `openHandler` is the popup owner's own business logic, passed once to
+ * `createOpenController`. Its return value is `{ onRequestClose, onClose }`,
+ * in the spirit of CloseWatcher
+ * (https://developer.mozilla.org/en-US/docs/Web/API/CloseWatcher) but with
+ * clearer naming than its cancel/close pair:
+ * - `onRequestClose(e)`: about to close — call `e.preventDefault()` to stay
+ *   open. Validation lives here.
+ * - `onClose(e)`: actually closing, not preventable — final reactions live here.
+ *
+ * The controller exposes matching action methods:
+ * - `open()`: requests opening — runs `openEffect`, then `openHandler`.
+ * - `requestClose()`: requests closing — calls `onRequestClose` then `onClose`,
+ *   stopping after the first if denied. The popup may choose to stay open.
+ * - `close()`: closes for real — calls only `onClose`, skipping
+ *   `onRequestClose` entirely. Used when there really is no choice (e.g. the
+ *   popup unmounting).
+ */
+export const createOpenController = (
+  openHandler,
+  { debugInteraction } = {},
+) => {
+  let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
+  let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+  let focusedAtClose = null; // what held the focus when the close was decided, see performClose
+
+  // Set true while we're waiting to see whether the click that follows a
+  // mousedown-close will land back on whatever would reopen us — see
+  // armSuppressNextOpenRequest below.
+  let suppressNextOpenRequest = false;
+  let disarmSuppressNextOpenRequest = null;
+
+  // When the popup closes because of a mousedown (e.g. clicking the
+  // backdrop), the browser still dispatches the matching "click" afterward.
+  // If that click lands back on the element that triggers open() (e.g. the
+  // picker button), it would immediately reopen the popup. We cannot
+  // preventDefault/stopPropagation the mousedown to stop that — the browser
+  // dispatches the click regardless.
+  //
+  // Instead: arm a capture-phase "click" listener on document. Capture fires
+  // before the click reaches its target, so by the time any bubble-phase
+  // click handler (e.g. the trigger button's onClick, which calls
+  // controller.open()) runs, `suppressNextOpenRequest` is already true and
+  // open() ignores the request — no need to know *which* element triggers
+  // it. A bubble-phase listener (runs after everything else, once the click
+  // reaches document) clears the flag if nothing consumed it, meaning this
+  // click never resulted in an open() call. A timeout is a last-resort safety
+  // net in case the click never reaches document at all (e.g. some ancestor
+  // called stopPropagation()) — a *task*, never a microtask: a microtask
+  // checkpoint runs between two listeners of the same trusted event dispatch,
+  // so it would clear the flag before the bubble-phase handler this is meant
+  // to block ever runs, which is precisely the case it exists for.
+  const armSuppressNextOpenRequest = () => {
+    disarmSuppressNextOpenRequest?.();
+    let safetyTimeout = null;
+    const onCaptureClick = () => {
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      suppressNextOpenRequest = true;
+      document.addEventListener("click", onBubbleClick);
+      safetyTimeout = setTimeout(() => {
+        suppressNextOpenRequest = false;
+      });
+    };
+    const onBubbleClick = () => {
+      document.removeEventListener("click", onBubbleClick);
+      clearTimeout(safetyTimeout);
+      suppressNextOpenRequest = false;
+    };
+    disarmSuppressNextOpenRequest = () => {
+      clearTimeout(safetyTimeout);
+      document.removeEventListener("click", onCaptureClick, {
+        capture: true,
+      });
+      document.removeEventListener("click", onBubbleClick);
+    };
+    document.addEventListener("click", onCaptureClick, { capture: true });
+  };
+
+  const performClose = (closeEvent) => {
+    controller.opened = false;
+    // Read before any close effect touches the DOM: closing a native <dialog>
+    // hands the focus back to whatever held it at showModal() time, so by the
+    // time the close cleanup runs, the popup's content has already lost the
+    // focus and could not be remembered for the next open.
+    focusedAtClose = document.activeElement;
+
+    prevent_reopen: {
+      const mousedownEvent = findEvent(closeEvent, "mousedown");
+      if (mousedownEvent) {
+        debugInteraction(
+          closeEvent,
+          `closed by mousedown -> ignore next click`,
+        );
+        armSuppressNextOpenRequest();
+        break prevent_reopen;
+      }
+
+      // The keyboard counterpart of the mousedown case above: a key press that
+      // closes the popup and then goes on to activate the trigger, reopening it
+      // on the spot. Space and Enter both get there, but not the same way and
+      // not always — preventing the key unconditionally would eat presses that
+      // were never going to activate anything (a space typed in a field, an
+      // Enter the popup's own handler already consumed), so each is verified
+      // before being prevented.
+
+      // Space: pressed on the trigger itself, which still has focus (closing
+      // does not move it away from an element outside the popup). The browser
+      // turns that press into a click on keyup, and that click lands back on
+      // the trigger. Asked of the browser's own default action rather than
+      // guessed from the tag name: a space that scrolls, or types into a field
+      // inside the popup, has no activation to prevent and preventing it would
+      // swallow the scroll / the character.
+      const spaceKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === " ",
+      );
+      if (
+        spaceKeyEvent &&
+        getKeyboardEventDefaultAction(spaceKeyEvent) === "activate"
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
+        );
+        // The browser won't dispatch the click, and our "space_to_open" sees
+        // defaultPrevented too so it won't try to open the picker either.
+        spaceKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+
+      // Enter: pressed inside the popup (its own submit button, or implicit
+      // submission from a field it contains). The popup closes synchronously
+      // and focus is restored to the trigger, so the activation the browser
+      // still owes this press is delivered to the trigger instead.
+      //
+      // Verified on two counts: the press still owes an activation (the
+      // browser's default action for it is one — "activate" on a submit button,
+      // "form_submit" on a field — and nothing has consumed it yet), and it came
+      // from inside the popup. An Enter from outside is not this case at all.
+      const enterKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === "Enter",
+      );
+      if (
+        enterKeyEvent &&
+        !enterKeyEvent.defaultPrevented &&
+        ENTER_ACTIVATING_DEFAULT_ACTION_SET.has(
+          getKeyboardEventDefaultAction(enterKeyEvent),
+        ) &&
+        isInsideOpenPopup(enterKeyEvent.target)
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by enter from inside the popup -> prevent the activation it would deliver to the trigger (enter.preventDefault())`,
+        );
+        enterKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+    }
+
+    // Sync the DOM closed first (releasing the focus trap) — only then run
+    // the owner's own reaction (onClose may restore focus to an element
+    // outside the popup, which the focus trap would otherwise fight while
+    // still active).
+    openEffectCleanup?.(closeEvent);
+    openEffectCleanup = null;
+    closeHandlers?.onClose?.(closeEvent);
+    closeHandlers = null;
+  };
+  const controller = {
+    opened: false,
+    openEffect: null,
+    open: (e, detail) => {
+      if (controller.opened || !controller.openEffect) {
+        return;
+      }
+      if (suppressNextOpenRequest) {
+        suppressNextOpenRequest = false;
+        return;
+      }
+      const requestOpenEvent = new CustomEvent("navi_request_open", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestOpenEvent, e);
+      controller.opened = true;
+      // we prepare focus transfer before actually opening the popover/dialog
+      // because opnening dialog makes browser try to transfer focus (which ends up in document.body for instance)
+      const focusTransfer = prepareFocusTransfer(
+        requestOpenEvent,
+        debugInteraction,
+      );
+      controller.transferFocusOnOpen = (el) => {
+        // requestOpenEvent, not the raw `e` — getFocusedBeforeTransfer needs
+        // e.detail.eventChain (built by chainEvent above) to recover the
+        // element a mousedown/click landed on. `e` itself is usually the raw
+        // native event: its own `.detail` is a number (click count) on a
+        // MouseEvent, so `e.detail.eventChain` is always undefined and the
+        // mousedown/click branches below never matched — silently falling
+        // back to `document.activeElement`, which is often `document.body`
+        // once mousedown.preventDefault() has kept focus from landing
+        // anywhere yet.
+
+        focusTransfer.transferFocus(e, el);
+        return (closeEvent) => {
+          markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
+          const focusoutEvent = findEvent(closeEvent, "focusout");
+          if (focusoutEvent) {
+            debugInteraction(
+              closeEvent,
+              `closed by focusout -> let focus go away`,
+            );
+          } else {
+            const mousedownEvent = findEvent(closeEvent, "mousedown");
+            if (mousedownEvent) {
+              debugInteraction(
+                closeEvent,
+                "closed by mousedown -> prevent browser focus (mousedown.preventDefault())",
+              );
+              mousedownEvent.preventDefault();
+            }
+            focusTransfer.restoreFocus();
+          }
+        };
+      };
+      const openEffectReturnValue =
+        controller.openEffect(requestOpenEvent) || null;
+      openEffectCleanup = (closeEvent) => {
+        openEffectReturnValue?.(closeEvent);
+      };
+      closeHandlers = openHandler(requestOpenEvent) || null;
+    },
+    requestClose: (
+      e = new CustomEvent("programmatic", { detail: {} }),
+      detail,
+    ) => {
+      if (!controller.opened) {
+        return;
+      }
+      const requestCloseEvent = new CustomEvent("navi_request_close", {
+        detail: { event: e, ...detail },
+        cancelable: true,
+      });
+      chainEvent(requestCloseEvent, e);
+      closeHandlers?.onRequestClose?.(requestCloseEvent);
+      if (requestCloseEvent.defaultPrevented) {
+        // The native <dialog> "cancel" event (Escape key) closes the dialog
+        // by default; prevent that default so denial actually keeps it open.
+        const nativeCancelEvent = findEvent(requestCloseEvent, "cancel");
+        if (nativeCancelEvent) {
+          nativeCancelEvent.preventDefault();
+        }
+        return;
+      }
+      performClose(requestCloseEvent);
+    },
+    close: (e = new CustomEvent("programmatic", { detail: {} }), detail) => {
+      if (!controller.opened) {
+        return;
+      }
+      const closeEvent = new CustomEvent("navi_close", {
+        detail: { event: e, ...detail },
+      });
+      chainEvent(closeEvent, e);
+      // Skips onRequestClose entirely — there is no choice here.
+      performClose(closeEvent);
+    },
+  };
+  return controller;
+};
+
+// Inside a popup that is open right now — the popup being closed, in practice,
+// since that is the one the key press was delivered to.
+const isInsideOpenPopup = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+};
+
+// What Enter is about to do when it is about to activate something: press the
+// focused control, or submit the form around it. Anything else it can do
+// (typing a newline, nothing at all) leaves no activation behind to land on the
+// trigger once focus is restored.
+const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
+  "activate",
+  "form_submit",
+]);
+
+// Created once per popup instance: openHandler is wrapped in a stable callback
+// so the controller identity never changes across renders, even though
+// Dialog/Popover read fresh closures (scrollTrap, etc.) via
+// openController.openEffect on every render.
+export const useOpenController = (openHandler) => {
+  const debugInteraction = useDebugInteraction();
+  const stableOpenHandler = useStableCallback(openHandler);
+  const controllerRef = useRef(null);
+  if (!controllerRef.current) {
+    controllerRef.current = createOpenController(stableOpenHandler, {
+      debugInteraction,
+    });
+  }
+  // Unmount safety net: if Dialog/Popover unmounts while still open (parent
+  // removes it from the tree without going through requestClose()), there is
+  // no choice to leave open — close it for real.
+  useLayoutEffect(() => {
+    return () => {
+      controllerRef.current.close();
+    };
+  }, []);
+  return controllerRef.current;
+};
+
+// Nested popups that both mount already-open (`open`/`defaultOpen`) would
+// otherwise stack in the wrong order: Preact fires layout effects
+// child-first on mount, so a nested popup's own silent mount-open would call
+// showPopover() before its ancestor's — and the top layer stacks *later*
+// showPopover() calls above *earlier* ones (see popover.jsx's own openEffect
+// comment) — leaving the ancestor on top instead of the nested popup, the
+// opposite of what opening them one at a time (ancestor first, by real user
+// interaction) would produce. Batching every mount-time silent open queued
+// during the same commit's layout-effect phase into one microtask flush,
+// then simply running them in *reverse* of their registration order fixes
+// this — no need to compare DOM positions: since effects already fire
+// child-first, tree-wide, for *any* ancestor/descendant pair the descendant
+// is always queued before the ancestor, regardless of what else is in the
+// tree, so reversing the whole batch always puts every ancestor before its
+// own descendants. Works for any nesting depth for the same reason. Two
+// unrelated (sibling) popups both mounting open also get reordered
+// relative to each other, but there's no meaningful "correct" order between
+// those anyway.
+let pendingSilentOpens = [];
+let silentOpenFlushScheduled = false;
+const scheduleSilentOpen = (run) => {
+  pendingSilentOpens.push(run);
+  if (silentOpenFlushScheduled) {
+    return;
+  }
+  silentOpenFlushScheduled = true;
+  queueMicrotask(() => {
+    const entries = pendingSilentOpens;
+    pendingSilentOpens = [];
+    silentOpenFlushScheduled = false;
+    for (let i = entries.length - 1; i >= 0; i--) {
+      entries[i]();
+    }
+  });
+};
+
+/**
+ * Keeps an open controller in sync with a plain `open`/`defaultOpen` pair —
+ * shared between `useOpenControllerByProps` below (Dialog/Popover driving
+ * their own controller) and `picker_custom.jsx` (which derives its own
+ * boolean from history state instead of a literal `open` prop, but needs
+ * the exact same skip-if-already-matching / open-or-requestClose control
+ * flow, via a small `{ open, requestClose, opened }` adapter around its own
+ * `requestOpen`/`requestClose` wrappers).
+ *
+ * @param {{ open: (e: Event, detail?: object) => void, requestClose: (e: Event, detail?: object) => void, opened: boolean }} openController
+ * @param {{ open?: boolean, defaultOpen?: boolean }} props
+ */
+export const useOpenPropsEffectOnOpenController = (openController, props) => {
+  const { open, defaultOpen } = props;
+  // Tracks whether the effect below has ever run before — only the very
+  // first run gets the "mount already open" treatment (`open` truthy from
+  // the start, or the uncontrolled, mount-only `defaultOpen`); every
+  // subsequent `open` change is a real, later toggle and should animate
+  // normally like any other interactive open/close.
+  const isFirstRunRef = useRef(true);
+
+  useLayoutEffect(() => {
+    const isFirstRun = isFirstRunRef.current;
+    isFirstRunRef.current = false;
+
+    if (isFirstRun) {
+      if (open || defaultOpen) {
+        // silent: true — nothing was ever shown as "closed" for the user to
+        // see transition away from, so this first open skips the entrance
+        // animation entirely (see popover.jsx's own openEffect for how).
+        // Deferred + batched (see scheduleSilentOpen above) rather than
+        // called directly, so nested popups that both mount already-open
+        // end up stacked ancestor-first instead of Preact's own child-first
+        // effect order.
+        scheduleSilentOpen(() =>
+          openController.open(new CustomEvent("open_by_prop", { detail: {} }), {
+            silent: true,
+          }),
+        );
+      }
+      return;
+    }
+
+    if (open === undefined) {
+      return;
+    }
+    // Skip when the controller is already in the desired state.
+    // openController.opened tracks actual open/close (updated by onopen/onclose,
+    // not by renders) so it is the authoritative check against feedback loops.
+    if (open === openController.opened) {
+      return;
+    }
+    if (open) {
+      openController.open(new CustomEvent("open_by_prop", { detail: {} }));
+    } else {
+      openController.requestClose(
+        new CustomEvent("close_by_prop", { detail: {} }),
+        { isCancel: true },
+      );
+    }
+  }, [open]);
+};
+
+export const useOpenControllerByProps = (props) => {
+  const { onClose } = props;
+  // Lets an uncontrolled consumer (no openController of its own) still react
+  // to a self-initiated close (Escape, backdrop click, its own close button)
+  // without having to own a controller just to observe it — onClose is
+  // called on every real close, matching createOpenController's own
+  // { onRequestClose, onClose } contract (never denies the close itself).
+  const openController = useOpenController(() =>
+    onClose ? { onClose } : undefined,
+  );
+  useOpenPropsEffectOnOpenController(openController, props);
+  return openController;
+};

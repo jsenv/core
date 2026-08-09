@@ -25,11 +25,13 @@ const css = /* css */ `
  * @param {string} [props.color="currentColor"] - Stroke color
  * @param {number|"inherit"} [props.radius] - Corner radius in px. When omitted, reads border-radius from the container.
  * @param {number} [props.size=2] - Stroke width in px
+ * @param {string} [props.networkSpeed] - Force the connection speed the animation is paced by ("slow-2g" | "2g" | "3g" | "4g"). Omitted, it follows the real connection.
  */
 export const LoadingIndicatorFluid = ({
   color = "currentColor",
   size = 2,
   radius,
+  networkSpeed,
   visuallyHidden,
   ...rest
 }) => {
@@ -98,6 +100,7 @@ export const LoadingIndicatorFluid = ({
           width={containerWidth}
           height={containerHeight}
           strokeWidth={size}
+          networkSpeed={networkSpeed}
         />
       )}
     </span>
@@ -111,6 +114,7 @@ const LoadingRectangleSvg = ({
   radius,
   trailColor = "transparent",
   strokeWidth,
+  networkSpeed: networkSpeedForced,
 }) => {
   const margin = Math.max(2, Math.min(width, height) * 0.03);
 
@@ -177,7 +181,11 @@ const LoadingRectangleSvg = ({
   const gapLength = pathLength - segmentLength;
 
   // Vitesse constante en pixels par seconde
-  const networkSpeed = useNetworkSpeed();
+  // The connection this one is paced by: whatever it was told, otherwise the
+  // real one. A caller forcing it is showing what a speed looks like (see the
+  // loading indicator demo), not reacting to the network.
+  const networkSpeedCurrent = useNetworkSpeed();
+  const networkSpeed = networkSpeedForced ?? networkSpeedCurrent;
   const pixelsPerSecond =
     {
       "slow-2g": 40,
@@ -190,6 +198,12 @@ const LoadingRectangleSvg = ({
   // ✅ Calculate correct offset based on actual segment size
   const segmentRatio = segmentLength / pathLength;
   const circleOffset = -animationDuration * segmentRatio;
+  // The dash and the dot are two animations that must stay in phase — the dot
+  // is the head of the dash. SMIL keeps running when its dur is edited, so
+  // changing the speed (or the path) re-times one and leaves the other where it
+  // was, and the dot detaches from the segment. Keyed on what defines their
+  // timing, both are recreated together and start on the same beat.
+  const animationKey = `${animationDuration}-${Math.round(pathLength)}`;
 
   return (
     <svg
@@ -236,6 +250,7 @@ const LoadingRectangleSvg = ({
         pathLength={pathLength}
       >
         <animate
+          key={animationKey}
           attributeName="stroke-dashoffset"
           from={pathLength}
           to="0"
@@ -248,6 +263,7 @@ const LoadingRectangleSvg = ({
       {/* Leading dot that follows the path */}
       <circle r={strokeWidth} fill={color}>
         <animateMotion
+          key={animationKey}
           path={rectPath}
           dur={`${animationDuration}s`}
           repeatCount="indefinite"

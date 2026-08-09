@@ -171,6 +171,12 @@ export const useUIStateController = (
         parentUiStateSignalHolder,
         isProxy,
         allowNameless,
+        // Set here too, not only in `update` below: a control rendered once and
+        // never re-rendered would otherwise never say whether it was GIVEN a
+        // value (`value`, or a bound signal with no default of its own) or is
+        // merely showing a suggestion (`defaultValue`) — a distinction Form
+        // reads to decide what counts as already sent.
+        hasStateProp: Boolean(controlInfo.hasStateProp),
 
         props,
         ref: props.ref,
@@ -180,6 +186,13 @@ export const useUIStateController = (
         state: stateInitial,
         uiState: stateInitial,
         uiStateSignal,
+        // What this control holds by ITSELF — the same signal as above unless
+        // it is a button inheriting from the control around it (see `inherit`).
+        // "The value I am about" and "the value I was given" are two different
+        // questions, and a button answering the first with the second is how a
+        // travel command ended up carrying a picker's selection: see
+        // resolveCommandValue in commands.js.
+        ownUIStateSignal,
         value: controlInfo.value,
 
         facadeChild: null,
@@ -690,6 +703,15 @@ const CANNOT_DERIVE = Symbol("cannot_derive");
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
 // group, creation throws so the caller knows it must supply them.
+// A child that groups other controls and was given no name of its own, holding
+// an object — the only shape that can be merged into the object around it.
+// A nameless LEAF (an input nobody named) is still a mistake and still warns.
+const isNamelessGrouping = (child, uiState) =>
+  typeof child.registerChild === "function" &&
+  uiState !== null &&
+  typeof uiState === "object" &&
+  !Array.isArray(uiState);
+
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
@@ -735,12 +757,64 @@ const GROUP_DEFAULTS = {
       return undefined;
     },
   },
+  // One value, not an object: the group holds whatever its single meaningful
+  // child holds. What a picker's popup does — the list inside it IS the value,
+  // and naming it would only add a key nobody asked for. A popup containing a
+  // real form uses "object" (the default) instead.
+  single: {
+    // The same exclusions canRegisterAsFacadeChild already makes below (the
+    // picker façade asked the very same question: which child IS the value).
+    // Buttons and links never hold one. And a control *carrying* navi-list is
+    // the search box driving some other list — not the list itself, which stays
+    // a perfectly good single value here (one item, or the array a multiple
+    // list exposes). Excluding the searcher is what leaves the list alone.
+    childControlFilter: (child) => {
+      if (child.controlType === "button" || child.controlType === "link") {
+        return false;
+      }
+      if (child.props?.["navi-list"]) {
+        return false;
+      }
+      return true;
+    },
+    aggregateChildStates: (children) => {
+      for (const child of children) {
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          return childUIState;
+        }
+      }
+      return undefined;
+    },
+    distributeChildUIState: (newUIState) => newUIState,
+  },
   object: {
+    // Buttons are not fields. HTML has always been clear about it: a submit
+    // button's name/value is sent only when it is the one that submitted, which
+    // is how a form offers two ways out ("save" / "delete") and still knows
+    // which was pressed. Aggregated like the fields, every button would be in
+    // the value at once and the last one would win — pressing Enter (which
+    // sends through the FIRST submit button) would then carry the LAST button's
+    // meaning. The one that was actually pressed writes itself in on its own,
+    // through wantRequesterButtonState (see the button branch in
+    // useUIStateController).
+    childControlFilter: (child) => {
+      return child.controlType !== "button" && child.controlType !== "link";
+    },
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
         const { name, uiState, allowNameless } = child;
         if (!name) {
+          // A nameless GROUP is a grouping, not a value: it exists to hold its
+          // children together (a WheelGroup sharing navigation, a fieldset-ish
+          // cluster) without claiming a key of its own, so what it holds is
+          // merged in as if its children had been written here. Naming it is
+          // what turns the same group into one key — see ControlGroup's `name`.
+          if (isNamelessGrouping(child, uiState)) {
+            Object.assign(groupValues, uiState);
+            continue;
+          }
           if (!allowNameless) {
             console.warn(
               "A group child is missing a name property, its state won't be included in the group state",
@@ -762,6 +836,11 @@ const GROUP_DEFAULTS = {
         Object.prototype.hasOwnProperty.call(newUIState, childName)
       ) {
         return newUIState[childName];
+      }
+      // Merged in on the way up (see above), so on the way down it takes the
+      // whole object and picks out its own keys — the same value it produced.
+      if (isNamelessGrouping(child, child.uiState)) {
+        return newUIState;
       }
       return CANNOT_DERIVE;
     },
@@ -805,8 +884,25 @@ export const useUIGroupStateController = (
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const hasValueProp = Object.hasOwn(props, "value");
-  const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
-  const { id, name, value, defaultValue, uiAction } = props;
+  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
+  // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
+  // with the signal's current value as what it starts on. Write-back is already
+  // handled (see applyState's own boundSignal), so this is the half that makes
+  // `signal` two-way on a group: the children are placed from it when they
+  // register, exactly as they would be from a defaultValue.
+  const boundSignal = hasValueProp ? undefined : props.signal;
+  const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
+  const { id, name, value, uiAction } = props;
+  // A signal holding something wins over `defaultValue`: the default is a
+  // suggestion of where to start (and where a reset goes back to), the signal's
+  // value is the answer — same precedence a leaf control applies (see
+  // control_hooks' own resolveControlInfo).
+  const defaultValue =
+    boundSignal && boundSignal.value !== undefined
+      ? boundSignal.value
+      : hasOwnDefaultValueProp
+        ? props.defaultValue
+        : boundSignal?.value;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
@@ -878,6 +974,24 @@ export const useUIGroupStateController = (
           });
         } else {
           controller.syncInternalState(groupUIState, e);
+          writeBoundSignal(groupUIState);
+        }
+      };
+
+      // The two-way half of a bound `signal`: the same write a leaf control
+      // makes from its own setUIState (see useUIStateController's boundSignal),
+      // for a group whose value is its children's put together.
+      //
+      // Called from both paths a user-driven change can take — applyState when
+      // the change is notified outward, syncInternalState when the group only
+      // brings itself up to date — because either one can be the user
+      // answering. The paths that are NOT the user (a value prop pushed down,
+      // the initial push, mount/unmount) are excluded at each call site rather
+      // than guessed at here.
+      const writeBoundSignal = (newUIState) => {
+        const boundSignal = s.props?.signal;
+        if (boundSignal) {
+          boundSignal.value = newUIState;
         }
       };
 
@@ -891,6 +1005,9 @@ export const useUIGroupStateController = (
           `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
         );
         publishUIState(newUIState);
+        if (!internalBehavior) {
+          writeBoundSignal(newUIState);
+        }
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,
         });
@@ -978,6 +1095,13 @@ export const useUIGroupStateController = (
         },
         onUIAction: (e, { skipCommand } = {}) => {
           const currentUIState = controller.uiState;
+          // The same write applyState/onChange make (see writeBoundSignal), for
+          // the case where the state did not move but the user acted all the
+          // same — a picker whose suggestion was confirmed untouched, say. A
+          // leaf control writes its signal from its own onUIAction for exactly
+          // this reason; setting a signal to what it already holds is a no-op,
+          // so the paths that write twice cost nothing.
+          writeBoundSignal(currentUIState);
           s.uiAction?.(currentUIState, e);
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {
@@ -1301,11 +1425,11 @@ export const useUIFacadeStateController = (props, realUIStateController) => {
           // not be treated as the picker's synced child.
           return false;
         }
-        if (
-          props.type === "controlgroup" &&
-          childController.controlType !== "control_group"
-        ) {
-          // ignore non control group registration (input outside the control group for instance)
+        if (props.type === "form" && childController.controlType !== "form") {
+          // Only a form: what a type="form" picker syncs with is the form in
+          // its popup, not any control that happens to be in there (an input
+          // sitting outside the form, a ControlGroup — which is a way of
+          // grouping controls INSIDE a form, not a thing a picker talks to).
           return false;
         }
         if (

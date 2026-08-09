@@ -2564,6 +2564,9 @@ const RESPONSE_KEYS_COMPOSITION = {
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
+  // measures a response hands back, merged into the server-timing header when
+  // the server has serverTiming enabled (see finalizeResponseProperties)
+  timing: (prevTiming, timing) => ({ ...prevTiming, ...timing }),
 };
 
 /**
@@ -3373,8 +3376,9 @@ const createEventHistory = (limit) => {
 
   const add = (data) => {
     events.push(data);
-
-    if (events.length >= limit) {
+    // Strictly above, not "as many as": shifting at `>= limit` keeps one less
+    // than asked for.
+    if (events.length > limit) {
       events.shift();
     }
   };
@@ -6147,6 +6151,9 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       let statusMessage;
       let headers;
       let body;
+      // measures the route hands back, merged into the server-timing header
+      // when serverTiming is enabled (see finalizeResponseProperties)
+      let timing;
 
       if (fetchReturnValue instanceof Response) {
         status = fetchReturnValue.status;
@@ -6162,6 +6169,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         statusMessage = fetchReturnValue.statusMessage;
         headers = fetchReturnValue.headers || {};
         body = fetchReturnValue.body;
+        timing = fetchReturnValue.timing;
       } else {
         throw new TypeError(
           `response must be a Response, or an Object, received ${fetchReturnValue}`,
@@ -6194,7 +6202,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
 
       onRouteMatch(route);
       onResponseHeaders(request, route, headers);
-      return { status, statusText, statusMessage, headers, body };
+      return { status, statusText, statusMessage, headers, body, timing };
     };
 
     const matchRoutes = async (request) => {
@@ -6944,11 +6952,19 @@ The list of existing endpoints is available at ${routeInspectorUrl}.`,
 const timingToServerTimingResponseHeaders = (timing) => {
   const serverTimingHeader = {};
   Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key],
-    };
+    // "a".."z" then "aa", "ab", …: names must be unique — they are the keys of
+    // the header object, so a shared fallback would overwrite every entry past
+    // it with the last one.
+    const name =
+      index < letters.length
+        ? letters[index]
+        : letters[Math.floor(index / letters.length) - 1] +
+          letters[index % letters.length];
+    const dur = timing[key];
+    // a non-number duration is a marker ("served from memory cache"): it has
+    // something to say (desc) but nothing to measure
+    serverTimingHeader[name] =
+      typeof dur === "number" ? { desc: key, dur } : { desc: key };
   });
   const serverTimingHeaderString =
     stringifyServerTimingHeader(serverTimingHeader);
@@ -7235,6 +7251,10 @@ const startServer = async ({
   // This param should be enabled ONLY during development on your machine
   canExposeSensitiveData = false,
   nagle = true,
+  // false | true | { minDuration }: server-timing response headers.
+  // minDuration (ms) drops entries that took less — 0 keeps everything, which
+  // is what a test wants; a human reading devtools usually wants the noise
+  // gone (the jsenv dev server passes 0.5 for that).
   serverTiming = false,
   requestWaitingMs = 0,
   requestWaitingCallback = ({ request, requestWaitingMs }) => {
@@ -7588,6 +7608,10 @@ const startServer = async ({
     sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
     return [receiveRequestOperation, sendResponseOperation];
   };
+  const serverTimingMinDuration =
+    serverTiming && typeof serverTiming === "object"
+      ? serverTiming.minDuration || 0
+      : 0;
   const getResponseProperties = async (request, { pushResponse }) => {
     const timings = {};
     const timing = serverTiming
@@ -7629,9 +7653,32 @@ const startServer = async ({
     const finalizeResponseProperties = (responseProperties) => {
       if (serverTiming) {
         startRespondingTiming.end();
+        // A response can hand back measures of its own (a `timing` property —
+        // durations keyed by description, null for a plain marker): they join
+        // the server's own in the same server-timing header.
+        if (responseProperties.timing) {
+          Object.assign(timings, responseProperties.timing);
+          delete responseProperties.timing;
+        }
+        // serverTiming.minDuration drops what took less: a request crosses
+        // every registered route, and a wall of sub-millisecond ".routing"
+        // entries buries the measures worth reading. Markers (null) and the
+        // overall "time to start responding" — the summary the rest details —
+        // always stay.
+        const timingsWorthReading = {};
+        for (const name of Object.keys(timings)) {
+          const duration = timings[name];
+          if (
+            name === startRespondingTiming.name ||
+            typeof duration !== "number" ||
+            duration >= serverTimingMinDuration
+          ) {
+            timingsWorthReading[name] = duration;
+          }
+        }
         responseProperties.headers = composeTwoHeaders(
           responseProperties.headers,
-          timingToServerTimingResponseHeaders(timings),
+          timingToServerTimingResponseHeaders(timingsWorthReading),
         );
       }
       if (requestWaitingMs) {

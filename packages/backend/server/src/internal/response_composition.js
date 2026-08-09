@@ -31,4 +31,7 @@ const RESPONSE_KEYS_COMPOSITION = {
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
+  // measures a response hands back, merged into the server-timing header when
+  // the server has serverTiming enabled (see finalizeResponseProperties)
+  timing: (prevTiming, timing) => ({ ...prevTiming, ...timing }),
 };

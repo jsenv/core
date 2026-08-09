@@ -225,6 +225,27 @@ naviI18n.addAll({
   },
 });
 
+// Spin messages — the ends of what one steps through, said without naming
+// what it is made of: the same words fit days, months, pages or sizes.
+naviI18n.addAll({
+  "spin.previous": {
+    en: "Previous",
+    fr: "Précédent",
+  },
+  "spin.next": {
+    en: "Next",
+    fr: "Suivant",
+  },
+  "spin.nothing_before": {
+    en: "No item before this one.",
+    fr: "Pas d'élément avant celui-ci.",
+  },
+  "spin.nothing_after": {
+    en: "No item after this one.",
+    fr: "Pas d'élément après celui-ci.",
+  },
+});
+
 // List messages — override any key to customize list messages
 naviI18n.addAll({
   "list.empty": {
@@ -311,13 +332,33 @@ naviI18n.addAll({
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
   },
+  "constraint.readonly.item": {
+    fr: "Cet élément n'est pas disponible.",
+    en: "This item is not available.",
+  },
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",
   },
+  "constraint.readonly.awaiting_change": {
+    fr: "Cette action attend une modification.",
+    en: "This action is waiting for a change.",
+  },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
+  },
+  "constraint.busy.item": {
+    fr: "Cet élément est en cours de synchronisation.",
+    en: "This item is being synchronized.",
+  },
+  "constraint.busy.item.adding": {
+    fr: "Cet élément est en cours d'ajout.",
+    en: "This item is being added.",
+  },
+  "constraint.busy.item.removing": {
+    fr: "Cet élément est en cours de suppression.",
+    en: "This item is being removed.",
   },
   "constraint.busy.default": {
     fr: "Cet élément est occupé.",

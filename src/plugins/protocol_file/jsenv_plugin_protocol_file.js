@@ -3,6 +3,7 @@ import { ensurePathnameTrailingSlash } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync, readdirSync } from "node:fs";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "../../kitchen/file_and_server_urls_converter.js";
+import { createHtmlPageLister } from "./html_pages.js";
 import { jsenvPluginDirectoryListing } from "./jsenv_plugin_directory_listing.js";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
@@ -19,6 +20,8 @@ export const jsenvPluginProtocolFile = ({
   packageDirectory,
   sourceFilesConfig,
 }) => {
+  const listHtmlPages = createHtmlPageLister({ rootDirectoryUrl });
+
   return [
     jsenvPluginFsRedirection({
       spa,
@@ -73,6 +76,27 @@ export const jsenvPluginProtocolFile = ({
           rootDirectoryUrl,
         );
       },
+    },
+    {
+      name: "jsenv:html_pages",
+      appliesDuring: "dev",
+      serverRoutes: [
+        {
+          endpoint: "GET /.internal/pages.json",
+          description:
+            "The .html files served under the source directory, as urls to navigate to.",
+          availableMediaTypes: ["application/json"],
+          declarationSource: import.meta.url,
+          fetch: async () => ({
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "cache-control": "no-store",
+            },
+            body: JSON.stringify(await listHtmlPages()),
+          }),
+        },
+      ],
     },
     ...(directoryListing
       ? [

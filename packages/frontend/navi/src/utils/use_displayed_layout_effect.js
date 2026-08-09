@@ -26,16 +26,20 @@ import { useLayoutEffect, useRef } from "preact/hooks";
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType }`:
+ * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
  *     | "popover" | "details" | "aria-expanded" }`.
- * Consumers that only care about a genuine top-level, no-ancestor mount
- * (e.g. use_auto_focus.js — an ancestor opening already has its own
- * transferFocus/openEffect placing focus, so re-running a per-element
- * autofocus for everything it reveals would fight that) can check
- * `event.detail.ancestorType === "document"`.
+ * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
+ *   - true — the element was already mounted and the ancestor just opened,
+ *     revealing it along with everything else it holds. The opening has an
+ *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
+ *     should defer to it — see use_auto_focus.js.
+ *   - false — the element was mounted just now, into a surface already on
+ *     screen (or into the plain document). Nothing else owns this appearance:
+ *     what the element says about itself (an autofocus, a measurement) is the
+ *     only word there is.
  *
  * Usage:
  *   useDisplayedLayoutEffect(ref, () => {
@@ -60,7 +64,7 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document));
+      callbackRef.current(el, createDisplayedEvent(document, false));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
@@ -68,7 +72,7 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
       // below will fire once it opens.
       return;
     }
-    callbackRef.current(el, createDisplayedEvent(ancestor));
+    callbackRef.current(el, createDisplayedEvent(ancestor, false));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -86,16 +90,17 @@ export const useDisplayedLayoutEffect = (ref, callback, deps) => {
         return;
       }
       const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor));
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
     });
   }, []);
 };
 
-const createDisplayedEvent = (ancestor) => {
+const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
   return new CustomEvent("navi_displayed", {
     detail: {
       ancestor,
       ancestorType: getAncestorOpenType(ancestor),
+      becauseAncestorOpened,
     },
   });
 };

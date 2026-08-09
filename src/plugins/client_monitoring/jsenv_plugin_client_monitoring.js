@@ -6,6 +6,15 @@
  * cooked one of our pages and reports back; we can only see clients that execute
  * our injected script, not arbitrary HTTP clients of the dev server.
  *
+ * The MAIN client — the machine the dev server runs on, browsing via
+ * localhost — is listed but not watched: it reports presence only (heartbeat,
+ * tabs), no console logs and no activity. Its devtools are already at hand,
+ * and the person reading the dashboard is that client. Watching is for the
+ * clients that reach the server over the network (a phone on the LAN address,
+ * acceptAnyIp: true), and every client record carries the ip it reports from —
+ * that ip is what tells the two kinds apart. See isLocalClient in
+ * client_reporter.js (the client side of the same rule).
+ *
  * Transport reuses what the dev server already has instead of opening a second
  * websocket:
  * - server → clients uses the jsenv "server events" channel (the same websocket
@@ -42,8 +51,6 @@
  */
 
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
-import { urlToRelativeUrl } from "@jsenv/urls";
-import { readdirSync } from "node:fs";
 import { getRuntimeFromRequest } from "../../dev/dev_server_plugins/runtime_from_request.js";
 
 // Normalize the dev server's { runtimeName, runtimeVersion } to the { name,
@@ -79,6 +86,18 @@ const ACTIVITY_MAX_PER_CLIENT = 50;
 const INACTIVITY_MS = 60 * 1000;
 // A tab not heard from for this long is considered closed and dropped.
 const TAB_TTL_MS = 2 * 60 * 1000;
+// What a browser sends is not to be trusted with the server's memory: a log
+// line is cut at the source too (see client_reporter.js), and cut again here so
+// a hand-made POST cannot park megabytes in the buffer — which the
+// server-events history would then keep a second time.
+// A little above the client's own cut, so the "… (N more characters)" it adds
+// survives this one — the reader needs to know something was left out.
+const LOG_TEXT_MAX = 10_064;
+// Clients seen since the server started, at most. One per browser profile in
+// practice, but every private window and every cleared storage adds one that
+// never comes back, each carrying its own buffer — so the oldest ones that are
+// no longer online are let go.
+const CLIENT_MAX = 50;
 
 // The dev server already parses browser + version from a request (sec-ch-ua or
 // user-agent) via getRuntimeFromRequest; it does not cover the OS, so this fills
@@ -119,7 +138,14 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
-export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
+// The machine the dev server runs on, talking to itself: the main client. A
+// phone (or any other device) reaching the server over the network reports
+// with the machine's LAN address instead — which is why the ip is kept on
+// every client record: it is what tells the main client from the others.
+const isLocalIp = (ip) =>
+  ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+
+export const jsenvPluginClientMonitoring = () => {
   // id -> client record
   const clients = new Map();
 
@@ -145,6 +171,9 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         userAgent,
         runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
+        // The address the reports come from; request.ipForwarded when a proxy
+        // sits in between, so the client's own address is kept, not the proxy's.
+        ip: request.ipForwarded || request.ip,
         firstSeen: now(),
         lastSeen: now(),
         everSeen: false,
@@ -156,12 +185,36 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         tabs: new Map(),
       };
       clients.set(id, client);
-    } else if (userAgent && userAgent !== client.userAgent) {
-      client.userAgent = userAgent;
-      client.runtime = runtimeFromRequest(request);
-      client.os = osFromUserAgent(userAgent);
+    } else {
+      if (userAgent && userAgent !== client.userAgent) {
+        client.userAgent = userAgent;
+        client.runtime = runtimeFromRequest(request);
+        client.os = osFromUserAgent(userAgent);
+      }
+      // A device changes address (wifi drop, DHCP): the record follows it.
+      const ip = request.ipForwarded || request.ip;
+      if (ip && ip !== client.ip) {
+        client.ip = ip;
+      }
     }
     return client;
+  };
+
+  // The oldest silent ones first: a client still reporting is one someone is
+  // looking at, whatever its age.
+  const pruneClients = () => {
+    if (clients.size <= CLIENT_MAX) {
+      return;
+    }
+    const droppable = [...clients.values()]
+      .filter((client) => !isOnline(client))
+      .sort((a, b) => a.lastSeen - b.lastSeen);
+    for (const client of droppable) {
+      if (clients.size <= CLIENT_MAX) {
+        return;
+      }
+      clients.delete(client.id);
+    }
   };
 
   const pruneLogs = (client) => {
@@ -255,6 +308,10 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
       // parsed { name, version } so pages can show a friendly browser/OS
       runtime: client.runtime,
       os: client.os,
+      ip: client.ip,
+      // The main client — the machine the dev server runs on, talking to
+      // itself over localhost.
+      local: isLocalIp(client.ip),
       firstSeen: client.firstSeen,
       lastSeen: client.lastSeen,
       online: isOnline(client),
@@ -311,6 +368,7 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
 
     updateTab(client, body.tab);
     pruneTabs(client);
+    pruneClients();
 
     if (firstEver) {
       sendClientHere({ reason: "new", client: serializeClient(client) });
@@ -331,13 +389,22 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
     for (const rawLog of logs) {
       const entry = {
         level: rawLog.level || "log",
-        text: typeof rawLog.text === "string" ? rawLog.text : "",
+        text:
+          typeof rawLog.text === "string"
+            ? rawLog.text.slice(0, LOG_TEXT_MAX)
+            : "",
         ts: rawLog.ts || now(),
       };
       // styled console segments ({ text, css } per %c run), when present, so a
       // monitor can render colors; the plain text stays for copy/paste.
       if (Array.isArray(rawLog.segments)) {
-        entry.segments = rawLog.segments;
+        entry.segments = rawLog.segments.map((segment) => ({
+          ...segment,
+          text:
+            typeof segment?.text === "string"
+              ? segment.text.slice(0, LOG_TEXT_MAX)
+              : "",
+        }));
       }
       client.logs.push(entry);
       sendClientLog({ clientId, ...entry });
@@ -359,57 +426,6 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
       },
       body: json,
     };
-  };
-
-  // The .html pages served under the source directory, as server-relative URLs,
-  // so the dashboard can offer them as "navigate this client to…" targets. Skips
-  // node_modules, build output and dot-dirs. Cached briefly — one scan per
-  // dialog-open is plenty; it needn't be fresh to the second.
-  const PAGE_SCAN_TTL_MS = 3000;
-  const PAGE_SCAN_SKIP_DIRS = new Set([
-    "node_modules",
-    "dist",
-    "git_ignored",
-    "old",
-  ]);
-  let pageScanCache = null;
-  let pageScanAt = 0;
-  const listNavigablePages = () => {
-    if (!rootDirectoryUrl) {
-      return [];
-    }
-    if (pageScanCache && now() - pageScanAt < PAGE_SCAN_TTL_MS) {
-      return pageScanCache;
-    }
-    const pages = [];
-    const walk = (dirUrl) => {
-      let entries;
-      try {
-        entries = readdirSync(new URL(dirUrl), { withFileTypes: true });
-      } catch {
-        return;
-      }
-      for (const entry of entries) {
-        const name = entry.name;
-        if (name[0] === ".") {
-          continue; // .git, .agents, dot-files…
-        }
-        if (entry.isDirectory()) {
-          if (!PAGE_SCAN_SKIP_DIRS.has(name)) {
-            walk(`${dirUrl}${name}/`);
-          }
-        } else if (name.endsWith(".html")) {
-          pages.push(
-            `/${urlToRelativeUrl(`${dirUrl}${name}`, rootDirectoryUrl)}`,
-          );
-        }
-      }
-    };
-    walk(String(rootDirectoryUrl));
-    pages.sort();
-    pageScanCache = pages;
-    pageScanAt = now();
-    return pages;
   };
 
   // Desktop pilots a client: validate a { clientId, tabId?, type, url? } command
@@ -535,14 +551,6 @@ export const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
           "Pilot a client from the dashboard: { clientId, tabId?, type: 'navigate'|'reload', url? }.",
         declarationSource: import.meta.url,
         fetch: (request) => ingestCommand(request),
-      },
-      {
-        endpoint: "GET /.internal/clients/pages.json",
-        description:
-          "The .html pages under the source directory, offered as navigation targets for a client.",
-        availableMediaTypes: ["application/json"],
-        declarationSource: import.meta.url,
-        fetch: () => jsonResponse(listNavigablePages()),
       },
       {
         endpoint: "GET /.internal/clients.json",

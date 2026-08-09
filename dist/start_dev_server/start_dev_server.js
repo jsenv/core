@@ -1,6 +1,6 @@
 import { WebSocketResponse, pickContentType, ServerEvents, serverPluginErrorHandler, composeTwoResponses, fetchDirectory, serverPluginCORS, jsenvAccessControlAllowedHeaders, startServer } from "@jsenv/server";
 import { existsSync, readFileSync, readdirSync, lstatSync, realpathSync } from "node:fs";
-import { registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
+import { registerFileLifecycle, lookupPackageDirectory, readPackageAtOrNull, generateContentFrame, urlToRelativeUrl, errorToHTML, DATA_URL, CONTENT_TYPE, normalizeImportMap, composeTwoImportMaps, resolveImport, JS_QUOTES, urlToExtension, urlToBasename, applyNodeEsmResolution, URL_META, readCustomConditionsFromProcessArgs, urlIsOrIsInsideOf, collectFiles, registerDirectoryLifecycle, asUrlWithoutSearch, readEntryStatSync, ensurePathnameTrailingSlash, compareFileUrls, urlToFilename, applyFileSystemMagicResolution, getExtensionsToTry, setUrlExtension, createDetailedMessage, stringifyUrlSite, injectQueryParamsIntoSpecifier, isSpecifierForNodeBuiltin, injectQueryParams, urlToFileSystemPath, writeFileSync, moveUrl, ensureWindowsDriveLetter, validateResponseIntegrity, setUrlFilename, getCallerPosition, asSpecifierWithoutSearch, bufferToEtag, isFileSystemPath, urlToPathname, setUrlBasename, createLogger, normalizeUrl, ANSI, RUNTIME_COMPAT, formatError, assertAndNormalizeDirectoryUrl, createTaskLog } from "./jsenv_core_packages.js";
 import { createPluginsController } from "@jsenv/server/src/plugins_controller.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst, parseCssUrls, getHtmlNodeAttribute, getHtmlNodePosition, getHtmlNodeAttributePosition, setHtmlNodeAttributes, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, getHtmlNodeText, analyzeScriptNode, visitHtmlNodes, parseJsUrls, getUrlForContentInsideJs, applyBabelPlugins, analyzeLinkNode, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn } from "@jsenv/ast";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
@@ -752,6 +752,15 @@ const parseUserAgentHeader = (userAgent) => {
  * cooked one of our pages and reports back; we can only see clients that execute
  * our injected script, not arbitrary HTTP clients of the dev server.
  *
+ * The MAIN client — the machine the dev server runs on, browsing via
+ * localhost — is listed but not watched: it reports presence only (heartbeat,
+ * tabs), no console logs and no activity. Its devtools are already at hand,
+ * and the person reading the dashboard is that client. Watching is for the
+ * clients that reach the server over the network (a phone on the LAN address,
+ * acceptAnyIp: true), and every client record carries the ip it reports from —
+ * that ip is what tells the two kinds apart. See isLocalClient in
+ * client_reporter.js (the client side of the same rule).
+ *
  * Transport reuses what the dev server already has instead of opening a second
  * websocket:
  * - server → clients uses the jsenv "server events" channel (the same websocket
@@ -821,6 +830,18 @@ const ACTIVITY_MAX_PER_CLIENT = 50;
 const INACTIVITY_MS = 60 * 1000;
 // A tab not heard from for this long is considered closed and dropped.
 const TAB_TTL_MS = 2 * 60 * 1000;
+// What a browser sends is not to be trusted with the server's memory: a log
+// line is cut at the source too (see client_reporter.js), and cut again here so
+// a hand-made POST cannot park megabytes in the buffer — which the
+// server-events history would then keep a second time.
+// A little above the client's own cut, so the "… (N more characters)" it adds
+// survives this one — the reader needs to know something was left out.
+const LOG_TEXT_MAX = 10_064;
+// Clients seen since the server started, at most. One per browser profile in
+// practice, but every private window and every cleared storage adds one that
+// never comes back, each carrying its own buffer — so the oldest ones that are
+// no longer online are let go.
+const CLIENT_MAX = 50;
 
 // The dev server already parses browser + version from a request (sec-ch-ua or
 // user-agent) via getRuntimeFromRequest; it does not cover the OS, so this fills
@@ -861,7 +882,14 @@ const osFromUserAgent = (userAgent) => {
   return { name: "unknown", version: "" };
 };
 
-const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
+// The machine the dev server runs on, talking to itself: the main client. A
+// phone (or any other device) reaching the server over the network reports
+// with the machine's LAN address instead — which is why the ip is kept on
+// every client record: it is what tells the main client from the others.
+const isLocalIp = (ip) =>
+  ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+
+const jsenvPluginClientMonitoring = () => {
   // id -> client record
   const clients = new Map();
 
@@ -887,6 +915,9 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         userAgent,
         runtime: runtimeFromRequest(request),
         os: osFromUserAgent(userAgent),
+        // The address the reports come from; request.ipForwarded when a proxy
+        // sits in between, so the client's own address is kept, not the proxy's.
+        ip: request.ipForwarded || request.ip,
         firstSeen: now(),
         lastSeen: now(),
         everSeen: false,
@@ -898,12 +929,36 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         tabs: new Map(),
       };
       clients.set(id, client);
-    } else if (userAgent && userAgent !== client.userAgent) {
-      client.userAgent = userAgent;
-      client.runtime = runtimeFromRequest(request);
-      client.os = osFromUserAgent(userAgent);
+    } else {
+      if (userAgent && userAgent !== client.userAgent) {
+        client.userAgent = userAgent;
+        client.runtime = runtimeFromRequest(request);
+        client.os = osFromUserAgent(userAgent);
+      }
+      // A device changes address (wifi drop, DHCP): the record follows it.
+      const ip = request.ipForwarded || request.ip;
+      if (ip && ip !== client.ip) {
+        client.ip = ip;
+      }
     }
     return client;
+  };
+
+  // The oldest silent ones first: a client still reporting is one someone is
+  // looking at, whatever its age.
+  const pruneClients = () => {
+    if (clients.size <= CLIENT_MAX) {
+      return;
+    }
+    const droppable = [...clients.values()]
+      .filter((client) => !isOnline(client))
+      .sort((a, b) => a.lastSeen - b.lastSeen);
+    for (const client of droppable) {
+      if (clients.size <= CLIENT_MAX) {
+        return;
+      }
+      clients.delete(client.id);
+    }
   };
 
   const pruneLogs = (client) => {
@@ -997,6 +1052,10 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
       // parsed { name, version } so pages can show a friendly browser/OS
       runtime: client.runtime,
       os: client.os,
+      ip: client.ip,
+      // The main client — the machine the dev server runs on, talking to
+      // itself over localhost.
+      local: isLocalIp(client.ip),
       firstSeen: client.firstSeen,
       lastSeen: client.lastSeen,
       online: isOnline(client),
@@ -1053,6 +1112,7 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
 
     updateTab(client, body.tab);
     pruneTabs(client);
+    pruneClients();
 
     if (firstEver) {
       sendClientHere({ reason: "new", client: serializeClient(client) });
@@ -1073,13 +1133,22 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
     for (const rawLog of logs) {
       const entry = {
         level: rawLog.level || "log",
-        text: typeof rawLog.text === "string" ? rawLog.text : "",
+        text:
+          typeof rawLog.text === "string"
+            ? rawLog.text.slice(0, LOG_TEXT_MAX)
+            : "",
         ts: rawLog.ts || now(),
       };
       // styled console segments ({ text, css } per %c run), when present, so a
       // monitor can render colors; the plain text stays for copy/paste.
       if (Array.isArray(rawLog.segments)) {
-        entry.segments = rawLog.segments;
+        entry.segments = rawLog.segments.map((segment) => ({
+          ...segment,
+          text:
+            typeof segment?.text === "string"
+              ? segment.text.slice(0, LOG_TEXT_MAX)
+              : "",
+        }));
       }
       client.logs.push(entry);
       sendClientLog({ clientId, ...entry });
@@ -1101,57 +1170,6 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
       },
       body: json,
     };
-  };
-
-  // The .html pages served under the source directory, as server-relative URLs,
-  // so the dashboard can offer them as "navigate this client to…" targets. Skips
-  // node_modules, build output and dot-dirs. Cached briefly — one scan per
-  // dialog-open is plenty; it needn't be fresh to the second.
-  const PAGE_SCAN_TTL_MS = 3000;
-  const PAGE_SCAN_SKIP_DIRS = new Set([
-    "node_modules",
-    "dist",
-    "git_ignored",
-    "old",
-  ]);
-  let pageScanCache = null;
-  let pageScanAt = 0;
-  const listNavigablePages = () => {
-    if (!rootDirectoryUrl) {
-      return [];
-    }
-    if (pageScanCache && now() - pageScanAt < PAGE_SCAN_TTL_MS) {
-      return pageScanCache;
-    }
-    const pages = [];
-    const walk = (dirUrl) => {
-      let entries;
-      try {
-        entries = readdirSync(new URL(dirUrl), { withFileTypes: true });
-      } catch {
-        return;
-      }
-      for (const entry of entries) {
-        const name = entry.name;
-        if (name[0] === ".") {
-          continue; // .git, .agents, dot-files…
-        }
-        if (entry.isDirectory()) {
-          if (!PAGE_SCAN_SKIP_DIRS.has(name)) {
-            walk(`${dirUrl}${name}/`);
-          }
-        } else if (name.endsWith(".html")) {
-          pages.push(
-            `/${urlToRelativeUrl(`${dirUrl}${name}`, rootDirectoryUrl)}`,
-          );
-        }
-      }
-    };
-    walk(String(rootDirectoryUrl));
-    pages.sort();
-    pageScanCache = pages;
-    pageScanAt = now();
-    return pages;
   };
 
   // Desktop pilots a client: validate a { clientId, tabId?, type, url? } command
@@ -1279,14 +1297,6 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         fetch: (request) => ingestCommand(request),
       },
       {
-        endpoint: "GET /.internal/clients/pages.json",
-        description:
-          "The .html pages under the source directory, offered as navigation targets for a client.",
-        availableMediaTypes: ["application/json"],
-        declarationSource: import.meta.url,
-        fetch: () => jsonResponse(listNavigablePages()),
-      },
-      {
         endpoint: "GET /.internal/clients.json",
         description: "Snapshot of every client seen since the server started.",
         availableMediaTypes: ["application/json"],
@@ -1306,6 +1316,48 @@ const jsenvPluginClientMonitoring = ({ rootDirectoryUrl } = {}) => {
         },
       },
     ],
+  };
+};
+
+/*
+ * cmd+K (ctrl+K elsewhere) on any page the dev server serves opens a list of
+ * the .html files it serves, filter as you type, Enter to go there.
+ *
+ * The list is the one the filesystem plugin already publishes for everyone
+ * (GET /.internal/pages.json, see protocol_file/html_pages.js) — this only adds
+ * the way to reach it without leaving the page one is working on.
+ *
+ * Registered with the dev server rather than among the core plugins, next to
+ * the other things that inject a client script: the script it adds is a
+ * reference like any other, and it has to be added while references are still
+ * being resolved — added later it stays a file:// url the browser refuses.
+ *
+ * A shortcut on every page is a shortcut taken from every page, so the page
+ * comes first: the key is watched on the document, in the bubble phase, and
+ * anything that called preventDefault on its way there keeps it. A page with
+ * its own cmd+K owes nothing to this one.
+ */
+
+
+const clientFileUrl$1 = new URL("../js/page_switcher.js", import.meta.url)
+  .href;
+
+const jsenvPluginPageSwitcher = () => {
+  return {
+    name: "jsenv:page_switcher",
+    // Dev only: it is a way around the source tree, which a built app has no
+    // business carrying.
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        injectJsenvScript(htmlAst, {
+          src: clientFileUrl$1,
+          pluginName: "jsenv:page_switcher",
+        });
+        return stringifyHtmlAst(htmlAst);
+      },
+    },
   };
 };
 
@@ -3009,6 +3061,11 @@ const addRelationshipWithPackageJson = ({
       String(packageJsonContentAsBuffer),
     );
   }
+  // Checked on disk at every validation rather than trusted to the watcher:
+  // what this file decides (the package version, hence the ?v= importers
+  // embed) ends up in the browser's immutable cache, so a request racing the
+  // watcher must never be answered from a stale package.json.
+  packageJsonReference.urlInfo.revalidateOnFileSystem = true;
 };
 
 const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {
@@ -3260,6 +3317,127 @@ const FILE_AND_SERVER_URLS_CONVERTER = {
     }
     return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
   },
+};
+
+/*
+ * The .html files under the served directory, as urls one can navigate to.
+ *
+ * Lives here, next to the plugin that owns the filesystem, because more than
+ * one feature wants the same list: the client dashboard sends a browser to one
+ * of them, the page switcher (cmd+K) opens one in the current tab. Whoever asks
+ * gets the same answer.
+ *
+ * Each page comes with what kind of page it is, read from where it sits and
+ * what it is called — the two conventions this repo already follows:
+ * - "experiment": something tried out, under a lab/ directory or named
+ *   *_experiment.html;
+ * - "demo": something shown, under a demos/ directory or named *_demo.html;
+ * - "page": everything else.
+ *
+ * Scanned on demand rather than watched: the list is asked for when a human
+ * opens a picker, which is rare and never on a hot path, and a short cache is
+ * enough to keep a burst of asks from walking the tree twice.
+ */
+
+
+const SCAN_TTL_MS = 5000;
+
+// What to walk and what to skip, in the shape @jsenv/url-meta reads: the last
+// matching pattern wins, so the exclusions come after the "every .html" rule.
+// Dependencies, build output and jsenv's own caches hold no page worth going to.
+const HTML_PAGE_ASSOCIATIONS = {
+  page: {
+    "**/*.html": true,
+    "**/.*/": false,
+    "**/node_modules/": false,
+    "**/dist/": false,
+    "**/build/": false,
+    "**/coverage/": false,
+    "**/git_ignored/": false,
+    "**/old/": false,
+  },
+  experiment: {
+    "**/lab/**/*.html": true,
+    "**/*_experiment.html": true,
+  },
+  demo: {
+    "**/demos/**/*.html": true,
+    "**/*_demo.html": true,
+  },
+};
+
+// An experiment inside a demos/ directory is an experiment: the more specific
+// of the two wins, and "shown" is the weaker claim.
+const readKind = (meta) => {
+  if (meta.experiment) {
+    return "experiment";
+  }
+  if (meta.demo) {
+    return "demo";
+  }
+  return "page";
+};
+
+// Which package a page belongs to: the nearest directory above it holding a
+// package.json, said as a url so whoever draws a tree can mark that very node.
+// Not the root itself — everything is under it, and "the whole repo" is not a
+// package one distinguishes from another. Memoized per directory: a scan asks
+// the same question once per file and there are hundreds of them.
+const createPackageDirectoryFinder = (rootDirectoryUrl) => {
+  const cache = new Map();
+  const find = (directoryUrl) => {
+    if (cache.has(directoryUrl)) {
+      return cache.get(directoryUrl);
+    }
+    let result = null;
+    if (directoryUrl.length > String(rootDirectoryUrl).length) {
+      result = existsSync(new URL("./package.json", directoryUrl))
+        ? directoryUrl
+        : find(new URL("../", directoryUrl).href);
+    }
+    cache.set(directoryUrl, result);
+    return result;
+  };
+  return find;
+};
+
+const createHtmlPageLister = ({ rootDirectoryUrl }) => {
+  let cache = null;
+  let cachedAt = 0;
+
+  return async () => {
+    if (!rootDirectoryUrl) {
+      return [];
+    }
+    const now = Date.now();
+    if (cache && now - cachedAt < SCAN_TTL_MS) {
+      return cache;
+    }
+    const fileResultArray = await collectFiles({
+      directoryUrl: rootDirectoryUrl,
+      associations: HTML_PAGE_ASSOCIATIONS,
+      predicate: (meta) => Boolean(meta.page),
+    });
+    const findPackageDirectory = createPackageDirectoryFinder(rootDirectoryUrl);
+    const pages = fileResultArray.map(({ relativeUrl, meta }) => {
+      const fileUrl = new URL(relativeUrl, rootDirectoryUrl).href;
+      const packageDirectoryUrl = findPackageDirectory(
+        new URL("./", fileUrl).href,
+      );
+      return {
+        url: `/${relativeUrl}`,
+        kind: readKind(meta),
+        // Relative to the root and without its trailing slash, which is how a
+        // tree names its own nodes.
+        packageUrl: packageDirectoryUrl
+          ? `/${packageDirectoryUrl.slice(String(rootDirectoryUrl).length).replace(/\/$/, "")}`
+          : null,
+      };
+    });
+    cache = pages;
+    cachedAt = now;
+    return pages;
+  };
 };
 
 const getDirectoryWatchPatterns = (
@@ -4019,6 +4197,8 @@ const jsenvPluginProtocolFile = ({
   packageDirectory,
   sourceFilesConfig,
 }) => {
+  const listHtmlPages = createHtmlPageLister({ rootDirectoryUrl });
+
   return [
     jsenvPluginFsRedirection({
       spa,
@@ -4073,6 +4253,27 @@ const jsenvPluginProtocolFile = ({
           rootDirectoryUrl,
         );
       },
+    },
+    {
+      name: "jsenv:html_pages",
+      appliesDuring: "dev",
+      serverRoutes: [
+        {
+          endpoint: "GET /.internal/pages.json",
+          description:
+            "The .html files served under the source directory, as urls to navigate to.",
+          availableMediaTypes: ["application/json"],
+          declarationSource: import.meta.url,
+          fetch: async () => ({
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "cache-control": "no-store",
+            },
+            body: JSON.stringify(await listHtmlPages()),
+          }),
+        },
+      ],
     },
     ...(directoryListing
       ? [
@@ -9203,6 +9404,17 @@ const createUrlInfo = (url, context) => {
         if (referenceFromOther.gotInlined()) {
           const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
           considerModified(urlInfoReferencingThisOne);
+          continue;
+        }
+        // A reference with a versioning effect writes this url's VERSION into
+        // its owner's cooked content (the ?v= param, read from package.json):
+        // this url modified means that content now embeds a stale version, so
+        // the owner is as modified as an owner of inlined content. Without
+        // this, the owner's cooked content survives the modification and a
+        // validity check that "heals" this url (see isValid re-reading files
+        // from disk) leaves the graph claiming the owner is fresh.
+        if (referenceFromOther.hasVersioningEffect) {
+          considerModified(referenceFromOther.ownerUrlInfo);
         }
       }
       for (const searchParamVariant of urlInfo.searchParamVariantSet) {
@@ -10461,14 +10673,23 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
     if (!urlInfo.url.startsWith("ignore:")) {
       try {
         await urlInfo.dependencies.startCollecting(async () => {
+          // Each phase timed into urlInfo.timing: the dev server turns it into
+          // a server-timing response header, so devtools show where the time
+          // to cook a file goes (fetch vs transform vs finalize).
+          const timePhase = async (name, phase) => {
+            const start = performance.now();
+            await phase();
+            urlInfo.timing[name] = performance.now() - start;
+          };
+
           // "fetchUrlContent" hook
-          await urlInfo.fetchContent();
+          await timePhase("fetch", () => urlInfo.fetchContent());
 
           // "transform" hook
-          await urlInfo.transformContent();
+          await timePhase("transform", () => urlInfo.transformContent());
 
           // "finalize" hook
-          await urlInfo.finalizeContent();
+          await timePhase("finalize", () => urlInfo.finalizeContent());
         });
       } catch (e) {
         urlInfo.error = e;
@@ -10816,8 +11037,14 @@ const devServerPluginServeSourceFiles = ({
             //   was compared using etag and it has changed
             return false;
           }
-          if (!urlInfo.isWatched) {
-            // file is not watched, check the filesystem
+          // Watched files trust the watcher — except the ones marked
+          // revalidateOnFileSystem (package.json files, see node_esm_resolver):
+          // the watcher fires a beat AFTER a change, and what these files
+          // decide (a package version, hence the ?v= the importer embeds) is
+          // cached as immutable by the browser — a request racing the watcher
+          // must not win a stale answer it would then keep forever.
+          if (!urlInfo.isWatched || urlInfo.revalidateOnFileSystem) {
+            // check the filesystem
             let fileContentAsBuffer;
             try {
               fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
@@ -10916,7 +11143,14 @@ const devServerPluginServeSourceFiles = ({
               rootDirectoryUrl,
             );
             requestedUrlObject.searchParams.delete("hot");
-            requestedUrl = requestedUrlObject.href;
+            // normalizeUrl, because searchParams.delete re-serializes the whole
+            // query and turns a valueless param ("?enabled") into "?enabled=".
+            // Every url in the graph is normalized the other way (kitchen.js
+            // strips those "="), and requestedUrl is compared to graph urls as
+            // a string: an inline urlInfo decides "is this request for me?"
+            // that way (jsenv:inline_content_fetcher) and re-cooks its own
+            // ALREADY COOKED content when the comparison wrongly fails.
+            requestedUrl = normalizeUrl(requestedUrlObject.href);
           }
           const { referer } = request.headers;
           const parentUrl = referer
@@ -10979,7 +11213,36 @@ const devServerPluginServeSourceFiles = ({
                 return respondWithNotModified();
               }
             }
-            await urlInfo.cook({ request, reference });
+            // Cooking is not memoized in dev (see cookGuard in kitchen.js): a
+            // request that reaches cook() re-fetches and re-transforms the file
+            // even when nothing changed. The 304 path above already avoids that
+            // for a browser that revalidates — but a browser with its cache
+            // disabled (devtools open, the common way to reload during dev)
+            // sends no if-none-match and would re-cook the entire graph on
+            // every reload, turning a warm reload into seconds of transform
+            // work. Same validity check as the 304 path, same trust: when the
+            // graph's in-memory content is still valid, it IS the response —
+            // only the status differs (200 with content, since there is no
+            // client etag to match).
+            const servableFromMemory =
+              !urlInfo.error &&
+              !inlineParentUrlInfo &&
+              !urlInfo.response &&
+              urlInfo.content !== undefined &&
+              !cacheIsDisabledInResponseHeader(urlInfo) &&
+              // a "?hot" request exists to bypass every cache, this one
+              // included: it must be cooked, because cooking is what rewrites
+              // its references so "?hot" cascades to the modified files below
+              // (see jsenv_plugin_hot_search_param) — the memory content was
+              // cooked before the change and its references carry nothing.
+              // The urlInfo itself often IS valid here (hot reload of a
+              // dependency: the file re-requested did not change, one below
+              // it did), so isValid() alone cannot catch this.
+              !request.searchParams.has("hot") &&
+              urlInfo.isValid();
+            if (!servableFromMemory) {
+              await urlInfo.cook({ request, reference });
+            }
             let { response } = urlInfo;
             if (response) {
               return response;
@@ -11020,7 +11283,14 @@ const devServerPluginServeSourceFiles = ({
                 "content-length": urlInfo.contentLength,
               },
               body: urlInfo.content,
-              timing: urlInfo.timing, // TODO: use something else
+              // Where the time went, readable in devtools (Network > Timing):
+              // the server merges this into the server-timing header. Served
+              // from memory: a marker saying so, since nothing was cooked for
+              // this request. Cooked: what the kitchen measured (each plugin
+              // hook, and the fetch/transform/finalize roll-ups).
+              timing: servableFromMemory
+                ? { "served from memory cache": null }
+                : urlInfo.timing,
             };
             const augmentResponseInfo = {
               ...kitchen.context,
@@ -11143,12 +11413,13 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {string} [params.sourceMainFilePath="./index.html"] - File served for "/".
  * @param {number} [params.port=3456] - Port to listen on (0 = a free port).
  * @param {string} [params.hostname] - Hostname to bind to.
- * @param {boolean} [params.acceptAnyIp=true] - Also accept connections on the machine's IPs.
+ * @param {boolean} [params.acceptAnyIp=false] - Also accept connections on the machine's IPs (so other devices on the network — a phone — can reach the server). Off by default: exposing the dev server beyond localhost is an explicit choice, not something a dev tool decides.
  * @param {boolean|object} [params.https=false] - HTTPS as `{ certificate, privateKey }`.
  * @param {boolean} [params.http2=false] - HTTP/2 (requires https).
  * @param {Array} [params.plugins=[]] - jsenv plugins (transformUrlContent, serverRoutes, serverEvents, effect, …).
  * @param {Array} [params.serverPlugins=[]] - `@jsenv/server`-level plugins.
  * @param {boolean|object} [params.clientAutoreload=true] - Live reload; also gates the server-events channel.
+ * @param {boolean|object} [params.serverTiming={ minDuration: 0.5 }] - server-timing response headers; `minDuration` (ms) drops entries that took less (0 when run by the test plan, so tests see every entry).
  * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
@@ -11173,7 +11444,7 @@ const startDevServer = async ({
   ignore,
   port = 3456,
   hostname,
-  acceptAnyIp = true,
+  acceptAnyIp = false,
   https,
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
@@ -11191,6 +11462,11 @@ const startDevServer = async ({
   sourceFilesConfig = {},
   clientAutoreload = true,
   clientAutoreloadOnServerRestart = true,
+  // server-timing response headers: devtools show how the time to answer is
+  // spent (cook measures come from the kitchen, see urlInfo.timing). Entries
+  // under minDuration are dropped so a human reads the measures that matter;
+  // a test wants them all, hence 0 there.
+  serverTiming = { minDuration: EXECUTED_BY_TEST_PLAN ? 0 : 0.5 },
 
   // runtimeCompat is the runtimeCompat for the build
   // when specified, dev server use it to warn in case
@@ -11329,7 +11605,9 @@ const startDevServer = async ({
     ...(EXECUTED_BY_TEST_PLAN
       ? []
       : [
-          jsenvPluginClientMonitoring({ rootDirectoryUrl: sourceDirectoryUrl }),
+          jsenvPluginClientMonitoring(),
+          // cmd+K on any served page to jump to another one.
+          jsenvPluginPageSwitcher(),
         ]),
     ...plugins,
     ...getCorePlugins({
@@ -11426,6 +11704,7 @@ const startDevServer = async ({
     hostname,
     port,
     requestWaitingMs: 60_000,
+    serverTiming,
     plugins: finalServerPlugins,
     // will allow to open file, provide more context on each route
     canExposeSensitiveData: true,

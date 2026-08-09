@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PROPAL: picker « choisir ou créer »</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        color: #1a1a2e;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #eef1f5;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      .intro {
+        max-width: 660px;
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      /* The page itself is the phone: view it with device emulation. There is
+         no fake frame any more — a Picker's popup goes to the browser's top
+         layer, and a layer="local" one would be confined to the trigger's own
+         box, which is the height of a single line. */
+      .screen {
+        box-sizing: border-box;
+        /* width, not only max-width: the fake backend's body is a start-aligned
+           flex column, so without it the screen shrinks to its content */
+        width: 100%;
+        max-width: 380px;
+        min-height: 100%;
+        margin: 0 auto;
+        padding: 16px;
+        background: #fff;
+        box-shadow: 0 0 0 1px #d6dae0;
+      }
+      /* The positioned ancestor a layer="local" popup is confined to */
+      .frame {
+        position: relative;
+        width: 320px;
+        height: 320px;
+        margin: 0 auto 32px;
+        border-radius: 12px;
+        overflow: auto;
+      }
+      .variant-title {
+        max-width: 380px;
+        margin: 24px auto 8px;
+        color: #444;
+        font-size: 0.95rem;
+      }
+      .screen-title {
+        margin: 0 0 18px;
+        font-weight: 600;
+        font-size: 1.1rem;
+      }
+      .field-title {
+        margin: 0 0 6px;
+        color: #444;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      /* The title of a row of fields: the last span sits over the last column
+         (same width as the field under it), the first takes the rest */
+      .field-title--row {
+        display: flex;
+        gap: 8px;
+      }
+      .field-title--row span:first-child {
+        flex: 1;
+      }
+      .field-block {
+        margin-bottom: 18px;
+      }
+      /* Grouped under a shared title: they belong together, so they sit
+         together rather than reading as two unrelated fields */
+      .field-block--grouped {
+        margin-bottom: 8px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+      }
+      .chip {
+        padding: 8px 14px;
+        font-size: 13px;
+        border: 1px solid #cbd1d8;
+        border-radius: 8px;
+      }
+      .chip.on {
+        color: #fff;
+        background: #1a1a2e;
+        border-color: #1a1a2e;
+      }
+      /* Enough room: annuler | confirmer on one line. Not enough: they wrap,
+         and the reversed direction puts confirmer on the first line. */
+      .form-actions {
+        display: flex;
+        flex-flow: row-reverse wrap;
+        gap: 8px;
+      }
+      .form-actions > * {
+        flex: 1 1 140px;
+      }
+      .required {
+        color: #b42318;
+      }
+      .detail {
+        color: #6b7280;
+        font-size: 12px;
+      }
+      /* The family name is what separates two homonyms, so it is the part that
+         carries the weight; the given name is only there to disambiguate it */
+      .family-name {
+        text-transform: uppercase;
+      }
+      .given-name {
+        text-transform: capitalize;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Picker « choisir ou créer »</h1>
+    <div id="app"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useSignal } from "@preact/signals";
+      import {
+        Box,
+        Button,
+        createSearch,
+        Field,
+        Form,
+        Icon,
+        Input,
+        Label,
+        List,
+        NaviDebug,
+        Picker,
+        RadioGroup,
+        route,
+        setupRoutes,
+        Slide,
+        SlideContainer,
+        stateSignal,
+        Text,
+        useSearchText,
+        useSlideValue,
+      } from "@jsenv/navi";
+      import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
+      import { ChevronDownSvg } from "@jsenv/navi/src/graphic/icons/chevron_updown_svg.jsx";
+      import { HeartSvg } from "@jsenv/navi/src/graphic/icons/heart_svg.jsx";
+      import { PencilSvg } from "@jsenv/navi/src/graphic/icons/pencil_svg.jsx";
+      import { PlusSvg } from "@jsenv/navi/src/graphic/icons/plus_svg.jsx";
+
+      // Name and detail are both searchable: with homonyms allowed, the detail
+      // is often the only thing telling two entries apart, so it has to be
+      // reachable from the search box too
+      const searchEntry = createSearch({
+        name: { getter: (entry) => entry.name, priority: 2 },
+        detail: { getter: (entry) => entry.detail || "", priority: 1 },
+      });
+
+      let idCounter = 0;
+      const nextId = () => `e${++idCounter}`;
+
+      // Creating, editing and deleting go to a server, so they take a moment.
+      // The actions below await it: navi keeps the form busy meanwhile (fields
+      // read-only, send button in its loading state) and the command that
+      // follows a send — going back to the list, closing the surface — only
+      // runs once the action resolves.
+      const SERVER_DELAY = 600;
+      const reachServer = () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, SERVER_DELAY);
+        });
+
+      // Everything the page holds as state lives in the URL: the picked ids,
+      // the side overrides, even what is typed in the search boxes. Nobody
+      // writes these signals by hand — each is handed to the control that owns
+      // it (Picker, Input), whose ui state controller keeps signal and control
+      // in sync — and the route mirrors them into search params, so a reload
+      // or a shared link restores the whole screen.
+      const SEARCH_PARAMS = {};
+      const urlSignal = (name) => {
+        const urlStateSignal = stateSignal(undefined, {
+          id: name,
+          type: "string",
+        });
+        SEARCH_PARAMS[name] = urlStateSignal;
+        return urlStateSignal;
+      };
+      const createScreenSignals = (idPrefix) => ({
+        club: {
+          signal: urlSignal(`${idPrefix}club`),
+          searchSignal: urlSignal(`${idPrefix}club_search`),
+        },
+        players: [1, 2, 3, 4].map((n) => ({
+          signal: urlSignal(`${idPrefix}player${n}`),
+          searchSignal: urlSignal(`${idPrefix}player${n}_search`),
+          sideSignal: urlSignal(`${idPrefix}player${n}_side`),
+        })),
+      });
+      const TOP_SCREEN_SIGNALS = createScreenSignals("top_");
+      const LOCAL_SCREEN_SIGNALS = createScreenSignals("local_");
+      setupRoutes([route("", { searchParams: SEARCH_PARAMS })]);
+
+      /*
+       * The field is a real search input, readOnly: it looks and reads exactly
+       * like the search box it opens, but the typing happens in the surface,
+       * never here. Its clear button still works — that is the one edit it is
+       * allowed to receive, and the only way to unset a choice.
+       *
+       * The surface opens on the list, keyboard down: once the app has lived a
+       * while, the people someone plays with are already there and picking is a
+       * single tap. Typing, and creating, stay one tap away for the rest.
+       */
+      const PickOrCreateField = ({
+        id,
+        // What the surrounding form will receive the choice under — the id
+        // stays unique per variant, the name is the payload's business
+        name,
+        popupLayer,
+        label,
+        placeholder,
+        searchPlaceholder,
+        surfaceTitle,
+        createLabel,
+        createTitle,
+        editTitle,
+        // The form itself, as a component: what a place or a player asks for
+        // has nothing generic about it, and a list of field descriptors would
+        // hide behind an abstraction the very thing this demo is about. It
+        // receives the name already typed, and renders navi controls whose
+        // names are what submitForm reads.
+        createForm,
+        toEntry,
+        entries,
+        recentIds = [],
+        onCreate,
+        onUpdate,
+        onDelete,
+        // The choice, as a signal holding the picked entry's id. Nobody writes
+        // it by hand: it is handed to the Picker, whose ui state controller
+        // keeps it in sync with what is selected — and the route keeps it in
+        // the URL.
+        signal,
+        // What the search box holds, same regime: the Input owns the writes
+        searchSignal,
+        // undefined when the entity has no such notion (a place); a signal when
+        // it does, so the field knows to offer it. Kept beside the choice, not
+        // inside the entry: overriding the side for tonight must not rewrite
+        // the player's own habit.
+        sideSignal,
+      }) => {
+        // capitalized: JSX reads a lowercase name as an html tag, and props are
+        // camelCase — so the prop is createForm and the element is <CreateForm>
+        const CreateForm = createForm;
+        // a search box nobody typed in holds undefined, not ""
+        const searchText = searchSignal.value || "";
+        // Derived, never copied: the signal holds an id and the entry it names
+        // is looked up at render time, so an edit or a deletion elsewhere
+        // cannot leave a stale copy of the entry behind
+        const selectedEntry = signal.value
+          ? (entries.find((e) => e.id === signal.value) ?? null)
+          : null;
+
+        // Without a search, the ones used recently come first: that is the tap
+        // the mature app is optimized for, and it must land above the fold
+        const orderedEntries = searchText
+          ? entries
+          : [
+              ...recentIds
+                .map((recentId) => entries.find((e) => e.id === recentId))
+                .filter(Boolean),
+              ...entries.filter((e) => !recentIds.includes(e.id)),
+            ];
+        const [matchingEntries, getMatchInfo] = useSearchText(
+          searchText,
+          orderedEntries,
+          searchEntry,
+        );
+        const typed = searchText.trim();
+
+        // isNew marks what this user added, which is what the pencil is offered
+        // on. The surface stays open until the server answers (reachServer), so
+        // the entry lands in the list already created rather than provisional.
+        const submitForm = async (values) => {
+          await reachServer();
+          onCreate({ id: nextId(), isNew: true, ...toEntry(values) });
+        };
+
+        // Only what this user typed in can be edited: an entry that came from
+        // the backend is shared with everyone else, and renaming it here would
+        // rename it under them. Nothing to do for the selection: it is derived
+        // from the id, so it shows the edit by itself.
+        const submitEdit = async (edited, values) => {
+          await reachServer();
+          onUpdate({ ...edited, ...toEntry(values) });
+          // Where to go is not decided here: the form says it with its own
+          // command (--navi-back), which follows a send that went through.
+        };
+        const deleteEntry = async (entry) => {
+          await reachServer();
+          onDelete(entry);
+          // Where to go is not decided here either: the button that sent said
+          // it (formCommand), the same way the form says it for a save.
+        };
+
+        return (
+          <div
+            class={label ? "field-block" : "field-block field-block--grouped"}
+          >
+            {label && <p class="field-title">{label}</p>}
+            <Box flex="x" spacing="s" alignY="end">
+              {/* Picker, not a hand-made trigger + Dialog: it already owns the
+                open/close, the value, the façade (value or placeholder, chevron
+                or clear button) and the popup — mode="dialog" just pins the
+                shape we want on every device instead of letting it pick. */}
+              <Picker
+                // explicit id: the popup's history entry is keyed by it, and a
+                // generated one neither survives a reload nor stays clear of
+                // another component's own
+                id={id}
+                name={name}
+                placeholder={placeholder}
+                signal={signal}
+                ui={selectedEntry ? selectedEntry.name : undefined}
+                clearable
+                borderRadius="s"
+                popupLayer={popupLayer}
+                positionArea="top"
+                dialogExpand
+                padding="m"
+                expandX
+              >
+                {/* One surface, three screens placed rather than ordered:
+                    creating is a step further into the same decision, so it
+                    comes from below; editing is about one entry of the list, so
+                    it comes from its side — see slide_container.jsx */}
+                <SlideContainer
+                  layout={[`${id}_pick ${id}_edit`, `${id}_create`]}
+                  // The arrows walk the list of candidates, not the map: a
+                  // screen here is reached by asking for it (the pencil, the
+                  // + button, a way out), never by pressing left.
+                  keyboardTravel={false}
+                  // The container sizes itself on its largest slide and never
+                  // grows on its own; filling the dialog (dialogExpand above)
+                  // is this caller's decision, said here — without it the
+                  // slides stop at their content and the list cannot reach
+                  // the bottom of the surface.
+                  expandY
+                >
+                  <Slide id={`${id}_pick`} overflow="auto">
+                    {/* No way back in it on purpose: this slide is the first
+                        one, and the surface is closed by clicking outside. */}
+                    <Box
+                      header
+                      flex="x"
+                      spacing="xs"
+                      alignY="center"
+                      padding="m"
+                      paddingY="s"
+                    >
+                      {/* 1rem, not the inherited size: this content lives
+                          inside the picker, so it would otherwise be sized for
+                          a control (13px) while reading as a screen of its
+                          own. */}
+                      <Text expandX fontSize="1rem">
+                        <strong>{surfaceTitle}</strong>
+                      </Text>
+                      {/* Always available, and never disabled: creating does
+                          not require having searched first, so the entry point
+                          must not depend on the search box holding something */}
+                      <Button
+                        // The create screen sits below this one, and this
+                        // button opens it about nothing in particular — no
+                        // value, so nothing to prefill.
+                        command="--navi-down"
+                        icon
+                        variant="discrete"
+                        padding="xs"
+                        size="xl"
+                        aria-label={createTitle}
+                        // A way into another screen, not what this screen is
+                        // about: the surface opens on the list (the search box
+                        // says the same of itself), and this takes the
+                        // keyboard only when there is nothing else.
+                        autoFocus="last-resort"
+                      >
+                        <Icon color="#6b7280">
+                          <PlusSvg />
+                        </Icon>
+                      </Button>
+                    </Box>
+                    {/* expandY: a body shrinks and scrolls but never grows on
+                        its own — here it must take the slide's whole height so
+                        the list below it (expandY too) reaches the bottom */}
+                    <Box body flex="y" spacing="m" padding="m" expandY>
+                      <Input
+                        navi-list={`${id}_list`}
+                        type="search"
+                        placeholder={searchPlaceholder}
+                        signal={searchSignal}
+                        autoComplete="off"
+                        backgroundColor="#ECEEEF"
+                        // Searching is optional, choosing is the point: the
+                        // surface opens on the list, and a text input taking
+                        // the focus would also raise the keyboard on mobile.
+                        autoFocus="last-resort"
+                        // grey at rest, white once focused
+                        variant="discrete"
+                        slotSpacing="s"
+                        borderRadius="m"
+                        paddingX="m"
+                        paddingY="m"
+                        expandX
+                      />
+
+                      <List
+                        selectable
+                        id={`${id}_list`}
+                        command="--navi-send"
+                        searchText={searchText}
+                        separator
+                        searchFallback={null}
+                        expandY
+                      >
+                        {matchingEntries.map((entry, i) => (
+                          <List.Item
+                            selectable
+                            key={entry.id}
+                            id={`${id}_${entry.id}`}
+                            index={i}
+                            value={entry.id}
+                            selected={entry.id === signal.value}
+                            matchInfo={getMatchInfo(entry)}
+                            padding="s"
+                          >
+                            <Box flex="x" alignY="center" spacing="xs" expandX>
+                              <Box flex="y" expandX>
+                                <Text>
+                                  <PlayerName entry={entry} />
+                                </Text>
+                                {entry.detail && (
+                                  <Text className="detail">{entry.detail}</Text>
+                                )}
+                              </Box>
+                              {/* Only on what this user added, and carrying a
+                                  command of its own: a row of a sending list is
+                                  claimed by that send, so a plain click here
+                                  would choose the entry instead of editing it */}
+                              {entry.isNew && (
+                                <Button
+                                  // The edit screen is the one to the right of
+                                  // the list on this map, so the button says
+                                  // where to go rather than setting the slide
+                                  // by hand — and `value` says what the travel
+                                  // is about, which the slide arriving reads
+                                  // back (useSlideValue) to fill its form.
+                                  command="--navi-right"
+                                  value={{ name: entry.name, id: entry.id }}
+                                  icon
+                                  variant="discrete"
+                                  padding="xs"
+                                  aria-label={`Modifier ${entry.name}`}
+                                  pointerEvents="auto"
+                                >
+                                  <Icon color="#6b7280">
+                                    <PencilSvg />
+                                  </Icon>
+                                </Button>
+                              )}
+                            </Box>
+                          </List.Item>
+                        ))}
+                        {/* At the bottom of the list rather than below it: it
+                            reads as "and if none of these is the one", right
+                            where the eye already is. Same slide as the +, name
+                            prefilled.
+                            A footer, not a regular row: it is not one of the
+                            candidates — it never takes the selection, never
+                            answers to the arrow keys, and stays visible while
+                            the matches scroll behind it. */}
+                        {typed !== "" && (
+                          <List.Item
+                            footer
+                            key="__create__"
+                            id={`${id}_create_row`}
+                          >
+                            {/* A Button, not a command on the row itself: the
+                                list carries --navi-send, and a row of a sending
+                                list is claimed by it — this row wants a
+                                different command, so it needs its own control
+                                to carry it. */}
+                            <Button
+                              // Same screen, opened about the name that was
+                              // typed: the travel carries it, and the form
+                              // there reads it back.
+                              command="--navi-down"
+                              value={typed}
+                              variant="discrete"
+                              padding="s"
+                              expandX
+                              alignX="start"
+                            >
+                              « {typed} » : {createLabel}
+                            </Button>
+                          </List.Item>
+                        )}
+                      </List>
+                    </Box>
+                  </Slide>
+
+                  {/* Asked once, at creation: an entry is entered a single time
+                      in its life, and the second field is what will tell
+                      homonyms apart afterwards. Cheaper here than as an
+                      after-the-fact chore nobody comes back to do. */}
+                  <Slide id={`${id}_create`} flex="y">
+                    {/* The form IS the group: it aggregates the named fields it
+                        contains and hands them to action when it is sent — no
+                        per-field signal to wire, and nothing committed if one
+                        goes back to the list instead. */}
+                    {/* standalone: what is typed here answers "create the
+                        thing I am about to pick", not "what is the picker's
+                        value" — without it the form registers with the picker
+                        around it and the field ends up showing the form's own
+                        object */}
+                    <Form
+                      standalone
+                      // Back to the list rather than closing: the entry shows
+                      // up there, so what just happened is visible — and one
+                      // tap chooses it or another. The list is above this
+                      // screen on the map, so that is the direction said.
+                      command="--navi-up"
+                      action={submitForm}
+                      flex="y"
+                      overflow="auto"
+                      expandY
+                    >
+                      <Box
+                        header
+                        flex="x"
+                        spacing="xs"
+                        alignY="center"
+                        padding="m"
+                        paddingY="s"
+                      >
+                        <Text expandX fontSize="1rem">
+                          <strong>{createTitle}</strong>
+                        </Text>
+                        {/* Back to the list, not out of the surface: this
+                            screen sits below it, so the way out points up */}
+                        <SlideContainer.Up
+                          size="xl"
+                          padding="xs"
+                          marginRight="-xs"
+                        />
+                      </Box>
+                      {/* body: the fields are what scrolls, so the header above
+                          and the footer below stay put */}
+                      <Box body padding="m">
+                        <CreateSlideForm createForm={CreateForm} />
+                      </Box>
+                      {/* row-reverse + wrap: with enough width the two sit side
+                          by side, cancel on the left and confirm on the right
+                          where the thumb ends up; too narrow, they wrap — and
+                          because the row is reversed, confirm takes the first
+                          line, on top */}
+                      <Box footer padding="m" className="form-actions">
+                        {/* --navi-send: it submits the form and, once that is
+                            valid, closes the surface it is in — the entry is
+                            created and the surface dismissed in one move */}
+                        <Button command="--navi-send" paddingY="s">
+                          Confirmer
+                        </Button>
+                        {/* the same way back as the arrow above, where the
+                            thumb already is once the form is filled */}
+                        <Button
+                          command="--navi-up"
+                          variant="discrete"
+                          paddingY="s"
+                        >
+                          Annuler
+                        </Button>
+                      </Box>
+                    </Form>
+                  </Slide>
+
+                  {/* Third slide, reached only by a pencil: editing is about
+                      one entry, so it is not somewhere one walks into */}
+                  <Slide id={`${id}_edit`} flex="y">
+                    <EditSlide
+                      id={id}
+                      editTitle={editTitle}
+                      entries={entries}
+                      createForm={CreateForm}
+                      onSave={submitEdit}
+                      onDelete={deleteEntry}
+                    />
+                  </Slide>
+                </SlideContainer>
+              </Picker>
+              {/* Always on the row, not conditional on a selection: it is part of
+                what the field is, and appearing later would shift the layout.
+                Beside the selection rather than inside the entry — overriding
+                the side for tonight must not rewrite the player's own habit. */}
+              {sideSignal && (
+                <Picker
+                  id={`${id}_side`}
+                  name={`${name}_side`}
+                  signal={sideSignal}
+                  ui={sideLabel(sideSignal.value)}
+                  placeholder="—"
+                  borderRadius="s"
+                  mode="popover"
+                  padding="m"
+                  slotSpacing="xs"
+                  // the width of its column, fixed: left free the field would
+                  // resize with what is selected ("—" vs "Les 2") and the row
+                  // would jiggle every time the side changes
+                  minWidth={SIDE_COLUMN_WIDTH}
+                  maxWidth={SIDE_COLUMN_WIDTH}
+                >
+                  <List selectable command="--navi-send" separator>
+                    {SIDES.map((side, i) => (
+                      <List.Item
+                        selectable
+                        key={side.value}
+                        id={`${id}_side_${side.value}`}
+                        index={i}
+                        value={side.value}
+                        selected={sideSignal.value === side.value}
+                        padding="s"
+                      >
+                        <Box flex="x" spacing="xs" alignY="center">
+                          <Text expandX>{side.label}</Text>
+                          {/* The player's own side, marked: it says whether
+                              tonight is an override, and it is the way back to
+                              the habit once you have left it */}
+                          {selectedEntry &&
+                            selectedEntry.side === side.value && (
+                              <Icon size="0.9em" color="#b42318">
+                                <HeartSvg />
+                              </Icon>
+                            )}
+                        </Box>
+                      </List.Item>
+                    ))}
+                  </List>
+                </Picker>
+              )}
+            </Box>
+          </div>
+        );
+      };
+
+      // Defined here, NOT inside PickOrCreateField: a component declared in
+      // another component's body is a new type on every render, so Preact
+      // throws its subtree away and builds it again — and the button that just
+      // sent the form is detached by the time the action resolves, so the
+      // command that follows the send (going back to the list) finds nothing to
+      // travel and the screen just sits there.
+      //
+      // Same as the edit screen: what to prefill is what the travel here
+      // carried — the "+" button hands over nothing, the "create «typed»" row
+      // hands over what was typed.
+      const CreateSlideForm = ({ createForm }) => {
+        // capitalized: JSX reads a lowercase name as an html tag
+        const CreateForm = createForm;
+        const prefill = useSlideValue() ?? "";
+        // keyed by it: the fields are uncontrolled, so arriving with another
+        // name must give them a fresh defaultValue rather than keep the
+        // previous one
+        return <CreateForm key={prefill} prefill={prefill} />;
+      };
+
+      // Inside the slide, which is the only place that can ask what the travel
+      // here was about: the pencil sent { id, name } along with --navi-right
+      // (see its `value`), and this reads it back. Nothing is stored on the
+      // side for it — the entry being edited is what the command handed over,
+      // and it is known here and nowhere else.
+      const EditSlide = ({
+        id,
+        editTitle,
+        entries,
+        createForm,
+        onSave,
+        onDelete,
+      }) => {
+        // capitalized: JSX reads a lowercase name as an html tag
+        const CreateForm = createForm;
+        const slideValue = useSlideValue();
+        const entry = slideValue
+          ? (entries.find((candidate) => candidate.id === slideValue.id) ??
+            slideValue)
+          : null;
+        return (
+          <Form
+            // Its value is its own: this form lives inside the Picker, and
+            // without this the picker's value would stop being "the chosen
+            // entry" and become the fields of this form — whose constraints
+            // would join the picker's too.
+            standalone
+            // Back where the user came from, which is the list — said as
+            // "back" rather than "left" because that is what it means: this
+            // screen is reached from the list, and it returns there whatever
+            // the map looks like.
+            command="--navi-back"
+            // One form, two ways to send it: which button asked comes in with
+            // the values — a submit button's name/value belongs to the send it
+            // made, exactly as in HTML — and where to go afterwards is that
+            // button's own business (see the Supprimer button's formCommand).
+            action={(values) =>
+              values.intent === "delete"
+                ? onDelete(entry)
+                : onSave(entry, values)
+            }
+            flex="y"
+            overflow="auto"
+            expandY
+          >
+            <Box header flex="x" spacing="xs" alignY="center" padding="m">
+              <Text expandX fontSize="1rem">
+                <strong>{editTitle}</strong>
+              </Text>
+              {/* This screen is beside the list, so the way out points at it */}
+              <SlideContainer.Left size="xl" padding="xs" marginRight="-xs" />
+            </Box>
+            <Box body padding="m">
+              {/* keyed by the entry: the fields are uncontrolled, so editing
+                  another one must give them fresh defaults */}
+              <CreateForm key={entry?.id} entry={entry} />
+            </Box>
+            <Box footer padding="m" paddingY="s" className="form-actions">
+              {/* First in the DOM, so this is the one Enter sends through. */}
+              <Button
+                command="--navi-send"
+                name="intent"
+                value="save"
+                paddingY="s"
+              >
+                Enregistrer
+              </Button>
+              {/* Sends the same form — so the whole screen goes read-only
+                  while it runs, which is what one wants of a deletion: nothing
+                  can be edited about a resource on its way out — and says where
+                  it goes afterwards, which is not where saving goes. */}
+              <Button
+                command="--navi-send"
+                name="intent"
+                value="delete"
+                formCommand={`--navi-go-to-slide:${id}_pick`}
+                variant="discrete"
+                paddingY="s"
+              >
+                Supprimer
+              </Button>
+            </Box>
+          </Form>
+        );
+      };
+
+      const INITIAL_CLUBS = [
+        {
+          id: nextId(),
+          name: "Mouratoglou Country Club",
+          detail: "3550 route des Dolines, Biot",
+        },
+        {
+          id: nextId(),
+          name: "Padel Attitude",
+          detail: "Chemin de Saint-Claude, Antibes",
+        },
+        {
+          id: nextId(),
+          name: "Padel Attitude",
+          detail: "Route de Grasse, Valbonne",
+        },
+      ];
+      // Rendered as "Prénom NOM": with homonyms allowed the family name is what
+      // separates two entries, so it is the part that carries the emphasis.
+      // Falls back to the plain name for an entity that has no such split.
+      const PlayerName = ({ entry }) =>
+        entry.lastName ? (
+          <>
+            <span class="given-name">{entry.firstName}</span>{" "}
+            <span class="family-name">{entry.lastName}</span>
+          </>
+        ) : (
+          entry.name
+        );
+
+      // name is the single searchable/displayable string, firstName/lastName the
+      // parts the list emphasizes — kept in sync from one place
+      const player = ({ firstName, lastName, detail, side }) => ({
+        id: nextId(),
+        firstName,
+        lastName,
+        name: `${firstName} ${lastName}`,
+        detail,
+        side,
+      });
+      const INITIAL_PLAYERS = [
+        {
+          ...player({
+            firstName: "Flore",
+            lastName: "Giraudier",
+            detail: "flore@mail.com",
+            side: "left",
+          }),
+        },
+        {
+          ...player({
+            firstName: "Karim",
+            lastName: "Benali",
+            detail: "karim@mail.com",
+            side: "right",
+          }),
+        },
+        {
+          ...player({
+            firstName: "Damien",
+            lastName: "Maillard",
+            detail: "damien@mail.com",
+            side: "both",
+          }),
+        },
+        {
+          ...player({
+            firstName: "Damien",
+            lastName: "Martin",
+            detail: "d.martin@mail.com",
+          }),
+        },
+        {
+          ...player({
+            firstName: "Marie-Ange",
+            lastName: "Da Silva",
+            detail: "ma.dasilva@mail.com",
+            side: "left",
+          }),
+        },
+      ];
+
+      // One source for both the side field and the column label above it, so
+      // the label stays over the column it names
+      const SIDE_COLUMN_WIDTH = "100px";
+
+      const SIDES = [
+        { value: "left", label: "Gauche" },
+        { value: "right", label: "Droite" },
+        { value: "both", label: "Les 2" },
+      ];
+
+      const sideLabel = (value) =>
+        SIDES.find((side) => side.value === value)?.label;
+
+      // The two forms, written out: this is the part of "create what is not
+      // there" that differs per entity, so it is the part worth seeing. The
+      // asterisk comes from Label's requiredIndicator, which reads the required
+      // state off the control itself — nothing to keep in sync by hand.
+      const TextField = ({ label, name, required, ...rest }) => (
+        <Field flex="y" spacingWithControl="s">
+          <Label requiredIndicator>{label}</Label>
+          <Input
+            name={name}
+            required={required}
+            borderRadius="m"
+            paddingY="s"
+            expandX
+            {...rest}
+          />
+        </Field>
+      );
+
+      // One component for both moments: creating starts from what was typed in
+      // the search, editing from the entry itself. Same fields either way —
+      // only where the defaults come from changes.
+      const PlaceForm = ({ prefill, entry }) => (
+        <Box flex="y" spacing="m">
+          {/* A place needs a name or an address to be recognizable again;
+              demanding both would be a lie, and demanding "one of the two" is
+              not something a form says well — so only the name is required */}
+          {/* autoFocus: this screen rebuilds itself around the value the
+              travel carried (see the key on CreateForm), so the keyboard's
+              place in it is its own to declare — the same word dialog content
+              says, and the slide's own hand-over yields to it. */}
+          <TextField
+            label="Nom"
+            name="name"
+            required
+            autoFocus
+            defaultValue={entry ? entry.name : prefill}
+          />
+          <TextField
+            label="Adresse"
+            name="address"
+            placeholder="Rue, ville…"
+            defaultValue={entry?.detail}
+          />
+        </Box>
+      );
+
+      const PlayerForm = ({ prefill, entry }) => (
+        <Box flex="y" spacing="s">
+          <TextField
+            label="Prénom"
+            name="firstName"
+            required
+            autoFocus
+            defaultValue={entry ? entry.firstName : prefill}
+          />
+          {/* Not required: a first name is enough to name someone, and the
+              rest is what tells two of them apart when it happens */}
+          <TextField
+            label="Nom"
+            name="lastName"
+            defaultValue={entry?.lastName}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            placeholder="prenom@mail.com"
+            defaultValue={entry?.detail}
+          />
+          <Field flex="y" spacingWithControl="s">
+            <Label>Côté</Label>
+            <RadioGroup
+              name="side"
+              flex="y"
+              spacing="s"
+              defaultValue={entry?.side}
+            >
+              {SIDES.map((side) => (
+                <Field key={side.value} spacing="xs">
+                  <Input type="radio" value={side.value} />
+                  <Label>{side.label}</Label>
+                </Field>
+              ))}
+            </RadioGroup>
+          </Field>
+        </Box>
+      );
+      // A field nobody filled has no ui state at all — undefined, not "" — so
+      // reading one always goes through here. navi is right to tell the two
+      // apart; a form that only wants text is the one that has to say so.
+      const text = (value) => (value || "").trim();
+
+      const playerToEntry = (values) => {
+        const firstName = text(values.firstName);
+        const lastName = text(values.lastName);
+        return {
+          firstName,
+          lastName,
+          // name stays the searchable/displayable single string; the parts are
+          // what let the list emphasize the family name
+          name: `${firstName} ${lastName}`.trim(),
+          detail: text(values.email),
+          side: values.side || "",
+        };
+      };
+
+      // `signals` are the URL-backed state signals of this screen (see
+      // createScreenSignals); the entry lists stay local, they stand in for
+      // what the backend would hold
+      const Screen = ({ idPrefix, popupLayer, signals }) => {
+        const clubsSignal = useSignal(INITIAL_CLUBS);
+        const playersSignal = useSignal(INITIAL_PLAYERS);
+        // What the mature app would know per slot; here it just puts different
+        // players above the fold of each picker
+        const recentIdsBySlot = [
+          [INITIAL_PLAYERS[0].id, INITIAL_PLAYERS[1].id],
+          [INITIAL_PLAYERS[2].id],
+          [],
+          [],
+        ];
+
+        // No view transition on these two, and it is not an oversight: both
+        // happen while ANOTHER screen is showing (creating from the create
+        // slide, deleting from the edit one), so the row appearing or leaving
+        // is not something anybody is looking at — and each is followed by a
+        // travel back to the list. A view transition holds the frame for its
+        // whole duration, so the travel asked for in the same breath does not
+        // start: the box takes its new height on the picture of the screen one
+        // is still on, and the list one is travelling TO shows through for an
+        // instant before anything moves. A transition for a change nobody can
+        // see, at the cost of the movement they can — see
+        // .agents/skills/animations/SKILL.md.
+        const addTo = (listSignal) => (entry) => {
+          listSignal.value = [...listSignal.value, entry];
+        };
+        const updateIn = (listSignal) => (entry) => {
+          listSignal.value = listSignal.value.map((candidate) =>
+            candidate.id === entry.id ? entry : candidate,
+          );
+        };
+        const removeFrom = (listSignal) => (entry) => {
+          listSignal.value = listSignal.value.filter(
+            (candidate) => candidate.id !== entry.id,
+          );
+        };
+
+        return (
+          <div class="screen">
+            <p class="screen-title">‹ Créer une partie</p>
+
+            <PickOrCreateField
+              popupLayer={popupLayer}
+              id={`${idPrefix}club`}
+              name="club"
+              label="Lieu"
+              placeholder="Choisir un lieu"
+              searchPlaceholder="Rechercher un lieu…"
+              surfaceTitle="Choisir un lieu"
+              createLabel="ajouter ce lieu"
+              createTitle="Ajouter un lieu"
+              editTitle="Modifier un lieu"
+              createForm={PlaceForm}
+              toEntry={(values) => ({
+                name: text(values.name),
+                detail: text(values.address),
+              })}
+              entries={clubsSignal.value}
+              recentIds={[INITIAL_CLUBS[0].id]}
+              onCreate={addTo(clubsSignal)}
+              onUpdate={updateIn(clubsSignal)}
+              onDelete={removeFrom(clubsSignal)}
+              signal={signals.club.signal}
+              searchSignal={signals.club.searchSignal}
+            />
+
+            {/* "Côté" is said once, at the head of the column it names: the
+                rows below are all the same shape, so repeating it on each of
+                them would be four times the words for one meaning */}
+            <p class="field-title field-title--row">
+              <span>Joueurs</span>
+              <span style={{ width: SIDE_COLUMN_WIDTH }}>Côté</span>
+            </p>
+            {/* Four slots at most, none of them required: a match can be
+                created before anyone has signed up for it */}
+            {signals.players.map((slotSignals, i) => (
+              <PickOrCreateField
+                key={i}
+                popupLayer={popupLayer}
+                id={`${idPrefix}player${i + 1}`}
+                name={`player${i + 1}`}
+                // no placeholder on purpose: an empty row reads as empty, which
+                // is exactly what it is — a player slot nobody has to fill
+                searchPlaceholder="Rechercher un joueur…"
+                surfaceTitle="Choisir un joueur"
+                createLabel="ajouter ce joueur"
+                createTitle="Ajouter un joueur"
+                editTitle="Modifier un joueur"
+                createForm={PlayerForm}
+                toEntry={playerToEntry}
+                entries={playersSignal.value}
+                recentIds={recentIdsBySlot[i]}
+                onCreate={addTo(playersSignal)}
+                onUpdate={updateIn(playersSignal)}
+                onDelete={removeFrom(playersSignal)}
+                signal={slotSignals.signal}
+                searchSignal={slotSignals.searchSignal}
+                sideSignal={slotSignals.sideSignal}
+              />
+            ))}
+
+            <Button type="submit" paddingY="s" expandX marginTop="m">
+              Créer la partie
+            </Button>
+          </div>
+        );
+      };
+
+      // debugAll on purpose: this is a lab file, and the interaction logs are the
+      // fastest way to see why a click did or did not reach a control
+      const App = () => (
+        <NaviDebug debugAll>
+          {/* Full page first: it is the real case, the frame below is the
+              laboratory one. Each variant sits in its own fake backend so what
+              a submit sends — a club and up to four players, sides included —
+              is on the page next to the screen that sent it. */}
+          <h2 class="variant-title">
+            1. Pleine page — top layer (à voir en émulation d'appareil)
+          </h2>
+          <FakeBackend>
+            {({ action }) => (
+              <Form action={action} expandX>
+                <Screen idPrefix="top_" signals={TOP_SCREEN_SIGNALS} />
+              </Form>
+            )}
+          </FakeBackend>
+          <h2 class="variant-title">2. popupLayer="local" — dans le cadre</h2>
+          <FakeBackend>
+            {({ action }) => (
+              <Form action={action} expandX>
+                <div class="frame">
+                  <Screen
+                    idPrefix="local_"
+                    popupLayer="local"
+                    signals={LOCAL_SCREEN_SIGNALS}
+                  />
+                </div>
+              </Form>
+            )}
+          </FakeBackend>
+        </NaviDebug>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

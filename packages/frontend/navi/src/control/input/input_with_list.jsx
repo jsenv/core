@@ -70,8 +70,8 @@ const InputWithList = (props) => {
   };
 
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowdown: (e) => requestListNav(e, "down"),
-    arrowup: (e) => requestListNav(e, "up"),
+    arrowdown: (e) => requestListNav(e, "next"),
+    arrowup: (e) => requestListNav(e, "previous"),
     home: (e) => requestListNav(e, "first"),
     end: (e) => requestListNav(e, "last"),
     enter: (e) => {

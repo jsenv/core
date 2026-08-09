@@ -76,6 +76,91 @@ import { usePartiallyHidden } from "./use_partially_hidden.js";
 export const BoxForwardedPropsContext = createContext({});
 
 import.meta.css = /* css */ `
+  /* A scrolling area, and the three layout roles that live in one. Declared
+     here rather than in dialog.jsx/popover.jsx because it has nothing to do
+     with popups: anything that scrolls can want a title that stays put. Those
+     two just carry [data-scrollable] on their own root.
+
+     Two shapes:
+     - header/footer alone: the container itself scrolls and they stick to its
+       edges;
+     - a body as well: the body is the only thing that scrolls, so the other two
+       simply sit outside it and need no stickiness at all.
+
+     Padding belongs on the parts, not on the scrolling box: padding on a
+     scroller sits INSIDE the scrollbars, so the content ends up centered
+     between them — and a control flush against the edge of a scrolling area
+     overflows it (a focus outline is drawn outside the control it belongs to)
+     and raises a scrollbar of its own. */
+  [data-scrollable] {
+    overflow: var(--x-scrollable-overflow, auto);
+
+    &[data-scrollable-overflow="scroll"] {
+      --x-scrollable-overflow: scroll;
+    }
+
+    /* box-shadow rather than a border: it draws the separation without taking
+       part in the layout, so a header keeps the exact height its content asks
+       for and nothing shifts by a pixel when the line appears. */
+    /* The corners are the container's, not the part's: a header sitting at the
+       top of a rounded box has to follow that curve or it paints square over
+       it (a dark header in a rounded popup is where this shows). inherit and
+       not a value of its own, so whoever rounds the box rounds these too. */
+    > [data-header] {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      border-top-left-radius: inherit;
+      border-top-right-radius: inherit;
+      box-shadow: 0 1px 0 var(--navi-separator-color-default);
+    }
+    > [data-footer] {
+      position: sticky;
+      bottom: 0;
+      z-index: 1;
+      border-bottom-right-radius: inherit;
+      border-bottom-left-radius: inherit;
+      box-shadow: 0 -1px 0 var(--navi-separator-color-default);
+    }
+
+    &:has(> [data-body]) {
+      /* A column, declared here rather than expected from the caller: the three
+         parts only make sense stacked, and the body needs a flex context to be
+         told "take what is left" below. */
+      display: flex;
+      flex-direction: column;
+      /* the body is the only thing that scrolls */
+      --x-scrollable-overflow: hidden;
+
+      > [data-header],
+      > [data-footer] {
+        position: static;
+        z-index: unset;
+        flex-shrink: 0;
+      }
+
+      > [data-body] {
+        /* Shrinks when there is not enough room (and then scrolls), but never
+           grows: a short body leaves the footer right under it rather than
+           pushed to the bottom of a container it does not fill.
+           min-height: a flex child refuses to shrink below its content unless
+           told it may, and without that the body grows instead of scrolling */
+        min-height: 0;
+        flex: 0 1 auto;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
+        overflow: auto;
+
+        &:focus-visible {
+          outline-style: solid;
+        }
+      }
+    }
+  }
+
   @layer navi {
     /*
     When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
@@ -198,7 +283,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 export const Box = (props) => {
   const {
     ref,
-    as = "div",
+    as: asProp = "div",
     baseClassName,
     className,
     baseStyle,
@@ -230,9 +315,55 @@ export const Box = (props) => {
 
     children,
     separator,
+    // Layout roles inside a scrolling container (a Dialog, a Popover): the
+    // header stays at the top and the footer at the bottom while the rest
+    // scrolls, or — when a body is present — the body is what scrolls and the
+    // two others simply sit outside it. Carried as data attributes because the
+    // container is the one that knows how to honour them, and it only has CSS
+    // to reach its children with. Same words as List.Item's own header/footer.
+    header,
+    footer,
+    body,
     ...rest
   } = props;
+  let as = asProp;
+
+  // A box that scrolls is what gives header/footer/body their meaning, and
+  // saying overflow="auto" is already saying it — no second prop for the same
+  // fact. Dialog and Popover get it the same way, by asking for that overflow.
+  const scrolls = ["overflow", "overflowX", "overflowY"].some((name) => {
+    const value = rest[name];
+    return value === "auto" || value === "scroll";
+  });
+  // <header>/<footer> rather than a div: the role is exactly what those tags
+  // mean, and a screen reader gets it for free. The body stays a div — <main>
+  // means "the main content of the document", which a popup's body is not.
+  if (header && as === "div") {
+    as = "header";
+  }
+  if (footer && as === "div") {
+    as = "footer";
+  }
   const TagName = as;
+  if (scrolls) {
+    rest["data-scrollable"] = "";
+    if (rest.overflow === "auto" || rest.overflow === "scroll") {
+      // Handed over to CSS rather than kept as an inline style: a body inside
+      // makes the body the only thing that scrolls, and an inline overflow
+      // would win over that rule — see [data-scrollable] in this file's CSS.
+      rest["data-scrollable-overflow"] = rest.overflow;
+      rest.overflow = undefined;
+    }
+  }
+  if (header) {
+    rest["data-header"] = "";
+  }
+  if (footer) {
+    rest["data-footer"] = "";
+  }
+  if (body) {
+    rest["data-body"] = "";
+  }
 
   const defaultDisplay = getDefaultDisplay(TagName);
   // Read the parent flow early so we can use it when display="inherit" is requested.

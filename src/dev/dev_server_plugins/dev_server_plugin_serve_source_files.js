@@ -2,6 +2,7 @@ import { bufferToEtag } from "@jsenv/filesystem";
 import { formatError } from "@jsenv/humanize";
 import { composeTwoResponses, fetchDirectory } from "@jsenv/server";
 import { URL_META } from "@jsenv/url-meta";
+import { normalizeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 import { watchSourceFiles } from "../../helpers/watch_source_files.js";
@@ -115,8 +116,14 @@ export const devServerPluginServeSourceFiles = ({
             //   was compared using etag and it has changed
             return false;
           }
-          if (!urlInfo.isWatched) {
-            // file is not watched, check the filesystem
+          // Watched files trust the watcher — except the ones marked
+          // revalidateOnFileSystem (package.json files, see node_esm_resolver):
+          // the watcher fires a beat AFTER a change, and what these files
+          // decide (a package version, hence the ?v= the importer embeds) is
+          // cached as immutable by the browser — a request racing the watcher
+          // must not win a stale answer it would then keep forever.
+          if (!urlInfo.isWatched || urlInfo.revalidateOnFileSystem) {
+            // check the filesystem
             let fileContentAsBuffer;
             try {
               fileContentAsBuffer = readFileSync(new URL(urlInfo.url));
@@ -215,7 +222,14 @@ export const devServerPluginServeSourceFiles = ({
               rootDirectoryUrl,
             );
             requestedUrlObject.searchParams.delete("hot");
-            requestedUrl = requestedUrlObject.href;
+            // normalizeUrl, because searchParams.delete re-serializes the whole
+            // query and turns a valueless param ("?enabled") into "?enabled=".
+            // Every url in the graph is normalized the other way (kitchen.js
+            // strips those "="), and requestedUrl is compared to graph urls as
+            // a string: an inline urlInfo decides "is this request for me?"
+            // that way (jsenv:inline_content_fetcher) and re-cooks its own
+            // ALREADY COOKED content when the comparison wrongly fails.
+            requestedUrl = normalizeUrl(requestedUrlObject.href);
           }
           const { referer } = request.headers;
           const parentUrl = referer
@@ -278,7 +292,36 @@ export const devServerPluginServeSourceFiles = ({
                 return respondWithNotModified();
               }
             }
-            await urlInfo.cook({ request, reference });
+            // Cooking is not memoized in dev (see cookGuard in kitchen.js): a
+            // request that reaches cook() re-fetches and re-transforms the file
+            // even when nothing changed. The 304 path above already avoids that
+            // for a browser that revalidates — but a browser with its cache
+            // disabled (devtools open, the common way to reload during dev)
+            // sends no if-none-match and would re-cook the entire graph on
+            // every reload, turning a warm reload into seconds of transform
+            // work. Same validity check as the 304 path, same trust: when the
+            // graph's in-memory content is still valid, it IS the response —
+            // only the status differs (200 with content, since there is no
+            // client etag to match).
+            const servableFromMemory =
+              !urlInfo.error &&
+              !inlineParentUrlInfo &&
+              !urlInfo.response &&
+              urlInfo.content !== undefined &&
+              !cacheIsDisabledInResponseHeader(urlInfo) &&
+              // a "?hot" request exists to bypass every cache, this one
+              // included: it must be cooked, because cooking is what rewrites
+              // its references so "?hot" cascades to the modified files below
+              // (see jsenv_plugin_hot_search_param) — the memory content was
+              // cooked before the change and its references carry nothing.
+              // The urlInfo itself often IS valid here (hot reload of a
+              // dependency: the file re-requested did not change, one below
+              // it did), so isValid() alone cannot catch this.
+              !request.searchParams.has("hot") &&
+              urlInfo.isValid();
+            if (!servableFromMemory) {
+              await urlInfo.cook({ request, reference });
+            }
             let { response } = urlInfo;
             if (response) {
               return response;
@@ -319,7 +362,14 @@ export const devServerPluginServeSourceFiles = ({
                 "content-length": urlInfo.contentLength,
               },
               body: urlInfo.content,
-              timing: urlInfo.timing, // TODO: use something else
+              // Where the time went, readable in devtools (Network > Timing):
+              // the server merges this into the server-timing header. Served
+              // from memory: a marker saying so, since nothing was cooked for
+              // this request. Cooked: what the kitchen measured (each plugin
+              // hook, and the fetch/transform/finalize roll-ups).
+              timing: servableFromMemory
+                ? { "served from memory cache": null }
+                : urlInfo.timing,
             };
             const augmentResponseInfo = {
               ...kitchen.context,

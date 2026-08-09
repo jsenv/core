@@ -53,6 +53,8 @@ export const createControlInteraction = (
 ) => {
   let interactionFailedConstraintInfo = null;
   let failingManagedInteraction = null;
+  // The title this rule put on the element, if any (see checkInteractivity).
+  let titleWritten = null;
 
   const checkInteractivity = ({ event } = {}) => {
     interactionFailedConstraintInfo = null;
@@ -103,12 +105,35 @@ export const createControlInteraction = (
       const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
-          element.setAttribute(
-            "title",
-            interactionFailedConstraintInfo.message,
-          );
+          // Only what stays true: a title is written once and read whenever the
+          // pointer rests on the element, so a constraint that comes and goes
+          // on its own (busy, see its own `transient`) would leave it telling a
+          // story that ended — "this action is in progress" over a button that
+          // has been idle for minutes. Those say what they have to say through
+          // the callout, live, while it lasts.
+          if (!interactionFailedConstraintInfo.constraint?.transient) {
+            // The same message the callout would show, not the generated one:
+            // a control that says why in its own words (readOnlyMessage and
+            // friends) says it wherever the reason is read.
+            const { message } = getConstraintMessage(
+              controller,
+              interactionFailedConstraintInfo.constraint,
+              interactionFailedConstraintInfo.message,
+              {},
+            );
+            element.setAttribute("title", message);
+            // Remembered so it can be taken back below.
+            titleWritten = message;
+          }
+        } else if (titleWritten !== null) {
+          // Only what this rule wrote, and only if nothing has changed it since
+          // — a title from validation (which owns its own, see
+          // control_validation.js) or from anywhere else is not ours to remove.
+          if (element.getAttribute("title") === titleWritten) {
+            element.removeAttribute("title");
+          }
+          titleWritten = null;
         }
-        // Title removal is managed by controlValidation to avoid conflicts.
       }
     }
 

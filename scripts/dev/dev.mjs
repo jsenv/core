@@ -51,6 +51,7 @@ await startDevServer({
   // https: { certificate, privateKey },
   http2: false,
   port: 3456,
+  acceptAnyIp: true,
   // supervisor: { logs: true },
   // supervisor: false,
   plugins: [

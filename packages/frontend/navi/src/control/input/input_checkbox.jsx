@@ -13,7 +13,7 @@ const css = /* css */ `
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(var(--outline-width) / 2);
+      --outline-offset: calc(0.5 * var(--outline-width));
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --margin: 3px 3px 3px 4px;

@@ -25,7 +25,7 @@ const css = /* css */ `
       --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
-      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
+      --button-outline-offset: calc(-0.5 * var(--button-outline-width));
       --button-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --button-padding-x-default: var(--navi-button-padding-x-default);
@@ -240,11 +240,20 @@ const css = /* css */ `
       --x-button-border-color: var(--callout-color);
     }
 
-    /* discrete: background on hover */
+    /* discrete: background on hover, and nothing else — no box at rest, and no
+       shrink when pressed. What is drawn IS the content (a chevron, a number,
+       a word), and shrinking it under the finger reads as the content itself
+       flinching rather than as a button being pressed. */
     &[data-variant="discrete"] {
       --button-border-width: 0;
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
+
+      &[data-pressed] {
+        .navi_button_content {
+          transform: none;
+        }
+      }
 
       &[data-hover] {
         --x-button-border-color: transparent;
@@ -261,6 +270,26 @@ const css = /* css */ `
       &[data-disabled] {
         --x-button-border-color: transparent;
         --x-button-background-color: transparent;
+      }
+    }
+    /* bare: discrete, minus the background on hover. For a control whose own
+       drawing IS the button (a carousel bullet, a swatch), where a box lighting
+       up around it would be the button showing through the only thing one is
+       supposed to see. It stays a button in every other way: focusable, ringed
+       on focus, commandable. */
+    &[data-variant="bare"] {
+      --button-border-width: 0;
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: transparent;
+        --x-button-border-color: transparent;
+      }
+      &[data-pressed] {
+        .navi_button_content {
+          transform: none;
+        }
       }
     }
     /* discrete-border: border on hover */

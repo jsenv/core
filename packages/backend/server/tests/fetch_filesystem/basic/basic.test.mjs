@@ -51,6 +51,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     },
     body: actual.body,
     bodyEncoding: undefined,
+    timing: undefined,
   };
   assert({ actual, expect });
 }
@@ -86,6 +87,7 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
     },
     body: undefined,
     bodyEncoding: undefined,
+    timing: undefined,
   };
   assert({ actual, expect });
 }

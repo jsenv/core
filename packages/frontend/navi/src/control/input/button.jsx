@@ -1,10 +1,11 @@
-import { useRef } from "preact/hooks";
+import { useContext, useRef } from "preact/hooks";
 
 import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
+import { FormContext } from "../form_context.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
 import { ButtonUI } from "./button_ui.jsx";
 
@@ -18,12 +19,42 @@ const ButtonFirstResolver = (props) => {
 
 const ButtonCommandPropResolver = (props) => {
   const Next = useNextResolver();
+  const form = useContext(FormContext);
 
   if (props.type === "submit") {
     props.type = "button";
     props.command = props.command || "--navi-send";
   }
   const command = props.command;
+  // What follows a send THIS button asked for, overriding the form's own
+  // `command` (see resolveAfterSend in commands.js). Named after the browser's
+  // formaction/formmethod/formtarget, which are the same idea: a submit button
+  // saying how its own submission differs. For a form with two ways out —
+  // "save" stays, "delete" goes back to the list.
+  const { formCommand } = props;
+  props.formCommand = undefined;
+  props["data-after-send"] = formCommand;
+
+  // `readOnlyWhileFormUnchanged`: hold the send button back until the form
+  // around it holds something new, so it says it is waiting instead of
+  // accepting a press that would send nothing.
+  //
+  // Opt-in, because a press that sends nothing is usually still worth
+  // accepting: in a dialog or a slide it closes the dialog / moves to the next
+  // step all the same — the user IS done, there was simply nothing to send. It
+  // is only in a form that goes nowhere on its own (one in the document) that
+  // the press would visibly do nothing at all.
+  //
+  // Passed to Next rather than written onto props like everything else here:
+  // these answer to something outside the button and flip back, and the props
+  // object outlives the render (a button inside a form is the same vnode when
+  // the form re-renders around it), so a write would never be undone.
+  const heldByForm = Boolean(
+    props.readOnlyWhileFormUnchanged &&
+    command === "--navi-send" &&
+    form?.changed === false,
+  );
+  const readOnly = heldByForm ? true : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
@@ -41,7 +72,17 @@ const ButtonCommandPropResolver = (props) => {
     }
   }
 
-  return <Next {...props} />;
+  return (
+    <Next
+      {...props}
+      readOnlyWhileFormUnchanged={undefined}
+      readOnly={readOnly}
+      // Why it is read-only, for READONLY_CONSTRAINT to say the right thing:
+      // read-only for some other reason (a caller's own prop, a read-only form
+      // around it) must not be explained as "waiting for a change".
+      data-readonly-reason={heldByForm ? "form-unchanged" : undefined}
+    />
+  );
 };
 const COMMAND_DEFAULT_PROPS_FACTORIES = {
   "--navi-clear": () => ({
