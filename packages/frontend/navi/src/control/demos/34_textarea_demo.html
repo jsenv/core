@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Textarea demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box, Link, Text, Textarea } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const THREE_LINES = `La première ligne
+la deuxième
+et la troisième`;
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Textarea"
+            previous={{ href: "./33_day_spin_demo.html", label: "Day spin" }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <BasicsDemo />
+          <StatesDemo />
+          <RowsDemo />
+          <CharCountDemo />
+        </Box>
+      );
+
+      // ── Basics ────────────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="desc">La boîte grandit avec ce qu'on y tape.</p>
+          <Textarea name="message" placeholder="Écrire quelque chose…" />
+        </div>
+      );
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="readOnly">
+              <Textarea defaultValue={THREE_LINES} readOnly />
+            </Variant>
+            <Variant caption="disabled">
+              <Textarea defaultValue={THREE_LINES} disabled />
+            </Variant>
+            <Variant caption="loading">
+              <Textarea defaultValue={THREE_LINES} loading />
+            </Variant>
+            <Variant caption="focus visible">
+              <Textarea
+                defaultValue={THREE_LINES}
+                pseudoState={{ ":focus-visible": true }}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── minRows / maxRows ─────────────────────────────────────────────────
+
+      const RowsDemo = () => (
+        <div class="demo-section">
+          <Heading id="rows">minRows / maxRows</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="par défaut (minRows=2)">
+              <Textarea placeholder="Deux lignes de haut" />
+            </Variant>
+            <Variant caption="minRows={1}">
+              <Textarea minRows={1} placeholder="Une ligne" />
+            </Variant>
+            <Variant caption="minRows={4}">
+              <Textarea minRows={4} placeholder="Quatre lignes" />
+            </Variant>
+            <Variant caption="maxRows={4} : au-delà, ça défile">
+              <Textarea
+                maxRows={4}
+                defaultValue={`Un
+deux
+trois
+quatre
+cinq
+six`}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── charCount ─────────────────────────────────────────────────────────
+
+      const CharCountDemo = () => (
+        <div class="demo-section">
+          <Heading id="char-count">charCount</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="charCount avec maxLength={100} : les caractères restants">
+              <Textarea
+                charCount
+                maxLength={100}
+                defaultValue="Déjà un début de message."
+              />
+            </Variant>
+            <Variant caption="charCount + maxLengthGuard={100} : taper au-delà est bloqué">
+              <Textarea
+                charCount
+                maxLengthGuard={100}
+                defaultValue="Déjà un début de message."
+              />
+            </Variant>
+            <Variant caption="charCount sans maxLength : les caractères tapés">
+              <Textarea charCount defaultValue="Déjà un début de message." />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

@@ -519,7 +519,9 @@ const RealInput = ({ maxLength, ...domProps }) => {
   );
 };
 
-const InputStyleCSSVars = {
+// Shared with textarea.jsx: a textarea is styled as a .navi_input box, so the
+// two read the same style props and pseudo states.
+export const InputStyleCSSVars = {
   "slotSpacing": "--slot-spacing",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
@@ -560,7 +562,7 @@ const InputStyleCSSVars = {
     color: "--color-disabled",
   },
 };
-const InputPseudoClasses = [
+export const InputPseudoClasses = [
   ":hover",
   ":active",
   ":focus",
@@ -570,4 +572,4 @@ const InputPseudoClasses = [
   ":-navi-loading",
   ":-navi-has-value",
 ];
-const InputPseudoElements = ["::-navi-loader"];
+export const InputPseudoElements = ["::-navi-loader"];
