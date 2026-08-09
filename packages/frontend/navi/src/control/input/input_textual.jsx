@@ -45,7 +45,7 @@
  * - backgroundColor="transparent" applies at rest and hover; a focused field
  *   turns solid (--navi-surface-color) so text is not typed over what sits behind.
  * - variant="discrete" drops background and border at rest; focus brings back
- *   a solid surface.
+ *   a solid surface. variant="discrete-border" does the same but keeps the border.
  * - variant="discrete" + backgroundColor: the color applies at rest and hover,
  *   and the field goes transparent while focused.
  */
@@ -277,23 +277,15 @@ const css = /* css */ `
       }
     }
 
-    &[data-variant="discrete"] {
+    &[data-variant="discrete"],
+    &[data-variant="discrete-border"] {
       /* An inline backgroundColor prop overrides this default */
       --background-color: transparent;
       --background-color-hover: var(--background-color);
       --background-color-focus: var(--navi-surface-color);
-      /* The border is part of what makes a field look like a field, so a
-         discrete one does without it until it is interacted with — same idea
-         as the background above, and the two come back together. */
-      --border-color: transparent;
 
       &[data-focus] {
         --x-background-color: var(--background-color-focus);
-        --x-border-color: color-mix(
-          in srgb,
-          var(--border-color) 55%,
-          transparent
-        );
       }
       &[data-readonly] {
         --x-background-color: var(--background-color);
@@ -305,6 +297,21 @@ const css = /* css */ `
          rest and on hover, back to transparent while being edited. */
       &[data-background] {
         --background-color-focus: transparent;
+      }
+    }
+    /* The border is part of what makes a field look like a field, so a
+       discrete one does without it until it is interacted with — same idea
+       as the background above, and the two come back together.
+       discrete-border keeps the border: only the background recedes. */
+    &[data-variant="discrete"] {
+      --border-color: transparent;
+
+      &[data-focus] {
+        --x-border-color: color-mix(
+          in srgb,
+          var(--border-color) 55%,
+          transparent
+        );
       }
     }
 

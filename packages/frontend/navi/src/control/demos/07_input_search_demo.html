@@ -56,14 +56,17 @@
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
 
-      const Heading = ({ id, children }) => (
-        <h2 id={id}>
-          <Link anchor revealOnInteraction href={`#${id}`}>
-            #
-          </Link>
-          {children}
-        </h2>
-      );
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
 
       const RectIcon = () => (
         <svg
@@ -225,48 +228,121 @@
         );
       };
 
+      // Discrete only reads against a surface that is not white, so every
+      // example of this section sits on the same grey one.
+      const Surface = ({ children }) => (
+        <Box
+          padding="m"
+          backgroundColor="#e9ecef"
+          borderRadius="8"
+          flex
+          spacing="s"
+          alignY="center"
+        >
+          {children}
+        </Box>
+      );
+
+      const VariantStates = ({ variant }) => (
+        <Box flex spacing="s" flexWrap>
+          <fieldset>
+            <legend>:hover</legend>
+            <Surface>
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant={variant}
+                pseudoState={{ ":hover": true }}
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>:focus</legend>
+            <Surface>
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant={variant}
+                pseudoState={{ ":focus": true }}
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>:focus-visible</legend>
+            <Surface>
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant={variant}
+                pseudoState={{ ":focus-visible": true }}
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>:read-only</legend>
+            <Surface>
+              <Input
+                type="search"
+                value="Text"
+                action={() => {}}
+                readOnly
+                variant={variant}
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>:disabled</legend>
+            <Surface>
+              <Input
+                type="search"
+                value="Text"
+                action={() => {}}
+                disabled
+                variant={variant}
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>:-navi-loading</legend>
+            <Surface>
+              <Input
+                type="search"
+                value="Text"
+                action={() => {}}
+                loading
+                variant={variant}
+              />
+            </Surface>
+          </fieldset>
+        </Box>
+      );
+
       const DiscreteDemo = () => (
         <div className="demo-section">
           <Heading id="discrete">Discrete</Heading>
 
+          <Heading level={3} id="variant-discrete">
+            Variant — discrete
+          </Heading>
           <fieldset>
-            <legend>
-              variant="discrete" — blends into the surface until focused
-            </legend>
-            <Box padding="l" backgroundColor="#e9ecef" borderRadius="8">
-              <Box flex spacing="s">
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  variant="discrete"
-                  borderRadius="6"
-                  padding="8"
-                />
-                <Input
-                  type="search"
-                  defaultValue="Hello world"
-                  placeholder="Search..."
-                  variant="discrete"
-                  borderRadius="6"
-                  padding="8"
-                />
-              </Box>
-            </Box>
+            <legend>Regular vs discrete</legend>
+            <Surface>
+              <Input type="search" placeholder="Search..." />
+              <Input type="search" placeholder="Search..." variant="discrete" />
+            </Surface>
           </fieldset>
-
           <fieldset>
-            <legend>
-              variant="discrete" + backgroundColor — grey at rest, back to the
-              surface while focused
-            </legend>
+            <legend>discrete — states</legend>
+            <VariantStates variant="discrete" />
+          </fieldset>
+          <fieldset>
+            <legend>discrete + backgroundColor</legend>
             <Box flex spacing="s">
               <Input
                 type="search"
                 placeholder="Search..."
                 variant="discrete"
                 backgroundColor="#e9ecef"
-                borderRadius="6"
-                padding="8"
               />
               <Input
                 type="search"
@@ -274,33 +350,34 @@
                 placeholder="Search..."
                 variant="discrete"
                 backgroundColor="#e9ecef"
-                borderRadius="6"
-                padding="8"
+              />
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant="discrete"
+                backgroundColor="#e9ecef"
+                pseudoState={{ ":focus": true }}
               />
             </Box>
           </fieldset>
 
+          <Heading level={3} id="variant-discrete-border">
+            Variant — discrete-border
+          </Heading>
           <fieldset>
-            <legend>backgroundColor="transparent" — border stays</legend>
-            <Box padding="l" backgroundColor="#e9ecef" borderRadius="8">
-              <Box flex spacing="s">
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  backgroundColor="transparent"
-                  borderRadius="6"
-                  padding="8"
-                />
-                <Input
-                  type="search"
-                  defaultValue="Hello world"
-                  placeholder="Search..."
-                  backgroundColor="transparent"
-                  borderRadius="6"
-                  padding="8"
-                />
-              </Box>
-            </Box>
+            <legend>Regular vs discrete-border</legend>
+            <Surface>
+              <Input type="search" placeholder="Search..." />
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant="discrete-border"
+              />
+            </Surface>
+          </fieldset>
+          <fieldset>
+            <legend>discrete-border — states</legend>
+            <VariantStates variant="discrete-border" />
           </fieldset>
         </div>
       );
