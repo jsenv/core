@@ -5356,7 +5356,7 @@ const stateSignal = (defaultValue, options = {}) => {
     const existingEntry = globalSignalRegistry.get(signalIdString);
     {
       throw new Error(
-        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()})`,
+        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()}). If this is the same stateSignal() call site running twice, the module was evaluated twice — check the network tab for the same file requested both bare and with "?hot=".`,
       );
     }
   }
@@ -33946,10 +33946,13 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
         black
       );
       /* Readonly */
+      /* Fading toward the surface, not toward white: "washed out" means
+         closer to the paper behind the button, whatever color that paper is
+         (white here IS the surface only in the light theme). */
       --button-border-color-readonly: color-mix(
         in srgb,
         var(--button-border-color) 30%,
-        white
+        var(--navi-surface-color)
       );
       --button-background-color-readonly: var(--button-background-color);
       --button-color-readonly: color-mix(
@@ -43668,6 +43671,10 @@ const lengthValue = value => typeof value === "number" ? `${value}px` : value;
  *
  *   getTrackedItemByIndex(index): synchronous O(1) lookup of a visible item by
  *   its visible rank. Returns undefined when index is out of range.
+ *
+ *   peekItems(): the items as they stand right now, without waiting for the
+ *   deferred notification — what a sibling rendering after the items must read
+ *   to paint them in the same commit.
  */
 
 const useItemTracker = ({ onChange } = {}) => {
@@ -43770,7 +43777,8 @@ const createItemTracker = (onChange) => {
         visibleItemsSignal.value = visibleItems;
         someChange = true;
       }
-      const noMatchCountModified = noMatchCountSignal.peek() !== newNoMatchCount;
+      const noMatchCountModified =
+        noMatchCountSignal.peek() !== newNoMatchCount;
       if (noMatchCountModified) {
         noMatchCountSignal.value = newNoMatchCount;
         someChange = true;
@@ -43964,9 +43972,32 @@ const createItemTracker = (onChange) => {
     return registrations.get(key);
   };
 
+  // The items as they stand right now, notification pending or not — same
+  // content as itemsSignal, minus the wait.
+  //
+  // Items register during their own render, while the signal is only updated
+  // on a deferred microtask (see notify): a sibling rendering after them would
+  // otherwise paint from an empty list and correct itself a frame later. That
+  // frame is visible whenever the painted size feeds a layout decision — a
+  // dialog sizing itself on its content measures the empty version and shifts
+  // once the real one lands. Reading this instead makes the first paint the
+  // right one. Callers must still subscribe to itemsSignal to re-render on
+  // LATER changes; this is the value to display, not the notification.
+  const peekItems = () => {
+    if (!notifyScheduled) {
+      return itemsSignal.peek();
+    }
+    const items = [];
+    for (const key of allOrderedKeys) {
+      items.push(allRegistrations.get(key));
+    }
+    return items;
+  };
+
   return {
     useTrackItem,
     getTrackedItemByIndex,
+    peekItems,
     itemsSignal,
     visibleItemsSignal,
     countSignal,
@@ -50733,12 +50764,16 @@ const css$k = /* css */`
        as rows scroll under the pointer. */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    /* Rendering virtualization: only the rows within each wheel's own viewport
-       are painted; the rest (clipped by the viewport's overflow) are skipped.
-       The box is still laid out (fixed main-axis size below), so offsets, snap
-       and the wrap math are unaffected — this cuts paint/compositing cost so a
-       wheel with many values (or a page full of wheels) scrolls smoothly. */
-    content-visibility: auto;
+    /* NO content-visibility here, ever. content-visibility: auto was tried
+       (to skip painting clipped rows) and it breaks the first opening of any
+       popup holding a wheel: rows born inside a closed dialog are "skipped"
+       with no last-remembered size, so they measure as empty (padding-only) on
+       the open's own layout — the dialog positions itself against that width
+       and visibly slides once the real width lands. The un-skip only happens
+       at the next update-the-rendering step: no forced reflow can read the
+       true size any earlier, making the bug unfixable from the dialog side.
+       There is also nothing left to win: the window renders only
+       visibleCount + 2 recycled rows, all in or against the viewport. */
   }
 
   /* Orientation-specific sizing/layout. The mask worn by the base layer: the
@@ -51706,23 +51741,16 @@ function WheelUI(props) {
   const trackedItems = tracker.itemsSignal.value;
   const trackedItemsRef = useRef(trackedItems);
   trackedItemsRef.current = trackedItems;
-  const itemCount = trackedItems.length;
 
   // Virtualization: render only visibleCount + 2 rows (one buffer each side to
   // cover the partial rows a scroll reveals + a re-render's one-frame lag) and
-  // recycle them, filling each from trackedItems. `centerRowSignal` holds the row
-  // currently at the center (round(pos / itemSize)); it changes only when the
-  // wheel crosses a row (not every frame), so the window re-renders on demand, not
-  // per frame. WheelWindow derives its top slot (base) from that row and its own
-  // windowSize — so a windowSize change (items still registering) recomputes base
-  // instead of leaving the top rows unrendered. The per-frame transform is
-  // imperative (--wheel-offset); renderedBaseRef mirrors the base the DOM shows so
-  // the transform stays consistent with it.
-  // visibleCount + 2, but never more rows than there are values.
-  let windowSize = visibleCount + 2;
-  if (windowSize > itemCount) {
-    windowSize = itemCount;
-  }
+  // recycle them. `centerRowSignal` holds the row currently at the center
+  // (round(pos / itemSize)); it changes only when the wheel crosses a row (not
+  // every frame), so the window re-renders on demand, not per frame. WheelWindow
+  // owns both its size and its top slot (base), derived from that row and from the
+  // items it reads off the tracker itself — see its own comment. The per-frame
+  // transform is imperative (--wheel-offset); renderedBaseRef mirrors the base the
+  // DOM shows so the transform stays consistent with it.
   const centerRowSignal = useSignal(0);
   const renderedBaseRef = useRef(0);
   // Row size in px, measured once from a rendered slot (rows are uniform).
@@ -52426,8 +52454,8 @@ function WheelUI(props) {
           className: "navi_wheel_list",
           children: jsx(WheelWindow, {
             centerRowSignal: centerRowSignal,
-            windowSize: windowSize,
-            trackedItems: trackedItems,
+            visibleCount: visibleCount,
+            tracker: tracker,
             isLoop: isLoop,
             onBaseCommit: commitRenderedBase
           })
@@ -52440,8 +52468,8 @@ function WheelUI(props) {
           className: "navi_wheel_list",
           children: jsx(WheelWindow, {
             centerRowSignal: centerRowSignal,
-            windowSize: windowSize,
-            trackedItems: trackedItems,
+            visibleCount: visibleCount,
+            tracker: tracker,
             isLoop: isLoop
           })
         })
@@ -52458,21 +52486,38 @@ const WHEEL_PSEUDO_CLASSES = [":focus-within", ":focus-visible", ":read-only", "
 
 // The recycled window: a fixed set of `windowSize` <li> slots (one per visible
 // row + 2 buffer), keyed by slot position so each DOM node is reused and only its
-// content re-renders. `base` (the top slot's value index) is derived here from the
-// center row + windowSize — computing it here, not upstream, means a windowSize
-// change (items still registering) recomputes base correctly. Each slot shows
-// trackedItems[base + slot] (wrapped when looping). It reads centerRowSignal, so
-// it re-renders ONLY when the wheel crosses a row, not every frame — the per-frame
-// motion is the imperative transform in applyOffset. On each new base it calls
-// onBaseCommit so the transform re-syncs to the freshly rendered rows same-frame.
+// content re-renders. `base` (the top slot's value index) and windowSize are both
+// derived here rather than upstream, from the items read straight off the tracker:
+// this component renders right after the Wheel.Item children, which register
+// during their own render, so it can draw the real rows in the very first commit.
+// Taking them from the parent instead would mean drawing an empty wheel first (the
+// parent renders before its children, and the tracker's signal only lands on a
+// microtask) — a wheel with no width, which is enough to misplace whatever sizes
+// itself on it, e.g. a dialog centered on its content.
+// Each slot shows items[base + slot] (wrapped when looping). It reads
+// centerRowSignal, so it re-renders ONLY when the wheel crosses a row, not every
+// frame — the per-frame motion is the imperative transform in applyOffset. On each
+// new base it calls onBaseCommit so the transform re-syncs to the freshly rendered
+// rows same-frame.
 const WheelWindow = ({
   centerRowSignal,
-  windowSize,
-  trackedItems,
+  visibleCount,
+  tracker,
   isLoop,
   onBaseCommit
 }) => {
+  // Subscribing is what re-renders this window when items are added or removed
+  // later; what to draw right now is read synchronously below.
+  // eslint-disable-next-line no-unused-expressions
+  tracker.itemsSignal.value;
+  const trackedItems = tracker.peekItems();
   const count = trackedItems.length;
+  // visibleCount + 2 (one buffer row each side), but never more rows than there
+  // are values.
+  let windowSize = visibleCount + 2;
+  if (windowSize > count) {
+    windowSize = count;
+  }
   let base = centerRowSignal.value - Math.floor(windowSize / 2);
   // Non-loop: keep the window inside the value range so every slot maps to a real
   // value; the transform then leaves the blank runway above the first / below the
@@ -57972,9 +58017,9 @@ const css$2 = /* css */`
     .navi_card_layout {
       --layout-margin: 30px;
       --layout-padding: 20px;
-      --layout-background: white;
+      --layout-background: var(--navi-surface-color);
       --layout-border-width: 2px;
-      --layout-border-color: lightgrey;
+      --layout-border-color: var(--navi-popup-border-color);
       --layout-border-radius: 10px;
       --layout-min-width: 300px;
       --layout-min-height: auto;
@@ -58093,7 +58138,9 @@ installImportMetaCssBuild(import.meta);const css$1 = /* css */`
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
-      --layout-background: white;
+      /* The page's own paper: the shared surface token, so a dark theme gets a
+         dark page without every screen overriding it. */
+      --layout-background: var(--navi-surface-color);
     }
   }
 
@@ -58300,14 +58347,17 @@ const css = /* css */`
       z-index: 1;
       background-color: var(--navi-popup-background-color);
     }
+    /* The separator token, not the popup border: these lines split two
+       regions of the panel's own surface (the head/foot from what scrolls
+       under them), they are not the panel's edge. */
     .navi_side_panel_head {
       top: 0;
-      border-bottom: 1px solid var(--navi-popup-border-color);
+      border-bottom: 1px solid var(--navi-separator-color-default);
     }
     .navi_side_panel_foot {
       bottom: 0;
       padding: 12px 16px;
-      border-top: 1px solid var(--navi-popup-border-color);
+      border-top: 1px solid var(--navi-separator-color-default);
     }
   }
 `;
