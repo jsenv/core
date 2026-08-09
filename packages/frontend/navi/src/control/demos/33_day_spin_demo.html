@@ -55,6 +55,7 @@
         Link,
         Text,
         NaviDebug,
+        Picker,
         route,
         setupRoutes,
         stateSignal,
@@ -180,6 +181,28 @@
             </Variant>
             <Variant caption='width="300px"'>
               <DaySpin defaultValue={TODAY} width="300px" />
+            </Variant>
+          </Box>
+
+          <Heading level={3} id="expand-x">
+            expandX
+          </Heading>
+          <p class="desc">
+            Dans un conteneur de 250px (en pointillés) : le spin prend la place
+            qui reste, le voisin garde sa taille naturelle.
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="sans expandX">
+              <Box flex spacing="m" width="250px" border="2px dashed #94a3b8">
+                <DaySpin defaultValue={TODAY} />
+                <Picker type="time" defaultValue="07:00" />
+              </Box>
+            </Variant>
+            <Variant caption="expandX">
+              <Box flex spacing="m" width="250px" border="2px dashed #94a3b8">
+                <DaySpin defaultValue={TODAY} expandX />
+                <Picker type="time" defaultValue="07:00" />
+              </Box>
             </Variant>
           </Box>
 
