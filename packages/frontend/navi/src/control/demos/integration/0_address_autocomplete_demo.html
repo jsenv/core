@@ -31,8 +31,10 @@
     <h1>Adresse avec autocomplete</h1>
     <p class="intro">
       On tape, l'API adresse.data.gouv.fr suggère; choisir une suggestion
-      remplit les composants structurés en dessous. Une adresse tapée sans
-      passer par une suggestion est découpée au mieux.
+      remplit des champs cachés (street_number, street_type, street_name,
+      postal_code, city) que le formulaire envoie — visibles dans le backend
+      simulé à l'envoi. Une adresse tapée sans passer par une suggestion est
+      découpée au mieux.
     </p>
     <div id="app"></div>
 
@@ -48,6 +50,7 @@
         Input,
         Label,
         List,
+        Popover,
         Text,
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
@@ -188,110 +191,72 @@
         };
 
         return (
-          <Box flex="y" spacing="m">
-            <Field flex="y" spacingWithControl="s">
-              <Label>Adresse</Label>
-              <Input
-                id={id}
-                type="search"
-                navi-list={`${id}_suggestions`}
-                placeholder="12 rue de la Paix, Antibes"
-                signal={textSignal}
-                action={searchAddress}
-                actionDebounce={300}
-                autoComplete="off"
-                borderRadius="s"
-                paddingX="s"
-                paddingY="s"
+          <Field flex="y" spacingWithControl="s" alignX="start">
+            <Label>Adresse</Label>
+            <Input
+              id={id}
+              type="search"
+              navi-list={`${id}_suggestions`}
+              placeholder="12 rue de la Paix, Antibes"
+              signal={textSignal}
+              action={searchAddress}
+              actionDebounce={300}
+              autoComplete="off"
+              borderRadius="s"
+              paddingX="s"
+              paddingY="s"
+              width="320px"
+            />
+            {/* anchor + minWidth="var(--anchor-width)": le popover est posé
+                sous l'input et fait au moins sa largeur */}
+            <Popover
+              anchor={id}
+              open={suggestions.length > 0}
+              minWidth="var(--anchor-width)"
+              autoFocus={false}
+            >
+              <List
+                selectable
+                id={`${id}_suggestions`}
+                uiAction={pickSuggestion}
+                separator
                 expandX
-              />
-              {suggestions.length > 0 && (
-                <List
-                  selectable
-                  id={`${id}_suggestions`}
-                  uiAction={pickSuggestion}
-                  border="1px solid #eee"
-                  borderRadius="s"
-                  separator
-                >
-                  {suggestions.map((feature, index) => (
-                    <List.Item
-                      selectable
-                      key={feature.properties.id || index}
-                      id={`${id}_suggestion_${index}`}
-                      index={index}
-                      value={feature.properties.id}
-                      padding="s"
-                    >
-                      <Box flex="y">
-                        <Text size="m">{feature.properties.label}</Text>
-                        {feature.properties.context && (
-                          <Text size="xs" color="secondary">
-                            {feature.properties.context}
-                          </Text>
-                        )}
-                      </Box>
-                    </List.Item>
-                  ))}
-                </List>
-              )}
-            </Field>
+              >
+                {suggestions.map((feature, index) => (
+                  <List.Item
+                    selectable
+                    key={feature.properties.id || index}
+                    id={`${id}_suggestion_${index}`}
+                    index={index}
+                    value={feature.properties.id}
+                    padding="s"
+                  >
+                    <Box flex="y">
+                      <Text size="m">{feature.properties.label}</Text>
+                      {feature.properties.context && (
+                        <Text size="xs" color="secondary">
+                          {feature.properties.context}
+                        </Text>
+                      )}
+                    </Box>
+                  </List.Item>
+                ))}
+              </List>
+            </Popover>
 
-            {/* Éditables: le découpage au mieux est une proposition, l'utilisateur
-                peut corriger — et c'est ce que le formulaire enverra */}
-            <Box flex="x" spacing="s" flexWrap>
-              <ComponentField
-                label="N°"
-                name="street_number"
-                signal={componentSignals.street_number}
-                width="60px"
+            {/* Les composants structurés ne se voient pas: ce sont des champs
+                cachés du formulaire, qui les envoie avec le reste */}
+            {Object.keys(componentSignals).map((name) => (
+              <Input
+                key={name}
+                type="hidden"
+                name={name}
+                signal={componentSignals[name]}
               />
-              <ComponentField
-                label="Type de voie"
-                name="street_type"
-                signal={componentSignals.street_type}
-                width="110px"
-              />
-              <ComponentField
-                label="Nom de voie"
-                name="street_name"
-                signal={componentSignals.street_name}
-                width="180px"
-              />
-              <ComponentField
-                label="Code postal"
-                name="postal_code"
-                signal={componentSignals.postal_code}
-                width="90px"
-              />
-              <ComponentField
-                label="Ville"
-                name="city"
-                signal={componentSignals.city}
-                width="140px"
-              />
-            </Box>
-          </Box>
+            ))}
+          </Field>
         );
       };
-
-      const ComponentField = ({ label, name, signal, width }) => (
-        <Field flex="y" spacingWithControl="xs">
-          <Label>
-            <Text size="xs" color="secondary">
-              {label}
-            </Text>
-          </Label>
-          <Input
-            name={name}
-            signal={signal}
-            borderRadius="s"
-            paddingX="s"
-            paddingY="s"
-            width={width}
-          />
-        </Field>
-      );
 
       const App = () => (
         <FakeBackend>
