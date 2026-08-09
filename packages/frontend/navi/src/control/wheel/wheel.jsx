@@ -750,7 +750,11 @@ const useWheelInteractions = ({
       if (vp.contains(documentWheelEvent.target)) {
         return; // on the scroll surface → its own onWheel handles it
       }
-      documentWheelEvent.preventDefault();
+      if (documentWheelEvent.cancelable) {
+        // cancelable=false during an inertial scroll the browser already owns;
+        // preventDefault would be ignored with an intervention warning.
+        documentWheelEvent.preventDefault();
+      }
       keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
     };
     const stopClaimingGesture = () => {
@@ -1066,7 +1070,11 @@ const useWheelInteractions = ({
     // preventing touchstart has wider side effects. Requires a non-passive
     // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
     const onTouchMove = (e) => {
-      if (drag) {
+      // cancelable=false when the touch landed while a scroll was already in
+      // progress (e.g. the page still coasting from a fling): the browser owns
+      // that scroll, preventDefault would be a no-op and Chrome logs an
+      // intervention warning for the attempt.
+      if (drag && e.cancelable) {
         e.preventDefault();
       }
     };
