@@ -2,12 +2,12 @@
  * AI reading this file: read ../docs/AI_INSTRUCTIONS.md for context on
  * using @jsenv/navi as intended.
  */
-import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal } from "./jsenv_navi_side_effects.js";
+import { installImportMetaCssBuild, windowHeightSignal, windowWidthSignal, visualViewportHeightSignal, visualViewportWidthSignal, coarsePointerSignal } from "./jsenv_navi_side_effects.js";
 import { isValidElement, createContext, h, toChildArray, render, Fragment, cloneElement } from "preact";
 import { useErrorBoundary, useLayoutEffect, useEffect, useContext, useMemo, useRef, useState, useCallback, useId } from "preact/hooks";
 import { jsxs, jsx, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { signal, effect, computed, batch, useSignal } from "@preact/signals";
-import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, activeElementSignal, initFocusGroup, elementIsFocusable, resolveOklchLightness, contrastColor, parsePositionArea, getPositionedParent, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { createIterableWeakSet, createEventGroupLogger, normalizeStyle, mergeOneStyle, getPositionedParent, createPubSub, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, createGroupTransitionController, getElementSignature, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, dispatchCustomEvent, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, measureLongestVisualLineWidth, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, findBefore, findAfter, resolveCSSSize, hasCSSSizeUnit, activeElementSignal, initFocusGroup, elementIsFocusable, resolveOklchLightness, contrastColor, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { prefixFirstAndIndentRemainingLines } from "@jsenv/humanize";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
@@ -76,7 +76,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$S = /* css */`
+installImportMetaCssBuild(import.meta);const css$U = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -101,7 +101,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -6448,6 +6448,7 @@ const OUTER_PROPS = {
   // not really related to flow but should be on the container element if any
   pointerEvents: PASS_THROUGH,
   viewTransitionName: PASS_THROUGH,
+  viewTransitionClass: PASS_THROUGH,
 };
 const INNER_PROPS = {
   // expanded into longhands for the same reason as "margin" above: the
@@ -7103,10 +7104,39 @@ const resolveViewportLength = (size) => {
   return (parseFloat(amount) / 100) * VIEWPORT_UNIT_SIGNALS[unit].value;
 };
 
+// "3cqw"/"2cqh" — a share of the container the given element lives in, the way
+// vvw/vvh are a share of the viewport. The caller passes the element, not the
+// container: which box actually contains it is a question with one answer
+// (getPositionedParent), and asking every caller to answer it themselves is how
+// two of them end up disagreeing. Resolved here rather than left to CSS because
+// a caller asking for a number (a placement, a slot) cannot wait for the
+// cascade, and a container query unit means nothing to getComputedStyle.
+const CONTAINER_LENGTH_REGEX = /^(-?[0-9.]+)cq([wh])$/;
+const resolveContainerLength = (size, element) => {
+  if (typeof size !== "string") {
+    return null;
+  }
+  const match = CONTAINER_LENGTH_REGEX.exec(size.trim());
+  if (!match) {
+    return null;
+  }
+  const [, amount, axis] = match;
+  const container = element
+    ? getPositionedParent(element)
+    : document.documentElement;
+  const containerSize =
+    axis === "w" ? container.clientWidth : container.clientHeight;
+  return (parseFloat(amount) / 100) * containerSize;
+};
+
 const resolveSpacingSize = (size, element, property = "padding") => {
   const viewportLength = resolveViewportLength(size);
   if (viewportLength !== null) {
     return viewportLength;
+  }
+  const containerLength = resolveContainerLength(size, element);
+  if (containerLength !== null) {
+    return containerLength;
   }
   return normalizeStyle(SIZE_MAP[size] || size, property, "js", element);
 };
@@ -7726,9 +7756,19 @@ const dispatchRequestResetUIState = (element, e) => {
     event: e,
   });
 };
-const getUIStateFromElement = (el) => {
+/**
+ * @param {Element} el
+ * @param {{ own?: boolean }} [options] `own`: what the element holds BY ITSELF.
+ *   Only a button ever answers differently — one with no value of its own
+ *   inherits the value of the control around it, which is what makes
+ *   `--navi-send` on a form's button be about that form. Something asking what
+ *   THIS element says (a travel command reading what the travel is about) wants
+ *   the own value and would otherwise be handed the surrounding control's.
+ */
+const getUIStateFromElement = (el, { own } = {}) => {
   let uiState;
   dispatchInternalCustomEvent(el, "navi_get_ui_state", {
+    own,
     respondWith: (v) => {
       uiState = v;
     },
@@ -8007,26 +8047,107 @@ definePseudoClass(":active", {
 // here and in control_hooks.jsx) can read it.
 let keyboardNavigationUsed = false;
 
-// Whether `el` should be treated as :focus-visible. Normally the native
-// :focus-visible match — but a control marked data-prevent-eager-focus-visible
-// (a button-like trigger whose native :focus-visible matches too eagerly: a
-// typed-into <input> on mouse focus, or a <div>/spinbutton focused
-// programmatically by a mouse-driven picker open) only counts while the current
-// modality is keyboard. So a purely mouse interaction never reveals its ring,
-// like a plain <button>. Use this instead of a bare el.matches(":focus-visible")
-// wherever focus-visible is evaluated.
+// HOW FOCUS-VISIBLE IS DECIDED (the details behind isMatchingFocusVisible)
+//
+// Two rules, depending on what `el` is:
+//
+// 1. An EDITABLE target (text-ish input, textarea, contenteditable — anything
+//    whose whole point is keyboard input, see isEditableTarget) shows its ring
+//    whenever it holds the focus, however the focus arrived — mouse,
+//    programmatic, even a focus({ focusVisible: false }). Being focused, for
+//    such a field, means being about to type, and that is what the ring
+//    announces. Its check is on :focus rather than :focus-visible on purpose:
+//    the native :focus-visible obeys the focusVisible option, which callers
+//    set from the modality without knowing what they are focusing.
+//
+// 2. Anything else needs BOTH the native :focus-visible match AND the current
+//    modality being keyboard (`keyboardNavigationUsed`).
+//
+//    The native match alone cannot be trusted, because we routinely take the
+//    pointer out of the browser's hands: a picker opens on mousedown and calls
+//    preventDefault() so the browser does not move focus itself (see
+//    picker_custom.jsx). The browser therefore never registers that a pointer
+//    was what moved focus, and whatever focus-visible state the previous
+//    keyboard interaction left behind stays true — even across the
+//    programmatic focus({ focusVisible: false }) that follows. Close a picker
+//    with Escape (ring on the trigger, rightly) and click it open again: the
+//    popup's own focusable would come up ringed, from a mouse press.
+//
+//    `keyboardNavigationUsed` has no such blind spot — it is set by navigation
+//    keydowns and cleared by pointerdown, whatever anyone prevents afterwards
+//    — so it is the authority for everything rule 1 does not cover.
+//
+// Ring INHERITANCE (a controlled element ringing because its aria-controls
+// controller is focused) stays gated on the keyboard modality even for an
+// editable controller — see hasIndirectFocus: propagating a ring promises
+// keyboard shortcuts will drive the controlled element, a promise that only
+// holds once a physical keyboard has actually been used.
+/**
+ * Whether `el` should currently show a focus ring — the enriched
+ * :focus-visible behind every [data-focus-visible] navi renders.
+ * Use this instead of a bare el.matches(":focus-visible") wherever
+ * focus-visible is evaluated; the comment above details the rules.
+ * @param {Element} el
+ * @returns {boolean}
+ */
 const isMatchingFocusVisible = (el) => {
+  if (isEditableTarget(el)) {
+    return el.matches(":focus");
+  }
   if (!el.matches(":focus-visible")) {
     return false;
   }
-  if (
-    el.hasAttribute("data-prevent-eager-focus-visible") &&
-    !keyboardNavigationUsed
-  ) {
+  if (!keyboardNavigationUsed) {
     return false;
   }
   return true;
 };
+
+// Elements that invite keyboard input: focusing one — even with the mouse —
+// means the user is about to type, so they always warrant a visible focus.
+// Also used to ignore the Space key as a navigation key while typing, and by
+// programmatic focus (focus_transfer.js) to pass focusVisible: true so the
+// native :focus-visible agrees with the ring rule 1 above draws.
+const EDITABLE_INPUT_TYPE_SET = new Set([
+  "text",
+  "search",
+  "url",
+  "email",
+  "password",
+  "tel",
+  "number",
+  "date",
+  "time",
+  "datetime-local",
+  "month",
+  "week",
+]);
+const isEditableTarget = (target) => {
+  if (!target) {
+    return false;
+  }
+  const tag = target.tagName;
+  if (tag === "TEXTAREA") {
+    return !target.readOnly;
+  }
+  if (tag === "INPUT") {
+    if (!target.type || EDITABLE_INPUT_TYPE_SET.has(target.type)) {
+      return !target.readOnly;
+    }
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  return false;
+};
+
+// The current modality, for code deciding whether something it is about to
+// focus should show a ring — a slide arriving, a popup opening. The question is
+// "was the user on the keyboard when this was asked for", which is what this
+// flag says; the element that happens to hold the focus right now says nothing
+// about it (it may have been focused programmatically, ring or no ring, by the
+// travel before this one).
+const isKeyboardModality = () => keyboardNavigationUsed;
 
 {
   // We implement :focus and :focus-visible with enriched semantics:
@@ -8080,37 +8201,6 @@ const isMatchingFocusVisible = (el) => {
     " ",
     "Tab",
   ]);
-  const isEditableTarget = (target) => {
-    if (!target) {
-      return false;
-    }
-    const tag = target.tagName;
-    if (tag === "TEXTAREA") {
-      return true;
-    }
-    if (tag === "INPUT") {
-      const type = target.type;
-      if (
-        !type ||
-        type === "text" ||
-        type === "search" ||
-        type === "url" ||
-        type === "email" ||
-        type === "password" ||
-        type === "tel" ||
-        type === "number"
-      ) {
-        if (target.readOnly) {
-          return false;
-        }
-        return true;
-      }
-    }
-    if (target.isContentEditable) {
-      return true;
-    }
-    return false;
-  };
   document.addEventListener(
     "keydown",
     (e) => {
@@ -8159,13 +8249,19 @@ const isMatchingFocusVisible = (el) => {
   // element (aria-controls) has focus, or because el is a proxy whose target
   // is itself controlled by a focused element.
   const hasIndirectFocus = (el, { requireFocusVisible = false } = {}) => {
+    // No ring inheritance without a keyboard: an editable target draws its own
+    // ring on any focus (see isMatchingFocusVisible), but propagating that ring
+    // to a controlled element (aria-controls) is a promise that keyboard
+    // shortcuts will drive it — a promise that holds only once a physical
+    // keyboard has actually been used. On touch devices the flag stays false
+    // and a focused search input keeps its ring to itself.
     if (requireFocusVisible && !keyboardNavigationUsed) {
       return false;
     }
     // A controller/proxy counts as focused for inheritance via the same rule
     // used everywhere: :focus for plain inheritance, isMatchingFocusVisible for
-    // the focus-visible variant (so a marked, mouse-focused controller doesn't
-    // propagate an eager ring).
+    // the focus-visible variant (so a mouse-focused controller doesn't propagate
+    // a ring).
     const isFocusedTarget = (target) =>
       requireFocusVisible
         ? isMatchingFocusVisible(target)
@@ -8945,6 +9041,91 @@ installImportMetaCssBuild(import.meta);/**
  */
 const BoxForwardedPropsContext = createContext({});
 import.meta.css = [/* css */`
+  /* A scrolling area, and the three layout roles that live in one. Declared
+     here rather than in dialog.jsx/popover.jsx because it has nothing to do
+     with popups: anything that scrolls can want a title that stays put. Those
+     two just carry [data-scrollable] on their own root.
+
+     Two shapes:
+     - header/footer alone: the container itself scrolls and they stick to its
+       edges;
+     - a body as well: the body is the only thing that scrolls, so the other two
+       simply sit outside it and need no stickiness at all.
+
+     Padding belongs on the parts, not on the scrolling box: padding on a
+     scroller sits INSIDE the scrollbars, so the content ends up centered
+     between them — and a control flush against the edge of a scrolling area
+     overflows it (a focus outline is drawn outside the control it belongs to)
+     and raises a scrollbar of its own. */
+  [data-scrollable] {
+    overflow: var(--x-scrollable-overflow, auto);
+
+    &[data-scrollable-overflow="scroll"] {
+      --x-scrollable-overflow: scroll;
+    }
+
+    /* box-shadow rather than a border: it draws the separation without taking
+       part in the layout, so a header keeps the exact height its content asks
+       for and nothing shifts by a pixel when the line appears. */
+    /* The corners are the container's, not the part's: a header sitting at the
+       top of a rounded box has to follow that curve or it paints square over
+       it (a dark header in a rounded popup is where this shows). inherit and
+       not a value of its own, so whoever rounds the box rounds these too. */
+    > [data-header] {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      border-top-left-radius: inherit;
+      border-top-right-radius: inherit;
+      box-shadow: 0 1px 0 var(--navi-separator-color-default);
+    }
+    > [data-footer] {
+      position: sticky;
+      bottom: 0;
+      z-index: 1;
+      border-bottom-right-radius: inherit;
+      border-bottom-left-radius: inherit;
+      box-shadow: 0 -1px 0 var(--navi-separator-color-default);
+    }
+
+    &:has(> [data-body]) {
+      /* A column, declared here rather than expected from the caller: the three
+         parts only make sense stacked, and the body needs a flex context to be
+         told "take what is left" below. */
+      display: flex;
+      flex-direction: column;
+      /* the body is the only thing that scrolls */
+      --x-scrollable-overflow: hidden;
+
+      > [data-header],
+      > [data-footer] {
+        position: static;
+        z-index: unset;
+        flex-shrink: 0;
+      }
+
+      > [data-body] {
+        /* Shrinks when there is not enough room (and then scrolls), but never
+           grows: a short body leaves the footer right under it rather than
+           pushed to the bottom of a container it does not fill.
+           min-height: a flex child refuses to shrink below its content unless
+           told it may, and without that the body grows instead of scrolling */
+        min-height: 0;
+        flex: 0 1 auto;
+        /* Overflow makes it focusable via tab: apply the outline styles */
+        outline-width: var(--navi-focus-outline-width);
+        /* Outline must appear ON the body, not outside */
+        /* Because for instance when body is within dialog or slide with overflow: hidden it would not be visible */
+        outline-offset: calc(-1 * var(--navi-focus-outline-width));
+        overflow: auto;
+
+        &:focus-visible {
+          outline-style: solid;
+        }
+      }
+    }
+  }
+
   @layer navi {
     /*
     When using square/circle/aspectRatio prop we expect box to respect the aspect ratio.
@@ -9066,7 +9247,7 @@ const PSEUDO_STATE_CHILD_PROP_SET = new Set(["tabIndex", "tabindex"]);
 const Box = props => {
   const {
     ref,
-    as = "div",
+    as: asProp = "div",
     baseClassName,
     className,
     baseStyle,
@@ -9097,9 +9278,55 @@ const Box = props => {
     preventInitialTransition,
     children,
     separator,
+    // Layout roles inside a scrolling container (a Dialog, a Popover): the
+    // header stays at the top and the footer at the bottom while the rest
+    // scrolls, or — when a body is present — the body is what scrolls and the
+    // two others simply sit outside it. Carried as data attributes because the
+    // container is the one that knows how to honour them, and it only has CSS
+    // to reach its children with. Same words as List.Item's own header/footer.
+    header,
+    footer,
+    body,
     ...rest
   } = props;
+  let as = asProp;
+
+  // A box that scrolls is what gives header/footer/body their meaning, and
+  // saying overflow="auto" is already saying it — no second prop for the same
+  // fact. Dialog and Popover get it the same way, by asking for that overflow.
+  const scrolls = ["overflow", "overflowX", "overflowY"].some(name => {
+    const value = rest[name];
+    return value === "auto" || value === "scroll";
+  });
+  // <header>/<footer> rather than a div: the role is exactly what those tags
+  // mean, and a screen reader gets it for free. The body stays a div — <main>
+  // means "the main content of the document", which a popup's body is not.
+  if (header && as === "div") {
+    as = "header";
+  }
+  if (footer && as === "div") {
+    as = "footer";
+  }
   const TagName = as;
+  if (scrolls) {
+    rest["data-scrollable"] = "";
+    if (rest.overflow === "auto" || rest.overflow === "scroll") {
+      // Handed over to CSS rather than kept as an inline style: a body inside
+      // makes the body the only thing that scrolls, and an inline overflow
+      // would win over that rule — see [data-scrollable] in this file's CSS.
+      rest["data-scrollable-overflow"] = rest.overflow;
+      rest.overflow = undefined;
+    }
+  }
+  if (header) {
+    rest["data-header"] = "";
+  }
+  if (footer) {
+    rest["data-footer"] = "";
+  }
+  if (body) {
+    rest["data-body"] = "";
+  }
   const defaultDisplay = getDefaultDisplay(TagName);
   // Read the parent flow early so we can use it when display="inherit" is requested.
   const parentBoxFlow = useContext(BoxFlowContext);
@@ -9555,17 +9782,62 @@ const shouldInjectSeparatorBetween = (left, right) => {
   return true;
 };
 
+/**
+ * View transitions, made safe to call.
+ *
+ * Calling this installs `document.startViewTransition` when the browser has
+ * none — so code that runs after it can take the API for granted — and returns
+ * the function to actually call, which does two things the raw API leaves to
+ * every caller:
+ *
+ * - It runs the update no matter what. A transition is about the animation,
+ *   never about the change.
+ * - It swallows the rejection a SKIPPED transition produces. Starting a
+ *   transition while another is running skips that other one, and a skipped
+ *   transition rejects its promises; nothing is waiting on them, so the
+ *   rejection surfaces as an unhandled error (a full error overlay in dev) for
+ *   something that is not an error at all — two updates close together is
+ *   normal in a list that is being edited.
+ *
+ * navi calls it from wherever it animates a DOM change itself (see list.jsx),
+ * which is why an application using navi finds the API already there.
+ *
+ *   const startViewTransition = ensureDocumentStartViewTransition();
+ *   startViewTransition(() => setItems(next));
+ */
 const ensureDocumentStartViewTransition = () => {
-  if (document.startViewTransition) {
+  if (!document.startViewTransition) {
+    document.startViewTransition = (updateCallback) => {
+      updateCallback();
+      return {
+        updateCallbackDone: Promise.resolve(),
+        ready: Promise.resolve(),
+        finished: Promise.resolve(),
+        skipTransition: () => {},
+      };
+    };
+  }
+  return startViewTransition;
+};
+
+const startViewTransition = (updateCallback) => {
+  const viewTransition = document.startViewTransition(updateCallback);
+  viewTransition.updateCallbackDone.catch(ignoreSkip);
+  viewTransition.ready.catch(ignoreSkip);
+  viewTransition.finished.catch(ignoreSkip);
+  return viewTransition;
+};
+
+// "Skipped" is an outcome, not a failure — anything else is still a real error
+// and must keep travelling.
+const ignoreSkip = (e) => {
+  if (e && e.name === "AbortError") {
     return;
   }
-  document.startViewTransition = (updateCallback) => {
-    updateCallback();
-    return {
-      ready: Promise.resolve(),
-      finished: Promise.resolve(),
-    };
-  };
+  if (e && typeof e.message === "string" && e.message.includes("skipped")) {
+    return;
+  }
+  throw e;
 };
 
 /**
@@ -14793,6 +15065,7 @@ const getHrefTargetInfo = (href) => {
 const setupBrowserIntegrationViaHistory = ({
   applyActions,
   applyRouting,
+  isRouting,
 }) => {
   const { history } = window;
 
@@ -14931,6 +15204,14 @@ const setupBrowserIntegrationViaHistory = ({
         return;
       }
       if (e.defaultPrevented) {
+        return;
+      }
+      // Nothing here declared a route, so there is nothing to route to: the
+      // page is a plain document and a link in it is a plain link. Taking it
+      // over anyway would push the url and then have nothing to show for it —
+      // the address bar moves and the page does not (see applyRouting's own
+      // "not called yet" branch, which is where that used to end up).
+      if (!isRouting()) {
         return;
       }
       const linkElement = e.target.closest("a");
@@ -15105,6 +15386,11 @@ const applyRouting = (
 const browserIntegration = setupBrowserIntegrationViaHistory({
   applyActions,
   applyRouting,
+  // Routes are declared by the consumer and registered through
+  // setOnAllRouteReady below, so "does this document route at all?" is only
+  // answerable once that has run — hence a function, read at click time rather
+  // than a value read at setup time.
+  isRouting: () => Boolean(updateRoutes),
 });
 
 setOnAllRouteReady((v) => {
@@ -16076,9 +16362,15 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$R = /* css */`
+const css$T = /* css */`
   @layer navi {
     .navi_callout {
+      /* A callout is parented to what it explains, so it inherits from it — and
+       an element that suppressed text selection (a list row, a drag source)
+       would make its own explanation unselectable. The message is text one
+       copies. */
+      user-select: text;
+
       --callout-success-color: #4caf50;
       --callout-info-color: #2196f3;
       --callout-warning-color: #ff9800;
@@ -16105,6 +16397,10 @@ const css$R = /* css */`
     inset: auto;
     top: 0;
     left: 0;
+    /* For some reason callout could end up behing elements when it's redisplayed in a dialog
+    (behind button relatively positioned in dialog footer while callout is appended into dialog body)
+    To ensure ti goes above we put a z-index: 1, I hope it won't bite use in the future */
+    z-index: 1;
     /* Callout styles */
     display: block;
     height: auto; /* User agent reset */
@@ -16286,7 +16582,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$R, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$T, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -16783,7 +17079,9 @@ const openCallout = (message, {
   addTeardown(() => {
     positioner.stop();
   });
-  callout.updatePosition = () => positioner.update();
+  // The content it just rendered changed its own size, so the check must not be
+  // deduped away on the grounds that the anchor did not move.
+  callout.updatePosition = () => positioner.update(new CustomEvent(ELEMENT_SIZE_CHANGE));
   return callout;
 };
 
@@ -18230,6 +18528,27 @@ naviI18n.addAll({
   },
 });
 
+// Spin messages — the ends of what one steps through, said without naming
+// what it is made of: the same words fit days, months, pages or sizes.
+naviI18n.addAll({
+  "spin.previous": {
+    en: "Previous",
+    fr: "Précédent",
+  },
+  "spin.next": {
+    en: "Next",
+    fr: "Suivant",
+  },
+  "spin.nothing_before": {
+    en: "No item before this one.",
+    fr: "Pas d'élément avant celui-ci.",
+  },
+  "spin.nothing_after": {
+    en: "No item after this one.",
+    fr: "Pas d'élément après celui-ci.",
+  },
+});
+
 // List messages — override any key to customize list messages
 naviI18n.addAll({
   "list.empty": {
@@ -18316,13 +18635,33 @@ naviI18n.addAll({
     fr: "Cette option n'est pas disponible.",
     en: "This option is not available.",
   },
+  "constraint.readonly.item": {
+    fr: "Cet élément n'est pas disponible.",
+    en: "This item is not available.",
+  },
   "constraint.readonly.default": {
     fr: "Cet élément est en lecture seule et ne peut pas être modifié.",
     en: "This element is read-only and cannot be modified.",
   },
+  "constraint.readonly.awaiting_change": {
+    fr: "Cette action attend une modification.",
+    en: "This action is waiting for a change.",
+  },
   "constraint.busy.button": {
     fr: "Cette action est en cours...",
     en: "This action is in progress...",
+  },
+  "constraint.busy.item": {
+    fr: "Cet élément est en cours de synchronisation.",
+    en: "This item is being synchronized.",
+  },
+  "constraint.busy.item.adding": {
+    fr: "Cet élément est en cours d'ajout.",
+    en: "This item is being added.",
+  },
+  "constraint.busy.item.removing": {
+    fr: "Cet élément est en cours de suppression.",
+    en: "This item is being removed.",
   },
   "constraint.busy.default": {
     fr: "Cet élément est occupé.",
@@ -20831,10 +21170,10 @@ const createControlValidation = (
       ...dynamicConstraintSet,
     ]);
     const elementSig = getElementSignature(controller.ref.current);
-    debugUIState(
-      event,
-      `check ${elementSig}: ${constraintSet.size} constraints`,
-    );
+    // Not logged: every control checks its constraints on every interaction and
+    // almost always passes, so this line alone was most of the debug output —
+    // and with devtools open, formatting it costs a frame. What matters is a
+    // constraint that FAILS, which says so below.
     validityInfoMap.clear();
     failedConstraintInfo = null;
     failingManagedControlValidity = null;
@@ -21008,10 +21347,8 @@ const createControlValidation = (
       if (ci) {
         ci.checkInteractivity({ event });
       }
-      debugUIState(
-        event,
-        `syncValidity ${elementSig}: no failing constraint -> close callout if any`,
-      );
+      // Same reason as the check above: "nothing was wrong" is the normal
+      // case and does not need saying.
       callout.removeOpenToken(VALIDATION_TOKEN, event);
     }
     // Propagate a silent validity update up the controller chain.
@@ -21201,7 +21538,18 @@ const useExecuteAction = (
       const [triggerAbort, addAbortCallback] = createPubSub();
       const [triggerError, addErrorCallback] = createPubSub();
       const [triggerComplete, addCompleteCallback] = createPubSub();
-      const addSideEffect = ({ abort, error, complete }) => {
+      // Either three callbacks, one per outcome, or a single one for "however
+      // this ends" — it receives `{ aborted, reason }`, `{ error }` or
+      // `{ data }`, so a caller that only needs to know the action settled
+      // (and whether it worked) does not have to register three.
+      const addSideEffect = (sideEffect) => {
+        if (typeof sideEffect === "function") {
+          addAbortCallback((reason) => sideEffect({ aborted: true, reason }));
+          addErrorCallback((error) => sideEffect({ error }));
+          addCompleteCallback((data) => sideEffect({ data }));
+          return;
+        }
+        const { abort, error, complete } = sideEffect;
         addAbortCallback(abort);
         addErrorCallback(error);
         addCompleteCallback(complete);
@@ -21295,10 +21643,16 @@ const useExecuteAction = (
 const BUSY_CONSTRAINT = {
   name: "busy",
   messageAttribute: "data-busy-message",
+  // True for as long as an action runs and false again right after, with
+  // nothing to re-check it in between: a title written from it would still be
+  // saying "this action is in progress" over a button that has been idle for
+  // minutes. The callout says it live while it lasts, which is where that
+  // message belongs (see control_interaction.js).
+  transient: true,
   // Unlike readonly/disabled, a busy element DOES block its parent from
   // submitting — the element is mid-operation and cannot safely participate.
   check: (field) => {
-    const isBusy = field.controlHostProps["aria-busy"] === "true";
+    const isBusy = isControlBusy(field);
     if (!isBusy) {
       return null;
     }
@@ -21311,6 +21665,32 @@ const BUSY_CONSTRAINT = {
   },
 };
 CONSTRAINT_ATTRIBUTE_SET.add("data-busy");
+
+// Asked source by source rather than off the rendered `aria-busy`, which
+// conflates them and is a frame behind: that attribute is written during
+// render, so it still says "true" for the whole tick in which an action
+// settles — and that tick is exactly when this gets asked (an action's own
+// completion side effect walking the surface around it: a popup deciding
+// whether it may finally close, a slide whether it may move on).
+//
+// The action's running state is a signal, so it is already right there. A
+// control busy only because the group above is running the action it asked for
+// has no state of its own to read — the group's answer IS its answer, so it
+// asks upward and inherits the same live reading.
+const isControlBusy = (field) => {
+  if (field.loadingFromOwnProp) {
+    return true;
+  }
+  const { boundAction } = field;
+  if (boundAction && boundAction.runningStateSignal.value === RUNNING) {
+    return true;
+  }
+  if (field.loadingFromParent) {
+    const parent = field.parentUIStateController;
+    return parent ? isControlBusy(parent) : false;
+  }
+  return false;
+};
 
 const DISABLED_CONSTRAINT = {
   name: "disabled",
@@ -21349,17 +21729,35 @@ const READONLY_CONSTRAINT = {
       return null;
     }
 
-    const isButton = field.controlType === "button";
-    const message = isButton
-      ? naviI18n("constraint.readonly.button")
-      : naviI18n("constraint.readonly.default");
     // A readonly element does not block its parent from submitting — mirrors
     // standard HTML form behaviour where readonly inputs are submitted as-is.
-    return { message, status: "info", ignoredByParents: true };
+    return {
+      message: readOnlyMessage(field),
+      status: "info",
+      ignoredByParents: true,
+    };
   },
 };
 // CONSTRAINT_ATTRIBUTE_SET.add("readOnly"); // not all control support this attr
 CONSTRAINT_ATTRIBUTE_SET.add("data-readonly");
+CONSTRAINT_ATTRIBUTE_SET.add("data-readonly-reason");
+
+const readOnlyMessage = (field) => {
+  // Read-only for a reason the control named itself. Only one so far: a send
+  // button held back by the form above it, which holds nothing new (see
+  // Button's own `readOnlyWhileFormUnchanged`) — what stops the press is not the
+  // button, it is the form still waiting for a change, so that is what it says.
+  // Read off the reason rather than off the form's state: a button read-only for
+  // its own reasons, inside a form that happens to be unchanged, is not waiting
+  // for anything.
+  if (field.controlHostProps["data-readonly-reason"] === "form-unchanged") {
+    return naviI18n("constraint.readonly.awaiting_change");
+  }
+  if (field.controlType === "button") {
+    return naviI18n("constraint.readonly.button");
+  }
+  return naviI18n("constraint.readonly.default");
+};
 
 /**
  * Interaction gate: decides whether a user interaction is allowed to proceed
@@ -21408,6 +21806,8 @@ const createControlInteraction = (
 ) => {
   let interactionFailedConstraintInfo = null;
   let failingManagedInteraction = null;
+  // The title this rule put on the element, if any (see checkInteractivity).
+  let titleWritten = null;
 
   const checkInteractivity = ({ event } = {}) => {
     interactionFailedConstraintInfo = null;
@@ -21458,12 +21858,35 @@ const createControlInteraction = (
       const element = controller.ref.current;
       if (element) {
         if (interactionFailedConstraintInfo) {
-          element.setAttribute(
-            "title",
-            interactionFailedConstraintInfo.message,
-          );
+          // Only what stays true: a title is written once and read whenever the
+          // pointer rests on the element, so a constraint that comes and goes
+          // on its own (busy, see its own `transient`) would leave it telling a
+          // story that ended — "this action is in progress" over a button that
+          // has been idle for minutes. Those say what they have to say through
+          // the callout, live, while it lasts.
+          if (!interactionFailedConstraintInfo.constraint?.transient) {
+            // The same message the callout would show, not the generated one:
+            // a control that says why in its own words (readOnlyMessage and
+            // friends) says it wherever the reason is read.
+            const { message } = getConstraintMessage(
+              controller,
+              interactionFailedConstraintInfo.constraint,
+              interactionFailedConstraintInfo.message,
+              {},
+            );
+            element.setAttribute("title", message);
+            // Remembered so it can be taken back below.
+            titleWritten = message;
+          }
+        } else if (titleWritten !== null) {
+          // Only what this rule wrote, and only if nothing has changed it since
+          // — a title from validation (which owns its own, see
+          // control_validation.js) or from anywhere else is not ours to remove.
+          if (element.getAttribute("title") === titleWritten) {
+            element.removeAttribute("title");
+          }
+          titleWritten = null;
         }
-        // Title removal is managed by controlValidation to avoid conflicts.
       }
     }
 
@@ -21647,6 +22070,62 @@ const dispatchRequestAction = (
   });
 };
 
+/**
+ * Dispatches an action and reports whether it outlived the dispatch.
+ *
+ * "start" is dispatched synchronously (see `use_execute_action.js`), so an
+ * action that has not settled by the time `dispatchAction` returns is
+ * asynchronous — which is the question anything waiting on a commit actually
+ * asks before acting on it: a dialog before closing, `--navi-send` before
+ * moving to the next slide.
+ *
+ * `whenSucceeded` registers what to do once it completes, and only then: an
+ * error or an abort leaves whatever the action left in front of the user
+ * (a validation message, an aborted state) instead.
+ *
+ * @param {Element} element - The element the action is dispatched on.
+ * @param {() => any} dispatchAction
+ * @returns {{ result: any, isRunning: boolean, whenSucceeded: (callback: Function) => void }}
+ */
+const watchActionCompletion = (element, dispatchAction) => {
+  let running = false;
+  let onSuccess = null;
+  const onActionStart = (actionStartEvent) => {
+    running = true;
+    actionStartEvent.detail.addSideEffect(({ error, aborted }) => {
+      running = false;
+      if (error || aborted) {
+        return;
+      }
+      // A microtask later, not right here: this runs inside the `batch()` that
+      // settles the action (see actions.js), and a bound action mirrors its
+      // running state through a signal effect the batch defers — so the action
+      // still reads as running until the batch ends. What waits for a commit
+      // asks exactly that question next (the interaction gate, on the way to
+      // closing a popup), and must not be told the action is still going.
+      // Null for an action that settled before the caller ever asked to wait
+      // (a synchronous one): it goes out through the caller's own normal path.
+      queueMicrotask(() => {
+        onSuccess?.();
+      });
+    });
+  };
+  element.addEventListener("navi_action_start", onActionStart);
+  let result;
+  try {
+    result = dispatchAction();
+  } finally {
+    element.removeEventListener("navi_action_start", onActionStart);
+  }
+  return {
+    result,
+    isRunning: running,
+    whenSucceeded: (callback) => {
+      onSuccess = callback;
+    },
+  };
+};
+
 const tryActionAfterInteractionAllowed = (
   element,
   {
@@ -21701,6 +22180,16 @@ const tryActionAfterInteractionAllowed = (
   }
 
   if (action === "auto" || action?.isAction) {
+    // A control that commits gets the last word on whether this particular
+    // value is worth acting on — see Form's own `shouldRequestAction`, which
+    // is where "nothing changed since the last send" is decided. Everything
+    // before this still ran (the interaction gate, the constraints), and the
+    // caller is still told the send went through: what follows a send (a slide
+    // moving on, a popup closing) is about the user being done, not about
+    // whether there was anything to send.
+    if (controller?.shouldRequestAction?.(uiState) === false) {
+      return true;
+    }
     dispatchInternalCustomEvent(elementForAction, "navi_action_allowed", {
       event,
       requester,
@@ -21734,16 +22223,20 @@ const tryActionAfterInteractionAllowed = (
  *   - Inside an open ancestor → runs on mount AND every subsequent open.
  *
  * The callback's second argument is always a `navi_displayed` CustomEvent,
- * with `detail: { ancestor, ancestorType }`:
+ * with `detail: { ancestor, ancestorType, becauseAncestorOpened }`:
  *   - No <dialog>/<details>/[popover]/[aria-expanded] ancestor at all →
  *     `{ ancestor: document, ancestorType: "document" }`.
  *   - Otherwise → `{ ancestor: <the matched element>, ancestorType: "dialog"
  *     | "popover" | "details" | "aria-expanded" }`.
- * Consumers that only care about a genuine top-level, no-ancestor mount
- * (e.g. use_auto_focus.js — an ancestor opening already has its own
- * transferFocus/openEffect placing focus, so re-running a per-element
- * autofocus for everything it reveals would fight that) can check
- * `event.detail.ancestorType === "document"`.
+ * `becauseAncestorOpened` distinguishes the two ways of coming on screen:
+ *   - true — the element was already mounted and the ancestor just opened,
+ *     revealing it along with everything else it holds. The opening has an
+ *     owner (the ancestor's own transferFocus/openEffect), and what it reveals
+ *     should defer to it — see use_auto_focus.js.
+ *   - false — the element was mounted just now, into a surface already on
+ *     screen (or into the plain document). Nothing else owns this appearance:
+ *     what the element says about itself (an autofocus, a measurement) is the
+ *     only word there is.
  *
  * Usage:
  *   useDisplayedLayoutEffect(ref, () => {
@@ -21768,7 +22261,7 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
     }
     const ancestor = closestOpenableAncestor(el);
     if (!ancestor) {
-      callbackRef.current(el, createDisplayedEvent(document));
+      callbackRef.current(el, createDisplayedEvent(document, false));
       return;
     }
     if (!isAncestorOpen(ancestor)) {
@@ -21776,7 +22269,7 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
       // below will fire once it opens.
       return;
     }
-    callbackRef.current(el, createDisplayedEvent(ancestor));
+    callbackRef.current(el, createDisplayedEvent(ancestor, false));
   }, deps);
 
   // Re-run every time the ancestor opens.
@@ -21794,16 +22287,17 @@ const useDisplayedLayoutEffect = (ref, callback, deps) => {
         return;
       }
       const lastEl = ref.current;
-      callbackRef.current(lastEl, createDisplayedEvent(ancestor));
+      callbackRef.current(lastEl, createDisplayedEvent(ancestor, true));
     });
   }, []);
 };
 
-const createDisplayedEvent = (ancestor) => {
+const createDisplayedEvent = (ancestor, becauseAncestorOpened) => {
   return new CustomEvent("navi_displayed", {
     detail: {
       ancestor,
       ancestorType: getAncestorOpenType(ancestor),
+      becauseAncestorOpened,
     },
   });
 };
@@ -21837,12 +22331,19 @@ const createDisplayedEvent = (ancestor) => {
  *
  * @param {import("preact/hooks").Ref<HTMLElement>} focusableElementRef
  *   Ref to the element to focus.
- * @param {boolean|"fallback"|"restore"} autoFocus
- *   When false the hook is a no-op. `"fallback"` claims focus only when nothing
- *   more specific already did. `"restore"` never claims focus on open; it only
- *   gets focus back from an ancestor that closed while it was focused (see
- *   focus_transfer.js) — typically a text input that must not pop the mobile
- *   keyboard open every time, but should stay where the user left it.
+ * @param {boolean|"last-resort"|"restore"} autoFocus
+ *   When false the hook is a no-op. The other values say WHEN this element is
+ *   the right place for the keyboard (the whole ladder lives in
+ *   findFocusTarget, see focus_transfer.js):
+ *   - `"last-resort"` — "not me, unless you have nothing else". Said by a
+ *     focusable that is a poor place to arrive (a picker's search box, a
+ *     panel's close button, a slide's chevron) and by a container about its own
+ *     contents (a dialog, a popover, a slide take the keyboard only when they
+ *     hold nothing that can).
+ *   - `"restore"` never claims focus on open; it only gets it back from an
+ *     ancestor that closed while it was focused — typically a text input that
+ *     must not pop the mobile keyboard open every time, but should stay where
+ *     the user left it.
  * @param {object} [options]
  * @param {boolean} [options.preventScroll]
  *   Passed as `preventScroll` to `element.focus()`. Defaults to true to suppress
@@ -21874,30 +22375,43 @@ const useAutoFocus = (
     if (!focusableElement) {
       return () => {};
     }
-    // Only autofocus when genuinely mounted directly on the document, or
-    // when *this* element is itself the expandable ancestor that just
-    // opened (e.g. Dialog's own self-targeting "fallback" autofocus below).
-    // Any other case means some *other* ancestor (popover, dialog, …) just
-    // opened and revealed this element as one of its descendants — that
-    // ancestor's own opening logic (transferFocus/openEffect) already
-    // placed focus, so we must not steal it back here.
-    const { ancestor, ancestorType } = e.detail;
+    // When an ancestor (popover, dialog, …) just OPENED and revealed this
+    // element among everything else it holds, the opening has an owner: that
+    // ancestor's own transferFocus/openEffect already placed focus, and a
+    // per-element autofocus must not steal it back. Mounting is the other way
+    // of appearing, and it is the element's own: mounted into a surface
+    // already on screen (a screen rebuilding itself around a new value, a row
+    // added to a visible list), nothing else speaks for it — an autofocus it
+    // declares is the only word there is, exactly like dialog content saying
+    // where the keyboard goes when the dialog's transfer looks for it.
+    const { ancestor, ancestorType, becauseAncestorOpened } = e.detail;
     const isSelfAncestor = ancestor === focusableElement;
-    if (ancestorType !== "document" && !isSelfAncestor) {
+    if (becauseAncestorOpened && !isSelfAncestor) {
+      return () => {};
+    }
+    if (autoFocus === "last-resort" && !isSelfAncestor) {
+      // "not me, unless you have nothing else" is a question only whoever hands
+      // out the focus can answer, and appearing in the document is nobody
+      // handing out anything: a page loading has no arrival to place, and a
+      // chevron or a search box saying this would take the keyboard from the
+      // document for no reason. The one case that IS an answer is a container
+      // saying it about itself as it opens — there the transfer already tried
+      // everything inside and came back empty.
       return () => {};
     }
     const activeElement = document.activeElement;
     if (
-      autoFocus === "fallback" &&
+      autoFocus === "last-resort" &&
       activeElement !== focusableElement &&
       focusableElement.contains(activeElement)
     ) {
-      // "fallback" only ever claims focus when nothing more specific
-      // already did. A descendant with its own real navi-autofocus (or one
-      // focused synchronously by transferFocus, see focus_transfer.js) has
-      // already run by the time this fires — Preact commits a child's own
-      // layout effects before its parent's, so this parent-level "fallback"
-      // effect would otherwise unconditionally steal focus back from it.
+      // "last-resort" said by a container: its contents come first, so it never
+      // claims focus when something inside it already has it. A descendant with
+      // its own real navi-autofocus (or one focused synchronously by
+      // transferFocus, see focus_transfer.js) has already run by the time this
+      // fires — Preact commits a child's own layout effects before its
+      // parent's, so this parent-level effect would otherwise unconditionally
+      // steal focus back from it.
       return () => {};
     }
     const focusDebugCall = `${getElementSignature(focusableElement)}.focus({ preventScroll: ${preventScroll} })`;
@@ -22016,7 +22530,8 @@ const triggerNaviCommand = (
   event,
   { optional, value } = {},
 ) => {
-  const naviCommand = NAVI_COMMANDS[command];
+  const naviCommand =
+    NAVI_COMMANDS[command] || NAVI_COMMANDS[commandName(command)];
   if (!naviCommand) {
     console.warn(`Unknown command "${command}"`);
     return false;
@@ -22029,7 +22544,10 @@ const triggerNaviCommand = (
     // attribute was present but target not found — already warned inside resolveExplicitTarget
     return false;
   }
-  const execute = naviCommand.commandHandler(element, event);
+  const execute = naviCommand.commandHandler(element, event, {
+    // Whatever followed the colon: "--navi-go-to-slide:edit" → "edit".
+    argument: command.includes(":") ? commandArgument(command) : undefined,
+  });
   if (!execute) {
     if (optional) {
       return false;
@@ -22117,6 +22635,18 @@ const resolveCommandProxySource = (element) => {
 const resolveClosestControlWithAction = (el) => {
   return findClosestControlWithAction(el);
 };
+// Both can enclose the send's source: a form inside a dialog is a control with
+// an action, inside an expandable. The nearer one owns the send — a button
+// inside that form means "submit this form", not "confirm the dialog around
+// it", and the same button placed directly in the dialog means the opposite.
+const resolveClosestSendTarget = (expandable, controlWithAction) => {
+  if (!expandable || !controlWithAction) {
+    return expandable || controlWithAction;
+  }
+  return expandable.contains(controlWithAction)
+    ? controlWithAction
+    : expandable;
+};
 
 const resolveCommandValue = (source, event) => {
   if (
@@ -22137,7 +22667,12 @@ const resolveCommandValue = (source, event) => {
     // wrong when the command needs to propagate the selected item's identity.
     return readControlValue(source);
   }
-  return getUIStateFromElement(source);
+  // What the SOURCE says, not what the control around it holds. A button with
+  // no value of its own inherits one from the control it sits in — right for
+  // `--navi-send` ("send what is around me"), wrong for a travel: a "+" button
+  // inside a picker would say the travel is about the entry that picker has
+  // selected, and the screen it opens would prefill a new entry with it.
+  return getUIStateFromElement(source, { own: true });
 };
 
 const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
@@ -22158,17 +22693,10 @@ const onNaviCommand = (e, { debugCommand = () => {} } = {}) => {
     `targeting`,
     commandTarget,
   );
-  // Time the command's synchronous work: it splits a slow commit (the value
-  // cascade/validation runs inside implementation) from a slow close/repaint
-  // (cheap here, cost lands after). Handy for the wheel-in-dialog "Définir feels
-  // frozen on mobile" case.
-  const start = performance.now();
-  const result = implementation();
-  debugCommand(
-    event,
-    `"${command}" implementation ran in ${Math.round(performance.now() - start)}ms`,
-  );
-  return result;
+  // Timed once, for the wheel-in-dialog "Définir feels frozen on mobile" case;
+  // the line is gone now that the answer is known — a command that runs in 1ms
+  // said nothing, and it said it on every single interaction.
+  return implementation();
 };
 
 const NAVI_COMMANDS = {};
@@ -22178,6 +22706,13 @@ const NAVI_COMMANDS = {};
 // - Returns undefined when no target can be found — this is a normal outcome for
 //   some commands (e.g. --navi-send when the source is outside any navi context).
 // - Returns { target, implementation } so dispatchNaviCommand can dispatch navi_command.
+// A command can carry an argument of its own, after a colon:
+// "--navi-go-to-slide:edit" is the go-to-slide command, told where to go. It is
+// part of the command because it says WHAT the command does — where a `value`
+// says what it is about, and a source needs to be able to say both.
+const commandName = (command) => command.split(":")[0];
+const commandArgument = (command) => command.slice(command.indexOf(":") + 1);
+
 const registerNaviCommand = (command, commandHandler) => {
   NAVI_COMMANDS[command] = {
     name: command,
@@ -22231,6 +22766,13 @@ registerNaviCommand("--navi-clear", (source, event) => {
     return undefined;
   }
   const fromInput = source.closest(`[navi-control="input"]`);
+  // A control that commits on an explicit send — a picker, whose list sends the
+  // moment a value is chosen — has nothing that would commit a clear: its
+  // action never runs on a ui state change. Left alone, the field goes empty
+  // while the caller still holds the value it gave, and renders it right back.
+  const fromSendOnlyControl = Boolean(
+    source.closest?.(`[navi-control=picker]`),
+  );
 
   return {
     target,
@@ -22239,7 +22781,16 @@ registerNaviCommand("--navi-clear", (source, event) => {
         event,
         name: "--navi-clear",
         prevented: () => event.preventDefault(),
-        allowed: () => dispatchRequestClearUIState(target, event),
+        allowed: () => {
+          dispatchRequestClearUIState(target, event);
+          if (fromSendOnlyControl) {
+            // After the clear, never before: the action is bound to the ui
+            // state signal, so this sends the value the control now holds.
+            triggerNaviCommand(source, "--navi-send", event, {
+              optional: true,
+            });
+          }
+        },
       });
 
       if (fromInput) ; else {
@@ -22268,15 +22819,66 @@ registerNaviCommand("--navi-reset", (source, event) => {
     },
   };
 });
+/**
+ * What a successful send does once the value is committed. The control says it
+ * (`command` on a Form, kept in the DOM as data-after-send), and when it says
+ * nothing the surface above it decides:
+ * - a slide: it is told the step is done (`--navi-done`) and decides for itself
+ *   what that means — what a finished step does to the walk is the slide's
+ *   business, not the form's;
+ * - an open popup: it closes. The popup was there for the duration of one
+ *   decision, and the send just made it. A picker already does this when the
+ *   send targets the popup itself (executeNaviDefine); a form inside one is the
+ *   same act, a level down;
+ * - the document: nothing. A form on a page stays where it is.
+ */
+// What follows a send that went through — and it is asked of the button that
+// sent before the form it sent, because a form with two submit buttons has two
+// answers: "save" stays, "delete" goes back to the list. Same shape as the
+// browser's own formaction/formmethod, and the same shape the action already
+// has (it is told which button requested it).
+const resolveAfterSend = (target, requester) => {
+  const askedForByRequester = requester?.getAttribute?.("data-after-send");
+  if (askedForByRequester) {
+    return askedForByRequester;
+  }
+  const askedFor = target.getAttribute?.("data-after-send");
+  if (askedFor) {
+    return askedFor;
+  }
+  // From above the target: a popup that IS the send target is handled on its
+  // own (see the aria-expanded branch below), and must not answer twice.
+  const surface = target.parentElement?.closest(
+    `[data-slide], [aria-expanded]`,
+  );
+  if (!surface) {
+    return undefined;
+  }
+  if (surface.hasAttribute("data-slide")) {
+    return "--navi-done";
+  }
+  if (surface.getAttribute("aria-expanded") === "true") {
+    return "--navi-close";
+  }
+  return undefined;
+};
+
 registerNaviCommand("--navi-send", (source, event) => {
+  const expandable = resolveClosestExpandable(source);
   const target =
     resolveExplicitTarget(source) ||
-    resolveClosestExpandable(source) ||
-    resolveClosestControlWithAction(source);
+    resolveClosestSendTarget(
+      expandable,
+      resolveClosestControlWithAction(source),
+    );
   if (!target) {
     return undefined;
   }
-
+  // What follows a send that went through, decided by where the control lives
+  // rather than by what it is: the surface holding it is what the user is
+  // looking at, and a decision just taken there is a reason to leave it. The
+  // NEAREST surface answers, and only that one — a form inside a slide inside a
+  // dialog goes back a slide, it does not also close the dialog.
   // send inside expandable
   if (target.getAttribute("aria-expanded") === "true") {
     return {
@@ -22300,30 +22902,238 @@ registerNaviCommand("--navi-send", (source, event) => {
           requester = firstButtonSubmitting;
         }
       }
-      return dispatchRequestAction(target, {
-        event,
-        name: "--navi-send",
-        always: () => {
-          const initiator =
-            event.detail && typeof event.detail === "object"
-              ? event.detail.eventChain[0]
-              : event;
-          const { form } = target;
-          if (form) {
-            // prevent form submission when clicking buttons or pressing enter on inputs
-            initiator.preventDefault();
-          } else if (
-            initiator.type === "keydown" &&
-            initiator.key === "Enter"
-          ) {
-            // prevent triggering click on such button, they are already performing submit
-            // (this ensures enter inside a picker won't trigger picker button click)
-            initiator.preventDefault();
-          }
-        },
-        requester,
-      });
+      // Read here rather than above: it depends on the requester, which is only
+      // known now — Enter in a field sends through the first submit button, and
+      // what follows the send is that button's answer.
+      const afterSend = resolveAfterSend(target, requester);
+      // Nothing is committed when a constraint fails, so nothing is decided
+      // and the popup must stay open — with the form still in front of the
+      // user, showing what it is waiting for.
+      let invalid = false;
+      const runAfterSend = () => {
+        triggerNaviCommand(source, afterSend, event, { optional: true });
+      };
+      const {
+        result: sent,
+        isRunning,
+        whenSucceeded,
+      } = watchActionCompletion(target, () =>
+        dispatchRequestAction(target, {
+          onInvalid: () => {
+            invalid = true;
+          },
+          event,
+          name: "--navi-send",
+          always: () => {
+            const initiator =
+              event.detail && typeof event.detail === "object"
+                ? event.detail.eventChain[0]
+                : event;
+            const { form } = target;
+            if (form) {
+              // prevent form submission when clicking buttons or pressing enter on inputs
+              initiator.preventDefault();
+            } else if (
+              initiator.type === "keydown" &&
+              initiator.key === "Enter"
+            ) {
+              // prevent triggering click on such button, they are already performing submit
+              // (this ensures enter inside a picker won't trigger picker button click)
+              initiator.preventDefault();
+            }
+          },
+          requester,
+        }),
+      );
+      if (sent === false || invalid || !afterSend) {
+        return sent;
+      }
+      if (isRunning) {
+        // The send is committing but has not finished: leaving now would take
+        // the form off the screen mid-submission (a popup closing over its own
+        // running action, a slide moving on before it is answered). What
+        // follows the send waits for the send to be real.
+        whenSucceeded(runAfterSend);
+        return sent;
+      }
+      runAfterSend();
+      return sent;
     },
+  };
+});
+
+// "What I was here for is done" — said to the surface the control lives in, not
+// to the screen that should come next. What a finished step does to the walk is
+// the slide's own business (mark it answered, move on), the same way closing
+// would be the dialog's.
+registerNaviCommand("--navi-done", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_done", {
+        event,
+        source: resolveCommandProxySource(source),
+      }),
+  };
+});
+
+// Which slide is shown is the slide container's own business: a button says
+// which way to go, not "show the slide with that id" — which is what lets them
+// be rearranged without touching what drives them.
+//
+// A direction, not a step: slides are laid out on a map (see
+// slide_container.jsx), and on a map "next" only means something when there is
+// a single axis to walk. One vocabulary for both cases beats a second one that
+// works half the time.
+const registerSlideCommand = (command, dx, dy) => {
+  registerNaviCommand(command, (source, event) => {
+    const target =
+      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+    if (!target) {
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () =>
+        dispatchCustomEvent(target, "navi_slide_move", {
+          event,
+          dx,
+          dy,
+          // What the source was worth, carried along: a button that says which
+          // entry it is about (value={{ name }}) sends that with the travel, and
+          // the slide arriving keeps it — see Slide's own `useSlideValue`. Read
+          // the same way every other command reads a value, so a source says it
+          // in one way whatever the command.
+          value: resolveCommandValue(source, event),
+        }),
+    };
+  });
+};
+registerSlideCommand("--navi-right", 1, 0);
+registerSlideCommand("--navi-left", -1, 0);
+registerSlideCommand("--navi-down", 0, 1);
+registerSlideCommand("--navi-up", 0, -1);
+
+// A step along a line, and the two ends of it. Said without an axis on purpose:
+// a list is a line of items whichever way it is laid out, and a container of
+// slides on a single row (or a single column) is one too — so the same four
+// commands drive both, and the thing being driven reads them in its own terms.
+// A map with two axes cannot answer "next" with a straight face: the four
+// directions (--navi-left and friends) are what it is driven by.
+//
+// Two kinds of target, whichever is nearer: a list walks its items, a slide
+// container walks its slides.
+const resolveWalkableTarget = (source) =>
+  resolveExplicitTarget(source) ||
+  source.closest("[navi-selectable], [data-slide-container]");
+
+const registerWalkCommand = (command, goal) => {
+  registerNaviCommand(command, (source, event) => {
+    const target = resolveWalkableTarget(source);
+    if (!target) {
+      return undefined;
+    }
+    const isList = target.hasAttribute("navi-selectable");
+    return {
+      target,
+      implementation: () => {
+        if (isList) {
+          return dispatchCustomEvent(target, "navi_request_nav", {
+            event,
+            goal,
+          });
+        }
+        if (goal === "first" || goal === "last") {
+          return dispatchCustomEvent(target, "navi_slide_end", {
+            event,
+            last: goal === "last",
+            value: resolveCommandValue(source, event),
+          });
+        }
+        // A line of slides: onwards is to the right, or downwards when that is
+        // where they are — which the container decides, not this.
+        return dispatchCustomEvent(target, "navi_slide_step", {
+          event,
+          goal,
+          value: resolveCommandValue(source, event),
+        });
+      },
+    };
+  });
+};
+registerWalkCommand("--navi-previous", "previous");
+registerWalkCommand("--navi-next", "next");
+registerWalkCommand("--navi-first", "first");
+registerWalkCommand("--navi-last", "last");
+
+// "Take the thing one is on": choosing the item a list is pointing at, without
+// naming it — the keyboard's own Enter, said as a command so a button can offer
+// it too.
+registerNaviCommand("--navi-activate", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[navi-selectable]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_request_activate", { event }),
+  };
+});
+
+// By name, when a direction cannot say it: a screen reached from several
+// places, or from one that is not next to it on the map. The name is part of
+// the command — `command="--navi-go-to-slide:edit"` — which leaves `value` for
+// what every other command uses it for: what this is about. A source needs to
+// be able to say both, and it says them in the two places that already mean
+// those two things.
+registerNaviCommand(
+  "--navi-go-to-slide",
+  (source, event, { argument } = {}) => {
+    const target =
+      resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+    if (!target) {
+      return undefined;
+    }
+    if (!argument) {
+      console.warn(
+        `--navi-go-to-slide needs the area to go to: --navi-go-to-slide:my_area`,
+        source,
+      );
+      return undefined;
+    }
+    return {
+      target,
+      implementation: () =>
+        dispatchCustomEvent(target, "navi_slide_go_to", {
+          event,
+          area: argument,
+          value: resolveCommandValue(source, event),
+        }),
+    };
+  },
+);
+
+// Back where one came from — the slide that sent the user here, whichever way
+// that was. What "back" means is a fact about the travel, not about the map: a
+// screen reached from two places goes back to the one it was reached from, and
+// no direction can say that.
+registerNaviCommand("--navi-back", (source, event) => {
+  const target =
+    resolveExplicitTarget(source) || source.closest("[data-slide-container]");
+  if (!target) {
+    return undefined;
+  }
+  return {
+    target,
+    implementation: () =>
+      dispatchCustomEvent(target, "navi_slide_back", { event }),
   };
 });
 
@@ -23002,6 +23812,12 @@ const useUIStateController = (
         parentUiStateSignalHolder,
         isProxy,
         allowNameless,
+        // Set here too, not only in `update` below: a control rendered once and
+        // never re-rendered would otherwise never say whether it was GIVEN a
+        // value (`value`, or a bound signal with no default of its own) or is
+        // merely showing a suggestion (`defaultValue`) — a distinction Form
+        // reads to decide what counts as already sent.
+        hasStateProp: Boolean(controlInfo.hasStateProp),
 
         props,
         ref: props.ref,
@@ -23011,6 +23827,13 @@ const useUIStateController = (
         state: stateInitial,
         uiState: stateInitial,
         uiStateSignal,
+        // What this control holds by ITSELF — the same signal as above unless
+        // it is a button inheriting from the control around it (see `inherit`).
+        // "The value I am about" and "the value I was given" are two different
+        // questions, and a button answering the first with the second is how a
+        // travel command ended up carrying a picker's selection: see
+        // resolveCommandValue in commands.js.
+        ownUIStateSignal,
         value: controlInfo.value,
 
         facadeChild: null,
@@ -23520,6 +24343,15 @@ const CANNOT_DERIVE = Symbol("cannot_derive");
 // Looked up in useUIGroupStateController to fill in omitted aggregateChildStates /
 // distributeChildUIState. If neither a default nor an explicit impl is found for a
 // group, creation throws so the caller knows it must supply them.
+// A child that groups other controls and was given no name of its own, holding
+// an object — the only shape that can be merged into the object around it.
+// A nameless LEAF (an input nobody named) is still a mistake and still warns.
+const isNamelessGrouping = (child, uiState) =>
+  typeof child.registerChild === "function" &&
+  uiState !== null &&
+  typeof uiState === "object" &&
+  !Array.isArray(uiState);
+
 const GROUP_DEFAULTS = {
   radio_group: {
     childControlFilter: (child) =>
@@ -23565,12 +24397,64 @@ const GROUP_DEFAULTS = {
       return undefined;
     },
   },
+  // One value, not an object: the group holds whatever its single meaningful
+  // child holds. What a picker's popup does — the list inside it IS the value,
+  // and naming it would only add a key nobody asked for. A popup containing a
+  // real form uses "object" (the default) instead.
+  single: {
+    // The same exclusions canRegisterAsFacadeChild already makes below (the
+    // picker façade asked the very same question: which child IS the value).
+    // Buttons and links never hold one. And a control *carrying* navi-list is
+    // the search box driving some other list — not the list itself, which stays
+    // a perfectly good single value here (one item, or the array a multiple
+    // list exposes). Excluding the searcher is what leaves the list alone.
+    childControlFilter: (child) => {
+      if (child.controlType === "button" || child.controlType === "link") {
+        return false;
+      }
+      if (child.props?.["navi-list"]) {
+        return false;
+      }
+      return true;
+    },
+    aggregateChildStates: (children) => {
+      for (const child of children) {
+        const childUIState = child.uiState;
+        if (childUIState !== undefined) {
+          return childUIState;
+        }
+      }
+      return undefined;
+    },
+    distributeChildUIState: (newUIState) => newUIState,
+  },
   object: {
+    // Buttons are not fields. HTML has always been clear about it: a submit
+    // button's name/value is sent only when it is the one that submitted, which
+    // is how a form offers two ways out ("save" / "delete") and still knows
+    // which was pressed. Aggregated like the fields, every button would be in
+    // the value at once and the last one would win — pressing Enter (which
+    // sends through the FIRST submit button) would then carry the LAST button's
+    // meaning. The one that was actually pressed writes itself in on its own,
+    // through wantRequesterButtonState (see the button branch in
+    // useUIStateController).
+    childControlFilter: (child) => {
+      return child.controlType !== "button" && child.controlType !== "link";
+    },
     aggregateChildStates: (children) => {
       const groupValues = {};
       for (const child of children) {
         const { name, uiState, allowNameless } = child;
         if (!name) {
+          // A nameless GROUP is a grouping, not a value: it exists to hold its
+          // children together (a WheelGroup sharing navigation, a fieldset-ish
+          // cluster) without claiming a key of its own, so what it holds is
+          // merged in as if its children had been written here. Naming it is
+          // what turns the same group into one key — see ControlGroup's `name`.
+          if (isNamelessGrouping(child, uiState)) {
+            Object.assign(groupValues, uiState);
+            continue;
+          }
           if (!allowNameless) {
             console.warn(
               "A group child is missing a name property, its state won't be included in the group state",
@@ -23592,6 +24476,11 @@ const GROUP_DEFAULTS = {
         Object.prototype.hasOwnProperty.call(newUIState, childName)
       ) {
         return newUIState[childName];
+      }
+      // Merged in on the way up (see above), so on the way down it takes the
+      // whole object and picks out its own keys — the same value it produced.
+      if (isNamelessGrouping(child, child.uiState)) {
+        return newUIState;
       }
       return CANNOT_DERIVE;
     },
@@ -23635,8 +24524,25 @@ const useUIGroupStateController = (
   }
   const parentUIStateController = useContext(ParentUIStateControllerContext);
   const hasValueProp = Object.hasOwn(props, "value");
-  const hasDefaultValueProp = Object.hasOwn(props, "defaultValue");
-  const { id, name, value, defaultValue, uiAction } = props;
+  const hasOwnDefaultValueProp = Object.hasOwn(props, "defaultValue");
+  // A bound signal seeds the group the way `defaultValue` does — uncontrolled,
+  // with the signal's current value as what it starts on. Write-back is already
+  // handled (see applyState's own boundSignal), so this is the half that makes
+  // `signal` two-way on a group: the children are placed from it when they
+  // register, exactly as they would be from a defaultValue.
+  const boundSignal = hasValueProp ? undefined : props.signal;
+  const hasDefaultValueProp = hasOwnDefaultValueProp || Boolean(boundSignal);
+  const { id, name, value, uiAction } = props;
+  // A signal holding something wins over `defaultValue`: the default is a
+  // suggestion of where to start (and where a reset goes back to), the signal's
+  // value is the answer — same precedence a leaf control applies (see
+  // control_hooks' own resolveControlInfo).
+  const defaultValue =
+    boundSignal && boundSignal.value !== undefined
+      ? boundSignal.value
+      : hasOwnDefaultValueProp
+        ? props.defaultValue
+        : boundSignal?.value;
   const ref = props.ref;
   const fallbackState =
     stateType === "array"
@@ -23708,6 +24614,24 @@ const useUIGroupStateController = (
           });
         } else {
           controller.syncInternalState(groupUIState, e);
+          writeBoundSignal(groupUIState);
+        }
+      };
+
+      // The two-way half of a bound `signal`: the same write a leaf control
+      // makes from its own setUIState (see useUIStateController's boundSignal),
+      // for a group whose value is its children's put together.
+      //
+      // Called from both paths a user-driven change can take — applyState when
+      // the change is notified outward, syncInternalState when the group only
+      // brings itself up to date — because either one can be the user
+      // answering. The paths that are NOT the user (a value prop pushed down,
+      // the initial push, mount/unmount) are excluded at each call site rather
+      // than guessed at here.
+      const writeBoundSignal = (newUIState) => {
+        const boundSignal = s.props?.signal;
+        if (boundSignal) {
+          boundSignal.value = newUIState;
         }
       };
 
@@ -23721,6 +24645,9 @@ const useUIGroupStateController = (
           `${controlType}.applyState(${JSON.stringify(newUIState)}, "${e.type}") -> updates from ${JSON.stringify(currentUIState)} to ${JSON.stringify(newUIState)}`,
         );
         publishUIState(newUIState);
+        if (!internalBehavior) {
+          writeBoundSignal(newUIState);
+        }
         s.parentUIStateController?.onChildUIAction(controller, e, {
           stateChanged: true,
         });
@@ -23808,6 +24735,13 @@ const useUIGroupStateController = (
         },
         onUIAction: (e, { skipCommand } = {}) => {
           const currentUIState = controller.uiState;
+          // The same write applyState/onChange make (see writeBoundSignal), for
+          // the case where the state did not move but the user acted all the
+          // same — a picker whose suggestion was confirmed untouched, say. A
+          // leaf control writes its signal from its own onUIAction for exactly
+          // this reason; setting a signal to what it already holds is a no-op,
+          // so the paths that write twice cost nothing.
+          writeBoundSignal(currentUIState);
           s.uiAction?.(currentUIState, e);
           s.uiActionInternal?.(currentUIState, e);
           if (!skipCommand && controller.props.command) {
@@ -24131,11 +25065,11 @@ const useUIFacadeStateController = (props, realUIStateController) => {
           // not be treated as the picker's synced child.
           return false;
         }
-        if (
-          props.type === "controlgroup" &&
-          childController.controlType !== "control_group"
-        ) {
-          // ignore non control group registration (input outside the control group for instance)
+        if (props.type === "form" && childController.controlType !== "form") {
+          // Only a form: what a type="form" picker syncs with is the form in
+          // its popup, not any control that happens to be in there (an input
+          // sitting outside the form, a ControlGroup — which is a way of
+          // grouping controls INSIDE a form, not a thing a picker talks to).
           return false;
         }
         if (
@@ -24579,10 +25513,23 @@ const useControlProps = (props, {
         // These don't interact with the field's value or activation → no validation needed.
         return null;
       };
+
+      // Space activates a control — unless the key already means something
+      // where it was pressed. Typing a space into a text field is not an
+      // interaction anything else may claim: the field is what the user is
+      // aiming at, and a control ABOVE it (a picker holding a search box, a
+      // link wrapping one) stealing that key would swallow the character.
+      const isSpaceToActivate = e => {
+        if (e.key !== " ") {
+          return false;
+        }
+        const defaultAction = getKeyboardEventDefaultAction(e);
+        return defaultAction !== "type" && defaultAction !== "value_change";
+      };
       if (controlType === "link") {
         return {
           keyDown: e => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
@@ -24640,7 +25587,7 @@ const useControlProps = (props, {
       if (controlType === "picker") {
         return {
           keyDown: e => {
-            if (e.key === " ") {
+            if (isSpaceToActivate(e)) {
               return {
                 name: "space to click",
                 allowed: () => {
@@ -24663,7 +25610,17 @@ const useControlProps = (props, {
             return {
               name: "navi_change",
               allowed: () => {
-                syncUIStateWithDOM(e);
+                // The state, but only when nobody has read it yet. navi_change
+                // is dispatched by input_effect, which listens to the very
+                // "input" event the reaction above already answered — syncing
+                // again there is the same gesture read twice, and uiAction fired
+                // twice with it. Everything else it reports (a "change" with no
+                // input before it: autocomplete, a value set from code, a form
+                // restored; a paste; a reset) never reached that reaction, so
+                // this is where those get in.
+                if (e.type !== "input") {
+                  syncUIStateWithDOM(e);
+                }
                 requestActionOnAllowed(e);
               }
             };
@@ -25054,7 +26011,12 @@ const createControlInfo = (props, {
         // so an input+signal is uncontrolled-with-default; the signal only
         // receives write-backs (onUIAction).
         hasStateProp = false;
-        stateInitial = props.defaultValue;
+        // A signal holding something wins over the default: `defaultValue` is a
+        // suggestion of what to start from (and what a reset goes back to), not
+        // an answer — while the signal's value IS the answer, restored from the
+        // url or set by whoever owns it. Taking the default here would show a
+        // suggestion in place of the value on every reload.
+        stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
       } else if (signal) {
         // A plain bound signal with no default (e.g. Wheel): its live value
         // seeds and controls the state.
@@ -25085,7 +26047,9 @@ const createControlInfo = (props, {
       stateInitial = props.value;
     } else if (Object.hasOwn(props, "defaultValue")) {
       hasStateProp = false;
-      stateInitial = props.defaultValue;
+      // Same precedence as an input above: the signal's value is the answer,
+      // defaultValue only the suggestion to start from.
+      stateInitial = signal && signal.value !== undefined ? signal.value : props.defaultValue;
     } else if (signal) {
       hasStateProp = true;
       stateInitial = signal.value;
@@ -25237,6 +26201,52 @@ const useControlgroupProps = (props, {
  * </ControlFacadeChildrenWrapper>
  * ```
  */
+/**
+ * What a control holds, read from the control itself.
+ *
+ * For a component built AROUND a control rather than instead of one — a
+ * stepper wrapping a picker, a preview beside a field: the control keeps the
+ * whole value story (`value` vs `defaultValue` vs `signal`, and what a form
+ * makes of each), and this is how the wrapper knows what is in it without
+ * having to tell that story a second time.
+ *
+ * Read from the DOM rather than from props on purpose: a value set from
+ * anywhere — the control's own popup, a signal moved elsewhere, a paste —
+ * comes back the same way, because every one of them ends in the same
+ * navi_ui_state_change.
+ *
+ * @param {{current: HTMLElement}} ref - the control's own ref (the element
+ *   given the `ref` prop, whatever the control renders around it).
+ * @param {any} [uiStateInitial] - what to say before the control has mounted,
+ *   which is the one moment the DOM cannot be asked.
+ */
+const useControlUIState = (ref, uiStateInitial) => {
+  const [uiState, setUIState] = useState(uiStateInitial);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) {
+      return undefined;
+    }
+    // The host, not the box around it: a control is a whole little tree (a
+    // picker is a box holding an input) and the state is announced on the one
+    // element that holds it. Same resolution every request goes through, see
+    // ui_state_dom.js.
+    const host = findControlHost(element) || element;
+    // Asked once here rather than trusted from the props above: between the
+    // first render and this effect the control has read its own value prop, its
+    // defaultValue and any signal it was bound to, and settled which of them
+    // wins — the answer to that is on the element, not in what we were handed.
+    setUIState(getUIStateFromElement(host));
+    const onUIStateChange = e => {
+      setUIState(e.detail.value);
+    };
+    host.addEventListener("navi_ui_state_change", onUIStateChange);
+    return () => {
+      host.removeEventListener("navi_ui_state_change", onUIStateChange);
+    };
+  }, [ref]);
+  return uiState;
+};
 const useControlFacadeProps = (props, options) => {
   const [controlRootProps, controlHostProps, {
     uiStateController
@@ -25337,10 +26347,20 @@ const useInteractiveProps = (props, {
     } = props;
     const disabledResolved = disabled || controlDisabled;
     const requiredResolved = required || controlRequired;
-    const loadingBase = loading || controlLoading && parentActionRequester === ref.current;
+    // Busy because the group above is running the action THIS control asked
+    // for (a submit button wearing its form's submission), as opposed to busy
+    // on its own say-so.
+    const loadingFromParent = Boolean(controlLoading && parentActionRequester === ref.current);
+    const loadingBase = loading || loadingFromParent;
     const readOnlyBase = readOnly || controlReadOnly || loadingBase || controlInfo.readOnlyUncontrolled;
     const loadingResolved = loadingBase || actionStatus.loading;
     const readOnlyResolved = readOnlyBase || actionStatus.loading;
+    // Both halves of "busy" that do not come from the bound action, kept apart
+    // from each other and from it: BUSY_CONSTRAINT answers each from its own
+    // live source rather than from the rendered aria-busy, which conflates all
+    // three and is a frame behind. See its own comment.
+    uiStateController.loadingFromOwnProp = Boolean(loading);
+    uiStateController.loadingFromParent = loadingFromParent;
     Object.assign(controlHostProps, {
       "required": requiredResolved,
       "aria-busy": loadingResolved ? "true" : "false",
@@ -25364,7 +26384,9 @@ const useInteractiveProps = (props, {
         controlHostProps["inert"] = "";
       }
     }
-    // inform any associated label of our state (connected, disabled, readOnly)
+    // inform any associated label of our state (connected, disabled, readOnly,
+    // required — a Label with requiredIndicator marks itself from it rather
+    // than being told twice what the control already knows)
     // dispatched directly on the label — works whether the label wraps the control
     // (Field as label) or is a separate element linked via htmlFor (Label component)
     useLayoutEffect(() => {
@@ -25379,11 +26401,12 @@ const useInteractiveProps = (props, {
         label.dispatchEvent(new CustomEvent("navi_control_state", {
           detail: {
             disabled: disabledResolved,
-            readOnly
+            readOnly,
+            required: requiredResolved
           }
         }));
       }
-    }, [disabledResolved, readOnlyResolved, ref]);
+    }, [disabledResolved, readOnlyResolved, requiredResolved, ref]);
     useLayoutEffect(() => {
       return () => {
         const element = ref.current;
@@ -25407,8 +26430,10 @@ const useInteractiveProps = (props, {
         uiStateController.resetUIState(e);
       },
       onnavi_get_ui_state: e => {
-        const uiState = uiStateController.uiStateSignal.peek();
-        e.detail.respondWith(uiState);
+        // `own`: what this control holds by itself, ignoring what a button
+        // inherits from the control around it (see ownUIStateSignal).
+        const uiStateSignal = e.detail.own && uiStateController.ownUIStateSignal ? uiStateController.ownUIStateSignal : uiStateController.uiStateSignal;
+        e.detail.respondWith(uiStateSignal.peek());
       },
       onnavi_set_ui_state: e => {
         uiStateController.setUIState(e.detail.value, e);
@@ -25605,6 +26630,13 @@ const useInteractiveProps = (props, {
   // keeps those reads current without any extra bookkeeping.
   const firstRender = uiStateController.controlHostProps === undefined;
   uiStateController.controlHostProps = controlHostProps;
+  // The action itself, not just what the last render made of it: its running
+  // state is a signal and changes the instant the action settles, while
+  // controlHostProps above is a snapshot of the render before that. Anything
+  // asked "is this control busy?" in that same tick — the interaction gate, on
+  // an action's own completion side effect — has to read the signal to get an
+  // answer that is not one frame late (see BUSY_CONSTRAINT).
+  uiStateController.boundAction = boundAction;
   if (firstRender) {
     // Deferred from the factory so these run after controlHostProps is set.
     // Constraints like READONLY_CONSTRAINT and findControlProxyTargetController
@@ -27318,7 +28350,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$Q = /* css */`
+installImportMetaCssBuild(import.meta);const css$S = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -27340,15 +28372,17 @@ installImportMetaCssBuild(import.meta);const css$Q = /* css */`
  * @param {string} [props.color="currentColor"] - Stroke color
  * @param {number|"inherit"} [props.radius] - Corner radius in px. When omitted, reads border-radius from the container.
  * @param {number} [props.size=2] - Stroke width in px
+ * @param {string} [props.networkSpeed] - Force the connection speed the animation is paced by ("slow-2g" | "2g" | "3g" | "4g"). Omitted, it follows the real connection.
  */
 const LoadingIndicatorFluid = ({
   color = "currentColor",
   size = 2,
   radius,
+  networkSpeed,
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -27408,7 +28442,8 @@ const LoadingIndicatorFluid = ({
       radius: containerRadius,
       width: containerWidth,
       height: containerHeight,
-      strokeWidth: size
+      strokeWidth: size,
+      networkSpeed: networkSpeed
     })
   });
 };
@@ -27418,7 +28453,8 @@ const LoadingRectangleSvg = ({
   color,
   radius,
   trailColor = "transparent",
-  strokeWidth
+  strokeWidth,
+  networkSpeed: networkSpeedForced
 }) => {
   const margin = Math.max(2, Math.min(width, height) * 0.03);
 
@@ -27474,7 +28510,11 @@ const LoadingRectangleSvg = ({
   const gapLength = pathLength - segmentLength;
 
   // Vitesse constante en pixels par seconde
-  const networkSpeed = useNetworkSpeed();
+  // The connection this one is paced by: whatever it was told, otherwise the
+  // real one. A caller forcing it is showing what a speed looks like (see the
+  // loading indicator demo), not reacting to the network.
+  const networkSpeedCurrent = useNetworkSpeed();
+  const networkSpeed = networkSpeedForced ?? networkSpeedCurrent;
   const pixelsPerSecond = {
     "slow-2g": 40,
     "2g": 60,
@@ -27486,6 +28526,12 @@ const LoadingRectangleSvg = ({
   // ✅ Calculate correct offset based on actual segment size
   const segmentRatio = segmentLength / pathLength;
   const circleOffset = -animationDuration * segmentRatio;
+  // The dash and the dot are two animations that must stay in phase — the dot
+  // is the head of the dash. SMIL keeps running when its dur is edited, so
+  // changing the speed (or the path) re-times one and leaves the other where it
+  // was, and the dot detaches from the segment. Keyed on what defines their
+  // timing, both are recreated together and start on the same beat.
+  const animationKey = `${animationDuration}-${Math.round(pathLength)}`;
   return jsxs("svg", {
     width: "100%",
     height: "100%",
@@ -27526,7 +28572,7 @@ const LoadingRectangleSvg = ({
         dur: `${animationDuration}s`,
         repeatCount: "indefinite",
         begin: "0s"
-      })
+      }, animationKey)
     }), jsx("circle", {
       r: strokeWidth,
       fill: color,
@@ -27536,18 +28582,37 @@ const LoadingRectangleSvg = ({
         repeatCount: "indefinite",
         rotate: "auto",
         begin: `${circleOffset}s`
-      })
+      }, animationKey)
     })]
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$P = /* css */`
+installImportMetaCssBuild(import.meta);const css$R = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
-    top: var(--loading-rectangle-top, 0);
-    right: var(--loading-rectangle-right, 0);
-    bottom: var(--loading-rectangle-bottom, 0);
-    left: var(--loading-rectangle-left, 0);
+    /* Controls place the outline slightly outside their box, right on top of
+       their border. Inside something that scrolls that bleed is enough to make
+       the area scrollable, so such a container sets --loading-outline-min-inset
+       to 0px to keep the outline within the control: a scrollbar appearing
+       just because something started loading is worse than an outline drawn a
+       couple pixels inward. The var is only ever read here (never set on this
+       element) so it keeps inheriting from whichever container declared it. */
+    top: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-top, 0px)
+    );
+    right: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-right, 0px)
+    );
+    bottom: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-bottom, 0px)
+    );
+    left: max(
+      var(--loading-outline-min-inset, -100vh),
+      var(--loading-rectangle-left, 0px)
+    );
     z-index: 1;
     border-radius: inherit;
     pointer-events: none;
@@ -27559,7 +28624,7 @@ installImportMetaCssBuild(import.meta);const css$P = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$P, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -27784,7 +28849,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$O = /* css */`
+const css$Q = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -28006,6 +29071,38 @@ const CustomWidthSpace = ({
     children: "\u200B"
   });
 };
+
+// Keeps the last child from being left alone on a line of its own — an icon
+// after a label, a unit after a number. It is an atomic inline, so the browser
+// is free to break the line right before it, and no character can stop that (a
+// word joiner does not suppress a break before an atomic inline). So the last
+// word of what precedes it and the child itself go in one nowrap box instead:
+// the classic widow fix, applied to the one place it is always wrong to break.
+//
+// Only the last word travels with it — wrapping the whole preceding child would
+// stop a long label from wrapping at all.
+const attachLastTextChild = (children, separator) => {
+  const childArray = toChildArray(children);
+  if (childArray.length < 2) {
+    // Nothing to attach it to: on its own it cannot be orphaned.
+    return children;
+  }
+  const lastChild = childArray[childArray.length - 1];
+  const previousChild = childArray[childArray.length - 2];
+  const before = childArray.slice(0, -2);
+  const attach = attached => jsxs("span", {
+    style: "white-space: nowrap",
+    children: [attached, separator, lastChild]
+  }, "attached");
+  if (typeof previousChild !== "string") {
+    return [...before, attach(previousChild)];
+  }
+  const lastWordMatch = /\s+(\S+)$/.exec(previousChild);
+  if (!lastWordMatch) {
+    return [...before, attach(previousChild)];
+  }
+  return [...before, previousChild.slice(0, lastWordMatch.index), attach(lastWordMatch[1])];
+};
 const applySpacingOnTextChildren = (children, spacing, defaultSpace) => {
   if (spacing === "pre" || spacing === "0" || spacing === 0) {
     return children;
@@ -28136,6 +29233,11 @@ const shouldInjectSpacingBetween = (left, right) => {
  * @param {boolean} [skeleton]
  *   Same as `loading` but without the shimmer animation — a static grey bar.
  *
+ * @param {boolean} [attachLastChild]
+ *   Keeps the last child on the same line as the word before it — a trailing
+ *   icon, a unit, an arrow. Without it the browser may break the line right
+ *   before that child and leave it alone underneath.
+ *
  * @param {boolean} [preventSpaceUnderlines]
  *   Replaces real space characters between children with padding-based spaces.
  *   Useful inside `<a>` elements where browsers draw an underline under spaces.
@@ -28252,11 +29354,12 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$O, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
     preventSpaceUnderlines = false,
+    attachLastChild = false,
     boldStable,
     holdSpaceForStyle,
     capitalize,
@@ -28275,6 +29378,12 @@ const TextUI = props => {
     ref,
     "baseClassName": withPropsClassName("navi_text", rest.baseClassName)
   };
+  if (attachLastChild) {
+    // Before the spacing pass, so the box it makes is one child of it: the gap
+    // between the text and the box is Text's own, the one inside it is written
+    // here (it has to live inside the nowrap box to be unbreakable).
+    children = attachLastTextChild(children, resolvedSpacing === "pre" || resolvedSpacing === 0 || resolvedSpacing === "0" ? null : defaultSpace);
+  }
   const shouldPreserveSpacing = rest.as === "pre" || rest.flex || rest.grid;
   if (shouldPreserveSpacing) {
     boxProps.spacing = resolvedSpacing;
@@ -28396,7 +29505,7 @@ const TextWithSelectRange = ({
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$N = /* css */`
+const css$P = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -28431,7 +29540,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$N, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -28546,14 +29655,22 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$M = /* css */`
+installImportMetaCssBuild(import.meta);const css$O = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
       display: inline-flex;
       box-sizing: border-box;
       max-width: 100%;
+      /* An icon never grows past the box it sits in, so a glyph can never make
+         a line of text taller than the text itself. lineOverflow="allow" opts
+         out, for an icon that is an affordance rather than a character — a
+         control's chevron or clear button, sized to be touched, not read. */
       max-height: 100%;
+
+      &[data-line-overflow="allow"] {
+        max-height: none;
+      }
     }
   }
 
@@ -28569,6 +29686,15 @@ installImportMetaCssBuild(import.meta);const css$M = /* css */`
       flex-grow: 0 !important;
       align-items: center;
       justify-content: center;
+
+      /* fillLine: measured on the line box (1lh) instead of the character box
+         (1em). The icon still stays inside the line — it just uses all of it,
+         which is what an icon standing on its own in a control's slot wants,
+         where a glyph sitting among letters wants to match their size. */
+      &[data-fill-line] {
+        height: round(1lh, 1px);
+        max-height: round(1lh, 1px);
+      }
 
       svg,
       img {
@@ -28596,7 +29722,6 @@ installImportMetaCssBuild(import.meta);const css$M = /* css */`
   .navi_icon > img {
     width: 100%;
     height: 100%;
-    backface-visibility: hidden;
   }
   .navi_icon[data-width-fixed] > svg,
   .navi_icon[data-width-fixed] > img {
@@ -28659,6 +29784,14 @@ installImportMetaCssBuild(import.meta);const css$M = /* css */`
  * @param {string|number} [props.width] - Explicit width; `"auto"` clears it.
  *   Any explicit size switches the icon to block (sized) mode.
  * @param {string|number} [props.height] - Explicit height; `"auto"` clears it.
+ * @param {"allow"} [props.lineOverflow] - `"allow"` lets the icon be taller
+ *   than the box it sits in (a line of text, a control's slot) instead of being
+ *   capped by it. For an icon that is an affordance sized for the finger rather
+ *   than a character sized for reading.
+ * @param {boolean} [props.fillLine] - Sizes the icon on the line box (1lh)
+ *   rather than on the character box (1em), so it uses the full height of the
+ *   line without leaving it. Unlike `lineOverflow`, the icon still never
+ *   exceeds the line.
  * @param {boolean} [props.square] - Keep a 1:1 box; combined with one explicit
  *   dimension it fixes the other too.
  * @param {boolean} [props.circle] - Like `square`, plus a circular shape.
@@ -28676,9 +29809,11 @@ const Icon = ({
   onClick,
   textAnchor = "center",
   lineLayout,
+  lineOverflow,
+  fillLine,
   ...props
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -28718,6 +29853,8 @@ const Icon = ({
       ...props,
       ...ariaProps,
       "data-icon-text": "",
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
       children: children
     });
   }
@@ -28731,6 +29868,8 @@ const Icon = ({
       "data-width-fixed": widthFixed ? "" : undefined,
       "data-height-fixed": heightFixed ? "" : undefined,
       "data-interactive": onClick ? "" : undefined,
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
       onClick: onClick,
       children: innerChildren
     });
@@ -28746,6 +29885,8 @@ const Icon = ({
       className: withPropsClassName("navi_icon", props.className),
       spacing: "pre",
       "data-icon-char": "",
+      "data-line-overflow": lineOverflow,
+      "data-fill-line": fillLine ? "" : undefined,
       "data-width-fixed": widthFixed ? "" : undefined,
       "data-height-fixed": heightFixed ? "" : undefined,
       "data-interactive": onClick ? "" : undefined,
@@ -28813,7 +29954,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$L = /* css */`
+installImportMetaCssBuild(import.meta);const css$N = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -29062,16 +30203,7 @@ installImportMetaCssBuild(import.meta);const css$L = /* css */`
       }
     }
 
-    .navi_icon > svg {
-      /* icon.jsx forces backface-visibility: hidden, which composites the
-           SVG onto its own GPU layer. On focus the generic z-index:1 rule adds
-           a stacking context that lands that layer on a sub-pixel origin, so it
-           rasterizes blurry. Not compositing lets it paint with its parent,
-           pixel-snapped and crisp — and it can still sit above via z-index. */
-      backface-visibility: visible;
-    }
-
-    .anchor_icon {å
+    .anchor_icon {
       margin-left: -0.1em;
     }
 
@@ -29244,7 +30376,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$L, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -29434,6 +30566,12 @@ const LinkPlain = props => {
       fontWeight: "bold"
     } : undefined,
     preventSpaceUnderlines: true
+    // A trailing icon (the anchor arrow, the blank-target one) belongs to the
+    // text it follows: without this the browser may break the line right
+    // before it and leave it alone under a link long enough to wrap.
+    ,
+
+    attachLastChild: Boolean(endIconEl)
     // Visual
     ,
 
@@ -29472,7 +30610,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$K = /* css */`
+const css$M = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -29608,7 +30746,7 @@ const Nav = ({
   panelBorderConnection,
   ...props
 }) => {
-  import.meta.css = [css$K, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -30242,7 +31380,7 @@ const useFocusGroup = (
 
 installImportMetaCssBuild(import.meta);const rightArrowPath = "M680-480L360-160l-80-80 240-240-240-240 80-80 320 320z";
 const downArrowPath = "M480-280L160-600l80-80 240 240 240-240 80 80-320 320z";
-const css$J = /* css */`
+const css$L = /* css */`
   .navi_summary_marker {
     width: 1em;
     height: 1em;
@@ -30327,7 +31465,7 @@ const SummaryMarker = ({
   open,
   loading
 }) => {
-  import.meta.css = [css$J, "@jsenv/navi/src/control/details/summary_marker.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/control/details/summary_marker.jsx"];
   const showLoading = useDebounceTrue(loading, 300);
   const mountedRef = useRef(false);
   const prevOpenRef = useRef(open);
@@ -30381,7 +31519,7 @@ const SummaryMarker = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$I = /* css */`
+installImportMetaCssBuild(import.meta);const css$K = /* css */`
   .navi_details {
     position: relative;
     z-index: 1;
@@ -30427,7 +31565,7 @@ const Details = props => {
   return details;
 };
 const DetailsField = props => {
-  import.meta.css = [css$I, "@jsenv/navi/src/control/details/details.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/control/details/details.jsx"];
   const {
     ref,
     persists,
@@ -30655,7 +31793,9 @@ const ControlGroup = props => {
     wantRequesterButtonState: true,
     controlType: props.type || "control_group",
     stateType: "object",
-    cascadeValidationToChildren: true
+    cascadeValidationToChildren: true,
+    aggregateChildStates: props.aggregateChildStates,
+    distributeChildUIState: props.distributeChildUIState
   });
   const {
     children
@@ -30663,7 +31803,12 @@ const ControlGroup = props => {
   return jsx(Box, {
     ...controlgroupRootProps,
     ...controlgroupProps,
-    type: undefined,
+    type: undefined
+    // consumed by the group hook above; blanked after the spreads so they
+    // don't reach the DOM as unknown attributes
+    ,
+    aggregateChildStates: undefined,
+    distributeChildUIState: undefined,
     pseudoClasses: CONTROL_GROUP_PSEUDO_CLASSES,
     children: jsx(ControlgroupChildrenWrapper, {
       ...childrenWrapperProps,
@@ -30772,7 +31917,7 @@ const useAccentColorAttributes = (
   }, [ref, accentColor, elementSelector, colorProperty]);
 };
 
-installImportMetaCssBuild(import.meta);const css$H = /* css */`
+installImportMetaCssBuild(import.meta);const css$J = /* css */`
   @layer navi {
     .navi_checkbox {
       --switch-margin: 0; /* Useful to reserve space for outline */
@@ -30850,7 +31995,7 @@ installImportMetaCssBuild(import.meta);const css$H = /* css */`
   }
 `;
 const SwitchUI = () => {
-  import.meta.css = [css$H, "@jsenv/navi/src/control/input/switch_ui.jsx"];
+  import.meta.css = [css$J, "@jsenv/navi/src/control/input/switch_ui.jsx"];
   return jsx(Box, {
     className: "navi_switch",
     as: "svg",
@@ -30892,14 +32037,14 @@ const useCheckableProps = (props, options) => {
   return result;
 };
 
-installImportMetaCssBuild(import.meta);const css$G = /* css */`
+installImportMetaCssBuild(import.meta);const css$I = /* css */`
   @layer navi {
     .navi_checkbox {
       --border-radius: var(--navi-control-border-radius);
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(var(--outline-width) / 2);
+      --outline-offset: calc(0.5 * var(--outline-width));
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --margin: 3px 3px 3px 4px;
@@ -31219,7 +32364,7 @@ const InputCheckboxHeadless = props => {
   });
 };
 const InputCheckboxFieldInterface = props => {
-  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
+  import.meta.css = [css$I, "@jsenv/navi/src/control/input/input_checkbox.jsx"];
   const [checkboxRootProps, checkboxHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -31341,9 +32486,11 @@ const CheckboxButtonStyleCSSVars = {
 const CheckboxPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const CheckboxPseudoElements = ["::-navi-loader", "::-navi-checkmark"];
 
-installImportMetaCssBuild(import.meta);const css$F = /* css */`
+installImportMetaCssBuild(import.meta);const css$H = /* css */`
   @layer navi {
     .navi_label {
+      --label-required-indicator-color: var(--navi-color-danger, #b42318);
+
       &[data-control-connected] {
         cursor: pointer;
         user-select: none;
@@ -31352,6 +32499,13 @@ installImportMetaCssBuild(import.meta);const css$F = /* css */`
       &[data-disabled] {
         color: rgba(0, 0, 0, 0.5);
         cursor: default;
+      }
+
+      .navi_label_required_indicator {
+        /* not a space in the text: it would be part of what a double-click
+           selects, and would collapse differently depending on the markup */
+        padding-left: 0.25em;
+        color: var(--label-required-indicator-color);
       }
     }
 
@@ -31412,7 +32566,7 @@ installImportMetaCssBuild(import.meta);const css$F = /* css */`
  * </Field>
  */
 const Field = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
   const refDefault = useRef();
   props.ref = props.ref || refDefault;
   const {
@@ -31447,13 +32601,16 @@ const FieldCSSVars = {
   spacingWithControl: "--spacing-with-control"
 };
 const FieldAsContainer = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
   const {
     children
   } = props;
   props.spacingWithControl = resolveSpacingSize(props.spacingWithControl);
   const isVertical = props.flex === "y";
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps({
+    ...props,
+    requiredIndicator: undefined
+  });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
   const idDefault = useId();
@@ -31476,13 +32633,19 @@ const FieldAsContainer = props => {
 };
 const FIELD_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const Label = props => {
-  import.meta.css = [css$F, "@jsenv/navi/src/control/field.jsx"];
+  import.meta.css = [css$H, "@jsenv/navi/src/control/field.jsx"];
   const {
-    children
+    children,
+    // Marks the label when its control is required. Takes what to show, or
+    // true for the usual asterisk. The control is the one that knows it is
+    // required — it tells its labels — so a form never has to say it twice,
+    // and the mark cannot drift from the constraint it announces.
+    requiredIndicator
   } = props;
   const controlId = useContext(ControlIdContext);
   const [disabled, setDisabled] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  const [required, setRequired] = useState(false);
   const [connected, setConnected] = useState(false);
   // Set htmlFor only when we know the correct target id:
   //   - caller explicitly provided one (even undefined to opt out)
@@ -31493,7 +32656,10 @@ const Label = props => {
   if (!Object.hasOwn(props, "htmlFor") && controlId) {
     props.htmlFor = controlId;
   }
-  const [messageProps, remainingProps] = extractMessageAndRemainingProps(props);
+  const [messageProps, remainingProps] = extractMessageAndRemainingProps({
+    ...props,
+    requiredIndicator: undefined
+  });
   const messagePropsRef = useRef();
   messagePropsRef.current = messageProps;
   return jsx(Box, {
@@ -31510,17 +32676,26 @@ const Label = props => {
       setConnected(true);
       setDisabled(e.detail.disabled);
       setReadOnly(e.detail.readOnly);
+      setRequired(Boolean(e.detail.required));
     },
     onnavi_control_disconnected: () => {
       setConnected(false);
       setDisabled(false);
       setReadOnly(false);
+      setRequired(false);
     },
     children: jsx(MessagePropsRefContext.Provider, {
       value: messagePropsRef,
-      children: jsx(ControlIdContext.Provider, {
+      children: jsxs(ControlIdContext.Provider, {
         value: props.htmlFor,
-        children: children
+        children: [children, requiredIndicator && required &&
+        // aria-hidden: the control carries `required`, which is what a
+        // screen reader announces — the mark is there for the eye
+        jsx("span", {
+          className: "navi_label_required_indicator",
+          "aria-hidden": "true",
+          children: requiredIndicator === true ? "*" : requiredIndicator
+        })]
       })
     })
   });
@@ -31548,6 +32723,7 @@ const InputIconSlot = ({
   return jsx(InputSlot, {
     side: side,
     children: jsx(Icon, {
+      fillLine: true,
       ...props,
       children: children
     })
@@ -31600,7 +32776,7 @@ const InputSlot = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$E = /* css */`
+installImportMetaCssBuild(import.meta);const css$G = /* css */`
   @layer navi {
     .navi_radio {
       --margin: 3px 3px 3px 5px;
@@ -31963,7 +33139,7 @@ const InputRadioHeadless = props => {
 };
 const APPEARANCE_SET = new Set(["icon", "button", "radio"]);
 const InputRadioFieldInterface = props => {
-  import.meta.css = [css$E, "@jsenv/navi/src/control/input/input_radio.jsx"];
+  import.meta.css = [css$G, "@jsenv/navi/src/control/input/input_radio.jsx"];
   const [radioRootProps, radioHostProps] = useCheckableProps(props);
   const {
     icon,
@@ -32109,7 +33285,7 @@ const RadioButtonStyleCSSVars = {
 const RadioPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":checked", ":-navi-loading"];
 const RadioPseudoElements = ["::-navi-loader", "::-navi-radiomark"];
 
-installImportMetaCssBuild(import.meta);const css$D = /* css */`
+installImportMetaCssBuild(import.meta);const css$F = /* css */`
   @layer navi {
     .navi_input_range {
       --border-radius: 6px;
@@ -32364,7 +33540,7 @@ const InputRange = props => {
   });
 };
 const InputRangeFieldInterface = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_range.jsx"];
+  import.meta.css = [css$F, "@jsenv/navi/src/control/input/input_range.jsx"];
   const {
     ref
   } = props;
@@ -32698,7 +33874,7 @@ const ButtonWithRoute = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$C = /* css */`
+installImportMetaCssBuild(import.meta);const css$E = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -32706,7 +33882,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
       --button-cta-background-color: var(--navi-accent-color);
       /* Focus outline */
       --button-outline-width: var(--navi-focus-outline-width);
-      --button-outline-offset: calc(-1 * var(--button-outline-width) / 2);
+      --button-outline-offset: calc(-0.5 * var(--button-outline-width));
       --button-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --button-padding-x-default: var(--navi-button-padding-x-default);
@@ -32921,11 +34097,20 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
       --x-button-border-color: var(--callout-color);
     }
 
-    /* discrete: background on hover */
+    /* discrete: background on hover, and nothing else — no box at rest, and no
+       shrink when pressed. What is drawn IS the content (a chevron, a number,
+       a word), and shrinking it under the finger reads as the content itself
+       flinching rather than as a button being pressed. */
     &[data-variant="discrete"] {
       --button-border-width: 0;
       --x-button-background-color: transparent;
       --x-button-border-color: transparent;
+
+      &[data-pressed] {
+        .navi_button_content {
+          transform: none;
+        }
+      }
 
       &[data-hover] {
         --x-button-border-color: transparent;
@@ -32942,6 +34127,26 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
       &[data-disabled] {
         --x-button-border-color: transparent;
         --x-button-background-color: transparent;
+      }
+    }
+    /* bare: discrete, minus the background on hover. For a control whose own
+       drawing IS the button (a carousel bullet, a swatch), where a box lighting
+       up around it would be the button showing through the only thing one is
+       supposed to see. It stays a button in every other way: focusable, ringed
+       on focus, commandable. */
+    &[data-variant="bare"] {
+      --button-border-width: 0;
+      --x-button-background-color: transparent;
+      --x-button-border-color: transparent;
+
+      &[data-hover] {
+        --x-button-background-color: transparent;
+        --x-button-border-color: transparent;
+      }
+      &[data-pressed] {
+        .navi_button_content {
+          transform: none;
+        }
       }
     }
     /* discrete-border: border on hover */
@@ -33028,7 +34233,7 @@ installImportMetaCssBuild(import.meta);const css$C = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$E, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -33201,11 +34406,39 @@ const ButtonFirstResolver = props => {
 };
 const ButtonCommandPropResolver = props => {
   const Next = useNextResolver();
+  const form = useContext(FormContext);
   if (props.type === "submit") {
     props.type = "button";
     props.command = props.command || "--navi-send";
   }
   const command = props.command;
+  // What follows a send THIS button asked for, overriding the form's own
+  // `command` (see resolveAfterSend in commands.js). Named after the browser's
+  // formaction/formmethod/formtarget, which are the same idea: a submit button
+  // saying how its own submission differs. For a form with two ways out —
+  // "save" stays, "delete" goes back to the list.
+  const {
+    formCommand
+  } = props;
+  props.formCommand = undefined;
+  props["data-after-send"] = formCommand;
+
+  // `readOnlyWhileFormUnchanged`: hold the send button back until the form
+  // around it holds something new, so it says it is waiting instead of
+  // accepting a press that would send nothing.
+  //
+  // Opt-in, because a press that sends nothing is usually still worth
+  // accepting: in a dialog or a slide it closes the dialog / moves to the next
+  // step all the same — the user IS done, there was simply nothing to send. It
+  // is only in a form that goes nowhere on its own (one in the document) that
+  // the press would visibly do nothing at all.
+  //
+  // Passed to Next rather than written onto props like everything else here:
+  // these answer to something outside the button and flip back, and the props
+  // object outlives the render (a button inside a form is the same vnode when
+  // the form re-renders around it), so a write would never be undone.
+  const heldByForm = Boolean(props.readOnlyWhileFormUnchanged && command === "--navi-send" && form?.changed === false);
+  const readOnly = heldByForm ? true : props.readOnly;
 
   // Called fresh on every render (not a module-level object computed once
   // at import time) — naviI18n(...) must be re-evaluated per call so a
@@ -33223,7 +34456,14 @@ const ButtonCommandPropResolver = props => {
     }
   }
   return jsx(Next, {
-    ...props
+    ...props,
+    readOnlyWhileFormUnchanged: undefined,
+    readOnly: readOnly
+    // Why it is read-only, for READONLY_CONSTRAINT to say the right thing:
+    // read-only for some other reason (a caller's own prop, a read-only form
+    // around it) must not be explained as "waiting for a change".
+    ,
+    "data-readonly-reason": heldByForm ? "form-unchanged" : undefined
   });
 };
 const COMMAND_DEFAULT_PROPS_FACTORIES = {
@@ -33254,6 +34494,15 @@ const Button = createComponentResolver([ButtonFirstResolver, ButtonRouteResolver
 
 const InputTypeResolver = props => {
   const Next = useNextResolver();
+  // Opt-in for any other type: type="search" gets this shape for free, but a
+  // control whose value is picked rather than typed (a picker façade) wants the
+  // very same "icon while empty, clear button once filled" affordance without
+  // pretending to be a search box.
+  if (props.clearable && props.type !== "search") {
+    return jsx(InputClearable, {
+      ...props
+    });
+  }
   if (props.type === "search") {
     return jsx(InputSearch, {
       ...props
@@ -33297,6 +34546,16 @@ const InputSearch = props => {
     ...props
   });
 };
+const InputClearable = props => {
+  const Next = useNextResolver();
+  return jsx(Next, {
+    ui: jsx(InputSearchUI, {
+      icon: props.icon === undefined ? null : props.icon
+    }),
+    ...props,
+    clearable: undefined
+  });
+};
 const InputSearchUI = ({
   icon
 }) => {
@@ -33323,6 +34582,7 @@ const InputSearchUI = ({
       icon: true,
       variant: "discrete",
       children: jsx(Icon, {
+        fillLine: true,
         children: jsx(CloseSvg, {})
       })
     })
@@ -33453,8 +34713,8 @@ const InputWithList = props => {
     });
   };
   const onKeyDownShortcuts = createOnKeyDownForShortcuts({
-    arrowdown: e => requestListNav(e, "down"),
-    arrowup: e => requestListNav(e, "up"),
+    arrowdown: e => requestListNav(e, "next"),
+    arrowup: e => requestListNav(e, "previous"),
     home: e => requestListNav(e, "first"),
     end: e => requestListNav(e, "last"),
     enter: e => {
@@ -33484,7 +34744,7 @@ const InputWithList = props => {
   });
 };
 
-const ChevronDownSvg = () => {
+const ChevronDownSvg$1 = () => {
   return jsx("svg", {
     viewBox: "0 0 16 16",
     fill: "currentColor",
@@ -33687,7 +34947,7 @@ const InputTextualWithSuggestions = props => {
         commandFor: suggestions,
         children: jsx(Icon, {
           color: "rgba(28, 43, 52, 0.5)",
-          children: jsx(ChevronDownSvg, {})
+          children: jsx(ChevronDownSvg$1, {})
         })
       })
     })
@@ -33788,22 +35048,30 @@ installImportMetaCssBuild(import.meta);/**
  *   Blocks keydown when the limit is reached; truncates on paste/set with an info callout.
  *   The maxLength constraint remains active for form validation at submit.
  *   Use plain maxLength (without maxLengthGuard) for submit-only validation.
+ *
+ * Background color:
+ * - backgroundColor="transparent" applies at rest and hover; a focused field
+ *   turns solid (--navi-surface-color) so text is not typed over what sits behind.
+ * - variant="discrete" drops background and border at rest; focus brings back
+ *   a solid surface. variant="discrete-border" does the same but keeps the border.
+ * - variant="discrete" + backgroundColor: the color applies at rest and hover,
+ *   and the field goes transparent while focused.
  */
-const css$B = /* css */`
+const css$D = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: var(--navi-control-border-radius);
       --border-width: var(--navi-control-border-width);
       /* Focus outline */
       --outline-width: var(--navi-focus-outline-width);
-      --outline-offset: calc(var(--outline-width) / 2 * -1);
+      --outline-offset: calc(-0.5 * var(--outline-width));
       --outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --font-size: var(--navi-control-font-size);
       --font-family: var(--navi-control-font-family);
       --loader-color: var(--navi-loader-color);
       --border-color: var(--navi-control-border-color);
-      --background-color: white;
+      --background-color: var(--navi-surface-color);
       --color: currentColor;
       --color-dimmed: color-mix(in srgb, currentColor 60%, transparent);
       --placeholder-color: var(--color-dimmed);
@@ -33929,10 +35197,8 @@ const css$B = /* css */`
     }
 
     .navi_input_slot {
-      --slot-spacing: calc(2px + 0.1em);
-
-      margin-right: var(--slot-spacing);
-      margin-left: var(--slot-spacing);
+      margin-right: var(--slot-spacing, calc(2px + 0.1em));
+      margin-left: var(--slot-spacing, calc(2px + 0.1em));
       color: #5e4e4e;
 
       &[data-left] {
@@ -33943,6 +35209,19 @@ const css$B = /* css */`
 
       .navi_button {
         font-size: inherit;
+
+        /* A button in a slot (e.g. the clear cross) is drawn small but must
+           not be small to hit: the spacing around it — the slot margins on the
+           sides, the input padding above and below — belongs to its clickable
+           zone. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-padding-top));
+          right: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          bottom: calc(-1 * var(--x-padding-bottom));
+          left: calc(-1 * var(--slot-spacing, calc(2px + 0.1em)));
+          content: "";
+        }
       }
     }
 
@@ -33976,20 +35255,53 @@ const css$B = /* css */`
       --x-outline-color: var(--callout-color);
     }
 
-    &[data-discrete] {
-      --x-background-color: transparent;
+    /* A transparent background is a resting look, not an editing one: while
+       the field has focus it turns solid so text is not typed over whatever
+       sits behind it. */
+    &[data-background-transparent] {
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
 
-      &[data-hover] {
-        --x-background-color: white;
-      }
       &[data-focus] {
-        --x-background-color: white;
+        --x-background-color: var(--background-color-focus);
+      }
+    }
+
+    &[data-variant="discrete"],
+    &[data-variant="discrete-border"] {
+      /* An inline backgroundColor prop overrides this default */
+      --background-color: transparent;
+      --background-color-hover: var(--background-color);
+      --background-color-focus: var(--navi-surface-color);
+
+      &[data-focus] {
+        --x-background-color: var(--background-color-focus);
       }
       &[data-readonly] {
-        --x-background-color: transparent;
+        --x-background-color: var(--background-color);
       }
       &[data-disabled] {
-        --x-background-color: transparent;
+        --x-background-color: var(--background-color);
+      }
+      /* With an explicit background color the movement flips: colored at
+         rest and on hover, back to transparent while being edited. */
+      &[data-background] {
+        --background-color-focus: transparent;
+      }
+    }
+    /* The border is part of what makes a field look like a field, so a
+       discrete one does without it until it is interacted with — same idea
+       as the background above, and the two come back together.
+       discrete-border keeps the border: only the background recedes. */
+    &[data-variant="discrete"] {
+      --border-color: transparent;
+
+      &[data-focus] {
+        --x-border-color: color-mix(
+          in srgb,
+          var(--border-color) 55%,
+          transparent
+        );
       }
     }
 
@@ -34076,11 +35388,15 @@ const useInputTextualProps = props => {
   });
 };
 const InputTextualUI = props => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes the
+  // declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const {
     ui,
-    discrete,
     variant,
+    backgroundColor,
     width = "maxLength"
   } = props;
   const [inputControlRootProps, inputControlHostProps, controlChildrenWrapperProps] = useInputTextualProps(props);
@@ -34134,11 +35450,9 @@ const InputTextualUI = props => {
     ...inputControlRootProps,
     basePseudoState: basePseudoState,
     ui: undefined,
-    "data-discrete": discrete ? "" : undefined,
-    discrete: undefined // handled via data attribute
-    ,
-
     "data-variant": variant || undefined,
+    "data-background": backgroundColor !== undefined && backgroundColor !== "transparent" ? "" : undefined,
+    "data-background-transparent": backgroundColor === "transparent" ? "" : undefined,
     styleCSSVars: InputStyleCSSVars,
     pseudoStateSelector: ".navi_control_input",
     pseudoClasses: InputPseudoClasses,
@@ -34194,6 +35508,7 @@ const RealInput = ({
   });
 };
 const InputStyleCSSVars = {
+  "slotSpacing": "--slot-spacing",
   "outlineWidth": "--outline-width",
   "borderWidth": "--border-width",
   "borderRadius": "--border-radius",
@@ -34393,6 +35708,33 @@ const NAVI_TYPE_DEFAULTS = {
  * - `time`, `datetime-local`, `datetime`:
  *   step accepts `"HH:MM"` and is converted to seconds.
  */
+/**
+ * A bound signal that carries a default of its own says the same thing on every
+ * control: the control starts there and is otherwise uncontrolled (it
+ * write-syncs the signal), which is what makes a form read the value shown as a
+ * SUGGESTION rather than as something it already holds. Written once and used
+ * by everything that takes a `signal` — a wheel that skipped this was the same
+ * signal meaning two different things depending on which control it was handed
+ * to (see wheel.jsx).
+ */
+const seedDefaultValueFromSignal = (props) => {
+  const signalOptions = props.signal?.options;
+  if (!signalOptions) {
+    return;
+  }
+  if (Object.hasOwn(props, "defaultValue")) {
+    // explicit defaultValue prop prevails
+    return;
+  }
+  // Snapshot the signal's current default so that resetUIState restores to the
+  // original default — not the value the signal had at the time of the last
+  // re-render.
+  const defaultValue = signalOptions.getDefaultValue(false);
+  if (defaultValue !== undefined) {
+    props.defaultValue = defaultValue;
+  }
+};
+
 const resolveInputProps = (props) => {
   // `signal` carries a bound state signal. It is left on `props` on purpose:
   // `createControlInfo` (control_hooks.jsx) reads it to seed the state and
@@ -34444,17 +35786,7 @@ const resolveInputProps = (props) => {
       return;
     }
 
-    if (signalOptions) {
-      if (Object.hasOwn(props, "defaultValue")) ; else {
-        // If no explicit defaultValue, snapshot the signal's current default
-        // so that resetUIState restores to the original default — not the
-        // value the signal had at the time of the last re-render.
-        const defaultVal = signalOptions.getDefaultValue(false);
-        if (defaultVal !== undefined) {
-          props.defaultValue = defaultVal;
-        }
-      }
-    }
+    seedDefaultValueFromSignal(props);
   }
 
   const currentType = props.type;
@@ -34713,7 +36045,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$A = /* css */`
+const css$C = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -34762,7 +36094,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$A, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -34927,23 +36259,71 @@ const Editable = props => {
 const Form = props => {
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
-  const form = jsx(FormControl, {
+  // A <form> cannot contain a <form> — the parser closes the first one at the
+  // second's opening tag, so the inner fields would silently belong to the
+  // outer form. Rather than forbidding the shape (a form inside a picker inside
+  // a form is a legitimate thing to want), a form that finds itself inside one
+  // is a different component: same group, no <form> element and none of the
+  // browser machinery that comes with it.
+  const isNested = Boolean(useContext(FormContext));
+  const form = isNested ? jsx(FormNested, {
+    ...props
+  }) : jsx(FormControl, {
     ...props
   });
+  if (props.standalone) {
+    // Nothing above to register with: the group hooks read the parent from
+    // this context, so emptying it here is the whole opt-out.
+    return jsx(ParentUIStateControllerContext.Provider, {
+      value: undefined,
+      children: form
+    });
+  }
   return form;
 };
-const FormControl = props => {
-  const {
-    ref,
-    method = "GET"
-  } = props;
-  const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(props, {
+
+// What both forms are made of: one group, one context for what is inside it.
+// standalone is read by Form above and never goes further — least of all to the
+// DOM.
+const useFormGroup = props => {
+  const propsForGroup = {
+    ...props
+  };
+  delete propsForGroup.standalone;
+  delete propsForGroup.canSendWhileUnchanged;
+  // Not the generic control `command`, which a control triggers on its own ui
+  // actions — here it is what follows a SUCCESSFUL submission. So it is kept
+  // out of the control machinery and left in the DOM for the send to read
+  // (resolveAfterSend in commands.js).
+  delete propsForGroup.command;
+  propsForGroup["data-after-send"] = props.command;
+  const [formRootProps, formProps, childrenWrapperProps] = useControlgroupProps(propsForGroup, {
     allowCapture: true,
     wantRequesterButtonState: true,
     controlType: "form",
     stateType: "object",
     cascadeValidationToChildren: true
   });
+  const uiStateController = childrenWrapperProps.uiGroupStateController;
+  // The signal, not the plain property: reading it here is what re-renders the
+  // form as its fields change, which is what turns the submit button below
+  // interactive the moment there is something to send.
+  const uiState = uiStateController.uiStateSignal.value;
+  // False until a field differs from what was last sent, true while it does,
+  // and false again the moment it comes back to it — the plain fact about the
+  // value, with no opinion about what a submit would do with it.
+  const changed = !compareTwoJsValues(withoutEmptyFields(uiState), uiStateController.sentUIState);
+  // Read by READONLY_CONSTRAINT from a submit button held back by this form,
+  // which has to be able to say what it is waiting for.
+  uiStateController.changed = changed;
+  // Asked by the action gate at submit time, whichever way the submit came in —
+  // a submit event, a --navi-send command, requestSubmit() (see
+  // control_action.js). The value it is given, not `changed` above: a
+  // field changing updates the state synchronously while the re-render is a
+  // microtask away, so typing and pressing Enter right after must not be read
+  // against the state of the previous frame.
+  uiStateController.shouldRequestAction = value => Boolean(props.canSendWhileUnchanged) || !compareTwoJsValues(withoutEmptyFields(value), uiStateController.sentUIState);
+  useFirstUIStateAsSent(uiStateController);
   const {
     basePseudoState,
     children
@@ -34953,12 +36333,46 @@ const FormControl = props => {
   const loading = basePseudoState[":-navi-loading"];
   const formContextValue = useMemo(() => {
     return {
-      loading
+      loading,
+      changed
     };
-  }, [loading]);
+  }, [loading, changed]);
+  return {
+    formRootProps,
+    formProps,
+    // What was sent is what the next submit is measured against. On success
+    // only: an action that failed has not been sent, and the user must be able
+    // to try the same value again.
+    onnavi_action_end: () => {
+      uiStateController.sentUIState = withoutEmptyFields(uiStateController.uiState);
+    },
+    inside: jsx(FormContext.Provider, {
+      value: formContextValue,
+      children: jsx(ControlgroupChildrenWrapper, {
+        ...childrenWrapperProps,
+        // do not propagate name to children like radio group or checkbox group does
+        // (otherwise anonymous button end up using that name)
+        name: undefined,
+        children: children
+      })
+    })
+  };
+};
+const FormControl = props => {
+  const {
+    ref,
+    method = "GET"
+  } = props;
+  const {
+    formRootProps,
+    formProps,
+    onnavi_action_end,
+    inside
+  } = useFormGroup(props);
   return jsx(Box, {
     ...formRootProps,
     ...formProps,
+    onnavi_action_end: onnavi_action_end,
     as: "form",
     "data-method": method,
     novalidate: "" // make sure browser don't prevent "submit" when invalid, nor display messages
@@ -34982,17 +36396,81 @@ const FormControl = props => {
       // we want to reset to the last known external state instead
       e.preventDefault();
     },
-    children: jsx(FormContext.Provider, {
-      value: formContextValue,
-      children: jsx(ControlgroupChildrenWrapper, {
-        ...childrenWrapperProps,
-        // do not propagate name to children like radio group or checkbox group does
-        // (otherwise anonymous button end up using that name)
-        name: undefined,
-        children: children
-      })
-    })
+    children: inside
   });
+};
+
+// A form inside a form: the group, without the element. There is no submit
+// event to intercept and no requestSubmit() to go through, so it is driven the
+// way every other group is — a command, or an action requested on it. method
+// belongs to the browser's own submission, so it means nothing here either.
+const FormNested = props => {
+  const {
+    formRootProps,
+    formProps,
+    onnavi_action_end,
+    inside
+  } = useFormGroup(props);
+  return jsx(Box, {
+    ...formRootProps,
+    ...formProps,
+    onnavi_action_end: onnavi_action_end,
+    pseudoClasses: FormPseudoClasses,
+    children: inside
+  });
+};
+
+// What the form HOLDS, as opposed to what it is showing. A `value` is held: the
+// form was given it, and sending it back says nothing new. A `defaultValue` is
+// only a suggestion — an age that is usually 18, a duration that is usually
+// 1h30 — so the form holds nothing for that field, and sending the suggestion
+// back IS an answer ("yes, 18"). A field bound to a signal falls on whichever
+// side the signal put it: one carrying a default seeds `defaultValue`, one
+// without controls the field outright.
+const readHeldUIState = uiStateController => {
+  const uiState = uiStateController.uiState;
+  // A form given a value holds all of it, whatever its fields say.
+  if (uiStateController.hasValueProp) {
+    return withoutEmptyFields(uiState);
+  }
+  const held = {
+    ...uiState
+  };
+  for (const child of uiStateController.getChildControllers?.() || []) {
+    if (child.name && !child.hasStateProp) {
+      delete held[child.name];
+    }
+  }
+  return withoutEmptyFields(held);
+};
+
+// A field holding nothing is a field the form has nothing to say about, and
+// whether it is absent or present-and-empty is an accident of when it
+// registered — the baseline is taken before the fields have had their say, the
+// value at submit after. Compared as they are, an empty form would look changed
+// by the mere existence of an empty field.
+const withoutEmptyFields = uiState => {
+  if (!uiState || typeof uiState !== "object") {
+    return {};
+  }
+  const kept = {};
+  for (const key of Object.keys(uiState)) {
+    const value = uiState[key];
+    if (value !== undefined && value !== "") {
+      kept[key] = value;
+    }
+  }
+  return kept;
+};
+
+// Taken in a layout effect rather than during render because the fields
+// register themselves in their own effects, which run first — this is the
+// earliest moment the form knows what it holds. Everything after this baseline
+// is a real send moving it forward (see useFormGroup's own onnavi_action_end).
+const useFirstUIStateAsSent = uiStateController => {
+  useLayoutEffect(() => {
+    uiStateController.sentUIState = readHeldUIState(uiStateController);
+  }, [uiStateController]);
 };
 const FormPseudoClasses = [":hover", ":active", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 
@@ -35030,7 +36508,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$z = /* css */`
+installImportMetaCssBuild(import.meta);const css$B = /* css */`
   .navi_group {
     --group-border-width: 1px;
 
@@ -35126,7 +36604,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$z, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
@@ -35136,982 +36614,2279 @@ const Group = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$y = /* css */`
-  .navi_checkbox_group {
-    border-style: solid;
+// Stroked chevrons, unlike the solid ones in chevron_updown_svg.jsx: those
+// point AT something (the popup a picker opens), these are directions the user
+// can take — go back, dismiss upward — where the platform convention is a thin
+// line rather than a filled triangle.
+const ChevronLeftSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M15 4.5L7.5 12L15 19.5",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
+const ChevronUpSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M4.5 15L12 7.5L19.5 15",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
+const ChevronRightSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M9 4.5L16.5 12L9 19.5",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
+const ChevronDownSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M4.5 9L12 16.5L19.5 9",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
 
-    &[data-callout] {
-      border-color: var(--callout-color);
-    }
-  }
-`;
-const CheckboxGroup = props => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const defaultName = useId();
-  props.name = props.name || `checkbox_group_${defaultName}`;
-  const checkboxGroup = jsx(CheckboxGroupInterface, {
-    ...props
-  });
-  return checkboxGroup;
-};
-const CheckboxGroupInterface = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
-  const {
-    ref
-  } = props;
-  const [checkboxGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
-    resetOnCancel: true,
-    resetOnAbort: true,
-    resetOnError: true,
-    ...props
-  }, {
-    stateType: "array",
-    controlType: "checkbox_group"
-  });
-  useFocusGroup(ref, {
-    wrap: "both"
-  });
-  return jsx(Box, {
-    as: "fieldset",
-    ...checkboxGroupProps,
-    ...remainingProps,
-    name: undefined,
-    baseClassName: "navi_checkbox_group",
-    "navi-checkbox-list": "",
-    "data-callout-point-to-border-box": "",
-    children: jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
-      children: props.children
-    })
-  });
+// The same chevrons against a bar: not "one step that way" but "all the way
+// that way" — the first slide, the last one. Same convention as a media
+// player's skip-to-start, which is what one already reads it as.
+const ChevronFirstSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M17 4.5L9.5 12L17 19.5M6.5 4.5V19.5",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
+const ChevronLastSvg = () => jsx("svg", {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  xmlns: "http://www.w3.org/2000/svg",
+  children: jsx("path", {
+    d: "M7 4.5L14.5 12L7 19.5M17.5 4.5V19.5",
+    stroke: "currentColor",
+    "stroke-width": "2",
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round"
+  })
+});
+
+/**
+ * Decides which element receives focus when a container (popover, dialog, …)
+ * opens, and gives it back to where it came from when the container closes.
+ *
+ * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
+ * focus lands. Candidates are tried in this order:
+ * 1. The element that held focus when the container was last closed
+ * 2. [navi-autofocus] asking for it ("" for a plain `autoFocus`)
+ * 3. The first focusable element
+ * 4. [navi-autofocus="last-resort"], the container itself included
+ * 5. The element focused before the container opened
+ *
+ * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
+ * a fresh open, it only gets it back.
+ */
+
+// The element that held focus when a container closed is marked with
+// [navi-autofocus-last-focused], and its container with
+// [navi-autofocus-restore]. Both carry the same generated id: containers can
+// nest (a popover inside a dialog), so the id is what tells a reopening
+// container which mark among its descendants is its own.
+let restoreIdCounter = 0;
+
+// The values that never ASK for the focus: one takes it for want of anything
+// better ("last-resort"), the other only takes it back ("restore"). What they
+// have in common is being worth giving back to — a container that was holding
+// the keyboard itself, a field that said it wants it, are both places one was,
+// and coming back to where one was is the whole point of a restore.
+const isRestorableAutofocus = (el) => {
+  const value = el.getAttribute("navi-autofocus");
+  return value === "last-resort" || value === "restore";
 };
 
-const Unit = ({
-  unit,
-  plural,
-  format = "long",
-  lang = languagesSignal.value,
-  label,
-  size = "smaller",
-  sizeRatio,
-  style,
-  ...props
-}) => {
-  let resolvedSize = size;
-  let resolvedStyle = style;
-  if (size === "smaller" || sizeRatio !== undefined) {
-    resolvedSize = undefined;
-    const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
-    resolvedStyle = {
-      fontSize: `calc(${ratio} * 1em)`,
-      ...style
-    };
-  }
-  let unitText = unit;
-  if (label) {
-    unitText = label;
-  } else if (naviI18n.has(unit, {
-    lang
-  })) {
-    const singularText = naviI18n(unit, undefined, {
-      lang
-    });
-    if (format === "short" || format === "narrow") {
-      const shortKey = `${unit}__short`;
-      const shortText = naviI18n(shortKey, undefined, {
-        lang
-      });
-      unitText = shortText === shortKey ? singularText : shortText;
-    } else if (plural) {
-      const pluralKey = `${unit}__plural`;
-      const pluralText = naviI18n(pluralKey, undefined, {
-        lang
-      });
-      // fallback to singular if no plural key registered
-      unitText = pluralText !== pluralKey ? pluralText : singularText;
-    } else {
-      unitText = singularText;
-    }
-  } else {
-    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
-    const intlText = formatIntlUnit(unit, {
-      plural,
-      lang,
-      format
-    });
-    if (intlText === null) {
-      unitText = unit;
-    } else {
-      unitText = intlText;
-    }
-  }
-  return jsx(Text, {
-    baseClassName: "navi_unit",
-    size: resolvedSize,
-    style: resolvedStyle,
-    ...props,
-    children: unitText
-  });
-};
-const formatIntlUnit = (unit, {
-  lang,
-  plural,
-  format
-}) => {
-  try {
-    const count = plural ? 2 : 1;
-    const parts = new Intl.NumberFormat(lang, {
-      style: "unit",
-      unit,
-      unitDisplay: format
-    }).formatToParts(count);
-    const unitPart = parts.find(p => p.type === "unit");
-    return unitPart ? unitPart.value : null;
-  } catch {
+const clearAutofocusRestore = (containerEl) => {
+  const restoreId = containerEl.getAttribute("navi-autofocus-restore");
+  if (restoreId === null) {
     return null;
   }
+  containerEl.removeAttribute("navi-autofocus-restore");
+  const selector = `[navi-autofocus-last-focused="${restoreId}"]`;
+  const lastFocused = containerEl.matches(selector)
+    ? containerEl
+    : containerEl.querySelector(selector);
+  if (lastFocused) {
+    lastFocused.removeAttribute("navi-autofocus-last-focused");
+  }
+  return lastFocused;
 };
 
 /**
- * Wraps multiple inputs together and handles keyboard navigation and paste
- * distribution between them.
+ * "When the focus comes back here, put it on this" — what transferFocus reads
+ * first when it next hands the focus to that container.
  *
- * Keyboard navigation:
- *   ArrowRight at the end of an input moves focus to the next input.
- *   ArrowLeft at the start of an input moves focus to the previous input.
- *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
- *
- * Paste distribution:
- *   When an input has a data-separator attribute, pasting a string that
- *   contains that separator (e.g. "27/04/1990" into a day input with
- *   data-separator="/") splits the text on each separator and fills the
- *   corresponding sub-inputs in order.
+ * Told rather than watched: whoever is about to take the focus away is the one
+ * moment that still knows what was holding it.
  */
-const useInputGroup = (ref) => {
-  const debugFocus = useDebugFocus();
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) {
-      return () => {};
-    }
-
-    const getInputs = () =>
-      Array.from(el.querySelectorAll(".navi_control_input"));
-
-    const focusInput = (input) => {
-      input.focus();
-      input.select();
-    };
-
-    const handleKeyDown = (e) => {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
-        return;
-      }
-      const active = document.activeElement;
-      if (!isTextInputElement(active) || !el.contains(active)) {
-        return;
-      }
-      if (e.key === "ArrowRight") {
-        const allSelected =
-          active.selectionStart === 0 &&
-          active.selectionEnd === active.value.length;
-        const atEnd =
-          allSelected ||
-          (active.selectionStart === active.value.length &&
-            active.selectionEnd === active.value.length);
-        if (!atEnd) {
-          return;
-        }
-        const inputs = getInputs();
-        const idx = inputs.indexOf(active);
-        if (idx === -1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight on non group input → do nothing",
-          );
-          return;
-        }
-        if (idx === inputs.length - 1) {
-          debugFocus(
-            e,
-            "InputGroup ArrowRight at end of last input → do nothing",
-          );
-          return;
-        }
-
-        debugFocus(
-          e,
-          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
-          idx,
-          idx + 1,
-        );
-        e.preventDefault();
-        focusInput(inputs[idx + 1]);
-        return;
-      }
-      const allSelected =
-        active.selectionStart === 0 &&
-        active.selectionEnd === active.value.length;
-      const atStart =
-        allSelected ||
-        (active.selectionStart === 0 && active.selectionEnd === 0);
-      if (!atStart) {
-        return;
-      }
-      const inputs = getInputs();
-      const idx = inputs.indexOf(active);
-      if (idx === 0) {
-        return;
-      }
-      debugFocus(
-        e,
-        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
-        idx,
-        idx - 1,
-      );
-      e.preventDefault();
-      focusInput(inputs[idx - 1]);
-    };
-
-    const handleNaviInputFull = (e) => {
-      if (!e.detail.event?.isTrusted) {
-        // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
-        return;
-      }
-      const input = e.detail.event.currentTarget;
-      if (!el.contains(input)) {
-        return;
-      }
-      const inputs = getInputs();
-      const idx = inputs.indexOf(input);
-      if (idx === -1) {
-        return;
-      }
-      if (idx === inputs.length - 1) {
-        return;
-      }
-      const nextInput = inputs[idx + 1];
-      debugFocus(
-        e,
-        "InputGroup navi_input_full on input -> move to next input",
-        input,
-        nextInput,
-      );
-      e.preventDefault();
-      focusInput(nextInput);
-    };
-
-    // const handlePaste = (e) => {
-    //   const active = document.activeElement;
-    //   if (!isTextInputElement(active) || !el.contains(active)) {
-    //     return;
-    //   }
-    //   const inputs = getInputs();
-    //   const startIdx = inputs.indexOf(active);
-    //   if (startIdx === -1) {
-    //     return;
-    //   }
-    //   const pastedText = e.clipboardData?.getData("text") ?? "";
-    //   if (!pastedText) {
-    //     return;
-    //   }
-    //   // Only intercept when the pasted text contains at least one separator
-    //   // from the inputs starting at the focused position.
-    //   const remainingInputs = inputs.slice(startIdx);
-    //   const hasSeparatorMatch = remainingInputs.some(
-    //     (input) =>
-    //       input.dataset.separator &&
-    //       pastedText.includes(input.dataset.separator),
-    //   );
-    //   if (!hasSeparatorMatch) {
-    //     return;
-    //   }
-    //   e.preventDefault();
-    //   let remaining = pastedText;
-    //   let lastFilledIdx = startIdx;
-    //   for (let i = 0; i < remainingInputs.length; i++) {
-    //     const input = remainingInputs[i];
-    //     const separator = input.dataset.separator;
-    //     let part;
-    //     if (separator && remaining.includes(separator)) {
-    //       const sepIdx = remaining.indexOf(separator);
-    //       part = remaining.slice(0, sepIdx);
-    //       remaining = remaining.slice(sepIdx + separator.length);
-    //     } else {
-    //       part = remaining;
-    //       remaining = "";
-    //     }
-    //     requestSubPaste(input, part, e);
-    //     lastFilledIdx = startIdx + i;
-    //     if (remaining === "") {
-    //       break;
-    //     }
-    //   }
-    //   focusInput(inputs[lastFilledIdx]);
-    // };
-
-    el.addEventListener("keydown", handleKeyDown, { capture: true });
-    el.addEventListener("navi_input_full", handleNaviInputFull);
-    // el.addEventListener("paste", handlePaste, { capture: true });
-    return () => {
-      el.removeEventListener("keydown", handleKeyDown, { capture: true });
-      el.removeEventListener("navi_input_full", handleNaviInputFull);
-      // el.removeEventListener("paste", handlePaste, { capture: true });
-    };
-  }, [debugFocus]);
+const markAutofocusRestore = (containerEl, element) => {
+  clearAutofocusRestore(containerEl);
+  if (!element || !(containerEl === element || containerEl.contains(element))) {
+    return;
+  }
+  const restoreId = `${++restoreIdCounter}`;
+  containerEl.setAttribute("navi-autofocus-restore", restoreId);
+  element.setAttribute("navi-autofocus-last-focused", restoreId);
 };
 
-// const requestSubPaste = (input, value, event) => {
-//   dispatchRequestInteraction(input, {
-//     event,
-//     name: "subpaste",
-//     allowed: () => {
-//       dispatchRequestSetUIState(input, value, { event });
-//     },
-//   });
-// };
+// A popup closing remembers what held the focus, so reopening comes back to
+// it — re-focusing where the user was takes priority over any autofocus the
+// contents declare (see transferFocus). One exception: the element the closing
+// pointer itself pressed (a close button, an option whose click dismissed the
+// popup) is remembered only if it asked to be (restorable) — reopening a
+// dialog on the button one pressed to leave it would be surprising. A keyboard
+// close (Escape) designates no element, so whatever holds the focus is
+// remembered as where the user was.
+const markAutofocusRestoreOnClose = (
+  containerEl,
+  closeEvent,
+  // Received rather than read here: by the time the close cleanups run, the
+  // closing itself may have moved the focus already (a native <dialog>.close()
+  // hands it back to what held it at showModal() time) — the caller captured
+  // it when the close was decided.
+  focused = document.activeElement,
+) => {
+  clearAutofocusRestore(containerEl);
+  if (!focused || !(containerEl === focused || containerEl.contains(focused))) {
+    return;
+  }
+  if (!isRestorableAutofocus(focused)) {
+    const pointerEvent = closeEvent
+      ? findEvent(closeEvent, "mousedown") || findEvent(closeEvent, "click")
+      : null;
+    if (pointerEvent) {
+      const pointerTarget = pointerEvent.target;
+      if (
+        pointerTarget &&
+        (focused === pointerTarget || focused.contains(pointerTarget))
+      ) {
+        return;
+      }
+    }
+  }
+  markAutofocusRestore(containerEl, focused);
+};
 
-const isTextInputElement = (el) => {
-  if (!el) {
-    return false;
+/**
+ * Where the focus goes inside a container, in the order candidates are tried:
+ * 1. the first [navi-autofocus] that leads somewhere focusable — "put it here";
+ * 2. the first focusable that asks for nothing in particular — what one came to
+ *    do;
+ * 3. the DEEPEST [navi-autofocus="last-resort"], the container itself included
+ *    — "not me, unless you have nothing else". Deepest first, because of two
+ *    nested ones the inner is the more precise answer: a dialog holding a panel
+ *    holding a close button lands on the button, not on the dialog;
+ * 4. nothing, and the caller decides what that means.
+ *
+ * One word covers both readings of "last resort", because they are the same
+ * sentence said by different elements. On a FOCUSABLE — a picker's search box,
+ * a panel's close button, a slide's chevron — it means "prefer anything else in
+ * here to me". On a CONTAINER — a dialog, a popover, a slide — it means the
+ * same about its own contents, and those contents being tried first (step 2
+ * walks them) is exactly what makes the container a last resort.
+ *
+ * @param {HTMLElement} containerEl
+ * @returns {{target: HTMLElement, reason: string}|undefined}
+ */
+const findFocusTarget = (containerEl) => {
+  // Not while there is anything else: what takes the focus only for want of
+  // anything better ("last-resort") and what only takes it back ("restore").
+  // Neither is dropped, both are simply tried later — step 3 below for the
+  // first, and for the second the restore transferFocus does before ever
+  // calling here.
+  const skip = (element) => isRestorableAutofocus(element);
+
+  // Every mark, not just the first: a mark is only worth stopping at if it
+  // leads somewhere focusable. One inside a screen waiting its turn (an inert
+  // slide) says where the focus goes WHEN it arrives there, not now — so it is
+  // passed over here rather than treated as an answer that then fails silently.
+  for (const asked of containerEl.querySelectorAll(`[navi-autofocus]`)) {
+    if (skip(asked)) {
+      continue;
+    }
+    // Through findFocusable: the mark is not always ON the focusable itself — a
+    // control puts it on the box it renders, the field inside being what takes
+    // the keyboard — and it is also what answers "can this be focused at all"
+    // (inert, hidden, disabled).
+    const askedFocusable = findFocusable(asked, { exclude: skip });
+    if (askedFocusable) {
+      return { target: askedFocusable, reason: "navi-autofocus" };
+    }
   }
-  if (el.tagName === "TEXTAREA") {
+  const focusable = findFocusable(containerEl, { exclude: skip });
+  if (focusable) {
+    return { target: focusable, reason: "first focusable element" };
+  }
+  const lastResorts = Array.from(
+    containerEl.querySelectorAll(`[navi-autofocus="last-resort"]`),
+  );
+  if (containerEl.matches?.(`[navi-autofocus="last-resort"]`)) {
+    // Last of all: querySelectorAll only looks at descendants, and the
+    // container is the outermost last resort there is.
+    lastResorts.push(containerEl);
+  }
+  const deepestLastResort = lastResorts.find(
+    (candidate) =>
+      !lastResorts.some(
+        (other) => other !== candidate && candidate.contains(other),
+      ),
+  );
+  if (deepestLastResort) {
+    const lastResortFocusable = findFocusable(deepestLastResort);
+    if (lastResortFocusable) {
+      return {
+        target: lastResortFocusable,
+        reason: "navi-autofocus last-resort",
+      };
+    }
+  }
+  return undefined;
+};
+
+const prepareFocusTransfer = (prepareEvent, debugFocus) => {
+  const focusedElement = getFocusedBeforeTransfer(prepareEvent);
+  // Whether what receives the focus shows a ring: the modality of the
+  // interaction asking for the transfer, not the state of the element handing
+  // it over. That element is often no witness at all — a popup opened from a
+  // trigger whose mousedown we prevented keeps a :focus-visible nobody can see,
+  // and a slide handing over to the next one was itself focused programmatically
+  // without a ring, so it would report "no ring" for a travel asked for with
+  // ArrowLeft. The modality answers "was the user on the keyboard when this was
+  // asked for", which is the whole question (see isKeyboardModality).
+  const focusVisible = isKeyboardModality();
+
+  debugFocus(
+    prepareEvent,
+    `prepare focus transfer from`,
+    focusedElement,
+    focusVisible ? " matching :focus-visible" : "not matching :focus-visible",
+  );
+
+  return {
+    focusedElement,
+    focusVisible,
+
+    transferFocus: (transferEvent, containerEl) => {
+      let target;
+      let reason;
+      const lastFocused = clearAutofocusRestore(containerEl);
+      if (lastFocused) {
+        // Through findFocusable: what was remembered may have become a wrapper
+        // since (or stopped taking focus at all), and what is inside it is then
+        // what the memory meant.
+        const stillFocusable = findFocusable(lastFocused);
+        if (stillFocusable) {
+          reason = "element focused when it was left (restore)";
+          target = stillFocusable;
+        }
+      }
+      if (!target) {
+        const found = findFocusTarget(containerEl);
+        if (found) {
+          reason = found.reason;
+          target = found.target;
+        }
+      }
+      if (!target) {
+        if (focusedElement) {
+          reason = "focused element before open (fallback)";
+          target = focusedElement;
+        }
+      }
+      if (!target) {
+        return;
+      }
+      // The modality speaks for the transfer, but an editable target outranks
+      // it: it draws its ring on any focus (see isMatchingFocusVisible), so
+      // the native :focus-visible is told the same.
+      const targetFocusVisible = focusVisible || isEditableTarget(target);
+      debugFocus(
+        transferEvent,
+        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${targetFocusVisible} }) (reason: ${reason})`,
+      );
+      target.focus({
+        preventScroll: true,
+        focusVisible: targetFocusVisible,
+      });
+      if (target.hasAttribute("navi-autofocus-select")) {
+        target.select();
+        target.scrollLeft = 0;
+      }
+    },
+
+    restoreFocus: (restoreEvent) => {
+      debugFocus(
+        restoreEvent,
+        `restore focus to previously focused element`,
+        focusedElement,
+      );
+      const restoreFocusVisible =
+        isKeyboardModality() || isEditableTarget(focusedElement);
+      focusedElement.focus({
+        preventScroll: true,
+        focusVisible: restoreFocusVisible,
+      });
+    },
+  };
+};
+
+// Get the active element before we transfer focus in the popover/dialog
+// We don't just use document.activeElement because when dialog is opened by mousedown
+// we prevent default so browser don't steal focus back from the dialog
+// meaning the focus did not yet reach the element receiving the mousedown
+// as a result document.activeElement is not up-to-date (can be document.body for instance)
+const getFocusedBeforeTransfer = (e) => {
+  // No event at all: a transfer asked for by code (a `current` prop moving a
+  // slide, say) has no interaction to read — whatever holds the focus is all
+  // there is to know.
+  const initiator = e?.detail?.eventChain ? e.detail.eventChain[0] : null;
+  if (initiator) {
+    if (initiator.type === "mousedown") {
+      // if we we had let browser give focus, the element would be the one that would be focused
+      return initiator.currentTarget;
+    }
+    if (initiator.type === "click") {
+      // label use case
+      return initiator.currentTarget;
+    }
+  }
+  return document.activeElement;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Slides that replace one another inside one box.
+ *
+ * Every slide sits in the same grid cell, so the box measures itself on the
+ * LARGEST of them and nothing resizes as one moves through them; a slide
+ * travels by exactly one box, so a short one and a tall one move the same
+ * distance.
+ *
+ * `layout` says where the slides are, and it takes either a word or a map:
+ *
+ *   <SlideContainer layout="row">        one after the other, in DOM order
+ *   <SlideContainer layout="column">     the same, downwards
+ *   <SlideContainer layout={["pick   edit",
+ *                            "create"]}> a map of named areas
+ *
+ * The map is spelled the way CSS spells grid-template-areas: one string per
+ * row, "." for a hole, a name repeated to span several cells. One place to read
+ * the shape, drawn as it looks; a slide only says which area it is, so moving a
+ * screen is an edit to the map and nothing else. There is no "grid" keyword,
+ * because a grid without names says nothing — the map IS the grid. A word is
+ * the map one would have drawn for a line, so it is drawn here and everything
+ * below only ever knows about maps.
+ *
+ * The slides live INSIDE the box, which is what makes this work for a popup: a
+ * dialog and a popover are both promoted to the browser's top layer, so no
+ * container of ours could ever hold two of them side by side and translate the
+ * pair. One popup holding slides of its own contents has no such problem — and
+ * it is the same component in the document, in a dialog or in a popover.
+ */
+const css$A = /* css */`
+  /* Every slide in the same grid cell: the box then measures itself on the
+     LARGEST of them, in both directions, without anything being measured by
+     hand — which is also why nothing here resizes as the slides change. Each
+     slide travels by exactly one box, so a short one and a tall one move the
+     same distance. */
+  .navi_slide_container {
+    /* The ring of the slide holding the keyboard is drawn on the CONTAINER,
+       not on the slide: a slide is deliberately square (its corners belong to
+       this box, see [data-slide] below), so a ring drawn on one would come out
+       square inside a rounded box and cut across the curve. Here it follows
+       whatever radius this box was given.
+       Not on the track either, for the other half of the reason: the track is
+       what travels, and a ring riding along would slide out of the frame for
+       the length of a travel. The two have the same geometry at rest, so
+       nothing is lost by drawing it on the one that stays still.
+       :has(), not a class set from JS: which slide is showing its focus is
+       something the DOM already says. */
+    position: relative;
+    display: grid;
+    min-width: 0;
+    min-height: 0;
+    /* Never bigger than what holds it: the box is as big as its largest slide,
+       but a slide scrolls its own body, so the room it would need is not room
+       it must be given. Shrinking is enough for that (the slides then scroll);
+       GROWING is a decision the caller makes with expandY, for a box that must
+       fill a container it does not need — see the dialog demo. */
+    flex: 0 1 auto;
+    /* Passed down rather than owned: this is usually the whole content of a
+       rounded popup, and a slide (with its header) has to follow that curve —
+       nothing between them may flatten it on the way. */
+    border-radius: inherit;
+    overflow: hidden;
+
+    /* The browser's own ring, suppressed in favour of the one below: this box
+       is focusable (see its tabIndex) and would otherwise get the UA outline
+       drawn on top of ours, on its own terms. Same as the wheel does. */
+    &:focus {
+      outline: none;
+    }
+
+    /* Outside the box, which is where an outline is drawn by default: nothing
+       inside can paint over it (the slides are all within), and this box's own
+       overflow does not clip it either — an element's outline is not its own
+       overflow's business. So it needs no element of its own, unlike the
+       wheel's ring, which marks a window inside the wheel. */
+    &[data-focus-visible] {
+      outline-width: var(--navi-focus-outline-width);
+      /* A style of its own, not the shorthand, so whoever holds this box can
+         take the ring over by setting the variable to "none" — the delegation
+         offered by data-focus-outline-delegate. */
+      outline-style: var(--navi-focus-outline-style, solid);
+      outline-color: var(--navi-focus-outline-color);
+      outline-offset: calc(-0.5 * var(--navi-focus-outline-width));
+    }
+
+    /* ONE thing moves: the track. The slides are laid out once and for all,
+       each at its own place on the map, and never transition — so two
+       neighbours cannot end up a pixel apart mid-travel the way two transitions
+       running side by side can. It also means one transitionend, one duration,
+       one easing, whatever the number of slides. */
+    > [data-slide-track] {
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      grid-area: 1 / 1;
+      border-radius: inherit;
+      /* Where the track IS. Moving there is animated from JS (see the layout
+         effect's own track.animate): a transition would have to be watched from
+         the outside to know when it ends, and "when it ends" is what a looping
+         container needs to be exact about. An animation is asked directly —
+         it has a finished promise of its own. */
+      translate: var(--slide-container-offset, 0);
+
+      > [data-slide] {
+        /* All in the one cell, so the box is as big as its largest slide and
+           the others stretch to it (grid stretches by default) rather than
+           floating in a corner of it. No display of its own here: a slide is a
+           Box and keeps whatever it was given. */
+        min-width: 0;
+        min-height: 0;
+        grid-area: 1 / 1;
+        /* Square, deliberately: two rounded slides passing each other leave a
+           pinched gap between their curves where the page shows through. The
+           corners belong to the container, which clips them (overflow: hidden
+           above) — so what one sees is rounded at rest and butt-jointed in
+           motion, with nothing between two slides at any point of the travel. */
+        border-radius: 0;
+        /* Never on the slide: the ring is drawn on the container above, which
+           is where the corners are. */
+        outline: none;
+        /* Its place on the map, in boxes — not a movement: same percentage
+           reference as the track's own (both are the size of the box), so the
+           distance the track travels is exactly the distance between two
+           slides. */
+        translate: var(--slide-offset, 0);
+      }
+      /* Nothing here for a slide not on screen: [inert] (set from JS) already
+         takes it out of reach of the pointer, of Tab and of a screen reader —
+         one attribute instead of pointer-events plus aria-hidden, and the only
+         one the browser does not argue with about a focused descendant. */
+    }
+  }
+`;
+
+// How much of a travel is left to make, as a fraction of the travel that was
+// asked for: 1 for a move starting from rest, less for one picked up while the
+// track was already moving. Everything is measured in px against the track's
+// own box, because that is what its percentages resolve to.
+const ratioOfOneTravel = (track, from, to, targetBefore) => {
+  const box = track.getBoundingClientRect();
+  const readOffset = offset => {
+    if (!offset || offset === "none") {
+      return {
+        x: 0,
+        y: 0
+      };
+    }
+    const [x = "0", y = "0"] = String(offset).trim().split(/\s+/);
+    const toPx = (value, size) => value.endsWith("%") ? parseFloat(value) / 100 * size : parseFloat(value) || 0;
+    return {
+      x: toPx(x, box.width),
+      y: toPx(y, box.height)
+    };
+  };
+  const distance = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  const target = readOffset(to);
+  const asked = distance(readOffset(targetBefore), target);
+  if (!asked) {
+    return 1;
+  }
+  const left = distance(readOffset(from), target);
+  const ratio = left / asked;
+  return ratio > 1 ? 1 : ratio;
+};
+
+// A press landing while the track is already travelling: what is playing is
+// sent home in a fifth of the time it has left, and the press it could not take
+// yet is taken as soon as it lands. A press has to be FELT — nudging the pace
+// of a travel already in flight (what this used to do) reads as "nothing
+// happened", because the thing was moving before the click too. Getting there
+// almost at once and setting off again is the click being answered.
+// Played out fast rather than cut short: ending it on the spot would jump.
+// Compounds, so two presses during one travel bring it home twice as sharply,
+// up to a rate past which nobody sees the difference anyway.
+const HURRY_FACTOR = 5;
+const HURRY_RATE_MAX = 25;
+const hurryTravel = animation => {
+  if (!animation || animation.playState !== "running") {
+    return;
+  }
+  const rate = animation.playbackRate * HURRY_FACTOR;
+  animation.playbackRate = rate > HURRY_RATE_MAX ? HURRY_RATE_MAX : rate;
+};
+
+// The ways out of a slide: whatever carries a travel command, the built-in
+// chevrons (SlideNavButton) and anything a caller wired by hand alike. They are
+// the container's chrome, not its content — see rememberFocus.
+const WAY_OUT_SELECTOR = ['[command="--navi-left"]', '[command="--navi-right"]', '[command="--navi-up"]', '[command="--navi-down"]', '[command="--navi-back"]', '[command^="--navi-go-to-slide"]'].join(",");
+const isWayOut = element => Boolean(element && element.closest && element.closest(WAY_OUT_SELECTOR));
+
+// One object, shared: the areas nothing was ever handed to all read the same
+// empty map, and a re-render changes nothing for them.
+const EMPTY_VALUE_BY_AREA = {};
+
+// What the container tells what is inside it: which way it travels, so a button
+// can point the right way without being told twice.
+const SlideContainerContext = createContext(null);
+// What a slide tells what is inside IT: whether leaving it is allowed right
+// now, so its own prev/next buttons say so instead of failing when pressed.
+const SlideContext = createContext(null);
+// What the travel into THIS slide carried (see SlideContainer's valueByArea).
+const SlideValueContext = createContext(undefined);
+
+/**
+ * What the command that opened this slide was about: the `value` of whatever
+ * asked for the travel — a button saying which entry it is editing
+ * (`value={{ name }}` next to `command="--navi-right"`), a `--navi-down`
+ * dispatched by hand with one.
+ *
+ * Undefined until something hands one over, and kept until the next travel into
+ * the same slide hands over another: a screen opened again about something else
+ * is about that something else.
+ */
+const useSlideValue = () => useContext(SlideValueContext);
+
+/**
+ * The map, as cells: ["pick edit", "create"] becomes a lookup from a place to
+ * the area sitting there, and from an area to the place it starts at. Written
+ * once here so nothing else has to know how a map is spelled.
+ */
+const parseAreas = areas => {
+  const rows = (Array.isArray(areas) ? areas : String(areas).split("\n")).map(row => row.trim()).filter(Boolean).map(row => row.split(/\s+/));
+  const areaAt = new Map();
+  const placeOf = new Map();
+  const order = [];
+  let y = 0;
+  for (const row of rows) {
+    let x = 0;
+    for (const name of row) {
+      if (name !== ".") {
+        areaAt.set(`${x},${y}`, name);
+        // The first cell it appears in: an area spanning several cells is shown
+        // from its top left corner, like a grid item is.
+        if (!placeOf.has(name)) {
+          placeOf.set(name, {
+            x,
+            y
+          });
+          order.push(name);
+        }
+      }
+      x++;
+    }
+    y++;
+  }
+  return {
+    areaAt,
+    placeOf,
+    order
+  };
+};
+
+// A word is a map too: "row" is every slide on one line, "column" is one per
+// line, both in the order they are written.
+const lineAreas = (slideElements, layout) => {
+  const names = slideElements.map(readArea);
+  return parseAreas(layout === "column" ? names : [names.join(" ")]);
+};
+
+// A CSS duration read as a number, so a window knows when its travel is over.
+const durationToMs = duration => {
+  const number = parseFloat(duration);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  return String(duration).trimEnd().endsWith("ms") ? number : number * 1000;
+};
+const readArea = slideElement => slideElement.getAttribute("data-slide-area") || slideElement.id || "";
+
+/**
+ * The slide shown can be driven from outside (`current` + `onCurrentChange`) or
+ * left to the container, which then answers the
+ * --navi-left/--navi-right/--navi-up/--navi-down commands sent from anything
+ * inside it.
+ *
+ * Which slides there are is read from the DOM, not from the children: a slide
+ * is whatever <Slide> put there, wherever it came from — a fragment, a .map(),
+ * a component of your own wrapping one. Nothing here assumes the children ARE
+ * the slides, so nothing breaks when they are not.
+ *
+ * @param {object} props
+ * @param {"row"|"column"|string[]} [props.layout="row"] - where the slides are.
+ *   A word for a line — "row" to the right, "column" downwards, both in DOM
+ *   order — or a map of named areas, one string per row: `["pick edit",
+ *   "create"]`. Spelled like grid-template-areas ("." is a hole, a name
+ *   repeated spans), except that a row needs no trailing hole: what is not
+ *   written is simply not there.
+ * @param {string} [props.current] - area (or id) of the slide being shown; omit
+ *   to keep it here and drive it by command.
+ * @param {string} [props.defaultCurrent] - which slide to open on, when the
+ *   travel is left to the container. Mount-only, like every other `default*`:
+ *   it says where one starts, not where one is — say `current` for that.
+ *   Without it the first slide is the one shown, the way a stack of pages opens
+ *   on its first page.
+ * @param {(area: string) => void} [props.onCurrentChange]
+ * @param {boolean} [props.loop] - the slides are a window over something
+ *   endless (days, months, a carousel) rather than places one stays at. A
+ *   travel plays as usual and then the window comes back to the slide it rests
+ *   on, without a travel of its own — so the content is expected to have moved
+ *   one step meanwhile, which is what `onLoop` is for. Travelling off one end
+ *   comes back on the other, since a window has no end.
+ * @param {(detail: {area: string, dx: number, dy: number, event: Event}) => void} [props.onLoop]
+ *   - the window has rolled one step this way and is back at rest: move the
+ *   content by one step, here, so the picture that lands in the middle is the
+ *   one that just travelled there. Called once the travel is over, and in the
+ *   same render as the return to rest — anything later shows the old content
+ *   for a frame.
+ * @param {boolean} [props.keyboardTravel=true] - whether the arrows (and
+ *   Home/End) walk the map. On by default: a map one can see is a map one
+ *   expects to walk. Off when the arrows mean something else where these slides
+ *   are — a list of choices one moves through, a picker whose screens are
+ *   steps rather than places — so the keys keep the meaning the content gives
+ *   them, and travelling stays something one asks for (a button, a command).
+ * @param {string} [props.duration="300ms"] - how long a slide change takes.
+ */
+const SlideContainer = ({
+  layout = "row",
+  current: currentProp,
+  defaultCurrent,
+  onCurrentChange,
+  loop,
+  onLoop,
+  keyboardTravel = true,
+  duration = "300ms",
+  children,
+  ...rest
+}) => {
+  import.meta.css = [css$A, "@jsenv/navi/src/layout/slide_container.jsx"];
+  const debugFocus = useDebugFocus();
+  const trackRef = useRef();
+  // The box itself: it is what takes the keyboard when what is on screen holds
+  // nothing that can (see handOverFocus).
+  const containerRef = useRef();
+  // The AREA of the slide being shown, not its rank: a rank would be wrong the
+  // moment a slide appears before it, and there is nothing to renumber here.
+  const [currentAreaState, setCurrentAreaState] = useState(defaultCurrent);
+  // Where the window is while it rolls, and nothing more: a looping container
+  // rests where it rested before (below), so this is the travel itself rather
+  // than a change of slide.
+  const [rollingArea, setRollingArea] = useState(null);
+  // Nothing travels until something changes: the first paint is where the
+  // slides ARE (a container opening on its third slide opens there, it does not
+  // fly there), and the way back to rest is not a travel either — the content
+  // has moved one step under the window, so the picture is already the right
+  // one and the track has only to be where the resting slide is. Undone the
+  // frame after, or the travel after that would jump too.
+  const [noTravel, setNoTravel] = useState(true);
+  const rollingRef = useRef(false);
+  // The presses that arrived while the window was rolling: kept rather than
+  // refused, and taken one per roll (see the effect below) — three quick
+  // presses on a carousel are three steps, not one.
+  const pendingRollsRef = useRef([]);
+  // Where the track was left, so the next move knows what to travel FROM: an
+  // animation is written as two ends, and reading the first one off the DOM
+  // mid-travel would read a moving value.
+  const offsetRef = useRef();
+  const trackAnimationRef = useRef(null);
+  // What to do once the travel now starting is over, handed to the animation as
+  // soon as there is one.
+  const rollBackRef = useRef(null);
+  // A focus transfer read off the interaction that asked for the travel, kept
+  // until the slide it is meant for holds its final DOM (see handOverFocus).
+  const focusHandOverRef = useRef(null);
+  const current = rollingArea ?? currentProp ?? currentAreaState;
+  const vertical = layout === "column";
+  // Which required slides have been answered (see Slide's own `required`). Held
+  // here rather than in each slide because answering one says something about
+  // the others: the steps after it were answered about a state that has just
+  // changed, so they stop counting as answered.
+  const [answeredAreas, setAnsweredAreas] = useState([]);
+  // What the last travel INTO an area carried, if anything: a button saying
+  // which entry it is about (value={{ name }}) hands it to the slide it opens,
+  // which reads it back with useSlideValue to fill a form with it. Per area,
+  // because two ways in can mean two different things, and kept until the next
+  // travel there replaces it.
+  const [valueByArea, setValueByArea] = useState(EMPTY_VALUE_BY_AREA);
+  // Where each area was reached FROM: what "back" means is a fact about the
+  // travel, not about the map — a screen reached from two places goes back to
+  // the one it was reached from, and no direction can say that. A ref, not
+  // state: nothing on screen depends on it, and a travel must read what the
+  // one before it wrote, not what the last render saw.
+  const cameFromRef = useRef({});
+
+  // The travel is given back as soon as the picture it must not animate has
+  // been painted: one frame with it off is all it takes.
+  useLayoutEffect(() => {
+    if (!noTravel) {
+      return undefined;
+    }
+    const frame = requestAnimationFrame(() => {
+      setNoTravel(false);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [noTravel]);
+
+  // What the user was doing on each slide, so coming back comes back to it. The
+  // ways out are left out on purpose: pressing one is how one LEAVES a slide,
+  // and remembering it would mean coming back to the exit rather than to the
+  // work — press →, press ←, and the keyboard would sit on the chevron one
+  // pressed instead of on the field one was filling. They are chrome, like a
+  // browser's own back button, which never becomes what the page restores.
+  const focusMemoryRef = useRef(new WeakMap());
+  useLayoutEffect(() => {
+    const containerEl = containerRef.current;
+    const onFocusIn = focusInEvent => {
+      const focusedElement = focusInEvent.target;
+      if (isWayOut(focusedElement)) {
+        return;
+      }
+      const slideElement = focusedElement.closest?.("[data-slide]");
+      if (slideElement && containerEl.contains(slideElement)) {
+        focusMemoryRef.current.set(slideElement, focusedElement);
+      }
+    };
+    containerEl.addEventListener("focusin", onFocusIn);
+    return () => {
+      containerEl.removeEventListener("focusin", onFocusIn);
+    };
+  }, []);
+  // Written down at the moment a slide is left: what is focused now when that
+  // is content, what was focused before otherwise, and nothing at all when the
+  // slide never held the keyboard anywhere but on its own ways out — the slide
+  // arriving then falls back to its ladder, which lands on what there is to do
+  // (findFocusTarget, and the chevrons' own "last-resort").
+  const rememberFocus = (slideElement, focusedElement) => {
+    if (focusedElement && !isWayOut(focusedElement)) {
+      markAutofocusRestore(slideElement, focusedElement);
+      return;
+    }
+    const remembered = focusMemoryRef.current.get(slideElement);
+    markAutofocusRestore(slideElement, remembered && slideElement.contains(remembered) ? remembered : null);
+  };
+  const readMap = () => {
+    const slideElements = Array.from(trackRef.current.children);
+    const map = typeof layout === "string" ? lineAreas(slideElements, layout) : parseAreas(layout);
+    return {
+      slideElements,
+      ...map
+    };
+  };
+  const markAnswered = area => {
+    const order = readMap().slideElements.map(readArea);
+    const rank = order.indexOf(area);
+    setAnsweredAreas(previous => [...previous.filter(answered => order.indexOf(answered) < rank), area]);
+  };
+
+  // A slide reporting that what it was there for is done (see Slide's own
+  // onnavi_done). Onwards, or back to where it came from when there is nothing
+  // after it — a step that has been answered is not a step to stay on.
+  const done = (area, event) => {
+    markAnswered(area);
+    if (!moveNext(event)) {
+      movePrevious(event);
+    }
+  };
+
+  // Everything positional is decided here, from the DOM, once per render: where
+  // each slide stands on the map, which one is current, and how far the track
+  // must be for that one to be the one on screen. Reading the DOM is what makes
+  // the children free — their shape says nothing about the arrangement, the map
+  // does — and it is also the only place that has to agree with itself.
+  useLayoutEffect(() => {
+    const {
+      slideElements,
+      placeOf
+    } = readMap();
+    if (slideElements.length === 0) {
+      return;
+    }
+    const currentElement = slideElements.find(slideElement => readArea(slideElement) === current) ||
+    // Nothing named, or a name nothing answers to: the first slide is the one
+    // shown, the way a stack of pages opens on its first page.
+    slideElements[0];
+    const currentPlace = placeOf.get(readArea(currentElement)) || {
+      x: 0,
+      y: 0
+    };
+    // A transfer waiting for a travel that never happened — a controlled
+    // `current` the caller chose not to move: dropped, the focus has no
+    // business going anywhere. The one for a travel that DID happen stays,
+    // and lands when the slide it is for says it is settled (see settleFocus).
+    if (focusHandOverRef.current && focusHandOverRef.current.area !== readArea(currentElement)) {
+      focusHandOverRef.current = null;
+    }
+    // Read before anything is marked: setting inert below moves the focus out by
+    // itself, so afterwards there is no way to tell whether it was inside. What
+    // this is for is the travel nobody asked for — a `current` prop moved from
+    // outside, with the keyboard still on the slide about to go out of reach. A
+    // travel someone asked for has its own transfer waiting (focusHandOverRef),
+    // and that one knows what was pressed.
+    const focusIsLeaving = !focusHandOverRef.current && slideElements.some(slideElement => slideElement !== currentElement && slideElement.contains(document.activeElement));
+    for (const slideElement of slideElements) {
+      const {
+        x,
+        y
+      } = placeOf.get(readArea(slideElement)) || {
+        x: 0,
+        y: 0
+      };
+      slideElement.style.setProperty("--slide-offset", `${x * 100}% ${y * 100}%`);
+      const isCurrent = slideElement === currentElement;
+      slideElement.toggleAttribute("data-current", isCurrent);
+      slideElement.toggleAttribute("data-slide-displaced", !isCurrent);
+      if (isCurrent) {
+        // Reachable again first, so the focus below has somewhere to land: an
+        // inert element cannot take it.
+        slideElement.removeAttribute("inert");
+      }
+    }
+    const track = trackRef.current;
+    const offset = `${-currentPlace.x * 100}% ${-currentPlace.y * 100}%`;
+    // Where the track IS, read before anything is written: a travel asked for
+    // while another is still playing must carry on from what is on screen. The
+    // previous TARGET is where the last travel was going, not where it got to —
+    // starting from it would jump the track to the end of a move that never
+    // finished, and only then slide back.
+    // Read, rather than left implicit: an animation with only a "to" keyframe
+    // starts from the UNDERLYING value, which is the resting offset (the CSS
+    // var just below) and not the moving one — the animation being replaced
+    // does not contribute to it. So the position on screen is a thing to go and
+    // fetch, and having it in hand is also what allows the pace below.
+    const travelInFlight = trackAnimationRef.current?.playState === "running";
+    const offsetOnScreen = travelInFlight ? getComputedStyle(track).translate : undefined;
+    const offsetBefore = offsetOnScreen ?? offsetRef.current;
+    const offsetTargetBefore = offsetRef.current;
+    offsetRef.current = offset;
+    // Where the track ends up, always — the animation below only covers the way
+    // there, and when it is over this is what holds.
+    track.style.setProperty("--slide-container-offset", offset);
+    const durationMs = durationToMs(duration);
+    const travels = !noTravel && durationMs > 0 && offsetBefore !== undefined && offsetBefore !== offset;
+    if (travels) {
+      // The time it takes is the distance it has left to cover: a travel picked
+      // up a fifth of the way through goes back in a fifth of the time, so what
+      // one sees keeps the speed it already had instead of crawling back over a
+      // short distance for a full duration. One box in `duration` is the pace;
+      // this only ever shortens it (a longer travel is not made slower, which
+      // would make a two-box move drag).
+      const travelRatio = ratioOfOneTravel(track, offsetBefore, offset, offsetTargetBefore);
+      // Already moving, so no ease-in to play: it would stall the track for an
+      // instant right where the eye is following it.
+      const easing = travelInFlight ? "ease-out" : "ease";
+      // Cancelled rather than layered: two animations on the same property
+      // would blend, and what one sees then is neither of the two moves.
+      trackAnimationRef.current?.cancel();
+      trackAnimationRef.current = track.animate([{
+        translate: offsetBefore
+      }, {
+        translate: offset
+      }], {
+        duration: durationMs * travelRatio,
+        easing
+      });
+      // Presses still waiting behind this one: it is already late, so it is
+      // sent home at once rather than played out at the pace of someone who
+      // has stopped pressing. Someone pressing → four times is asking to be
+      // four slides further, not to watch four travels.
+      if (pendingRollsRef.current.length) {
+        hurryTravel(trackAnimationRef.current);
+      }
+    }
+    // A window waiting for its travel to be over (see goToArea's own loop
+    // branch): the animation says when, and says it about the move that just
+    // started rather than about a duration counted out beside it.
+    const rollBack = rollBackRef.current;
+    if (rollBack) {
+      rollBackRef.current = null;
+      if (travels) {
+        trackAnimationRef.current.finished.then(rollBack, () => {
+          // cancelled by the next travel — that one answers for it
+        });
+      } else {
+        requestAnimationFrame(rollBack);
+      }
+    }
+    // The keyboard is on a slide about to go out of reach and nobody has moved
+    // it: inert would drop it on the floor (document.body), so it is handed to
+    // the slide on screen instead. No event to read — this travel was asked for
+    // by code — so the transfer has nothing but the modality to go on.
+    if (focusIsLeaving) {
+      // Nobody pressed anything here, so what is focused is content by
+      // definition — but it is still the slide being left that has to remember
+      // it, and it has to be done before inert takes it away.
+      const leavingElement = slideElements.find(slideElement => slideElement !== currentElement && slideElement.contains(document.activeElement));
+      if (leavingElement) {
+        rememberFocus(leavingElement, document.activeElement);
+      }
+      handOverFocus(currentElement, prepareFocusTransfer(undefined, debugFocus), undefined);
+    }
+    // Out of reach LAST, once the keyboard has already moved on: a browser
+    // takes the focus off an element the moment it becomes inert, and on its
+    // own schedule — doing this first would let that undo the landing above and
+    // leave the focus on nothing.
+    for (const slideElement of slideElements) {
+      slideElement.toggleAttribute("inert", slideElement !== currentElement);
+    }
+  });
+
+  /**
+   * @returns {boolean} whether it moved — false is "there was nowhere to go",
+   *   which is what lets a key that changes nothing keep its own meaning.
+   */
+  const goToArea = (area, {
+    forward,
+    event,
+    value,
+    dx = 0,
+    dy = 0
+  } = {}) => {
+    // A window mid-roll cannot travel yet: it is on its way somewhere and the
+    // content that goes with it has not moved, so a second travel would be
+    // about a picture nobody is looking at. The press is not lost though — it
+    // waits for the roll to end, which is what makes three quick presses on a
+    // carousel move three steps instead of one.
+    if (rollingRef.current) {
+      pendingRollsRef.current.push({
+        area,
+        forward,
+        event,
+        value,
+        dx,
+        dy
+      });
+      // And the one in flight is sent home: waiting out a travel at its own
+      // pace before the next one starts is what makes a carousel feel
+      // unresponsive — the press has to show on screen while the finger is
+      // still down, and here that means arriving, then setting off again.
+      hurryTravel(trackAnimationRef.current);
+      return true;
+    }
+    const {
+      slideElements,
+      placeOf
+    } = readMap();
+    const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
+    if (!area || area === readArea(currentElement)) {
+      return false;
+    }
+    if (forward === undefined) {
+      // Asked for by name (--navi-go-to-slide, --navi-back) rather than by a
+      // direction: which way it is is still a fact, read off the map, and it is
+      // what says which of the two locks below applies.
+      const from = placeOf.get(readArea(currentElement)) || {
+        x: 0,
+        y: 0
+      };
+      const to = placeOf.get(area) || {
+        x: 0,
+        y: 0
+      };
+      forward = to.y === from.y ? to.x > from.x : to.y > from.y;
+    }
+    // The one gate every way out goes through — a key, a command, a button, an
+    // event dispatched by hand: a slide that holds on to the user holds them
+    // whatever they press. Read off the slide being LEFT, because that is what
+    // has a reason to keep them (an answer still missing, a step not taken).
+    if (currentElement?.hasAttribute(forward ? "data-prevent-nav-next" : "data-prevent-nav-previous")) {
+      return false;
+    }
+    // The focus moves here, while the event that asked for it is still in hand:
+    // who pressed what, and whether they were on the keyboard, is knowable now
+    // and gone a render later. The slide arriving is made reachable on the spot
+    // for that — it is out of reach only because it was not on screen, and it is
+    // about to be.
+    const arrivingElement = slideElements.find(slideElement => readArea(slideElement) === area);
+    if (arrivingElement) {
+      const focusedElement = document.activeElement;
+      const focusIsLoose = !focusedElement || focusedElement === document.body || focusedElement === containerRef.current || currentElement.contains(focusedElement);
+      if (focusIsLoose) {
+        // What the slide being left was left on, so coming back comes back to
+        // it — the way out one pressed excepted (see rememberFocus).
+        rememberFocus(currentElement, focusedElement);
+        arrivingElement.removeAttribute("inert");
+        focusHandOverRef.current = {
+          area,
+          focusTransfer: prepareFocusTransfer(event, debugFocus),
+          event
+        };
+      }
+    }
+    if (value !== undefined) {
+      setValueByArea(previous => ({
+        ...previous,
+        [area]: value
+      }));
+    }
+    cameFromRef.current = {
+      ...cameFromRef.current,
+      [area]: readArea(currentElement)
+    };
+    if (loop) {
+      // A window does not change slide, it rolls: the travel plays, and once it
+      // is over the window is put back where it rests while whoever owns the
+      // content moves it one step. Both in the same tick — the return to rest
+      // and the new content are the same picture, and a render between them
+      // would show the old one in the new place.
+      rollingRef.current = true;
+      setRollingArea(area);
+      rollBackRef.current = () => {
+        rollingRef.current = false;
+        setRollingArea(null);
+        setNoTravel(true);
+        onLoop?.({
+          area,
+          dx,
+          dy,
+          event
+        });
+      };
+      return true;
+    }
+    setCurrentAreaState(area);
+    onCurrentChange?.(area);
     return true;
-  }
-  if (el.tagName !== "INPUT") {
-    return false;
-  }
-  const type = el.type || "text";
+  };
+
+  // The press kept during a roll, taken once the window rests and the travel is
+  // given back (noTravel off): by direction when there was one, so it is read
+  // against the map as it is NOW — the content moved one step under the window
+  // in between.
+  useLayoutEffect(() => {
+    if (noTravel || rollingRef.current || !pendingRollsRef.current.length) {
+      return;
+    }
+    const {
+      area,
+      dx,
+      dy,
+      event,
+      value
+    } = pendingRollsRef.current.shift();
+    if (dx || dy) {
+      move(dx, dy, event, value);
+      return;
+    }
+    goToArea(area, {
+      event,
+      value
+    });
+  }, [noTravel]);
+
+  // Hand the focus to a slide: what it was left on if it remembers something,
+  // and otherwise the ladder every container uses — which passes over the ways
+  // out (they say so themselves, see SlideNavButton).
+  //
+  // A slide with nothing focusable in it leaves the ladder empty-handed, and
+  // that is what this box is for: it takes the keyboard itself (see its own
+  // tabIndex), so the arrows keep working and the ring says where one is.
+  //
+  // In two steps, and they are two different moments — the same split every
+  // openable surface makes (a dialog's openEffect transfers focus once the
+  // dialog is OPEN, not when it was asked to open). `prepareFocusTransfer` has
+  // to read the interaction — which element a mousedown landed on, whether the
+  // modality is the keyboard — while the event is still being dispatched. The
+  // landing waits for the slide to say its DOM is settled (settleFocus below),
+  // which is later than one would think: a travel hands the slide a value
+  // (useSlideValue) and that value reaches it through context, so Preact
+  // re-renders the slide in a flush of its own — the container's own layout
+  // effect runs BEFORE its children have seen the value. A screen keyed by it,
+  // a form whose uncontrolled fields must start again from a new prefill,
+  // replaces its whole subtree there. Landing before that took the focus to a
+  // node about to be thrown away, and the focus went to document.body with it.
+  const handOverFocus = (slideElement, focusTransfer, event) => {
+    focusTransfer.transferFocus(event, slideElement);
+    // Asked of the SLIDE, not of this box: the box contains itself, so asking
+    // it would answer "yes, it is here" for the very case this is about — a
+    // slide with nothing focusable, where the keyboard is already on the box
+    // and must be put back on it, if only to say so with a ring the modality of
+    // this travel decides (arriving by key shows one, by click does not).
+    const containerEl = containerRef.current;
+    if (containerEl && !slideElement.contains(document.activeElement)) {
+      if (document.activeElement === containerEl) {
+        // Already here, and .focus() on what is already focused does nothing at
+        // all — the browser will not reconsider its focus ring for it. So the
+        // focus is given up for an instant and taken back, which is the only
+        // way to say "same place, but arrived at with the keyboard this time":
+        // travelling by key from a box that was clicked into must show a ring.
+        containerEl.blur();
+      }
+      containerEl.focus({
+        preventScroll: true,
+        focusVisible: focusTransfer.focusVisible
+      });
+    }
+  };
+
+  // A slide reporting that its DOM is settled (its own layout effect, see
+  // Slide) — the moment the transfer prepared in goToArea can land. Every
+  // slide reports on every commit; only the one a transfer is waiting for,
+  // and only while it is the current one, takes it.
+  const settleFocus = slideArea => {
+    const focusHandOver = focusHandOverRef.current;
+    if (!focusHandOver || focusHandOver.area !== slideArea) {
+      return;
+    }
+    const slideElement = readMap().slideElements.find(slideElement => readArea(slideElement) === slideArea);
+    if (!slideElement || !slideElement.hasAttribute("data-current")) {
+      return;
+    }
+    focusHandOverRef.current = null;
+    handOverFocus(slideElement, focusHandOver.focusTransfer, focusHandOver.event);
+  };
+
+  /**
+   * @returns {string|undefined} the area one step that way, if there is one.
+   *   Nothing there means the direction is simply not offered — no wrapping, no
+   *   nearest-match: a map is read as a map, and a move landing nowhere would
+   *   break that reading. Walks over its own cells first, so a spanning area
+   *   leaves by its far edge rather than onto itself.
+   */
+  const areaTowards = (dx, dy) => {
+    const {
+      slideElements,
+      areaAt,
+      placeOf
+    } = readMap();
+    const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current")) || slideElements[0];
+    const currentArea = readArea(currentElement);
+    let {
+      x,
+      y
+    } = placeOf.get(currentArea) || {
+      x: 0,
+      y: 0
+    };
+    // How far the line being walked goes, needed only by a window: stepping off
+    // one of its ends comes back on the other, since a window has no ends.
+    const line = loop ? [...areaAt.keys()].map(key => key.split(",").map(Number)).filter(([cellX, cellY]) => dx ? cellY === y : cellX === x).map(([cellX, cellY]) => dx ? cellX : cellY) : null;
+    const first = line ? Math.min(...line) : 0;
+    const last = line ? Math.max(...line) : 0;
+    let steps = 0;
+    while (true) {
+      x += dx;
+      y += dy;
+      if (loop) {
+        if (dx) {
+          x = x < first ? last : x > last ? first : x;
+        } else {
+          y = y < first ? last : y > last ? first : y;
+        }
+      } else if (x < 0 || y < 0) {
+        return undefined;
+      }
+      const area = areaAt.get(`${x},${y}`);
+      if (area === currentArea || loop && area === undefined) {
+        // A hole, or a cell of the area one is already on: keep walking — and
+        // give up once the whole line has been walked, which only happens when
+        // there is nowhere else on it to go.
+        if (loop && (steps += 1) > line.length) {
+          return undefined;
+        }
+        continue;
+      }
+      return area;
+    }
+  };
+  const move = (dx, dy, event, value) => goToArea(areaTowards(dx, dy), {
+    forward: dx > 0 || dy > 0,
+    event,
+    value,
+    dx,
+    dy
+  });
+
+  // "next"/"previous" are the same movement said without a direction, which is
+  // all a line ever needs: to the right, or downwards when that is where the
+  // slides are. On a map they mean the same thing, and fall back to the other
+  // axis when there is nothing that way — a step onwards, however the screens
+  // happen to be arranged.
+  const moveNext = event => vertical ? move(0, 1, event) || move(1, 0, event) : move(1, 0, event) || move(0, 1, event);
+  const movePrevious = event => vertical ? move(0, -1, event) || move(-1, 0, event) : move(-1, 0, event) || move(0, -1, event);
+
+  // Arrows walk the map, Home/End jump to its ends — but only where those keys
+  // mean nothing else: applyKeyboardShortcuts refuses to intercept a key the
+  // focused element has a native use for, so an arrow inside a text field still
+  // moves the caret and only a press with nothing else to do travels. Each
+  // arrow means its own direction, so the key always matches what one sees
+  // move. A shortcut that moved nothing returns null and the key goes back to
+  // the page (scrolling, most likely).
+  const travelled = moved => moved ? false : null;
+  const goToEnd = (last, event) => {
+    const {
+      order
+    } = readMap();
+    const area = last ? order[order.length - 1] : order[0];
+    return goToArea(area, {
+      forward: last,
+      event
+    });
+  };
+  // Each handler is given the key press that ran it, and hands it on: what the
+  // travel does about the focus is decided from the interaction that asked for
+  // it (see goToArea), so it has to reach that far.
+  const onKeyDownShortcuts = createOnKeyDownForShortcuts({
+    // A shortcut that is not offered is not the same as one that does nothing:
+    // `enabled` leaves the key to whatever else wants it (see
+    // keyboard_shortcuts.js), rather than swallowing it here.
+    arrowright: {
+      enabled: keyboardTravel,
+      handler: e => travelled(move(1, 0, e))
+    },
+    arrowleft: {
+      enabled: keyboardTravel,
+      handler: e => travelled(move(-1, 0, e))
+    },
+    arrowdown: {
+      enabled: keyboardTravel,
+      handler: e => travelled(move(0, 1, e))
+    },
+    arrowup: {
+      enabled: keyboardTravel,
+      handler: e => travelled(move(0, -1, e))
+    },
+    home: {
+      enabled: keyboardTravel,
+      handler: e => travelled(goToEnd(false, e))
+    },
+    end: {
+      enabled: keyboardTravel,
+      handler: e => travelled(goToEnd(true, e))
+    }
+  });
   return (
-    type === "text" ||
-    type === "search" ||
-    type === "url" ||
-    type === "tel" ||
-    type === "email" ||
-    type === "password" ||
-    type === "number"
+    // Box rather than a plain div: it is how every navi component takes the
+    // onnavi_* handlers below — they are navi's own event names, and Box is
+    // what carries them onto the element.
+    jsx(Box, {
+      ...rest,
+      ref: containerRef,
+      baseClassName: "navi_slide_container",
+      "data-slide-container": ""
+      // The focusable one, and a Tab stop: a slide is not (see Slide), so the
+      // keyboard lands on what the current slide holds, and on this box when it
+      // holds nothing. It is also what makes the arrows and Home/End reachable
+      // at all — a keyboard shortcut only reaches what has the focus.
+      ,
+
+      tabIndex: rest.tabIndex ?? 0
+      // "not me, unless you have nothing else": whoever hands the focus here —
+      // a popup opening, a slide arriving — reads this the same way (see
+      // findFocusTarget), so this box takes the keyboard only when what is on
+      // screen holds nothing that can.
+      ,
+
+      "navi-autofocus": "last-resort"
+      // "the box around me may draw my focus ring instead of me": a container
+      // filling a dialog or a popover has its ring land on the very edge the
+      // popup already outlines, and two rings a pixel apart read as a mistake.
+      // The popup answers this attribute (see dialog.jsx / popover.jsx) and
+      // silences the ring below through --navi-focus-outline-style.
+      ,
+
+      "data-focus-outline-delegate": ""
+      // Focusable and a surface, so it says what state it is in — and
+      // :focus-visible is what the ring below is drawn from.
+      ,
+
+      pseudoClasses: SLIDE_CONTAINER_PSEUDO_CLASSES
+      // A direction, never a step: on a map "next" only means something when
+      // there is a single axis to walk, so everything that moves a slide — a
+      // chevron, --navi-left/right/up/down, a line of code — says which way.
+      // Dispatch it (bubbling) from anywhere inside to move.
+      ,
+
+      onnavi_slide_move: e => {
+        const {
+          dx,
+          dy,
+          value
+        } = e.detail;
+        // `e`, not e.detail.event: a navi event carries the chain it came from
+        // (a --navi-right command carries the click that ran it, that click its
+        // own mousedown), and the focus transfer reads the whole chain to know
+        // where the interaction started.
+        move(dx, dy, e, value);
+      }
+      // By name rather than by direction (--navi-go-to-slide): the caller says
+      // where, the map says nothing about it.
+      ,
+
+      onnavi_slide_go_to: e => {
+        const {
+          area,
+          value
+        } = e.detail;
+        goToArea(area, {
+          event: e,
+          value
+        });
+      }
+      // …the ends of the walk (--navi-first / --navi-last): the same jump
+      // Home and End make, said as a command so a nav bar can offer it.
+      ,
+
+      onnavi_slide_end: e => {
+        goToEnd(e.detail.last, e);
+      }
+      // …and a step along it (--navi-previous / --navi-next), for a container
+      // laid out as a line: which direction that is is this container's own
+      // business (a row goes right, a column goes down), which is exactly what
+      // a command saying "onwards" leaves to it.
+      ,
+
+      onnavi_slide_step: e => {
+        if (e.detail.goal === "next") {
+          moveNext(e);
+        } else {
+          movePrevious(e);
+        }
+      }
+      // …and back where one came from (--navi-back).
+      ,
+
+      onnavi_slide_back: e => {
+        const {
+          slideElements
+        } = readMap();
+        const currentElement = slideElements.find(slideElement => slideElement.hasAttribute("data-current"));
+        const cameFrom = cameFromRef.current[readArea(currentElement)];
+        if (cameFrom) {
+          goToArea(cameFrom, {
+            event: e
+          });
+        }
+      }
+      // …and the protocol every command target answers: without this the
+      // command resolves, finds this element, and nothing runs.
+      ,
+
+      onnavi_command: e => {
+        onNaviCommand(e);
+      },
+      onKeyDown: e => {
+        onKeyDownShortcuts(e);
+        rest.onKeyDown?.(e);
+      },
+      style: rest.style,
+      children: jsx("div", {
+        "data-slide-track": "",
+        ref: trackRef,
+        children: jsx(SlideContainerContext.Provider, {
+          value: {
+            vertical,
+            answeredAreas,
+            done,
+            valueByArea,
+            settleFocus
+          },
+          children: children
+        })
+      })
+    })
   );
 };
 
-installImportMetaCssBuild(import.meta);const css$x = /* css */`
-  .navi_input_duration {
-    --duration-separator-spacing: 4px;
-    --loader-color: var(--navi-loader-color);
-
-    position: relative; /* For loading outline  */
-
-    .navi_label {
-      &[data-separator] {
-        .navi_unit {
-          margin-right: 1ch;
-          margin-right: calc(1ch + var(--duration-separator-spacing));
-        }
-      }
-    }
-
-    .navi_input {
-      --padding-x: 0;
-
-      .navi_input_slot {
-        --slot-spacing: var(--duration-separator-spacing);
-
-        margin-right: calc(var(--slot-spacing) / 2);
-      }
-    }
-  }
-`;
-
 /**
- * An input for a duration expressed as an ISO 8601 duration string
- * (e.g. "PT2H15M", "PT2H15M30S").
+ * One slide, and its own place on the map: it renders the element the container
+ * moves, so anything can put one there — a fragment, a .map(), a component of
+ * your own — without the container having to recognise it.
  *
- * Which sub-fields are shown is derived from `min`, `max`, and `step`:
- *   - default:             H + M  (max defaults to "23h59")
- *   - max < 1 hour:        M only (e.g. max="59min")
- *   - max < 1 minute:      S only (e.g. max="59second")
- *   - max < 1 second:      MS only (e.g. max="999millisecond")
- *   - step="1hour":        H only (whole-hour step hides minutes)
- *   - max includes seconds: adds S field (e.g. max="59min59second" → M + S)
- *   - value has seconds:   adds S field read-only if step doesn't allow seconds
+ * It is both SlideContainer.Item and an export of its own: <Slide> where the
+ * container is far above, SlideContainer.Item where the two sit side by side.
  *
- * `value`, `min`, `max`, `step` accept ISO 8601 strings or human-friendly
- * strings (e.g. "1h30min", "2 hours", "5minute").
- *
- * `uiAction` / `action` receive an ISO 8601 duration string.
- *
- * Loading state is displayed on the group container only — sub-inputs do not
- * carry individual loading outlines.
- *
- * @param {Object} props
- * @param {string} [props.value] - Controlled value (ISO 8601 or human-friendly)
- * @param {string} [props.defaultValue] - Uncontrolled initial value
- * @param {string} [props.min] - Minimum duration
- * @param {string} [props.max="23h59"] - Maximum duration (also controls which fields appear)
- * @param {string} [props.step] - Step between valid values (also controls which fields appear)
- * @param {string} [props.name] - Field name for form submission
- * @param {boolean} [props.readOnly]
- * @param {boolean} [props.disabled]
- * @param {boolean} [props.required]
- * @param {boolean} [props.loading]
- * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
- * @param {Function} [props.action] - Called on form submission
- * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
- * @param {"auto"|"left"|"center"|"right"} [props.textAlign="auto"] - Text alignment of sub-inputs.
- *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
+ * @param {object} props
+ * @param {string} [props.area] - which area of the map it is. Defaults to its
+ *   id, so a slide that is already named is not named twice.
+ * @param {boolean} [props.required] - this step has to be answered before the
+ *   ones after it can be reached: it holds the user until something inside it
+ *   says it is done (`--navi-done`, which a Form triggers on a successful
+ *   send), and lets go afterwards. What makes a slide reachable ONLY by
+ *   answering the one before it — an arrow key or a "next" button cannot skip
+ *   ahead to a screen that has nothing to show yet. Answering a step
+ *   un-answers the ones after it, since what they were answered about has just
+ *   changed.
+ * @param {boolean} [props.preventNav] - hold the user here, whichever way they
+ *   try to leave.
+ * @param {boolean} [props.preventNavNext] - hold them from going right or down.
+ * @param {boolean} [props.preventNavPrevious] - …left or up.
  */
-const InputDuration = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/control/input/input_duration.jsx"];
-  const defaultRef = useRef();
-  props.ref = props.ref || defaultRef;
-  props.max = props.max || "23h59";
-  const {
-    ref,
-    uiAction,
-    action,
-    unitHour,
-    textAlign = "auto",
-    maxLengthGuard,
-    charGuard
-  } = props;
-  const minDuration = parseDuration(props.min);
-  const maxDuration = parseDuration(props.max);
-  const stepDuration = parseDuration(props.step);
-  const hasValue = Object.hasOwn(props, "value");
-  const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
-  const maxSeconds = durationToSeconds(maxDuration);
-  const stepSeconds = stepDuration ? durationToSeconds(stepDuration) : undefined;
-  const renderSource = hasValue ? props.value : props.defaultValue;
-  const components = parseDuration(renderSource);
-  const initialIsoString = components ? durationToISOString(components) ?? "" : "";
-  const valueHasSeconds = components?.seconds !== undefined;
-  const valueHasMinutes = components?.minutes !== undefined;
-  // Fractional seconds (e.g. 0.5 from "PT0.5S") also imply milliseconds.
-  const valueHasMilliseconds = components?.milliseconds !== undefined || typeof components?.seconds === "number" && components.seconds % 1 !== 0;
-  const stepHasSeconds = Object.hasOwn(stepDuration ?? {}, "seconds");
-  const stepHasMilliseconds = Object.hasOwn(stepDuration ?? {}, "milliseconds");
-  const showSeconds = Object.hasOwn(minDuration ?? {}, "seconds") || Object.hasOwn(maxDuration ?? {}, "seconds") || stepHasSeconds || valueHasSeconds;
-  const showMilliseconds = Object.hasOwn(minDuration ?? {}, "milliseconds") || Object.hasOwn(maxDuration ?? {}, "milliseconds") || stepHasMilliseconds || valueHasMilliseconds;
-  // A field is read-only when the step is a multiple of that field's unit,
-  // meaning stepping never passes through it (e.g. step=1min → seconds stay 0).
-  const secondsReadOnly = valueHasSeconds && stepSeconds !== undefined && stepSeconds % 60 === 0;
-  const millisecondsReadOnly = valueHasMilliseconds && stepSeconds !== undefined && stepSeconds % 1 === 0;
-  const minutesReadOnly = valueHasMinutes && stepSeconds !== undefined && stepSeconds % 3600 === 0;
-  const showHours = maxSeconds >= 3600;
-  // Hide minutes when the step is a whole number of hours — entering fractional
-  // hours would contradict the step, so only the hour field is shown.
-  // Exception: if the current value already has minutes, show them read-only so
-  // the stored precision is faithfully displayed.
-  const showMinutes = maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
-  const [groupRootProps, groupHostProps, childrenWrapperProps] = useControlgroupProps({
-    ...props,
-    uiAction: (groupState, event) => {
-      const hiddenInput = ref.current;
-      if (hiddenInput) {
-        hiddenInput.value = groupState ?? "";
-      }
-      uiAction?.(groupState, event);
-    },
-    action: action ? (groupState, info) => action(groupState, info) : undefined
-  }, {
-    controlType: "duration_group",
-    cascadeValidationToChildren: true,
-    // Aggregates sub-input values into an ISO 8601-like duration string.
-    // durationToISOString preserves non-numeric mid-edit values
-    // (e.g. hours="ab") between their unit markers ("PTabH30M"),
-    // which round-trips correctly through parseISODuration.
-    aggregateChildStates: childUIStateControllers => {
-      let h = "";
-      let m = "";
-      let s = "";
-      let ms = "";
-      for (const child of childUIStateControllers) {
-        if (child.name === "hour") h = child.uiState ?? "";
-        if (child.name === "minute") m = child.uiState ?? "";
-        if (child.name === "second") s = child.uiState ?? "";
-        if (child.name === "millisecond") ms = child.uiState ?? "";
-      }
-      const durationObj = {};
-      if (showHours && h !== "") {
-        durationObj.hours = h;
-      }
-      if (showMinutes && m !== "") {
-        durationObj.minutes = m;
-      }
-      if (showSeconds && s !== "") {
-        durationObj.seconds = s;
-      }
-      if (showMilliseconds && ms !== "") {
-        durationObj.milliseconds = ms;
-      }
-      // Return undefined (not "") when all fields are empty so that a
-      // picker signal initialised with undefined stays undefined on mount.
-      return durationToISOString(durationObj) ?? undefined;
-    },
-    // Reverse mapping: duration string → { hour, minute, second, millisecond }
-    // so that when the picker cancels and calls setUIState(storedValue), the
-    // sub-inputs are correctly reset to their original raw string values.
-    // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
-    // so fractional seconds are split back into whole seconds + ms.
-    distributeChildUIState: (groupState, childUIStateController) => {
-      const components = parseDuration(groupState);
-      if (!components) {
-        return undefined;
-      }
-      const rawSeconds = components.seconds;
-      let secondForField = rawSeconds;
-      let millisecondForField = components.milliseconds;
-      if (typeof rawSeconds === "number" && rawSeconds % 1 !== 0 && millisecondForField === undefined) {
-        secondForField = Math.floor(rawSeconds);
-        millisecondForField = Math.round(rawSeconds % 1 * 1000);
-      }
-      const fieldMap = {
-        hour: components.hours,
-        minute: components.minutes,
-        second: secondForField,
-        millisecond: millisecondForField
-      };
-      return fieldMap[childUIStateController.name];
-    }
+const Slide = ({
+  area,
+  required,
+  preventNav,
+  preventNavNext = preventNav,
+  preventNavPrevious = preventNav,
+  children,
+  ...rest
+}) => {
+  const container = useContext(SlideContainerContext);
+  const slideArea = area ?? rest.id;
+  const answered = Boolean(container?.answeredAreas.includes(slideArea));
+  const holdsUntilAnswered = Boolean(required) && !answered;
+  const nextIsLocked = Boolean(preventNavNext) || holdsUntilAnswered;
+  const locks = useMemo(() => ({
+    preventNavNext: nextIsLocked,
+    preventNavPrevious
+  }), [nextIsLocked, preventNavPrevious]);
+  // What the travel into this slide carried, if anything (see useSlideValue).
+  const slideValue = container?.valueByArea?.[slideArea];
+  // This slide's DOM is settled — said after EVERY commit, no dependency
+  // array, because it is a fact about the render that just happened, not a
+  // reaction to a particular prop. The container is the one holding a focus
+  // transfer waiting for it (see settleFocus): a travel's value reaches this
+  // slide through context one flush after the container moved, and what it
+  // shows (a form keyed by a prefill) is only final here.
+  useLayoutEffect(() => {
+    container?.settleFocus?.(slideArea);
   });
-  const {
-    required,
-    readOnly,
-    disabled,
-    basePseudoState
-  } = groupHostProps;
-  const groupRef = useRef();
-  useInputGroup(groupRef);
-  const clipboardProps = useClipboardProps(groupRef);
-  const hourValue = components?.hours;
-  const minuteValue = components?.minutes;
-  const rawSecondValue = components?.seconds;
-  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
-  let secondValue = rawSecondValue;
-  let millisecondValue = components?.milliseconds;
-  if (typeof rawSecondValue === "number" && rawSecondValue % 1 !== 0 && millisecondValue === undefined) {
-    secondValue = Math.floor(rawSecondValue);
-    millisecondValue = Math.round(rawSecondValue % 1 * 1000);
-  }
-  const loading = basePseudoState[":-navi-loading"];
-  delete basePseudoState[":-navi-loading"];
-  return jsxs(Box, {
-    ref: groupRef,
-    className: "navi_input_duration",
-    "data-callout-arrow-x": "center",
-    width: "fit-content",
-    flex: true,
-    spacing: "xxs",
-    ...groupRootProps,
-    unit: undefined,
-    unitHour: undefined,
-    ...clipboardProps,
-    children: [jsx(LoadingOutline, {
-      loading: loading,
-      color: "var(--loader-color)",
-      inset: -1
-    }), jsx("input", {
-      ...groupHostProps,
-      type: "hidden",
-      basePseudoState: undefined // eslint-disable-line react/no-unknown-property
-      ,
+  return jsx(SlideContext.Provider, {
+    value: locks,
+    children: jsx(SlideValueContext.Provider, {
+      value: slideValue,
+      children: jsx(Box, {
+        flex: "y"
+        // Not focusable: the keyboard goes to what is IN a slide, and when a
+        // slide holds nothing, to the container around it (see
+        // SlideContainer's own tabIndex). One stop for the whole thing rather
+        // than one per screen — the shape a wheel and its values already have.
+        ,
 
-      ...(hasValue ? {
-        value: initialIsoString
-      } : {
-        defaultValue: initialIsoString
-      })
-    }), jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
-      name: undefined,
-      children: jsx(InputDurationFields, {
-        showHours: showHours,
-        showMinutes: showMinutes,
-        showSeconds: showSeconds,
-        showMilliseconds: showMilliseconds,
-        minutesReadOnly: minutesReadOnly,
-        secondsReadOnly: secondsReadOnly,
-        millisecondsReadOnly: millisecondsReadOnly,
-        stepHasMilliseconds: stepHasMilliseconds,
-        controlled: hasValue,
-        hourValue: hourValue,
-        minuteValue: minuteValue,
-        secondValue: secondValue,
-        millisecondValue: millisecondValue,
-        minSeconds: minSeconds,
-        maxSeconds: maxSeconds,
-        stepSeconds: stepSeconds,
-        unitHour: unitHour,
-        textAlign: textAlign,
-        maxLengthGuard: maxLengthGuard,
-        charGuard: charGuard,
-        required: required,
-        readOnly: readOnly,
-        disabled: disabled,
-        basePseudoState: basePseudoState
-      })
-    })]
-  });
-};
-const getVisibleFields = container => {
-  return ["hour", "minute", "second", "millisecond"].filter(f => container.querySelector(`[navi-input-type="${f}"]`) !== null);
-};
-const useClipboardProps = groupRef => {
-  const getClipboardPayload = () => {
-    const groupEl = groupRef.current;
-    if (!groupEl) {
-      return null;
-    }
-    const hiddenInput = groupEl.querySelector('input[type="hidden"]');
-    const isoString = hiddenInput.value;
-    if (!isoString) {
-      return null;
-    }
-    const parsed = parseDuration(isoString);
-    if (!parsed) {
-      return null;
-    }
-    const rawS = parsed.seconds;
-    const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
-    const ms = typeof rawS === "number" && rawS % 1 !== 0 ? Math.round(rawS % 1 * 1000) : parsed.milliseconds ?? undefined;
-    const byField = {
-      hour: parsed.hours,
-      minute: parsed.minutes,
-      second: wholeS,
-      millisecond: ms
-    };
-    const visibleFields = getVisibleFields(groupEl);
-    const showMilliseconds = visibleFields.includes("millisecond");
-    const parts = visibleFields.filter(f => f !== "millisecond").map((f, i) => {
-      const v = byField[f] ?? 0;
-      return i === 0 ? String(v) : String(v).padStart(2, "0");
-    });
-    let plainText = parts.join(":");
-    if (showMilliseconds) {
-      plainText += `.${String(byField.millisecond ?? 0).padStart(3, "0")}`;
-    }
-    return {
-      isoString,
-      plainText
-    };
-  };
-  const applyToGroup = (isoValue, e) => {
-    const host = groupRef.current;
-    dispatchRequestInteraction(host, {
-      event: e,
-      name: "subpaste",
-      allowed: () => {
-        dispatchRequestSetUIState(host, isoValue, {
-          event: e
-        });
-      }
-    });
-    e.preventDefault();
-  };
-  const isFromDurationField = e => {
-    const target = e.target;
-    if (!target.matches) {
-      return false;
-    }
-    if (!target.matches(`[navi-control-host="input"`)) {
-      return false;
-    }
-    if (!target.closest(".navi_duration_part")) {
-      return false;
-    }
-    return true;
-  };
-  const onCopy = e => {
-    if (!isFromDurationField(e)) {
-      return;
-    }
-    const payload = getClipboardPayload();
-    if (!payload) {
-      return;
-    }
-    e.clipboardData.setData("text/plain", payload.plainText);
-    e.clipboardData.setData("application/x-navi", payload.isoString);
-    e.preventDefault();
-  };
-  const onCut = e => {
-    if (!isFromDurationField(e)) {
-      return;
-    }
-    const payload = getClipboardPayload();
-    if (!payload) {
-      return;
-    }
-    e.clipboardData.setData("text/plain", payload.plainText);
-    e.clipboardData.setData("application/x-navi", payload.isoString);
-    applyToGroup("", e);
-  };
-  const onPaste = e => {
-    if (!isFromDurationField(e)) {
-      return;
-    }
-    const naviData = e.clipboardData.getData("application/x-navi");
-    const textData = e.clipboardData.getData("text/plain");
-    let isoValue = null;
-    if (naviData && parseDuration(naviData)) {
-      isoValue = naviData;
-    }
-    if (!isoValue && textData) {
-      const parsed = parseDuration(textData);
-      if (parsed) {
-        isoValue = durationToISOString(parsed) ?? null;
-      } else {
-        // Colon-split fallback: "1:30", "1:30:45", "1:30:45.500"
-        const colonParts = textData.trim().split(":");
-        const visibleFields = getVisibleFields(groupRef.current);
-        if (colonParts.length > 1 || visibleFields.length === 1) {
-          const durationObj = {};
-          colonParts.forEach((part, i) => {
-            const field = visibleFields[i];
-            if (!field || field === "millisecond") return;
-            if (i === colonParts.length - 1 && part.includes(".")) {
-              const [sec, msPart] = part.split(".");
-              durationObj[FIELD_TO_KEY[field]] = parseInt(sec, 10);
-              if (visibleFields[i + 1] === "millisecond") {
-                durationObj.milliseconds = parseInt(msPart.slice(0, 3).padEnd(3, "0"), 10);
-              }
-            } else {
-              durationObj[FIELD_TO_KEY[field]] = parseInt(part, 10);
-            }
-          });
-          isoValue = durationToISOString(durationObj) ?? null;
+        ...rest,
+        // The protocol every command target answers — a slide is one now
+        // (--navi-done). navi_command does not bubble, so the container's own
+        // handler is not an answer for what was aimed here.
+        onnavi_command: e => {
+          onNaviCommand(e);
+          rest.onnavi_command?.(e);
         }
-      }
-    }
-    if (!isoValue) return;
-    applyToGroup(isoValue, e);
-  };
-  return {
-    onCopy,
-    onCut,
-    onPaste
-  };
-};
-const FIELD_TO_KEY = {
-  hour: "hours",
-  minute: "minutes",
-  second: "seconds",
-  millisecond: "milliseconds"
-};
+        // What was in this slide says it is finished (a form that just sent —
+        // see resolveAfterSend in commands.js). It says nothing about where to
+        // go: that is read here, from this slide's own place in the walk.
+        ,
 
-// Renders the appropriate combination of hour/minute/second sub-inputs based
-// on which fields are active.
-const InputDurationFields = ({
-  showHours,
-  showMinutes,
-  showSeconds,
-  showMilliseconds,
-  minutesReadOnly,
-  secondsReadOnly,
-  millisecondsReadOnly,
-  stepHasMilliseconds,
-  controlled,
-  hourValue,
-  minuteValue,
-  secondValue,
-  millisecondValue,
-  minSeconds,
-  maxSeconds,
-  stepSeconds,
-  unitHour,
-  textAlign,
-  ...childProps
-}) => {
-  // Hour bounds (in hours)
-  const minHours = minSeconds !== undefined ? Math.floor(minSeconds / 3600) : 0;
-  const maxHours = Math.floor(maxSeconds / 3600);
+        onnavi_done: e => {
+          // Dropped imperatively rather than left to the re-render this
+          // schedules: moving on happens in this same handler, and the gate it
+          // goes through reads this attribute off the DOM (see goToArea) — a
+          // render is a microtask away, the move is not.
+          e.currentTarget.removeAttribute("data-prevent-nav-next");
+          container?.done(slideArea);
+          rest.onnavi_done?.(e);
+        },
+        "data-slide": "",
+        "data-slide-area": slideArea,
+        "data-prevent-nav-next": nextIsLocked ? "" : undefined,
+        "data-prevent-nav-previous": preventNavPrevious ? "" : undefined
+        // A surface one interacts with says what state it is in, the way every
+        // other surface does — a dialog carries the very same set.
+        // :focus-within is the one a slide is really about: it is what tells
+        // the slide holding the keyboard from the ones waiting.
+        ,
 
-  // Minute bounds (in minutes).
-  // When hours are also shown, keep the natural [0, 59] range — the group-level
-  // constraint validates the combined total. Dynamic per-hour offsets can produce
-  // negative max values (e.g. max=1h30 + current hours=2 → max=-30 for minutes).
-  const minuteMin = showHours ? 0 : minSeconds !== undefined ? Math.floor(minSeconds / 60) : 0;
-  const minuteMax = showHours ? 59 : Math.min(59, Math.floor(maxSeconds / 60));
-
-  // Second bounds (in seconds). Same reasoning as minutes.
-  const secondMin = showHours || showMinutes ? 0 : minSeconds !== undefined ? Math.floor(minSeconds) : 0;
-  const secondMax = showHours || showMinutes ? 59 : Math.min(59, Math.floor(maxSeconds));
-
-  // The step applies to the finest-grained field; coarser fields use step=1.
-  const stepForMinutes = stepSeconds === undefined ? undefined : stepSeconds % 60 === 0 ? stepSeconds / 60 : 1; // sub-minute step → minute always increments by 1
-  const stepForHours = stepSeconds !== undefined && stepSeconds % 3600 === 0 ? stepSeconds / 3600 : 1;
-  // Millisecond bounds and step.
-  const millisecondMin = 0;
-  const millisecondMax = maxSeconds < 1 ? Math.floor(maxSeconds * 1000) : 999;
-  // When the step has sub-second precision, derive the ms step from the
-  // fractional-seconds part. Otherwise leave it undefined (free editing).
-  const stepForMs = stepHasMilliseconds ? Math.round(stepSeconds % 1 * 1000) : undefined;
-  const visibleUnits = [showHours && "hour", showMinutes && "minute", showSeconds && "second", showMilliseconds && "millisecond"].filter(Boolean);
-  const textAlignFor = unit => {
-    if (textAlign !== "auto") return textAlign;
-    const i = visibleUnits.indexOf(unit);
-    if (visibleUnits.length === 1) return "center";
-    if (i === 0) return "right";
-    if (i === visibleUnits.length - 1) return "left";
-    return "center";
-  };
-  const inputs = [];
-  if (showHours) {
-    inputs.push(jsx(InputDurationPart, {
-      unit: "hour",
-      label: unitHour,
-      textAlign: textAlignFor("hour"),
-      ...(controlled ? {
-        value: hourValue
-      } : {
-        defaultValue: hourValue
-      }),
-      min: minHours,
-      max: maxHours,
-      step: stepForHours,
-      separator: showMinutes || showSeconds ? ":" : undefined,
-      ...childProps
-    }, "hour"));
-  }
-  if (showMinutes) {
-    inputs.push(jsx(InputDurationPart, {
-      unit: "minute",
-      textAlign: textAlignFor("minute"),
-      ...(controlled ? {
-        value: minuteValue
-      } : {
-        defaultValue: minuteValue
-      }),
-      min: minuteMin,
-      max: minuteMax,
-      step: stepForMinutes,
-      separator: showSeconds ? ":" : undefined,
-      ...childProps,
-      readOnly: minutesReadOnly || childProps.readOnly
-    }, "minute"));
-  }
-  if (showSeconds) {
-    inputs.push(jsx(InputDurationPart, {
-      unit: "second",
-      textAlign: textAlignFor("second"),
-      ...(controlled ? {
-        value: secondValue
-      } : {
-        defaultValue: secondValue
-      }),
-      min: secondMin,
-      max: secondMax,
-      step: stepSeconds,
-      separator: showMilliseconds ? "." : undefined,
-      ...childProps,
-      readOnly: secondsReadOnly || childProps.readOnly
-    }, "second"));
-  }
-  if (showMilliseconds) {
-    inputs.push(jsx(InputDurationPart, {
-      unit: "millisecond",
-      textAlign: textAlignFor("millisecond"),
-      ...(controlled ? {
-        value: millisecondValue
-      } : {
-        defaultValue: millisecondValue
-      }),
-      min: millisecondMin,
-      max: millisecondMax,
-      step: stepForMs,
-      ...childProps,
-      readOnly: millisecondsReadOnly || childProps.readOnly
-    }, "millisecond"));
-  }
-  if (inputs.length === 1) {
-    return inputs[0];
-  }
-  return inputs;
-};
-const InputDurationPart = ({
-  unit,
-  label,
-  separator,
-  ...props
-}) => {
-  const unitLabel = label ?? jsx(Unit, {
-    unit: unit,
-    plural: true,
-    color: "secondary"
-  });
-  return jsxs(Label, {
-    flex: "y",
-    "data-separator": separator || undefined,
-    children: [jsx(Input, {
-      className: "navi_duration_part"
-      // When autofocused this field should be selected
-      // this help to modify the value on mobile
-      ,
-
-      autoFocusSelect: true,
-      type: "navi_number",
-      "navi-input-type": unit,
-      name: unit,
-      size: "l",
-      unit: false,
-      variant: "underline",
-      expandX: true,
-      ...props,
-      children: separator ? jsx(Input.UI.UnitSlot, {
-        children: separator
-      }) : undefined
-    }), unitLabel]
-  });
-};
-
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
-  .navi_radio_group {
-    border-style: solid;
-
-    &[data-callout] {
-      border-color: var(--callout-color);
-    }
-  }
-`;
-const RadioGroup = props => {
-  const refDefault = useRef(null);
-  props.ref = props.ref || refDefault;
-  const defaultName = useId();
-  props.name = props.name || `radio_group_${defaultName}`;
-  const radioGroup = jsx(RadioGroupInterface, {
-    ...props
-  });
-  return radioGroup;
-};
-const RadioGroupInterface = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/control/input/radio_group.jsx"];
-  const {
-    ref
-  } = props;
-  const [radioGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
-    resetOnCancel: true,
-    resetOnAbort: true,
-    resetOnError: true,
-    ...props
-  }, {
-    controlType: "radio_group"
-  });
-  useFocusGroup(ref, {
-    wrap: "both"
-  });
-  return jsx(Box, {
-    as: "fieldset",
-    ...radioGroupProps,
-    ...remainingProps,
-    name: undefined,
-    baseClassName: "navi_radio_group",
-    "data-callout-point-to-border-box": "",
-    children: jsx(ControlgroupChildrenWrapper, {
-      ...childrenWrapperProps,
-      children: props.children
+        pseudoClasses: SLIDE_PSEUDO_CLASSES,
+        children: children
+      })
     })
   });
+};
+const SLIDE_CONTAINER_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
+const SLIDE_PSEUDO_CLASSES = [":hover", ":active", ":focus", ":focus-visible", ":focus-within"];
+const DIRECTIONS = {
+  right: {
+    dx: 1,
+    dy: 0,
+    command: "--navi-right",
+    Svg: ChevronRightSvg,
+    label: "Slide on the right"
+  },
+  left: {
+    dx: -1,
+    dy: 0,
+    command: "--navi-left",
+    Svg: ChevronLeftSvg,
+    label: "Slide on the left"
+  },
+  down: {
+    dx: 0,
+    dy: 1,
+    command: "--navi-down",
+    Svg: ChevronDownSvg,
+    label: "Slide below"
+  },
+  up: {
+    dx: 0,
+    dy: -1,
+    command: "--navi-up",
+    Svg: ChevronUpSvg,
+    label: "Slide above"
+  }
+};
+const SlideNavButton = ({
+  ChevronSvg,
+  locked,
+  ...rest
+}) => jsx(Button
+// Read-only, not disabled and not hidden: the way out stays visible and
+// explainable (it can still be reached, hovered, described) — it just does
+// nothing while the slide is holding on to the user.
+, {
+  readOnly: Boolean(locked)
+  // "not me, unless you have nothing else": arriving on a way out means the
+  // first thing offered is leaving again, so whoever hands out the focus —
+  // a slide arriving, a dialog holding slides opening — lands on what there
+  // is to do instead. It stays perfectly focusable by a click or by Tab, and
+  // a slide holding nothing but its chevrons does land on one: there was
+  // nothing else, which is exactly what this says.
+  ,
+
+  autoFocus: "last-resort",
+  icon: true,
+  variant: "discrete"
+  // Takes the focus like any other button, on purpose. It used to refuse it
+  // (mousedown.preventDefault) to keep the keyboard where the user had put
+  // it — but pressing a way out with nothing focused then left the keyboard
+  // on nothing at all: the travel below only hands the focus to the slide
+  // arriving when it was leaving a slide, so a click from document.body
+  // arrived on document.body, and the next Tab started from the top of the
+  // page rather than from what is on screen.
+  //
+  // Letting it focus is both the plain behaviour of a button and what makes
+  // the rest fall into place: the press lands on the chevron, the slide left
+  // behind remembers it (see focusMemory) and hands the keyboard to the slide
+  // arriving, which prefers anything but its own ways out (see
+  // findFocusTargetInSlide) — so one arrives on what there is to do. Coming
+  // back the other way lands on the chevron one left by, which is where the
+  // eye and the hand already are.
+  ,
+
+  ...rest,
+  children: jsx(Icon, {
+    lineOverflow: "allow",
+    children: jsx(ChevronSvg, {})
+  })
+});
+
+/**
+ * The way out of a slide, and the way into the next one. Nothing but the
+ * command plus the chevron that matches the travel: a row goes left/right, a
+ * column up/down — so the button points where the slide actually goes without
+ * the caller having to keep the two in sync.
+ */
+/**
+ * A way out pointing where it goes. It says a direction, not a slide: what is
+ * over there is the map's business, and moving a screen changes nothing here.
+ * Four of them, matching the four commands (`--navi-left` and friends) — a map
+ * has four ways out, and a component per direction is what makes that obvious
+ * at the call site.
+ *
+ * @param {object} props
+ * @param {"right"|"left"|"down"|"up"} props.direction
+ */
+const SlideMove = ({
+  direction,
+  ...rest
+}) => {
+  const locks = useContext(SlideContext);
+  const {
+    dx,
+    dy,
+    command,
+    Svg,
+    label
+  } = DIRECTIONS[direction];
+  const forward = dx > 0 || dy > 0;
+  const locked = forward ? locks?.preventNavNext : locks?.preventNavPrevious;
+  return jsx(SlideNavButton, {
+    command: command,
+    locked: locked,
+    ChevronSvg: Svg,
+    "aria-label": label,
+    ...rest
+  });
+};
+
+// "All the way that way": the first slide of the walk, or the last one. Not a
+// direction — a map reads its own order — so it is its own component rather
+// than a fifth arrow.
+const SlideEnd = ({
+  last,
+  ...rest
+}) => jsx(SlideNavButton, {
+  command: last ? "--navi-last" : "--navi-first",
+  ChevronSvg: last ? ChevronLastSvg : ChevronFirstSvg,
+  "aria-label": last ? "Last slide" : "First slide",
+  ...rest
+});
+const SlideFirst = props => jsx(SlideEnd, {
+  ...props,
+  last: false
+});
+const SlideLast = props => jsx(SlideEnd, {
+  ...props,
+  last: true
+});
+const SlideLeft = props => jsx(SlideMove, {
+  ...props,
+  direction: "left"
+});
+const SlideRight = props => jsx(SlideMove, {
+  ...props,
+  direction: "right"
+});
+const SlideUp = props => jsx(SlideMove, {
+  ...props,
+  direction: "up"
+});
+const SlideDown = props => jsx(SlideMove, {
+  ...props,
+  direction: "down"
+});
+SlideContainer.Item = Slide;
+SlideContainer.Left = SlideLeft;
+SlideContainer.Right = SlideRight;
+SlideContainer.Up = SlideUp;
+SlideContainer.Down = SlideDown;
+SlideContainer.First = SlideFirst;
+SlideContainer.Last = SlideLast;
+
+const Time = props => {
+  const {
+    type
+  } = props;
+  if (type === "date") {
+    return jsx(TimeDate, {
+      ...props
+    });
+  }
+  if (type === "month") {
+    return jsx(TimeMonth, {
+      ...props
+    });
+  }
+  if (type === "week") {
+    return jsx(TimeWeek, {
+      ...props
+    });
+  }
+  if (type === "datetime") {
+    return jsx(TimeDatetime, {
+      ...props
+    });
+  }
+  if (type === "time") {
+    return jsx(TimeTime, {
+      ...props
+    });
+  }
+  if (type === "minute") {
+    return jsx(TimeMinute, {
+      ...props
+    });
+  }
+  if (type === "second") {
+    return jsx(TimeSecond, {
+      ...props
+    });
+  }
+  if (type === "hour") {
+    return jsx(TimeHour, {
+      ...props
+    });
+  }
+  if (type === "duration") {
+    return jsx(TimeDuration, {
+      ...props
+    });
+  }
+  return jsx(TimeRelative, {
+    ...props
+  });
+};
+const TimeDate = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  dayLabel,
+  now,
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      capitalize: false,
+      children: formatDatePlaceholder({
+        lang
+      })
+    });
+  }
+  const date = toDate(children, value => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const base = formatDay(date, {
+    lang,
+    format
+  });
+  let text;
+  if (dayLabel) {
+    const offset = getRelativeDay(date, {
+      now
+    });
+    if (offset >= -1 && offset <= 1) {
+      text = `${base} (${formatDayRelative(offset, lang)})`;
+    } else {
+      text = base;
+    }
+  } else {
+    text = base;
+  }
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}-${dd}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeMonth = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatMonthPlaceholder({
+        lang,
+        format
+      })
+    });
+  }
+  const date = toDate(children, value => {
+    if (/^\d{4}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}-01T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const text = formatMonth(date, {
+    lang,
+    format
+  });
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeWeek = ({
+  children,
+  lang = languagesSignal.value,
+  ...props
+}) => {
+  if (children === undefined || children === null) {
+    return jsx(TimeText, {
+      ...props,
+      children: formatWeekPlaceholder({
+        lang
+      })
+    });
+  }
+  const dateTime = String(children);
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: dateTime
+  });
+};
+const TimeDatetime = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      capitalize: false,
+      children: formatDatetimePlaceholder({
+        lang,
+        format
+      })
+    });
+  }
+  const date = toDate(children);
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const text = formatDatetime(date, {
+    lang,
+    format
+  });
+  const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeTime = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "--:--"
+    });
+  }
+  const date = toDate(children, value => {
+    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
+      const d = new Date(`1970-01-01T${value}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  });
+  // toDate turns a non-finite number into an Invalid Date, which is an object
+  if (!date || isNaN(date.getTime())) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
+  if (format === "timestring") {
+    return jsx(TimeText, {
+      dateTime: dateTime,
+      ...props,
+      children: formatTime(date, lang)
+    });
+  }
+  const totalMinutes = date.getHours() * 60 + date.getMinutes();
+  // Midnight (hour 0) can't go through formatMinuteDuration's own default
+  // zero-hour handling: it drops a zero-valued unit entirely (by design — a
+  // real 5-minute duration should print as "5 minutes", not "0 hours 5
+  // minutes"), so "00:05" would otherwise render identically to an actual
+  // 5-minute duration, silently losing the fact that it's midnight. Every
+  // other hour keeps at least its own "N hour(s)" wording as a hint that
+  // this is a time-of-day, not a duration — only hour 0 loses that hint
+  // entirely.
+  // clockStyle: this is always a time-of-day here, never a duration — keeps
+  // a zero hour instead of dropping it (midnight would otherwise be
+  // indistinguishable from an actual 5-minute duration), and in
+  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
+  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
+  let text;
+  if (date.getHours() !== 0) {
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      clockStyle: true
+    });
+  } else if (format !== "long") {
+    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
+    // dropping it — e.g. "0 h et 5 min"/"0h 5min"/"00h05" — rather than
+    // substituting a translated "midnight" word, which would look out of
+    // place squeezed into these otherwise terse, symbol-based formats.
+    text = formatMinuteDuration(totalMinutes, {
+      lang,
+      format,
+      clockStyle: true
+    });
+  } else {
+    const midnightWord = naviI18n("time.midnight", undefined, {
+      lang
+    });
+    if (midnightWord === "time.midnight") {
+      // No "midnight" translation registered for this language — fall back
+      // to this language's own literal "0 heure(s)" wording instead (still
+      // better than leaking the untranslated key, or substituting an
+      // English word that wouldn't grammatically match the rest of the
+      // sentence in whatever language this actually is).
+      text = formatMinuteDuration(totalMinutes, {
+        lang,
+        format,
+        clockStyle: true
+      });
+    } else {
+      // Swap just the "0 heure(s)" part of the Intl-generated duration
+      // string for the translated "midnight" word, keeping everything else
+      // (the conjunction, the minutes part) exactly as Intl would produce
+      // for this locale — formatToParts tags each token with the unit it
+      // belongs to, so the swap doesn't need to know the locale's own
+      // grammar/word order. Only ever one hour-tagged group per call
+      // (hours is always 0 or absent here), but guarded anyway in case a
+      // future Intl implementation ever splits it into more parts.
+      const parts = new Intl.DurationFormat(lang, {
+        style: "long",
+        hoursDisplay: "always"
+      }).formatToParts({
+        hours: 0,
+        minutes: date.getMinutes()
+      });
+      let hourGroupReplaced = false;
+      text = parts.map(part => {
+        if (part.unit !== "hour") {
+          return part.value;
+        }
+        if (hourGroupReplaced) {
+          return "";
+        }
+        hourGroupReplaced = true;
+        return midnightWord;
+      }).join("");
+    }
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeMinute = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  forceUnit = false,
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: format === "timestring" ? "--:--" : "--"
+    });
+  }
+  const minutes = Number(children);
+  if (!Number.isFinite(minutes)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const totalHours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  const hh = String(totalHours).padStart(2, "0");
+  const mm = String(remainingMinutes).padStart(2, "0");
+  const dateTime = `${hh}:${mm}`;
+  let text;
+  if (format === "timestring") {
+    const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
+    text = formatTime(date, lang);
+  } else {
+    text = formatMinuteDuration(minutes, {
+      lang,
+      format,
+      forceUnit
+    });
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeSecond = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  forceUnit = false,
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: format === "timestring" ? "--:--:--" : "--"
+    });
+  }
+  const seconds = Number(children);
+  if (!Number.isFinite(seconds)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor(seconds % 3600 / 60);
+  const s = seconds % 60;
+  const dateTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  let text;
+  if (format === "timestring") {
+    // Always HH:MM:SS to avoid ambiguity with HH:MM time-of-day format
+    text = dateTime;
+  } else {
+    text = formatSecondDuration(seconds, {
+      lang,
+      format,
+      forceUnit
+    });
+  }
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeHour = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  forceUnit = false,
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: format === "timestring" ? "--:--" : "--"
+    });
+  }
+  const hours = Number(children);
+  if (!Number.isFinite(hours)) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  if (format === "timestring") {
+    const totalMinutes = Math.round(hours * 60);
+    const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
+    return jsx(TimeText, {
+      ...props,
+      children: formatTime(date, lang)
+    });
+  }
+  const text = formatHourDuration(hours, {
+    lang,
+    format,
+    forceUnit
+  });
+  return jsx(TimeText, {
+    ...props,
+    children: text
+  });
+};
+const TimeDuration = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  ...props
+}) => {
+  if (children === undefined || children === null) {
+    return jsx(TimeText, {
+      ...props,
+      children: "--"
+    });
+  }
+
+  // Accept: duration.js string ("2hour15minute"), ISO 8601 ("PT2H15M"), number (seconds)
+  let duration;
+  if (typeof children === "number") {
+    duration = {
+      seconds: children
+    };
+  } else if (typeof children === "string") {
+    duration = parseDuration(children);
+    if (!duration) {
+      return jsx(TimeText, {
+        ...props,
+        children: children
+      });
+    }
+  } else if (typeof children === "object") {
+    duration = children;
+  } else {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+  const isoString = durationToISOString(duration) ?? String(children);
+  if (format === "iso") {
+    return jsx(TimeText, {
+      dateTime: isoString,
+      ...props,
+      children: isoString
+    });
+  }
+  const totalSeconds = durationToSeconds(duration);
+  if (totalSeconds === null) {
+    // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
+    // formatDuration reads the raw values and appends compact unit symbols.
+    return jsx(TimeText, {
+      ...props,
+      children: formatDuration(duration, {
+        lang,
+        format
+      })
+    });
+  }
+  if (totalSeconds === 0) {
+    return jsx(TimeText, {
+      ...props,
+      children: "0"
+    });
+  }
+  const text = formatDuration(duration, {
+    lang,
+    format
+  });
+  return jsx(TimeText, {
+    dateTime: isoString,
+    ...props,
+    children: text
+  });
+};
+const TimeRelative = ({
+  children,
+  lang = languagesSignal.value,
+  format = "long",
+  eventDuration = 0,
+  bare,
+  ...props
+}) => {
+  if (children === undefined) {
+    return jsx(TimeText, {
+      ...props,
+      children: "\u2013"
+    });
+  }
+  const date = toDate(children);
+  if (!date) {
+    return jsx(TimeText, {
+      ...props,
+      children: String(children)
+    });
+  }
+
+  // eventDuration accepts ms (number), duration.js string, or ISO 8601 string
+  let eventDurationMs = eventDuration;
+  if (typeof eventDuration === "string") {
+    const s = durationToSeconds(eventDuration);
+    eventDurationMs = s !== null ? s * 1000 : 0;
+  }
+  const text = formatTimeRelative(date, eventDurationMs, {
+    lang,
+    bare,
+    format
+  });
+  const dateTime = date.toISOString();
+  return jsx(TimeText, {
+    dateTime: dateTime,
+    ...props,
+    children: text
+  });
+};
+const TimeText = props => {
+  return jsx(Text, {
+    as: "time",
+    noWrap: true,
+    ...props
+  });
+};
+const toDate = (value, parseString) => {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "number") {
+    return new Date(value);
+  }
+  if (typeof value === "string") {
+    if (parseString) {
+      return parseString(value);
+    }
+    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const d = new Date(`${value}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    // ISO / other parseable strings
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
 };
 
 // When a component render a prop that can be anything (js value of preact element)
@@ -36135,177 +38910,6 @@ const renderSafe = (value) => {
 };
 
 const PickerContext = createContext();
-
-/**
- * Decides which element receives focus when a container (popover, dialog, …)
- * opens, and gives it back to where it came from when the container closes.
- *
- * The [navi-autofocus] attribute (written by use_auto_focus.js) tunes where
- * focus lands. Candidates are tried in this order:
- * 1. The element that held focus when the container was last closed, if it
- *    opted into that with "fallback" or "restore"
- * 2. [navi-autofocus] with any other value ("" for a plain `autoFocus`)
- * 3. The first focusable element
- * 4. [navi-autofocus="fallback"], the container itself included
- * 5. The element focused before the container opened
- *
- * [navi-autofocus="restore"] appears in step 1 only: it never claims focus on
- * a fresh open, it only gets it back.
- */
-
-// The element that held focus when a container closed is marked with
-// [navi-autofocus-last-focused], and its container with
-// [navi-autofocus-restore]. Both carry the same generated id: containers can
-// nest (a popover inside a dialog), so the id is what tells a reopening
-// container which mark among its descendants is its own.
-let restoreIdCounter = 0;
-
-const isRestorableAutofocus = (el) => {
-  const value = el.getAttribute("navi-autofocus");
-  return value === "fallback" || value === "restore";
-};
-
-const clearAutofocusRestore = (containerEl) => {
-  const restoreId = containerEl.getAttribute("navi-autofocus-restore");
-  if (restoreId === null) {
-    return null;
-  }
-  containerEl.removeAttribute("navi-autofocus-restore");
-  const selector = `[navi-autofocus-last-focused="${restoreId}"]`;
-  const lastFocused = containerEl.matches(selector)
-    ? containerEl
-    : containerEl.querySelector(selector);
-  if (lastFocused) {
-    lastFocused.removeAttribute("navi-autofocus-last-focused");
-  }
-  return lastFocused;
-};
-
-const markAutofocusRestoreOnClose = (containerEl) => {
-  clearAutofocusRestore(containerEl);
-  const focused = document.activeElement;
-  if (
-    focused &&
-    (containerEl === focused || containerEl.contains(focused)) &&
-    isRestorableAutofocus(focused)
-  ) {
-    const restoreId = `${++restoreIdCounter}`;
-    containerEl.setAttribute("navi-autofocus-restore", restoreId);
-    focused.setAttribute("navi-autofocus-last-focused", restoreId);
-  }
-};
-
-const prepareFocusTransfer = (prepareEvent, debugFocus) => {
-  const focusedElement = getFocusedBeforeTransfer(prepareEvent);
-  const focusVisible = isMatchingFocusVisible(focusedElement);
-
-  debugFocus(
-    prepareEvent,
-    `prepare focus transfer from`,
-    focusedElement,
-    focusVisible ? " matching :focus-visible" : "not matching :focus-visible",
-  );
-
-  return {
-    focusedElement,
-    focusVisible,
-
-    transferFocus: (transferEvent, containerEl) => {
-      let target;
-      let reason;
-      const lastFocused = clearAutofocusRestore(containerEl);
-      if (lastFocused) {
-        reason = "element focused when closed (restore)";
-        target = lastFocused;
-      }
-      if (!target) {
-        const naviAutoFocus = containerEl.querySelector(
-          `[navi-autofocus]:not([navi-autofocus="fallback"]):not([navi-autofocus="restore"])`,
-        );
-        if (naviAutoFocus) {
-          reason = "navi-autofocus";
-          target = naviAutoFocus;
-        }
-      }
-      if (!target) {
-        const focusable = findFocusable(containerEl, {
-          exclude: isRestorableAutofocus,
-        });
-        if (focusable) {
-          reason = "first focusable element";
-          target = focusable;
-        }
-      }
-      if (!target) {
-        // A [navi-autofocus="fallback"] INSIDE the container (e.g. a search
-        // input) wins over the container itself. The container is only the
-        // fallback-of-the-fallback: a focusable popup root gets focus solely
-        // when nothing inside it already carries the fallback. (matches() covers
-        // the container-only case since querySelector searches descendants only.)
-        const naviAutoFocusFallback =
-          containerEl.querySelector(`[navi-autofocus="fallback"]`) ||
-          (containerEl.matches(`[navi-autofocus="fallback"]`)
-            ? containerEl
-            : null);
-        if (naviAutoFocusFallback) {
-          reason = "navi-autofocus fallback";
-          target = naviAutoFocusFallback;
-        }
-      }
-      if (!target) {
-        if (focusedElement) {
-          reason = "focused element before open (fallback)";
-          target = focusedElement;
-        }
-      }
-      if (!target) {
-        return;
-      }
-      debugFocus(
-        transferEvent,
-        `Moving focus to ${getElementSignature(target)}.focus({ preventScroll: true, focusVisible: ${focusVisible} }) (reason: ${reason})`,
-      );
-      target.focus({
-        preventScroll: true,
-        focusVisible,
-      });
-      if (target.hasAttribute("navi-autofocus-select")) {
-        target.select();
-        target.scrollLeft = 0;
-      }
-    },
-
-    restoreFocus: (restoreEvent) => {
-      debugFocus(
-        restoreEvent,
-        `restore focus to previously focused element`,
-        focusedElement,
-      );
-      focusedElement.focus({ preventScroll: true });
-    },
-  };
-};
-
-// Get the active element before we transfer focus in the popover/dialog
-// We don't just use document.activeElement because when dialog is opened by mousedown
-// we prevent default so browser don't steal focus back from the dialog
-// meaning the focus did not yet reach the element receiving the mousedown
-// as a result document.activeElement is not up-to-date (can be document.body for instance)
-const getFocusedBeforeTransfer = (e) => {
-  const initiator =
-    e.detail && e.detail.eventChain ? e.detail.eventChain[0] : null;
-  if (initiator) {
-    if (initiator.type === "mousedown") {
-      // if we we had let browser give focus, the element would be the one that would be focused
-      return initiator.currentTarget;
-    }
-    if (initiator.type === "click") {
-      // label use case
-      return initiator.currentTarget;
-    }
-  }
-  return document.activeElement;
-};
 
 /**
  * Owns open/close decision-making for a popup (Dialog or Popover): guards
@@ -36347,6 +38951,7 @@ const createOpenController = (
 ) => {
   let closeHandlers = null; // { onRequestClose, onClose } returned by openHandler
   let openEffectCleanup = null; // function returned by openEffect, undoes its DOM side effects
+  let focusedAtClose = null; // what held the focus when the close was decided, see performClose
 
   // Set true while we're waiting to see whether the click that follows a
   // mousedown-close will land back on whatever would reopen us — see
@@ -36404,6 +39009,11 @@ const createOpenController = (
 
   const performClose = (closeEvent) => {
     controller.opened = false;
+    // Read before any close effect touches the DOM: closing a native <dialog>
+    // hands the focus back to whatever held it at showModal() time, so by the
+    // time the close cleanup runs, the popup's content has already lost the
+    // focus and could not be remembered for the next open.
+    focusedAtClose = document.activeElement;
 
     prevent_reopen: {
       const mousedownEvent = findEvent(closeEvent, "mousedown");
@@ -36416,19 +39026,65 @@ const createOpenController = (
         break prevent_reopen;
       }
 
-      const spaceEvent = findEvent(
+      // The keyboard counterpart of the mousedown case above: a key press that
+      // closes the popup and then goes on to activate the trigger, reopening it
+      // on the spot. Space and Enter both get there, but not the same way and
+      // not always — preventing the key unconditionally would eat presses that
+      // were never going to activate anything (a space typed in a field, an
+      // Enter the popup's own handler already consumed), so each is verified
+      // before being prevented.
+
+      // Space: pressed on the trigger itself, which still has focus (closing
+      // does not move it away from an element outside the popup). The browser
+      // turns that press into a click on keyup, and that click lands back on
+      // the trigger. Asked of the browser's own default action rather than
+      // guessed from the tag name: a space that scrolls, or types into a field
+      // inside the popup, has no activation to prevent and preventing it would
+      // swallow the scroll / the character.
+      const spaceKeyEvent = findEvent(
         closeEvent,
         (e) => e.type === "keydown" && e.key === " ",
       );
-      if (spaceEvent) {
-        // space would trigger a click on the picker button causing it to re-open immediatly after closing
+      if (
+        spaceKeyEvent &&
+        getKeyboardEventDefaultAction(spaceKeyEvent) === "activate"
+      ) {
         debugInteraction(
           closeEvent,
-          `closed by space key -> prevent browser click (spaceEvent.preventDefault())`,
+          `closed by space on <${spaceKeyEvent.target.tagName.toLowerCase()}> -> prevent the click it would produce (space.preventDefault())`,
         );
-        // browser won't try to dispatch click
-        // and our "space_to_open" will see e.defaultPrevented too and won't try to open picker
-        spaceEvent.preventDefault();
+        // The browser won't dispatch the click, and our "space_to_open" sees
+        // defaultPrevented too so it won't try to open the picker either.
+        spaceKeyEvent.preventDefault();
+        break prevent_reopen;
+      }
+
+      // Enter: pressed inside the popup (its own submit button, or implicit
+      // submission from a field it contains). The popup closes synchronously
+      // and focus is restored to the trigger, so the activation the browser
+      // still owes this press is delivered to the trigger instead.
+      //
+      // Verified on two counts: the press still owes an activation (the
+      // browser's default action for it is one — "activate" on a submit button,
+      // "form_submit" on a field — and nothing has consumed it yet), and it came
+      // from inside the popup. An Enter from outside is not this case at all.
+      const enterKeyEvent = findEvent(
+        closeEvent,
+        (e) => e.type === "keydown" && e.key === "Enter",
+      );
+      if (
+        enterKeyEvent &&
+        !enterKeyEvent.defaultPrevented &&
+        ENTER_ACTIVATING_DEFAULT_ACTION_SET.has(
+          getKeyboardEventDefaultAction(enterKeyEvent),
+        ) &&
+        isInsideOpenPopup(enterKeyEvent.target)
+      ) {
+        debugInteraction(
+          closeEvent,
+          `closed by enter from inside the popup -> prevent the activation it would deliver to the trigger (enter.preventDefault())`,
+        );
+        enterKeyEvent.preventDefault();
         break prevent_reopen;
       }
     }
@@ -36478,7 +39134,7 @@ const createOpenController = (
 
         focusTransfer.transferFocus(e, el);
         return (closeEvent) => {
-          markAutofocusRestoreOnClose(el);
+          markAutofocusRestoreOnClose(el, closeEvent, focusedAtClose);
           const focusoutEvent = findEvent(closeEvent, "focusout");
           if (focusoutEvent) {
             debugInteraction(
@@ -36543,6 +39199,24 @@ const createOpenController = (
   };
   return controller;
 };
+
+// Inside a popup that is open right now — the popup being closed, in practice,
+// since that is the one the key press was delivered to.
+const isInsideOpenPopup = (element) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  return Boolean(element.closest("dialog[open], [popover]:popover-open"));
+};
+
+// What Enter is about to do when it is about to activate something: press the
+// focused control, or submit the form around it. Anything else it can do
+// (typing a newline, nothing at all) leaves no activation behind to land on the
+// trigger once focus is restored.
+const ENTER_ACTIVATING_DEFAULT_ACTION_SET = new Set([
+  "activate",
+  "form_submit",
+]);
 
 // Created once per popup instance: openHandler is wrapped in a stable callback
 // so the controller identity never changes across renders, even though
@@ -36667,25 +39341,12 @@ const useOpenPropsEffectOnOpenController = (openController, props) => {
   }, [open]);
 };
 
-const useOpenControllerByProps = (props) => {
-  const { onClose } = props;
-  // Lets an uncontrolled consumer (no openController of its own) still react
-  // to a self-initiated close (Escape, backdrop click, its own close button)
-  // without having to own a controller just to observe it — onClose is
-  // called on every real close, matching createOpenController's own
-  // { onRequestClose, onClose } contract (never denies the close itself).
-  const openController = useOpenController(() =>
-    onClose ? { onClose } : undefined,
-  );
-  useOpenPropsEffectOnOpenController(openController, props);
-  return openController;
-};
-
 /**
  * Where the "popover or dialog?" answer lives, for both the components that
  * decide it and the content that renders inside one.
  *
- * `useResolvedPopupMode` is the decision (screen size + maxWidth heuristic),
+ * `useResolvedPopupMode` is the decision (available width + maxWidth
+ * heuristic — the visual viewport, or the container for a local popup),
  * called by whatever renders the popup — `Popup` itself, or `picker_custom.jsx`
  * which needs the answer for its own mode-dependent history/ARIA handling on
  * top of picking a renderer. `usePopupMode` is the read side: any content
@@ -36711,29 +39372,74 @@ const usePopupMode = () => useContext(PopupModeContext);
  * @param {"dialog"|"popover"} [modeProp] - Forces one mode; `undefined` to
  *   resolve automatically.
  * @param {string} [maxWidth] - A small enough value is treated as "compact",
- *   staying a popover even on a small screen.
+ *   staying a popover even in a narrow container.
+ * @param {object} [options]
+ * @param {"top"|"local"} [options.layer] - Where the popup will live. The
+ *   decision measures the room the popup will actually get: the visual
+ *   viewport for a top-layer popup, the positioned ancestor for a
+ *   `layer="local"` one — a 320px frame is a small screen for the popup it
+ *   confines, whatever the window measures.
+ * @param {{current: Element|null}} [options.elementRef] - An element at (or
+ *   near) the spot the popup is declared, used to find the positioned
+ *   ancestor a local popup answers to. Only read for `layer="local"`.
  * @returns {["dialog"|"popover", () => void]} The resolved mode, and a
  *   `resetMode` function a caller can call (e.g. on close) to force the *next*
  *   call to re-resolve from scratch instead of keeping the frozen value —
  *   `Popup` itself never needs this (it has no notion of open/close of its
- *   own), `picker_custom.jsx` does (re-evaluates screen size on every fresh
- *   open).
+ *   own), `picker_custom.jsx` does (re-evaluates the available room on every
+ *   fresh open).
  */
-const useResolvedPopupMode = (modeProp, maxWidth) => {
+const useResolvedPopupMode = (modeProp, maxWidth, {
+  layer,
+  elementRef
+} = {}) => {
   const defaultModeRef = useRef(null);
-  if (defaultModeRef.current === null) {
-    defaultModeRef.current = resolvePopupMode(modeProp, maxWidth);
+  let mode = defaultModeRef.current;
+  if (mode === null) {
+    const element = elementRef ? elementRef.current : null;
+    mode = resolvePopupMode(modeProp, maxWidth, {
+      layer,
+      element
+    });
+    // A local popup measures its container, and that takes DOM: on the very
+    // first render the element is not mounted yet, so the value above came
+    // from the viewport fallback. Used for this render, but not frozen — the
+    // next render has the element and resolves against the real container.
+    // Only when an elementRef was handed over though: without one there is
+    // nothing to wait for, and staying unfrozen would let the mode flip
+    // mid-session, the very thing the freeze exists to prevent.
+    const resolvedBlind = layer === "local" && !modeProp && elementRef && !element;
+    if (!resolvedBlind) {
+      defaultModeRef.current = mode;
+    }
   }
   const resetMode = () => {
     defaultModeRef.current = null;
   };
-  return [defaultModeRef.current, resetMode];
+  return [mode, resetMode];
 };
-const resolvePopupMode = (modeProp, maxWidth) => {
-  const isSmallScreen = windowWidthSignal.peek() <= 600;
+const resolvePopupMode = (modeProp, maxWidth, {
+  layer,
+  element
+}) => {
+  if (modeProp) {
+    return modeProp;
+  }
+  const isNarrow = getAvailableWidth(layer, element) <= 600;
   const maxWidthPx = parseFloat(maxWidth);
   const isCompact = isFinite(maxWidthPx) && maxWidthPx < 150;
-  return modeProp ?? (isSmallScreen && !isCompact ? "dialog" : "popover");
+  return isNarrow && !isCompact ? "dialog" : "popover";
+};
+
+// The room the popup will really get: what it is positioned and sized
+// against. For a local popup that is its positioned ancestor; for a top-layer
+// one the visual viewport — not window.innerWidth, which ignores pinch-zoom
+// and the mobile keyboard's effect on what is actually visible.
+const getAvailableWidth = (layer, element) => {
+  if (layer === "local" && element) {
+    return getPositionedParent(element).clientWidth;
+  }
+  return visualViewportWidthSignal.peek();
 };
 
 /**
@@ -36917,8 +39623,10 @@ const popupCss = /* css */ `
       opacity: 1;
       translate: 0 0;
 
+      /* No fade: the travel is the whole effect. Fading it out on top would
+         make the popup disappear before it has finished leaving, which reads as
+         two things happening rather than one movement. */
       &[aria-expanded="false"] {
-        opacity: 0;
         translate: calc(var(--x-popup-slide-x, 0) * 100%)
           calc(var(--x-popup-slide-y, -1) * 100%);
       }
@@ -37150,6 +39858,15 @@ const resolveAutoAnimationKind = (anchor, parsedPositionArea) => {
 };
 
 installImportMetaCssBuild(import.meta);/**
+ * A dialog is a surface, not a control: it holds no value, has no action and
+ * aggregates nothing. Fields and a submit go in a `<Form>` inside it, exactly
+ * as they would in the document — the form owns the answer, and the dialog owns
+ * where it is shown. What the two say to each other is small and goes one way:
+ * the form says it is finished (`--navi-close`, see resolveAfterSend in
+ * commands.js) and the dialog closes; the dialog, before letting a close
+ * through, asks what it contains whether anything is mid-action and refuses if
+ * so (see findBusyElementInside below).
+ *
  * A dialog is centered in the viewport by default, with no anchor to grow
  * out of or slide in from — `animation={true}`/`"auto"` resolves through
  * Popover's own no-real-anchor path (see popover.jsx's own top comment).
@@ -37194,7 +39911,8 @@ installImportMetaCssBuild(import.meta);/**
  * overflow growth from a translate/scale entrance transition before it
  * reaches the real container.
  */
-const css$v = /* css */`
+let openLocalDialogCount = 0;
+const css$z = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -37202,28 +39920,51 @@ const css$v = /* css */`
          to set from CSS — so the size caps here and the placement can never
          disagree. The literal is only what a dialog painted before that ever
          runs falls back to. Not named "margin" because it isn't implemented
-         with margins (those are needed for centering).
+         with margins (those are needed for centering), and not "viewport"
+         because the container is only the viewport for a top-layer dialog —
+         a local one answers to the box it was declared in (see below).
 
          Capping the *size* here rather than only offsetting the position is
          what makes a centered dialog follow the mobile virtual keyboard for
          free: --navi-vvw/--navi-vvh track the visual viewport, so the browser
          reflows the dialog itself as the keyboard opens. */
-      --x-dialog-viewport-spacing: 3vvw;
+      --x-dialog-container-spacing: 3vvw;
 
       --dialog-maxmax-width: calc(
-        var(--navi-vvw) - 2 * var(--x-dialog-viewport-spacing)
+        var(--navi-vvw) - 2 * var(--x-dialog-container-spacing)
       );
       --dialog-maxmax-height: calc(
-        var(--navi-vvh) - 2 * var(--x-dialog-viewport-spacing)
+        var(--navi-vvh) - 2 * var(--x-dialog-container-spacing)
       );
 
       --dialog-border-radius: var(--navi-popup-border-radius);
       --dialog-border-width: 0px; /* Dialog do not need border like popover (they stand out more) */
       --dialog-outline-width: var(--navi-focus-outline-width);
-      --dialog-outline-offset: calc(-1 * var(--dialog-outline-width) / 2);
+      --dialog-outline-offset: calc(-0.5 * var(--dialog-outline-width));
       --dialog-outline-color: var(--navi-focus-outline-color);
       --dialog-box-shadow: var(--navi-popup-box-shadow);
       --dialog-background-color: var(--navi-popup-background-color);
+
+      /* A local dialog is not confined by the viewport but by the box it was
+         declared in — its own containing block, since it is positioned inside
+         it. So the ceiling is written in percentages of THAT box and the
+         browser resolves it, rather than in viewport units that would mean
+         something else entirely inside a small container. The gap follows the
+         same reading: 3% of what holds it, not 3% of the screen.
+
+         This is the pre-JS reading; the placement then writes the same gap
+         back in pixels (see positionDialog), so the caps and the placement
+         cannot say two different things. */
+      &[data-layer="local"] {
+        --x-dialog-container-spacing: 3%;
+
+        --dialog-maxmax-width: calc(
+          100% - 2 * var(--x-dialog-container-spacing)
+        );
+        --dialog-maxmax-height: calc(
+          100% - 2 * var(--x-dialog-container-spacing)
+        );
+      }
     }
   }
 
@@ -37272,6 +40013,8 @@ const css$v = /* css */`
        unlike an earlier version of this file. */
     position: absolute;
     inset: unset;
+    /* Custom renderer only — see openLocalDialogCount above */
+    z-index: calc(var(--navi-popup-z-index) + var(--dialog-stack-order, 0));
     min-width: min(
       max(var(--anchor-width, 0px), var(--dialog-min-width, 0px)),
       var(--x-dialog-max-width)
@@ -37283,7 +40026,13 @@ const css$v = /* css */`
     );
     max-height: var(--x-dialog-max-height);
     margin: 0;
+
+    /* The UA gives <dialog> a padding of its own (1em in Chrome). A popup is a
+       surface, not a box with an opinion about its content — Popover has none
+       either, and what is inside declares its own spacing. */
+    padding: 0;
     flex-direction: column;
+
     background-color: var(--dialog-background-color);
     border-width: var(--dialog-border-width);
     border-style: solid;
@@ -37293,6 +40042,32 @@ const css$v = /* css */`
     outline-color: var(--dialog-outline-color);
     outline-offset: 0;
     box-shadow: var(--dialog-box-shadow);
+    /* The clamped max, not --dialog-maxmax-*: that one is the viewport minus
+       the spacing, which is only the real ceiling for layer="top". A local
+       dialog is confined to its positioned ancestor, whose size reaches here
+       through --container-position-remaining-* (see applyNewPosition) — the
+       min() in --x-dialog-max-* is what accounts for both. */
+    &[data-expand-x] {
+      width: var(--x-dialog-max-width);
+    }
+    &[data-expand-y] {
+      height: var(--x-dialog-max-height);
+    }
+
+    /* Square off the corners that land on the container's own corners — see
+       the flushEdges computation in useDialogProps for when that happens */
+    &[data-flush-top][data-flush-left] {
+      border-top-left-radius: 0;
+    }
+    &[data-flush-top][data-flush-right] {
+      border-top-right-radius: 0;
+    }
+    &[data-flush-bottom][data-flush-right] {
+      border-bottom-right-radius: 0;
+    }
+    &[data-flush-bottom][data-flush-left] {
+      border-bottom-left-radius: 0;
+    }
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
        stays independent from navi-animation's own opacity/scale/display
@@ -37329,8 +40104,19 @@ const css$v = /* css */`
       }
     }
 
-    &[data-focus-visible] {
+    &[data-focus-visible],
+    /* …or something filling it holds the keyboard and offers its ring to
+       whoever holds it (data-focus-outline-delegate — a slide container says
+       this, see slide_container.jsx). Its own ring would land on the very edge
+       this dialog already outlines, one pixel in, so the dialog draws it
+       instead. Direct children only: a delegate deeper in has its own box to
+       ring, and this edge is not it. */
+    &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
+    }
+    /* …and the delegate stands down. */
+    > [data-focus-outline-delegate] {
+      --navi-focus-outline-style: none;
     }
 
     &[open] {
@@ -37346,6 +40132,13 @@ const css$v = /* css */`
     &[data-layer="top"] {
       position: fixed;
     }
+
+    /* overflow is not declared here: the dialog carries [data-scrollable] (see
+       box.jsx), which is what makes it scroll — and what a header/footer/body
+       inside it then rearranges. A modal dialog would get overflow:auto from
+       the UA stylesheet anyway; a local one is not modal and gets nothing, so
+       without a scrolling rule its max-height would only decide how big the box
+       looks while the content kept painting straight through it. */
 
     /* [open] above is already scoped (display only turns on while shown),
        but that alone isn't enough: a consumer whose own CSS also sets an
@@ -37426,7 +40219,8 @@ const css$v = /* css */`
 
 /**
  * A dialog box — modal by default (real `<dialog>` + `showModal()`, browser
- * top layer), or confined to a local container via `layer="local"`. See
+ * top layer), or confined to a local container via `layer="local"`. A surface
+ * only: put a `<Form>` inside it for anything with fields and a submit. See
  * this file's own top comment for the full architecture (positionArea
  * grammar, anchor's sizing-only role, backdrop mechanics).
  *
@@ -37437,6 +40231,17 @@ const css$v = /* css */`
  *   shown via the non-modal `.show()` instead, staying in normal document
  *   flow inside its own positioned ancestor — confined to (and clipped by)
  *   that container instead of the whole viewport.
+ * @param {boolean} [props.dockedOnTouch] - Turns the dialog into a bottom sheet
+ *   (docked flush to the bottom edge, full width) when the pointer is coarse,
+ *   and leaves it alone otherwise. For a dialog meant to be interacted with
+ *   rather than merely read: under a finger the keyboard owns the bottom of
+ *   the screen and a centered box ends up both cramped and out of thumb
+ *   reach, while under a mouse the centered box is already the right shape —
+ *   hence a prop that only ever does something on touch. It supplies defaults
+ *   for `positionArea`, `marginWithContainer` and `expandX`, so any of the
+ *   three can still be pinned explicitly. Keyed off `(pointer: coarse)` (the
+ *   input device, not a width breakpoint — a narrow desktop window is still a
+ *   mouse) via `coarsePointerSignal`, so it re-resolves live.
  * @param {string} [props.positionArea="center"] - Where to dock the dialog
  *   within its container (the viewport for `layer="top"`, the positioned
  *   ancestor for `layer="local"`) — Dialog is never anchored to a real
@@ -37447,10 +40252,16 @@ const css$v = /* css */`
  *   `bottom-end`/`bottom-left`/`bottom-right`, `left`/`left-start`/
  *   `left-end`, or `center` — optionally wrapped in `inset(...)` (e.g.
  *   `inset(top)`) for the overlapping variant.
+ * @param {boolean} [props.expand] - Shorthand for both `expandX` and `expandY`.
+ * @param {boolean} [props.expandX] - Stretches the dialog to the full width its
+ *   container allows (`--dialog-maxmax-width`). Set by `dockedOnTouch` on a
+ *   touch device.
+ * @param {boolean} [props.expandY] - Same, vertically
+ *   (`--dialog-maxmax-height`).
  * @param {string|number} [props.marginWithContainer="3vvw"] - Minimum gap kept
  *   between the dialog and the edges of its container, whatever its
  *   `positionArea`: it both caps the dialog's own size (via
- *   `--x-dialog-viewport-spacing`, written from this prop) and offsets a docked
+ *   `--x-dialog-container-spacing`, written from this prop) and offsets a docked
  *   one from the edge it docks to. Accepts a spacing token ("s", "m"…), a
  *   number of pixels, or a viewport length — "vvw"/"vvh" being the visual
  *   viewport, which shrinks when the mobile keyboard opens. Pass 0 for a dialog
@@ -37462,6 +40273,10 @@ const css$v = /* css */`
  *   at least a click-absorbing backdrop regardless of this prop.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
+ *   A `layer="local"` dialog always locks its own positioned ancestor's
+ *   scroll while open (its backdrop only covers the scrollport, so scrolling
+ *   there would reveal uncovered content); this prop extends the lock to the
+ *   whole page.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -37483,12 +40298,12 @@ const css$v = /* css */`
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--dialog-max-height`.
  * @param {number} [props.tabIndex=-1] - Set on the dialog element itself so
- *   `autoFocus="fallback"` below has somewhere to land when the dialog has
+ *   `autoFocus="last-resort"` below has somewhere to land when the dialog has
  *   no other focusable descendant of its own.
- * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
- *   `focus_transfer.js` — `"fallback"` focuses the dialog itself if it has
- *   no other focusable descendant, `"restore"` keeps it out of the opening
- *   focus chain unless it held focus when the dialog closed.
+ * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
+ *   `focus_transfer.js` — `"last-resort"` focuses the dialog itself only if it
+ *   has no other focusable descendant, `"restore"` keeps it out of the
+ *   opening focus chain unless it held focus when the dialog closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
@@ -37504,7 +40319,7 @@ const css$v = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$v, "@jsenv/navi/src/popup/dialog.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -37519,7 +40334,36 @@ const Dialog = props => {
 // by --navi-toggle/--navi-open/--navi-close commands, the `open` prop, or
 // `defaultOpen`) rather than owned by a parent component.
 const UncontrolledDialog = props => {
-  const openController = useOpenControllerByProps(props);
+  const debugPopup = useDebugPopup();
+  // Resolved here rather than left to useDialogProps: the open handler below
+  // needs the dialog element to look at what it contains.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  const openController = useOpenController(openEvent => {
+    const dialogEl = props.ref.current;
+    debugPopup(openEvent, `dialog opened`);
+    return {
+      onRequestClose: requestCloseEvent => {
+        // Whatever is inside must not be interrupted mid-action: a form that is
+        // sending holds an answer that is neither committed nor given up. The
+        // dialog has no such state of its own to consult (it is layout — see
+        // this file's top comment), so it asks what it contains, and lets that
+        // control report why the way it would to anyone else.
+        const busyElement = findBusyElementInside$1(dialogEl);
+        if (busyElement) {
+          dispatchRequestInteraction(busyElement, {
+            event: requestCloseEvent,
+            name: "dialog request close"
+          });
+          requestCloseEvent.preventDefault();
+        }
+      },
+      onClose: closeEvent => {
+        props.onClose?.(closeEvent);
+      }
+    };
+  });
+  useOpenPropsEffectOnOpenController(openController, props);
   return jsx(ControlledDialog, {
     ...props,
     open: undefined,
@@ -37533,7 +40377,8 @@ const UncontrolledDialog = props => {
     },
     onnavi_request_close: e => {
       openController.requestClose(e, {
-        isCancel: e.detail?.isCancel
+        isCancel: e.detail?.isCancel,
+        requester: e.detail?.source
       });
     }
   });
@@ -37588,9 +40433,36 @@ const DialogLocal = props => {
  * contentProps]` — `backdropProps` is `null` for the via-attribute renderer
  * (its own backdrop is native, not a real element).
  */
+// What a dialog turns into under a finger. "bottom" is not a taste: it puts
+// the dialog in the zone a handheld device is actually operated from — where
+// the thumbs rest and where the virtual keyboard comes up — instead of the
+// middle of the screen, which is the farthest point from both.
+// Only defaults: an explicitly passed prop still wins, so the docked shape can
+// be adjusted one axis at a time instead of being all-or-nothing.
+const DOCKED = {
+  positionArea: "bottom",
+  marginWithContainer: 0,
+  expandX: true
+};
+
+// The first control inside `dialogEl` that is mid-action, if any. Walks the
+// controls rather than reading an attribute off the dialog: a dialog carries no
+// state of its own (see this file's top comment), and `aria-busy` on the
+// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+const findBusyElementInside$1 = dialogEl => {
+  for (const element of dialogEl.querySelectorAll("[navi-control-host]")) {
+    const controller = element.__uiStateController__;
+    if (controller && BUSY_CONSTRAINT.check(controller)) {
+      return element;
+    }
+  }
+  return null;
+};
 const useDialogProps = props => {
   const backdropProps = {};
   const contentProps = {};
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   const {
     openController,
     // "top" (default) → real <dialog>, showModal(), the browser's own top
@@ -37598,13 +40470,17 @@ const useDialogProps = props => {
     // .show() instead, staying in normal document flow, position: absolute
     // relative to its own positioned ancestor. See this file's top comment.
     layer = "top",
+    dockedOnTouch,
     // Same grammar as Popover's own positionArea — see this file's top
     // comment and popup_shared.js's parsePositionArea.
-    positionArea = "center",
+    positionArea: positionAreaProp,
     // A dialog docked against an edge must keep the same gap its own size cap
     // already guarantees a centered one — so this drives both (see
-    // --x-dialog-viewport-spacing above). Pass 0 to sit flush (side_panel.jsx).
-    marginWithContainer = "3vvw",
+    // --x-dialog-container-spacing above). Pass 0 to sit flush (side_panel.jsx).
+    marginWithContainer: marginWithContainerProp,
+    expand,
+    expandX: expandXProp,
+    expandY: expandYProp,
     // "close" (default) closes on an outside click. "capture"/"none" both
     // just absorb it without closing — for the via-attribute renderer,
     // showModal() already makes the rest of the page inert, so there's
@@ -37617,29 +40493,42 @@ const useDialogProps = props => {
     // Only ever affects --anchor-width/--anchor-height (see this file's top
     // comment) — Dialog's own positioning is never relative to it.
     anchor,
-    // Makes the dialog itself a valid focus target so autoFocus="fallback"
-    // below has somewhere to land when it contains nothing focusable of its
-    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // Makes the dialog itself a valid focus target so
+    // autoFocus="last-resort" below has somewhere to land when it contains
+    // nothing focusable of its own — -1 keeps it out of the normal Tab order (it's only ever reached
     // programmatically). <dialog> has no default tabindex of its own.
     tabIndex = -1,
     // See use_auto_focus.js's own docs for why this must never reach the DOM
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
-    autoFocus = "fallback",
+    autoFocus = "last-resort",
     onKeyDown,
     children,
     ...rest
   } = props;
   const isModal = layer === "top";
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const ref = props.ref;
+  // Only touch changes anything: with a mouse a dialog already wants to be the
+  // centered box it is by default, so there is nothing to resolve there.
+  const isDocked = dockedOnTouch && coarsePointerSignal.value;
+  const positionArea = positionAreaProp ?? (isDocked ? DOCKED.positionArea : "center");
+  const marginWithContainer = marginWithContainerProp ?? (isDocked ? DOCKED.marginWithContainer :
+  // A share of whatever holds the dialog: the viewport for a top-layer
+  // one — where vvw is exactly "3% of the container", the container being
+  // the viewport — and the positioned ancestor for a local one, where
+  // reading 3% of the viewport gives an absurd gap inside a small box.
+  isModal ? "3vvw" : "3cqw");
+  // "expand || expandX", the shorthand semantics Popup used to apply before
+  // handing them over — the docked default only applies when neither was said
+  const expandXUnset = expand === undefined && expandXProp === undefined;
+  const expandX = expandXUnset ? isDocked && DOCKED.expandX : Boolean(expand) || Boolean(expandXProp);
+  const expandY = Boolean(expand) || Boolean(expandYProp);
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — same pattern as popover.jsx's own.
   const disarmBackdropHideRef = useRef(null);
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // positionDialog lives in openEffect's closure — created once, when the
   // dialog opens. Reading the placement props through a ref instead of that
@@ -37664,6 +40553,27 @@ const useDialogProps = props => {
     y: "center",
     x: "center"
   };
+  // A corner sitting exactly on the container's own corner must not be
+  // rounded: the gap a radius carves out would show the container through it,
+  // reading as a rendering glitch rather than as a rounded box. A corner is on
+  // the container's corner when both of its edges are — which only happens
+  // with no margin, hence the gate.
+  const flushEdges = {
+    top: false,
+    right: false,
+    bottom: false,
+    left: false
+  };
+  if (resolveSpacingSize(marginWithContainer) === 0) {
+    const {
+      y,
+      x
+    } = parsedPositionArea;
+    flushEdges.top = expandY || y === "top" || y === "inset-top";
+    flushEdges.bottom = expandY || y === "bottom" || y === "inset-bottom";
+    flushEdges.left = expandX || x === "left" || x === "inset-left";
+    flushEdges.right = expandX || x === "right" || x === "inset-right";
+  }
   const isAutoAnimation = animation === true || animation === "auto";
   // Dialog never has a real anchor (see this file's top comment), so this
   // is always the "no anchor" path — the same one Popover's own custom
@@ -37725,6 +40635,10 @@ const useDialogProps = props => {
       anchorElement = e.detail.anchor;
     }
     debugPopup(`"${e.type}" on ${getElementSignature(e.target)} -> openDialog`);
+    if (!isModal) {
+      // see openLocalDialogCount's own comment
+      dialogEl.style.setProperty("--dialog-stack-order", openLocalDialogCount++);
+    }
     if (anchorElement) {
       const {
         width,
@@ -37788,6 +40702,18 @@ const useDialogProps = props => {
     }
     if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
+    } else if (!isModal) {
+      // A local dialog is confined to its positioned ancestor, and so is its
+      // backdrop (inset: 0 covers the scrollport, not the scrolled content):
+      // letting that ancestor scroll would slide the dialog away and reveal
+      // content the backdrop does not cover. So its own container's scroll is
+      // always locked — trapScrollInside also swaps the scrollbar for an
+      // equivalent padding, so the width the dialog was sized against does not
+      // change. The rest of the page keeps scrolling: only `scrollCapture`
+      // (above) reaches that far.
+      addCleanup(trapScrollInside(dialogEl, {
+        boundaryElement: positionedAncestor
+      }));
     }
 
     // Positioning: dialogEl is already shown (display: flex, per this
@@ -37803,19 +40729,23 @@ const useDialogProps = props => {
         positionArea,
         marginWithContainer
       } = positionPropsRef.current;
-      let marginWithContainerInPixels = resolveSpacingSize(marginWithContainer);
+      // The dialog's PARENT, not the dialog: a modal one is promoted to the
+      // top layer and would answer "the viewport" about itself, when what a
+      // "3cqw" margin means here is a share of the box it was declared in.
+      // resolveSpacingSize walks up from there to find that container.
+      let marginWithContainerInPixels = resolveSpacingSize(marginWithContainer, dialogEl.parentElement);
       if (typeof marginWithContainerInPixels !== "number") {
         // A value only CSS could evaluate (a spacing token resolving to a var(),
         // a percentage…) — the placement below needs a real number, and letting
         // it through would put the dialog at NaN.
-        console.warn(`Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number or a viewport length ("3vvw", "2vvh").`);
+        console.warn(`Dialog: marginWithContainer="${marginWithContainer}" cannot be resolved to pixels. Use a number, a viewport length ("3vvw", "2vvh") or a container length ("3cqw", "2cqh").`);
         marginWithContainerInPixels = 0;
       }
       // The size caps read the same gap in CSS as the placement below applies
       // in pixels, so a docked dialog and a centered one keep the same
       // distance from the edges. Written resolved (not as the raw prop) so a
       // spacing token stays valid inside the caps' own calc().
-      dialogEl.style.setProperty("--x-dialog-viewport-spacing", `${marginWithContainerInPixels}px`);
+      dialogEl.style.setProperty("--x-dialog-container-spacing", `${marginWithContainerInPixels}px`);
       const pickOptions = {
         positionArea,
         container: positionedAncestor,
@@ -37923,6 +40853,16 @@ const useDialogProps = props => {
         if (mouseDownEvent.button !== 0) {
           return;
         }
+        // The click landed inside another popup: that is a click on what is in
+        // front of this dialog, not outside it. Asking the target where it
+        // lives rather than asking this dialog whether it was pushed — a popup
+        // in front does not have to be one this dialog knows about. Excludes a
+        // popup nested inside this one, which the containment check below
+        // handles as the inside click it is.
+        const popupUnderPointer = mouseDownEvent.target.closest?.(`[navi-control="dialog"], [navi-control="popover"]`);
+        if (popupUnderPointer && popupUnderPointer !== dialogEl && !dialogEl.contains(popupUnderPointer)) {
+          return;
+        }
         // Real DOM containment wins over the coordinate check below — an
         // element genuinely inside the dialog (e.g. one with `overflow:
         // visible`, a negative margin, or an absolutely-positioned child)
@@ -37958,6 +40898,10 @@ const useDialogProps = props => {
     return closeEvent => {
       debugPopup(`"${closeEvent.type}" on ${getElementSignature(closeEvent.target)} -> closeDialog`);
       dialogEl.setAttribute("aria-expanded", "false");
+      if (!isModal) {
+        openLocalDialogCount = Math.max(0, openLocalDialogCount - 1);
+        dialogEl.style.removeProperty("--dialog-stack-order");
+      }
       // See openEffect's own identical comment for why this is needed
       // regardless of isModal, not just when a stray authored display
       // property is actually present — harmless the rest of the time.
@@ -38060,21 +41004,36 @@ const useDialogProps = props => {
     ...autoFocusProps,
     "as": "dialog",
     ref,
+    // Not a control, but still something the rest of navi has to be able to
+    // recognise: outside-click detection asks what a click landed in
+    // ("[navi-control='dialog'], [navi-control='popover']" — see openEffect
+    // above), and --navi-open/--navi-close resolve their target this way.
+    "navi-control": "dialog",
+    // The protocol every command target answers. It came with the control
+    // group before; a dialog is layout and still has to answer --navi-open,
+    // --navi-close and --navi-toggle, which are dispatched here and do not
+    // bubble.
+    "onnavi_command": e => {
+      onNaviCommand(e);
+      rest.onnavi_command?.(e);
+    },
     "baseClassName": "navi_dialog",
     "pseudoClasses": DIALOG_PSEUDO_CLASSES,
     // Distinguishes the two renderers for the CSS above (position: fixed
     // vs. absolute) — positioning itself is entirely JS-driven now (see
     // openEffect's own positionDialog above), no data-position-area
     // attribute needed at all.
+    // A popup scrolls, and asking Box for that overflow is also what lets what
+    // it contains claim header/footer/body (see box.jsx) — a popup is always a
+    // scrolling area, so it says so once, here.
+    "overflow": "auto",
     "data-layer": layer,
-    "onnavi_command": e => {
-      onNaviCommand(e);
-    },
-    "onnavi_request_interaction": e => {
-      onRequestInteraction(e, {
-        debugInteraction
-      });
-    },
+    "data-expand-x": expandX ? "" : undefined,
+    "data-expand-y": expandY ? "" : undefined,
+    "data-flush-top": flushEdges.top ? "" : undefined,
+    "data-flush-right": flushEdges.right ? "" : undefined,
+    "data-flush-bottom": flushEdges.bottom ? "" : undefined,
+    "data-flush-left": flushEdges.left ? "" : undefined,
     "onKeyDown": e => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
@@ -38098,6 +41057,13 @@ const useDialogProps = props => {
   if (!isModal) {
     backdropProps.onMouseDown = mouseDownEvent => {
       if (mouseDownEvent.button !== 0) {
+        return;
+      }
+      // See the custom renderer's own onDocumentMouseDown: a click inside
+      // another popup is a click on what is in front, not an outside click.
+      const dialogEl = ref.current;
+      const popupUnderPointer = mouseDownEvent.target.closest?.(`[navi-control="dialog"], [navi-control="popover"]`);
+      if (popupUnderPointer && popupUnderPointer !== dialogEl && !dialogEl?.contains(popupUnderPointer)) {
         return;
       }
       if (pointerInteractionOutsideEffect === "close" || pointerInteractionOutsideEffect === "cancel") {
@@ -38125,6 +41091,11 @@ const DIALOG_STYLE_CSS_VARS = {
 };
 
 installImportMetaCssBuild(import.meta);/**
+ * A popover is a surface, not a control: it holds no value, has no action and
+ * aggregates nothing — same as Dialog, see dialog.jsx's own top comment for the
+ * whole reasoning. Fields and a submit go in a `<Form>` inside it; the form
+ * owns the answer, the popover owns where it is shown.
+ *
  * A popup positioned via `anchor`/`positionArea`. Two real rendering
  * strategies live in this file, each its own component: `PopoverViaAttribute`
  * (native Popover API, top layer) and `PopoverCustom` (`position: absolute`
@@ -38166,7 +41137,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$u = /* css */`
+const css$y = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -38181,7 +41152,7 @@ const css$u = /* css */`
       --popover-border-width: 1px;
       --popover-border-color: var(--navi-popup-border-color);
       --popover-outline-width: var(--navi-focus-outline-width);
-      --popover-outline-offset: calc(-1 * var(--popover-outline-width) / 2);
+      --popover-outline-offset: calc(-1 * var(--popover-outline-width));
       --popover-outline-color: var(--navi-focus-outline-color);
       --popover-background-color: var(--navi-popup-background-color);
     }
@@ -38256,16 +41227,42 @@ const css$u = /* css */`
     border-radius: var(--popover-border-radius);
     outline-width: var(--popover-outline-width);
     outline-color: var(--popover-outline-color);
-    outline-offset: 0px;
+    outline-offset: var(--popover-outline-offset);
     box-shadow: var(--popover-box-shadow);
+
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
+    overscroll-behavior: none;
     /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
        drives that itself via the Web Animations API instead of CSS, so it
        stays independent from navi-animation's own opacity/scale/display
        transition list below (no shared transition-property to clobber, no
        propertyName to filter). */
-    overflow: auto;
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
     overscroll-behavior: none;
 
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
+    overscroll-behavior: none;
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
+    /* overflow is not declared here: the popover carries [data-scrollable]
+       (see box.jsx), which is what makes it scroll — and what a
+       header/footer/body inside it then rearranges. */
+    overscroll-behavior: none;
+
+    /* left/top are NOT transitioned here — applyNewPosition (visible_rect.js)
+       drives that itself via the Web Animations API instead of CSS, so it
+       stays independent from navi-animation's own opacity/scale/display
+       transition list below (no shared transition-property to clobber, no
+       propertyName to filter). */
     /* The via-attribute renderer starts hidden for free (native UA default
        for any [popover] element, same as <dialog> without [open]) — the
        custom renderer is a plain div with no such native default, so
@@ -38292,8 +41289,19 @@ const css$u = /* css */`
       display: none !important;
     }
 
-    &[data-focus-visible] {
+    &[data-focus-visible],
+    /* …or something filling it holds the keyboard and offers its ring to
+       whoever holds it (data-focus-outline-delegate — a slide container says
+       this, see slide_container.jsx). Its own ring would land on the very edge
+       this popover already outlines, one pixel in, so the popover draws it
+       instead. Direct children only: a delegate deeper in has its own box to
+       ring, and this edge is not it. */
+    &:has(> [data-focus-outline-delegate][data-focus-visible]) {
       outline-style: solid;
+    }
+    /* …and the delegate stands down. */
+    > [data-focus-outline-delegate] {
+      --navi-focus-outline-style: none;
     }
 
     /* The via-attribute renderer's own default: an element in the top layer
@@ -38472,12 +41480,12 @@ const css$u = /* css */`
  *   clamping as `minWidth`.
  * @param {string} [props.maxHeight] - Maps to `--popover-max-height`.
  * @param {number} [props.tabIndex=-1] - Set on the popover element itself
- *   so `autoFocus="fallback"` below has somewhere to land when the popover
+ *   so `autoFocus="last-resort"` below has somewhere to land when the popover
  *   has no other focusable descendant of its own.
- * @param {boolean|"fallback"|"restore"} [props.autoFocus="fallback"] - See
- *   `focus_transfer.js` — `"fallback"` focuses the popover itself if it has
- *   no other focusable descendant, `"restore"` keeps it out of the opening
- *   focus chain unless it held focus when the popover closed.
+ * @param {boolean|"last-resort"|"restore"} [props.autoFocus="last-resort"] - See
+ *   `focus_transfer.js` — `"last-resort"` focuses the popover itself only if it
+ *   has no other focusable descendant, `"restore"` keeps it out of the
+ *   opening focus chain unless it held focus when the popover closed.
  * @param {boolean} [props.open] - Controlled open state.
  * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
  *   open state — plays no entrance animation (nothing was ever shown as
@@ -38493,7 +41501,7 @@ const css$u = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$u, "@jsenv/navi/src/popup/popover.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -38508,7 +41516,34 @@ const Popover = props => {
 // by --navi-toggle/--navi-open/--navi-close commands, or by the `open` prop)
 // rather than owned by a parent component.
 const UncontrolledPopover = props => {
-  const openController = useOpenControllerByProps(props);
+  const debugPopup = useDebugPopup();
+  // Resolved here rather than in usePopoverProps: the open handler below needs
+  // the popover element to read what it holds.
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // Same as Dialog's own UncontrolledDialog, for the same reasons — see it for
+  // the full story: a popover is a surface, so the only thing it has to say
+  // about closing is that what it contains must not be interrupted mid-action.
+  const openController = useOpenController(openEvent => {
+    const popoverEl = props.ref.current;
+    debugPopup(openEvent, `popover opened`);
+    return {
+      onRequestClose: requestCloseEvent => {
+        const busyElement = findBusyElementInside(popoverEl);
+        if (busyElement) {
+          dispatchRequestInteraction(busyElement, {
+            event: requestCloseEvent,
+            name: "popover request close"
+          });
+          requestCloseEvent.preventDefault();
+        }
+      },
+      onClose: closeEvent => {
+        props.onClose?.(closeEvent);
+      }
+    };
+  });
+  useOpenPropsEffectOnOpenController(openController, props);
   return jsx(ControlledPopover, {
     ...props,
     open: undefined,
@@ -38589,9 +41624,26 @@ const PopoverCustom = props => {
  * contentProps]` — two plain prop objects ready to spread onto a
  * backdrop/content element each.
  */
+// The first control inside `popupEl` that is mid-action, if any. Walks the
+// controls rather than reading an attribute off the popup: a popup carries no
+// state of its own (see this file's top comment), and `aria-busy` on the
+// controls is a render snapshot — BUSY_CONSTRAINT reads the live answer.
+// Same as Dialog's own; kept in both rather than shared, since it is three
+// lines and each file reads on its own.
+const findBusyElementInside = popupEl => {
+  for (const element of popupEl.querySelectorAll("[navi-control-host]")) {
+    const controller = element.__uiStateController__;
+    if (controller && BUSY_CONSTRAINT.check(controller)) {
+      return element;
+    }
+  }
+  return null;
+};
 const usePopoverProps = props => {
   const backdropProps = {};
   const contentProps = {};
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   const {
     openController,
     // "top" (default) → via-attribute, in the browser's own top layer;
@@ -38620,22 +41672,21 @@ const usePopoverProps = props => {
     anchor,
     anchorCustomEventDetail = "override",
     marginWithAnchor = 0,
-    // Makes the popover itself a valid focus target so autoFocus="fallback"
-    // below has somewhere to land when it contains nothing focusable of its
-    // own — -1 keeps it out of the normal Tab order (it's only ever reached
+    // Makes the popover itself a valid focus target so
+    // autoFocus="last-resort" below has somewhere to land when it contains
+    // nothing focusable of its own — -1 keeps it out of the normal Tab order (it's only ever reached
     // programmatically).
     tabIndex = -1,
     // See use_auto_focus.js's own docs for why this must never reach the DOM
     // as a plain `autofocus` attribute — useAutoFocus below takes over
     // instead, so it's read here rather than left in `rest`.
-    autoFocus = "fallback",
+    autoFocus = "last-resort",
     onKeyDown,
     children,
     ...rest
   } = props;
   const isTopLayer = layer === "top";
-  const defaultRef = useRef();
-  const ref = rest.ref || defaultRef;
+  const ref = props.ref;
   const backdropRef = useRef();
   // Disarms a still-pending backdrop hide from a previous close (see
   // armPointerDownOutsideClose below) — set at close time, read at the next
@@ -38647,7 +41698,6 @@ const usePopoverProps = props => {
   const backdropId = `${id}-backdrop`;
   const debugPopup = useDebugPopup();
   const debugFocus = useDebugFocus();
-  const debugInteraction = useDebugInteraction();
   const autoFocusProps = useAutoFocus(ref, autoFocus);
   // animation={true} or "auto" always resolves to "sliding" or "scaling"
   // (see resolveAutoAnimationKind).
@@ -39298,16 +42348,25 @@ const usePopoverProps = props => {
     ...rest,
     ...autoFocusProps,
     ref,
-    "baseClassName": "navi_popover",
-    "pseudoClasses": POPOVER_PSEUDO_CLASSES,
+    // Not a control, but still something the rest of navi has to be able to
+    // recognise: outside-click detection asks what a click landed in
+    // ("[navi-control='dialog'], [navi-control='popover']"), and
+    // --navi-open/--navi-close resolve their target this way.
+    "navi-control": "popover",
+    // The protocol every command target answers. It came with the control
+    // group before; a popover is layout and still has to answer --navi-open,
+    // --navi-close and --navi-toggle, which are dispatched here and do not
+    // bubble.
     "onnavi_command": e => {
       onNaviCommand(e);
+      rest.onnavi_command?.(e);
     },
-    "onnavi_request_interaction": e => {
-      onRequestInteraction(e, {
-        debugInteraction
-      });
-    },
+    // A popup scrolls, and asking Box for that overflow is also what lets what
+    // it contains claim header/footer/body (see box.jsx) — a popup is always a
+    // scrolling area, so it says so once, here.
+    "overflow": "auto",
+    "baseClassName": "navi_popover",
+    "pseudoClasses": POPOVER_PSEUDO_CLASSES,
     "onKeyDown": e => {
       onKeyDown?.(e);
       onKeyDownShortcuts(e);
@@ -39401,7 +42460,7 @@ installImportMetaCssBuild(import.meta);/**
  * pass through untouched via `...rest` to whichever of Popover/Dialog
  * actually renders.
  */
-const css$t = /* css */`
+const css$x = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -39419,17 +42478,6 @@ const css$t = /* css */`
         --dialog-border-color: var(--popup-border-color);
 
         padding: 0;
-      }
-    }
-  }
-
-  .navi_popup {
-    &.navi_dialog {
-      &[data-expand-x] {
-        width: var(--dialog-maxmax-width);
-      }
-      &[data-expand-y] {
-        height: var(--dialog-maxmax-height);
       }
     }
   }
@@ -39506,7 +42554,7 @@ const css$t = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/popup/popup.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -39527,25 +42575,31 @@ const Popup = props => {
     anchorCustomEventDetail,
     marginWithAnchor,
     focusCapture,
+    scrollCapture,
     positionAreaFixed,
     ...rest
   } = props;
-  const [mode] = useResolvedPopupMode(modeProp, maxWidth);
+  const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
+    // layer stays in ...rest (forwarded as-is to Dialog/Popover); it is read
+    // here too because a local popup measures its container, not the screen
+    layer: rest.layer,
+    elementRef: rest.ref
+  });
   // So the content can lay itself out per mode — see usePopupMode.
   const childrenWithMode = jsx(PopupModeContext.Provider, {
     value: mode,
     children: children
   });
   if (mode === "dialog") {
-    const expandXResolved = expand || expandX;
-    const expandYResolved = expand || expandY;
     return jsx(Dialog, {
       ...rest,
       maxWidth: maxWidth,
       pointerInteractionOutsideEffect: pointerInteractionOutsideEffect,
       className: withPropsClassName("navi_popup", className),
-      "data-expand-x": expandXResolved ? "" : undefined,
-      "data-expand-y": expandYResolved ? "" : undefined,
+      expand: expand,
+      expandX: expandX,
+      expandY: expandY,
+      scrollCapture: scrollCapture === "dialog" || scrollCapture,
       children: childrenWithMode
     });
   }
@@ -39556,13 +42610,94 @@ const Popup = props => {
     anchorCustomEventDetail: anchorCustomEventDetail,
     marginWithAnchor: marginWithAnchor,
     focusCapture: focusCapture,
+    scrollCapture: scrollCapture === "popover" || scrollCapture,
     positionAreaFixed: positionAreaFixed,
     className: withPropsClassName("navi_popup", className),
     children: childrenWithMode
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+/**
+ * What a control HOLDS, as opposed to what it is showing.
+ *
+ * A `value` is held: the control was given it, so handing it back says nothing
+ * new. A `defaultValue` is only a suggestion — an age that is usually 18, a
+ * duration that is usually 1h30 — so the control holds nothing, and confirming
+ * the suggestion IS an answer ("yes, 18"). A control bound to a signal falls on
+ * whichever side the signal put it: a signal with something in it is an answer
+ * (restored from the url, set by whoever owns it), an empty one leaves the
+ * control on its suggestion.
+ *
+ * The same distinction Form makes across its fields (see readHeldUIState in
+ * form.jsx), asked of a single control — which is what lets a Picker tell "the
+ * user re-confirmed what was already chosen" (nothing new) from "the user
+ * accepted the proposal" (an answer).
+ */
+
+const isUIStateHeld = (controller) => {
+  if (!controller) {
+    return false;
+  }
+  // Given a value outright: held, whatever it is showing.
+  if (controller.hasStateProp || controller.hasValueProp) {
+    return true;
+  }
+  // A facade (a picker) shows what the control inside its popup holds, so that
+  // is the one to ask — the facade itself was given nothing.
+  const facadeChild = controller.facadeChild;
+  if (facadeChild) {
+    return isUIStateHeld(facadeChild);
+  }
+  const boundSignal = controller.props?.signal;
+  if (boundSignal) {
+    return boundSignal.value !== undefined;
+  }
+  // Uncontrolled with a suggestion: what it shows is that suggestion until it
+  // differs from it.
+  if (controller.defaultValue !== undefined) {
+    return !compareTwoJsValues(controller.uiState, controller.defaultValue);
+  }
+  // A group holding nothing of its own is worth what its children are: two
+  // wheels each on their own suggestion make a group still waiting for an
+  // answer, one of them moved makes a group holding one.
+  const childControllers = controller.getChildControllers?.() || [];
+  if (childControllers.length > 0) {
+    return childControllers.some((child) => isUIStateHeld(child));
+  }
+  return controller.uiState !== undefined;
+};
+
+/**
+ * Tell a control — and everything inside it — that what it is showing is now
+ * the answer, without its state having to move.
+ *
+ * The state is already right; what has not happened is anyone saying so. A
+ * control reports an answer through `onUIAction` (that is where a bound signal
+ * is written, where `uiAction` fires), and a suggestion nobody touched never
+ * got there. Confirming a picker is exactly that moment.
+ *
+ * Down the whole subtree because that is where the answer actually lives: a
+ * picker holding a group of two wheels has one signal per wheel, and it is each
+ * wheel that has to record what it is showing. Commands are skipped — a
+ * `command` on a control is its reaction to being used, and this is a
+ * confirmation happening elsewhere, whose own command (the picker's) is already
+ * running.
+ */
+const commitUIStateAsAnswer = (controller, e) => {
+  if (!controller) {
+    return;
+  }
+  const answering = controller.facadeChild || controller;
+  commitSubtree(answering, e);
+};
+const commitSubtree = (controller, e) => {
+  controller.onUIAction?.(e, { skipCommand: true });
+  for (const child of controller.getChildControllers?.() || []) {
+    commitSubtree(child, e);
+  }
+};
+
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -39674,7 +42809,7 @@ installImportMetaCssBuild(import.meta);const css$s = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$s, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -39759,12 +42894,18 @@ const PickerCustom = props => {
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
-  // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
+  // Same narrow-container/maxWidth-compact heuristic Popup itself uses (see
   // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
   // doesn't switch between Popover and Dialog), with resetMode called from
   // this picker's own onClose below to re-evaluate on the *next* open.
-  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth);
+  // The picker element locates the measurement: a popupLayer="local" popup is
+  // confined to the picker's own positioned ancestor, so that box — not the
+  // screen — is what "small" means for it.
+  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth, {
+    layer: props.popupLayer,
+    elementRef: ref
+  });
   const pickerProps = {
     ...props
   };
@@ -39823,7 +42964,12 @@ const PickerCustom = props => {
     const openController = useOpenController(openEvent => {
       enterExpanded();
       const valueAtOpen = getPickerInputUIState(ref.current);
-      debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen);
+      // Whether that value is an ANSWER or only a suggestion. A picker showing
+      // a defaultValue holds nothing, so closing on it untouched IS the answer
+      // ("yes, 2h15") — the same rule Form applies to an untouched field (see
+      // isUIStateHeld). Read at open, before anything inside can change it.
+      const heldAtOpen = isUIStateHeld(getPickerInput(ref.current)?.__uiStateController__);
+      debugPopup(openEvent, `picker opened, store value at open`, valueAtOpen, heldAtOpen ? `(held)` : `(a suggestion, not an answer yet)`);
       return {
         onRequestClose: requestCloseEvent => {
           if (requestCloseEvent.detail.isCancel) {
@@ -39833,8 +42979,9 @@ const PickerCustom = props => {
           const pickerEl = ref.current;
           const inputEl = getPickerInput(pickerEl);
           const valueAtClose = getUIStateFromElement(inputEl);
-          if (compareTwoJsValues(valueAtClose, valueAtOpen)) {
-            // Value unchanged — no action to run, but still allow the close.
+          if (heldAtOpen && compareTwoJsValues(valueAtClose, valueAtOpen)) {
+            // Value unchanged and already held — closing on it says nothing
+            // new. No action to run, but still allow the close.
             return;
           }
           dispatchRequestAction(inputEl, {
@@ -39859,6 +43006,14 @@ const PickerCustom = props => {
             dispatchRequestSetUIState(inputEl, valueAtOpen, {
               event: closeEvent
             });
+          } else if (!heldAtOpen) {
+            // Confirmed a suggestion: nothing changed, so nothing has told the
+            // control's own bound signal / uiAction that this is now the
+            // answer. Say it here — this is the moment the suggestion becomes
+            // one. Harmless when the value did change on the way: the state is
+            // already what it is, and this only re-runs the same reaction.
+            debugPopup(closeEvent, `picker defined a suggestion -> commit it`);
+            commitUIStateAsAnswer(getPickerInput(ref.current)?.__uiStateController__, closeEvent);
           }
           leaveExpanded({
             isBack: closeEvent.detail.isCancel
@@ -40105,10 +43260,14 @@ const PickerContentInsidePopup = props => {
     // defaulting the now-correctly-named prop to `true` would be a real,
     // unintended behavior change riding along with the rename.
     focusCapture,
+    // Popup documents its own `layer` as forwarded as-is to Dialog/Popover,
+    // but popupProps is built explicitly here, so it only travels if named.
+    // "popupLayer" rather than "layer": the picker itself is not the popup.
+    popupLayer,
     positionArea,
     popoverMode = "nearby",
     popoverSpacing = popoverMode === "nearby" ? 5 : 0,
-    marginWithContainer = 10,
+    marginWithContainer,
     closeOnFocusOut = false,
     // Clicking outside the popup closes it and COMMITS by default (fires the
     // action if the value changed) — Escape still cancels. Pass "cancel" to make
@@ -40117,12 +43276,15 @@ const PickerContentInsidePopup = props => {
     dialogExpand,
     dialogExpandX,
     dialogExpandY,
+    // Named like the Dialog prop it forwards, not prefixed like dialogExpand*
+    // above: those exist because "expand" already means something on the picker
+    // itself, and this one does not. Popover ignores it, same as Dialog ignores
+    // marginWithAnchor.
+    dockedOnTouch,
     animation,
     ...rest
   } = props;
   const isPopover = mode === "popover";
-  const expandX = dialogExpand || dialogExpandX;
-  const expandY = dialogExpand || dialogExpandY;
   return jsx(Next, {
     "aria-haspopup": isPopover ? "listbox" : "dialog",
     "navi-popover-mode": isPopover ? popoverMode : undefined,
@@ -40154,15 +43316,18 @@ const PickerContentInsidePopup = props => {
     children: jsx(Popup, {
       ...popupProps,
       mode: mode,
+      layer: popupLayer,
       animation: animation,
       positionArea: isPopover ? positionArea ?? (popoverMode === "nearby" ? "bottom-start" : "inset(top-left)") : positionArea,
       marginWithAnchor: isPopover ? popoverSpacing : undefined,
-      marginWithContainer: isPopover ? marginWithContainer : undefined,
-      scrollCapture: scrollCapture === "dialog" ? !isPopover : scrollCapture === "popover" ? isPopover : scrollCapture,
+      marginWithContainer: marginWithContainer === undefined && isPopover ? popoverSpacing : marginWithContainer ? 10 : marginWithContainer,
+      scrollCapture: scrollCapture,
       pointerInteractionOutsideEffect: pointerLock ? "capture" : pointerInteractionOutsideEffect,
       focusCapture: isPopover ? focusCapture : undefined,
-      expandX: !isPopover ? expandX : undefined,
-      expandY: !isPopover ? expandY : undefined,
+      expand: isPopover ? undefined : dialogExpand,
+      expandX: isPopover ? undefined : dialogExpandX,
+      expandY: isPopover ? undefined : dialogExpandY,
+      dockedOnTouch: isPopover ? undefined : dockedOnTouch,
       children: jsx(PopupModeContext.Provider, {
         value: mode,
         children: children
@@ -40209,590 +43374,6 @@ const PickerNaviMinute = props => {
       })]
     })
   });
-};
-
-const Time = props => {
-  const {
-    type
-  } = props;
-  if (type === "date") {
-    return jsx(TimeDate, {
-      ...props
-    });
-  }
-  if (type === "month") {
-    return jsx(TimeMonth, {
-      ...props
-    });
-  }
-  if (type === "week") {
-    return jsx(TimeWeek, {
-      ...props
-    });
-  }
-  if (type === "datetime") {
-    return jsx(TimeDatetime, {
-      ...props
-    });
-  }
-  if (type === "time") {
-    return jsx(TimeTime, {
-      ...props
-    });
-  }
-  if (type === "minute") {
-    return jsx(TimeMinute, {
-      ...props
-    });
-  }
-  if (type === "second") {
-    return jsx(TimeSecond, {
-      ...props
-    });
-  }
-  if (type === "hour") {
-    return jsx(TimeHour, {
-      ...props
-    });
-  }
-  if (type === "duration") {
-    return jsx(TimeDuration, {
-      ...props
-    });
-  }
-  return jsx(TimeRelative, {
-    ...props
-  });
-};
-const TimeDate = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  dayLabel,
-  now,
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      capitalize: false,
-      children: formatDatePlaceholder({
-        lang
-      })
-    });
-  }
-  const date = toDate(children, value => {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
-  if (!date) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const base = formatDay(date, {
-    lang,
-    format
-  });
-  let text;
-  if (dayLabel) {
-    const offset = getRelativeDay(date, {
-      now
-    });
-    if (offset >= -1 && offset <= 1) {
-      text = `${base} (${formatDayRelative(offset, lang)})`;
-    } else {
-      text = base;
-    }
-  } else {
-    text = base;
-  }
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const dateTime = `${yyyy}-${mm}-${dd}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeMonth = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: formatMonthPlaceholder({
-        lang,
-        format
-      })
-    });
-  }
-  const date = toDate(children, value => {
-    if (/^\d{4}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}-01T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
-  if (!date) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const text = formatMonth(date, {
-    lang,
-    format
-  });
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dateTime = `${yyyy}-${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeWeek = ({
-  children,
-  lang = languagesSignal.value,
-  ...props
-}) => {
-  if (children === undefined || children === null) {
-    return jsx(TimeText, {
-      ...props,
-      children: formatWeekPlaceholder({
-        lang
-      })
-    });
-  }
-  const dateTime = String(children);
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: dateTime
-  });
-};
-const TimeDatetime = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      capitalize: false,
-      children: formatDatetimePlaceholder({
-        lang,
-        format
-      })
-    });
-  }
-  const date = toDate(children);
-  if (!date) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const text = formatDatetime(date, {
-    lang,
-    format
-  });
-  const dateTime = date.toISOString(); // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeTime = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: "--:--"
-    });
-  }
-  const date = toDate(children, value => {
-    if (/^\d{2}:\d{2}(?::\d{2})?$/.test(value)) {
-      const d = new Date(`1970-01-01T${value}`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  });
-  // toDate turns a non-finite number into an Invalid Date, which is an object
-  if (!date || isNaN(date.getTime())) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const dateTime = `${hh}:${mm}`; // See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/time#datetime
-  if (format === "timestring") {
-    return jsx(TimeText, {
-      dateTime: dateTime,
-      ...props,
-      children: formatTime(date, lang)
-    });
-  }
-  const totalMinutes = date.getHours() * 60 + date.getMinutes();
-  // Midnight (hour 0) can't go through formatMinuteDuration's own default
-  // zero-hour handling: it drops a zero-valued unit entirely (by design — a
-  // real 5-minute duration should print as "5 minutes", not "0 hours 5
-  // minutes"), so "00:05" would otherwise render identically to an actual
-  // 5-minute duration, silently losing the fact that it's midnight. Every
-  // other hour keeps at least its own "N hour(s)" wording as a hint that
-  // this is a time-of-day, not a duration — only hour 0 loses that hint
-  // entirely.
-  // clockStyle: this is always a time-of-day here, never a duration — keeps
-  // a zero hour instead of dropping it (midnight would otherwise be
-  // indistinguishable from an actual 5-minute duration), and in
-  // format="compact" also zero-pads a single-digit hour so "5h30"/"0h05"
-  // read as "05h30"/"00h05", closer to a "HH:MM" clock.
-  let text;
-  if (date.getHours() !== 0) {
-    text = formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true
-    });
-  } else if (format !== "long") {
-    // short/narrow/compact: keep the "0 h"/"0h" hour part instead of
-    // dropping it — e.g. "0 h et 5 min"/"0h 5min"/"00h05" — rather than
-    // substituting a translated "midnight" word, which would look out of
-    // place squeezed into these otherwise terse, symbol-based formats.
-    text = formatMinuteDuration(totalMinutes, {
-      lang,
-      format,
-      clockStyle: true
-    });
-  } else {
-    const midnightWord = naviI18n("time.midnight", undefined, {
-      lang
-    });
-    if (midnightWord === "time.midnight") {
-      // No "midnight" translation registered for this language — fall back
-      // to this language's own literal "0 heure(s)" wording instead (still
-      // better than leaking the untranslated key, or substituting an
-      // English word that wouldn't grammatically match the rest of the
-      // sentence in whatever language this actually is).
-      text = formatMinuteDuration(totalMinutes, {
-        lang,
-        format,
-        clockStyle: true
-      });
-    } else {
-      // Swap just the "0 heure(s)" part of the Intl-generated duration
-      // string for the translated "midnight" word, keeping everything else
-      // (the conjunction, the minutes part) exactly as Intl would produce
-      // for this locale — formatToParts tags each token with the unit it
-      // belongs to, so the swap doesn't need to know the locale's own
-      // grammar/word order. Only ever one hour-tagged group per call
-      // (hours is always 0 or absent here), but guarded anyway in case a
-      // future Intl implementation ever splits it into more parts.
-      const parts = new Intl.DurationFormat(lang, {
-        style: "long",
-        hoursDisplay: "always"
-      }).formatToParts({
-        hours: 0,
-        minutes: date.getMinutes()
-      });
-      let hourGroupReplaced = false;
-      text = parts.map(part => {
-        if (part.unit !== "hour") {
-          return part.value;
-        }
-        if (hourGroupReplaced) {
-          return "";
-        }
-        hourGroupReplaced = true;
-        return midnightWord;
-      }).join("");
-    }
-  }
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeMinute = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  forceUnit = false,
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: format === "timestring" ? "--:--" : "--"
-    });
-  }
-  const minutes = Number(children);
-  if (!Number.isFinite(minutes)) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const totalHours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  const hh = String(totalHours).padStart(2, "0");
-  const mm = String(remainingMinutes).padStart(2, "0");
-  const dateTime = `${hh}:${mm}`;
-  let text;
-  if (format === "timestring") {
-    const date = new Date(1970, 0, 1, totalHours, remainingMinutes, 0);
-    text = formatTime(date, lang);
-  } else {
-    text = formatMinuteDuration(minutes, {
-      lang,
-      format,
-      forceUnit
-    });
-  }
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeSecond = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  forceUnit = false,
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: format === "timestring" ? "--:--:--" : "--"
-    });
-  }
-  const seconds = Number(children);
-  if (!Number.isFinite(seconds)) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor(seconds % 3600 / 60);
-  const s = seconds % 60;
-  const dateTime = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  let text;
-  if (format === "timestring") {
-    // Always HH:MM:SS to avoid ambiguity with HH:MM time-of-day format
-    text = dateTime;
-  } else {
-    text = formatSecondDuration(seconds, {
-      lang,
-      format,
-      forceUnit
-    });
-  }
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeHour = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  forceUnit = false,
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: format === "timestring" ? "--:--" : "--"
-    });
-  }
-  const hours = Number(children);
-  if (!Number.isFinite(hours)) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  if (format === "timestring") {
-    const totalMinutes = Math.round(hours * 60);
-    const date = new Date(1970, 0, 1, Math.floor(totalMinutes / 60), totalMinutes % 60, 0);
-    return jsx(TimeText, {
-      ...props,
-      children: formatTime(date, lang)
-    });
-  }
-  const text = formatHourDuration(hours, {
-    lang,
-    format,
-    forceUnit
-  });
-  return jsx(TimeText, {
-    ...props,
-    children: text
-  });
-};
-const TimeDuration = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  ...props
-}) => {
-  if (children === undefined || children === null) {
-    return jsx(TimeText, {
-      ...props,
-      children: "--"
-    });
-  }
-
-  // Accept: duration.js string ("2hour15minute"), ISO 8601 ("PT2H15M"), number (seconds)
-  let duration;
-  if (typeof children === "number") {
-    duration = {
-      seconds: children
-    };
-  } else if (typeof children === "string") {
-    duration = parseDuration(children);
-    if (!duration) {
-      return jsx(TimeText, {
-        ...props,
-        children: children
-      });
-    }
-  } else if (typeof children === "object") {
-    duration = children;
-  } else {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-  const isoString = durationToISOString(duration) ?? String(children);
-  if (format === "iso") {
-    return jsx(TimeText, {
-      dateTime: isoString,
-      ...props,
-      children: isoString
-    });
-  }
-  const totalSeconds = durationToSeconds(duration);
-  if (totalSeconds === null) {
-    // Non-numeric unit values (e.g. mid-edit "2ahour15minute" or { hours: "abc" }):
-    // formatDuration reads the raw values and appends compact unit symbols.
-    return jsx(TimeText, {
-      ...props,
-      children: formatDuration(duration, {
-        lang,
-        format
-      })
-    });
-  }
-  if (totalSeconds === 0) {
-    return jsx(TimeText, {
-      ...props,
-      children: "0"
-    });
-  }
-  const text = formatDuration(duration, {
-    lang,
-    format
-  });
-  return jsx(TimeText, {
-    dateTime: isoString,
-    ...props,
-    children: text
-  });
-};
-const TimeRelative = ({
-  children,
-  lang = languagesSignal.value,
-  format = "long",
-  eventDuration = 0,
-  bare,
-  ...props
-}) => {
-  if (children === undefined) {
-    return jsx(TimeText, {
-      ...props,
-      children: "\u2013"
-    });
-  }
-  const date = toDate(children);
-  if (!date) {
-    return jsx(TimeText, {
-      ...props,
-      children: String(children)
-    });
-  }
-
-  // eventDuration accepts ms (number), duration.js string, or ISO 8601 string
-  let eventDurationMs = eventDuration;
-  if (typeof eventDuration === "string") {
-    const s = durationToSeconds(eventDuration);
-    eventDurationMs = s !== null ? s * 1000 : 0;
-  }
-  const text = formatTimeRelative(date, eventDurationMs, {
-    lang,
-    bare,
-    format
-  });
-  const dateTime = date.toISOString();
-  return jsx(TimeText, {
-    dateTime: dateTime,
-    ...props,
-    children: text
-  });
-};
-const TimeText = props => {
-  return jsx(Text, {
-    as: "time",
-    noWrap: true,
-    ...props
-  });
-};
-const toDate = (value, parseString) => {
-  if (value instanceof Date) {
-    return value;
-  }
-  if (typeof value === "number") {
-    return new Date(value);
-  }
-  if (typeof value === "string") {
-    if (parseString) {
-      return parseString(value);
-    }
-    // "YYYY-MM-DD" — use local midnight to avoid UTC shift
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-      const d = new Date(`${value}T00:00:00`);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    // ISO / other parseable strings
-    const d = new Date(value);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
 };
 
 const LoadingDotsSvg = () => {
@@ -40873,22 +43454,22 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
-      --color: #e4e4e7;
-      --spacing: 0.5em;
-      --spacing-start: 0.5em;
-      --spacing-end: 0.5em;
+      --color: var(--navi-separator-color-default);
+      --margin: 0.5em;
     }
   }
 
   .navi_separator {
     width: 100%;
     height: var(--size);
-    margin-top: var(--spacing-start, var(--spacing));
-    margin-bottom: var(--spacing-end, var(--spacing));
+    /* Logical, not top/bottom: "start" is above a horizontal rule and to the
+       left of a vertical one, so the same two vars place both. */
+    margin-top: var(--margin-start, var(--margin));
+    margin-bottom: var(--margin-end, var(--margin));
     flex-shrink: 0;
     background: var(--color);
     border: none;
@@ -40899,29 +43480,98 @@ installImportMetaCssBuild(import.meta);const css$r = /* css */`
       width: var(--size);
       height: 1lh;
       margin-top: 0;
-      margin-right: var(--spacing-end, var(--spacing));
+      margin-right: var(--margin-end, var(--margin));
       margin-bottom: 0;
-      margin-left: var(--spacing-start, var(--spacing));
+      margin-left: var(--margin-start, var(--margin));
       vertical-align: bottom;
     }
   }
 `;
-const SeparatorStyleCSSVars = {
-  color: "--color"
-};
+
+/**
+ * A line between two things. Horizontal by default — a real `<hr>`, so it is a
+ * separator to a screen reader too, not a styled div. `vertical` makes it a
+ * `<span>` instead: an `<hr>` cannot sit inside a line of text, and what a
+ * vertical rule separates is almost always inline (two links in a row, a label
+ * and a count).
+ *
+ * A vertical one is `1lh` tall — the height of the line it sits on, not of
+ * whatever contains it — so it matches the text beside it and needs no height
+ * of its own whatever the font size around it.
+ *
+ * Everything about how it looks goes through a CSS var, so it can be set per
+ * separator as a prop or once for a whole surface in CSS.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   vertical?: boolean,
+ *   size?: string|number,
+ *   color?: string,
+ *   margin?: string|number,
+ *   marginStart?: string|number,
+ *   marginEnd?: string|number,
+ * }>}
+ * @param {boolean} [props.vertical] - Draw it upright, inline with the text
+ *   beside it, instead of across the flow.
+ * @param {string|number} [props.size="1px"] - How thick the line is —
+ *   `--size`. Its length is not a prop: a horizontal one spans what holds it, a
+ *   vertical one matches the line of text it sits on.
+ * @param {string} [props.color] - The line's own colour — `--color`.
+ * @param {string|number} [props.margin="0.5em"] - Room kept on both sides of
+ *   the line — `--margin`.
+ * @param {string|number} [props.marginStart] - Room on one side only —
+ *   `--margin-start`, above a horizontal rule and left of a vertical one.
+ * @param {string|number} [props.marginEnd] - …and the other, `--margin-end`.
+ */
 const Separator = ({
   vertical,
+  size,
+  color,
+  margin,
+  marginStart,
+  marginEnd,
+  style,
   ...props
 }) => {
-  import.meta.css = [css$r, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
     "data-vertical": vertical ? "" : undefined,
-    baseClassName: "navi_separator",
-    styleCSSVars: SeparatorStyleCSSVars
+    baseClassName: "navi_separator"
+    // Written straight into style rather than declared through Box's own
+    // styleCSSVars: `size` and `margin` are names Box already owns (a font
+    // size, real margins) and it resolves those before it ever looks at
+    // styleCSSVars — so size="4px" would set a font size and leave the line
+    // as thin as it was. Last, so a caller's own style still wins.
+    ,
+
+    style: {
+      ...cssVars({
+        "--size": lengthValue(size),
+        "--color": color,
+        "--margin": lengthValue(margin),
+        "--margin-start": lengthValue(marginStart),
+        "--margin-end": lengthValue(marginEnd)
+      }),
+      ...style
+    }
   });
 };
+
+// Only what was actually passed: an undefined custom property would otherwise
+// be written as the string "undefined" and break the var() fallback chain the
+// CSS above relies on.
+const cssVars = vars => {
+  const declared = {};
+  for (const name of Object.keys(vars)) {
+    const value = vars[name];
+    if (value !== undefined) {
+      declared[name] = value;
+    }
+  }
+  return declared;
+};
+const lengthValue = value => typeof value === "number" ? `${value}px` : value;
 
 /*
  * useItemTracker() — hook that creates a stable item tracker for the lifetime
@@ -41339,7 +43989,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$u = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -41433,6 +44083,18 @@ installImportMetaCssBuild(import.meta);const css$q = /* css */`
         opacity: 0;
         clip-path: none;
         cursor: var(--x-list-item-cursor);
+        pointer-events: auto;
+      }
+
+      /* A popup opened from the row is not part of the row: it is shown over
+         the page — in the browser's own top layer for a modal one — and only
+         happens to be declared here. pointer-events is inherited, so without
+         this it inherits the row's own "none" and nothing inside it can be
+         clicked, however far from the row it is painted. Matched on what makes
+         an element a popup to the browser rather than on navi's own attribute:
+         anything shown over the page has the same claim, navi's or not. */
+      dialog,
+      [popover] {
         pointer-events: auto;
       }
     }
@@ -41531,7 +44193,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$q, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -41694,7 +44356,13 @@ const ListSelectable = props => {
         // tell the requester that we don't want to unselect this item
         allowed: () => childController.setUIState(undefined, e)
       });
-    },
+    }
+    // "previous"/"next", not "up"/"down": a list is a line of items whichever
+    // way it is laid out, and a horizontal one walks sideways. The keys that
+    // drive it (arrows, Home/End) map onto that here, and so do the commands
+    // (--navi-previous / --navi-next / --navi-first / --navi-last).
+    ,
+
     onnavi_request_nav: e => {
       const {
         goal
@@ -41713,7 +44381,7 @@ const ListSelectable = props => {
         targetEl = navigableEls[0];
       } else if (goal === "last") {
         targetEl = navigableEls[navigableEls.length - 1];
-      } else if (goal === "down") {
+      } else if (goal === "next") {
         if (currentIndex === -1) {
           targetEl = navigableEls[0];
         } else if (currentIndex < navigableEls.length - 1) {
@@ -41721,7 +44389,7 @@ const ListSelectable = props => {
         } else {
           targetEl = navigableEls[navigableEls.length - 1];
         }
-      } else if (goal === "up") {
+      } else if (goal === "previous") {
         if (currentIndex === -1) {
           targetEl = navigableEls[0];
         } else if (currentIndex > 0) {
@@ -42064,7 +44732,10 @@ const ListColumnsContext = createContext(null);
 // Carries the separator element/function down to each ListItem so separators
 // are only rendered between items that actually mount (post-filter, post-window).
 const SeparatorContext = createContext(null);
-const css$p = /* css */`
+// Set by <List itemTransition>: each row then gets a view-transition-name of
+// its own, so a change wrapped in a view transition animates row by row.
+const ItemTransitionContext = createContext(false);
+const css$t = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -42166,7 +44837,14 @@ const css$p = /* css */`
         flex: 1;
       }
     }
-    &[navi-nothing-to-display] {
+    /* :not(:has(...)) — a header or a footer is content of its own (a title, a
+       count, an "add" call to action) and is often most useful exactly when the
+       items are gone, so a list carrying one is never "nothing to display".
+       nothingToDisplay only ever counts items, which is right for it: this is
+       the one place that knows the chrome is there too. */
+    &[navi-nothing-to-display]:not(
+        :has(.navi_list_item_header, .navi_list_item_footer)
+      ) {
       display: none;
     }
     &[popover] {
@@ -42277,6 +44955,50 @@ const css$p = /* css */`
 
     &[navi-muted] {
       opacity: 0.35;
+    }
+
+    /* A row that cannot be acted on right now (see ListItemReal): it says so
+       by dimming, and stops taking clicks — including on the buttons it holds,
+       which is the whole point (the row is what is read-only, not one of its
+       parts). Positioned so the loading outline it may draw has a box to sit
+       on. */
+    /* Same inline callout as the list's own error (.navi_list_error), scoped to
+       one row. The message takes the room, the way out sits at the end. */
+    .navi_list_item_error_message {
+      flex: 1;
+    }
+    .navi_list_item_error_dismiss {
+      padding: 2px 8px;
+      flex: none;
+      color: inherit;
+      font: inherit;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      opacity: 0.8;
+      cursor: pointer;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &[navi-error] {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: light-dark(#b91c1c, #fca5a5);
+      background: light-dark(#fef2f2, rgba(127, 29, 29, 0.25));
+    }
+
+    &[navi-readonly] {
+      position: relative;
+      opacity: 0.6;
+      cursor: default;
+      /* NOT pointer-events: none — the press has to reach the row so it can
+         say why it does nothing (see ListItemReal). What the row holds is
+         neutralized by the capture-phase handlers there instead. */
+      user-select: none;
     }
   }
 
@@ -42425,6 +45147,20 @@ const css$p = /* css */`
      after the list items */
     order: 1;
   }
+  /* A control that IS the row — a direct child of the item, so it spans it —
+     must keep its loading outline within its own box: the scroll container is
+     overflow:auto, and the couple pixels the outline normally draws outside
+     the control are enough to make it scrollable, so a scrollbar would appear
+     and disappear as things load. Targeted on the outline itself rather than
+     inherited from the item, so a control nested deeper (which has room around
+     it, and does not reach the edges) keeps the outline it asked for. */
+  .navi_list_item > .navi_loading_outline_wrapper,
+  .navi_list_item > * > .navi_loading_outline_wrapper,
+  .navi_list_item_header > * > .navi_loading_outline_wrapper,
+  .navi_list_item_footer > * > .navi_loading_outline_wrapper {
+    --loading-outline-min-inset: 0px;
+  }
+
   /* order: 2 pins the footer after fallbacks (order: 1) and all items. */
   .navi_list_item_footer {
     position: sticky;
@@ -42487,7 +45223,7 @@ const css$p = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -42496,6 +45232,7 @@ const ListUI = props => {
     fallback,
     searchFallback,
     separator,
+    itemTransition,
     children,
     popover,
     expandX,
@@ -42696,6 +45433,7 @@ const ListUI = props => {
       error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
+      itemTransition: itemTransition,
       expandX: expandX || expand,
       horizontal: horizontal,
       spacing: spacing,
@@ -42766,6 +45504,7 @@ const ListContent = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   expandX,
   horizontal,
   spacing,
@@ -42788,6 +45527,7 @@ const ListContent = ({
       error: error,
       searchNoMatchMode: searchNoMatchMode,
       separator: separator,
+      itemTransition: itemTransition,
       expandX: expandX
       // Deliberately not expandY here (unlike expandX above): the outer
       // .navi_list_container already gets its own expandY treatment (see
@@ -43287,6 +46027,7 @@ const UnorderedList = ({
   error,
   searchNoMatchMode,
   separator,
+  itemTransition,
   horizontal,
   spacing,
   columns,
@@ -43321,11 +46062,14 @@ const UnorderedList = ({
         value: renderWindow,
         children: jsx(SeparatorContext.Provider, {
           value: separator ?? null,
-          children: jsx(ListItemTrackerContext.Provider, {
-            value: tracker,
-            children: jsx(ListColumnsContext.Provider, {
-              value: columns || null,
-              children: children
+          children: jsx(ItemTransitionContext.Provider, {
+            value: Boolean(itemTransition),
+            children: jsx(ListItemTrackerContext.Provider, {
+              value: tracker,
+              children: jsx(ListColumnsContext.Provider, {
+                value: columns || null,
+                children: children
+              })
             })
           })
         })
@@ -43637,10 +46381,21 @@ const ListItemReal = props => {
     id,
     hidden,
     muted,
+    loading,
+    readOnly,
+    error,
+    onErrorDismiss,
     matchInfo,
     children,
     ...rest
   } = props;
+  // A row that failed says so in place of its content, and — when the caller
+  // gave it somewhere to go — carries the way out with the message: the row
+  // stands for something that never happened, so acknowledging the failure is
+  // what makes it leave. Making it leave is the CALLER's move, not this one's:
+  // the row it stands for is the caller's, and so is whatever animates its
+  // departure (navi starts no view transition of its own — the browser has to
+  // see the state change, which only the caller can arrange).
   const pendingScrollRef = useContext(PendingScrollRefContext);
   const pendingScroll = pendingScrollRef.current;
   const needScrollOnMount = pendingScroll && pendingScroll.id === id;
@@ -43659,7 +46414,70 @@ const ListItemReal = props => {
   // if any (there is no standalone highlight prop — see ListItem's own doc).
   useSearchHighlight(ref, matchInfo?.matchRanges, [children, hidden]);
   const columnsOverrideProps = useListItemColumnsOverrideProps(rest.style);
-  return jsx(Box, {
+  // <List itemTransition>: the row is named, so a change wrapped in a view
+  // transition animates it rather than cross-fading the list. Through the Box
+  // prop and not through style, because Box turns the name off again while the
+  // row is only partly visible (see usePartiallyHidden) — a row half-scrolled
+  // out of its container would otherwise animate from a clipped snapshot.
+  const itemTransition = useContext(ItemTransitionContext);
+
+  // Pressing a row that is busy or read-only must say why nothing happens,
+  // where the press happened — a control does this through its own interaction
+  // gate, and a list row has none (same situation as picker_spin's way-out
+  // buttons). Caught in the capture phase so the buttons the row contains never
+  // see the press either: it is the ROW that is unavailable, not one of its
+  // parts.
+  const blocked = loading || readOnly;
+  // The primary button only: a right (or middle) click asks the browser for its
+  // own menu — copying the row's text, opening a link it holds in a tab — and
+  // none of that acts on the row, so a busy row has no reason to swallow it.
+  // What is layered OVER the row is not part of it: the callout explaining why
+  // the row is blocked is parented to the row (that is how it is anchored), so
+  // a capture-phase block would swallow the press on its own close button — the
+  // callout could then never be dismissed. Anything inside a popover is someone
+  // else's business.
+  const isOverlaidOnRow = event => event.target.closest && event.target.closest("[popover]");
+  const blockInteraction = event => {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  // Whether the click about to arrive belongs to a press that started on this
+  // row. A click can be delivered here without one: dismissing the callout
+  // presses its close button, the callout goes away, and the click that follows
+  // is delivered to whatever is now under the pointer — this row.
+  const pressStartedHereRef = useRef(false);
+  const calloutRef = useRef(null);
+  const explainBlockedInteraction = event => {
+    if (event.button !== 0 || isOverlaidOnRow(event)) {
+      return;
+    }
+    blockInteraction(event);
+    pressStartedHereRef.current = true;
+    // One at a time, and not the one that just dismissed it (see the refs).
+    if (calloutRef.current && calloutRef.current.opened) {
+      return;
+    }
+    calloutRef.current = openCallout(blockedMessage(loading, readOnly, props), {
+      anchorElement: event.currentTarget,
+      status: "info",
+      openingEvent: event
+    });
+  };
+  useLayoutEffect(() => {
+    if (blocked) {
+      return;
+    }
+    // The wait is over, so the sentence explaining it has nothing left to say.
+    const callout = calloutRef.current;
+    if (callout && callout.opened) {
+      callout.close();
+    }
+    calloutRef.current = null;
+  }, [blocked]);
+  return jsxs(Box, {
     as: "li",
     baseClassName: "navi_list_item",
     styleCSSVars: LIST_ITEM_STYLE_CSS_VARS,
@@ -43678,10 +46496,61 @@ const ListItemReal = props => {
 
     "aria-hidden": hidden,
     inert: hidden ? true : undefined,
-    "navi-muted": muted ? "" : undefined,
+    "navi-muted": muted ? "" : undefined
+    // A row of a list is edited row by row — created, saved, deleted — so
+    // waiting on a server and being untouchable are states of the ROW, not
+    // only of a control inside it. Loading implies read-only: a row whose
+    // fate is in flight must not take another order in the meantime.
+    ,
+
+    "navi-loading": loading ? loading === true ? "" : loading : undefined,
+    "navi-readonly": readOnly || loading ? "" : undefined,
+    "aria-busy": loading ? "true" : undefined,
+    "aria-readonly": readOnly ? "true" : undefined,
+    "navi-error": error ? "" : undefined,
+    viewTransitionName: itemTransition ? `navi_list_item_${id}` : rest.viewTransitionName,
+    viewTransitionClass: itemTransition ? "navi_list_item" : rest.viewTransitionClass,
+    onPointerDownCapture: blocked ? explainBlockedInteraction : undefined,
+    onClickCapture: blocked ? event => {
+      if (!pressStartedHereRef.current) {
+        return;
+      }
+      pressStartedHereRef.current = false;
+      blockInteraction(event);
+    } : undefined,
     ref: ref,
-    children: children
+    children: [error ? jsxs(Fragment$1, {
+      children: [jsx("span", {
+        className: "navi_list_error_icon",
+        "aria-hidden": "true",
+        children: "\u26A0"
+      }), jsx("span", {
+        className: "navi_list_item_error_message",
+        children: error === true ? "Something went wrong." : error
+      }), onErrorDismiss && jsx("button", {
+        type: "button",
+        className: "navi_list_item_error_dismiss",
+        onClick: onErrorDismiss,
+        children: naviI18n("button.close", props)
+      })]
+    }) : children, loading && jsx(LoadingOutline, {
+      loading: true,
+      color: "var(--navi-loader-color)",
+      inset: -1
+    })]
   });
+};
+// Why the row cannot be acted on, in the row's own terms. `loading` may say
+// what it is waiting for ("adding", "removing"): a row being created is not
+// simply "busy", and saying which one it is tells the user what to expect.
+const blockedMessage = (loading, readOnly, props) => {
+  if (!loading) {
+    return naviI18n("constraint.readonly.item", props);
+  }
+  if (loading === "adding" || loading === "removing") {
+    return naviI18n(`constraint.busy.item.${loading}`, props);
+  }
+  return naviI18n("constraint.busy.item", props);
 };
 const LIST_ITEM_STYLE_CSS_VARS = {
   "borderRadius": "--list-item-border-radius",
@@ -43750,6 +46619,16 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               `selected.includes(value)` (multiple) from parent state.
  *   itemId    — internal stable string id for tracker bookkeeping (auto-generated
  *               if omitted; prefer `id` for external addressing).
+ *   error     — what this row stood for failed: the message replaces its
+ *               content, styled like the list's own error. `true` shows a
+ *               generic sentence.
+ *   loading   — the row is waiting on something: it draws a loading outline and,
+ *               like readOnly, stops taking clicks. Works on any item, not only
+ *               a selectable one — a list is edited row by row. Pass "adding" or
+ *               "removing" rather than true to say WHAT it is waiting for, which
+ *               is what a press on it then answers.
+ *   readOnly  — the row cannot be acted on: dimmed and click-through-proof,
+ *               buttons inside it included.
  *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
  *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
  *               but stays in DOM with the native HTML hidden attribute
@@ -43909,7 +46788,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$o = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -43988,7 +46867,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$o, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -44035,7 +46914,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$n = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -44060,7 +46939,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$n, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -44135,7 +47014,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$m = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -44166,7 +47045,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$m, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -44183,6 +47062,72 @@ const Color = ({
 // const COLOR_PROP_CSS_VAR = {
 //   color: "--color",
 // };
+
+const CalendarSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
+    })
+  });
+};
+
+const ClockSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
+    })
+  });
+};
+
+const ColorSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
+    })
+  });
+};
+
+const DurationSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M6 2v6l4 4-4 4v6h12v-6l-4-4 4-4V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z"
+    })
+  });
+};
+
+const FileSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
+    })
+  });
+};
+
+const PencilSvg = () => {
+  return jsx("svg", {
+    xmlns: "http://www.w3.org/2000/svg",
+    viewBox: "0 0 24 24",
+    fill: "currentColor",
+    children: jsx("path", {
+      d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+    })
+  });
+};
 
 const PickerTypeResolver = props => {
   const Next = useNextResolver();
@@ -44236,8 +47181,8 @@ const PickerTypeResolver = props => {
       ...props
     });
   }
-  if (props.type === "controlgroup") {
-    return jsx(PickerControlGroup, {
+  if (props.type === "form") {
+    return jsx(PickerForm, {
       ...props
     });
   }
@@ -44252,15 +47197,20 @@ const PickerText = props => {
     ...props
   });
 };
-const PickerControlGroup = props => {
+
+// The popup holds a group of named controls — a `<Form>`, or a `<ControlGroup>`
+// when the group is only a shape and has no submit — and this picker's value is
+// whatever that group aggregates. The popup itself holds nothing: it is a
+// surface (see dialog.jsx), so there is nothing to tell it about the shape.
+const PickerForm = props => {
   const Next = useNextResolver();
   return jsx(Next, {
-    ui: jsx(PickerControlGroupUI, {}),
+    ui: jsx(PickerFormUI, {}),
     ...props,
     type: "navi_js"
   });
 };
-const PickerControlGroupUI = () => {
+const PickerFormUI = () => {
   const {
     value,
     placeholder
@@ -44549,75 +47499,15 @@ const PickerFileUI = () => {
   // value is a FileList-like string from the input; display file names
   return String(value);
 };
-const PencilSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-    })
-  });
-};
-const CalendarSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
-    })
-  });
-};
-const ClockSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"
-    })
-  });
-};
-const DurationSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M6 2v6l4 4-4 4v6h12v-6l-4-4 4-4V2H6zm10 14.5V20H8v-3.5l4-4 4 4zm-4-5-4-4V4h8v3.5l-4 4z"
-    })
-  });
-};
-const ColorSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"
-    })
-  });
-};
-const FileSvg = () => {
-  return jsx("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    viewBox: "0 0 24 24",
-    fill: "currentColor",
-    children: jsx("path", {
-      d: "M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"
-    })
-  });
-};
 
-installImportMetaCssBuild(import.meta);const css$l = /* css */`
+installImportMetaCssBuild(import.meta);const css$p = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
       --picker-border-width: var(--navi-control-border-width);
       /* Focus outline */
       --picker-outline-width: var(--navi-focus-outline-width);
-      --picker-outline-offset: calc(-1 * var(--picker-outline-width) / 2);
+      --picker-outline-offset: calc(-0.5 * var(--picker-outline-width));
       --picker-outline-color: var(--navi-focus-outline-color);
       /* Focus outline end */
       --picker-padding-x-default: var(--navi-picker-padding-x-default);
@@ -44706,36 +47596,54 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
     --x-picker-color: var(--picker-color);
     --x-picker-icon-color: var(--picker-icon-color);
 
-    position: relative;
+    /* Deliberately NOT positioned: the popup children live in here, and a
+       layer="local" Popover/Dialog takes its nearest positioned ancestor as
+       containing block — the trigger would cap it at the height of one line and
+       clip it. Everything that needs a containing block (the custom-UI input
+       overlay, the loading outline) lives in .navi_picker_box below instead.
+       This element stays a real box so the sizing props a caller puts on the
+       picker (minWidth, expandX…) still apply; the box just fills it. */
     display: inline-flex;
     box-sizing: border-box;
     max-width: 100%;
-    min-height: calc(
-      1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
-    );
-    padding-top: var(--x-picker-padding-top);
-    padding-right: 0;
-    padding-bottom: var(--x-picker-padding-bottom);
-    padding-left: 0;
-    flex-direction: row;
-    align-items: center;
+    /* Inherited properties stay here: a caller's own size/color lands on this
+       element, and re-declaring them on the box below would override what it
+       would otherwise inherit. */
     color: var(--x-picker-color);
     font-size: var(--picker-font-size);
     font-family: var(--picker-font-family);
     text-align: inherit;
-    background-color: var(--x-picker-background-color);
-    border-width: var(--picker-border-width);
-    border-style: solid;
-    border-color: var(--x-picker-border-color);
-    border-radius: var(--picker-border-radius);
-    outline-width: var(--picker-outline-width);
-    outline-style: none;
-    outline-color: var(--picker-outline-color);
-    outline-offset: var(--picker-outline-offset);
-    cursor: var(--x-picker-cursor, pointer);
-    pointer-events: auto;
-    /* user-select: none; */
-    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+
+    .navi_picker_box {
+      position: relative;
+      display: inline-flex;
+      box-sizing: border-box;
+      min-width: 0;
+      max-width: 100%;
+      min-height: calc(
+        1lh + var(--x-picker-padding-top) + var(--x-picker-padding-bottom)
+      );
+      padding-top: var(--x-picker-padding-top);
+      padding-right: 0;
+      padding-bottom: var(--x-picker-padding-bottom);
+      padding-left: 0;
+      flex: 1 1 auto;
+      flex-direction: row;
+      align-items: center;
+      background-color: var(--x-picker-background-color);
+      border-width: var(--picker-border-width);
+      border-style: solid;
+      border-color: var(--x-picker-border-color);
+      border-radius: var(--picker-border-radius);
+      outline-width: var(--picker-outline-width);
+      outline-style: none;
+      outline-color: var(--picker-outline-color);
+      outline-offset: var(--picker-outline-offset);
+      cursor: var(--x-picker-cursor, pointer);
+      pointer-events: auto;
+      /* user-select: none; */
+      -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
+    }
 
     .navi_picker_value {
       display: inline-block;
@@ -44757,21 +47665,60 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
       }
     }
     .navi_picker_right_slot {
-      --slot-spacing: calc(var(--x-picker-padding-right) * 0.5);
-
       display: inline-flex;
       height: 1em;
       height: 1lh;
-      margin-right: var(--slot-spacing);
+      /* Half the horizontal padding by default, so what sits in the slot lines
+         up with the gutter the value already has; slotSpacing overrides it */
+      margin-right: var(
+        --picker-slot-spacing,
+        calc(var(--x-picker-padding-right) * 0.5)
+      );
       flex-shrink: 0;
       align-items: center;
       align-self: flex-start;
       justify-content: center;
       color: var(--x-picker-icon-color);
+      /* Transparent to the pointer: the chevron is decoration, and a click on
+         it means "open the picker", which is what the input underneath does. */
       pointer-events: none;
 
-      .navi_icon {
+      /* :not(...) — the slot is one line tall, and an icon fills it rather than
+         stretching it. An icon that opted out of that cap (Icon's lineOverflow,
+         which the slot's own icons use) is asking to be bigger than the line,
+         so this must not put the cap back. */
+      .navi_icon:not([data-line-overflow="allow"]) {
         max-height: 100%;
+      }
+      /* The clear button is the exception — it is a real target with its own
+         intention (clear, the opposite of open), so it takes its clicks back. */
+      .navi_button {
+        pointer-events: auto;
+
+        /* Drawn small but not small to hit: the spacing around the cross — the
+           slot margins on the sides, the picker padding above and below —
+           belongs to its clickable zone, the same zone the clear cross of an
+           input claims. The visual stays untouched; only the hit area grows. */
+        &::before {
+          position: absolute;
+          top: calc(-1 * var(--x-picker-padding-top));
+          right: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          bottom: calc(-1 * var(--x-picker-padding-bottom));
+          left: calc(
+            -1 *
+              var(
+                --picker-slot-spacing,
+                calc(var(--x-picker-padding-right) * 0.5)
+              )
+          );
+          content: "";
+        }
       }
     }
     &[navi-single-line] {
@@ -44832,7 +47779,10 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
     /* Focus */
     &[data-focus-within]:has(.navi_picker_input[data-focus-visible]) {
       --x-picker-border-color: transparent;
-      outline-style: solid;
+
+      .navi_picker_box {
+        outline-style: solid;
+      }
     }
     /* Disabled */
     &[data-disabled] {
@@ -44867,17 +47817,23 @@ installImportMetaCssBuild(import.meta);const css$l = /* css */`
       --x-picker-background-color: transparent;
       --x-picker-icon-color: currentColor;
 
-      position: absolute;
-      inset: 0;
-      z-index: -1;
+      .navi_picker_box {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+      }
     }
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$l, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
+  // Spacing props travel to CSS as a raw custom property value, so the size
+  // keywords have to become lengths here — "s" reaching CSS untouched makes
+  // the declaration invalid, silently, and the gap just goes away.
+  props.slotSpacing = resolveSpacingSize(props.slotSpacing);
   const {
     ref,
     variant,
@@ -44891,6 +47847,10 @@ const PickerButton = props => {
     // (e.g. a Wheel) instead of being stretched to the trigger — see
     // picker_custom.jsx.
     popupWidthFitContent,
+    // Adds a clear button to the right slot, the same one type="search" puts at
+    // the end of an input: a picker holds a value the user chose, and unsetting
+    // it should not require reopening the popup to hunt for a "none" entry.
+    clearable,
     error
   } = props;
   const isSingleLine = maxLines === 1;
@@ -44941,106 +47901,140 @@ const PickerButton = props => {
 
     onnavi_request_open: inputProps.onnavi_request_open,
     onnavi_request_close: inputProps.onnavi_request_close,
-    children: [variant === "headless" ? null : jsx(LoadingOutline, {
-      loading: loading,
-      color: "var(--picker-loader-color)",
-      inset: -2
-    }), jsx(PickerInput, {
-      tabIndex: variant === "headless" ? -1 : undefined,
-      "aria-hidden": variant === "headless" ? "true" : undefined,
-      ...inputProps,
-      // eslint-disable-next-line react/no-children-prop
-      children: undefined // we will render children into the div
-      ,
+    children: [jsxs("span", {
+      className: "navi_picker_box",
+      children: [variant === "headless" ? null : jsx(LoadingOutline, {
+        loading: loading,
+        color: "var(--picker-loader-color)",
+        inset: -2
+      }), jsx(PickerInput, {
+        tabIndex: variant === "headless" ? -1 : undefined,
+        "aria-hidden": variant === "headless" ? "true" : undefined,
+        ...inputProps,
+        // eslint-disable-next-line react/no-children-prop
+        children: undefined // we will render children into the div
+        ,
 
-      ui: ui,
-      onFocus: e => {
-        inputProps.onFocus?.(e);
-        e.target.select();
-      },
-      onCopy: e => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          return;
-        }
-        const uiState = uiStateController.uiState;
-        if (uiState === undefined) {
-          return;
-        }
-        e.preventDefault();
-        const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-        e.clipboardData.setData("text/plain", displayText);
-        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-      },
-      onCut: e => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          return;
-        }
-        const uiState = uiStateController.uiState;
-        if (uiState === undefined) {
-          return;
-        }
-        // the copy part don't need control to be interactable
-        const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
-        e.clipboardData.setData("text/plain", displayText);
-        e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
-        // the clear ui state part need control to be interactable
-        dispatchRequestInteraction(pickerEl, {
-          event: e,
-          name: "cut",
-          allowed: () => {
-            dispatchRequestClearUIState(inputRef.current, e);
-          }
-        });
-        e.preventDefault();
-      },
-      onPaste: e => {
-        const pickerEl = ref.current;
-        if (isWithinPickerContent(e.target, pickerEl)) {
-          // Don't intercept inside the picker popup content.
-          return;
-        }
-        const naviData = e.clipboardData.getData("application/x-navi");
-        let pasteValue;
-        if (naviData) {
-          try {
-            pasteValue = JSON.parse(naviData);
-          } catch {
-            pasteValue = naviData;
-          }
-        } else {
-          pasteValue = e.clipboardData.getData("text/plain");
-        }
-        dispatchRequestInteraction(pickerEl, {
-          event: e,
-          name: "paste",
-          allowed: () => {
-            dispatchRequestSetUIState(inputRef.current, pasteValue, {
-              event: e
-            });
-          }
-        });
-        e.preventDefault();
-      }
-    }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
-      className: "navi_picker_value",
-      "navi-placeholder": value === undefined || value === "" ? "" : undefined,
-      maxLines: maxLines,
-      children: jsx(PickerContext.Provider, {
-        value: {
-          value,
-          placeholder,
-          maxLines
+        ui: ui,
+        onFocus: e => {
+          inputProps.onFocus?.(e);
+          e.target.select();
         },
-        children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
-      })
-    }), variant === "headless" || ui === "default" ? null : jsx("span", {
-      className: "navi_picker_right_slot",
-      children: jsx(Icon, {
-        size: iconSize,
-        children: icon === undefined ? jsx(ChevronDownSvg, {}) : icon
-      })
+        onCopy: e => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          e.preventDefault();
+          const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+        },
+        onCut: e => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            return;
+          }
+          const uiState = uiStateController.uiState;
+          if (uiState === undefined) {
+            return;
+          }
+          // the copy part don't need control to be interactable
+          const displayText = pickerEl.querySelector(".navi_picker_value")?.textContent ?? String(uiState);
+          e.clipboardData.setData("text/plain", displayText);
+          e.clipboardData.setData("application/x-navi", JSON.stringify(uiState));
+          // the clear ui state part need control to be interactable
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "cut",
+            allowed: () => {
+              dispatchRequestClearUIState(inputRef.current, e);
+            }
+          });
+          e.preventDefault();
+        },
+        onPaste: e => {
+          const pickerEl = ref.current;
+          if (isWithinPickerContent(e.target, pickerEl)) {
+            // Don't intercept inside the picker popup content.
+            return;
+          }
+          const naviData = e.clipboardData.getData("application/x-navi");
+          let pasteValue;
+          if (naviData) {
+            try {
+              pasteValue = JSON.parse(naviData);
+            } catch {
+              pasteValue = naviData;
+            }
+          } else {
+            pasteValue = e.clipboardData.getData("text/plain");
+          }
+          dispatchRequestInteraction(pickerEl, {
+            event: e,
+            name: "paste",
+            allowed: () => {
+              dispatchRequestSetUIState(inputRef.current, pasteValue, {
+                event: e
+              });
+            }
+          });
+          e.preventDefault();
+        }
+      }), variant === "icon" || variant === "headless" || ui === "default" ? null : jsx(Text, {
+        className: "navi_picker_value",
+        "navi-placeholder": value === undefined || value === "" ? "" : undefined,
+        maxLines: maxLines,
+        children: jsx(PickerContext.Provider, {
+          value: {
+            value,
+            placeholder,
+            maxLines
+          },
+          children: ui === undefined ? jsx(PickerDefaultUI, {}) : ui
+        })
+      }), variant === "headless" || ui === "default" ? null : jsx("span", {
+        className: "navi_picker_right_slot",
+        children: clearable && value !== undefined && value !== "" ? jsx(Button, {
+          command: "--navi-clear",
+          commandFor: inputProps.id,
+          tabIndex: "-1"
+          // No navi-focus-delegate, unlike the identical button inside an
+          // input: handing focus back to the picker's own input is what
+          // opens the popup, and clearing is the opposite intention.
+          ,
+
+          icon: true,
+          variant: "discrete"
+          // preventDefault, not just tabIndex="-1": a mousedown focuses
+          // its target before any click happens, and this button should
+          // never hold focus at all — the field keeps it.
+          ,
+
+          onMouseDown: e => {
+            e.preventDefault();
+          },
+          flex: true,
+          align: "center",
+          children: jsx(Icon, {
+            size: iconSize,
+            lineOverflow: "allow",
+            children: jsx(CloseSvg, {})
+          })
+        }) :
+        // lineOverflow: what sits in the slot is an affordance, not a
+        // character — a caller asking for a bigger one wants it bigger,
+        // not capped at the height of the line it sits on
+        jsx(Icon, {
+          size: iconSize,
+          lineOverflow: "allow",
+          children: icon === undefined ? jsx(ChevronDownSvg$1, {}) : icon
+        })
+      })]
     }), jsx(ControlFacadeChildrenWrapper, {
       ...facadeChildrenProps,
       children: jsx("div", {
@@ -45095,14 +48089,7 @@ const PickerInput = props => {
     as: "input",
     ...props,
     readOnly: readOnlyForced ? true : readOnly,
-    "data-readonly-forced": readOnlyForced ? "" : undefined
-    // A forced-readonly picker trigger is button-like — it can't be typed
-    // into, so it shouldn't get the browser's eager text-input focus ring on
-    // mouse. Gate the ring on keyboard use instead (see pseudo_styles.js). An
-    // editable picker (readOnlyForced false) keeps native input focus-visible.
-    ,
-
-    "data-prevent-eager-focus-visible": "",
+    "data-readonly-forced": readOnlyForced ? "" : undefined,
     ui: undefined,
     className: "navi_picker_input",
     pseudoClasses: PickerInputPseudoClasses,
@@ -45139,6 +48126,7 @@ const PickerStyleCSSVars = {
   "popupBackgroundColor": "--picker-popup-background-color",
   "popupBorderRadius": "--picker-popup-border-radius",
   "dialogBorderWidth": "--picker-dialog-border-width",
+  "slotSpacing": "--picker-slot-spacing",
   "padding": "--picker-padding",
   "paddingX": "--picker-padding-x",
   "paddingY": "--picker-padding-y",
@@ -45217,9 +48205,12 @@ const PickerFirstResolver = props => {
  *   variant?: "icon" | "headless",
  *   icon?: import("ignore:preact").ComponentChildren,
  *   maxLines?: number,
+ *   slotSpacing?: number | string,
  *   popoverMaxHeight?: number | string,
  *   popupBackgroundColor?: string,
  *   popupBorderRadius?: number | string,
+ *   clearable?: boolean,
+ *   popupLayer?: "top" | "local",
  *   dialogExpand?: boolean,
  *   dialogExpandX?: boolean,
  *   dialogExpandY?: boolean,
@@ -45242,6 +48233,11 @@ const PickerFirstResolver = props => {
  * @param {boolean} [popupWidthFitContent] By default the popup is at least as
  *   wide as the trigger. Set this to let the content size it instead, so a
  *   popup narrower than the trigger stays narrow.
+ * @param {number|string} [slotSpacing] Gap kept between what sits in the right
+ *   slot (the chevron, or the clear button) and the picker's own edge — same
+ *   prop name Input uses for its own slots. Accepts a spacing token ("s",
+ *   "m"…) like any other spacing prop, or a length. Defaults to half the
+ *   horizontal padding.
  * @param {number|string} [popoverMaxHeight] Soft cap on the popover's height
  *   (default 300px). The popover shrinks below it when space is tight.
  */
@@ -45254,15 +48250,1646 @@ Picker.UI.Week = PickerWeekUI;
 Picker.UI.Datetime = PickerDatetimeUI;
 Picker.UI.File = PickerFileUI;
 Picker.UI.Color = PickerColorUI;
-Picker.UI.ControlGroup = PickerControlGroupUI;
+Picker.UI.Form = PickerFormUI;
 Picker.UI.Multiple = PickerArrayUI;
 Picker.UI.PencilSvg = PencilSvg;
-Picker.UI.ChevronDownSvg = ChevronDownSvg;
+Picker.UI.ChevronDownSvg = ChevronDownSvg$1;
 Picker.UI.ClockSvg = ClockSvg;
 Picker.UI.DurationSvg = DurationSvg;
 Picker.UI.CalendarSvg = CalendarSvg;
 Picker.UI.FileSvg = FileSvg;
 Picker.UI.ColorSvg = ColorSvg;
+
+installImportMetaCssBuild(import.meta);/**
+ * A value one steps through, one press at a time: what is chosen sits between
+ * the way back and the way on, and the two of them are the whole control.
+ *
+ * Days for now — DaySpin below — but nothing here is about days except how
+ * one is written and what "one step" adds. The name says where this is going:
+ * a picker whose value is stepped rather than typed (a month, a page, a size),
+ * shown as the picker it is.
+ *
+ * A picker, so it lives here: what one presses in the middle IS a picker, and
+ * the stepping is a way of showing it. It is headless and behind the three
+ * slides — there is one value being chosen, so there is one picker for it.
+ *
+ * Three slides for a row with no end, kept by a looping slide container: a
+ * press travels by one, then the window comes back to the middle while the
+ * value moves one step under it (see its `loop`/`onLoop`). So the three are
+ * only ever "the one before, this one, the one after".
+ *
+ * Two things take the keyboard and no more: the container (arrows step,
+ * Enter/Space open the picker) and the two chevrons. What is in the middle is
+ * not a control — a click on the container opens the picker by command — which
+ * is what keeps the focus where the travel happens instead of moving it into a
+ * slide that is about to leave.
+ */
+const css$o = /* css */`
+  .navi_picker_spin {
+    /* What the loading outline is drawn around. */
+    position: relative;
+    /* Framed like every other control (see navi_css_vars.js): what one steps
+       through is a value one edits, and a box around it is what says so. Said
+       as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
+       of one's own still wins — an inline style beats a stylesheet. */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
+    outline-width: var(--navi-focus-outline-width);
+    /* Just outside the border, never on it: the ring belongs to the whole
+       control — the two chevrons included, since pressing one lands the
+       keyboard here (see navi-focus-delegate below). */
+    outline-color: var(--navi-focus-outline-color);
+    outline-offset: 0px;
+  }
+  /* The days hold the keyboard, and this box wears their ring: the container
+     fills it, so its own ring would be drawn a pixel inside this border and
+     two rings that close together read as a mistake. Same offer a dialog and a
+     popover answer (data-focus-outline-delegate, see slide_container.jsx), and
+     the same reply — the delegate stands down.
+     Said on this box too (the first selector): nothing focuses it for real —
+     it is the container that takes the keyboard — but it is where the ring is
+     drawn, so a demo can hold it there and show what it looks like. */
+  .navi_picker_spin[data-focus-visible],
+  .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]) {
+    outline-style: solid;
+  }
+  .navi_picker_spin [data-focus-outline-delegate] {
+    --navi-focus-outline-style: none;
+  }
+  /* Same fading every navi control does when it is not to be touched (the
+     border first, the words too once it is out of service): what is inside is
+     three pieces of ours, so the box says it for all of them. */
+  .navi_picker_spin[data-readonly] {
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 45%,
+      transparent
+    );
+
+    [data-slide] {
+      color: color-mix(in srgb, currentColor 60%, transparent);
+    }
+  }
+  .navi_picker_spin[data-disabled] {
+    color: color-mix(in srgb, currentColor 40%, transparent);
+    border-color: color-mix(
+      in srgb,
+      var(--navi-control-border-color) 30%,
+      transparent
+    );
+  }
+  /* The middle, as a box of its own: the headless picker draws nothing and
+     covers whatever is positioned around it, and THAT box is where the browser
+     opens its calendar. Around the whole control it would open under a chevron;
+     around the value it opens under the value one pressed. */
+  .navi_picker_spin_middle {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex: 1 1 0;
+  }
+  /* The hidden picker, centred and no wider than it needs to be: the browser
+     opens its calendar from the box the input occupies, and it chooses which
+     corner. Over the whole middle that choice is a coin toss between one end
+     and the other; over a narrow box in the middle, whichever corner it picks
+     is under the value one pressed. */
+  .navi_picker_spin_middle > .navi_picker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: min(100%, var(--picker-spin-picker-width, 12ch));
+    translate: -50% 0;
+  }
+  /* The value takes it as padding; the two chevrons take it as their own
+     --button-padding-y (a button's padding lives on its content, see
+     button_ui.jsx), which is why it is said as a variable rather than applied
+     here. Same number on all three: it is what makes them one line rather than
+     three boxes. */
+  .navi_picker_spin [data-slide] {
+    padding-block: var(--picker-spin-padding-y);
+  }
+  /* Centred, always: the middle holds three values of three different lengths,
+     and a value that starts where the last one ended reads as a jump. */
+  .navi_picker_spin [data-slide] {
+    text-align: center;
+    overflow: hidden;
+  }
+  /* The middle opens the picker, so it says so under the pointer — and stops
+     saying it the moment pressing it would only get an answer about why not. */
+  .navi_picker_spin [data-slide-container] {
+    cursor: pointer;
+  }
+  .navi_picker_spin[data-readonly] [data-slide-container],
+  .navi_picker_spin[data-disabled] [data-slide-container] {
+    cursor: default;
+  }
+  /* Kept inside its own slide: the three days share one cell, so anything
+     sticking out would be written across the two beside it. A day too long for
+     the box simply wraps — the box grows, and the words are all there; say
+     maxLines to cut it instead, which the text itself knows how to do. */
+  .navi_picker_spin [data-slide] > * {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  /* As tall as one line of what it steps through — not half the box: what one
+     presses is a chevron. Its height is its own, rather than the middle's, so a
+     value that wraps does not turn the two into towers; the font is the one
+     around it, so "one line" means the same on both sides. */
+  .navi_picker_spin > .navi_picker_spin_way_out {
+    box-sizing: border-box;
+    height: calc(1lh + 2 * var(--picker-spin-padding-y));
+    padding-block: var(--picker-spin-padding-y);
+    color: inherit;
+    background: none;
+    border: none;
+    border-radius: var(--navi-control-border-radius);
+    cursor: pointer;
+  }
+  .navi_picker_spin > .navi_picker_spin_way_out:hover {
+    background: color-mix(in srgb, currentColor 8%, transparent);
+  }
+  /* Nothing that way: still there, still pressable — pressing it is how one
+     learns why (see WayOut's own callout). */
+  .navi_picker_spin > .navi_picker_spin_way_out[data-unavailable] {
+    color: color-mix(in srgb, currentColor 35%, transparent);
+  }
+  .navi_picker_spin[data-readonly] > .navi_picker_spin_way_out,
+  .navi_picker_spin[data-disabled] > .navi_picker_spin_way_out {
+    cursor: default;
+  }
+  /* Square beside the value, full width above and below it: a way out is as
+     wide as what it steps through when it sits across it. */
+  .navi_picker_spin:not([data-vertical]) > .navi_picker_spin_way_out {
+    aspect-ratio: 1;
+    justify-content: center;
+  }
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out {
+    width: 100%;
+    justify-content: center;
+  }
+  /* The corners of the box belong to what sits in them: a chevron in the corner
+     of a rounded spin is rounded there too, and nowhere else. Said with
+     inherit rather than clipped away with overflow, which would cut the focus
+     ring of the very button it rounds. */
+  .navi_picker_spin:not([data-vertical])
+    > .navi_picker_spin_way_out:first-of-type {
+    border-start-start-radius: inherit;
+    border-end-start-radius: inherit;
+  }
+  .navi_picker_spin:not([data-vertical])
+    > .navi_picker_spin_way_out:last-of-type {
+    border-start-end-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:first-of-type {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:last-of-type {
+    border-end-end-radius: inherit;
+    border-end-start-radius: inherit;
+  }
+`;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   name?: string,
+ *   min?: string,
+ *   max?: string,
+ *   step?: number,
+ *   duration?: number,
+ *   lang?: string,
+ *   renderDay?: (day: string) => import("ignore:preact").ComponentChildren,
+ *   previousLabel?: string,
+ *   nextLabel?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The day shown, as "YYYY-MM-DD". Held from above:
+ *   `uiAction` says when it should move. Say `signal` for a two-way binding
+ *   instead, or `defaultValue` to let the spin hold the day itself.
+ * @param {number} [step=1] How many days a press covers — 7 for a week at a
+ *   time, and the label then names the day one lands on, as it always does.
+ * @param {number} [duration=250] How long a travel takes, in milliseconds.
+ * @param {string} [min] The first day one can reach, as "YYYY-MM-DD"; `max` is
+ *   the last. Beyond them the travel simply does not happen and the chevron
+ *   that way says so.
+ * @param {"long"|"short"|"numeric"} [format="long"] How the date is written.
+ *   Long by default, since this is a control one reads rather than a column
+ *   one scans; `short` where the room is not there.
+ * @param {string} [paddingY="xs"] Above and below, on the day AND on the two
+ *   chevrons: it is what makes the three the same height.
+ * @param {number} [maxLines] How many lines the day may take before it is cut
+ *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a day
+ *   too long for the box wraps, and the box grows.
+ * @param {boolean} [vertical] The same control standing up: the ways out above
+ *   and below rather than left and right, and the days travelling upwards.
+ * Everything a box takes is taken here too — `width`, `borderWidth`,
+ * `borderRadius`, `backgroundColor`: this IS a box, and its corners are passed
+ * on to the chevrons sitting in them.
+ * @param {(day: string) => import("ignore:preact").ComponentChildren} [renderDay] What
+ *   to write for a day. Defaults to the date plus what it is to today when
+ *   there is a word for it ("samedi 8 août (demain)"), since a day near now is
+ *   read as a distance from now before it is read as a date.
+ */
+const DaySpin = ({
+  value,
+  defaultValue,
+  uiAction,
+  signal: signalProp,
+  name,
+  min,
+  max,
+  step = 1,
+  duration = 250,
+  lang,
+  format = "long",
+  paddingY = "xs",
+  vertical,
+  readOnly,
+  disabled,
+  loading,
+  maxLines,
+  renderDay = renderDayDefault,
+  previousLabel,
+  nextLabel,
+  ...rest
+}) => {
+  import.meta.css = [css$o, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  const id = useId();
+  const containerId = `${id}_days`;
+  const pickerId = `${id}_picker`;
+  // The picker holds the day, and it is asked rather than shadowed: `value`,
+  // `defaultValue` and `signal` are handed to it untouched (see below), it
+  // settles which of them wins — and what a form makes of each — and this reads
+  // the answer back. Nothing of that story is told twice.
+  const pickerRef = useRef();
+  const dayFallback = firstDayAllowed({
+    min,
+    max,
+    step
+  });
+  const day = useControlUIState(pickerRef, value ?? defaultValue ?? signalProp?.peek()) ?? dayFallback;
+
+  // …and the other way round when a signal was handed over: a bound signal is
+  // the day, wherever it is moved from — the url, a back/forward, a button
+  // elsewhere on the page — and the control follows it. A picker seeded from a
+  // signal only writes back into it (see resolveInputProps), which is enough
+  // for a field one only ever types into and not for a day that is also moved
+  // from outside. Undefined is not a day: the signal has nothing to say, so the
+  // control goes back to what it started on.
+  const signalDay = signalProp ? signalProp.value : undefined;
+  // The day as of the render this effect belongs to, and not one the closure
+  // captured a while ago: a step writes the signal, the signal brings us back
+  // here, and comparing against a stale day would set it a second time — one
+  // uiAction per step becoming two.
+  const dayRef = useRef(day);
+  dayRef.current = day;
+  useLayoutEffect(() => {
+    const pickerEl = pickerRef.current;
+    if (!signalProp || !pickerEl) {
+      return;
+    }
+    if (signalDay === undefined) {
+      dispatchRequestResetUIState(pickerEl);
+      return;
+    }
+    if (signalDay !== dayRef.current) {
+      dispatchRequestSetUIState(pickerEl, signalDay, {});
+    }
+  }, [signalDay]);
+
+  // A step is a change made to the picker, not beside it: it goes in the way a
+  // paste or a pick from the calendar goes in, so the signal, the form and
+  // `uiAction` all learn about it from the same place — and the event that
+  // asked for it travels with it, which is how `uiAction` can tell a chevron
+  // from the calendar.
+  // What asked for the day being set, while it is being set: the picker
+  // announces the change as its own input event, which says nothing of what
+  // started it — so it is held here for the length of the dispatch and handed
+  // to uiAction below. That is how a caller tells a chevron from the calendar.
+  const stepEventRef = useRef(null);
+  const setDay = (dayNext, event) => {
+    stepEventRef.current = event;
+    try {
+      dispatchRequestSetUIState(pickerRef.current, dayNext, {
+        event
+      });
+    } finally {
+      stepEventRef.current = null;
+    }
+  };
+
+  // Passed through rather than defaulted here: a prop nobody wrote must not
+  // reach the picker at all (it reads the presence of `value`, not its
+  // content), so each is added only if it was given.
+  const dayProps = {};
+  if (value !== undefined) {
+    dayProps.value = value;
+  } else {
+    if (signalProp) {
+      dayProps.signal = signalProp;
+    }
+    // A day is always shown, so the picker always HOLDS one: what was named, or
+    // what the signal starts on, or today (the nearest day a min/max/step
+    // leaves reachable). Said as a default rather than as a value, so a form
+    // reads the day shown as an answer one can send rather than as something it
+    // already holds — and said even when a signal is bound, because a signal
+    // with nothing in it would otherwise leave the picker empty while the
+    // spin shows a day, and a form has nothing to send about an empty field.
+    dayProps.defaultValue = defaultValue ?? signalProp?.options?.getDefaultValue?.(false) ?? dayFallback;
+  }
+
+  // Told from above as often as said here: a form running its action puts
+  // every control inside it out of service (that is how the chevrons grey out
+  // by themselves), and the day they sit around must fade with them — it is one
+  // control, not a box with three moods.
+  const readOnlyFromAbove = useContext(ReadOnlyContext);
+  const loadingFromAbove = useContext(LoadingContext);
+  const disabledFromAbove = useContext(DisabledContext);
+  const loadingResolved = Boolean(loading || loadingFromAbove);
+  const readOnlyResolved = Boolean(readOnly || readOnlyFromAbove || loadingResolved);
+  const disabledResolved = Boolean(disabled || disabledFromAbove);
+
+  // Why a chevron refuses, in its own words — and only when the reason is
+  // ours: the end of what one may reach is something this control knows and
+  // navi cannot guess. For everything else the reason belongs to the state the
+  // whole control is in, and it is said about the control ("read-only",
+  // "busy") rather than about the button, which is not what the user was
+  // pressing.
+  const wayOutMessage = (allowed, endKey) => {
+    if (!allowed) {
+      return naviI18n(endKey);
+    }
+    if (loadingResolved) {
+      return naviI18n("constraint.busy.default");
+    }
+    if (readOnlyResolved) {
+      return naviI18n("constraint.readonly.default");
+    }
+    return undefined;
+  };
+  const dayTextProps = {
+    lang,
+    format,
+    maxLines
+  };
+  const dayPrevious = addDays(day, -step);
+  const dayNext = addDays(day, step);
+  const previousAllowed = !min || dayPrevious >= min;
+  const nextAllowed = !max || dayNext <= max;
+  return jsxs(Box, {
+    ...rest,
+    baseClassName: "navi_picker_spin",
+    flex: vertical ? "y" : "x",
+    alignY: "center"
+    // The states this box draws itself: the ring above is the one that is
+    // asked for by hand (pseudoState) as well as held for real.
+    ,
+
+    pseudoClasses: PICKER_SPIN_PSEUDO_CLASSES,
+    "data-vertical": vertical ? "" : undefined,
+    "data-readonly": readOnlyResolved ? "" : undefined,
+    "data-disabled": disabledResolved ? "" : undefined,
+    style: {
+      "--picker-spin-padding-y": resolveSpacingSize(paddingY),
+      ...rest.style
+    },
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--navi-loader-color)",
+      inset: -2
+    }), jsx(WayOut, {
+      command: vertical ? "--navi-up" : "--navi-left",
+      containerId: containerId,
+      unavailableMessage: wayOutMessage(previousAllowed, "spin.nothing_before"),
+      label: previousLabel ?? naviI18n("spin.previous"),
+      children: vertical ? jsx(ChevronUpSvg, {}) : jsx(ChevronLeftSvg, {})
+    }), jsxs("div", {
+      className: "navi_picker_spin_middle",
+      children: [jsx(Picker, {
+        ref: pickerRef,
+        id: pickerId,
+        type: "date",
+        variant: "headless",
+        name: name
+        // Whatever was said about the day, said to the picker: a `value` it
+        // holds, a `signal` it follows, a `defaultValue` it merely starts on —
+        // including what a form makes of the difference (it HOLDS a value and
+        // has nothing to send back, where a default is a suggestion and
+        // confirming it is an answer). A day is always shown, so there is
+        // always a default: today, when nobody named one.
+        ,
+
+        ...dayProps,
+        min: min,
+        max: max,
+        readOnly: readOnly,
+        disabled: disabled,
+        loading: loading,
+        uiAction: (dayNext, event) => {
+          uiAction?.(dayNext, stepEventRef.current ?? event);
+        }
+      }), jsxs(SlideContainer, {
+        id: containerId,
+        layout: vertical ? "column" : "row"
+        // What is left beside the two chevrons, whatever the days it holds are
+        // long: a control that resizes as one steps through it is a control one
+        // has to aim at twice.
+        ,
+
+        expandX: true,
+        defaultCurrent: "current",
+        duration: `${duration}ms`
+        // The three days are a window over an endless row: the container plays
+        // the travel and comes back to the middle, and the day moves one step
+        // here, in onLoop, as it lands.
+        ,
+
+        loop: true,
+        onLoop: ({
+          dx,
+          dy,
+          event
+        }) => {
+          // One step, whichever axis it came from: the map is a line, so only
+          // one of the two is ever anything but zero. The event goes with it —
+          // it is what says a chevron (or an arrow key) asked for this day.
+          setDay(addDays(day, (dx || dy) * step), event);
+        }
+        // The whole middle opens the calendar — a command, like the chevrons
+        // send one, and no button of its own: the day would then be one more
+        // Tab stop, and the focus would follow it out of the box as it travels.
+        ,
+
+        commandFor: pickerId
+        // Sent whatever state the control is in: the picker is the one that
+        // knows it cannot be opened right now, and refusing there is what says
+        // so out loud (read-only, busy). Refusing here would be a press that
+        // does nothing and explains nothing.
+        // preventDefault, because a <Label> around the whole control forwards
+        // a click to what it labels — the picker — and that would open the
+        // calendar a second time, right after this command did.
+        ,
+
+        onClick: e => {
+          e.preventDefault();
+          triggerNaviCommand(e.currentTarget, "--navi-open", e);
+        },
+        children: [jsx(Slide, {
+          area: "previous",
+          flex: true,
+          align: "center",
+          children: renderDay(dayPrevious, dayTextProps)
+        }), jsx(Slide, {
+          area: "current",
+          flex: true,
+          align: "center"
+          // The days a min/max leaves out are simply not reachable: the way out
+          // is closed on the slide being left, so a key, a chevron and a
+          // command are all stopped by the same thing.
+          ,
+
+          preventNavPrevious: !previousAllowed,
+          preventNavNext: !nextAllowed,
+          children: renderDay(day, dayTextProps)
+        }), jsx(Slide, {
+          area: "next",
+          flex: true,
+          align: "center",
+          children: renderDay(dayNext, dayTextProps)
+        })]
+      })]
+    }), jsx(WayOut, {
+      command: vertical ? "--navi-down" : "--navi-right",
+      containerId: containerId,
+      unavailableMessage: wayOutMessage(nextAllowed, "spin.nothing_after"),
+      label: nextLabel ?? naviI18n("spin.next"),
+      children: vertical ? jsx(ChevronDownSvg, {}) : jsx(ChevronRightSvg, {})
+    })]
+  });
+};
+
+// A way out is a place one presses, not a control: no <button>, on purpose.
+// A <button> is labelable, so a <Label> wrapping the whole spin would bind
+// to the first chevron instead of to the picker — the thing that actually holds
+// the value — and a form would carry two more controls that answer for nothing.
+// It is not focusable either: the keyboard walks the days on the container (see
+// its own tabIndex), where the arrows already mean this.
+const WayOut = ({
+  command,
+  containerId,
+  unavailableMessage,
+  label,
+  children
+}) => jsx(Box, {
+  as: "span",
+  baseClassName: "navi_picker_spin_way_out"
+  // Announced as a button because that is what it is to whoever cannot see
+  // the chevron — and marked unavailable rather than removed when there is
+  // nothing that way, so it keeps its place.
+  ,
+
+  role: "button",
+  "aria-label": label,
+  "aria-disabled": unavailableMessage ? "true" : undefined,
+  "data-unavailable": unavailableMessage ? "" : undefined
+  // Read by triggerNaviCommand below the same way it reads a button's own.
+  ,
+
+  commandfor: containerId,
+  flex: true,
+  align: "center"
+  // A press, answered where it starts: mousedown rather than click, which is
+  // what makes holding one feel immediate — and the click after it is stopped
+  // below, so a <Label> wrapping the whole control does not forward it to the
+  // picker and open the calendar on the way past.
+  ,
+
+  onClick: e => {
+    e.preventDefault();
+  },
+  onMouseDown: e => {
+    // No focus, no text selection: the keyboard is put on the days below.
+    e.preventDefault();
+    const wayOutElement = e.currentTarget;
+    if (unavailableMessage) {
+      // Why it does nothing, said where one pressed: a control would have
+      // done this through its own interaction gate, and this one has none.
+      openCallout(unavailableMessage, {
+        anchorElement: wayOutElement,
+        status: "info",
+        openingEvent: e
+      });
+      return;
+    }
+    // The keyboard follows the press: the days are where the arrows work, so
+    // pressing a chevron leaves one able to keep going with the keys.
+    document.getElementById(containerId)?.focus({
+      preventScroll: true
+    });
+    triggerNaviCommand(wayOutElement, command, e);
+  },
+  children: jsx(Icon, {
+    children: children
+  })
+});
+const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+
+// The date, and what it is to today when that is something one has a word for:
+// "samedi 8 août (demain)" says both where one is and how far that is, and only
+// the second is read at a glance.
+const renderDayDefault = (day, {
+  lang,
+  format,
+  maxLines
+} = {}) => jsx(Time, {
+  type: "date",
+  format: format,
+  dayLabel: true,
+  lang: lang
+  // A Time keeps its date on one line by default; here a day too long for
+  // the box is meant to wrap, so that is undone — except for maxLines={1},
+  // which IS one line and cuts it itself (see Text's own TextOverflow):
+  // saying "you may wrap" there would undo the truncation instead.
+  ,
+
+  noWrap: maxLines === 1 ? undefined : false,
+  maxLines: maxLines,
+  children: day
+});
+
+// The day one starts on when nobody said which: today, unless a min/max puts
+// today out of reach — a control opening on a day it refuses to keep would be
+// invalid before it has been touched. A step counts from `min`, so the day
+// landed on is one the chevrons can actually reach.
+const firstDayAllowed = ({
+  min,
+  max,
+  step
+}) => {
+  const today = todayString();
+  if (min && today < min) {
+    return min;
+  }
+  if (max && today > max) {
+    return alignOnStep(max, {
+      min,
+      step,
+      down: true
+    });
+  }
+  return alignOnStep(today, {
+    min,
+    step
+  });
+};
+const alignOnStep = (day, {
+  min,
+  step,
+  down
+}) => {
+  if (!min || !step || step === 1) {
+    return day;
+  }
+  const stepsAway = Math.round((dayToDate(day) - dayToDate(min)) / (step * MS_PER_DAY));
+  const aligned = addDays(min, stepsAway * step);
+  if (down && aligned > day) {
+    return addDays(aligned, -step);
+  }
+  return aligned;
+};
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const dayToDate = day => new Date(`${day}T00:00:00`);
+const dateToDay = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const todayString = () => dateToDay(new Date());
+const addDays = (day, count) => {
+  const date = dayToDate(day);
+  date.setDate(date.getDate() + count);
+  return dateToDay(date);
+};
+
+installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
+const css$n = /* css */`
+  .navi_checkbox_group {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+const CheckboxGroup = props => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `checkbox_group_${defaultName}`;
+  const checkboxGroup = jsx(CheckboxGroupInterface, {
+    ...props
+  });
+  return checkboxGroup;
+};
+const CheckboxGroupInterface = props => {
+  import.meta.css = [css$n, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  const {
+    ref
+  } = props;
+  const [checkboxGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props
+  }, {
+    stateType: "array",
+    controlType: "checkbox_group"
+  });
+  useFocusGroup(ref, {
+    wrap: "both"
+  });
+  return jsx(Box, {
+    as: "fieldset",
+    ...checkboxGroupProps,
+    ...remainingProps,
+    name: undefined,
+    baseClassName: "navi_checkbox_group",
+    "navi-checkbox-list": "",
+    "data-callout-point-to-border-box": "",
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+};
+
+const Unit = ({
+  unit,
+  plural,
+  format = "long",
+  lang = languagesSignal.value,
+  label,
+  size = "smaller",
+  sizeRatio,
+  style,
+  ...props
+}) => {
+  let resolvedSize = size;
+  let resolvedStyle = style;
+  if (size === "smaller" || sizeRatio !== undefined) {
+    resolvedSize = undefined;
+    const ratio = sizeRatio !== undefined ? sizeRatio : 0.8;
+    resolvedStyle = {
+      fontSize: `calc(${ratio} * 1em)`,
+      ...style
+    };
+  }
+  let unitText = unit;
+  if (label) {
+    unitText = label;
+  } else if (naviI18n.has(unit, {
+    lang
+  })) {
+    const singularText = naviI18n(unit, undefined, {
+      lang
+    });
+    if (format === "short" || format === "narrow") {
+      const shortKey = `${unit}__short`;
+      const shortText = naviI18n(shortKey, undefined, {
+        lang
+      });
+      unitText = shortText === shortKey ? singularText : shortText;
+    } else if (plural) {
+      const pluralKey = `${unit}__plural`;
+      const pluralText = naviI18n(pluralKey, undefined, {
+        lang
+      });
+      // fallback to singular if no plural key registered
+      unitText = pluralText !== pluralKey ? pluralText : singularText;
+    } else {
+      unitText = singularText;
+    }
+  } else {
+    // naviI18n has no translation — try Intl.NumberFormat with style:"unit"
+    const intlText = formatIntlUnit(unit, {
+      plural,
+      lang,
+      format
+    });
+    if (intlText === null) {
+      unitText = unit;
+    } else {
+      unitText = intlText;
+    }
+  }
+  return jsx(Text, {
+    baseClassName: "navi_unit",
+    size: resolvedSize,
+    style: resolvedStyle,
+    ...props,
+    children: unitText
+  });
+};
+const formatIntlUnit = (unit, {
+  lang,
+  plural,
+  format
+}) => {
+  try {
+    const count = plural ? 2 : 1;
+    const parts = new Intl.NumberFormat(lang, {
+      style: "unit",
+      unit,
+      unitDisplay: format
+    }).formatToParts(count);
+    const unitPart = parts.find(p => p.type === "unit");
+    return unitPart ? unitPart.value : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Wraps multiple inputs together and handles keyboard navigation and paste
+ * distribution between them.
+ *
+ * Keyboard navigation:
+ *   ArrowRight at the end of an input moves focus to the next input.
+ *   ArrowLeft at the start of an input moves focus to the previous input.
+ *   navi_input_full (emitted when an input reaches maxLength) also moves forward.
+ *
+ * Paste distribution:
+ *   When an input has a data-separator attribute, pasting a string that
+ *   contains that separator (e.g. "27/04/1990" into a day input with
+ *   data-separator="/") splits the text on each separator and fills the
+ *   corresponding sub-inputs in order.
+ */
+const useInputGroup = (ref) => {
+  const debugFocus = useDebugFocus();
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) {
+      return () => {};
+    }
+
+    const getInputs = () =>
+      Array.from(el.querySelectorAll(".navi_control_input"));
+
+    const focusInput = (input) => {
+      input.focus();
+      input.select();
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") {
+        return;
+      }
+      const active = document.activeElement;
+      if (!isTextInputElement(active) || !el.contains(active)) {
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        const allSelected =
+          active.selectionStart === 0 &&
+          active.selectionEnd === active.value.length;
+        const atEnd =
+          allSelected ||
+          (active.selectionStart === active.value.length &&
+            active.selectionEnd === active.value.length);
+        if (!atEnd) {
+          return;
+        }
+        const inputs = getInputs();
+        const idx = inputs.indexOf(active);
+        if (idx === -1) {
+          debugFocus(
+            e,
+            "InputGroup ArrowRight on non group input → do nothing",
+          );
+          return;
+        }
+        if (idx === inputs.length - 1) {
+          debugFocus(
+            e,
+            "InputGroup ArrowRight at end of last input → do nothing",
+          );
+          return;
+        }
+
+        debugFocus(
+          e,
+          "InputGroup ArrowRight at end of input[%d] → focus input[%d]",
+          idx,
+          idx + 1,
+        );
+        e.preventDefault();
+        focusInput(inputs[idx + 1]);
+        return;
+      }
+      const allSelected =
+        active.selectionStart === 0 &&
+        active.selectionEnd === active.value.length;
+      const atStart =
+        allSelected ||
+        (active.selectionStart === 0 && active.selectionEnd === 0);
+      if (!atStart) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(active);
+      if (idx === 0) {
+        return;
+      }
+      debugFocus(
+        e,
+        "InputGroup ArrowLeft at start of input[%d] → focus input[%d]",
+        idx,
+        idx - 1,
+      );
+      e.preventDefault();
+      focusInput(inputs[idx - 1]);
+    };
+
+    const handleNaviInputFull = (e) => {
+      if (!e.detail.event?.isTrusted) {
+        // Programmatic value change (e.g. ArrowUp/Down) — don't auto-advance.
+        return;
+      }
+      const input = e.detail.event.currentTarget;
+      if (!el.contains(input)) {
+        return;
+      }
+      const inputs = getInputs();
+      const idx = inputs.indexOf(input);
+      if (idx === -1) {
+        return;
+      }
+      if (idx === inputs.length - 1) {
+        return;
+      }
+      const nextInput = inputs[idx + 1];
+      debugFocus(
+        e,
+        "InputGroup navi_input_full on input -> move to next input",
+        input,
+        nextInput,
+      );
+      e.preventDefault();
+      focusInput(nextInput);
+    };
+
+    // const handlePaste = (e) => {
+    //   const active = document.activeElement;
+    //   if (!isTextInputElement(active) || !el.contains(active)) {
+    //     return;
+    //   }
+    //   const inputs = getInputs();
+    //   const startIdx = inputs.indexOf(active);
+    //   if (startIdx === -1) {
+    //     return;
+    //   }
+    //   const pastedText = e.clipboardData?.getData("text") ?? "";
+    //   if (!pastedText) {
+    //     return;
+    //   }
+    //   // Only intercept when the pasted text contains at least one separator
+    //   // from the inputs starting at the focused position.
+    //   const remainingInputs = inputs.slice(startIdx);
+    //   const hasSeparatorMatch = remainingInputs.some(
+    //     (input) =>
+    //       input.dataset.separator &&
+    //       pastedText.includes(input.dataset.separator),
+    //   );
+    //   if (!hasSeparatorMatch) {
+    //     return;
+    //   }
+    //   e.preventDefault();
+    //   let remaining = pastedText;
+    //   let lastFilledIdx = startIdx;
+    //   for (let i = 0; i < remainingInputs.length; i++) {
+    //     const input = remainingInputs[i];
+    //     const separator = input.dataset.separator;
+    //     let part;
+    //     if (separator && remaining.includes(separator)) {
+    //       const sepIdx = remaining.indexOf(separator);
+    //       part = remaining.slice(0, sepIdx);
+    //       remaining = remaining.slice(sepIdx + separator.length);
+    //     } else {
+    //       part = remaining;
+    //       remaining = "";
+    //     }
+    //     requestSubPaste(input, part, e);
+    //     lastFilledIdx = startIdx + i;
+    //     if (remaining === "") {
+    //       break;
+    //     }
+    //   }
+    //   focusInput(inputs[lastFilledIdx]);
+    // };
+
+    el.addEventListener("keydown", handleKeyDown, { capture: true });
+    el.addEventListener("navi_input_full", handleNaviInputFull);
+    // el.addEventListener("paste", handlePaste, { capture: true });
+    return () => {
+      el.removeEventListener("keydown", handleKeyDown, { capture: true });
+      el.removeEventListener("navi_input_full", handleNaviInputFull);
+      // el.removeEventListener("paste", handlePaste, { capture: true });
+    };
+  }, [debugFocus]);
+};
+
+// const requestSubPaste = (input, value, event) => {
+//   dispatchRequestInteraction(input, {
+//     event,
+//     name: "subpaste",
+//     allowed: () => {
+//       dispatchRequestSetUIState(input, value, { event });
+//     },
+//   });
+// };
+
+const isTextInputElement = (el) => {
+  if (!el) {
+    return false;
+  }
+  if (el.tagName === "TEXTAREA") {
+    return true;
+  }
+  if (el.tagName !== "INPUT") {
+    return false;
+  }
+  const type = el.type || "text";
+  return (
+    type === "text" ||
+    type === "search" ||
+    type === "url" ||
+    type === "tel" ||
+    type === "email" ||
+    type === "password" ||
+    type === "number"
+  );
+};
+
+installImportMetaCssBuild(import.meta);const css$m = /* css */`
+  .navi_input_duration {
+    --duration-separator-spacing: 4px;
+    --loader-color: var(--navi-loader-color);
+
+    position: relative; /* For loading outline  */
+
+    .navi_label {
+      &[data-separator] {
+        .navi_unit {
+          margin-right: 1ch;
+          margin-right: calc(1ch + var(--duration-separator-spacing));
+        }
+      }
+    }
+
+    .navi_input {
+      --padding-x: 0;
+
+      .navi_input_slot {
+        --slot-spacing: var(--duration-separator-spacing);
+
+        margin-right: calc(var(--slot-spacing) / 2);
+      }
+    }
+  }
+`;
+
+/**
+ * An input for a duration expressed as an ISO 8601 duration string
+ * (e.g. "PT2H15M", "PT2H15M30S").
+ *
+ * Which sub-fields are shown is derived from `min`, `max`, and `step`:
+ *   - default:             H + M  (max defaults to "23h59")
+ *   - max < 1 hour:        M only (e.g. max="59min")
+ *   - max < 1 minute:      S only (e.g. max="59second")
+ *   - max < 1 second:      MS only (e.g. max="999millisecond")
+ *   - step="1hour":        H only (whole-hour step hides minutes)
+ *   - max includes seconds: adds S field (e.g. max="59min59second" → M + S)
+ *   - value has seconds:   adds S field read-only if step doesn't allow seconds
+ *
+ * `value`, `min`, `max`, `step` accept ISO 8601 strings or human-friendly
+ * strings (e.g. "1h30min", "2 hours", "5minute").
+ *
+ * `uiAction` / `action` receive an ISO 8601 duration string.
+ *
+ * Loading state is displayed on the group container only — sub-inputs do not
+ * carry individual loading outlines.
+ *
+ * @param {Object} props
+ * @param {string} [props.value] - Controlled value (ISO 8601 or human-friendly)
+ * @param {string} [props.defaultValue] - Uncontrolled initial value
+ * @param {string} [props.min] - Minimum duration
+ * @param {string} [props.max="23h59"] - Maximum duration (also controls which fields appear)
+ * @param {string} [props.step] - Step between valid values (also controls which fields appear)
+ * @param {string} [props.name] - Field name for form submission
+ * @param {boolean} [props.readOnly]
+ * @param {boolean} [props.disabled]
+ * @param {boolean} [props.required]
+ * @param {boolean} [props.loading]
+ * @param {Function} [props.uiAction] - Called on every change with the ISO 8601 value
+ * @param {Function} [props.action] - Called on form submission
+ * @param {preact.ComponentChild} [props.unitHour] - Custom label for the hour sub-field
+ * @param {"auto"|"left"|"center"|"right"} [props.textAlign="auto"] - Text alignment of sub-inputs.
+ *   "auto" aligns each field toward its neighbouring separator (first→right, last→left, middle/solo→center).
+ */
+const InputDuration = props => {
+  import.meta.css = [css$m, "@jsenv/navi/src/control/input/input_duration.jsx"];
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  props.max = props.max || "23h59";
+  const {
+    ref,
+    uiAction,
+    action,
+    unitHour,
+    textAlign = "auto",
+    maxLengthGuard,
+    charGuard
+  } = props;
+  const minDuration = parseDuration(props.min);
+  const maxDuration = parseDuration(props.max);
+  const stepDuration = parseDuration(props.step);
+  const hasValue = Object.hasOwn(props, "value");
+  const minSeconds = minDuration ? durationToSeconds(minDuration) : undefined;
+  const maxSeconds = durationToSeconds(maxDuration);
+  const stepSeconds = stepDuration ? durationToSeconds(stepDuration) : undefined;
+  const renderSource = hasValue ? props.value : props.defaultValue;
+  const components = parseDuration(renderSource);
+  const initialIsoString = components ? durationToISOString(components) ?? "" : "";
+  const valueHasSeconds = components?.seconds !== undefined;
+  const valueHasMinutes = components?.minutes !== undefined;
+  // Fractional seconds (e.g. 0.5 from "PT0.5S") also imply milliseconds.
+  const valueHasMilliseconds = components?.milliseconds !== undefined || typeof components?.seconds === "number" && components.seconds % 1 !== 0;
+  const stepHasSeconds = Object.hasOwn(stepDuration ?? {}, "seconds");
+  const stepHasMilliseconds = Object.hasOwn(stepDuration ?? {}, "milliseconds");
+  const showSeconds = Object.hasOwn(minDuration ?? {}, "seconds") || Object.hasOwn(maxDuration ?? {}, "seconds") || stepHasSeconds || valueHasSeconds;
+  const showMilliseconds = Object.hasOwn(minDuration ?? {}, "milliseconds") || Object.hasOwn(maxDuration ?? {}, "milliseconds") || stepHasMilliseconds || valueHasMilliseconds;
+  // A field is read-only when the step is a multiple of that field's unit,
+  // meaning stepping never passes through it (e.g. step=1min → seconds stay 0).
+  const secondsReadOnly = valueHasSeconds && stepSeconds !== undefined && stepSeconds % 60 === 0;
+  const millisecondsReadOnly = valueHasMilliseconds && stepSeconds !== undefined && stepSeconds % 1 === 0;
+  const minutesReadOnly = valueHasMinutes && stepSeconds !== undefined && stepSeconds % 3600 === 0;
+  const showHours = maxSeconds >= 3600;
+  // Hide minutes when the step is a whole number of hours — entering fractional
+  // hours would contradict the step, so only the hour field is shown.
+  // Exception: if the current value already has minutes, show them read-only so
+  // the stored precision is faithfully displayed.
+  const showMinutes = maxSeconds >= 60 && (stepSeconds === undefined || stepSeconds % 3600 !== 0 || valueHasMinutes);
+  const [groupRootProps, groupHostProps, childrenWrapperProps] = useControlgroupProps({
+    ...props,
+    uiAction: (groupState, event) => {
+      const hiddenInput = ref.current;
+      if (hiddenInput) {
+        hiddenInput.value = groupState ?? "";
+      }
+      uiAction?.(groupState, event);
+    },
+    action: action ? (groupState, info) => action(groupState, info) : undefined
+  }, {
+    controlType: "duration_group",
+    cascadeValidationToChildren: true,
+    // Aggregates sub-input values into an ISO 8601-like duration string.
+    // durationToISOString preserves non-numeric mid-edit values
+    // (e.g. hours="ab") between their unit markers ("PTabH30M"),
+    // which round-trips correctly through parseISODuration.
+    aggregateChildStates: childUIStateControllers => {
+      let h = "";
+      let m = "";
+      let s = "";
+      let ms = "";
+      for (const child of childUIStateControllers) {
+        if (child.name === "hour") h = child.uiState ?? "";
+        if (child.name === "minute") m = child.uiState ?? "";
+        if (child.name === "second") s = child.uiState ?? "";
+        if (child.name === "millisecond") ms = child.uiState ?? "";
+      }
+      const durationObj = {};
+      if (showHours && h !== "") {
+        durationObj.hours = h;
+      }
+      if (showMinutes && m !== "") {
+        durationObj.minutes = m;
+      }
+      if (showSeconds && s !== "") {
+        durationObj.seconds = s;
+      }
+      if (showMilliseconds && ms !== "") {
+        durationObj.milliseconds = ms;
+      }
+      // Return undefined (not "") when all fields are empty so that a
+      // picker signal initialised with undefined stays undefined on mount.
+      return durationToISOString(durationObj) ?? undefined;
+    },
+    // Reverse mapping: duration string → { hour, minute, second, millisecond }
+    // so that when the picker cancels and calls setUIState(storedValue), the
+    // sub-inputs are correctly reset to their original raw string values.
+    // ISO 8601 encodes milliseconds as fractional seconds (e.g. "PT0.5S" = 500ms),
+    // so fractional seconds are split back into whole seconds + ms.
+    distributeChildUIState: (groupState, childUIStateController) => {
+      const components = parseDuration(groupState);
+      if (!components) {
+        return undefined;
+      }
+      const rawSeconds = components.seconds;
+      let secondForField = rawSeconds;
+      let millisecondForField = components.milliseconds;
+      if (typeof rawSeconds === "number" && rawSeconds % 1 !== 0 && millisecondForField === undefined) {
+        secondForField = Math.floor(rawSeconds);
+        millisecondForField = Math.round(rawSeconds % 1 * 1000);
+      }
+      const fieldMap = {
+        hour: components.hours,
+        minute: components.minutes,
+        second: secondForField,
+        millisecond: millisecondForField
+      };
+      return fieldMap[childUIStateController.name];
+    }
+  });
+  const {
+    required,
+    readOnly,
+    disabled,
+    basePseudoState
+  } = groupHostProps;
+  const groupRef = useRef();
+  useInputGroup(groupRef);
+  const clipboardProps = useClipboardProps(groupRef);
+  const hourValue = components?.hours;
+  const minuteValue = components?.minutes;
+  const rawSecondValue = components?.seconds;
+  // ISO 8601 fractional seconds encode ms (e.g. 0.5 = 500ms); split them.
+  let secondValue = rawSecondValue;
+  let millisecondValue = components?.milliseconds;
+  if (typeof rawSecondValue === "number" && rawSecondValue % 1 !== 0 && millisecondValue === undefined) {
+    secondValue = Math.floor(rawSecondValue);
+    millisecondValue = Math.round(rawSecondValue % 1 * 1000);
+  }
+  const loading = basePseudoState[":-navi-loading"];
+  delete basePseudoState[":-navi-loading"];
+  return jsxs(Box, {
+    ref: groupRef,
+    className: "navi_input_duration",
+    "data-callout-arrow-x": "center",
+    width: "fit-content",
+    flex: true,
+    spacing: "xxs",
+    ...groupRootProps,
+    unit: undefined,
+    unitHour: undefined,
+    ...clipboardProps,
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx("input", {
+      ...groupHostProps,
+      type: "hidden",
+      basePseudoState: undefined // eslint-disable-line react/no-unknown-property
+      ,
+
+      ...(hasValue ? {
+        value: initialIsoString
+      } : {
+        defaultValue: initialIsoString
+      })
+    }), jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      name: undefined,
+      children: jsx(InputDurationFields, {
+        showHours: showHours,
+        showMinutes: showMinutes,
+        showSeconds: showSeconds,
+        showMilliseconds: showMilliseconds,
+        minutesReadOnly: minutesReadOnly,
+        secondsReadOnly: secondsReadOnly,
+        millisecondsReadOnly: millisecondsReadOnly,
+        stepHasMilliseconds: stepHasMilliseconds,
+        controlled: hasValue,
+        hourValue: hourValue,
+        minuteValue: minuteValue,
+        secondValue: secondValue,
+        millisecondValue: millisecondValue,
+        minSeconds: minSeconds,
+        maxSeconds: maxSeconds,
+        stepSeconds: stepSeconds,
+        unitHour: unitHour,
+        textAlign: textAlign,
+        maxLengthGuard: maxLengthGuard,
+        charGuard: charGuard,
+        required: required,
+        readOnly: readOnly,
+        disabled: disabled,
+        basePseudoState: basePseudoState
+      })
+    })]
+  });
+};
+const getVisibleFields = container => {
+  return ["hour", "minute", "second", "millisecond"].filter(f => container.querySelector(`[navi-input-type="${f}"]`) !== null);
+};
+const useClipboardProps = groupRef => {
+  const getClipboardPayload = () => {
+    const groupEl = groupRef.current;
+    if (!groupEl) {
+      return null;
+    }
+    const hiddenInput = groupEl.querySelector('input[type="hidden"]');
+    const isoString = hiddenInput.value;
+    if (!isoString) {
+      return null;
+    }
+    const parsed = parseDuration(isoString);
+    if (!parsed) {
+      return null;
+    }
+    const rawS = parsed.seconds;
+    const wholeS = rawS !== undefined ? Math.floor(rawS) : undefined;
+    const ms = typeof rawS === "number" && rawS % 1 !== 0 ? Math.round(rawS % 1 * 1000) : parsed.milliseconds ?? undefined;
+    const byField = {
+      hour: parsed.hours,
+      minute: parsed.minutes,
+      second: wholeS,
+      millisecond: ms
+    };
+    const visibleFields = getVisibleFields(groupEl);
+    const showMilliseconds = visibleFields.includes("millisecond");
+    const parts = visibleFields.filter(f => f !== "millisecond").map((f, i) => {
+      const v = byField[f] ?? 0;
+      return i === 0 ? String(v) : String(v).padStart(2, "0");
+    });
+    let plainText = parts.join(":");
+    if (showMilliseconds) {
+      plainText += `.${String(byField.millisecond ?? 0).padStart(3, "0")}`;
+    }
+    return {
+      isoString,
+      plainText
+    };
+  };
+  const applyToGroup = (isoValue, e) => {
+    const host = groupRef.current;
+    dispatchRequestInteraction(host, {
+      event: e,
+      name: "subpaste",
+      allowed: () => {
+        dispatchRequestSetUIState(host, isoValue, {
+          event: e
+        });
+      }
+    });
+    e.preventDefault();
+  };
+  const isFromDurationField = e => {
+    const target = e.target;
+    if (!target.matches) {
+      return false;
+    }
+    if (!target.matches(`[navi-control-host="input"`)) {
+      return false;
+    }
+    if (!target.closest(".navi_duration_part")) {
+      return false;
+    }
+    return true;
+  };
+  const onCopy = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
+    const payload = getClipboardPayload();
+    if (!payload) {
+      return;
+    }
+    e.clipboardData.setData("text/plain", payload.plainText);
+    e.clipboardData.setData("application/x-navi", payload.isoString);
+    e.preventDefault();
+  };
+  const onCut = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
+    const payload = getClipboardPayload();
+    if (!payload) {
+      return;
+    }
+    e.clipboardData.setData("text/plain", payload.plainText);
+    e.clipboardData.setData("application/x-navi", payload.isoString);
+    applyToGroup("", e);
+  };
+  const onPaste = e => {
+    if (!isFromDurationField(e)) {
+      return;
+    }
+    const naviData = e.clipboardData.getData("application/x-navi");
+    const textData = e.clipboardData.getData("text/plain");
+    let isoValue = null;
+    if (naviData && parseDuration(naviData)) {
+      isoValue = naviData;
+    }
+    if (!isoValue && textData) {
+      const parsed = parseDuration(textData);
+      if (parsed) {
+        isoValue = durationToISOString(parsed) ?? null;
+      } else {
+        // Colon-split fallback: "1:30", "1:30:45", "1:30:45.500"
+        const colonParts = textData.trim().split(":");
+        const visibleFields = getVisibleFields(groupRef.current);
+        if (colonParts.length > 1 || visibleFields.length === 1) {
+          const durationObj = {};
+          colonParts.forEach((part, i) => {
+            const field = visibleFields[i];
+            if (!field || field === "millisecond") return;
+            if (i === colonParts.length - 1 && part.includes(".")) {
+              const [sec, msPart] = part.split(".");
+              durationObj[FIELD_TO_KEY[field]] = parseInt(sec, 10);
+              if (visibleFields[i + 1] === "millisecond") {
+                durationObj.milliseconds = parseInt(msPart.slice(0, 3).padEnd(3, "0"), 10);
+              }
+            } else {
+              durationObj[FIELD_TO_KEY[field]] = parseInt(part, 10);
+            }
+          });
+          isoValue = durationToISOString(durationObj) ?? null;
+        }
+      }
+    }
+    if (!isoValue) return;
+    applyToGroup(isoValue, e);
+  };
+  return {
+    onCopy,
+    onCut,
+    onPaste
+  };
+};
+const FIELD_TO_KEY = {
+  hour: "hours",
+  minute: "minutes",
+  second: "seconds",
+  millisecond: "milliseconds"
+};
+
+// Renders the appropriate combination of hour/minute/second sub-inputs based
+// on which fields are active.
+const InputDurationFields = ({
+  showHours,
+  showMinutes,
+  showSeconds,
+  showMilliseconds,
+  minutesReadOnly,
+  secondsReadOnly,
+  millisecondsReadOnly,
+  stepHasMilliseconds,
+  controlled,
+  hourValue,
+  minuteValue,
+  secondValue,
+  millisecondValue,
+  minSeconds,
+  maxSeconds,
+  stepSeconds,
+  unitHour,
+  textAlign,
+  ...childProps
+}) => {
+  // Hour bounds (in hours)
+  const minHours = minSeconds !== undefined ? Math.floor(minSeconds / 3600) : 0;
+  const maxHours = Math.floor(maxSeconds / 3600);
+
+  // Minute bounds (in minutes).
+  // When hours are also shown, keep the natural [0, 59] range — the group-level
+  // constraint validates the combined total. Dynamic per-hour offsets can produce
+  // negative max values (e.g. max=1h30 + current hours=2 → max=-30 for minutes).
+  const minuteMin = showHours ? 0 : minSeconds !== undefined ? Math.floor(minSeconds / 60) : 0;
+  const minuteMax = showHours ? 59 : Math.min(59, Math.floor(maxSeconds / 60));
+
+  // Second bounds (in seconds). Same reasoning as minutes.
+  const secondMin = showHours || showMinutes ? 0 : minSeconds !== undefined ? Math.floor(minSeconds) : 0;
+  const secondMax = showHours || showMinutes ? 59 : Math.min(59, Math.floor(maxSeconds));
+
+  // The step applies to the finest-grained field; coarser fields use step=1.
+  const stepForMinutes = stepSeconds === undefined ? undefined : stepSeconds % 60 === 0 ? stepSeconds / 60 : 1; // sub-minute step → minute always increments by 1
+  const stepForHours = stepSeconds !== undefined && stepSeconds % 3600 === 0 ? stepSeconds / 3600 : 1;
+  // Millisecond bounds and step.
+  const millisecondMin = 0;
+  const millisecondMax = maxSeconds < 1 ? Math.floor(maxSeconds * 1000) : 999;
+  // When the step has sub-second precision, derive the ms step from the
+  // fractional-seconds part. Otherwise leave it undefined (free editing).
+  const stepForMs = stepHasMilliseconds ? Math.round(stepSeconds % 1 * 1000) : undefined;
+  const visibleUnits = [showHours && "hour", showMinutes && "minute", showSeconds && "second", showMilliseconds && "millisecond"].filter(Boolean);
+  const textAlignFor = unit => {
+    if (textAlign !== "auto") return textAlign;
+    const i = visibleUnits.indexOf(unit);
+    if (visibleUnits.length === 1) return "center";
+    if (i === 0) return "right";
+    if (i === visibleUnits.length - 1) return "left";
+    return "center";
+  };
+  const inputs = [];
+  if (showHours) {
+    inputs.push(jsx(InputDurationPart, {
+      unit: "hour",
+      label: unitHour,
+      textAlign: textAlignFor("hour"),
+      ...(controlled ? {
+        value: hourValue
+      } : {
+        defaultValue: hourValue
+      }),
+      min: minHours,
+      max: maxHours,
+      step: stepForHours,
+      separator: showMinutes || showSeconds ? ":" : undefined,
+      ...childProps
+    }, "hour"));
+  }
+  if (showMinutes) {
+    inputs.push(jsx(InputDurationPart, {
+      unit: "minute",
+      textAlign: textAlignFor("minute"),
+      ...(controlled ? {
+        value: minuteValue
+      } : {
+        defaultValue: minuteValue
+      }),
+      min: minuteMin,
+      max: minuteMax,
+      step: stepForMinutes,
+      separator: showSeconds ? ":" : undefined,
+      ...childProps,
+      readOnly: minutesReadOnly || childProps.readOnly
+    }, "minute"));
+  }
+  if (showSeconds) {
+    inputs.push(jsx(InputDurationPart, {
+      unit: "second",
+      textAlign: textAlignFor("second"),
+      ...(controlled ? {
+        value: secondValue
+      } : {
+        defaultValue: secondValue
+      }),
+      min: secondMin,
+      max: secondMax,
+      step: stepSeconds,
+      separator: showMilliseconds ? "." : undefined,
+      ...childProps,
+      readOnly: secondsReadOnly || childProps.readOnly
+    }, "second"));
+  }
+  if (showMilliseconds) {
+    inputs.push(jsx(InputDurationPart, {
+      unit: "millisecond",
+      textAlign: textAlignFor("millisecond"),
+      ...(controlled ? {
+        value: millisecondValue
+      } : {
+        defaultValue: millisecondValue
+      }),
+      min: millisecondMin,
+      max: millisecondMax,
+      step: stepForMs,
+      ...childProps,
+      readOnly: millisecondsReadOnly || childProps.readOnly
+    }, "millisecond"));
+  }
+  if (inputs.length === 1) {
+    return inputs[0];
+  }
+  return inputs;
+};
+const InputDurationPart = ({
+  unit,
+  label,
+  separator,
+  ...props
+}) => {
+  const unitLabel = label ?? jsx(Unit, {
+    unit: unit,
+    plural: true,
+    color: "secondary"
+  });
+  return jsxs(Label, {
+    flex: "y",
+    "data-separator": separator || undefined,
+    children: [jsx(Input, {
+      className: "navi_duration_part"
+      // When autofocused this field should be selected
+      // this help to modify the value on mobile
+      ,
+
+      autoFocusSelect: true,
+      type: "navi_number",
+      "navi-input-type": unit,
+      name: unit,
+      size: "l",
+      unit: false,
+      variant: "underline",
+      expandX: true,
+      ...props,
+      children: separator ? jsx(Input.UI.UnitSlot, {
+        children: separator
+      }) : undefined
+    }), unitLabel]
+  });
+};
+
+installImportMetaCssBuild(import.meta);const css$l = /* css */`
+  .navi_radio_group {
+    border-style: solid;
+
+    &[data-callout] {
+      border-color: var(--callout-color);
+    }
+  }
+`;
+const RadioGroup = props => {
+  const refDefault = useRef(null);
+  props.ref = props.ref || refDefault;
+  const defaultName = useId();
+  props.name = props.name || `radio_group_${defaultName}`;
+  const radioGroup = jsx(RadioGroupInterface, {
+    ...props
+  });
+  return radioGroup;
+};
+const RadioGroupInterface = props => {
+  import.meta.css = [css$l, "@jsenv/navi/src/control/input/radio_group.jsx"];
+  const {
+    ref
+  } = props;
+  const [radioGroupProps, remainingProps, childrenWrapperProps] = useControlgroupProps({
+    resetOnCancel: true,
+    resetOnAbort: true,
+    resetOnError: true,
+    ...props
+  }, {
+    controlType: "radio_group"
+  });
+  useFocusGroup(ref, {
+    wrap: "both"
+  });
+  return jsx(Box, {
+    as: "fieldset",
+    ...radioGroupProps,
+    ...remainingProps,
+    name: undefined,
+    baseClassName: "navi_radio_group",
+    "data-callout-point-to-border-box": "",
+    children: jsx(ControlgroupChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: props.children
+    })
+  });
+};
 
 /**
  * applySearch — matches value against searchText.
@@ -45668,8 +50295,17 @@ installImportMetaCssBuild(import.meta);/*
  * between rows, which is what makes keyboard nav cheap); the value updates
  * immediately while the selection glides to center.
  *
+ * TWO LAYERS. The rows are rendered twice, one copy over the other, moved by the
+ * same offset: a base layer wearing the fade (and, with `zoom`, scaled down),
+ * and a center layer clipped to the emphasis band, painted in the wheel's own
+ * colour. The emphasis therefore
+ * belongs to the WINDOW rather than to a row — a row is emphasised over the part
+ * of it that is inside the window, so it gains emphasis progressively as it
+ * slides in, and a wheel resting between two rows still shows an emphasised
+ * center. See .navi_wheel_layer in the CSS.
+ *
  * VIRTUALIZED. The DOM is NOT the source of truth — the ordered tracked-item list
- * is. Only visibleCount + 2 <li> slots are rendered (WheelWindow) and recycled: as
+ * is. Only visibleCount + 2 <li> slots are rendered per layer (WheelWindow) and recycled: as
  * the wheel scrolls, each slot's content is refilled from trackedItems. The slots
  * re-render on demand — only when the wheel crosses a row (the window base index
  * changes) — never per frame; the per-frame motion is a single imperative
@@ -45699,46 +50335,64 @@ installImportMetaCssBuild(import.meta);/*
  */
 const css$k = /* css */`
   .navi_wheel_container {
-    --wheel-item-height: round(2.2em, 1px);
+    /* Row size and emphasis band are read together: the band is what a value
+       must cross to lose its emphasis, and the row is how far it has to travel
+       to swap with its neighbour. A row much taller than the band leaves a dead
+       zone — a wheel resting between two rows emphasises NEITHER value, since
+       both glyphs are outside the band. Keeping the row within ~1.2× the band
+       removes it: whatever the position, something is always inside. */
+    --wheel-item-height: round(1.8em, 1px);
+    --wheel-emphasis-size: round(1.5em, 1px);
     --wheel-item-width: 3.5ch;
     --wheel-visible-count: 3;
+    /* ONE colour to set: --wheel-color is the wheel's colour, worn by the value
+       in the window. The neighbours are a washed-out version of it (blended
+       toward transparent, then dimmed further by the fade), so tinting the
+       wheel takes a single declaration and stays coherent. Override
+       --wheel-neighbor-color for a neighbour colour of its own. */
     --wheel-color: light-dark(#111, #eee);
+    --wheel-neighbor-color: color-mix(
+      in srgb,
+      var(--wheel-color) 45%,
+      transparent
+    );
 
     position: relative; /* for the loading outline */
     display: inline-flex;
     color: var(--wheel-color);
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
+    /* Bordered like every other control: the box a user can interact with is
+       visible without having to hover or guess. border="none" opts out. */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
     border-radius: var(--navi-control-border-radius);
     -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
 
-    /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
+    &:focus {
+      /* Keyboard focus rings the center window only (see .navi_wheel_focus_ring) —
        the neighbours are just hints, so the ring belongs on the selected value,
        not the whole column. The spinbutton container is the focusable element, so
        suppress its own UA outline in favour of the ring. [data-focus-visible] lets
        a caller force the ring. */
-    &:focus {
       outline: none;
     }
-    &:focus-visible .navi_wheel_focus_ring,
-    &[data-focus-visible] .navi_wheel_focus_ring {
-      outline: var(--navi-focus-outline-width) solid
-        var(--navi-focus-outline-color);
-      /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
-      outline-offset: calc(-1 * var(--navi-focus-outline-width) / 2);
+    &[data-focus-visible] {
+      .navi_wheel_focus_ring {
+        outline: var(--navi-focus-outline-width) solid
+          var(--navi-focus-outline-color);
+        /* Inset so overflow: hidden on the viewport doesn't clip the ring. */
+        outline-offset: calc(0.5 * var(--navi-focus-outline-width));
+      }
     }
 
-    /* Readonly & disabled dim the neighbour text identically; disabled dims the
-       centered value further so the state reads on the value itself. */
+    /* Readonly dims the whole wheel; disabled dims it further. Both go through
+       --wheel-color, so the neighbours follow along (they are mixed from it). */
     &[data-readonly] {
       --wheel-color: light-dark(#666, #999);
     }
     &[data-disabled] {
-      --wheel-color: light-dark(#666, #999);
-
-      .navi_wheel_item[data-wheel-current] {
-        color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
-      }
+      --wheel-color: light-dark(rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.38));
     }
     &[data-readonly],
     &[data-disabled] {
@@ -45773,14 +50427,48 @@ const css$k = /* css */`
        drags to our pointer handlers instead of the browser's scroll. */
     overflow: hidden;
   }
+  /* TWO COPIES OF THE SAME ROWS, stacked and moved together. The base layer
+     paints every row in the neighbour colour and wears the fade (and, with
+     [data-zoom], is the one scaled down); the center layer paints the same rows
+     in the wheel's colour, clipped to the emphasis band — so what is inside the
+     band is emphasised and nothing else is.
+     Emphasis is thus a property of the WINDOW, not of a row: a row gains it
+     progressively as it slides in — half in, half emphasised — which no
+     per-row style could do, and it survives resting between two rows (where a
+     fade alone leaves nothing emphasised at all). */
+  .navi_wheel_layer[data-layer="base"] {
+    color: var(--wheel-neighbor-color);
+    /* In flow: this copy is what gives the viewport (and so the whole wheel,
+       which is fit-content) its size — the center layer is an overlay on top of
+       it and measures nothing.
+       The fade belongs to this layer, not to the viewport: on the viewport it
+       would dim the center layer too, and the window edges (where the gradient
+       is already partly transparent) would wash the selected value out —
+       exactly where it must be at full strength. no-repeat so the rows
+       overflowing this box are masked out rather than showing a repeated
+       gradient tile. */
+    -webkit-mask-image: var(--wheel-fade);
+    mask-image: var(--wheel-fade);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  .navi_wheel_layer[data-layer="center"] {
+    position: absolute;
+    inset: 0;
+    color: var(--wheel-color);
+    /* The base rows underneath take the clicks (this copy sits on top of them). */
+    pointer-events: none;
+  }
   .navi_wheel_list {
     display: flex;
     margin: 0;
     padding: 0;
     list-style: none;
     /* Virtual scroll position: JS writes --wheel-offset (px, already rounded to a
-       whole pixel) each frame and CSS decides how to apply it. translate3d keeps
-       the track on its own composited layer for smooth momentum/glide. */
+       whole pixel) on the viewport each frame — one write, inherited by both
+       layers, so they can never drift apart — and CSS decides how to apply it.
+       translate3d keeps the track on its own composited layer for smooth
+       momentum/glide. */
     transform: translate3d(0, var(--wheel-offset, 0px), 0);
     /* NO will-change: transform. translate3d already composites the track;
        will-change additionally pins it to its own layer, which the glass panes'
@@ -45799,10 +50487,9 @@ const css$k = /* css */`
     flex: none;
     align-items: center;
     justify-content: center;
-    /* Every row is identical: same colour, same weight. What makes the center
-       stand out is the veil over the neighbours (see "Center window"), not any
-       per-row style — so a row emphasises smoothly as it scrolls into place. */
-    color: var(--wheel-color);
+    /* NO colour here: a row takes it from the layer it belongs to (see
+       .navi_wheel_layer), which is what makes the same row read as neighbour
+       below and as selected above. */
     font-weight: 600;
     text-align: center;
     white-space: nowrap;
@@ -45819,20 +50506,25 @@ const css$k = /* css */`
     content-visibility: auto;
   }
 
-  /* Orientation-specific sizing/layout. The emphasis fade: opacity peaks on the
-     center row and falls off progressively toward the edges (like a physical
-     wheel curving away). Because it is a function of position, a row emphasises
-     smoothly as it scrolls into the middle — no per-row style flip — and a
-     half-scrolled row is half-faded. The center number keeps a small fully-opaque
-     plateau so it stays crisp. */
+  /* Orientation-specific sizing/layout. The mask worn by the base layer: the
+     neighbours dissolve progressively toward the edges, like a physical wheel
+     curving away, and the emphasis band is cut clean out of it — inside the
+     band only the center layer paints. Both jobs are one gradient because they
+     run along the same axis; a second mask layer composited out would need
+     mask-composite, whose prefixed Safari form takes different keywords.
+     Cutting the band matters as soon as the two layers draw a row differently
+     ([data-zoom] shrinks the base one): the glyphs no longer coincide, and the
+     one underneath would show through as a grey ghost around the other. */
   .navi_wheel_container {
     --wheel-fade: linear-gradient(
       var(--wheel-fade-direction),
       transparent 0%,
-      rgba(0, 0, 0, 0.4) 34%,
-      #000 45%,
-      #000 55%,
-      rgba(0, 0, 0, 0.4) 66%,
+      rgba(0, 0, 0, 0.6) 32%,
+      #000 var(--wheel-band-inset),
+      transparent var(--wheel-band-inset),
+      transparent calc(100% - var(--wheel-band-inset)),
+      #000 calc(100% - var(--wheel-band-inset)),
+      rgba(0, 0, 0, 0.6) 68%,
       transparent 100%
     );
 
@@ -45855,7 +50547,9 @@ const css$k = /* css */`
     .navi_wheel_focus_ring {
       position: absolute;
       z-index: 2;
-      border-radius: 3px;
+      /* The wheel's own, whatever it was given: a ring with a radius of its own
+         would go its own way the moment a caller rounds the wheel. */
+      border-radius: inherit;
       pointer-events: none;
     }
     /* The loading outline (rendered as a container child, outside the viewport)
@@ -45866,6 +50560,20 @@ const css$k = /* css */`
       z-index: 3;
       border-radius: inherit;
       pointer-events: none;
+    }
+
+    /* Zoom: the size difference is obtained by SHRINKING the base layer, never
+       by growing the center one — the centered value keeps its natural size, so
+       it can't spill over the wheel's border or into a neighbouring column, and
+       the wheel needs no extra room to be zoomed. --wheel-zoom stays the ratio
+       between centered and neighbour (1.3 = the center reads 30% bigger).
+       Only the base layer is scaled, so a value is shrunk exactly over the part
+       of it that is OUTSIDE the band: sliding into the center it grows from the
+       edge inwards. The scale property (not transform) leaves the track's
+       translate3d alone, and scaling each row about its own center keeps the row
+       grid intact, so nothing in the geometry or the wrap math sees it. */
+    &[data-zoom] .navi_wheel_layer[data-layer="base"] .navi_wheel_item {
+      scale: calc(1 / var(--wheel-zoom, 1.3));
     }
 
     &[data-glass] .navi_wheel_pane {
@@ -45884,13 +50592,31 @@ const css$k = /* css */`
 
     &:not([data-horizontal]) {
       --wheel-fade-direction: to bottom;
+      /* Distance from a viewport edge to the center window / to the emphasis
+         band (the band is the narrower of the two, see --wheel-emphasis-size). */
+      --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
+      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
+
       width: fit-content;
 
       .navi_wheel_viewport {
         width: 100%;
         height: calc(var(--wheel-item-height) * var(--wheel-visible-count));
-        -webkit-mask-image: var(--wheel-fade);
-        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_layer[data-layer="base"] {
+        /* The fade must span the VIEWPORT, so the layer wearing it is the size
+           of the viewport — its track (taller: visibleCount + 2 rows) overflows
+           it and is clipped by the viewport. Only the cross axis (width) is left
+           to the content, since that is what sizes the wheel. */
+        height: 100%;
+      }
+      .navi_wheel_layer[data-layer="center"] {
+        /* Around the GLYPH, not around the row: a row is taller than the digits
+           it holds (line box + padding), so a row-sized band would keep a value
+           fully emphasised for the first third of a scroll and only then start
+           cutting it. Sized on the glyph, it starts changing as soon as the
+           wheel moves. */
+        clip-path: inset(var(--wheel-band-inset) 0);
       }
       .navi_wheel_list {
         flex-direction: column;
@@ -45919,7 +50645,7 @@ const css$k = /* css */`
       .navi_wheel_pane {
         right: 0;
         left: 0;
-        height: calc((100% - var(--wheel-item-height)) / 2);
+        height: var(--wheel-window-inset);
         &[data-side="start"] {
           top: 0;
         }
@@ -45929,9 +50655,9 @@ const css$k = /* css */`
       }
       .navi_wheel_focus_ring,
       .navi_wheel_outline_wrapper {
-        top: calc((100% - var(--wheel-item-height)) / 2);
+        top: var(--wheel-window-inset);
         right: 0;
-        bottom: calc((100% - var(--wheel-item-height)) / 2);
+        bottom: var(--wheel-window-inset);
         left: 0;
         height: auto;
       }
@@ -45947,13 +50673,27 @@ const css$k = /* css */`
 
     &[data-horizontal] {
       --wheel-fade-direction: to right;
+      /* A cell is about as wide as the value it holds, so the band is the whole
+         cell (unlike the vertical case — see the note there). */
+      --wheel-emphasis-size: var(--wheel-item-width);
+      /* Distance from a viewport edge to the center window / to the emphasis
+         band (see the vertical branch). */
+      --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
+      --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
+
       height: fit-content;
 
       .navi_wheel_viewport {
         width: calc(var(--wheel-item-width) * var(--wheel-visible-count));
         height: 100%;
-        -webkit-mask-image: var(--wheel-fade);
-        mask-image: var(--wheel-fade);
+      }
+      .navi_wheel_layer[data-layer="base"] {
+        /* Viewport-sized along the scroll axis so the fade spans it (see the
+           vertical branch); the cross axis (height) follows the content. */
+        width: 100%;
+      }
+      .navi_wheel_layer[data-layer="center"] {
+        clip-path: inset(0 var(--wheel-band-inset));
       }
       .navi_wheel_list {
         flex-direction: row;
@@ -45973,7 +50713,7 @@ const css$k = /* css */`
       .navi_wheel_pane {
         top: 0;
         bottom: 0;
-        width: calc((100% - var(--wheel-item-width)) / 2);
+        width: var(--wheel-window-inset);
         &[data-side="start"] {
           left: 0;
         }
@@ -45984,9 +50724,9 @@ const css$k = /* css */`
       .navi_wheel_focus_ring,
       .navi_wheel_outline_wrapper {
         top: 0;
-        right: calc((100% - var(--wheel-item-width)) / 2);
+        right: var(--wheel-window-inset);
         bottom: 0;
-        left: calc((100% - var(--wheel-item-width)) / 2);
+        left: var(--wheel-window-inset);
         width: auto;
       }
       &[data-frame-border] .navi_wheel_pane {
@@ -46009,6 +50749,16 @@ const css$k = /* css */`
   .navi_wheel_group {
     display: inline-flex;
     align-items: center;
+    /* ONE border around the whole group — hours, ":" and minutes are read as a
+       single control, so each wheel drops its own (a box per column would cut
+       the group into pieces and box the separator out of it). */
+    border: var(--navi-control-border-width) solid
+      var(--navi-control-border-color);
+    border-radius: var(--navi-control-border-radius);
+
+    .navi_wheel_container {
+      border: none;
+    }
 
     &:not([data-horizontal]) {
       /* Same full-row line-height as .navi_wheel_item so the glyph centers on a
@@ -46029,8 +50779,9 @@ const css$k = /* css */`
     /* Stretch to the group height (= the wheels' height) and center the content,
        landing it on the middle (selected) row and sharing the numbers' baseline
        (right for words / letters like "ZZ"). A sibling of the wheels, so it does
-       NOT inherit their --wheel-item-height — re-expose it here. */
-    --wheel-item-height: round(2.2em, 1px);
+       NOT inherit their --wheel-item-height — re-expose it here (same value as
+       .navi_wheel_container). */
+    --wheel-item-height: round(1.8em, 1px);
 
     display: flex;
     align-items: center;
@@ -46145,6 +50896,7 @@ const WheelGroupContext = createContext(null);
  *   itemWidth?: number | string,
  *   bounded?: boolean,
  *   horizontal?: boolean,
+ *   zoom?: boolean | number,
  *   glideSpeed?: number,
  *   type?: string,
  *   name?: string,
@@ -46163,6 +50915,7 @@ const WheelGroupContext = createContext(null);
  * @param {boolean} [props.horizontal] - Lay the wheel out horizontally (scrolls left/right) instead of vertically.
  * @param {boolean} [props.glass] - Frost the neighbouring rows so the center reads as a clear "window" (iOS-picker style). Inherited from a WheelGroup.
  * @param {boolean} [props.frameBorder] - Line the center-window edges with a faint frame (off by default; independent of glass). Tune via --wheel-frame-color.
+ * @param {boolean|number} [props.zoom] - Make the centered value stand out by size: the neighbours are drawn smaller, so a value grows as it slides into the window and shrinks as it leaves (the centered one keeps its natural size). `true` uses the default ratio (1.3); a number is the ratio itself (1.8 = the center reads 80% bigger than its neighbours). Inherited from a WheelGroup.
  * @param {number} [props.glideSpeed=0.16] - Speed (px/ms) of the programmatic glide used by arrow keys, taps and the navi_scroll "smooth" behavior. Lower = slower, more visible transitions; ≈0.16 covers one 32px row in 200ms.
  * @param {string} [props.type] - Informative value kind (e.g. "integer", "day"). Used only for rendering hints, like tabular figures for "integer".
  */
@@ -46175,7 +50928,7 @@ const Wheel = props => {
 };
 
 // Wheel-only props: consumed here, must not leak onto the container DOM element.
-const WHEEL_OWN_PROP_KEYS = ["visibleCount", "itemHeight", "itemWidth", "bounded", "horizontal", "glass", "frameBorder", "glideSpeed", "type"];
+const WHEEL_OWN_PROP_KEYS = ["visibleCount", "itemHeight", "itemWidth", "bounded", "horizontal", "glass", "frameBorder", "zoom", "glideSpeed", "type"];
 
 // Pointer drag, mouse-wheel, programmatic `navi_scroll`, and the document-level
 // gesture guard: all the ways raw input drives the virtual position. Bound once
@@ -46335,11 +51088,15 @@ const useWheelInteractions = ({
       });
     };
 
-    // Programmatic scroll: move by detail.delta px (and/or detail.items rows),
-    // then snap — mirroring element.scrollBy. behavior "smooth" glides then
-    // snaps; otherwise it jumps and snaps like a wheel tick. There is no native
-    // scroller to drive here, so this is the seam external code (e.g. a demo
-    // comparing this wheel against a native scroll-snap list) uses to move it.
+    // Programmatic scroll: move by detail.delta px (and/or detail.items rows,
+    // fractions allowed), then snap — mirroring element.scrollBy. behavior
+    // "smooth" glides then snaps; otherwise it jumps and snaps like a wheel
+    // tick. detail.settle === false skips the snap so the wheel stays parked
+    // wherever it lands, including between two rows — the only way to hold an
+    // in-between rendering still (a demo showing the fade mid-scroll, a visual
+    // test). There is no native scroller to drive here, so this is the seam
+    // external code (e.g. a demo comparing this wheel against a native
+    // scroll-snap list) uses to move it.
     const onNaviScroll = e => {
       if (!e.detail) {
         return;
@@ -46362,9 +51119,11 @@ const useWheelInteractions = ({
             glideTo(vp, snapPosToRow(vp, posRef.current + delta));
           } else {
             setPos(vp, posRef.current + delta, {
-              live: true
+              live: e.detail.settle !== false
             });
-            scheduleSettle();
+            if (e.detail.settle !== false) {
+              scheduleSettle();
+            }
           }
         }
       });
@@ -46668,6 +51427,7 @@ function WheelUI(props) {
     horizontal,
     glass,
     frameBorder,
+    zoom,
     glideSpeed = WHEEL_GLIDE_SPEED,
     type,
     style
@@ -46681,6 +51441,11 @@ function WheelUI(props) {
   // Both inherited from a WheelGroup so a whole group is styled with one prop.
   const showGlass = Boolean(glass ?? group?.glass);
   const showFrameBorder = Boolean(frameBorder ?? group?.frameBorder);
+  // zoom: true takes the default factor, a number IS the factor (1.6 = 60%
+  // bigger); either way it is inherited from a WheelGroup when not set here.
+  const zoomResolved = zoom ?? group?.zoom;
+  const showZoom = Boolean(zoomResolved);
+  const zoomFactor = typeof zoomResolved === "number" ? zoomResolved : undefined;
 
   // Collect every Wheel.Item's {value, label, itemProps} in order, robustly
   // (children may be wrapped). This ordered list is the source of truth for the
@@ -46717,8 +51482,6 @@ function WheelUI(props) {
   }
   const centerRowSignal = useSignal(0);
   const renderedBaseRef = useRef(0);
-  // Which window slot currently carries data-wheel-current (the center row).
-  const markedSlotRef = useRef(-1);
   // Row size in px, measured once from a rendered slot (rows are uniform).
   const itemSizeRef = useRef(0);
 
@@ -46735,6 +51498,11 @@ function WheelUI(props) {
   // complex values). The wheel's own `type` prop ("integer", "day"…) is a
   // rendering hint kept on the container (data-wheel-type), never on the input.
   const inputRef = useRef(null);
+  // A signal with a default of its own seeds `defaultValue` here as it does on
+  // an input or a picker (see seedDefaultValueFromSignal): the wheel then starts
+  // on it while staying uncontrolled, so a form reads what it shows as an answer
+  // one can send rather than as a value it already holds.
+  seedDefaultValueFromSignal(props);
   const [controlRootProps, controlHostProps, {
     facadeController
   }] = useControlFacadeProps({
@@ -46867,6 +51635,9 @@ function WheelUI(props) {
     ...(itemWidth === undefined ? {} : {
       "--wheel-item-width": typeof itemWidth === "number" ? `${itemWidth}px` : itemWidth
     }),
+    ...(zoomFactor === undefined ? {} : {
+      "--wheel-zoom": zoomFactor
+    }),
     ...style
   };
 
@@ -46888,7 +51659,6 @@ function WheelUI(props) {
     return size;
   };
   const getViewport = () => ref.current?.querySelector(".navi_wheel_viewport");
-  const getTrack = vp => vp.querySelector(".navi_wheel_list");
   const clampNumber = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
   // An index wrapped into [0, count) when looping, else clamped.
   const wrapIndex = index => {
@@ -46911,30 +51681,13 @@ function WheelUI(props) {
   // off a static element at a half-pixel; the separators share this line-height to
   // match the grid).
   const applyOffset = vp => {
-    const track = getTrack(vp);
     const size = getItemSize(vp);
-    if (!track || size === 0) {
+    if (size === 0) {
       return;
     }
     const t = viewportMain(vp) / 2 - size / 2 - posRef.current + renderedBaseRef.current * size;
-    track.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
-    // Mark the row currently in the center window (its value is the selection).
-    // The slot recycles, so the marked node changes as we scroll — move the
-    // attribute only when the center slot index actually changes. Only [disabled]
-    // styling reads it; the fade/focus-ring center is geometric (CSS).
-    const centerSlot = Math.round(posRef.current / size) - renderedBaseRef.current;
-    if (centerSlot !== markedSlotRef.current) {
-      const slots = track.children;
-      const previous = slots[markedSlotRef.current];
-      if (previous) {
-        previous.removeAttribute("data-wheel-current");
-      }
-      const current = slots[centerSlot];
-      if (current) {
-        current.setAttribute("data-wheel-current", "");
-      }
-      markedSlotRef.current = centerSlot;
-    }
+    // On the viewport, so both layers' tracks read the same value.
+    vp.style.setProperty("--wheel-offset", `${Math.round(t)}px`);
   };
   const renderPos = vp => {
     const size = getItemSize(vp);
@@ -47385,6 +52138,7 @@ function WheelUI(props) {
     "data-horizontal": isHorizontal ? "" : undefined,
     "data-glass": showGlass ? "" : undefined,
     "data-frame-border": showFrameBorder ? "" : undefined,
+    "data-zoom": showZoom ? "" : undefined,
     "data-wheel-type": type || undefined,
     pseudoClasses: WHEEL_PSEUDO_CLASSES,
     basePseudoState: basePseudoState,
@@ -47422,14 +52176,31 @@ function WheelUI(props) {
           facadeController: facadeController,
           children: children
         })
-      }), jsx("ul", {
-        className: "navi_wheel_list",
-        children: jsx(WheelWindow, {
-          centerRowSignal: centerRowSignal,
-          windowSize: windowSize,
-          trackedItems: trackedItems,
-          isLoop: isLoop,
-          onBaseCommit: commitRenderedBase
+      }), jsx("div", {
+        className: "navi_wheel_layer",
+        "data-layer": "base",
+        children: jsx("ul", {
+          className: "navi_wheel_list",
+          children: jsx(WheelWindow, {
+            centerRowSignal: centerRowSignal,
+            windowSize: windowSize,
+            trackedItems: trackedItems,
+            isLoop: isLoop,
+            onBaseCommit: commitRenderedBase
+          })
+        })
+      }), jsx("div", {
+        className: "navi_wheel_layer",
+        "data-layer": "center",
+        "aria-hidden": "true",
+        children: jsx("ul", {
+          className: "navi_wheel_list",
+          children: jsx(WheelWindow, {
+            centerRowSignal: centerRowSignal,
+            windowSize: windowSize,
+            trackedItems: trackedItems,
+            isLoop: isLoop
+          })
         })
       }), jsx("div", {
         className: "navi_wheel_pane",
@@ -47467,7 +52238,9 @@ const WheelWindow = ({
     base = base < 0 ? 0 : base > count - windowSize ? count - windowSize : base;
   }
   useLayoutEffect(() => {
-    onBaseCommit(base);
+    // Only the base layer reports; the center layer renders the same window
+    // from the same inputs, so one report keeps the transform in sync for both.
+    onBaseCommit?.(base);
   });
   const slots = [];
   for (let slot = 0; slot < windowSize; slot++) {
@@ -47539,6 +52312,7 @@ Wheel.Item = WheelItem;
  * @param {boolean} [props.horizontal] - Stack the (horizontal) wheels vertically instead of in a row.
  * @param {boolean} [props.glass] - Frost every wheel's neighbouring rows (see Wheel's glass prop) with one prop for the whole group.
  * @param {boolean} [props.frameBorder] - Line every wheel's center-window edges with a faint frame (off by default; independent of glass).
+ * @param {boolean} [props.zoom] - Enlarge the centered value of every wheel (see Wheel's zoom prop) with one prop for the whole group.
  */
 const WheelGroup = props => {
   import.meta.css = [css$k, "@jsenv/navi/src/control/wheel/wheel.jsx"];
@@ -47552,23 +52326,31 @@ const WheelGroup = props => {
     horizontal,
     glass,
     frameBorder,
+    zoom,
     style
   } = props;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
   const groupRef = props.ref;
 
-  // controlType "control_group" (not a bespoke "wheel_group") so a Picker with
-  // type="controlgroup" recognises this as its aggregating child (it only syncs
-  // with a control_group — see useUIFacadeStateController). Named wheels aggregate
-  // into { hours, minutes, … }; a nameless wheel warns (name it or it won't be in
-  // the value), same as any control group.
+  // Named wheels aggregate into { hours, minutes, … }; a nameless wheel warns
+  // (name it or it won't be in the value), same as any control group.
+  //
+  // `aggregateChildStates`/`distributeChildUIState` turn that into whatever the
+  // group really is worth instead — a total in minutes, an ISO duration, a date
+  // — one value in both directions, so the group can be driven by a single
+  // `value`/`signal` and hand a single value back. Same mechanism InputDuration
+  // uses for its own hour/minute/second fields (see input_duration.jsx); passed
+  // through rather than fixed here because only the caller knows what two wheels
+  // add up to.
   const [controlgroupRootProps, controlgroupProps, childrenWrapperProps] = useControlgroupProps(props, {
     allowCapture: true,
     wantRequesterButtonState: true,
     controlType: "control_group",
     stateType: "object",
-    cascadeValidationToChildren: true
+    cascadeValidationToChildren: true,
+    aggregateChildStates: props.aggregateChildStates,
+    distributeChildUIState: props.distributeChildUIState
   });
   const {
     children
@@ -47624,6 +52406,9 @@ const WheelGroup = props => {
     horizontal: undefined,
     glass: undefined,
     frameBorder: undefined,
+    zoom: undefined,
+    aggregateChildStates: undefined,
+    distributeChildUIState: undefined,
     baseClassName: "navi_wheel_group",
     "data-horizontal": horizontal ? "" : undefined,
     style: groupStyle,
@@ -47632,6 +52417,7 @@ const WheelGroup = props => {
       value: {
         glass,
         frameBorder,
+        zoom,
         horizontal
       },
       children: jsx(ControlgroupChildrenWrapper, {
@@ -52927,10 +57713,20 @@ const SVGMaskOverlay = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);// We HAVE TO put paddings around the dialog to ensure window resizing respects this space
+installImportMetaCssBuild(import.meta);/**
+ * A card centered in the area it is given: a bordered, rounded, padded surface
+ * with room kept all around it. It looks like a dialog and is deliberately not
+ * one — it lives in the document, nothing opens or closes it, nothing is made
+ * inert behind it. A sign-in screen, an empty state, a one-question page.
+ *
+ * The room around the card is the outer element's own padding, not a margin on
+ * the card: a margin can collapse and can be scrolled past, whereas padding is
+ * space the outer box genuinely occupies — so a narrow window shrinks the card
+ * and still shows that room, instead of pushing it against the edges.
+ */
 const css$2 = /* css */`
   @layer navi {
-    .navi_dialog_layout {
+    .navi_card_layout {
       --layout-margin: 30px;
       --layout-padding: 20px;
       --layout-background: white;
@@ -52941,7 +57737,7 @@ const css$2 = /* css */`
       --layout-min-height: auto;
     }
   }
-  .navi_dialog_layout {
+  .navi_card_layout {
     padding-top: var(
       --layout-margin-top,
       var(--layout-margin-y, var(--layout-margin))
@@ -52960,7 +57756,7 @@ const css$2 = /* css */`
     );
   }
 
-  .navi_dialog_content {
+  .navi_card {
     min-width: var(--layout-min-width);
     min-height: var(--layout-min-height);
     padding-top: var(
@@ -52987,7 +57783,7 @@ const css$2 = /* css */`
     border-radius: var(--layout-border-radius);
   }
 `;
-const DialogLayoutStyleCSSVars = {
+const CardLayoutStyleCSSVars = {
   margin: "--layout-margin",
   marginTop: "--layout-margin-top",
   marginBottom: "--layout-margin-bottom",
@@ -53006,21 +57802,43 @@ const DialogLayoutStyleCSSVars = {
   minWidth: "--layout-min-width",
   minHeight: "--layout-min-height"
 };
-const DialogLayout = ({
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   alignX?: string,
+ *   alignY?: string,
+ *   margin?: string|number,
+ *   padding?: string|number,
+ *   minWidth?: string|number,
+ *   minHeight?: string|number,
+ *   background?: string,
+ *   borderRadius?: string|number,
+ *   borderWidth?: string|number,
+ *   borderColor?: string,
+ * }>}
+ * @param {string} [props.alignX="center"] - Where the card's own content sits
+ *   across it. The card itself is always centered in the area.
+ * @param {string} [props.alignY="center"] - …and down it.
+ * @param {string|number} [props.margin=30] - Room kept between the card and the
+ *   edges of the area, on every side (see this file's top comment for why it is
+ *   padding underneath). Per-side `marginTop`/`marginRight`/… override it.
+ * @param {string|number} [props.padding=20] - Room inside the card, between its
+ *   border and its content. Per-side props override it the same way.
+ */
+const CardLayout = ({
   children,
   alignX = "center",
   alignY = "center",
   ...props
 }) => {
-  import.meta.css = [css$2, "@jsenv/navi/src/layout/dialog_layout.jsx"];
+  import.meta.css = [css$2, "@jsenv/navi/src/layout/card_layout.jsx"];
   return jsx(Box, {
-    baseClassName: "navi_dialog_layout",
-    styleCSSVars: DialogLayoutStyleCSSVars,
-    visualSelector: ".navi_dialog_content",
+    baseClassName: "navi_card_layout",
+    styleCSSVars: CardLayoutStyleCSSVars,
+    visualSelector: ".navi_card",
     ...props,
     children: jsx(Box, {
       flex: "y",
-      className: "navi_dialog_content",
+      className: "navi_card",
       alignX: alignX,
       alignY: alignY,
       children: children
@@ -53064,6 +57882,28 @@ const ViewportLayoutStyleCSSVars = {
   paddingRight: "--layout-padding-right",
   background: "--layout-background"
 };
+/**
+ * The page itself: a box the size of what holds it (`100%` both ways), with a
+ * background and room kept around its content. What a screen is built on top
+ * of, so what is inside it can be laid out against a known area instead of
+ * against whatever the document happens to be tall.
+ *
+ * It only claims 100% of its parent, never of the viewport — so it works the
+ * same inside a route, a preview pane or a demo box, and it is up to the page
+ * around it to be full-height.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   padding?: string|number,
+ *   paddingTop?: string|number,
+ *   paddingBottom?: string|number,
+ *   paddingLeft?: string|number,
+ *   paddingRight?: string|number,
+ *   background?: string,
+ * }>}
+ * @param {string|number} [props.padding=40] - Room kept between the edges and
+ *   the content. The per-side props override it one edge at a time.
+ * @param {string} [props.background] - Painted behind everything inside it.
+ */
 const ViewportLayout = props => {
   import.meta.css = [css$1, "@jsenv/navi/src/layout/viewport_layout.jsx"];
   return jsx(Box, {
@@ -53309,7 +58149,7 @@ const SidePanel = ({
   className,
   ...rest
 }) => {
-  import.meta.css = [css, "@jsenv/navi/src/popup/side_panel.jsx"];
+  import.meta.css = [css, "@jsenv/navi/src/layout/side_panel.jsx"];
   return jsx(Popup, {
     mode: mode,
     open: open,
@@ -53538,5 +58378,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, Details, Dialog, DialogLayout, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

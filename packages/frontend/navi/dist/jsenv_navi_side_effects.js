@@ -86,6 +86,22 @@ if (vv) {
   vv.addEventListener("scroll", update);
 }
 
+// Whether the primary input is a finger rather than a mouse. A pointer type is
+// not a size: a narrow desktop window is still a mouse, and a large tablet is
+// still a finger — so anything sized for thumb reach or for the on-screen
+// keyboard must key off this, never off windowWidthSignal.
+const coarsePointerQuery = window.matchMedia
+  ? window.matchMedia("(pointer: coarse)")
+  : null;
+const coarsePointerSignal = signal(
+  coarsePointerQuery ? coarsePointerQuery.matches : false,
+);
+if (coarsePointerQuery) {
+  coarsePointerQuery.addEventListener("change", () => {
+    coarsePointerSignal.value = coarsePointerQuery.matches;
+  });
+}
+
 installImportMetaCssBuild(import.meta);/**
  * Regroup CSS vars that makes sense to share across all navi components.
  */
@@ -146,6 +162,10 @@ const css = /* css */`
          Override this single variable to apply a consistent brand color across
          all components that need to stand out. */
       --navi-accent-color: rgb(3, 30, 60);
+      /* The surface a control's content sits on — the "paper" behind the text.
+         Fields use it whenever they need a solid background (their default
+         background, a transparent field being edited, …). */
+      --navi-surface-color: light-dark(#ffffff, #1c1c1e);
       --navi-color-white: white;
       --navi-color-dark: rgb(55, 60, 69);
 
@@ -180,6 +200,10 @@ const css = /* css */`
          discrete:  unobtrusive elements that shouldn't compete for attention
          hint:      barely-there color, watermarks, ghost placeholders */
       --navi-color-secondary: color-mix(in srgb, currentColor 80%, transparent);
+      /* The line that separates two regions of one surface — a scrolling area's
+         header from what scrolls under it, for instance. Not a border: the
+         separation belongs to the layout, not to the box that draws it. */
+      --navi-separator-color-default: #d1d9e0;
       --navi-color-emphasis: color-mix(in srgb, currentColor 50%, black);
       --navi-color-discrete: color-mix(in srgb, currentColor 60%, transparent);
       --navi-color-hint: color-mix(in srgb, currentColor 25%, transparent);
@@ -221,5 +245,5 @@ effect(() => {
   document.documentElement.style.setProperty("--navi-vvh", `${visualViewportHeightSignal.value}px`);
 });
 
-export { installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
+export { coarsePointerSignal, installImportMetaCssBuild, visualViewportHeightSignal, visualViewportWidthSignal, windowHeightSignal, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi_side_effects.js.map

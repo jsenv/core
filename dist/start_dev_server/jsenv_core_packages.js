@@ -1,6 +1,6 @@
 import { createSupportsColor, isUnicodeSupported, eastAsianWidth, clearTerminal, eraseLines } from "./jsenv_core_node_modules.js";
 import { stripVTControlCharacters } from "node:util";
-import { readFileSync, existsSync, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, watch, realpathSync } from "node:fs";
+import { readFileSync, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, watch, realpathSync } from "node:fs";
 import { extname, basename, dirname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -1978,7 +1978,7 @@ const compareFileUrls = (a, b) => {
   return comparePathnames(new URL(a).pathname, new URL(b).pathname);
 };
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -2001,7 +2001,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$2) {
+  if (!isWindows$3) {
     return url;
   }
 
@@ -2111,6 +2111,457 @@ const readPackageAtOrNull = (packageDirectoryUrl) => {
   } catch {
     throw new Error(`Invalid package configuration at ${packageJsonFileUrl}`);
   }
+};
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+
+  const callbackListOnce = {};
+
+  const add = (callback) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "add", status });
+      return removeNoop;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    // don't register twice
+    const existingCallback = callbacks.find((callbackCandidate) => {
+      return callbackCandidate === callback;
+    });
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        }
+
+        // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = (param) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "call", status });
+      return [];
+    }
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified";
+    // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+    callbacks = null;
+    currentCallbackIndex = -1;
+
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({ action, status }) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(
+      `"${action}" should not happen when callback list is ${status}`,
+      {
+        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+        detail: `Code is potentially executed when it should not`,
+      },
+    );
+  } else {
+    console.warn(
+      `"${action}" should not happen when callback list is ${status}`,
+    );
+  }
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`,
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+
+
+const Abort = {
+  isAbortError: (error) => {
+    return error && error.name === "AbortError";
+  },
+
+  startOperation: () => {
+    return createOperation();
+  },
+
+  throwIfAborted: (signal) => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  },
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController();
+  // const abortOperation = (value) => abortController.abort(value)
+  const operationSignal = operationAbortController.signal;
+
+  // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expect
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  };
+
+  // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+  const addAbortCallback = (callback) => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = (callback) => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({ abortAfterEnd = false } = {}) => {
+    await Promise.all(endCallbackList.notify());
+
+    // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (
+    signal,
+    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+  ) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks(
+      {
+        operation_abort: (cb) => {
+          return addAbortCallback(cb);
+        },
+        operation_end: (cb) => {
+          return addEndCallback(cb);
+        },
+        child_abort: (cb) => {
+          return addEventListener(signal, "abort", cb);
+        },
+      },
+      (winner) => {
+        const raceEffects = {
+          // Both "operation_abort" and "operation_end"
+          // means we don't care anymore if the child aborts.
+          // So we can:
+          // - remove "abort" event listener on child (done by raceCallback)
+          // - remove abort callback on operation (done by raceCallback)
+          // - remove end callback on operation (done by raceCallback)
+          // - call any custom cancel function
+          operation_abort: () => {
+            applyAbortEffects();
+            applyRemoveEffects();
+          },
+          operation_end: () => {
+            // Exists to
+            // - remove abort callback on operation
+            // - remove "abort" event listener on child
+            // - call any custom cancel function
+            applyRemoveEffects();
+          },
+          child_abort: () => {
+            applyAbortEffects();
+            operationAbortController.abort();
+          },
+        };
+        raceEffects[winner.name](winner.value);
+      },
+    );
+
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = (abortSourceCallback) => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop,
+    };
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+    abortSource.signal = abortSourceSignal;
+    if (operationSignal.aborted) {
+      return abortSource;
+    }
+    const returnValue = abortSourceCallback((value) => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        if (typeof returnValue === "function") {
+          returnValue();
+        }
+        abortSource.cleaned = true;
+      },
+    });
+    abortSource.remove = removeAbortSignal;
+    return abortSource;
+  };
+
+  const timeout = (ms) => {
+    return addAbortSource((abort) => {
+      const timeoutId = setTimeout(abort, ms);
+      // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
+  const withSignal = async (asyncCallback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = (callback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    fork,
+    timeout,
+    wait,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end,
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
 };
 
 /*
@@ -2716,6 +3167,43 @@ const URL_META = {
   createFilter,
 };
 
+const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
+  const directoryUrl = assertAndNormalizeDirectoryUrl(url);
+  const directoryUrlObject = new URL(directoryUrl);
+  const startMs = Date.now();
+  let attemptCount = 0;
+
+  const attempt = async () => {
+    try {
+      const names = await new Promise((resolve, reject) => {
+        readdir(directoryUrlObject, (error, names) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(names);
+          }
+        });
+      });
+      return names.map(encodeURIComponent);
+    } catch (e) {
+      // https://nodejs.org/dist/latest-v13.x/docs/api/errors.html#errors_common_system_errors
+      if (e.code === "EMFILE" || e.code === "ENFILE") {
+        attemptCount++;
+        const nowMs = Date.now();
+        const timeSpentWaiting = nowMs - startMs;
+        if (timeSpentWaiting > emfileMaxWait) {
+          throw e;
+        }
+        await new Promise((resolve) => setTimeout(resolve), attemptCount);
+        return await attempt();
+      }
+      throw e;
+    }
+  };
+
+  return attempt();
+};
+
 const generateWindowsEPERMErrorMessage = (
   error,
   { operation, path },
@@ -2735,6 +3223,209 @@ const generateWindowsEPERMErrorMessage = (
   message += "\n";
   message += error.stack;
   return message;
+};
+
+const writeEntryPermissions = async (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  {
+    binaryFlags = permissions;
+  }
+
+  return new Promise((resolve, reject) => {
+    chmod(new URL(sourceUrl), binaryFlags, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+const isWindows$2 = process.platform === "win32";
+
+const readEntryStat = async (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return readStat(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$2
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: async (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              await writeEntryPermissions(sourceUrl, 0o666);
+              const stats = await readStat(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                generateWindowsEPERMErrorMessage(e, {
+                  operation: "stats",
+                  path: sourcePath,
+                }),
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const readStat = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? stat : lstat;
+
+  return new Promise((resolve, reject) => {
+    nodeMethod(sourcePath, (error, statsObject) => {
+      if (error) {
+        if (handleNotFoundError && error.code === "ENOENT") {
+          resolve(handleNotFoundError(error));
+        } else if (
+          handlePermissionDeniedError &&
+          (error.code === "EPERM" || error.code === "EACCES")
+        ) {
+          resolve(handlePermissionDeniedError(error));
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve(statsObject);
+      }
+    });
+  });
+};
+
+const collectFiles = async ({
+  signal = new AbortController().signal,
+  directoryUrl,
+  associations,
+  predicate,
+}) => {
+  const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  associations = URL_META.resolveAssociations(associations, rootDirectoryUrl);
+
+  const collectOperation = Abort.startOperation();
+  collectOperation.addAbortSignal(signal);
+
+  const matchingFileResultArray = [];
+  const visitDirectory = async (directoryUrl) => {
+    collectOperation.throwIfAborted();
+    const directoryItems = await readDirectory(directoryUrl);
+
+    await Promise.all(
+      directoryItems.map(async (directoryItem) => {
+        const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
+        collectOperation.throwIfAborted();
+        const directoryChildNodeStats = await readEntryStat(
+          directoryChildNodeUrl,
+          {
+            // we ignore symlink because recursively traversed
+            // so symlinked file will be discovered.
+            // Moreover if they lead outside of directoryPath it can become a problem
+            // like infinite recursion of whatever.
+            // that we could handle using an object of pathname already seen but it will be useless
+            // because directoryPath is recursively traversed
+            followLink: false,
+          },
+        );
+
+        if (directoryChildNodeStats.isDirectory()) {
+          const subDirectoryUrl = `${directoryChildNodeUrl}/`;
+          if (
+            !URL_META.urlChildMayMatch({
+              url: subDirectoryUrl,
+              associations,
+              predicate,
+            })
+          ) {
+            return;
+          }
+          await visitDirectory(subDirectoryUrl);
+          return;
+        }
+
+        if (directoryChildNodeStats.isFile()) {
+          const meta = URL_META.applyAssociations({
+            url: directoryChildNodeUrl,
+            associations,
+          });
+          if (!predicate(meta)) return;
+          const relativeUrl = urlToRelativeUrl(
+            directoryChildNodeUrl,
+            rootDirectoryUrl,
+          );
+          matchingFileResultArray.push({
+            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            relativeUrl: decodeURIComponent(relativeUrl),
+            meta,
+            fileStats: directoryChildNodeStats,
+          });
+          return;
+        }
+      }),
+    );
+  };
+
+  try {
+    await visitDirectory(rootDirectoryUrl);
+
+    // When we operate on thoose files later it feels more natural
+    // to perform operation in the same order they appear in the filesystem.
+    // It also allow to get a predictable return value.
+    // For that reason we sort matchingFileResultArray
+    matchingFileResultArray.sort((leftFile, rightFile) => {
+      return comparePathnames(leftFile.relativeUrl, rightFile.relativeUrl);
+    });
+    return matchingFileResultArray;
+  } finally {
+    await collectOperation.end();
+  }
 };
 
 const writeEntryPermissionsSync = (source, permissions) => {
@@ -6671,4 +7362,4 @@ const isResponseEligibleForIntegrityValidation = (response) => {
   return ["basic", "cors", "default"].includes(response.type);
 };
 
-export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, CONTENT_TYPE, DATA_URL, JS_QUOTES, RUNTIME_COMPAT, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, collectFiles, compareFileUrls, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, errorToHTML, formatError, generateContentFrame, getCallerPosition, getExtensionsToTry, injectQueryParams, injectQueryParamsIntoSpecifier, isFileSystemPath, isSpecifierForNodeBuiltin, lookupPackageDirectory, moveUrl, normalizeImportMap, normalizeUrl, readCustomConditionsFromProcessArgs, readEntryStatSync, readPackageAtOrNull, registerDirectoryLifecycle, registerFileLifecycle, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsOrIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
