@@ -150,7 +150,7 @@ export const stateSignal = (defaultValue, options = {}) => {
     const existingEntry = globalSignalRegistry.get(signalIdString);
     if (!hotReloading) {
       throw new Error(
-        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()})`,
+        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()}). If this is the same stateSignal() call site running twice, the module was evaluated twice — check the network tab for the same file requested both bare and with "?hot=".`,
       );
     }
     // Same call site re-executing during a partial reload: replace the entry.

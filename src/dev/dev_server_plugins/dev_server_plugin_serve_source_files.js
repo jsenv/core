@@ -318,9 +318,20 @@ export const devServerPluginServeSourceFiles = ({
               // dependency: the file re-requested did not change, one below
               // it did), so isValid() alone cannot catch this.
               !request.searchParams.has("hot") &&
+              // ...and the mirror guard: content cooked UNDER a "?hot" request
+              // carries "?hot" in its rewritten references, and is correct for
+              // that request only. Served from memory to a normal request (a
+              // fresh tab), the browser would then load "file.js" from one
+              // importer and "file.js?hot=..." from another — the same module
+              // evaluated twice, which breaks anything module-level (e.g. a
+              // signal registry throwing on duplicate ids). Re-cooking under
+              // the normal request rewrites the references clean.
+              !urlInfo.contentCookedForHotRequest &&
               urlInfo.isValid();
             if (!servableFromMemory) {
               await urlInfo.cook({ request, reference });
+              urlInfo.contentCookedForHotRequest =
+                request.searchParams.has("hot");
             }
             let { response } = urlInfo;
             if (response) {
