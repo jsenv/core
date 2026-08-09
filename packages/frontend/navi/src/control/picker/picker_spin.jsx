@@ -59,6 +59,10 @@ const css = /* css */ `
   .navi_picker_spin {
     /* What the loading outline is drawn around. */
     position: relative;
+    /* Written in the control font, like the picker it wraps: the day and its
+       two chevrons are a control, not running text. */
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
     /* Framed like every other control (see navi_css_vars.js): what one steps
        through is a value one edits, and a box around it is what says so. Said
        as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
