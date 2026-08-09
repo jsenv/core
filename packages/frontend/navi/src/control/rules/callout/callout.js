@@ -1248,8 +1248,15 @@ const canContainCallout = (element) => {
   if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
     return false;
   }
-  if (element.tagName === "BUTTON") {
-    // callout itself contains a button, browser would not let that happen
+  if (
+    element.tagName === "BUTTON" ||
+    element.getAttribute("role") === "button"
+  ) {
+    // Never mount the callout inside a button, native or role="button":
+    // - a <button> cannot contain the callout's own close button
+    // - presses inside the callout would bubble into the button's own press
+    //   handlers: a preventDefault there makes the callout text unselectable,
+    //   and a handler that opens the callout re-opens it (visible blink)
     return false;
   }
   return true;
