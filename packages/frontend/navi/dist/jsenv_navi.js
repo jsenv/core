@@ -6521,6 +6521,13 @@ const DIMENSION_PROPS = {
     const inHorizontalFlexFlow =
       parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     if (inHorizontalFlexFlow) {
+      if (value === "content") {
+        // flex-basis stays auto: the item still takes the free space, but its
+        // content size is what line-breaking sees — so in a flexWrap parent a
+        // neighbor that no longer fits wraps to the next line. With basis 0%
+        // (below) nothing ever wraps: every item claims a size of zero.
+        return { flexGrow: 1 };
+      }
       // Parent is flex-x: grow as flex item
       return { flexGrow: 1, flexBasis: "0%" };
     }
@@ -6540,6 +6547,11 @@ const DIMENSION_PROPS = {
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
     if (inVerticalFlexFlow) {
+      if (value === "content") {
+        // Same as expandX="content": grow from the content size, so a
+        // flexWrap parent can wrap.
+        return { flexGrow: 1 };
+      }
       // Parent is flex-y: grow as flex item
       return { flexGrow: 1, flexBasis: "0%" };
     }
@@ -17435,8 +17447,12 @@ const canContainCallout = element => {
   if (VOID_ELEMENT_TAG_NAMES.has(element.tagName)) {
     return false;
   }
-  if (element.tagName === "BUTTON") {
-    // callout itself contains a button, browser would not let that happen
+  if (element.tagName === "BUTTON" || element.getAttribute("role") === "button") {
+    // Never mount the callout inside a button, native or role="button":
+    // - a <button> cannot contain the callout's own close button
+    // - presses inside the callout would bubble into the button's own press
+    //   handlers: a preventDefault there makes the callout text unselectable,
+    //   and a handler that opens the callout re-opens it (visible blink)
     return false;
   }
   return true;
@@ -35070,7 +35086,7 @@ installImportMetaCssBuild(import.meta);/**
  * - variant="discrete" + backgroundColor: the color applies at rest and hover,
  *   and the field goes transparent while focused.
  */
-const css$D = /* css */`
+const inputCss = /* css */`
   @layer navi {
     .navi_input {
       --border-radius: var(--navi-control-border-radius);
@@ -35401,7 +35417,7 @@ const useInputTextualProps = props => {
   });
 };
 const InputTextualUI = props => {
-  import.meta.css = [css$D, "@jsenv/navi/src/control/input/input_textual.jsx"];
+  import.meta.css = [inputCss, "@jsenv/navi/src/control/input/input_textual.jsx"];
   // Spacing props travel to CSS as a raw custom property value, so the size
   // keywords have to become lengths here — "s" reaching CSS untouched makes the
   // declaration invalid, silently, and the gap just goes away.
@@ -35520,6 +35536,9 @@ const RealInput = ({
     "navi-max-length": maxLength
   });
 };
+
+// Shared with textarea.jsx: a textarea is styled as a .navi_input box, so the
+// two read the same style props and pseudo states.
 const InputStyleCSSVars = {
   "slotSpacing": "--slot-spacing",
   "outlineWidth": "--outline-width",
@@ -36058,7 +36077,7 @@ installImportMetaCssBuild(import.meta);/**
  * This means an editable thing MUST have a parent with position relative that wraps the content and the eventual editable input
  *
  */
-const css$C = /* css */`
+const css$D = /* css */`
   .navi_editable_wrapper {
     --inset-top: 0px;
     --inset-right: 0px;
@@ -36107,7 +36126,7 @@ const useEditionController = () => {
   };
 };
 const Editable = props => {
-  import.meta.css = [css$C, "@jsenv/navi/src/control/edition/editable.jsx"];
+  import.meta.css = [css$D, "@jsenv/navi/src/control/edition/editable.jsx"];
   let {
     children,
     action,
@@ -36521,7 +36540,7 @@ HTMLFormElement.prototype.requestSubmit = function (submitter) {
 //   form.dispatchEvent(customEvent);
 // };
 
-installImportMetaCssBuild(import.meta);const css$B = /* css */`
+installImportMetaCssBuild(import.meta);const css$C = /* css */`
   .navi_group {
     --group-border-width: 1px;
 
@@ -36617,7 +36636,7 @@ const Group = ({
   vertical = row,
   ...props
 }) => {
-  import.meta.css = [css$B, "@jsenv/navi/src/control/group.jsx"];
+  import.meta.css = [css$C, "@jsenv/navi/src/control/group.jsx"];
   return jsx(Box, {
     baseClassName: "navi_group",
     "data-vertical": vertical ? "" : undefined,
@@ -37027,7 +37046,7 @@ installImportMetaCssBuild(import.meta);/**
  * pair. One popup holding slides of its own contents has no such problem — and
  * it is the same component in the document, in a dialog or in a popover.
  */
-const css$A = /* css */`
+const css$B = /* css */`
   /* Every slide in the same grid cell: the box then measures itself on the
      LARGEST of them, in both directions, without anything being measured by
      hand — which is also why nothing here resizes as the slides change. Each
@@ -37325,7 +37344,7 @@ const SlideContainer = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$A, "@jsenv/navi/src/layout/slide_container.jsx"];
+  import.meta.css = [css$B, "@jsenv/navi/src/layout/slide_container.jsx"];
   const debugFocus = useDebugFocus();
   const trackRef = useRef();
   // The box itself: it is what takes the keyboard when what is on screen holds
@@ -39925,7 +39944,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$z = /* css */`
+const css$A = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -40332,7 +40351,7 @@ const css$z = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$z, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$A, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -41150,7 +41169,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$y = /* css */`
+const css$z = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -41517,7 +41536,7 @@ const css$y = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$y, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$z, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -42481,7 +42500,7 @@ installImportMetaCssBuild(import.meta);/**
  * pass through untouched via `...rest` to whichever of Popover/Dialog
  * actually renders.
  */
-const css$x = /* css */`
+const css$y = /* css */`
   @layer navi {
     .navi_popup {
       --popup-border-radius: var(--navi-popup-border-radius);
@@ -42575,7 +42594,7 @@ const css$x = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popup = props => {
-  import.meta.css = [css$x, "@jsenv/navi/src/layout/popup.jsx"];
+  import.meta.css = [css$y, "@jsenv/navi/src/layout/popup.jsx"];
   const {
     mode: modeProp,
     maxWidth,
@@ -42718,7 +42737,7 @@ const commitSubtree = (controller, e) => {
   }
 };
 
-installImportMetaCssBuild(import.meta);const css$w = /* css */`
+installImportMetaCssBuild(import.meta);const css$x = /* css */`
   .navi_picker {
     /* Sizing ceilings (maxmax), background, box-shadow, outline, padding,
        overflow... are already handled correctly by Popup/Popover/Dialog
@@ -42830,7 +42849,7 @@ installImportMetaCssBuild(import.meta);const css$w = /* css */`
   }
 `;
 const PickerCustomResolver = props => {
-  import.meta.css = [css$w, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
+  import.meta.css = [css$x, "@jsenv/navi/src/control/picker/picker_custom.jsx"];
   if (props.children === undefined) {
     return jsx(PickerNative, {
       ...props
@@ -43475,7 +43494,7 @@ const LoadingIndicator = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$v = /* css */`
+installImportMetaCssBuild(import.meta);const css$w = /* css */`
   @layer navi {
     .navi_separator {
       --size: 1px;
@@ -43553,7 +43572,7 @@ const Separator = ({
   style,
   ...props
 }) => {
-  import.meta.css = [css$v, "@jsenv/navi/src/layout/separator.jsx"];
+  import.meta.css = [css$w, "@jsenv/navi/src/layout/separator.jsx"];
   return jsx(Box, {
     as: vertical ? "span" : "hr",
     ...props,
@@ -44010,7 +44029,7 @@ const ListItemFooter = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$u = /* css */`
+installImportMetaCssBuild(import.meta);const css$v = /* css */`
   @layer navi {
     .navi_list_container[navi-selectable] {
       /* Focus outline */
@@ -44214,7 +44233,7 @@ const ListSelectableResolver = props => {
 };
 const ListSelectable = props => {
   const Next = useNextResolver();
-  import.meta.css = [css$u, "@jsenv/navi/src/control/list/list_selectable.jsx"];
+  import.meta.css = [css$v, "@jsenv/navi/src/control/list/list_selectable.jsx"];
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
@@ -44756,7 +44775,7 @@ const SeparatorContext = createContext(null);
 // Set by <List itemTransition>: each row then gets a view-transition-name of
 // its own, so a change wrapped in a view transition animates row by row.
 const ItemTransitionContext = createContext(false);
-const css$t = /* css */`
+const css$u = /* css */`
   @layer navi {
     .navi_list_container {
       --list-outline-width: 1px;
@@ -45244,7 +45263,7 @@ const css$t = /* css */`
   }
 `;
 const ListUI = props => {
-  import.meta.css = [css$t, "@jsenv/navi/src/control/list/list.jsx"];
+  import.meta.css = [css$u, "@jsenv/navi/src/control/list/list.jsx"];
   const {
     ref,
     renderBudget: renderBudgetProp = RENDER_BUDGET_DEFAULT,
@@ -46809,7 +46828,7 @@ const PickerPresetResolver = props => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$s = /* css */`
+installImportMetaCssBuild(import.meta);const css$t = /* css */`
   @layer navi {
   }
   .navi_badge {
@@ -46888,7 +46907,7 @@ const Badge = ({
   className,
   ...props
 }) => {
-  import.meta.css = [css$s, "@jsenv/navi/src/text/badge.jsx"];
+  import.meta.css = [css$t, "@jsenv/navi/src/text/badge.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   const {
@@ -46935,7 +46954,7 @@ const BadgeButton = props => {
 };
 Badge.Button = BadgeButton;
 
-installImportMetaCssBuild(import.meta);const css$r = /* css */`
+installImportMetaCssBuild(import.meta);const css$s = /* css */`
   @layer navi {
   }
   .navi_badge_list {
@@ -46960,7 +46979,7 @@ const BadgeList = ({
   max,
   ...props
 }) => {
-  import.meta.css = [css$r, "@jsenv/navi/src/text/badge_list.jsx"];
+  import.meta.css = [css$s, "@jsenv/navi/src/text/badge_list.jsx"];
   const measureRef = useRef();
   const visibleRef = useRef();
   useLayoutEffect(() => {
@@ -47035,7 +47054,7 @@ const BadgeList = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$q = /* css */`
+installImportMetaCssBuild(import.meta);const css$r = /* css */`
   .navi_color {
     display: block;
     aspect-ratio: 1/1;
@@ -47066,7 +47085,7 @@ const Color = ({
   children,
   ...rest
 }) => {
-  import.meta.css = [css$q, "@jsenv/navi/src/text/color.jsx"];
+  import.meta.css = [css$r, "@jsenv/navi/src/text/color.jsx"];
   const color = children || undefined;
   return jsx(Box, {
     as: "span",
@@ -47521,7 +47540,7 @@ const PickerFileUI = () => {
   return String(value);
 };
 
-installImportMetaCssBuild(import.meta);const css$p = /* css */`
+installImportMetaCssBuild(import.meta);const css$q = /* css */`
   @layer navi {
     .navi_picker {
       --picker-border-radius: var(--navi-control-border-radius);
@@ -47847,7 +47866,7 @@ installImportMetaCssBuild(import.meta);const css$p = /* css */`
   }
 `;
 const PickerButton = props => {
-  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker.jsx"];
+  import.meta.css = [css$q, "@jsenv/navi/src/control/picker/picker.jsx"];
   if (typeof props.maxLines === "string") {
     props.maxLines = parseInt(props.maxLines);
   }
@@ -48305,7 +48324,7 @@ installImportMetaCssBuild(import.meta);/**
  * is what keeps the focus where the travel happens instead of moving it into a
  * slide that is about to leave.
  */
-const css$o = /* css */`
+const css$p = /* css */`
   .navi_picker_spin {
     /* What the loading outline is drawn around. */
     position: relative;
@@ -48544,7 +48563,7 @@ const DaySpin = ({
   nextLabel,
   ...rest
 }) => {
-  import.meta.css = [css$o, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
+  import.meta.css = [css$p, "@jsenv/navi/src/control/picker/picker_spin.jsx"];
   const id = useId();
   const containerId = `${id}_days`;
   const pickerId = `${id}_picker`;
@@ -48939,7 +48958,7 @@ const addDays = (day, count) => {
 };
 
 installImportMetaCssBuild(import.meta);// TOFIX: select in data then reset, it reset to red/blue instead of red/blue/green
-const css$n = /* css */`
+const css$o = /* css */`
   .navi_checkbox_group {
     border-style: solid;
 
@@ -48959,7 +48978,7 @@ const CheckboxGroup = props => {
   return checkboxGroup;
 };
 const CheckboxGroupInterface = props => {
-  import.meta.css = [css$n, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
+  import.meta.css = [css$o, "@jsenv/navi/src/control/input/checkbox_group.jsx"];
   const {
     ref
   } = props;
@@ -48987,6 +49006,197 @@ const CheckboxGroupInterface = props => {
       ...childrenWrapperProps,
       children: props.children
     })
+  });
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * Multiline text control that grows with what is typed.
+ *
+ * Autosize is native: `field-sizing: content` lets the browser size the
+ * textarea from its value — no hidden mirror textarea to measure against (the
+ * technique libraries used before the property existed). `minRows`/`maxRows`
+ * become min/max heights in `lh` units on top of it; past `maxRows` the
+ * content scrolls.
+ *
+ * TextareaCharCount is the counter that goes with it, and the caller places
+ * it: under the box, in a form footer, next to a label — fed with the same
+ * value/signal as the textarea. The textarea draws no counter of its own.
+ *
+ * Styled as a `.navi_input` box (border, background, focus ring, readonly and
+ * disabled fades, variants): one look for everything one types into. The
+ * shared sheet is registered here too — a page may render a Textarea without
+ * any Input.
+ */
+const css$n = /* css */`
+  .navi_input.navi_textarea {
+    .navi_control_input {
+      min-height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+      /* Above maxRows the box stops growing and the content scrolls. The
+         99999 fallback means "no cap" without needing a conditional rule. */
+      max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
+      field-sizing: content;
+      /* Explicit, never normal: minRows/maxRows are lengths in lh, and with
+         line-height normal the lh unit resolves to a theoretical value that
+         does not match the real rendered line — the box then jumps by a few
+         pixels the moment the first character replaces the theory with a real
+         line. One number for both keeps every row count exact. */
+      line-height: 1.5;
+      /* The control grows itself; resizable below hands the handle back. */
+      resize: none;
+      overflow: auto;
+    }
+    &[data-resizable] .navi_control_input {
+      height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+      /* The two are exclusive: with field-sizing content the browser removes
+         the resize handle (the size follows the content, there is nothing to
+         drag). resizable means the hand takes over — fixed sizing, starting
+         at minRows, and the drag writes its own inline height from there. */
+      field-sizing: fixed;
+      resize: vertical;
+    }
+  }
+  .navi_textarea_char_count {
+    color: color-mix(in srgb, currentColor 60%, transparent);
+    font-size: 0.75em;
+    user-select: none;
+  }
+`;
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   name?: string,
+ *   minRows?: number,
+ *   maxRows?: number,
+ *   resizable?: boolean,
+ *   maxLength?: number,
+ *   width?: string,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [minRows=1.5] Height the empty control starts at, in lines.
+ *   The default shows half of a second line: enough to read "multiline" at a
+ *   glance without the height of a full extra row.
+ * @param {number} [maxRows] Lines after which the control stops growing and
+ *   scrolls instead. Without it the control grows with its content.
+ * @param {boolean} [resizable] Give the browser's vertical resize handle back.
+ *   A manual resize takes over from the automatic growth.
+ * @param {number} [maxLength] The character limit, validated at submit. Pair
+ *   with `maxLengthGuard` to block typing past it, and render a
+ *   TextareaCharCount to show it.
+ * @param {string} [width="35ch"] The control's width. Fixed on purpose: with
+ *   field-sizing the width would otherwise follow the longest line, and a box
+ *   that widens while one types is a box one chases.
+ */
+const Textarea = ({
+  // Destructured, never deleted off the props object: Preact reuses the same
+  // props object when an internal state update re-renders the component, so a
+  // delete would make these props vanish from the second render on (the box
+  // then jumps back to the default minRows at the first keystroke).
+  minRows = 1.5,
+  maxRows,
+  resizable,
+  width = "35ch",
+  ...props
+}) => {
+  import.meta.css = [inputCss + css$n, "@jsenv/navi/src/control/input/textarea.jsx"];
+  const defaultRef = useRef(null);
+  props.ref = props.ref || defaultRef;
+  const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
+    controlType: "input"
+  });
+  const {
+    basePseudoState,
+    children
+  } = hostProps;
+  // Children go through ControlChildrenWrapper below; inside the <textarea>
+  // element they would become its text content.
+  delete hostProps.children;
+  const loading = basePseudoState[":-navi-loading"];
+  delete rootProps.width;
+  hostProps.width = width;
+  return jsxs(Box, {
+    as: "span",
+    inline: true,
+    flex: true,
+    baseClassName: "navi_input",
+    className: "navi_textarea",
+    ...rootProps,
+    basePseudoState: basePseudoState,
+    "data-resizable": resizable ? "" : undefined,
+    styleCSSVars: InputStyleCSSVars,
+    pseudoStateSelector: ".navi_control_input",
+    pseudoClasses: InputPseudoClasses,
+    pseudoElements: InputPseudoElements,
+    "data-callout-anchor": ".navi_control_input",
+    style: {
+      "--textarea-min-rows": minRows,
+      "--textarea-max-rows": maxRows,
+      ...rootProps.style
+    },
+    children: [jsx(LoadingOutline, {
+      loading: loading,
+      color: "var(--loader-color)",
+      inset: -1
+    }), jsx(RealTextarea, {
+      ...hostProps
+    }), jsx(ControlChildrenWrapper, {
+      ...childrenWrapperProps,
+      children: children
+    })]
+  });
+};
+
+/**
+ * The counter that goes with a Textarea: "50/200" — how many characters are
+ * typed over how many the limit allows, the way Material writes it (just the
+ * count when there is no `maxLength`). Where it goes is the caller's call,
+ * which is why it is a separate component rather than something the textarea
+ * draws: put it under the box, in a form footer, next to a label, and feed it
+ * the same value or signal as the textarea.
+ *
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   maxLength?: number,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The text being counted. Say `signal` instead for a
+ *   two-way bound textarea: reading it here subscribes the count to it.
+ * @param {number} [maxLength] The limit, shown after the count ("50/200").
+ *   Without it the count stands alone.
+ */
+const TextareaCharCount = ({
+  value,
+  signal,
+  maxLength,
+  ...rest
+}) => {
+  import.meta.css = [css$n, "@jsenv/navi/src/control/input/textarea.jsx"];
+  const resolvedValue = signal ? signal.value : value;
+  const length = typeof resolvedValue === "string" ? resolvedValue.length : 0;
+  return jsx(Box, {
+    as: "span",
+    baseClassName: "navi_textarea_char_count",
+    ...rest,
+    children: maxLength === undefined ? length : `${length}/${maxLength}`
+  });
+};
+const RealTextarea = ({
+  maxLength,
+  ...domProps
+}) => {
+  const autoSelectReadOnlyProps = useAutoSelectReadOnly(domProps);
+  return jsx(Box, {
+    ...domProps,
+    as: "textarea",
+    baseClassName: "navi_control_input",
+    ...autoSelectReadOnlyProps,
+    // Native maxLength stays off, like RealInput in input_textual.jsx: the
+    // maxLengthGuard handles live blocking, the constraint validates at
+    // submit, and navi-max-length keeps the value readable from the DOM.
+    "navi-max-length": maxLength
   });
 };
 
@@ -58411,5 +58621,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
