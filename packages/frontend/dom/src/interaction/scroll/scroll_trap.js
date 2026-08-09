@@ -25,9 +25,14 @@ import { measureScrollbar } from "./scrollbar_size.js";
  *
  * @param {HTMLElement} element - The overlay element being shown. Its preceding
  *   siblings and all ancestor scroll containers will be scroll-locked.
+ * @param {Object} [options]
+ * @param {HTMLElement} [options.boundaryElement] - Only lock scroll containers
+ *   inside this element (itself included). For an overlay confined to a local
+ *   container rather than the viewport: the container's own scroll must stop,
+ *   the rest of the page keeps scrolling as usual.
  * @returns {() => void} Cleanup function that restores all modified styles.
  */
-export const trapScrollInside = (element) => {
+export const trapScrollInside = (element, { boundaryElement } = {}) => {
   const cleanupCallbackSet = new Set();
 
   // Collect every element to lock first (preceding scrollable siblings + all
@@ -41,7 +46,11 @@ export const trapScrollInside = (element) => {
     previous = previous.previousSibling;
   }
   for (const selfOrAncestorScroll of getSelfAndAncestorScrolls(element)) {
-    elementsToLock.push(selfOrAncestorScroll.scrollContainer);
+    const { scrollContainer } = selfOrAncestorScroll;
+    if (boundaryElement && !boundaryElement.contains(scrollContainer)) {
+      continue;
+    }
+    elementsToLock.push(scrollContainer);
   }
 
   // Phase 1 — MEASURE. Batch every layout/style read (scrollTop, scrollbar

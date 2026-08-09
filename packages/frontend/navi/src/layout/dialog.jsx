@@ -457,6 +457,10 @@ const css = /* css */ `
  *   at least a click-absorbing backdrop regardless of this prop.
  * @param {boolean} [props.scrollCapture] - Traps scroll gestures inside the
  *   dialog so the page/container behind it can't scroll while it's open.
+ *   A `layer="local"` dialog always locks its own positioned ancestor's
+ *   scroll while open (its backdrop only covers the scrollport, so scrolling
+ *   there would reveal uncovered content); this prop extends the lock to the
+ *   whole page.
  * @param {boolean|"auto"|"fading"|"scaling"|"sliding"|`slide-from-${string}`} [props.animation]
  *   - `true`/`"auto"` resolves to `"scaling"` for a centered `positionArea`,
  *   or a concrete `"slide-from-*"` direction otherwise. Any other explicit
@@ -894,6 +898,18 @@ const useDialogProps = (props) => {
     }
     if (scrollCapture) {
       addCleanup(trapScrollInside(dialogEl));
+    } else if (!isModal) {
+      // A local dialog is confined to its positioned ancestor, and so is its
+      // backdrop (inset: 0 covers the scrollport, not the scrolled content):
+      // letting that ancestor scroll would slide the dialog away and reveal
+      // content the backdrop does not cover. So its own container's scroll is
+      // always locked — trapScrollInside also swaps the scrollbar for an
+      // equivalent padding, so the width the dialog was sized against does not
+      // change. The rest of the page keeps scrolling: only `scrollCapture`
+      // (above) reaches that far.
+      addCleanup(
+        trapScrollInside(dialogEl, { boundaryElement: positionedAncestor }),
+      );
     }
 
     // Positioning: dialogEl is already shown (display: flex, per this
