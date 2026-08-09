@@ -30,10 +30,10 @@
   <body>
     <h1>Adresse avec autocomplete</h1>
     <p class="intro">
-      On tape, l'API adresse.data.gouv.fr suggère; choisir une suggestion
-      remplit les composants structurés en dessous, qui restent modifiables et
-      sont ce que le formulaire envoie. Une adresse tapée sans passer par une
-      suggestion est découpée au mieux.
+      On tape, l'API adresse.data.gouv.fr suggère. Les composants structurés en
+      dessous — ce que le formulaire envoie — se remplissent sur un geste
+      explicite: choisir une suggestion, ou le bouton qui découpe au mieux le
+      texte tapé. Ils restent modifiables à la main.
     </p>
     <div id="app"></div>
 
@@ -72,8 +72,10 @@
       const parseStreetLine = (line) => {
         let streetNumber = "";
         let streetType = "";
-        let rest = line.trim();
-        const numberMatch = rest.match(/^(\d+\s?(?:bis|ter)?)\s+(.*)$/i);
+        // espaces normalisés d'abord: les regex ci-dessous peuvent alors
+        // matcher un séparateur littéral, sans quantifieurs ambigus
+        let rest = line.trim().replace(/\s+/g, " ");
+        const numberMatch = rest.match(/^(\d+(?: ?(?:bis|ter))?) (.*)$/i);
         if (numberMatch) {
           streetNumber = numberMatch[1];
           rest = numberMatch[2];
@@ -89,15 +91,19 @@
           street_name: rest,
         };
       };
+      // Coupé autour du code postal (5 chiffres) plutôt qu'en une seule
+      // regex: avant lui la voie, après lui la ville
       const parseAddress = (text) => {
-        const match = text.match(/^(.*?)[,\s]+(\d{5})\s+(.+)$/);
-        if (!match) {
+        const postalMatch = text.match(/\b\d{5}\b/);
+        if (!postalMatch) {
           return { ...parseStreetLine(text), postal_code: "", city: "" };
         }
+        const streetPart = text.slice(0, postalMatch.index);
+        const cityPart = text.slice(postalMatch.index + 5);
         return {
-          ...parseStreetLine(match[1]),
-          postal_code: match[2],
-          city: match[3].trim(),
+          ...parseStreetLine(streetPart.replace(/[\s,]+$/, "")),
+          postal_code: postalMatch[0],
+          city: cityPart.replace(/^[\s,]+/, "").trim(),
         };
       };
       const formatAddress = (components) => {
@@ -161,11 +167,11 @@
         // l'abort de la requête en vol est géré ici (le signal d'abort d'une
         // action ne couvre que la durée de son run, fini immédiatement en
         // sync). actionDebounce fait toujours le debounce.
+        // Taper ne fait que chercher: les champs en dessous ne bougent que
+        // sur un geste explicite — choisir une suggestion, ou le bouton
+        // "Remplir les champs"
         const searchAddress = (value) => {
           const typed = (value || "").trim();
-          // ce qui avait été choisi ne décrit plus le texte: on retombe sur
-          // le découpage au mieux jusqu'au prochain choix
-          writeComponents(typed ? parseAddress(typed) : {});
           abortRef.current?.abort();
           if (typed.length < SUGGESTION_MIN_CHARS) {
             setSearching(false);
@@ -215,6 +221,13 @@
           abortRef.current?.abort();
           setSearching(false);
           setSuggestions(null);
+        };
+
+        // Le geste explicite pour une adresse tapée sans passer par une
+        // suggestion: elle est découpée au mieux dans les champs
+        const fillFromText = () => {
+          const typed = (textSignal.value || "").trim();
+          writeComponents(typed ? parseAddress(typed) : {});
         };
 
         return (
@@ -277,9 +290,16 @@
               </Popover>
             </Field>
 
+            {/* type="button": dans un Form, un bouton nu enverrait le
+                formulaire — celui-ci ne fait que reporter le texte */}
+            <Button type="button" action={fillFromText} paddingY="s">
+              ↓ Remplir les champs avec cette adresse
+            </Button>
+
             <Box flex="y" spacing="xs" alignX="start">
               <Text size="xs" color="secondary">
-                Remplis par la recherche ci-dessus, modifiables
+                Remplis en choisissant une suggestion ou via le bouton,
+                modifiables
               </Text>
               <Box flex="x" spacing="s" flexWrap>
                 <ComponentField
@@ -304,12 +324,14 @@
                   label="Code postal"
                   name="postal_code"
                   signal={componentSignals.postal_code}
+                  autoComplete="postal-code"
                   width="90px"
                 />
                 <ComponentField
                   label="Ville"
                   name="city"
                   signal={componentSignals.city}
+                  autoComplete="address-level2"
                   width="140px"
                 />
               </Box>
@@ -318,7 +340,18 @@
         );
       };
 
-      const ComponentField = ({ label, name, signal, width }) => (
+      // autoComplete: dire au navigateur ce qu'est chaque champ, pour que son
+      // autofill propose la bonne chose au lieu de deviner (un identifiant
+      // dans "nom de voie"...). Tokens standard: postal-code, address-level2
+      // (ville). La granularité s'arrête là — numéro/type/nom de voie n'ont
+      // pas de token, "off" empêche au moins le navigateur d'y improviser.
+      const ComponentField = ({
+        label,
+        name,
+        signal,
+        width,
+        autoComplete = "off",
+      }) => (
         <Field flex="y" spacingWithControl="xs">
           <Label>
             <Text size="xs" color="secondary">
@@ -328,6 +361,7 @@
           <Input
             name={name}
             signal={signal}
+            autoComplete={autoComplete}
             borderRadius="s"
             paddingX="s"
             paddingY="s"
@@ -339,7 +373,7 @@
       const App = () => (
         <FakeBackend>
           {({ action }) => (
-            <Form action={action} flex="y" spacing="m" expandX>
+            <Form action={action} flex="y" spacing="m" expandX alignX="start">
               <AddressField id="address" />
               <Button type="submit" paddingY="s" alignX="start">
                 Envoyer
