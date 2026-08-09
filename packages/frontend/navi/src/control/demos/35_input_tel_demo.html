@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Input tel demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 32px;
+        font-size: 1.4rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+        scroll-margin-top: 12px;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        scroll-margin-top: 16px;
+      }
+      p.desc {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Input, Link, Text } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children, ...rest }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag {...rest}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      const Variant = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          {children}
+        </Box>
+      );
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Input tel"
+            previous={{ href: "./34_textarea_demo.html", label: "Textarea" }}
+          />
+          <div class="demo-section">
+            <h2 style="margin: 0 0 4px">Sommaire</h2>
+            <DocumentToc />
+          </div>
+          <BasicsDemo />
+          <StatesDemo />
+          <CharGuardDemo />
+          <PrefixDemo />
+        </Box>
+      );
+
+      // ── Basics ────────────────────────────────────────────────────────────
+
+      const BasicsDemo = () => (
+        <div class="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <p class="desc">
+            <code>type="tel"</code> ouvre le clavier téléphone sur mobile ;
+            <code>autoComplete="tel"</code> propose le numéro connu du
+            navigateur.
+          </p>
+          <Input
+            type="tel"
+            name="phone"
+            placeholder="06 12 34 56 78"
+            autoComplete="tel"
+          />
+        </div>
+      );
+
+      // ── États ─────────────────────────────────────────────────────────────
+
+      const StatesDemo = () => (
+        <div class="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="readOnly">
+              <Input
+                type="tel"
+                value="06 12 34 56 78"
+                action={() => {}}
+                readOnly
+              />
+            </Variant>
+            <Variant caption="disabled">
+              <Input
+                type="tel"
+                value="06 12 34 56 78"
+                action={() => {}}
+                disabled
+              />
+            </Variant>
+            <Variant caption="loading">
+              <Input
+                type="tel"
+                value="06 12 34 56 78"
+                action={() => {}}
+                loading
+              />
+            </Variant>
+            <Variant caption="focus visible">
+              <Input
+                type="tel"
+                placeholder="06 12 34 56 78"
+                pseudoState={{ ":focus-visible": true }}
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── charGuard ─────────────────────────────────────────────────────────
+
+      const CharGuardDemo = () => (
+        <div class="demo-section">
+          <Heading id="char-guard">charGuard</Heading>
+          <p class="desc">
+            Taper des lettres dans chacun : le premier laisse tout passer, le
+            second ne prend que les caractères d'un numéro (chiffres, +, -,
+            parenthèses, espace).
+          </p>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="sans charGuard">
+              <Input type="tel" placeholder="06 12 34 56 78" />
+            </Variant>
+            <Variant caption="charGuard">
+              <Input type="tel" charGuard placeholder="06 12 34 56 78" />
+            </Variant>
+            <Variant caption="charGuard + maxLengthGuard={14}">
+              <Input
+                type="tel"
+                charGuard
+                maxLengthGuard={14}
+                placeholder="06 12 34 56 78"
+              />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      // ── Préfixe international ─────────────────────────────────────────────
+
+      const COUNTRIES = [
+        { code: "FR", dial: "+33", label: "🇫🇷 France" },
+        { code: "BE", dial: "+32", label: "🇧🇪 Belgique" },
+        { code: "CH", dial: "+41", label: "🇨🇭 Suisse" },
+        { code: "CA", dial: "+1", label: "🇨🇦 Canada" },
+      ];
+
+      const CountrySelectExample = () => {
+        const [dial, setDial] = useState("+33");
+        return (
+          <Box flex spacing="s" alignY="center">
+            <select
+              value={dial}
+              onChange={(e) => {
+                setDial(e.target.value);
+              }}
+              style="height: 100%"
+            >
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.dial}>
+                  {country.label} {country.dial}
+                </option>
+              ))}
+            </select>
+            <Input
+              type="tel"
+              charGuard
+              placeholder="6 12 34 56 78"
+              autoComplete="tel-national"
+            />
+          </Box>
+        );
+      };
+
+      const PrefixDemo = () => (
+        <div class="demo-section">
+          <Heading id="prefix">Préfixe international</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <Variant caption="préfixe fixe : un slot +33 devant le numéro national">
+              <Input
+                type="tel"
+                charGuard
+                placeholder="6 12 34 56 78"
+                autoComplete="tel-national"
+              >
+                <Input.UI.UnitSlot side="left">+33</Input.UI.UnitSlot>
+              </Input>
+            </Variant>
+            <Variant caption="préfixe au choix : un select de pays devant le champ">
+              <CountrySelectExample />
+            </Variant>
+          </Box>
+        </div>
+      );
+
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

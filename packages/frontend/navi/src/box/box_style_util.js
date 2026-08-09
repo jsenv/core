@@ -168,6 +168,13 @@ const DIMENSION_PROPS = {
     const inHorizontalFlexFlow =
       parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x";
     if (inHorizontalFlexFlow) {
+      if (value === "content") {
+        // flex-basis stays auto: the item still takes the free space, but its
+        // content size is what line-breaking sees — so in a flexWrap parent a
+        // neighbor that no longer fits wraps to the next line. With basis 0%
+        // (below) nothing ever wraps: every item claims a size of zero.
+        return { flexGrow: 1 };
+      }
       // Parent is flex-x: grow as flex item
       return { flexGrow: 1, flexBasis: "0%" };
     }
@@ -187,6 +194,11 @@ const DIMENSION_PROPS = {
     const inVerticalFlexFlow =
       parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y";
     if (inVerticalFlexFlow) {
+      if (value === "content") {
+        // Same as expandX="content": grow from the content size, so a
+        // flexWrap parent can wrap.
+        return { flexGrow: 1 };
+      }
       // Parent is flex-y: grow as flex item
       return { flexGrow: 1, flexBasis: "0%" };
     }

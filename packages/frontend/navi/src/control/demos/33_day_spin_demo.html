@@ -205,6 +205,20 @@
                 <Picker type="time" defaultValue="07:00" />
               </Box>
             </Variant>
+            <Variant
+              caption={`flexWrap + expandX="content" : le jour trop large pousse l'heure dessous`}
+            >
+              <Box
+                flex
+                flexWrap
+                spacing="m"
+                width="250px"
+                border="2px dashed #94a3b8"
+              >
+                <DaySpin defaultValue={TODAY} expandX="content" />
+                <Picker type="time" defaultValue="07:00" />
+              </Box>
+            </Variant>
           </Box>
 
           <Heading level={3} id="too-long">
