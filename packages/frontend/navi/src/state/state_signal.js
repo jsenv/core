@@ -11,7 +11,21 @@ const generateSignalId = () => {
   return id;
 };
 
+// While a partial reload re-executes app modules, a stateSignal call site
+// re-registering its ID is a re-execution, not a genuine duplicate — the ID
+// conflict check must not throw in that window (see the conflict check below).
+let hotReloading = false;
 if (import.meta.hot) {
+  // events is jsenv-specific; other tooling may inject a different import.meta.hot
+  const hotEvents = import.meta.hot.events;
+  if (hotEvents) {
+    hotEvents.beforePartialReload.addCallback(() => {
+      hotReloading = true;
+    });
+    hotEvents.afterPartialReload.addCallback(() => {
+      hotReloading = false;
+    });
+  }
   import.meta.hot.dispose(() => {
     globalSignalRegistry.clear();
     signalIdCounter = 0;
@@ -131,11 +145,22 @@ export const stateSignal = (defaultValue, options = {}) => {
   const signalId = id || generateSignalId();
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
+  let valueFromPreviousExecution;
   if (globalSignalRegistry.has(signalIdString)) {
-    const conflictInfo = globalSignalRegistry.get(signalIdString);
-    throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.getDefaultValue()})`,
-    );
+    const existingEntry = globalSignalRegistry.get(signalIdString);
+    if (!hotReloading) {
+      throw new Error(
+        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()})`,
+      );
+    }
+    // Same call site re-executing during a partial reload: replace the entry.
+    // Carry over the value only if the user had set a custom one, so a default
+    // changed in code takes effect on signals still following their default.
+    const existingValue = existingEntry.signal.peek();
+    if (existingEntry.options.isCustomValue(existingValue)) {
+      valueFromPreviousExecution = existingValue;
+    }
+    globalSignalRegistry.delete(signalIdString);
   }
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
@@ -260,7 +285,13 @@ export const stateSignal = (defaultValue, options = {}) => {
     // can reflect the current input state without silently correcting it.
     return validity.value;
   };
-  const preactSignal = signal(processValue(getFallbackValue()));
+  const preactSignal = signal(
+    processValue(
+      valueFromPreviousExecution === undefined
+        ? getFallbackValue()
+        : valueFromPreviousExecution,
+    ),
+  );
 
   // Override the value setter on the instance to intercept writes and apply processValue.
   // We do this on the instance (not the prototype) so preactSignal remains a real Signal
