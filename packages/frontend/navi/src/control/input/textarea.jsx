@@ -38,11 +38,23 @@ const css = /* css */ `
          99999 fallback means "no cap" without needing a conditional rule. */
       max-height: calc(var(--textarea-max-rows, 99999) * 1lh);
       field-sizing: content;
+      /* Explicit, never normal: minRows/maxRows are lengths in lh, and with
+         line-height normal the lh unit resolves to a theoretical value that
+         does not match the real rendered line — the box then jumps by a few
+         pixels the moment the first character replaces the theory with a real
+         line. One number for both keeps every row count exact. */
+      line-height: 1.5;
       /* The control grows itself; resizable below hands the handle back. */
       resize: none;
       overflow: auto;
     }
     &[data-resizable] .navi_control_input {
+      height: calc(var(--textarea-min-rows, 1.5) * 1lh);
+      /* The two are exclusive: with field-sizing content the browser removes
+         the resize handle (the size follows the content, there is nothing to
+         drag). resizable means the hand takes over — fixed sizing, starting
+         at minRows, and the drag writes its own inline height from there. */
+      field-sizing: fixed;
       resize: vertical;
     }
   }
@@ -80,15 +92,20 @@ const css = /* css */ `
  *   field-sizing the width would otherwise follow the longest line, and a box
  *   that widens while one types is a box one chases.
  */
-export const Textarea = (props) => {
+export const Textarea = ({
+  // Destructured, never deleted off the props object: Preact reuses the same
+  // props object when an internal state update re-renders the component, so a
+  // delete would make these props vanish from the second render on (the box
+  // then jumps back to the default minRows at the first keystroke).
+  minRows = 1.5,
+  maxRows,
+  resizable,
+  width = "35ch",
+  ...props
+}) => {
   import.meta.css = inputCss + css;
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
-  const { minRows = 1.5, maxRows, resizable, width = "35ch" } = props;
-  delete props.minRows;
-  delete props.maxRows;
-  delete props.resizable;
-  delete props.width;
 
   const [rootProps, hostProps, childrenWrapperProps] = useControlProps(props, {
     controlType: "input",
