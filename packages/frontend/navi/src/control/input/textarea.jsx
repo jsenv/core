@@ -154,11 +154,12 @@ export const Textarea = ({
 };
 
 /**
- * The counter that goes with a Textarea: how many characters remain before
- * `maxLength` — or how many are typed when there is no `maxLength`. Where it
- * goes is the caller's call, which is why it is a separate component rather
- * than something the textarea draws: put it under the box, in a form footer,
- * next to a label, and feed it the same value or signal as the textarea.
+ * The counter that goes with a Textarea: "50/200" — how many characters are
+ * typed over how many the limit allows, the way Material writes it (just the
+ * count when there is no `maxLength`). Where it goes is the caller's call,
+ * which is why it is a separate component rather than something the textarea
+ * draws: put it under the box, in a form footer, next to a label, and feed it
+ * the same value or signal as the textarea.
  *
  * @type {import("preact").FunctionComponent<{
  *   value?: string,
@@ -168,8 +169,8 @@ export const Textarea = ({
  * }>}
  * @param {string} [value] The text being counted. Say `signal` instead for a
  *   two-way bound textarea: reading it here subscribes the count to it.
- * @param {number} [maxLength] The limit to count down from. Without it the
- *   count simply shows how many characters are typed.
+ * @param {number} [maxLength] The limit, shown after the count ("50/200").
+ *   Without it the count stands alone.
  */
 export const TextareaCharCount = ({ value, signal, maxLength, ...rest }) => {
   import.meta.css = css;
@@ -178,7 +179,7 @@ export const TextareaCharCount = ({ value, signal, maxLength, ...rest }) => {
 
   return (
     <Box as="span" baseClassName="navi_textarea_char_count" {...rest}>
-      {maxLength === undefined ? length : maxLength - length}
+      {maxLength === undefined ? length : `${length}/${maxLength}`}
     </Box>
   );
 };
