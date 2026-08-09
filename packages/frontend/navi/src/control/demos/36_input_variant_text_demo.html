@@ -24,10 +24,6 @@
         font-size: 1.1rem;
         scroll-margin-top: 12px;
       }
-      h3 {
-        margin: 16px 0 4px;
-        font-size: 0.95rem;
-      }
       .demo-section {
         margin-bottom: 24px;
         padding: 24px;
@@ -41,8 +37,9 @@
         color: #555;
         font-size: 13px;
       }
-      /* A line the eye can watch while the control above it changes. */
+      /* A line the eye can hold on to while the control above it changes. */
       .ruler {
+        width: 100%;
         height: 2px;
         background: repeating-linear-gradient(
           to right,
@@ -84,14 +81,31 @@
         );
       };
 
-      const Variant = ({ caption, children }) => (
-        <Box flex="y" spacing="xs" alignX="start">
-          <Text size="s" color="#666">
-            {caption}
-          </Text>
-          {children}
-        </Box>
-      );
+      // Every example is the same control seen twice: the button flips it and
+      // nothing else changes, which is what makes a shift visible.
+      const Swap = ({ caption, children }) => {
+        const [asText, setAsText] = useState(true);
+
+        return (
+          <Box flex="y" spacing="xs" alignX="start">
+            <Box flex alignY="center" spacing="s">
+              <Button onClick={() => setAsText(!asText)}>
+                {asText ? "texte" : "champ"}
+              </Button>
+              {caption && (
+                <Text size="s" color="#666">
+                  {caption}
+                </Text>
+              )}
+            </Box>
+            {children(asText ? "text" : undefined)}
+          </Box>
+        );
+      };
+
+      const NAME = "Damien Maillard";
+      const LONG_NAME =
+        "Jean-Baptiste Grenouille de la Fontaine-sur-Mer et de Montsoreau";
 
       const App = () => (
         <Box flex="y" spacing="l">
@@ -105,7 +119,7 @@
           </div>
           <BasicsDemo />
           <StatesDemo />
-          <SwapDemo />
+          <ShiftDemo />
           <MetricsDemo />
           <PrefixDemo />
           <FormDemo />
@@ -117,177 +131,162 @@
       const BasicsDemo = () => (
         <div class="demo-section">
           <Heading id="nominal">Cas nominal</Heading>
-          <Box flex="y" spacing="m" alignX="start">
-            <Field flex="y">
-              <Label>Nom</Label>
-              <Input
-                variant="text"
-                value="Damien Maillard"
-                paddingX="s"
-                paddingY="s"
-              />
-            </Field>
-            <Field flex="y">
-              <Label>Nom</Label>
-              <Input value="Damien Maillard" paddingX="s" paddingY="s" />
-            </Field>
-          </Box>
+          <Swap>
+            {(variant) => (
+              <Field flex="y">
+                <Label>Nom</Label>
+                <Input
+                  variant={variant}
+                  defaultValue={NAME}
+                  paddingX="s"
+                  paddingY="s"
+                />
+              </Field>
+            )}
+          </Swap>
         </div>
       );
 
       // ── États ─────────────────────────────────────────────────────────────
 
-      const LONG_NAME =
-        "Jean-Baptiste Grenouille de la Fontaine-sur-Mer et de Montsoreau";
-
       const StatesDemo = () => (
         <div class="demo-section">
           <Heading id="states">États</Heading>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="valeur">
-              <Input
-                variant="text"
-                value="Damien"
-                width="240px"
-                paddingX="s"
-                paddingY="s"
-              />
-            </Variant>
-            <Variant caption="valeur vide">
-              <Input
-                variant="text"
-                value=""
-                width="240px"
-                paddingX="s"
-                paddingY="s"
-              />
-            </Variant>
-            <Variant caption="valeur plus longue que la boîte">
-              <Input
-                variant="text"
-                value={LONG_NAME}
-                width="240px"
-                paddingX="s"
-                paddingY="s"
-              />
-            </Variant>
-            <Variant caption="la même, éditable">
-              <Input
-                value={LONG_NAME}
-                width="240px"
-                paddingX="s"
-                paddingY="s"
-              />
-            </Variant>
+            <Swap caption="valeur">
+              {(variant) => (
+                <Input
+                  variant={variant}
+                  defaultValue={NAME}
+                  width="240px"
+                  paddingX="s"
+                  paddingY="s"
+                />
+              )}
+            </Swap>
+            <Swap caption="valeur vide">
+              {(variant) => (
+                <Input
+                  variant={variant}
+                  defaultValue=""
+                  width="240px"
+                  paddingX="s"
+                  paddingY="s"
+                />
+              )}
+            </Swap>
+            <Swap caption="valeur plus longue que la boîte">
+              {(variant) => (
+                <Input
+                  variant={variant}
+                  defaultValue={LONG_NAME}
+                  width="240px"
+                  paddingX="s"
+                  paddingY="s"
+                />
+              )}
+            </Swap>
           </Box>
         </div>
       );
 
       // ── Alternance ────────────────────────────────────────────────────────
 
-      const ORGANIZERS = [
-        { id: "1", label: "avec un nom connu", name: "Damien" },
-        { id: "2", label: "sans nom connu", name: "" },
-      ];
-
-      const SwapDemo = () => {
-        const [organizer, setOrganizer] = useState(ORGANIZERS[0]);
-        const known = organizer.name !== "";
-
-        return (
-          <div class="demo-section">
-            <Heading id="swap">Alternance texte / champ</Heading>
-            <Box flex="y" spacing="m" alignX="start" width="320px">
-              <Box flex spacing="s">
-                {ORGANIZERS.map((candidate) => (
-                  <Button
-                    key={candidate.id}
-                    onClick={() => setOrganizer(candidate)}
-                  >
-                    {candidate.label}
-                  </Button>
-                ))}
-              </Box>
-              <Field flex="y" expandX>
-                <Label>Nom</Label>
-                {known ? (
+      const ShiftDemo = () => (
+        <div class="demo-section">
+          <Heading id="shift">Alternance texte / champ</Heading>
+          <Box flex="y" spacing="m" alignX="start" width="320px">
+            <Swap>
+              {(variant) => (
+                <Field flex="y" expandX>
+                  <Label>Nom</Label>
                   <Input
-                    variant="text"
-                    value={organizer.name}
+                    variant={variant}
+                    defaultValue={NAME}
                     paddingX="s"
                     paddingY="s"
                     expandX
                   />
-                ) : (
-                  <Input
-                    name="organizer_name"
-                    placeholder="Nom de l'organisateur"
-                    paddingX="s"
-                    paddingY="s"
-                    expandX
-                  />
-                )}
-              </Field>
-              <div class="ruler" style="width: 100%"></div>
-              <Text size="s" color="#666">
-                Téléphone, adresse, et tout ce qui suit
-              </Text>
-            </Box>
-          </div>
-        );
-      };
+                </Field>
+              )}
+            </Swap>
+            <div class="ruler"></div>
+            <Text size="s" color="#666">
+              Téléphone, adresse, et tout ce qui suit
+            </Text>
+          </Box>
+        </div>
+      );
 
       // ── Mesures ───────────────────────────────────────────────────────────
+
+      const Stacked = ({ caption, children }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text size="s" color="#666">
+            {caption}
+          </Text>
+          <Box flex="y" backgroundColor="#eef">
+            {children("text")}
+            {children(undefined)}
+          </Box>
+        </Box>
+      );
 
       const MetricsDemo = () => (
         <div class="demo-section">
           <Heading id="metrics">Mêmes mesures</Heading>
           <p class="desc">
-            Les deux boîtes sont posées l'une sur l'autre, sans espace entre
-            elles.
+            Le texte est posé sur le champ, sans espace entre les deux.
           </p>
           <Box flex="y" spacing="l" alignX="start">
-            <Variant caption='paddingX="s" paddingY="s"'>
-              <Box flex="y" backgroundColor="#eef">
+            <Stacked caption='paddingX="s" paddingY="s"'>
+              {(variant) => (
                 <Input
-                  variant="text"
-                  value="texte"
-                  width="200px"
+                  variant={variant}
+                  defaultValue={NAME}
+                  width="240px"
                   paddingX="s"
                   paddingY="s"
                 />
-                <Input value="champ" width="200px" paddingX="s" paddingY="s" />
-              </Box>
-            </Variant>
-            <Variant caption='padding="l"'>
-              <Box flex="y" backgroundColor="#eef">
-                <Input variant="text" value="texte" width="200px" padding="l" />
-                <Input value="champ" width="200px" padding="l" />
-              </Box>
-            </Variant>
-            <Variant caption='borderWidth="3" fontSize="20px"'>
-              <Box flex="y" backgroundColor="#eef">
+              )}
+            </Stacked>
+            <Stacked caption='padding="l"'>
+              {(variant) => (
                 <Input
-                  variant="text"
-                  value="texte"
-                  width="200px"
+                  variant={variant}
+                  defaultValue={NAME}
+                  width="240px"
+                  padding="l"
+                />
+              )}
+            </Stacked>
+            <Stacked caption='borderWidth="3" fontSize="20px"'>
+              {(variant) => (
+                <Input
+                  variant={variant}
+                  defaultValue={NAME}
+                  width="240px"
                   borderWidth="3"
                   fontSize="20px"
                 />
+              )}
+            </Stacked>
+            <Stacked caption="valeur plus longue que la boîte">
+              {(variant) => (
                 <Input
-                  value="champ"
-                  width="200px"
-                  borderWidth="3"
-                  fontSize="20px"
+                  variant={variant}
+                  defaultValue={LONG_NAME}
+                  width="240px"
+                  paddingX="s"
+                  paddingY="s"
                 />
-              </Box>
-            </Variant>
-            <Variant caption="maxLength={6}">
-              <Box flex="y" backgroundColor="#eef">
-                <Input variant="text" value="123456" maxLength={6} />
-                <Input value="123456" maxLength={6} />
-              </Box>
-            </Variant>
+              )}
+            </Stacked>
+            <Stacked caption="maxLength={6}">
+              {(variant) => (
+                <Input variant={variant} defaultValue="123456" maxLength={6} />
+              )}
+            </Stacked>
           </Box>
         </div>
       );
@@ -297,32 +296,21 @@
       const PrefixDemo = () => (
         <div class="demo-section">
           <Heading id="prefix">Téléphone, avec son préfixe</Heading>
-          <Box flex="y" spacing="l" alignX="start">
-            <Variant caption="texte">
-              <Box flex alignY="center" spacing="xs">
-                <Text>+33</Text>
-                <Input
-                  variant="text"
-                  value="6 12 34 56 78"
-                  width="160px"
-                  paddingX="s"
-                  paddingY="s"
-                />
-              </Box>
-            </Variant>
-            <Variant caption="champ">
+          <Swap>
+            {(variant) => (
               <Box flex alignY="center" spacing="xs">
                 <Text>+33</Text>
                 <Input
                   type="tel"
-                  value="6 12 34 56 78"
+                  variant={variant}
+                  defaultValue="6 12 34 56 78"
                   width="160px"
                   paddingX="s"
                   paddingY="s"
                 />
               </Box>
-            </Variant>
-          </Box>
+            )}
+          </Swap>
         </div>
       );
 
@@ -334,40 +322,46 @@
         return (
           <div class="demo-section">
             <Heading id="form">Dans un formulaire</Heading>
-            <Form
-              name="text_variant"
-              action={(values) => {
-                setSent(Object.entries(values));
-              }}
-            >
-              <Box flex="y" spacing="m" alignX="start">
-                <Field flex="y">
-                  <Label>Nom</Label>
-                  <Input
-                    variant="text"
-                    name="name"
-                    value="Damien"
-                    paddingX="s"
-                    paddingY="s"
-                  />
-                </Field>
-                <Field flex="y">
-                  <Label>Ville</Label>
-                  <Input
-                    name="city"
-                    defaultValue="Rennes"
-                    paddingX="s"
-                    paddingY="s"
-                  />
-                </Field>
-                <Button type="submit">Envoyer</Button>
-                <Text size="s" color="#666">
-                  {sent === null
-                    ? " "
-                    : sent.map(([key, value]) => `${key}=${value}`).join(", ")}
-                </Text>
-              </Box>
-            </Form>
+            <Swap>
+              {(variant) => (
+                <Form
+                  name="text_variant"
+                  action={(values) => {
+                    setSent(Object.entries(values));
+                  }}
+                >
+                  <Box flex="y" spacing="m" alignX="start">
+                    <Field flex="y">
+                      <Label>Nom</Label>
+                      <Input
+                        variant={variant}
+                        name="name"
+                        defaultValue={NAME}
+                        paddingX="s"
+                        paddingY="s"
+                      />
+                    </Field>
+                    <Field flex="y">
+                      <Label>Ville</Label>
+                      <Input
+                        name="city"
+                        defaultValue="Rennes"
+                        paddingX="s"
+                        paddingY="s"
+                      />
+                    </Field>
+                    <Button type="submit">Envoyer</Button>
+                    <Text size="s" color="#666">
+                      {sent === null
+                        ? " "
+                        : sent
+                            .map(([key, value]) => `${key}=${value}`)
+                            .join(", ")}
+                    </Text>
+                  </Box>
+                </Form>
+              )}
+            </Swap>
           </div>
         );
       };

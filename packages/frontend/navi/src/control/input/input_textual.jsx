@@ -226,13 +226,15 @@ export const inputCss = /* css */ `
       /* Nothing to read yet is still a line: the box may not collapse just
          because the value is empty. */
       min-height: 1lh;
-      text-overflow: ellipsis;
+      text-overflow: clip;
       /* A form control keeps a line of its own whatever line-height the page
          is written in; the text that stands in for one has to say the same
          number, or the box it is meant to match changes height. */
       line-height: normal;
-      /* Cut rather than wrapped, the way a field shows the start of a value
-         too long for it — a second line would be taller than the field. */
+      /* Cut where the field cuts, and cut the same way: wrapping would make
+         the box taller than the field, and an ellipsis would end the value a
+         character earlier than the field ends it — put side by side the two
+         would no longer read as the same thing. */
       white-space: nowrap;
       overflow: hidden;
     }
