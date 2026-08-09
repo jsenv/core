@@ -5353,10 +5353,12 @@ const stateSignal = (defaultValue, options = {}) => {
   // Convert numeric IDs to strings for consistency
   const signalIdString = String(signalId);
   if (globalSignalRegistry.has(signalIdString)) {
-    const conflictInfo = globalSignalRegistry.get(signalIdString);
-    throw new Error(
-      `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${conflictInfo.options.getDefaultValue()})`,
-    );
+    const existingEntry = globalSignalRegistry.get(signalIdString);
+    {
+      throw new Error(
+        `Signal ID conflict: A signal with ID "${signalIdString}" already exists (existing default: ${existingEntry.options.getDefaultValue()})`,
+      );
+    }
   }
 
   // Determine localStorage key: use id if persists=true, or legacy localStorage option
@@ -5481,7 +5483,12 @@ const stateSignal = (defaultValue, options = {}) => {
     // can reflect the current input state without silently correcting it.
     return validity.value;
   };
-  const preactSignal = signal(processValue(getFallbackValue()));
+  const preactSignal = signal(
+    processValue(
+      getFallbackValue()
+        ,
+    ),
+  );
 
   // Override the value setter on the instance to intercept writes and apply processValue.
   // We do this on the instance (not the prototype) so preactSignal remains a real Signal
@@ -48302,6 +48309,10 @@ const css$o = /* css */`
   .navi_picker_spin {
     /* What the loading outline is drawn around. */
     position: relative;
+    /* Written in the control font, like the picker it wraps: the day and its
+       two chevrons are a control, not running text. */
+    font-size: var(--navi-control-font-size);
+    font-family: var(--navi-control-font-family);
     /* Framed like every other control (see navi_css_vars.js): what one steps
        through is a value one edits, and a box around it is what says so. Said
        as CSS rather than as defaults on the Box, so borderWidth="0" or a radius
@@ -51015,7 +51026,11 @@ const useWheelInteractions = ({
       if (vp.contains(documentWheelEvent.target)) {
         return; // on the scroll surface → its own onWheel handles it
       }
-      documentWheelEvent.preventDefault();
+      if (documentWheelEvent.cancelable) {
+        // cancelable=false during an inertial scroll the browser already owns;
+        // preventDefault would be ignored with an intervention warning.
+        documentWheelEvent.preventDefault();
+      }
       keepClaimingGesture(); // the gesture continues elsewhere → keep swallowing it
     };
     const stopClaimingGesture = () => {
@@ -51315,7 +51330,11 @@ const useWheelInteractions = ({
     // preventing touchstart has wider side effects. Requires a non-passive
     // listener. See docs/MOBILE_TAP_SUPPRESSION_AFTER_DRAG.md.
     const onTouchMove = e => {
-      if (drag) {
+      // cancelable=false when the touch landed while a scroll was already in
+      // progress (e.g. the page still coasting from a fling): the browser owns
+      // that scroll, preventDefault would be a no-op and Chrome logs an
+      // intervention warning for the attempt.
+      if (drag && e.cancelable) {
         e.preventDefault();
       }
     };
