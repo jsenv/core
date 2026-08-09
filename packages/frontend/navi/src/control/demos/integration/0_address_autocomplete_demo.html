@@ -33,10 +33,10 @@
       Les champs structurés sont la source de vérité: ce que le formulaire
       envoie, et ce que l'autofill du navigateur sait remplir correctement
       (tokens autocomplete standard: address-line1, postal-code, address-level2,
-      country-name). La recherche au-dessus est optionnelle: elle interroge
-      l'API adresse.data.gouv.fr, ses suggestions passent par le datalist natif
-      du navigateur, et en choisir une remplit les champs — qui restent
-      modifiables à la main.
+      country-name). La recherche au-dessus est optionnelle: elle interroge le
+      géocodage de la Géoplateforme (ex api-adresse.data.gouv.fr), ses
+      suggestions passent par le datalist natif du navigateur, et en choisir une
+      remplit les champs — qui restent modifiables à la main.
     </p>
     <div id="app"></div>
 
@@ -55,7 +55,10 @@
       } from "@jsenv/navi";
       import { FakeBackend } from "@jsenv/navi/src/internal/fake_backend.jsx";
 
-      const GEO_API_URL = "https://api-adresse.data.gouv.fr/search/";
+      // Le géocodage de la Géoplateforme — successeur officiel de
+      // api-adresse.data.gouv.fr (dépréciée, DNS déjà capricieux), même
+      // schéma de réponse
+      const GEO_API_URL = "https://data.geopf.fr/geocodage/search";
       const SUGGESTION_MIN_CHARS = 3;
 
       const componentsFromGeoFeature = (feature) => {
