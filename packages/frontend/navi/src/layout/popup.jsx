@@ -146,7 +146,12 @@ export const Popup = (props) => {
     ...rest
   } = props;
 
-  const [mode] = useResolvedPopupMode(modeProp, maxWidth);
+  const [mode] = useResolvedPopupMode(modeProp, maxWidth, {
+    // layer stays in ...rest (forwarded as-is to Dialog/Popover); it is read
+    // here too because a local popup measures its container, not the screen
+    layer: rest.layer,
+    elementRef: rest.ref,
+  });
   // So the content can lay itself out per mode — see usePopupMode.
   const childrenWithMode = (
     <PopupModeContext.Provider value={mode}>

@@ -221,12 +221,18 @@ const PickerCustom = (props) => {
   const idDefault = useId();
   const controlId = useContext(ControlIdContext);
   props.id = props.id || controlId || idDefault;
-  // Same small-screen/maxWidth-compact heuristic Popup itself uses (see
+  // Same narrow-container/maxWidth-compact heuristic Popup itself uses (see
   // popup_mode.jsx's own useResolvedPopupMode) — frozen for the lifetime of an opening
   // (computed when closed, stable while open, so a screen resize mid-session
   // doesn't switch between Popover and Dialog), with resetMode called from
   // this picker's own onClose below to re-evaluate on the *next* open.
-  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth);
+  // The picker element locates the measurement: a popupLayer="local" popup is
+  // confined to the picker's own positioned ancestor, so that box — not the
+  // screen — is what "small" means for it.
+  const [mode, resetMode] = useResolvedPopupMode(modeProp, props.maxWidth, {
+    layer: props.popupLayer,
+    elementRef: ref,
+  });
 
   const pickerProps = {
     ...props,

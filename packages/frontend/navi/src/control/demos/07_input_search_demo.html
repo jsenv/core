@@ -15,13 +15,6 @@
         background: #f5f5f5;
       }
 
-      h1 {
-        margin-bottom: 30px;
-        color: #333;
-        font-size: 2rem;
-        text-align: center;
-      }
-
       .demo-section {
         margin-bottom: 40px;
         padding: 20px;
@@ -51,76 +44,26 @@
         font-weight: 500;
         white-space: nowrap;
       }
-
-      .states-section {
-        margin: 20px 0;
-      }
-
-      .states-title {
-        margin: 0 0 15px 0;
-        padding: 8px 12px;
-        color: #495057;
-        font-weight: 600;
-        font-size: 0.95rem;
-        text-align: center;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-      }
-
-      .enhanced-states-title {
-        color: #1565c0;
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-        border-color: #2196f3;
-      }
-
-      .states-description {
-        margin: 10px 0 15px 0;
-        padding: 10px 15px;
-        color: #666;
-        font-style: italic;
-        font-size: 0.9rem;
-        background: #f8f9fa;
-        border-left: 4px solid #007bff;
-        border-radius: 0 4px 4px 0;
-      }
     </style>
   </head>
   <body>
-    <h1>Input Search Demo</h1>
-    <nav
-      style="
-        margin-bottom: 32px;
-        padding: 16px 20px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      "
-    >
-      <strong
-        style="
-          display: block;
-          margin-bottom: 8px;
-          font-size: 0.85rem;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: #888;
-        "
-        >Contents</strong
-      >
-      <ol style="margin: 0; padding-left: 20px; line-height: 2">
-        <li><a href="#states">Search Input States</a></li>
-        <li><a href="#live">Live Search Demo</a></li>
-        <li><a href="#variations">Search Input Variations</a></li>
-        <li><a href="#custom-icon">Custom Icon &amp; Long Placeholder</a></li>
-      </ol>
-    </nav>
     <div id="root"></div>
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Input, Box, Caption, NaviDebug } from "@jsenv/navi";
+      import { Input, Box, Caption, Link, NaviDebug } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ id, children }) => (
+        <h2 id={id}>
+          <Link anchor revealOnInteraction href={`#${id}`}>
+            #
+          </Link>
+          {children}
+        </h2>
+      );
 
       const RectIcon = () => (
         <svg
@@ -145,143 +88,222 @@
         return (
           <NaviDebug debugAction debugInteraction>
             <div>
-              <BasicStatesDemo />
+              <DemoHeader title="Input search demo" />
+              <TableOfContents />
+              <NominalDemo />
+              <StatesDemo />
+              <WithAndWithoutValueDemo />
+              <DiscreteDemo />
               <InteractiveDemo />
               <VariationsDemo />
+              <CustomIconDemo />
             </div>
           </NaviDebug>
         );
       };
 
-      const BasicStatesDemo = () => {
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <h2>Table of contents</h2>
+          <DocumentToc />
+        </div>
+      );
+
+      const NominalDemo = () => (
+        <div className="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <Input type="search" placeholder="Search..." />
+        </div>
+      );
+
+      const StatesDemo = () => {
         return (
           <div className="demo-section">
-            <h2 id="states">Search Input States</h2>
+            <Heading id="states">States</Heading>
 
-            <div className="states-section">
-              <div className="states-title">
-                Standard HTML Search Input States
-              </div>
-              <p className="states-description">
-                These states work exactly like user agent HTML search inputs,
-                with enhanced styling and consistent behavior.
-              </p>
-
-              <Box column spacing="sm">
-                <fieldset>
-                  <legend>Default</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input type="search" placeholder="Search..." />
-                    <input type="search" placeholder="Search..." />
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:focus-visible</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      placeholder="Search..."
-                      pseudoState={{ ":focus-visible": true }}
-                    />
-                    <input
-                      type="search"
-                      placeholder="Search..."
-                      // autoFocus
-                    />
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>With value</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      placeholder="Search..."
-                      value="Text"
-                      action={() => {}}
-                      width="127"
-                    />
-                    <input type="search" placeholder="Search..." value="Text" />
-                  </Box>
-                </fieldset>
-              </Box>
-
-              <Box column spacing="sm">
-                <fieldset>
-                  <legend>:read-only</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      action={() => {}}
-                      readOnly
-                      value="Read-only search term"
-                    />
-                    <input
-                      type="search"
-                      readOnly
-                      value="Read-only search term"
-                    />
-                  </Box>
-                </fieldset>
-                <fieldset>
-                  <legend>:disabled</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      disabled
-                      action={() => {}}
-                      value="test"
-                    />
-                    <input type="search" disabled value="test" />
-                  </Box>
-                </fieldset>
-              </Box>
-            </div>
-
-            <div className="states-section">
-              <div className="states-title enhanced-states-title">
-                Enhanced Navi States
-              </div>
-              <p className="states-description">
-                These additional states provide enhanced UX patterns not
-                available in standard HTML inputs.
-              </p>
-
-              <Box column spacing="sm">
-                <fieldset>
-                  <legend>Loading state</legend>
-                  <Box row spacing="sm" alignX="start">
-                    <Input
-                      type="search"
-                      loading
-                      value="test"
-                      action={() => {}}
-                    />
-                  </Box>
-                </fieldset>
-              </Box>
-
-              <div
-                style={{
-                  marginTop: "15px",
-                  padding: "10px",
-                  background: "#f8f9fa",
-                  borderRadius: "4px",
-                  fontSize: "0.85rem",
-                  color: "#666",
-                }}
-              >
-                <strong>Enhanced State Explanations:</strong>
-                <ul style={{ margin: "5px 0", paddingLeft: "20px" }}>
-                  <li>
-                    <strong>Loading:</strong> Shows a spinner while searching,
-                    allowing continued interaction and value updates
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <Box column spacing="sm">
+              <fieldset>
+                <legend>Default — navi vs native</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input type="search" placeholder="Search..." />
+                  <input type="search" placeholder="Search..." />
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>:focus-visible</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    pseudoState={{ ":focus-visible": true }}
+                  />
+                  <input type="search" placeholder="Search..." />
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>With value</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input
+                    type="search"
+                    placeholder="Search..."
+                    value="Text"
+                    action={() => {}}
+                    width="127"
+                  />
+                  <input type="search" placeholder="Search..." value="Text" />
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>:read-only</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input
+                    type="search"
+                    action={() => {}}
+                    readOnly
+                    value="Read-only search term"
+                  />
+                  <input type="search" readOnly value="Read-only search term" />
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>:disabled</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input
+                    type="search"
+                    disabled
+                    action={() => {}}
+                    value="test"
+                  />
+                  <input type="search" disabled value="test" />
+                </Box>
+              </fieldset>
+              <fieldset>
+                <legend>Loading</legend>
+                <Box row spacing="sm" alignX="start">
+                  <Input type="search" loading value="test" action={() => {}} />
+                </Box>
+              </fieldset>
+            </Box>
           </div>
         );
       };
+
+      const WithAndWithoutValueDemo = () => {
+        const [value, setValue] = useState("Hello");
+        return (
+          <div className="demo-section">
+            <Heading id="value">With and without value</Heading>
+            <p>
+              Empty shows the search icon, a value shows the clear button. The
+              two are stacked so any width difference between the two states is
+              visible.
+            </p>
+
+            <fieldset>
+              <legend>Empty above, with value below</legend>
+              <Box flex="y" spacing="s" alignX="start">
+                <Input type="search" placeholder="Hello" />
+                <Input type="search" defaultValue="Hello" placeholder="Hello" />
+              </Box>
+            </fieldset>
+
+            <fieldset>
+              <legend>Interactive — type then clear</legend>
+              <Box flex="y" spacing="s" alignX="start">
+                <Input
+                  type="search"
+                  placeholder="Hello"
+                  value={value}
+                  uiAction={(v) => {
+                    setValue(v);
+                  }}
+                />
+                <Input type="search" placeholder="Hello" />
+              </Box>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const DiscreteDemo = () => (
+        <div className="demo-section">
+          <Heading id="discrete">Discrete</Heading>
+
+          <fieldset>
+            <legend>
+              variant="discrete" — blends into the surface until focused
+            </legend>
+            <Box padding="l" backgroundColor="#e9ecef" borderRadius="8">
+              <Box flex spacing="s">
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  variant="discrete"
+                  borderRadius="6"
+                  padding="8"
+                />
+                <Input
+                  type="search"
+                  defaultValue="Hello world"
+                  placeholder="Search..."
+                  variant="discrete"
+                  borderRadius="6"
+                  padding="8"
+                />
+              </Box>
+            </Box>
+          </fieldset>
+
+          <fieldset>
+            <legend>
+              variant="discrete" + backgroundColor — grey at rest, back to the
+              surface while focused
+            </legend>
+            <Box flex spacing="s">
+              <Input
+                type="search"
+                placeholder="Search..."
+                variant="discrete"
+                backgroundColor="#e9ecef"
+                borderRadius="6"
+                padding="8"
+              />
+              <Input
+                type="search"
+                defaultValue="Hello world"
+                placeholder="Search..."
+                variant="discrete"
+                backgroundColor="#e9ecef"
+                borderRadius="6"
+                padding="8"
+              />
+            </Box>
+          </fieldset>
+
+          <fieldset>
+            <legend>backgroundColor="transparent" — border stays</legend>
+            <Box padding="l" backgroundColor="#e9ecef" borderRadius="8">
+              <Box flex spacing="s">
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  backgroundColor="transparent"
+                  borderRadius="6"
+                  padding="8"
+                />
+                <Input
+                  type="search"
+                  defaultValue="Hello world"
+                  placeholder="Search..."
+                  backgroundColor="transparent"
+                  borderRadius="6"
+                  padding="8"
+                />
+              </Box>
+            </Box>
+          </fieldset>
+        </div>
+      );
 
       const FilteredItems = ({ searchTerm }) => {
         const items = [
@@ -373,7 +395,7 @@
 
         return (
           <div className="demo-section">
-            <h2 id="live">Live Search Demo</h2>
+            <Heading id="live">Live search</Heading>
 
             <fieldset>
               <legend>Filter Product List</legend>
@@ -416,229 +438,199 @@
 
       const VariationsDemo = () => {
         return (
-          <>
-            <div className="demo-section">
-              <h2 id="variations">Search Input Variations</h2>
-              <p className="states-description">
-                Different styling variations of the search input to show
-                customization possibilities.
-              </p>
+          <div className="demo-section">
+            <Heading id="variations">Variations</Heading>
 
-              <Box flex="y" spacing="l">
-                <fieldset>
-                  <legend>Extra Padding</legend>
-                  <Box flex spacing="s">
-                    <Input
-                      type="search"
-                      placeholder="Placholder..."
-                      paddingX="16"
-                      paddingY="10"
-                      size="l"
-                      borderRadius="12"
-                    />
-                    <Input
-                      type="search"
-                      defaultValue="Hello world"
-                      placeholder="Placholder..."
-                      paddingX="16"
-                      paddingY="10"
-                      size="l"
-                      borderRadius="12"
-                    />
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>Rounded Pill Style</legend>
-                  <Box flex spacing="s">
-                    <Input
-                      type="search"
-                      placeholder="Pill-shaped search..."
-                      paddingX="12"
-                      paddingY="24"
-                      borderRadius="50"
-                      borderColor="#007bff"
-                    />
-                    <Input
-                      type="search"
-                      defaultValue="Hello world"
-                      placeholder="Pill-shaped search..."
-                      paddingX="12"
-                      paddingY="24"
-                      borderRadius="50"
-                      borderColor="#007bff"
-                    />
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>Large Size</legend>
-                  <Box flex spacing="s">
-                    <Input
-                      type="search"
-                      placeholder="Large search input..."
-                      padding="24"
-                      size="l"
-                      minHeight="56"
-                      borderRadius="8"
-                      borderWidth="2"
-                      borderColor="#ddd"
-                    />
-                    <Input
-                      type="search"
-                      defaultValue="Hello world"
-                      placeholder="Large search input..."
-                      padding="24"
-                      size="l"
-                      minHeight="56"
-                      borderRadius="8"
-                      borderWidth="2"
-                      borderColor="#ddd"
-                    />
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>Parent smaller font</legend>
-                  <Box flex spacing="s">
-                    <Box size="xxs">
-                      <Input type="search" placeholder="Placeholder" />
-                    </Box>
-                    <Box size="xxs">
-                      <Input
-                        type="search"
-                        defaultValue="Hello world"
-                        placeholder="Placeholder"
-                      />
-                    </Box>
-                  </Box>
-                </fieldset>
-
-                <fieldset style="background:grey">
-                  <legend>Discrete</legend>
-                  <Box flex spacing="s">
-                    <Input
-                      type="search"
-                      placeholder="Discrete search..."
-                      borderRadius="6"
-                      variant="discrete"
-                      padding="14"
-                    />
-                    <Input
-                      type="search"
-                      defaultValue="Hello world"
-                      placeholder="Discrete search..."
-                      borderRadius="6"
-                      variant="discrete"
-                      padding="14"
-                    />
-                  </Box>
-                </fieldset>
-
-                <fieldset>
-                  <legend>WTF</legend>
-                  <Box flex spacing="s">
-                    <Input
-                      type="search"
-                      placeholder="Subtle search..."
-                      boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
-                      borderRadius="6"
-                      borderColor="transparent"
-                      backgroundColor="violet"
-                      padding="14"
-                      style={{
-                        ":hover": {
-                          backgroundColor: "yellow",
-                        },
-                        ":focus": {
-                          backgroundColor: "orange",
-                        },
-                      }}
-                    />
-                    <Input
-                      type="search"
-                      defaultValue="Hello world"
-                      placeholder="Subtle search..."
-                      boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
-                      borderRadius="6"
-                      borderColor="transparent"
-                      backgroundColor="violet"
-                      padding="14"
-                      style={{
-                        ":hover": {
-                          backgroundColor: "yellow",
-                        },
-                        ":focus": {
-                          backgroundColor: "orange",
-                        },
-                      }}
-                    />
-                  </Box>
-                </fieldset>
-              </Box>
-            </div>
-
-            <div className="demo-section">
-              <h2 id="custom-icon">Custom Icon &amp; Long Placeholder</h2>
-              <p className="states-description">
-                The icon prop replaces the default search icon. The red
-                rectangle shows the exact bounding box the icon occupies, so you
-                can see where the placeholder text gets clipped.
-              </p>
-
+            <Box flex="y" spacing="l">
               <fieldset>
-                <legend>Custom icon — short placeholder</legend>
-                <Box flex="y" spacing="s">
+                <legend>Extra Padding</legend>
+                <Box flex spacing="s">
                   <Input
                     type="search"
-                    placeholder="Search…"
-                    icon={<RectIcon />}
+                    placeholder="Placholder..."
+                    paddingX="16"
+                    paddingY="10"
+                    size="l"
+                    borderRadius="12"
                   />
                   <Input
                     type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
-                    icon={<RectIcon />}
-                  />
-                  <Input
-                    type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
-                    width="50"
-                    icon={<RectIcon />}
-                  />
-                  <Input
-                    type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
-                    width="100"
-                    icon={<RectIcon />}
-                  />
-                  <Input
-                    type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
-                    paddingX="m"
-                    icon={<RectIcon />}
+                    defaultValue="Hello world"
+                    placeholder="Placholder..."
+                    paddingX="16"
+                    paddingY="10"
+                    size="l"
+                    borderRadius="12"
                   />
                 </Box>
               </fieldset>
 
               <fieldset>
-                <legend>Default icon — long placeholder</legend>
-                <Box flex="y" spacing="s">
-                  <Input type="search" placeholder="Search…" />
+                <legend>Rounded Pill Style</legend>
+                <Box flex spacing="s">
                   <Input
                     type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
+                    placeholder="Pill-shaped search..."
+                    paddingX="12"
+                    paddingY="24"
+                    borderRadius="50"
+                    borderColor="#007bff"
                   />
                   <Input
                     type="search"
-                    placeholder="Search by name, email address, phone number or any other identifier…"
-                    paddingX="m"
+                    defaultValue="Hello world"
+                    placeholder="Pill-shaped search..."
+                    paddingX="12"
+                    paddingY="24"
+                    borderRadius="50"
+                    borderColor="#007bff"
                   />
                 </Box>
               </fieldset>
-            </div>
-          </>
+
+              <fieldset>
+                <legend>Large Size</legend>
+                <Box flex spacing="s">
+                  <Input
+                    type="search"
+                    placeholder="Large search input..."
+                    padding="24"
+                    size="l"
+                    minHeight="56"
+                    borderRadius="8"
+                    borderWidth="2"
+                    borderColor="#ddd"
+                  />
+                  <Input
+                    type="search"
+                    defaultValue="Hello world"
+                    placeholder="Large search input..."
+                    padding="24"
+                    size="l"
+                    minHeight="56"
+                    borderRadius="8"
+                    borderWidth="2"
+                    borderColor="#ddd"
+                  />
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>Parent smaller font</legend>
+                <Box flex spacing="s">
+                  <Box size="xxs">
+                    <Input type="search" placeholder="Placeholder" />
+                  </Box>
+                  <Box size="xxs">
+                    <Input
+                      type="search"
+                      defaultValue="Hello world"
+                      placeholder="Placeholder"
+                    />
+                  </Box>
+                </Box>
+              </fieldset>
+
+              <fieldset>
+                <legend>Per-state styles</legend>
+                <Box flex spacing="s">
+                  <Input
+                    type="search"
+                    placeholder="Subtle search..."
+                    boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
+                    borderRadius="6"
+                    borderColor="transparent"
+                    backgroundColor="violet"
+                    padding="14"
+                    style={{
+                      ":hover": {
+                        backgroundColor: "yellow",
+                      },
+                      ":focus": {
+                        backgroundColor: "orange",
+                      },
+                    }}
+                  />
+                  <Input
+                    type="search"
+                    defaultValue="Hello world"
+                    placeholder="Subtle search..."
+                    boxShadow="inset 0 1px 3px rgba(0,0,0,0.1)"
+                    borderRadius="6"
+                    borderColor="transparent"
+                    backgroundColor="violet"
+                    padding="14"
+                    style={{
+                      ":hover": {
+                        backgroundColor: "yellow",
+                      },
+                      ":focus": {
+                        backgroundColor: "orange",
+                      },
+                    }}
+                  />
+                </Box>
+              </fieldset>
+            </Box>
+          </div>
         );
       };
+
+      const CustomIconDemo = () => (
+        <div className="demo-section">
+          <Heading id="custom-icon">Custom icon &amp; long placeholder</Heading>
+          <p>
+            The red rectangle is the exact bounding box the icon occupies, so
+            one sees where the placeholder text gets clipped.
+          </p>
+
+          <fieldset>
+            <legend>Custom icon — short placeholder</legend>
+            <Box flex="y" spacing="s">
+              <Input type="search" placeholder="Search…" icon={<RectIcon />} />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+                icon={<RectIcon />}
+              />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+                width="50"
+                icon={<RectIcon />}
+              />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+                width="100"
+                icon={<RectIcon />}
+              />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+                paddingX="m"
+                icon={<RectIcon />}
+              />
+            </Box>
+          </fieldset>
+
+          <fieldset>
+            <legend>Default icon — long placeholder</legend>
+            <Box flex="y" spacing="s">
+              <Input type="search" placeholder="Search…" />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+              />
+              <Input
+                type="search"
+                placeholder="Search by name, email address, phone number or any other identifier…"
+                paddingX="m"
+              />
+            </Box>
+          </fieldset>
+        </div>
+      );
 
       render(<App />, document.querySelector("#root"));
     </script>
