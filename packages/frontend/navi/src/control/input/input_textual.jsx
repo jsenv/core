@@ -177,6 +177,10 @@ export const inputCss = /* css */ `
       flex-grow: 1;
       color: inherit;
       font-size: inherit;
+      /* A form control does not inherit the font on its own — the browser has
+         one of its own for it, monospace for a <textarea> — so the box's font
+         (--navi-control-font-family) is handed down by hand. */
+      font-family: inherit;
       text-align: inherit;
       background: none;
       border: none;

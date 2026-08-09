@@ -26,7 +26,6 @@
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "@jsenv/navi/src/box/box.jsx";
-import { resolveSpacingSize } from "@jsenv/navi/src/box/box_style_util.js";
 import {
   ChevronDownSvg,
   ChevronLeftSvg,
@@ -56,7 +55,49 @@ import {
 import { Picker } from "./picker.jsx";
 
 const css = /* css */ `
+  @layer navi {
+    .navi_picker_spin {
+      /* A picker one steps through is still a picker: what themes every picker
+         padding themes this one too. */
+      --picker-spin-padding-x-default: var(--navi-picker-padding-x-default);
+      --picker-spin-padding-y-default: var(--navi-picker-padding-y-default);
+    }
+  }
+
   .navi_picker_spin {
+    /* The padding is written on what is inside the box rather than on the box
+       — the day takes all four sides, the two chevrons only the vertical ones
+       — so the four sides are resolved once here, in the side-then-axis-then
+       -shorthand order a Box resolves them in. What writes them: the padding
+       props, through PICKER_SPIN_STYLE_CSS_VARS below. */
+    --x-picker-spin-padding-top: var(
+      --picker-spin-padding-top,
+      var(
+        --picker-spin-padding-y,
+        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
+      )
+    );
+    --x-picker-spin-padding-right: var(
+      --picker-spin-padding-right,
+      var(
+        --picker-spin-padding-x,
+        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
+      )
+    );
+    --x-picker-spin-padding-bottom: var(
+      --picker-spin-padding-bottom,
+      var(
+        --picker-spin-padding-y,
+        var(--picker-spin-padding, var(--picker-spin-padding-y-default))
+      )
+    );
+    --x-picker-spin-padding-left: var(
+      --picker-spin-padding-left,
+      var(
+        --picker-spin-padding-x,
+        var(--picker-spin-padding, var(--picker-spin-padding-x-default))
+      )
+    );
     /* What the loading outline is drawn around. */
     position: relative;
     /* Written in the control font, like the picker it wraps: the day and its
@@ -137,17 +178,19 @@ const css = /* css */ `
     width: min(100%, var(--picker-spin-picker-width, 12ch));
     translate: -50% 0;
   }
-  /* The value takes it as padding; the two chevrons take it as their own
-     --button-padding-y (a button's padding lives on its content, see
-     button_ui.jsx), which is why it is said as a variable rather than applied
-     here. Same number on all three: it is what makes them one line rather than
-     three boxes. */
-  .navi_picker_spin [data-slide] {
-    padding-block: var(--picker-spin-padding-y);
-  }
-  /* Centred, always: the middle holds three values of three different lengths,
+  /* Where the padding lands: all four sides on the value, the two vertical
+     ones on the chevrons below — the same number above and below is what makes
+     the three one line rather than three boxes, while sideways it is the room
+     between the value and the chevron it would otherwise touch. Not on the box
+     itself: that would push the chevrons off the corners they are rounded by.
+
+     Centred, always: the middle holds three values of three different lengths,
      and a value that starts where the last one ended reads as a jump. */
   .navi_picker_spin [data-slide] {
+    padding-top: var(--x-picker-spin-padding-top);
+    padding-right: var(--x-picker-spin-padding-right);
+    padding-bottom: var(--x-picker-spin-padding-bottom);
+    padding-left: var(--x-picker-spin-padding-left);
     text-align: center;
     overflow: hidden;
   }
@@ -174,8 +217,12 @@ const css = /* css */ `
      around it, so "one line" means the same on both sides. */
   .navi_picker_spin > .navi_picker_spin_way_out {
     box-sizing: border-box;
-    height: calc(1lh + 2 * var(--picker-spin-padding-y));
-    padding-block: var(--picker-spin-padding-y);
+    height: calc(
+      1lh + var(--x-picker-spin-padding-top) +
+        var(--x-picker-spin-padding-bottom)
+    );
+    padding-top: var(--x-picker-spin-padding-top);
+    padding-bottom: var(--x-picker-spin-padding-bottom);
     color: inherit;
     background: none;
     border: none;
@@ -256,8 +303,13 @@ const css = /* css */ `
  * @param {"long"|"short"|"numeric"} [format="long"] How the date is written.
  *   Long by default, since this is a control one reads rather than a column
  *   one scans; `short` where the room is not there.
- * @param {string} [paddingY="xs"] Above and below, on the day AND on the two
- *   chevrons: it is what makes the three the same height.
+ * @param {string} [padding] The room around the value, `paddingX`/`paddingY`
+ *   and the four sides included. It goes on what is inside the box rather than
+ *   on the box: above and below it is taken by the day AND by the two chevrons,
+ *   which is what makes the three the same height; sideways it is the room
+ *   between the day and the chevron beside it. Left unsaid it is the padding
+ *   every picker takes (`--navi-picker-padding-x-default` and its `-y` twin),
+ *   so a theme that spaces its fields spaces this one with them.
  * @param {number} [maxLines] How many lines the day may take before it is cut
  *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a day
  *   too long for the box wraps, and the box grows.
@@ -283,7 +335,6 @@ export const DaySpin = ({
   duration = 250,
   lang,
   format = "long",
-  paddingY = "xs",
   vertical,
   readOnly,
   disabled,
@@ -426,13 +477,10 @@ export const DaySpin = ({
       // The states this box draws itself: the ring above is the one that is
       // asked for by hand (pseudoState) as well as held for real.
       pseudoClasses={PICKER_SPIN_PSEUDO_CLASSES}
+      styleCSSVars={PICKER_SPIN_STYLE_CSS_VARS}
       data-vertical={vertical ? "" : undefined}
       data-readonly={readOnlyResolved ? "" : undefined}
       data-disabled={disabledResolved ? "" : undefined}
-      style={{
-        "--picker-spin-padding-y": resolveSpacingSize(paddingY),
-        ...rest.style,
-      }}
     >
       {/* Around the whole box, the way a button wears it: the day is on its
           way somewhere, and it is the day one is looking at. */}
@@ -606,6 +654,20 @@ const WayOut = ({
 );
 
 const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+
+// A padding written on this box would sit between its border and the chevrons,
+// which are meant to reach the corners they are rounded by — so each padding
+// prop becomes a variable instead, and the CSS above hands it to the day and to
+// the chevrons themselves. Same trick, and same var chain, as Picker's.
+const PICKER_SPIN_STYLE_CSS_VARS = {
+  padding: "--picker-spin-padding",
+  paddingX: "--picker-spin-padding-x",
+  paddingY: "--picker-spin-padding-y",
+  paddingTop: "--picker-spin-padding-top",
+  paddingRight: "--picker-spin-padding-right",
+  paddingBottom: "--picker-spin-padding-bottom",
+  paddingLeft: "--picker-spin-padding-left",
+};
 
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only
