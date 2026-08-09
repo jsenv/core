@@ -25,6 +25,12 @@
         font-size: 13px;
         line-height: 1.5;
       }
+      /* La flèche que Chrome/Edge ajoutent sur un input lié à un datalist.
+         La masquer ne désactive pas les suggestions: elles sortent toujours
+         à la frappe, seule l'affordance visuelle disparaît. */
+      input[list]::-webkit-calendar-picker-indicator {
+        display: none;
+      }
     </style>
   </head>
   <body>
