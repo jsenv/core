@@ -4,7 +4,9 @@ const css = /* css */ `
   @layer navi {
     .navi_viewport_layout {
       --layout-padding: 40px;
-      --layout-background: white;
+      /* The page's own paper: the shared surface token, so a dark theme gets a
+         dark page without every screen overriding it. */
+      --layout-background: var(--navi-surface-color);
     }
   }
 

@@ -60,10 +60,13 @@ const css = /* css */ `
         black
       );
       /* Readonly */
+      /* Fading toward the surface, not toward white: "washed out" means
+         closer to the paper behind the button, whatever color that paper is
+         (white here IS the surface only in the light theme). */
       --button-border-color-readonly: color-mix(
         in srgb,
         var(--button-border-color) 30%,
-        white
+        var(--navi-surface-color)
       );
       --button-background-color-readonly: var(--button-background-color);
       --button-color-readonly: color-mix(

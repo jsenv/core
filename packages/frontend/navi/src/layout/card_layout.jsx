@@ -17,9 +17,9 @@ const css = /* css */ `
     .navi_card_layout {
       --layout-margin: 30px;
       --layout-padding: 20px;
-      --layout-background: white;
+      --layout-background: var(--navi-surface-color);
       --layout-border-width: 2px;
-      --layout-border-color: lightgrey;
+      --layout-border-color: var(--navi-popup-border-color);
       --layout-border-radius: 10px;
       --layout-min-width: 300px;
       --layout-min-height: auto;

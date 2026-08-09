@@ -234,6 +234,23 @@
         background: #eef3fb;
         border: 1px solid #cfe0f5;
       }
+      /* Wider than the dialog's own title, and sized late on purpose:
+         content-visibility: auto means a row born inside the closed dialog is
+         "skipped" with no remembered size — it measures as empty (padding
+         only) during the very layout the dialog positions itself against. */
+      .demo-content-cv-row {
+        display: flex;
+        height: 40px;
+        margin: 4px 0;
+        padding-inline: 24px;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        white-space: nowrap;
+        background: #eef3fb;
+        border: 1px solid #cfe0f5;
+        content-visibility: auto;
+      }
       .demo-content-tall-block {
         /* flex-shrink: 0 (+ matching min-height) so a flex/column ancestor
            can't shrink these back down — the whole point is to force the
@@ -729,6 +746,32 @@
               />
               <MegaMinSizeDialog
                 label="mega minWidth/minHeight"
+                animation={animation}
+                animationDuration={animationDuration}
+              />
+            </div>
+
+            <Heading level={3} id="content-size-content-visibility">
+              Content measured late (content-visibility)
+            </Heading>
+            <p>
+              The wide rows have <code>content-visibility: auto</code>. Never
+              laid out before the first opening, they measure as empty (padding
+              only) during the very layout the dialog positions itself against —
+              no forced reflow can read their true width any earlier, so the
+              dialog paints too narrow and slides into place a frame later. From
+              the second opening on, the browser's remembered size makes it
+              correct — which is why only the first opening shows it.
+            </p>
+            <div class="demo-row">
+              <ContentSizeDialog
+                label="content-visibility"
+                content={
+                  <>
+                    <div class="demo-content-cv-row">0 1 2 3 4 5 6 7 8 9</div>
+                    <div class="demo-content-cv-row">0 1 2 3 4 5 6 7 8 9</div>
+                  </>
+                }
                 animation={animation}
                 animationDuration={animationDuration}
               />

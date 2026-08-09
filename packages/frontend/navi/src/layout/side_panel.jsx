@@ -145,14 +145,17 @@ const css = /* css */ `
       z-index: 1;
       background-color: var(--navi-popup-background-color);
     }
+    /* The separator token, not the popup border: these lines split two
+       regions of the panel's own surface (the head/foot from what scrolls
+       under them), they are not the panel's edge. */
     .navi_side_panel_head {
       top: 0;
-      border-bottom: 1px solid var(--navi-popup-border-color);
+      border-bottom: 1px solid var(--navi-separator-color-default);
     }
     .navi_side_panel_foot {
       bottom: 0;
       padding: 12px 16px;
-      border-top: 1px solid var(--navi-popup-border-color);
+      border-top: 1px solid var(--navi-separator-color-default);
     }
   }
 `;

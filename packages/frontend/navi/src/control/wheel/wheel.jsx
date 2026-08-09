@@ -239,12 +239,16 @@ const css = /* css */ `
        as rows scroll under the pointer. */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
-    /* Rendering virtualization: only the rows within each wheel's own viewport
-       are painted; the rest (clipped by the viewport's overflow) are skipped.
-       The box is still laid out (fixed main-axis size below), so offsets, snap
-       and the wrap math are unaffected — this cuts paint/compositing cost so a
-       wheel with many values (or a page full of wheels) scrolls smoothly. */
-    content-visibility: auto;
+    /* NO content-visibility here, ever. content-visibility: auto was tried
+       (to skip painting clipped rows) and it breaks the first opening of any
+       popup holding a wheel: rows born inside a closed dialog are "skipped"
+       with no last-remembered size, so they measure as empty (padding-only) on
+       the open's own layout — the dialog positions itself against that width
+       and visibly slides once the real width lands. The un-skip only happens
+       at the next update-the-rendering step: no forced reflow can read the
+       true size any earlier, making the bug unfixable from the dialog side.
+       There is also nothing left to win: the window renders only
+       visibleCount + 2 recycled rows, all in or against the viewport. */
   }
 
   /* Orientation-specific sizing/layout. The mask worn by the base layer: the
