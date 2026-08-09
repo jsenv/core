@@ -26,7 +26,8 @@ return composeTwoResponses(
     "content-type": "text/javascript"
   },
   "body": undefined,
-  "bodyEncoding": undefined
+  "bodyEncoding": undefined,
+  "timing": undefined
 }
 ```
 

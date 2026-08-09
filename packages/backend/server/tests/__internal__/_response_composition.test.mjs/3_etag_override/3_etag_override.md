@@ -24,7 +24,8 @@ return composeTwoResponses(
     "etag": "bar"
   },
   "body": undefined,
-  "bodyEncoding": undefined
+  "bodyEncoding": undefined,
+  "timing": undefined
 }
 ```
 
