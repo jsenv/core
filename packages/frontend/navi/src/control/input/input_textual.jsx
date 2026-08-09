@@ -226,15 +226,26 @@ export const inputCss = /* css */ `
       /* Nothing to read yet is still a line: the box may not collapse just
          because the value is empty. */
       min-height: 1lh;
-      text-overflow: clip;
       /* A form control keeps a line of its own whatever line-height the page
          is written in; the text that stands in for one has to say the same
          number, or the box it is meant to match changes height. */
       line-height: normal;
-      /* Cut where the field cuts, and cut the same way: wrapping would make
-         the box taller than the field, and an ellipsis would end the value a
-         character earlier than the field ends it — put side by side the two
-         would no longer read as the same thing. */
+    }
+    /* The value is cut by a box of its own, and that is the whole reason it
+       exists: a field ends its text at the content edge, while an overflow set
+       on the padded box would let it run through the padding — the same value
+       would then lose a character on one side and not on the other. This box
+       IS the content edge, so both stop on the same letter.
+       Cut rather than wrapped (a second line would be taller than the field),
+       and cut rather than ellipsed (an ellipsis costs a character the field
+       does not lose). */
+    .navi_input_text_value {
+      display: block;
+      /* The whole content box, short value or not: a field's text is laid out
+         in the full width whatever it holds, so text-align lands in the same
+         place on both. */
+      width: 100%;
+      text-overflow: clip;
       white-space: nowrap;
       overflow: hidden;
     }
@@ -638,7 +649,7 @@ const InputTextualAsText = (props) => {
         id={id || controlId}
         width={textWidth}
       >
-        {valueShown}
+        <span className="navi_input_text_value">{valueShown}</span>
       </Box>
     </Box>
   );
