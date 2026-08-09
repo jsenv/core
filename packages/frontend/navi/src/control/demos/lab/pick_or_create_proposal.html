@@ -344,7 +344,6 @@
                 ui={selectedEntry ? selectedEntry.name : undefined}
                 clearable
                 borderRadius="s"
-                mode="dialog"
                 popupLayer={popupLayer}
                 positionArea="top"
                 dialogExpand
@@ -420,6 +419,7 @@
                         placeholder={searchPlaceholder}
                         signal={searchSignal}
                         autoComplete="off"
+                        backgroundColor="#ECEEEF"
                         // Searching is optional, choosing is the point: the
                         // surface opens on the list, and a text input taking
                         // the focus would also raise the keyboard on mobile.

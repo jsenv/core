@@ -2,6 +2,7 @@ import { bufferToEtag } from "@jsenv/filesystem";
 import { formatError } from "@jsenv/humanize";
 import { composeTwoResponses, fetchDirectory } from "@jsenv/server";
 import { URL_META } from "@jsenv/url-meta";
+import { normalizeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 import { watchSourceFiles } from "../../helpers/watch_source_files.js";
@@ -221,7 +222,14 @@ export const devServerPluginServeSourceFiles = ({
               rootDirectoryUrl,
             );
             requestedUrlObject.searchParams.delete("hot");
-            requestedUrl = requestedUrlObject.href;
+            // normalizeUrl, because searchParams.delete re-serializes the whole
+            // query and turns a valueless param ("?enabled") into "?enabled=".
+            // Every url in the graph is normalized the other way (kitchen.js
+            // strips those "="), and requestedUrl is compared to graph urls as
+            // a string: an inline urlInfo decides "is this request for me?"
+            // that way (jsenv:inline_content_fetcher) and re-cooks its own
+            // ALREADY COOKED content when the comparison wrongly fails.
+            requestedUrl = normalizeUrl(requestedUrlObject.href);
           }
           const { referer } = request.headers;
           const parentUrl = referer
