@@ -5,6 +5,7 @@
 }
 body {
   margin: 0;
+  font-size: 14px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #eef1f5;
@@ -17,17 +18,43 @@ body {
   overflow-x: auto;
 }
 .page {
-  padding: 16px;
+  padding: 12px;
 }
 .row {
-  margin-bottom: 8px;
-  padding: 12px;
+  margin-bottom: 6px;
+  padding: 8px;
   background: #f3f5f9;
   border-radius: 6px;
 }
+/* The three anchor targets: scrolling to any of them must land it in front of
+   the bars, not under them — that is scroll-padding's job, published by
+   FixedBar alongside the padding. */
+.first,
+.marker,
 .last {
-  padding: 12px;
+  margin-bottom: 6px;
+  padding: 8px;
   color: white;
+  border-radius: 6px;
+}
+.first {
+  background: #7c3aed;
+}
+.marker {
+  background: #0891b2;
+}
+.last {
   background: #16a34a;
+}
+.anchors {
+  display: flex;
+  padding: 8px 0;
+  gap: 8px;
+}
+.anchors a {
+  padding: 4px 8px;
+  color: #1a237e;
+  font-size: 12px;
+  background: #eaf2fd;
   border-radius: 6px;
 }

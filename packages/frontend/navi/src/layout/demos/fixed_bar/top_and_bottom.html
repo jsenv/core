@@ -35,14 +35,30 @@
                   {withTopBar ? "Remove the top bar" : "Add the top bar"}
                 </Button>
               </Box>
-              {Array.from({ length: 20 }, (_, index) => (
+              <div id="first" className="first">
+                First row — anchor target
+              </div>
+              {Array.from({ length: 10 }, (_, index) => (
                 <div key={index} className="row">
                   Row {index + 1}
                 </div>
               ))}
-              <div className="last">
-                Last row — nothing hides under either bar.
+              <div id="middle" className="marker">
+                Middle — anchor target
               </div>
+              {Array.from({ length: 10 }, (_, index) => (
+                <div key={index} className="row">
+                  Row {index + 11}
+                </div>
+              ))}
+              <div id="last" className="last">
+                Last row — anchor target
+              </div>
+              <nav className="anchors">
+                <a href="#first">↑ first</a>
+                <a href="#middle">middle</a>
+                <a href="#last">↓ last</a>
+              </nav>
             </div>
             <FixedBar area="bottom" size="64px">
               <Box flex alignX="center" expandX>

@@ -229,6 +229,16 @@ const css = /* css */ `
     flex: 1;
     color: inherit;
 
+    /* An app shell: the binder is the window, the page is what scrolls in it,
+       and the tab row stays put without being fixed — it is simply the part of
+       the binder that does not scroll. min-size:0 because a flex item refuses
+       to shrink under its content, which is what makes overflow do nothing. */
+    .navi_binder[data-scrollable-page] & {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+    }
+
     .navi_binder[data-tabs-position="top"] & {
       padding-top: var(--binder-page-padding);
     }
@@ -292,6 +302,12 @@ const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
  *   side of the page the tabs sit on.
  * @param {"start"|"center"|"end"|"stretch"} [props.tabsAlign="stretch"] - How
  *   the tabs spread along that side.
+ * @param {boolean} [props.scrollablePage] - Makes the page scroll inside the
+ *   binder instead of growing it. What an app shell wants: give the binder the
+ *   size of the window and the tab row stays in place while the page scrolls
+ *   under it — no `position: fixed` anywhere, so the tabs and the page are
+ *   still one shape and the junction still merges them. The trade is that the
+ *   document itself no longer scrolls.
  * @param {number|false} [props.maxLines=1] - How many lines a tab label may
  *   use before being cut with an ellipsis; `false` lets it wrap freely. A tab
  *   is never allowed to widen the binder past the page it opens, so the
@@ -311,6 +327,7 @@ export const Binder = ({
   tabsPosition = "top",
   tabsAlign = "stretch",
   maxLines = 1,
+  scrollablePage,
   borderWidth,
   borderRadius,
   paddingX,
@@ -405,6 +422,7 @@ export const Binder = ({
       baseClassName="navi_binder"
       data-tabs-position={tabsPosition}
       data-tabs-align={tabsAlign}
+      data-scrollable-page={scrollablePage ? "" : undefined}
       borderWidth={withPixelUnit(borderWidth)}
       borderRadius={withPixelUnit(borderRadius)}
       paddingX={withPixelUnit(paddingX)}
