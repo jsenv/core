@@ -76,7 +76,7 @@ const useActionStatus = (action) => {
   };
 };
 
-installImportMetaCssBuild(import.meta);const css$U = /* css */`
+installImportMetaCssBuild(import.meta);const css$W = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -101,7 +101,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -16381,7 +16381,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$T = /* css */`
+const css$V = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -16601,7 +16601,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$T, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$V, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -28374,7 +28374,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$S = /* css */`
+installImportMetaCssBuild(import.meta);const css$U = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -28406,7 +28406,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$S, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -28611,7 +28611,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$R = /* css */`
+installImportMetaCssBuild(import.meta);const css$T = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -28648,7 +28648,7 @@ installImportMetaCssBuild(import.meta);const css$R = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$R, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -28873,7 +28873,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$Q = /* css */`
+const css$S = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -29378,7 +29378,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -29529,7 +29529,7 @@ const TextWithSelectRange = ({
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$P = /* css */`
+const css$R = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -29564,7 +29564,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -29679,7 +29679,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$O = /* css */`
+installImportMetaCssBuild(import.meta);const css$Q = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -29837,7 +29837,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -29941,6 +29941,18 @@ const useIsVisited = (url) => {
   }, [url, visitedUrlsSignal.value]);
 };
 
+/**
+ * What a binder tab hands to whatever it contains: a way to say "I am the
+ * current one". A `Link` inside a tab knows it is current (its route matches)
+ * long before the binder could work it out, so it reports instead of the
+ * binder guessing — see `Link`'s use of this context.
+ *
+ * Its own module so `link.jsx` can read it without importing the binder.
+ *
+ * @type {import("preact").Context<{ reportCurrent: (current: boolean) => void } | null>}
+ */
+const BinderItemContext = createContext(null);
+
 /*
  * Custom hook to apply semi-transparent color when an element should be dimmed.
  *
@@ -29978,7 +29990,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`
+installImportMetaCssBuild(import.meta);const css$P = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -30053,7 +30065,12 @@ installImportMetaCssBuild(import.meta);const css$N = /* css */`
     aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
     padding-right: var(--x-link-padding-right);
-    padding-bottom: var(--link-loading-outline-size);
+    /* The loading underline is drawn inside the box: its own room is kept at
+       the bottom on top of whatever padding was asked for, so a link that
+       starts loading never reflows. */
+    padding-bottom: calc(
+      var(--x-link-padding-bottom) + var(--link-loading-outline-size)
+    );
     padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);
@@ -30311,6 +30328,21 @@ const LinkStyleCSSVars = {
     color: "--link-color-selected"
   }
 };
+// A link placed inside a binder tab tells that tab whether it is the current
+// one. The binder cannot know: which page an url opens is the link's business,
+// and it is settled before the binder renders anything.
+const useReportCurrentToBinderItem = current => {
+  const reportCurrent = useContext(BinderItemContext);
+  useLayoutEffect(() => {
+    if (!reportCurrent) {
+      return undefined;
+    }
+    reportCurrent(current);
+    return () => {
+      reportCurrent(false);
+    };
+  }, [reportCurrent, current]);
+};
 const LinkPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":visited", ":-navi-loading", ":-navi-href-internal", ":-navi-href-external", ":-navi-href-anchor", ":-navi-href-current", ":-navi-selected"];
 const LinkPseudoElements = ["::-navi-loader", "::-navi-indicator"];
 Object.assign(PSEUDO_CLASSES, {
@@ -30400,7 +30432,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$N, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -30489,6 +30521,7 @@ const LinkPlain = props => {
     isCurrent
   } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
+  useReportCurrentToBinderItem(innerCurrent);
   controlHostProps.basePseudoState = {
     ...basePseudoState,
     ":visited": visited,
@@ -30634,7 +30667,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$M = /* css */`
+const css$O = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -30727,20 +30760,60 @@ const css$M = /* css */`
       }
     }
 
-    &[data-panel-border-connection] {
-      --nav-border-width: 10px;
+    /* Folder tabs: the current tab and the panel share one surface. Every tab
+       carries the panel's line on the side facing it, and the current one
+       paints that side with the panel background instead, so the line opens
+       there. The negative margin makes the two lines overlap — without it the
+       panel's own line would still be drawn under the tabs; and since a tab
+       background is painted under its border too, a tab with a background of
+       its own would otherwise hide the panel's line over its width.
+
+       The line is 1px and never thicker: past that, the corner where a square
+       tab meets the panel shows the miter as a visible notch. */
+    &[data-panel-position] {
+      --nav-border-color: transparent;
+      --nav-tab-border-radius: 0px;
+
+      --x-nav-panel-background: var(
+        --nav-panel-background,
+        var(--link-background-current, white)
+      );
+
       position: relative;
       z-index: 1;
 
       .navi_link {
-        border: var(--nav-border-width) solid transparent;
+        border: 1px solid transparent;
 
-        &[data-tab-selected] {
-          border-color: gray;
-          border-bottom-color: var(--nav-background);
+        &[data-href-current] {
+          border-color: var(--nav-border-color);
+        }
+      }
 
-          border-top-left-radius: 5px;
-          border-top-right-radius: 5px;
+      &[data-panel-position="after"] {
+        margin-bottom: -1px;
+
+        .navi_link {
+          border-bottom-color: var(--nav-border-color);
+
+          &[data-href-current] {
+            border-bottom-color: var(--x-nav-panel-background);
+            border-top-left-radius: var(--nav-tab-border-radius);
+            border-top-right-radius: var(--nav-tab-border-radius);
+          }
+        }
+      }
+      &[data-panel-position="before"] {
+        margin-top: -1px;
+
+        .navi_link {
+          border-top-color: var(--nav-border-color);
+
+          &[data-href-current] {
+            border-top-color: var(--x-nav-panel-background);
+            border-bottom-right-radius: var(--nav-tab-border-radius);
+            border-bottom-left-radius: var(--nav-tab-border-radius);
+          }
         }
       }
     }
@@ -30766,11 +30839,10 @@ const Nav = ({
   expandX,
   linkBorderRadiusInherit,
   panelPosition,
-  // before or after
-  panelBorderConnection,
+  // "before" or "after": which side the panel sits on, turning the nav into folder tabs
   ...props
 }) => {
-  import.meta.css = [css$M, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -30781,7 +30853,6 @@ const Nav = ({
     "data-expand": expand || expandX ? "" : undefined,
     "data-vertical": vertical ? "" : undefined,
     "data-panel-position": panelPosition,
-    "data-panel-border-connection": panelBorderConnection ? "" : undefined,
     expand: expand,
     expandX: expandX,
     spacing: spacing,
@@ -30791,6 +30862,1268 @@ const Nav = ({
       value: true,
       children: children
     })
+  });
+};
+
+/**
+ * The binder outline: one closed path wrapping the tab row AND the page, with
+ * the current tab opening into the page through concave junction curves.
+ *
+ * Why a path instead of CSS borders — CSS cannot do either of these:
+ *   1. Omit one side of a border while keeping the surrounding corners intact
+ *      (the current tab has no border on the page side, so it merges with it).
+ *   2. Curve a corner inward (concave), which is what a tab-to-page junction
+ *      is. `border-radius` only bulges outward.
+ *
+ * Everything here is in "path space": the main axis (along the tab row) is x
+ * and the cross axis goes from the tabs toward the page, whatever the real
+ * orientation. Tabs left/right reuse the top/bottom builders and transpose the
+ * result at the end.
+ *
+ * The path is a centerline: it runs half a border-width inside the box edges,
+ * so a stroke of `borderWidth` covers exactly the border area the CSS borders
+ * of the inactive tabs occupy, and the two line up.
+ */
+
+// Low-level arc helpers: produce SVG arc commands with an explicit sweep flag.
+// sweep=1 → clockwise arc; sweep=0 → counter-clockwise arc.
+const arcSweep1 = (r, dx, dy) => {
+  if (r <= 0) {
+    return `l ${dx},${dy}`;
+  }
+  return `a ${r},${r} 0 0 1 ${dx},${dy}`;
+};
+const arcSweep0 = (r, dx, dy) => {
+  if (r <= 0) {
+    return `l ${dx},${dy}`;
+  }
+  return `a ${r},${r} 0 0 0 ${dx},${dy}`;
+};
+// Semantic aliases used when drawing the CW outer path.
+// In a CW path: convex (outward) corners use sweep=1, concave (inward) use sweep=0.
+const arcConvex = arcSweep1;
+const arcConcave = arcSweep0;
+
+// Swaps x and y in a command list produced by the path builders (only
+// M/h/v/l/a/Z commands, in the exact format they emit). Swapping axes is a
+// mirror transform, so arc sweep flags must flip.
+const transposePath = (commands) =>
+  commands.map((command) => {
+    const parts = command.split(" ");
+    const type = parts[0];
+    if (type === "M" || type === "l") {
+      const [x, y] = parts[1].split(",");
+      return `${type} ${y},${x}`;
+    }
+    if (type === "h") {
+      return `v ${parts[1]}`;
+    }
+    if (type === "v") {
+      return `h ${parts[1]}`;
+    }
+    if (type === "a") {
+      const sweep = parts[4] === "1" ? "0" : "1";
+      const [dx, dy] = parts[5].split(",");
+      return `a ${parts[1]} ${parts[2]} ${parts[3]} ${sweep} ${dy},${dx}`;
+    }
+    return command;
+  });
+
+/**
+ * @param {object} params
+ * @param {number} params.tabX - Where the current tab starts along the tab row.
+ * @param {number} params.tabWidth - Its size along the tab row.
+ * @param {number} params.tabRowHeight - From the outer edge of the tab row to
+ *   the junction line where tabs meet the page.
+ * @param {number} params.panelWidth - The whole binder, along the tab row.
+ * @param {number} params.panelHeight - From the junction line to the far edge
+ *   of the page.
+ * @param {number} params.gapBeforeTabs - Free room before the first tab, and
+ * @param {number} params.gapAfterTabs - after the last one: a page corner on
+ *   the tab-row side is only rounded when its gap has room for the radius.
+ * @param {number} params.outerRadius - The corners of the shape as a whole:
+ *   the page's, and the ones the tab row shares with it. Square when the
+ *   binder fills its container, rounded when it sits in a rounded one.
+ * @param {number} params.tabRadius - The tabs' own corners, away from the
+ *   page, and the concave curves where a tab opens into it. Independent: tabs
+ *   can be rounded inside a square binder, and the other way round.
+ * @param {"top"|"bottom"|"left"|"right"} params.tabsPosition
+ * @returns {string} An SVG path `d` attribute.
+ */
+const buildBinderPath = ({
+  tabX,
+  tabWidth,
+  tabRowHeight,
+  panelWidth,
+  panelHeight,
+  borderWidth,
+  outerRadius,
+  tabRadius,
+  gapBeforeTabs,
+  gapAfterTabs,
+  tabsPosition,
+}) => {
+  const h = borderWidth / 2;
+  const withoutBorder = (radius) => (radius - h < 0 ? 0 : radius - h);
+  const r = withoutBorder(tabRadius);
+  const rOuter = withoutBorder(outerRadius);
+  // Page corners on the tab-row side only get rounded when the gap before /
+  // after the tabs leaves room for the full radius.
+  const gapAfter = gapAfterTabs < 0 ? 0 : gapAfterTabs;
+  const rTR = gapAfter >= rOuter ? rOuter : 0;
+  const gapBefore = gapBeforeTabs < 0 ? 0 : gapBeforeTabs;
+  const rTL = gapBefore >= rOuter ? rOuter : 0;
+
+  const params = {
+    tabX,
+    tabWidth,
+    tabRowHeight,
+    panelWidth,
+    panelHeight,
+    h,
+    r,
+    rOuter,
+    rTR,
+    rTL,
+  };
+  const d =
+    tabsPosition === "top" || tabsPosition === "left"
+      ? buildBinderCenterlinePathAbove(params)
+      : buildBinderCenterlinePathBelow(params);
+  const commands =
+    tabsPosition === "left" || tabsPosition === "right" ? transposePath(d) : d;
+  return commands.join(" ");
+};
+
+// Builds the centerline path when tabs are ABOVE the panel.
+// CW path: M(tabLeft+r, top) → tab top → tab TR → [right junction] → panel TR
+//   → panel right ↓ → panel BR → panel bottom ← → panel BL → panel left ↑ → [left junction] → tab TL → Z
+const buildBinderCenterlinePathAbove = ({
+  tabX,
+  tabWidth,
+  tabRowHeight,
+  panelWidth,
+  panelHeight,
+  h,
+  r,
+  rOuter,
+  rTR,
+  rTL,
+}) => {
+  const hasRightJunction = tabX + tabWidth < panelWidth;
+  const hasLeftJunction = tabX > 0;
+
+  const left = h;
+  const top = h;
+  const right = panelWidth - h;
+  const bottom = tabRowHeight + panelHeight - h;
+  const tabLeft = tabX + h;
+  const tabRight = tabX + tabWidth - h;
+  const junctionY = tabRowHeight - h;
+
+  const rVSpace = junctionY - top - r;
+  const rTotalHSpace = right - tabRight;
+  const rFits = hasRightJunction && rVSpace >= r && rTotalHSpace >= r + rTR;
+
+  const lVSpace = junctionY - top - r;
+  const lTotalHSpace = tabLeft - left - rTL; // capped by gap left of first tab
+  // lFits: room for panel TL arc (rTL) + concave junction arc (r)
+  const lFits = hasLeftJunction && lVSpace >= r && lTotalHSpace >= r;
+  // lTight: only room for panel TL arc, skip concave — favor panel rounding
+  const lTight = hasLeftJunction && lVSpace >= r && lTotalHSpace >= 0;
+
+  const d = [];
+  d.push(`M ${tabLeft + r},${top}`);
+  d.push(`h ${tabRight - r - (tabLeft + r)}`);
+
+  // ── Right side ────────────────────────────────────────────────────────────
+  if (!hasRightJunction) {
+    d.push(arcConvex(r, r, r));
+    d.push(`v ${bottom - top - r - rOuter}`);
+  } else if (rFits) {
+    d.push(arcConvex(r, r, r)); // tab TR: right→down
+    d.push(`v ${rVSpace - r}`); // tab right ↓ to concave arc start
+    d.push(arcConcave(r, r, r)); // junction concave: down→right
+    d.push(`h ${rTotalHSpace - r - rTR}`); // panel top →
+    d.push(arcConvex(rTR, rTR, rTR)); // panel TR: right→down
+    d.push(`v ${bottom - junctionY - rTR - rOuter}`); // panel right ↓
+  } else {
+    d.push(arcConvex(r, r, r)); // tab TR: right→down
+    d.push(`v ${rVSpace}`); // straight down to junctionY
+    d.push(`h ${rTotalHSpace - rTR}`); // panel top →
+    d.push(arcConvex(rTR, rTR, rTR)); // panel TR: right→down (clamped)
+    d.push(`v ${bottom - junctionY - rTR - rOuter}`); // panel right ↓
+  }
+
+  // ── Panel BR → bottom → BL ────────────────────────────────────────────────
+  d.push(arcConvex(rOuter, -rOuter, rOuter));
+  d.push(`h -${right - left - 2 * rOuter}`);
+  d.push(arcConvex(rOuter, -rOuter, -rOuter));
+
+  // ── Panel left ↑ + left junction back to M ───────────────────────────────
+  if (!hasLeftJunction) {
+    d.push(`v -${bottom - top - rOuter - r}`);
+    d.push(arcConvex(r, r, -r)); // panel TL = tab TL: up→right
+  } else if (lFits) {
+    d.push(`v -${bottom - junctionY - rOuter - rTL}`); // panel left ↑ to (left, junctionY+rTL)
+    d.push(arcConvex(rTL, rTL, -rTL)); // panel TL: up→right
+    d.push(`h ${lTotalHSpace - r}`); // panel top → to (tabLeft-r, junctionY)
+    d.push(arcConcave(r, r, -r)); // junction concave: right→up
+    d.push(`v -${lVSpace - r}`); // tab left ↑
+    d.push(arcConvex(r, r, -r)); // tab TL: up→right
+  } else if (lTight) {
+    // Panel TL rounded, no concave — square tab corner
+    d.push(`v -${bottom - junctionY - rOuter - rTL}`); // panel left ↑ to (left, junctionY+rTL)
+    d.push(arcConvex(rTL, rTL, -rTL)); // panel TL: up→right
+    d.push(`h ${lTotalHSpace}`); // panel top → to (tabLeft, junctionY)
+    d.push(`v -${lVSpace}`); // tab left ↑
+    d.push(arcConvex(r, r, -r)); // tab TL: up→right
+  } else {
+    d.push(`v -${bottom - junctionY - rOuter}`); // panel left ↑ to junctionY
+    d.push(`h ${lTotalHSpace}`); // panel top →
+    d.push(`v -${lVSpace}`); // tab left ↑
+    d.push(arcConvex(r, r, -r)); // tab TL: up→right
+  }
+
+  d.push("Z");
+  return d;
+};
+
+// Builds the centerline path when tabs are BELOW the panel.
+// CW path: M(left+r, top) → panel top → panel TR → panel right ↓ → [right junction] →
+//   tab right ↓ → tab BR → tab bottom ← → [left junction] → tab BL → tab left ↑ → panel left ↑ → panel TL → Z
+//
+// Right junction: panel right ↓ to junctionY (square corner), left along panel bottom gap,
+//   concave notch arc (left→down), tab right ↓.
+// Left junction: tab left ↑, concave notch arc (up→left), left along panel bottom gap to panel left
+//   (square corner), panel left ↑.
+const buildBinderCenterlinePathBelow = ({
+  tabX,
+  tabWidth,
+  tabRowHeight,
+  panelWidth,
+  panelHeight,
+  h,
+  r,
+  rOuter,
+  rTR,
+  rTL,
+}) => {
+  const hasRightJunction = tabX + tabWidth < panelWidth;
+  const hasLeftJunction = tabX > 0;
+
+  const left = h;
+  const top = h;
+  const right = panelWidth - h;
+  const bottom = panelHeight + tabRowHeight - h;
+  const tabLeft = tabX + h;
+  const tabRight = tabX + tabWidth - h;
+  const junctionY = panelHeight - h;
+
+  // Vertical room on the page's right/left sides, between its top corner
+  // (outer) and the junction.
+  const rPanelVSpace = junctionY - top - rOuter;
+
+  // Right junction: the page corner beside the last tab uses rTR.
+  const rTotalHSpace = right - tabRight - rTR;
+  // rFits: room for the page corner arc (rTR) + the concave junction arc (r)
+  const rFits = hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= r;
+  // rTight: only room for the page corner arc, skip concave — favor the page
+  const rTight = hasRightJunction && rPanelVSpace >= r && rTotalHSpace >= 0;
+
+  // Left junction: the page corner beside the first tab uses rTL.
+  const lTotalHSpace = tabLeft - left - rTL;
+  const lFits = hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= r;
+  const lTight = hasLeftJunction && rPanelVSpace >= r && lTotalHSpace >= 0;
+
+  const d = [];
+
+  // M: start after the page's TL arc, going right along the page top
+  d.push(`M ${left + rOuter},${top}`);
+  d.push(`h ${right - left - 2 * rOuter}`); // page top →
+
+  // ── Right side: page right ↓ then (junction or direct) tab right ↓ ──────
+  if (!hasRightJunction) {
+    d.push(arcConvex(rOuter, rOuter, rOuter)); // page TR: right→down
+    d.push(`v ${bottom - top - rOuter - r}`); // full right side ↓
+    d.push(arcConvex(r, -r, r)); // tab BR: down→left
+  } else if (rFits) {
+    d.push(arcConvex(rOuter, rOuter, rOuter)); // page TR: right→down
+    d.push(`v ${rPanelVSpace - rTR}`); // page right ↓ to (right, junctionY-rTR)
+    d.push(arcConvex(rTR, -rTR, rTR)); // page corner: down→left
+    d.push(`h -${rTotalHSpace - r}`); // page bottom ← to (tabRight+r, junctionY)
+    d.push(arcConcave(r, -r, r)); // junction concave: left→down
+    d.push(`v ${bottom - junctionY - 2 * r}`); // tab right ↓ to (tabRight, bottom-r)
+    d.push(arcConvex(r, -r, r)); // tab BR: down→left
+  } else if (rTight) {
+    // Page corner rounded, no concave — square tab corner
+    d.push(arcConvex(rOuter, rOuter, rOuter)); // page TR: right→down
+    d.push(`v ${rPanelVSpace - rTR}`); // page right ↓ to (right, junctionY-rTR)
+    d.push(arcConvex(rTR, -rTR, rTR)); // page corner: down→left
+    d.push(`h -${rTotalHSpace}`); // page bottom ← to (tabRight, junctionY)
+    d.push(`v ${bottom - junctionY - r}`); // tab right ↓ to (tabRight, bottom-r)
+    d.push(arcConvex(r, -r, r)); // tab BR: down→left
+  } else {
+    // Very tight: all square corners
+    d.push(arcConvex(rOuter, rOuter, rOuter)); // page TR: right→down
+    d.push(`v ${rPanelVSpace}`); // page right ↓ to junctionY
+    d.push(`h -${right - tabRight}`); // page bottom ← to tabRight
+    d.push(`v ${bottom - junctionY - r}`); // tab right ↓ to (tabRight, bottom-r)
+    d.push(arcConvex(r, -r, r)); // tab BR: down→left
+  }
+
+  // ── Tab bottom ← ──────────────────────────────────────────────────────────
+  d.push(`h -${tabRight - r - (tabLeft + r)}`); // tab bottom ←
+
+  // ── Left side: tab BL → tab left ↑ → (junction or direct) → page left ↑ ──
+  if (!hasLeftJunction) {
+    d.push(arcConvex(r, -r, -r)); // tab BL: left→up
+    d.push(`v -${bottom - top - rOuter - r}`); // full left side ↑
+    d.push(arcConvex(rOuter, rOuter, -rOuter)); // page TL: up→right → M
+  } else if (lFits) {
+    d.push(arcConvex(r, -r, -r)); // tab BL: left→up
+    d.push(`v -${bottom - junctionY - 2 * r}`); // tab left ↑ to (tabLeft, junctionY+r)
+    d.push(arcConcave(r, -r, -r)); // junction concave: up→left
+    d.push(`h -${lTotalHSpace - r}`); // page bottom ← to (left+rTL, junctionY)
+    d.push(arcConvex(rTL, -rTL, -rTL)); // page corner: left→up
+    d.push(`v -${rPanelVSpace - rTL}`); // page left ↑ to (left, top+rOuter)
+    d.push(arcConvex(rOuter, rOuter, -rOuter)); // page TL: up→right → M
+  } else if (lTight) {
+    // Page corner rounded, no concave — square tab corner
+    d.push(arcConvex(r, -r, -r)); // tab BL: left→up
+    d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to (tabLeft, junctionY)
+    d.push(`h -${lTotalHSpace}`); // page bottom ← to (left+rTL, junctionY)
+    d.push(arcConvex(rTL, -rTL, -rTL)); // page corner: left→up
+    d.push(`v -${rPanelVSpace - rTL}`); // page left ↑ to (left, top+rOuter)
+    d.push(arcConvex(rOuter, rOuter, -rOuter)); // page TL: up→right → M
+  } else {
+    // Very tight: all square corners
+    d.push(arcConvex(r, -r, -r)); // tab BL: left→up
+    d.push(`v -${bottom - junctionY - r}`); // tab left ↑ to junctionY
+    d.push(`h -${tabLeft - left}`); // page bottom ← to left
+    d.push(`v -${rPanelVSpace}`); // page left ↑ to (left, top+rOuter)
+    d.push(arcConvex(rOuter, rOuter, -rOuter)); // page TL: up→right → M
+  }
+
+  d.push("Z");
+  return d;
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A binder: tabs and the page they open, drawn as one shape.
+ *
+ * Unlike a `Nav`, a binder owns its content — the tab and the page it shows are
+ * the same item, declared together:
+ *
+ *   <Binder>
+ *     <Binder.Item value="a" label="Approved">…the page…</Binder.Item>
+ *   </Binder>
+ *
+ * Layers, and why they are what they are:
+ * - The outline (tab row + page, with the concave junctions around the current
+ *   tab) is a single SVG path — see binder_path.js for why CSS borders cannot
+ *   draw it. It covers the whole binder and sits above the inactive tabs but
+ *   below the current tab and the page.
+ * - The inactive tabs keep plain CSS borders: the path only runs along the
+ *   current tab, so the top of an inactive tab is its own to draw. Their border
+ *   width matches the path's stroke and lands in the same band, which is what
+ *   makes the two read as one continuous line.
+ * - Every tab reserves that band on the page side with a margin, so the stroke
+ *   never lands on a tab's own edge.
+ *
+ * Border width participates in layout (it is added to the tab and page
+ * padding): a thick border grows the binder rather than eating into the text.
+ */
+const css$N = /* css */`
+  @layer navi {
+    .navi_binder {
+      --binder-border-width: var(--navi-control-border-width);
+      --binder-border-radius: var(--navi-control-border-radius);
+      /* The tabs' own corners. Their own knob because the two answer different
+         questions: the outer radius follows the container the binder sits in
+         (square when it fills the page), the tab radius is the tabs' shape. */
+      --binder-tab-border-radius: var(--binder-border-radius);
+      --binder-border-color: var(--navi-control-border-color);
+      --binder-background: var(--navi-surface-color);
+      /* The tabs that are not open read as the same paper, slightly shaded:
+         derived from the border color so one override themes both, in light
+         and dark alike. */
+      --binder-tab-background: color-mix(
+        in srgb,
+        var(--binder-border-color) 12%,
+        var(--binder-background)
+      );
+      --binder-tab-border-color: var(--binder-border-color);
+      --binder-tab-color: var(--navi-color-secondary);
+      --binder-tab-background-hover: color-mix(
+        in srgb,
+        var(--binder-border-color) 22%,
+        var(--binder-background)
+      );
+      --binder-padding-x: var(--navi-s);
+      --binder-padding-y: var(--navi-xs);
+      --binder-page-padding: var(--navi-m);
+    }
+  }
+
+  .navi_binder {
+    position: relative;
+    display: flex;
+    width: fit-content;
+    align-items: stretch;
+
+    &[data-tabs-position="top"] {
+      flex-direction: column;
+    }
+    &[data-tabs-position="bottom"] {
+      flex-direction: column-reverse;
+    }
+    &[data-tabs-position="left"] {
+      flex-direction: row;
+    }
+    &[data-tabs-position="right"] {
+      flex-direction: row-reverse;
+    }
+  }
+
+  .navi_binder_outline {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .navi_binder_tabs {
+    display: flex;
+    /* The page decides how wide the binder is; the tab row only fills it.
+       Sizing it to 0 keeps its labels out of the binder's intrinsic size (a
+       long one would otherwise stretch the whole thing) while min-size brings
+       it back to the width the page settled on — which is what leaves the
+       labels something to truncate against. */
+    .navi_binder[data-tabs-position="top"] &,
+    .navi_binder[data-tabs-position="bottom"] & {
+      width: 0;
+      min-width: 100%;
+    }
+    .navi_binder[data-tabs-position="left"] &,
+    .navi_binder[data-tabs-position="right"] & {
+      height: 0;
+      min-height: 100%;
+    }
+    /* Tabs of unequal size line up on the page side, so the junction band is
+       one straight line whatever their content. */
+    .navi_binder[data-tabs-position="top"] & {
+      align-items: flex-end;
+    }
+    .navi_binder[data-tabs-position="bottom"] & {
+      align-items: flex-start;
+    }
+    /* A column of tabs is as wide as its widest one, all of them that wide, so
+       the junction band is one straight line here too. */
+    .navi_binder[data-tabs-position="left"] &,
+    .navi_binder[data-tabs-position="right"] & {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  .navi_binder_tab {
+    position: relative;
+    z-index: 0;
+    /* A flex item refuses to go under its content unless told to; without this
+       a long label widens the tab row instead of truncating. */
+    min-width: 0;
+    min-height: 0;
+    /* The border is part of the tab's box on every tab, current one included
+       (transparent there — the path draws it), so opening a tab never moves
+       anything. */
+    padding: var(--binder-padding-y) var(--binder-padding-x);
+    flex: 0 1 auto;
+    color: var(--binder-tab-color);
+    font: inherit;
+    text-align: center;
+    text-decoration: none;
+    background: var(--binder-tab-background);
+    border: var(--binder-border-width) solid var(--binder-tab-border-color);
+    cursor: pointer;
+    /* "stretch" is an equal share each, whatever a tab holds — a basis read
+       from the content would hand the longest label the widest tab. */
+    .navi_binder[data-tabs-align="stretch"] & {
+      flex: 1 1 0;
+    }
+
+    /* The navi attributes rather than the CSS pseudo-classes: they are what a
+       demo can hold with pseudoState={{ ":focus-visible": true }}. */
+    &[data-hover] {
+      background: var(--binder-tab-background-hover);
+    }
+    /* The ring would be cut by the neighbours and by the outline band around
+       it, so it is drawn inside and lifted above them. */
+    &[data-focus-visible] {
+      z-index: 3;
+      outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--navi-focus-outline-width));
+    }
+    &[data-current] {
+      z-index: 2;
+      color: inherit;
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+    /* Adjacent tabs share one line rather than stacking two borders. */
+    &:not(:first-child) {
+      margin-inline-start: calc(-1 * var(--binder-border-width));
+    }
+
+    /* The margin on the page side is the junction band the path draws in; the
+       corners away from the page are the ones that round. */
+    .navi_binder[data-tabs-position="top"] & {
+      margin-bottom: var(--binder-border-width);
+      border-bottom: none;
+      border-radius: var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0 0;
+    }
+    .navi_binder[data-tabs-position="bottom"] & {
+      margin-top: var(--binder-border-width);
+      border-top: none;
+      border-radius: 0 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius);
+    }
+    .navi_binder[data-tabs-position="left"] & {
+      margin-right: var(--binder-border-width);
+      border-right: none;
+      border-radius: var(--binder-tab-border-radius) 0 0
+        var(--binder-tab-border-radius);
+    }
+    .navi_binder[data-tabs-position="right"] & {
+      margin-left: var(--binder-border-width);
+      border-left: none;
+      border-radius: 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0;
+    }
+    /* A column of tabs shares its main axis with the block direction, where
+       margin-inline-start would collapse the wrong pair. */
+    .navi_binder[data-tabs-position="left"] &:not(:first-child),
+    .navi_binder[data-tabs-position="right"] &:not(:first-child) {
+      margin-inline-start: 0;
+      margin-top: calc(-1 * var(--binder-border-width));
+    }
+  }
+
+  /* A tab that grows with its label would push the binder wider than the page
+     it opens; by default a label stays on one line and is cut with an ellipsis.
+     maxLines={n} lets it use n lines, maxLines={false} lets it wrap freely. */
+  .navi_binder_tab_label {
+    display: block;
+
+    &[data-max-lines="1"] {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    &[data-max-lines]:not([data-max-lines="1"]) {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--binder-tab-max-lines);
+    }
+  }
+
+  .navi_binder_page {
+    position: relative;
+    z-index: 2;
+    /* Same reservation as the tabs, on the three sides the path runs along. */
+    padding: calc(var(--binder-page-padding) + var(--binder-border-width));
+    flex: 1;
+    color: inherit;
+
+    /* An app shell: the binder is the window, the page is what scrolls in it,
+       and the tab row stays put without being fixed — it is simply the part of
+       the binder that does not scroll. min-size:0 because a flex item refuses
+       to shrink under its content, which is what makes overflow do nothing. */
+    .navi_binder[data-scrollable-page] & {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .navi_binder[data-tabs-position="top"] & {
+      padding-top: var(--binder-page-padding);
+    }
+    .navi_binder[data-tabs-position="bottom"] & {
+      padding-bottom: var(--binder-page-padding);
+    }
+    .navi_binder[data-tabs-position="left"] & {
+      padding-left: var(--binder-page-padding);
+    }
+    .navi_binder[data-tabs-position="right"] & {
+      padding-right: var(--binder-page-padding);
+    }
+  }
+`;
+const BinderStyleCSSVars = {
+  borderWidth: "--binder-border-width",
+  borderRadius: "--binder-border-radius",
+  tabBorderRadius: "--binder-tab-border-radius",
+  borderColor: "--binder-border-color",
+  background: "--binder-background",
+  tabBackground: "--binder-tab-background",
+  tabBackgroundHover: "--binder-tab-background-hover",
+  tabBorderColor: "--binder-tab-border-color",
+  tabColor: "--binder-tab-color",
+  paddingX: "--binder-padding-x",
+  paddingY: "--binder-padding-y",
+  pagePadding: "--binder-page-padding"
+};
+const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
+  start: "flex-start",
+  center: "center",
+  end: "flex-end",
+  stretch: "stretch"
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   value?: any,
+ *   defaultValue?: any,
+ *   onChange?: (value: any) => void,
+ *   tabsPosition?: "top"|"bottom"|"left"|"right",
+ *   tabsAlign?: "start"|"center"|"end"|"stretch",
+ *   borderWidth?: string|number,
+ *   borderRadius?: string|number,
+ *   tabBorderRadius?: string|number,
+ *   borderColor?: string,
+ *   background?: string,
+ *   tabBackground?: string,
+ *   tabBackgroundHover?: string,
+ *   tabBorderColor?: string,
+ *   tabColor?: string,
+ *   paddingX?: string|number,
+ *   paddingY?: string|number,
+ *   pagePadding?: string|number,
+ * }>}
+ * @param {any} [props.value] - The open item, when the caller keeps that state.
+ *   Leave it out for a binder that keeps its own (see `defaultValue`).
+ * @param {any} [props.defaultValue] - Which item is open to begin with;
+ *   defaults to the first one.
+ * @param {"top"|"bottom"|"left"|"right"} [props.tabsPosition="top"] - Which
+ *   side of the page the tabs sit on.
+ * @param {"start"|"center"|"end"|"stretch"} [props.tabsAlign="stretch"] - How
+ *   the tabs spread along that side.
+ * @param {boolean} [props.scrollablePage] - Makes the page scroll inside the
+ *   binder instead of growing it. What an app shell wants: give the binder the
+ *   size of the window and the tab row stays in place while the page scrolls
+ *   under it — no `position: fixed` anywhere, so the tabs and the page are
+ *   still one shape and the junction still merges them. The trade is that the
+ *   document itself no longer scrolls.
+ * @param {number|false} [props.maxLines=1] - How many lines a tab label may
+ *   use before being cut with an ellipsis; `false` lets it wrap freely. A tab
+ *   is never allowed to widen the binder past the page it opens, so the
+ *   default keeps every label on one line. Overridable per item.
+ * @param {string|number} [props.borderWidth] - Thickness of the whole outline,
+ *   the inactive tabs included. It is added to the paddings, so a thick border
+ *   grows the binder instead of closing in on the text.
+ * @param {string} [props.tabBorderColor] - The inactive tabs alone; the rest of
+ *   the outline follows `borderColor`.
+ * @param {import("ignore:preact").ComponentChildren} props.children - `Binder.Item`s.
+ */
+const Binder = ({
+  children,
+  value,
+  defaultValue,
+  onChange,
+  tabsPosition = "top",
+  tabsAlign = "stretch",
+  maxLines = 1,
+  scrollablePage,
+  borderWidth,
+  borderRadius,
+  tabBorderRadius,
+  paddingX,
+  paddingY,
+  pagePadding,
+  ...props
+}) => {
+  import.meta.css = [css$N, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  const items = toChildArray(children).map((child, index) => {
+    const {
+      value: itemValue,
+      label,
+      children: content,
+      ...tabProps
+    } = child.props;
+    return {
+      value: itemValue === undefined ? index : itemValue,
+      label,
+      content,
+      // Everything else belongs to the tab: an item is how one styles and
+      // configures the control that opens it.
+      tabProps
+    };
+  });
+  const [valueOwnState, setValueOwnState] = useState(defaultValue === undefined ? items[0]?.value : defaultValue);
+  // A tab holding a Link knows it is the current one (its route matches) before
+  // the binder could work it out, and says so — see BinderItemContext.
+  const [reportedValue, setReportedValue] = useState(undefined);
+  let wantedValue;
+  if (value !== undefined) {
+    wantedValue = value;
+  } else if (reportedValue !== undefined) {
+    wantedValue = reportedValue;
+  } else {
+    wantedValue = valueOwnState;
+  }
+  const currentIndex = items.findIndex(item => item.value === wantedValue);
+  const currentItem = currentIndex === -1 ? items[0] : items[currentIndex];
+  const currentValue = currentItem?.value;
+  const open = item => {
+    if (value === undefined) {
+      setValueOwnState(item.value);
+    }
+    onChange?.(item.value);
+  };
+  const reportCurrent = (item, current) => {
+    setReportedValue(previous => {
+      if (current) {
+        return item.value;
+      }
+      // Only the tab that claimed it may withdraw it, otherwise the tabs that
+      // just stopped being current would erase the one that just became it.
+      return previous === item.value ? undefined : previous;
+    });
+  };
+  const vertical = tabsPosition === "left" || tabsPosition === "right";
+  const tabsFirst = tabsPosition === "top" || tabsPosition === "left";
+  const rootRef = useRef(null);
+  const tabRefs = useRef([]);
+  const onKeyDown = event => {
+    const {
+      key
+    } = event;
+    const previousKey = vertical ? "ArrowUp" : "ArrowLeft";
+    const nextKey = vertical ? "ArrowDown" : "ArrowRight";
+    let nextIndex;
+    if (key === previousKey) {
+      nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+    } else if (key === nextKey) {
+      nextIndex = currentIndex >= items.length - 1 ? 0 : currentIndex + 1;
+    } else if (key === "Home") {
+      nextIndex = 0;
+    } else if (key === "End") {
+      nextIndex = items.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    open(items[nextIndex]);
+    tabRefs.current[nextIndex]?.focus();
+  };
+  return jsxs(Box, {
+    ref: rootRef,
+    baseClassName: "navi_binder",
+    "data-tabs-position": tabsPosition,
+    "data-tabs-align": tabsAlign,
+    "data-scrollable-page": scrollablePage ? "" : undefined,
+    borderWidth: withPixelUnit(borderWidth),
+    borderRadius: withPixelUnit(borderRadius),
+    tabBorderRadius: withPixelUnit(tabBorderRadius),
+    paddingX: withPixelUnit(paddingX),
+    paddingY: withPixelUnit(paddingY),
+    pagePadding: withPixelUnit(pagePadding),
+    ...props,
+    styleCSSVars: BinderStyleCSSVars,
+    children: [jsx(BinderOutline, {
+      rootRef: rootRef,
+      currentValue: currentValue,
+      tabsPosition: tabsPosition,
+      vertical: vertical,
+      tabsFirst: tabsFirst
+    }), jsx("div", {
+      className: "navi_binder_tabs",
+      role: "tablist",
+      "aria-orientation": vertical ? "vertical" : "horizontal",
+      style: {
+        justifyContent: TABS_ALIGN_TO_JUSTIFY_CONTENT[tabsAlign]
+      },
+      children: items.map((item, index) => jsx(BinderTab, {
+        item: item,
+        index: index,
+        tabRefs: tabRefs,
+        current: item === currentItem,
+        maxLines: maxLines,
+        onOpen: () => open(item),
+        onKeyDown: onKeyDown,
+        onReportCurrent: current => reportCurrent(item, current)
+      }, item.value))
+    }), jsx("div", {
+      className: "navi_binder_page",
+      role: "tabpanel",
+      children: currentItem?.content
+    })]
+  });
+};
+
+/**
+ * @param {any} [props.value] - What identifies this item; defaults to its
+ *   position among its siblings.
+ * @param {import("ignore:preact").ComponentChildren} [props.label] - What the tab
+ *   shows.
+ * @param {import("../route.js").Route} [props.route] - Makes the tab a `Link`
+ *   to that route, and the binder follows the url: the open item is the one
+ *   whose route matches, no `value`/`onChange` needed.
+ * @param {string} [props.href] - Same, for a plain url.
+ * @param {import("ignore:preact").ComponentChildren} [props.children] - The page.
+ *
+ * Every other prop goes to the tab (a `Box`, or a `Link` when routed): an item
+ * styles and configures the control that opens it.
+ */
+// Read by Binder, never rendered on its own: an item declares a tab AND its
+// page, and the binder needs both before it renders either.
+const BinderItem = () => null;
+Binder.Item = BinderItem;
+const BINDER_TAB_PSEUDO_CLASSES = [":hover", ":active", ":focus-visible"];
+const BinderTab = ({
+  item,
+  index,
+  tabRefs,
+  current,
+  maxLines,
+  onOpen,
+  onKeyDown,
+  onReportCurrent
+}) => {
+  const {
+    label,
+    tabProps
+  } = item;
+  const {
+    maxLines: itemMaxLines = maxLines,
+    onClick,
+    ...rest
+  } = tabProps;
+  return jsx(Box, {
+    as: "button",
+    type: "button",
+    baseClassName: "navi_binder_tab",
+    pseudoClasses: BINDER_TAB_PSEUDO_CLASSES,
+    ref: element => {
+      tabRefs.current[index] = element;
+    },
+    role: "tab",
+    "aria-selected": current,
+    tabIndex: current ? 0 : -1,
+    "data-current": current ? "" : undefined,
+    onClick: event => {
+      onOpen();
+      onClick?.(event);
+    },
+    onKeyDown: onKeyDown,
+    ...rest,
+    children: jsx(BinderItemContext.Provider, {
+      value: onReportCurrent,
+      children: jsx("span", {
+        className: "navi_binder_tab_label",
+        "data-max-lines": itemMaxLines || undefined,
+        style: itemMaxLines > 1 ? {
+          "--binder-tab-max-lines": itemMaxLines
+        } : undefined,
+        children: label
+      })
+    })
+  });
+};
+const BinderOutline = ({
+  rootRef,
+  currentValue,
+  tabsPosition,
+  vertical,
+  tabsFirst
+}) => {
+  const [drawing, setDrawing] = useState(null);
+  const measure = useCallback(() => {
+    setDrawing(measureDrawing({
+      rootEl: rootRef.current,
+      vertical,
+      tabsFirst
+    }));
+  }, [rootRef, vertical, tabsFirst]);
+  useLayoutEffect(() => {
+    const rootEl = rootRef.current;
+    // The outline is positioned absolutely, so drawing it cannot change any
+    // observed size — the observer settles after one pass.
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(rootEl);
+    for (const tabEl of rootEl.querySelectorAll(".navi_binder_tab")) {
+      resizeObserver.observe(tabEl);
+    }
+    measure();
+    return () => resizeObserver.disconnect();
+  }, [rootRef, measure, currentValue]);
+  if (!drawing) {
+    return jsx("svg", {
+      className: "navi_binder_outline",
+      "aria-hidden": "true"
+    });
+  }
+  return jsx("svg", {
+    className: "navi_binder_outline",
+    "aria-hidden": "true",
+    width: drawing.width,
+    height: drawing.height,
+    children: jsx("path", {
+      d: buildBinderPath({
+        ...drawing.pathParams,
+        tabsPosition
+      }),
+      fill: drawing.background,
+      stroke: drawing.borderColor,
+      "stroke-width": drawing.borderWidth
+    })
+  });
+};
+
+// Everything the path needs, read off the DOM rather than taken from props:
+// the shape has to follow the sizes the layout actually produced — text length,
+// font, whatever the page contains.
+const measureDrawing = ({
+  rootEl,
+  vertical,
+  tabsFirst
+}) => {
+  const tabEls = rootEl.querySelectorAll(".navi_binder_tab");
+  const currentTabEl = rootEl.querySelector(".navi_binder_tab[data-current]");
+  if (!currentTabEl) {
+    return null;
+  }
+  const rootComputedStyle = getComputedStyle(rootEl);
+  const readVar = name => rootComputedStyle.getPropertyValue(name).trim();
+  const borderWidth = parseFloat(readVar("--binder-border-width")) || 0;
+  const outerRadius = parseFloat(readVar("--binder-border-radius")) || 0;
+  const tabRadius = parseFloat(readVar("--binder-tab-border-radius")) || 0;
+
+  // Path space: the main axis runs along the tab row, the cross axis goes from
+  // the tabs toward the page.
+  const mainSizeOf = el => vertical ? el.offsetHeight : el.offsetWidth;
+  const mainStartOf = el => {
+    let start = vertical ? el.offsetTop : el.offsetLeft;
+    let offsetParent = el.offsetParent;
+    while (offsetParent && offsetParent !== rootEl) {
+      start += vertical ? offsetParent.offsetTop : offsetParent.offsetLeft;
+      offsetParent = offsetParent.offsetParent;
+    }
+    return start;
+  };
+  const crossStartOf = el => {
+    let start = vertical ? el.offsetLeft : el.offsetTop;
+    let offsetParent = el.offsetParent;
+    while (offsetParent && offsetParent !== rootEl) {
+      start += vertical ? offsetParent.offsetLeft : offsetParent.offsetTop;
+      offsetParent = offsetParent.offsetParent;
+    }
+    return start;
+  };
+  const crossSizeOf = el => vertical ? el.offsetWidth : el.offsetHeight;
+  const mainSize = vertical ? rootEl.offsetHeight : rootEl.offsetWidth;
+  const crossSize = vertical ? rootEl.offsetWidth : rootEl.offsetHeight;
+  const currentTabCrossStart = crossStartOf(currentTabEl);
+
+  // The junction line lands in the margin every tab keeps on the page side —
+  // right against the tab boxes, so it continues the CSS borders drawn inside
+  // them instead of covering their last row of pixels.
+  let tabRowHeight;
+  let panelHeight;
+  if (tabsFirst) {
+    tabRowHeight = currentTabCrossStart + crossSizeOf(currentTabEl) + borderWidth;
+    panelHeight = crossSize - tabRowHeight;
+  } else {
+    panelHeight = currentTabCrossStart;
+    tabRowHeight = crossSize - panelHeight;
+  }
+  const firstTabEl = tabEls[0];
+  const lastTabEl = tabEls[tabEls.length - 1];
+  return {
+    width: vertical ? crossSize : mainSize,
+    height: vertical ? mainSize : crossSize,
+    borderWidth,
+    borderColor: readVar("--binder-border-color"),
+    background: readVar("--binder-background"),
+    pathParams: {
+      tabX: mainStartOf(currentTabEl),
+      tabWidth: mainSizeOf(currentTabEl),
+      tabRowHeight,
+      panelWidth: mainSize,
+      panelHeight,
+      borderWidth,
+      outerRadius,
+      tabRadius,
+      gapBeforeTabs: mainStartOf(firstTabEl),
+      gapAfterTabs: mainSize - (mainStartOf(lastTabEl) + mainSizeOf(lastTabEl))
+    }
+  };
+};
+
+// A bare number in a CSS var stays a bare number and the declaration is
+// dropped; every length prop here is in pixels when it is not spelled out.
+const withPixelUnit = value => {
+  if (typeof value === "number") {
+    return `${value}px`;
+  }
+  return value;
+};
+
+/**
+ * The room a fixed bar takes from the content, published so whatever scrolls
+ * under it can give that room back.
+ *
+ * There are TWO rooms to give back, and forgetting the second one is the
+ * classic bug:
+ *
+ * - **padding**, so the end of the content can be scrolled out from under the
+ *   bar. Without it the last screenful stays covered, unreachable.
+ * - **scroll-padding**, so anything the browser scrolls TO lands in front of
+ *   the bar rather than under it. An anchor link, `scrollIntoView()`, a focused
+ *   field brought into view, restoring a scroll position — all of them align
+ *   the target with the edge of the scrollport, which is behind the bar. The
+ *   padding above does not help here: it moves the content, not the place the
+ *   browser scrolls the target to.
+ *
+ * Published on <html> as CSS variables rather than applied to some element:
+ * which element scrolls is the app's business, and an app with more than one
+ * would have to fight a component that picked for it. The app either marks its
+ * scrolling area with `data-navi-fixed-bar-space` (the rules below) or reads
+ * the variables itself. `:root` gets the scroll-padding unconditionally,
+ * because the document is the scrollport in the common case and an anchor
+ * landing under a bar is never what anyone wants.
+ *
+ * The variables hold the bar's measured size — see the comment where FixedBar
+ * sets them.
+ */
+
+const FIXED_BAR_SPACE_CSS = /* css */ `
+  :root {
+    --navi-fixed-bar-space-top: 0px;
+    --navi-fixed-bar-space-bottom: 0px;
+    --navi-fixed-bar-space-left: 0px;
+    --navi-fixed-bar-space-right: 0px;
+
+    scroll-padding-top: var(--navi-fixed-bar-space-top);
+    scroll-padding-right: var(--navi-fixed-bar-space-right);
+    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
+    scroll-padding-left: var(--navi-fixed-bar-space-left);
+  }
+
+  /* Put this on whatever scrolls under the bars. */
+  [data-navi-fixed-bar-space] {
+    padding-top: var(--navi-fixed-bar-space-top);
+    padding-right: var(--navi-fixed-bar-space-right);
+    padding-bottom: var(--navi-fixed-bar-space-bottom);
+    padding-left: var(--navi-fixed-bar-space-left);
+
+    scroll-padding-top: var(--navi-fixed-bar-space-top);
+    scroll-padding-right: var(--navi-fixed-bar-space-right);
+    scroll-padding-bottom: var(--navi-fixed-bar-space-bottom);
+    scroll-padding-left: var(--navi-fixed-bar-space-left);
+  }
+`;
+
+/**
+ * @param {"top"|"bottom"|"left"|"right"} area
+ * @param {string|null} value - `null` gives the room back to the content.
+ */
+const setFixedBarSpace = (area, value) => {
+  const property = `--navi-fixed-bar-space-${area}`;
+  const { style } = document.documentElement;
+  if (value === null) {
+    style.removeProperty(property);
+  } else {
+    style.setProperty(property, value);
+  }
+};
+
+installImportMetaCssBuild(import.meta);/**
+ * A strip pinned to one edge of the window, and the space it takes back from
+ * the content. What goes in it is none of its business — a nav, a title, a
+ * toolbar, an action.
+ *
+ * The four things it is here to get right, each of which is a trap:
+ *
+ * 1. **`position: fixed`, never sticky.** A sticky element sticks to its
+ *    nearest scrolling ancestor, and an app shell almost always has one (an
+ *    `overflow` somewhere) — the bar would then stick inside that box and
+ *    never to the window. Fixed, centered and bounded by `maxWidth`, it also
+ *    stays lined up with the content on a wide screen.
+ * 2. **It gives its space back.** Being fixed it covers the content: without a
+ *    reserve the end of a long page stays under it, unreachable. It publishes
+ *    what it takes on <html> — see fixed_bar_space.js.
+ * 3. **It reaches under the notch.** `env(safe-area-inset-*)` pushes the
+ *    content in while the background keeps running to the edge of the screen.
+ *    Note that every `env(safe-area-inset-*)` is 0 unless the page asks for
+ *    it: `<meta name="viewport" content="…, viewport-fit=cover">`.
+ * 4. **Its hairline is a box-shadow, not a border.** `width`/`height` is the
+ *    bar's content box, so the safe-area padding adds outside it: the size you
+ *    asked for is the size the content gets, whatever the device does. A real
+ *    border would eat into it; a box-shadow draws the identical line and stays
+ *    out of layout.
+ */
+const css$M = /* css */`
+  @layer navi {
+    :root {
+      --navi-fixed-bar-width: 56px;
+      --navi-fixed-bar-height: 56px;
+      --navi-fixed-bar-max-width: none;
+      --navi-fixed-bar-background: var(--navi-surface-color);
+      --navi-fixed-bar-border-width: 1px;
+      --navi-fixed-bar-border-color: var(--navi-separator-color-default);
+      /* Along the bar only: room so its content never touches the edge of the
+         screen. Across it there is nothing to add — that direction is what the
+         width/height prop names, and padding there would only make the bar
+         thicker than the size asked for. */
+      --navi-fixed-bar-padding: var(--navi-s);
+    }
+  }
+
+  ${FIXED_BAR_SPACE_CSS}
+
+  .navi_fixed_bar {
+    position: fixed;
+    z-index: 1;
+    display: flex;
+    /* content-box against an app that is border-box everywhere else: the size
+       stays bare and the safe-area padding adds OUTSIDE it, so a bar asked for
+       56px still shows 56px of bar under the notch instead of 56px minus it. */
+    box-sizing: content-box;
+    margin: auto;
+    align-items: center;
+    background: var(--navi-fixed-bar-background);
+
+    &[data-area="top"],
+    &[data-area="bottom"] {
+      right: 0;
+      left: 0;
+      /* No width of its own: pinned to both edges, the used width absorbs the
+         padding instead of being inflated by it — which a content-box
+         "width: 100%" would do. max-width then narrows it and the auto
+         margins re-center it. */
+      max-width: var(--navi-fixed-bar-max-width);
+      height: var(--navi-fixed-bar-height);
+      padding-right: var(--navi-fixed-bar-padding);
+      padding-left: var(--navi-fixed-bar-padding);
+    }
+    &[data-area="left"],
+    &[data-area="right"] {
+      top: 0;
+      bottom: 0;
+      width: var(--navi-fixed-bar-width);
+      padding-top: var(--navi-fixed-bar-padding);
+      padding-bottom: var(--navi-fixed-bar-padding);
+      flex-direction: column;
+    }
+
+    /* The inset on this edge alone: the one the bar is pinned to. */
+    &[data-area="top"] {
+      top: 0;
+      padding-top: env(safe-area-inset-top);
+      box-shadow: 0 var(--navi-fixed-bar-border-width) 0
+        var(--navi-fixed-bar-border-color);
+    }
+    &[data-area="bottom"] {
+      bottom: 0;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
+        var(--navi-fixed-bar-border-color);
+    }
+    &[data-area="left"] {
+      left: 0;
+      padding-left: env(safe-area-inset-left);
+      box-shadow: var(--navi-fixed-bar-border-width) 0 0
+        var(--navi-fixed-bar-border-color);
+    }
+    &[data-area="right"] {
+      right: 0;
+      padding-right: env(safe-area-inset-right);
+      box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0
+        var(--navi-fixed-bar-border-color);
+    }
+    &[data-border="none"] {
+      box-shadow: none;
+    }
+  }
+`;
+const FixedBarStyleCSSVars = {
+  maxWidth: "--navi-fixed-bar-max-width",
+  padding: "--navi-fixed-bar-padding",
+  background: "--navi-fixed-bar-background",
+  borderWidth: "--navi-fixed-bar-border-width",
+  borderColor: "--navi-fixed-bar-border-color"
+};
+
+/**
+ * @type {import("ignore:preact").FunctionComponent<{
+ *   area?: "top"|"bottom"|"left"|"right",
+ *   width?: string|number,
+ *   height?: string|number,
+ *   maxWidth?: string|number,
+ *   padding?: string|number,
+ *   background?: string,
+ *   border?: boolean,
+ *   borderWidth?: string|number,
+ *   borderColor?: string,
+ * }>}
+ * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
+ *   the window it is pinned to.
+ * @param {string|number} [props.height] - For a bar on the top or bottom
+ * @param {string|number} [props.width] - …and for one on a side. The safe-area
+ *   inset is NOT included in it: the inset is added outside, and the content
+ *   keeps the size asked for.
+ * @param {boolean} [props.border=true] - The hairline on the content side.
+ *   Drawn with a box-shadow so it never eats into the size; give it a
+ *   `borderWidth`/`borderColor`, or `border={false}` for none.
+ * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
+ *   content column narrower than the window (it stays centered).
+ */
+const FixedBar = ({
+  children,
+  area = "top",
+  border = true,
+  ...props
+}) => {
+  import.meta.css = [css$M, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
+  // Whichever of width/height crosses the edge the bar sits on is what the
+  // content has to be given back — and the bar's border box already IS that:
+  // the size it was given, plus the safe-area padding added outside it.
+  // Measured rather than rebuilt as a calc() expression, so a size coming from
+  // anywhere — a prop, a theme variable, the content itself — is reserved just
+  // the same, and each `env()` inset stays the browser's business alone.
+  const vertical = area === "left" || area === "right";
+  const {
+    ref
+  } = props;
+  useLayoutEffect(() => {
+    const barElement = ref.current;
+    if (!barElement) {
+      return undefined;
+    }
+    const {
+      width,
+      height
+    } = barElement.getBoundingClientRect();
+    setFixedBarSpace(area, `${vertical ? width : height}px`);
+    return () => {
+      setFixedBarSpace(area, null);
+    };
+  }, [area]);
+  return jsx(Box, {
+    baseClassName: "navi_fixed_bar",
+    "data-area": area,
+    "data-border": border ? undefined : "none",
+    ...props,
+    styleCSSVars: FixedBarStyleCSSVars,
+    children: children
   });
 };
 
@@ -58976,5 +60309,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map
