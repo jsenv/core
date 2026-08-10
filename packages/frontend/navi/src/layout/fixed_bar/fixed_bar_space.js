@@ -22,8 +22,8 @@
  * because the document is the scrollport in the common case and an anchor
  * landing under a bar is never what anyone wants.
  *
- * The variables hold live CSS expressions, not measured numbers — see the
- * comment where FixedBar sets them.
+ * The variables hold the bar's measured size — see the comment where FixedBar
+ * sets them.
  */
 
 export const FIXED_BAR_SPACE_CSS = /* css */ `
@@ -53,10 +53,16 @@ export const FIXED_BAR_SPACE_CSS = /* css */ `
   }
 `;
 
+/**
+ * @param {"top"|"bottom"|"left"|"right"} area
+ * @param {string|null} value - `null` gives the room back to the content.
+ */
 export const setFixedBarSpace = (area, value) => {
   const property = `--navi-fixed-bar-space-${area}`;
-  document.documentElement.style.setProperty(property, value);
-  return () => {
-    document.documentElement.style.removeProperty(property);
-  };
+  const { style } = document.documentElement;
+  if (value === null) {
+    style.removeProperty(property);
+  } else {
+    style.setProperty(property, value);
+  }
 };

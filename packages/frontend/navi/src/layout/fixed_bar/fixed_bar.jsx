@@ -18,17 +18,16 @@
  *    Note that every `env(safe-area-inset-*)` is 0 unless the page asks for
  *    it: `<meta name="viewport" content="…, viewport-fit=cover">`.
  * 4. **Its hairline is a box-shadow, not a border.** `width`/`height` is the
- *    bar's content box, so the safe-area padding can add outside it and the
- *    reserve can be that same value plus that same inset — nothing twice.
- *    A real border would join that total and put the reserve off by its width;
- *    a box-shadow draws the identical line and stays out of layout.
+ *    bar's content box, so the safe-area padding adds outside it: the size you
+ *    asked for is the size the content gets, whatever the device does. A real
+ *    border would eat into it; a box-shadow draws the identical line and stays
+ *    out of layout.
  */
 
-import { useLayoutEffect } from "preact/hooks";
-
-import { stringifyStyle } from "@jsenv/dom";
+import { useCallback } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { useComposeElementRef } from "../../box/ref_composition/use_element_ref.js";
 import { FIXED_BAR_SPACE_CSS, setFixedBarSpace } from "./fixed_bar_space.js";
 
 const css = /* css */ `
@@ -41,8 +40,9 @@ const css = /* css */ `
       --navi-fixed-bar-border-width: 1px;
       --navi-fixed-bar-border-color: var(--navi-separator-color-default);
       /* Along the bar only: room so its content never touches the edge of the
-         screen. Across it, the size and the safe-area inset already say
-         everything — anything added there would throw the reserve off. */
+         screen. Across it there is nothing to add — that direction is what the
+         width/height prop names, and padding there would only make the bar
+         thicker than the size asked for. */
       --navi-fixed-bar-padding: var(--navi-s);
     }
   }
@@ -54,9 +54,8 @@ const css = /* css */ `
     z-index: 1;
     display: flex;
     /* content-box against an app that is border-box everywhere else: the size
-       stays bare and the safe-area padding adds OUTSIDE it, so
-       the total is exactly what fixed_bar_space.js reserves — no
-       calc(var + env) written twice. */
+       stays bare and the safe-area padding adds OUTSIDE it, so a bar asked for
+       56px still shows 56px of bar under the notch instead of 56px minus it. */
     box-sizing: content-box;
     margin: auto;
     align-items: center;
@@ -124,13 +123,6 @@ const FixedBarStyleCSSVars = {
   borderColor: "--navi-fixed-bar-border-color",
 };
 
-const SAFE_AREA_INSET = {
-  top: "env(safe-area-inset-top)",
-  bottom: "env(safe-area-inset-bottom)",
-  left: "env(safe-area-inset-left)",
-  right: "env(safe-area-inset-right)",
-};
-
 /**
  * @type {import("preact").FunctionComponent<{
  *   area?: "top"|"bottom"|"left"|"right",
@@ -147,47 +139,51 @@ const SAFE_AREA_INSET = {
  *   the window it is pinned to.
  * @param {string|number} [props.height] - For a bar on the top or bottom
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
- *   inset is NOT included in it: the inset is added outside, and the reserve is
- *   the sum of the two.
+ *   inset is NOT included in it: the inset is added outside, and the content
+ *   keeps the size asked for.
  * @param {boolean} [props.border=true] - The hairline on the content side.
- *   Drawn with a box-shadow so it never joins the reserve arithmetic; give it
- *   a `borderWidth`/`borderColor`, or `border={false}` for none.
+ *   Drawn with a box-shadow so it never eats into the size; give it a
+ *   `borderWidth`/`borderColor`, or `border={false}` for none.
  * @param {string|number} [props.maxWidth] - Keeps the bar lined up with a
  *   content column narrower than the window (it stays centered).
  */
 export const FixedBar = ({
   children,
   area = "top",
-  width,
-  height,
   border = true,
+  ref,
   ...props
 }) => {
   import.meta.css = css;
 
-  // Written as CSS variables in the element's own style rather than handed to
-  // Box, which would turn them into a real width/height — the same thing
-  // SidePanel does with its own width/height props.
-  const widthValue = toCssLength(width, "width");
-  const heightValue = toCssLength(height, "height");
-
-  // Whichever of the two crosses the edge the bar sits on is the one the
-  // content has to be given back. The reserve is published on <html>, where a
-  // variable set on the bar itself would not resolve, so it has to be the
-  // value; falling back to the variable keeps the reserve following an app
-  // that themes the size globally.
+  // Whichever of width/height crosses the edge the bar sits on is what the
+  // content has to be given back — and the bar's border box already IS that:
+  // the size it was given, plus the safe-area padding added outside it.
+  // Measured rather than rebuilt as a calc() expression, so a size coming from
+  // anywhere — a prop, a theme variable, the content itself — is reserved just
+  // the same, and each `env()` inset stays the browser's business alone.
   const vertical = area === "left" || area === "right";
-  const sizeValue =
-    (vertical ? widthValue : heightValue) ||
-    `var(--navi-fixed-bar-${vertical ? "width" : "height"})`;
-  useLayoutEffect(() => {
-    // A CSS expression rather than a measured number: whatever moves the bar
-    // moves the reserve with it, with nothing to recompute.
-    return setFixedBarSpace(
-      area,
-      `calc(${sizeValue} + ${SAFE_AREA_INSET[area]})`,
-    );
-  }, [area, sizeValue]);
+  const syncBar = useCallback(
+    (barEl) => {
+      // border-box, because what moves the reserve is as often the padding —
+      // the safe-area inset changing on rotation — as the size itself, and a
+      // content-box observation would report only the second. observe() also
+      // delivers once on its own, before the first paint: that initial delivery
+      // is the first publication, no eager measure needed (and none wanted, as
+      // this runs before Box has written the size onto the element).
+      const resizeObserver = new ResizeObserver(() => {
+        const { width, height } = barEl.getBoundingClientRect();
+        setFixedBarSpace(area, `${vertical ? width : height}px`);
+      });
+      resizeObserver.observe(barEl, { box: "border-box" });
+      return () => {
+        resizeObserver.disconnect();
+        setFixedBarSpace(area, null);
+      };
+    },
+    [area, vertical],
+  );
+  const barRef = useComposeElementRef(syncBar, ref);
 
   return (
     <Box
@@ -195,21 +191,10 @@ export const FixedBar = ({
       data-area={area}
       data-border={border ? undefined : "none"}
       {...props}
-      style={{
-        "--navi-fixed-bar-width": widthValue,
-        "--navi-fixed-bar-height": heightValue,
-        ...props.style,
-      }}
+      ref={barRef}
       styleCSSVars={FixedBarStyleCSSVars}
     >
       {children}
     </Box>
   );
 };
-
-// The same normalization Box uses for its own length props: bare numbers
-// become px, percentages / calc() / keywords pass through untouched.
-const toCssLength = (value, propertyName) =>
-  value === undefined || value === null
-    ? undefined
-    : stringifyStyle(value, propertyName);
