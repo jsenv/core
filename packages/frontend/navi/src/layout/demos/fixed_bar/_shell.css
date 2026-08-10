@@ -58,3 +58,10 @@ body {
   background: #eaf2fd;
   border-radius: 6px;
 }
+
+/* The jumps sitting in a bar rather than in the page: centered, filling it. */
+.navi_fixed_bar .anchors {
+  padding: 0;
+  flex: 1;
+  justify-content: center;
+}
