@@ -1,0 +1,143 @@
+# [wildcard_allowed_origins](../../cors_allowed_origins.test.mjs)
+
+```js
+return {
+  literal_origin: await run({
+    origin: "http://localhost:3400",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  origin_matching_wildcard: await run({
+    origin: "https://pr-12-wematch.fly.dev",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  origin_not_matching_wildcard: await run({
+    origin: "https://pr-12-other.fly.dev",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  // "." in the pattern stays literal
+  origin_replacing_dot: await run({
+    origin: "https://pr-12-wematchXfly.dev",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  // the wildcard must not cross a "/" nor match beyond the end
+  origin_with_path_prefix: await run({
+    origin: "https://evil.com/pr-12-wematch.fly.dev",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  origin_with_suffix: await run({
+    origin: "https://pr-12-wematch.fly.dev.evil.com",
+    accessControlAllowedOrigins: wildcardAllowedOrigins,
+  }),
+  subdomain_wildcard: await run({
+    origin: "https://wematch.fly.dev",
+    accessControlAllowedOrigins: ["https://*.fly.dev"],
+  }),
+  // no literal origin to fall back on, "*" is sent instead of the pattern
+  disallowed_origin_when_only_wildcards: await run({
+    origin: "http://evil.com",
+    accessControlAllowedOrigins: ["https://*.fly.dev"],
+  }),
+};
+```
+
+```js
+{
+  "literal_origin": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "http://127.0.0.1",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked",
+    "vary": "origin"
+  },
+  "origin_matching_wildcard": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "https://pr-12-wematch.fly.dev",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked",
+    "vary": "origin"
+  },
+  "origin_not_matching_wildcard": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "http://127.0.0.1",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "origin_replacing_dot": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "http://127.0.0.1",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "origin_with_path_prefix": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "http://127.0.0.1",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "origin_with_suffix": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "http://127.0.0.1",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  },
+  "subdomain_wildcard": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "https://wematch.fly.dev",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked",
+    "vary": "origin"
+  },
+  "disallowed_origin_when_only_wildcards": {
+    "access-control-allow-headers": "x-requested-with",
+    "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "access-control-allow-origin": "*",
+    "access-control-max-age": "600",
+    "connection": "keep-alive",
+    "content-type": "text/plain;charset=UTF-8",
+    "date": "<X>",
+    "keep-alive": "timeout=5",
+    "transfer-encoding": "chunked"
+  }
+}
+```
+
+---
+
+<sub>
+  Generated by <a href="https://github.com/jsenv/core/tree/main/packages/tooling/snapshot">@jsenv/snapshot</a>
+</sub>

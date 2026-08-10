@@ -2,6 +2,7 @@
 
 
 - [multiple_allowed_origins](0_multiple_allowed_origins/0_multiple_allowed_origins.md)
+- [wildcard_allowed_origins](1_wildcard_allowed_origins/1_wildcard_allowed_origins.md)
 
 ---
 

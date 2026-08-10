@@ -8485,12 +8485,16 @@ const serverPluginCORS = ({
     return [];
   }
 
+  const allowedOriginChecker = createAllowedOriginChecker(
+    accessControlAllowedOrigins,
+  );
+
   return {
     name: "jsenv:cors",
     injectResponseProperties: (request) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
-        accessControlAllowedOrigins,
+        allowedOriginChecker,
         accessControlAllowRequestOrigin,
         accessControlAllowedMethods,
         accessControlAllowRequestMethod,
@@ -8507,11 +8511,53 @@ const serverPluginCORS = ({
   };
 };
 
+/**
+ * An origin ("scheme://host:port") can never contain "*", so it is free to be
+ * used as a wildcard standing for any run of characters except "/":
+ * "https://pr-*-my-app.fly.dev" matches "https://pr-12-my-app.fly.dev".
+ */
+const createAllowedOriginChecker = (allowedOrigins) => {
+  const literalOrigins = [];
+  const originRegExps = [];
+  for (const allowedOrigin of allowedOrigins) {
+    if (allowedOrigin.includes("*")) {
+      originRegExps.push(originPatternToRegExp(allowedOrigin));
+    } else {
+      literalOrigins.push(allowedOrigin);
+    }
+  }
+
+  return {
+    // when the request origin cannot be reflected back we must still send a
+    // single valid origin, never a pattern
+    defaultOrigin: literalOrigins[0] ?? "*",
+    isAllowed: (origin) => {
+      if (literalOrigins.includes(origin)) {
+        return true;
+      }
+      for (const originRegExp of originRegExps) {
+        if (originRegExp.test(origin)) {
+          return true;
+        }
+      }
+      return false;
+    },
+  };
+};
+
+const originPatternToRegExp = (originPattern) => {
+  const source = originPattern
+    .split("*")
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("[^/]*");
+  return new RegExp(`^${source}$`);
+};
+
 // https://www.w3.org/TR/cors/
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 const generateAccessControlHeaders = ({
   request: { headers },
-  accessControlAllowedOrigins,
+  allowedOriginChecker,
   accessControlAllowRequestOrigin,
   accessControlAllowedMethods,
   accessControlAllowRequestMethod,
@@ -8538,7 +8584,7 @@ const generateAccessControlHeaders = ({
         : null;
 
   if (requestOrigin) {
-    if (accessControlAllowedOrigins.includes(requestOrigin)) {
+    if (allowedOriginChecker.isAllowed(requestOrigin)) {
       allowOrigin = requestOrigin;
       vary.push("origin");
     } else if (accessControlAllowRequestOrigin) {
@@ -8550,7 +8596,7 @@ const generateAccessControlHeaders = ({
   }
 
   if (allowOrigin === null) {
-    allowOrigin = accessControlAllowedOrigins[0] ?? "*";
+    allowOrigin = allowedOriginChecker.defaultOrigin;
   }
 
   const allowedMethodArray = [...accessControlAllowedMethods];
