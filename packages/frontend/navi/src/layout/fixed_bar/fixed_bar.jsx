@@ -17,9 +17,9 @@
  *    content in while the background keeps running to the edge of the screen.
  *    Note that every `env(safe-area-inset-*)` is 0 unless the page asks for
  *    it: `<meta name="viewport" content="…, viewport-fit=cover">`.
- * 4. **Its hairline is a box-shadow, not a border.** `size` is the bar's
+ * 4. **Its hairline is a box-shadow, not a border.** `thickness` is the bar's
  *    content box, so the safe-area padding can add outside it and the reserve
- *    can be that same variable plus that same inset — nothing counted twice.
+ *    can be that same value plus that same inset — nothing counted twice.
  *    A real border would join that total and put the reserve off by its width;
  *    a box-shadow draws the identical line and stays out of layout.
  */
@@ -27,12 +27,13 @@
 import { useLayoutEffect } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { stringifySpacingStyle } from "../../box/box_style_util.js";
 import { FIXED_BAR_SPACE_CSS, setFixedBarSpace } from "./fixed_bar_space.js";
 
 const css = /* css */ `
   @layer navi {
     :root {
-      --navi-fixed-bar-size: 56px;
+      --navi-fixed-bar-thickness: 56px;
       --navi-fixed-bar-max-width: none;
       --navi-fixed-bar-background: var(--navi-surface-color);
       --navi-fixed-bar-border-width: 1px;
@@ -46,8 +47,8 @@ const css = /* css */ `
     position: fixed;
     z-index: 1;
     display: flex;
-    /* content-box against an app that is border-box everywhere else: "size"
-       stays the bare variable and the safe-area padding adds OUTSIDE it, so
+    /* content-box against an app that is border-box everywhere else: the
+       thickness stays bare and the safe-area padding adds OUTSIDE it, so
        the total is exactly what fixed_bar_space.js reserves — no
        calc(var + env) written twice. */
     box-sizing: content-box;
@@ -61,13 +62,13 @@ const css = /* css */ `
       left: 0;
       width: 100%;
       max-width: var(--navi-fixed-bar-max-width);
-      height: var(--navi-fixed-bar-size);
+      height: var(--navi-fixed-bar-thickness);
     }
     &[data-area="left"],
     &[data-area="right"] {
       top: 0;
       bottom: 0;
-      width: var(--navi-fixed-bar-size);
+      width: var(--navi-fixed-bar-thickness);
       height: 100%;
       flex-direction: column;
     }
@@ -103,12 +104,11 @@ const css = /* css */ `
   }
 `;
 
-// Written into the element's own style rather than handed to Box as style
-// props: several of these names already mean something else to a Box ("size"
-// is its font size), and a bar's size is its thickness on whichever axis it
-// sits — a meaning only this component can give them.
-const FIXED_BAR_CSS_VARS = {
-  size: "--navi-fixed-bar-size",
+// "thickness" rather than "size": Box expands `size` into `fontSize` before a
+// styleCSSVars entry gets a say, so a bar sized that way would set its own text
+// size instead. The name has to be one Box passes through untouched.
+const FixedBarStyleCSSVars = {
+  thickness: "--navi-fixed-bar-thickness",
   maxWidth: "--navi-fixed-bar-max-width",
   background: "--navi-fixed-bar-background",
   borderWidth: "--navi-fixed-bar-border-width",
@@ -125,7 +125,7 @@ const SAFE_AREA_INSET = {
 /**
  * @type {import("preact").FunctionComponent<{
  *   area?: "top"|"bottom"|"left"|"right",
- *   size?: string|number,
+ *   thickness?: string|number,
  *   maxWidth?: string|number,
  *   background?: string,
  *   border?: boolean,
@@ -133,10 +133,11 @@ const SAFE_AREA_INSET = {
  *   borderColor?: string,
  * }>}
  * @param {"top"|"bottom"|"left"|"right"} [props.area="top"] - Which edge of
- *   the window it is pinned to. `size` is its height on top/bottom, its width
- *   on left/right.
- * @param {string|number} [props.size] - The bar's own size, safe-area inset
- *   NOT included — the inset is added outside it, and the reserve is the sum.
+ *   the window it is pinned to.
+ * @param {string|number} [props.thickness] - How thick the bar is across the
+ *   edge it sits on: its height on top/bottom, its width on left/right. The
+ *   safe-area inset is NOT included — it is added outside, and the reserve is
+ *   the sum of the two.
  * @param {boolean} [props.border=true] - The hairline on the content side.
  *   Drawn with a box-shadow so it never joins the reserve arithmetic; give it
  *   a `borderWidth`/`borderColor`, or `border={false}` for none.
@@ -146,61 +147,39 @@ const SAFE_AREA_INSET = {
 export const FixedBar = ({
   children,
   area = "top",
-  size,
-  maxWidth,
-  background,
-  borderWidth,
-  borderColor,
+  thickness,
   border = true,
-  style,
   ...props
 }) => {
   import.meta.css = css;
 
-  const ownStyle = { ...style };
-  const setVar = (name, value) => {
-    if (value !== undefined) {
-      ownStyle[FIXED_BAR_CSS_VARS[name]] = withPixelUnit(value);
-    }
-  };
-  setVar("size", size);
-  setVar("maxWidth", maxWidth);
-  setVar("background", background);
-  setVar("borderWidth", borderWidth);
-  setVar("borderColor", borderColor);
-
-  // The reserve is published on <html>, where a `size` given as a prop — set
-  // on the bar itself — would not be readable: it has to be the expression,
-  // not the variable. Falling back to the variable keeps the reserve following
-  // an app that themes the size globally.
-  const sizeExpression = withPixelUnit(size) || "var(--navi-fixed-bar-size)";
+  // The reserve is published on <html>, where the thickness — a variable set on
+  // the bar itself — would not resolve: it has to be the value, not the
+  // variable. Falling back to the variable keeps the reserve following an app
+  // that themes the thickness globally.
+  const thicknessValue =
+    thickness === undefined
+      ? "var(--navi-fixed-bar-thickness)"
+      : stringifySpacingStyle(thickness);
   useLayoutEffect(() => {
     // A CSS expression rather than a measured number: whatever moves the bar
     // moves the reserve with it, with nothing to recompute.
     return setFixedBarSpace(
       area,
-      `calc(${sizeExpression} + ${SAFE_AREA_INSET[area]})`,
+      `calc(${thicknessValue} + ${SAFE_AREA_INSET[area]})`,
     );
-  }, [area, sizeExpression]);
+  }, [area, thicknessValue]);
 
   return (
     <Box
       baseClassName="navi_fixed_bar"
       data-area={area}
       data-border={border ? undefined : "none"}
-      style={ownStyle}
+      thickness={thickness}
       {...props}
+      styleCSSVars={FixedBarStyleCSSVars}
     >
       {children}
     </Box>
   );
-};
-
-// A bare number in a CSS var stays a bare number and the declaration is
-// dropped; every length prop here is in pixels when it is not spelled out.
-const withPixelUnit = (value) => {
-  if (typeof value === "number") {
-    return `${value}px`;
-  }
-  return value;
 };

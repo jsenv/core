@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — the nominal app: a top bar and a bottom nav</title>
+    <link rel="stylesheet" href="./_shell.css" />
+    <style>
+      .cta {
+        display: flex;
+        width: 30px;
+        height: 30px;
+        margin-top: -4px;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        background: #2563eb;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-fixed-bar-space></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        FixedBar,
+        Icon,
+        Link,
+        Text,
+        Title,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const HOME = route("/");
+      const GAMES = route("/games");
+      const CREATE = route("/create");
+      const PROFILE = route("/profile");
+      setupRoutes([HOME, GAMES, CREATE, PROFILE]);
+
+      const TITLES = new Map([
+        [HOME, "Accueil"],
+        [GAMES, "Mes parties"],
+        [CREATE, "Créer"],
+        [PROFILE, "Profil"],
+      ]);
+
+      const NAV_ITEM_STYLE = {
+        "color": "#6b7280",
+        ":-navi-href-current": { color: "#2563eb" },
+      };
+      const NavItem = ({ route, label, children }) => (
+        <Link
+          route={route}
+          underline={false}
+          hrefFallback={false}
+          flex="y"
+          alignX="center"
+          alignY="center"
+          spacing="xxs"
+          expandX
+          style={NAV_ITEM_STYLE}
+        >
+          {children}
+          <Text size="xs">{label}</Text>
+        </Link>
+      );
+      const NavIcon = ({ path }) => (
+        <Icon size="l">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d={path} />
+          </svg>
+        </Icon>
+      );
+
+      const App = () => {
+        let title = "Accueil";
+        for (const [aRoute, aTitle] of TITLES) {
+          if (aRoute.matchingSignal.value) {
+            title = aTitle;
+          }
+        }
+        return (
+          <>
+            <FixedBar area="top" thickness={44}>
+              <Title as="h1" margin="0" size="16">
+                {title}
+              </Title>
+            </FixedBar>
+            <div className="page">{rows()}</div>
+            <FixedBar as="nav" area="bottom" thickness={54}>
+              <NavItem route={HOME} label="Accueil">
+                <NavIcon path="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
+              </NavItem>
+              <NavItem route={GAMES} label="Parties">
+                <NavIcon path="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 15-5-5 1.41-1.41L10.5 14.17l6.59-6.59L18.5 9l-8 8z" />
+              </NavItem>
+              <NavItem route={CREATE} label="Créer">
+                <span className="cta">
+                  <NavIcon path="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                </span>
+              </NavItem>
+              <NavItem route={PROFILE} label="Profil">
+                <NavIcon path="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </NavItem>
+            </FixedBar>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

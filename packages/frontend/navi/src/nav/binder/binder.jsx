@@ -36,6 +36,10 @@ const css = /* css */ `
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
       --binder-border-radius: var(--navi-control-border-radius);
+      /* The tabs' own corners. Their own knob because the two answer different
+         questions: the outer radius follows the container the binder sits in
+         (square when it fills the page), the tab radius is the tabs' shape. */
+      --binder-tab-border-radius: var(--binder-border-radius);
       --binder-border-color: var(--navi-control-border-color);
       --binder-background: var(--navi-surface-color);
       /* The tabs that are not open read as the same paper, slightly shaded:
@@ -176,22 +180,26 @@ const css = /* css */ `
     .navi_binder[data-tabs-position="top"] & {
       margin-bottom: var(--binder-border-width);
       border-bottom: none;
-      border-radius: var(--binder-border-radius) var(--binder-border-radius) 0 0;
+      border-radius: var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0 0;
     }
     .navi_binder[data-tabs-position="bottom"] & {
       margin-top: var(--binder-border-width);
       border-top: none;
-      border-radius: 0 0 var(--binder-border-radius) var(--binder-border-radius);
+      border-radius: 0 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius);
     }
     .navi_binder[data-tabs-position="left"] & {
       margin-right: var(--binder-border-width);
       border-right: none;
-      border-radius: var(--binder-border-radius) 0 0 var(--binder-border-radius);
+      border-radius: var(--binder-tab-border-radius) 0 0
+        var(--binder-tab-border-radius);
     }
     .navi_binder[data-tabs-position="right"] & {
       margin-left: var(--binder-border-width);
       border-left: none;
-      border-radius: 0 var(--binder-border-radius) var(--binder-border-radius) 0;
+      border-radius: 0 var(--binder-tab-border-radius)
+        var(--binder-tab-border-radius) 0;
     }
     /* A column of tabs shares its main axis with the block direction, where
        margin-inline-start would collapse the wrong pair. */
@@ -257,6 +265,7 @@ const css = /* css */ `
 const BinderStyleCSSVars = {
   borderWidth: "--binder-border-width",
   borderRadius: "--binder-border-radius",
+  tabBorderRadius: "--binder-tab-border-radius",
   borderColor: "--binder-border-color",
   background: "--binder-background",
   tabBackground: "--binder-tab-background",
@@ -284,6 +293,7 @@ const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
  *   tabsAlign?: "start"|"center"|"end"|"stretch",
  *   borderWidth?: string|number,
  *   borderRadius?: string|number,
+ *   tabBorderRadius?: string|number,
  *   borderColor?: string,
  *   background?: string,
  *   tabBackground?: string,
@@ -330,6 +340,7 @@ export const Binder = ({
   scrollablePage,
   borderWidth,
   borderRadius,
+  tabBorderRadius,
   paddingX,
   paddingY,
   pagePadding,
@@ -425,6 +436,7 @@ export const Binder = ({
       data-scrollable-page={scrollablePage ? "" : undefined}
       borderWidth={withPixelUnit(borderWidth)}
       borderRadius={withPixelUnit(borderRadius)}
+      tabBorderRadius={withPixelUnit(tabBorderRadius)}
       paddingX={withPixelUnit(paddingX)}
       paddingY={withPixelUnit(paddingY)}
       pagePadding={withPixelUnit(pagePadding)}
@@ -598,7 +610,8 @@ const measureDrawing = ({ rootEl, vertical, tabsFirst }) => {
   const rootComputedStyle = getComputedStyle(rootEl);
   const readVar = (name) => rootComputedStyle.getPropertyValue(name).trim();
   const borderWidth = parseFloat(readVar("--binder-border-width")) || 0;
-  const cornerRadius = parseFloat(readVar("--binder-border-radius")) || 0;
+  const outerRadius = parseFloat(readVar("--binder-border-radius")) || 0;
+  const tabRadius = parseFloat(readVar("--binder-tab-border-radius")) || 0;
 
   // Path space: the main axis runs along the tab row, the cross axis goes from
   // the tabs toward the page.
@@ -656,7 +669,8 @@ const measureDrawing = ({ rootEl, vertical, tabsFirst }) => {
       panelWidth: mainSize,
       panelHeight,
       borderWidth,
-      cornerRadius,
+      outerRadius,
+      tabRadius,
       gapBeforeTabs: mainStartOf(firstTabEl),
       gapAfterTabs: mainSize - (mainStartOf(lastTabEl) + mainSizeOf(lastTabEl)),
     },

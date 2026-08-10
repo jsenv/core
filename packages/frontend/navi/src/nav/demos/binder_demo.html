@@ -116,6 +116,7 @@
           <TabsAlignDemo />
           <BorderWidthDemo />
           <BorderRadiusDemo />
+          <InContainerDemo />
           <ColorsDemo />
           <DarkDemo />
           <LabelDemo />
@@ -197,26 +198,76 @@
         </div>
       );
 
+      const RADIUS_CASES = [
+        { legend: "borderRadius=12 — the shape and its tabs" },
+        {
+          legend:
+            "borderRadius=12 tabBorderRadius=0 — square tabs in a rounded binder",
+          tabBorderRadius: 0,
+        },
+        {
+          legend:
+            "borderRadius=0 tabBorderRadius=12 — rounded tabs, square outline: the binder sitting flush in a page",
+          borderRadius: 0,
+          tabBorderRadius: 12,
+        },
+        { legend: "borderRadius=0 — nothing rounded", borderRadius: 0 },
+      ];
+
       const BorderRadiusDemo = () => (
         <div className="demo-section">
-          <Heading id="border-radius">borderRadius</Heading>
+          <Heading id="border-radius">borderRadius / tabBorderRadius</Heading>
           <Box flex="y" spacing="l" alignX="start">
-            {[0, undefined, 10, 20].map((borderRadius) => (
-              <fieldset key={String(borderRadius)}>
-                <legend>
-                  {borderRadius === undefined
-                    ? "borderRadius (default)"
-                    : `borderRadius=${borderRadius}`}
-                </legend>
+            {RADIUS_CASES.map(
+              ({ legend, borderRadius = 12, tabBorderRadius }) => (
+                <fieldset key={legend}>
+                  <legend>{legend}</legend>
+                  <Binder
+                    borderRadius={borderRadius}
+                    tabBorderRadius={tabBorderRadius}
+                    borderWidth={3}
+                    defaultValue="pending"
+                  >
+                    {pages()}
+                  </Binder>
+                </fieldset>
+              ),
+            )}
+          </Box>
+        </div>
+      );
+
+      // The outer radius is there to follow the container: flush against a
+      // square one, curved inside a rounded one.
+      const CONTAINER_STYLE = {
+        padding: "12px",
+        background: "#eef1f5",
+        border: "1px solid #cbd2dc",
+      };
+      const InContainerDemo = () => (
+        <div className="demo-section">
+          <Heading id="in-container">Inside a container</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>a square container, a binder flush in it</legend>
+              <div style={CONTAINER_STYLE}>
                 <Binder
-                  borderRadius={borderRadius}
-                  borderWidth={3}
+                  borderRadius={0}
+                  tabBorderRadius={8}
                   defaultValue="pending"
                 >
                   {pages()}
                 </Binder>
-              </fieldset>
-            ))}
+              </div>
+            </fieldset>
+            <fieldset>
+              <legend>a rounded container, the binder following it</legend>
+              <div style={{ ...CONTAINER_STYLE, borderRadius: "20px" }}>
+                <Binder borderRadius={12} defaultValue="pending">
+                  {pages()}
+                </Binder>
+              </div>
+            </fieldset>
           </Box>
         </div>
       );

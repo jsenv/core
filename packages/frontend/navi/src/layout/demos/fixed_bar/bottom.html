@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — a plain bottom bar</title>
+    <link rel="stylesheet" href="./_shell.css" />
+  </head>
+  <body>
+    <div id="app" data-navi-fixed-bar-space></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box, Button, FixedBar } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const App = () => (
+        <>
+          <div className="page">{rows()}</div>
+          <FixedBar area="bottom">
+            <Box flex alignX="center" spacing="s" expandX>
+              <Button>Annuler</Button>
+              <Button>Valider</Button>
+            </Box>
+          </FixedBar>
+        </>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

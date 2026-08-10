@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — border and thickness</title>
+    <link rel="stylesheet" href="./_shell.css" />
+  </head>
+  <body>
+    <div id="app" data-navi-fixed-bar-space></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import { Box, Button, FixedBar } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const App = () => {
+        const [border, setBorder] = useState(true);
+        const [thickness, setThickness] = useState(56);
+        return (
+          <>
+            <FixedBar area="top" border={border} thickness={thickness}>
+              <Box flex alignX="center" expandX>
+                border={String(border)} · thickness={thickness}
+              </Box>
+            </FixedBar>
+            <div className="page">
+              <Box flex spacing="s" marginBottom="s">
+                <Button onClick={() => setBorder(!border)}>
+                  {border ? "border={false}" : "border={true}"}
+                </Button>
+                <Button
+                  onClick={() => setThickness(thickness === 56 ? 88 : 56)}
+                >
+                  thickness {thickness === 56 ? "88" : "56"}
+                </Button>
+              </Box>
+              {rows()}
+            </div>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

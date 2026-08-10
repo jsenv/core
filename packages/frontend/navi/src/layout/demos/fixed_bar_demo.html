@@ -89,8 +89,11 @@
       // over the same edges. Each layout is its own document, shown here at
       // phone size — and openable on its own, which is the only way to see it
       // against a real window.
-      const Screen = ({ src, caption }) => (
-        <div className="screen">
+      const Screen = ({ src, caption, height = 260, scale = 0.8 }) => (
+        <div
+          className="screen"
+          style={{ "--screen-height": `${height}px`, "--screen-scale": scale }}
+        >
           <div className="viewport">
             <iframe src={src} title={caption} />
           </div>
@@ -109,26 +112,34 @@
           </div>
 
           <div className="demo-section">
-            <Heading id="area">area</Heading>
+            <Heading id="nominal">Cas nominal</Heading>
             <div className="screens">
-              <Screen src="./fixed_bar/top.html" caption='area="top"' />
               <Screen
-                src="./fixed_bar/bottom_nav.html"
-                caption='area="bottom", a nav in it'
-              />
-              <Screen
-                src="./fixed_bar/sides.html"
-                caption='area="left" + area="right"'
+                src="./fixed_bar/nominal.html"
+                caption="a top bar and a bottom nav"
+                height={420}
+                scale={0.75}
               />
             </div>
           </div>
 
           <div className="demo-section">
-            <Heading id="space">The space a bar takes back</Heading>
+            <Heading id="area">area</Heading>
             <div className="screens">
               <Screen
-                src="./fixed_bar/top_and_bottom.html"
-                caption="two bars, and one that comes and goes"
+                src="./fixed_bar/background.html"
+                caption='area="top", background="#1e293b"'
+              />
+              <Screen src="./fixed_bar/bottom.html" caption='area="bottom"' />
+            </div>
+          </div>
+
+          <div className="demo-section">
+            <Heading id="border">border and thickness</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/border.html"
+                caption="press the buttons: border on/off, thickness"
               />
             </div>
           </div>
@@ -137,12 +148,10 @@
             <Heading id="anchors">Scrolling to something</Heading>
             <div className="screens">
               <Screen
-                src="./fixed_bar/top.html"
-                caption="press ↑ first / middle / ↓ last"
-              />
-              <Screen
                 src="./fixed_bar/top_and_bottom.html"
-                caption="the same, with a bar on each side"
+                caption="the jumps live in the bars — every target lands in front of them"
+                height={420}
+                scale={0.75}
               />
             </div>
           </div>
@@ -153,6 +162,8 @@
               <Screen
                 src="./fixed_bar/binder_nav.html"
                 caption="Binder as the app shell, tabs at the bottom"
+                height={420}
+                scale={0.75}
               />
             </div>
           </div>
