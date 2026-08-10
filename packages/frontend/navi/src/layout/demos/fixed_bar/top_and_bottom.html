@@ -18,15 +18,25 @@
       import { useState } from "preact/hooks";
       import { Box, Button, FixedBar, Title } from "@jsenv/navi";
 
+      // The page for testing where a scroll lands: the jumps live IN the bars,
+      // so they stay under the thumb wherever the page is, and each of them can
+      // be tried from anywhere — including from right against the bar that
+      // would swallow its target.
+      const Jumps = () => (
+        <nav className="anchors">
+          <a href="#first">↑ first</a>
+          <a href="#middle">middle</a>
+          <a href="#last">↓ last</a>
+        </nav>
+      );
+
       const App = () => {
         const [withTopBar, setWithTopBar] = useState(true);
         return (
           <>
             {withTopBar && (
               <FixedBar area="top">
-                <Title as="h1" margin="0" size="20">
-                  Mes parties
-                </Title>
+                <Jumps />
               </FixedBar>
             )}
             <div className="page">
@@ -54,16 +64,9 @@
               <div id="last" className="last">
                 Last row — anchor target
               </div>
-              <nav className="anchors">
-                <a href="#first">↑ first</a>
-                <a href="#middle">middle</a>
-                <a href="#last">↓ last</a>
-              </nav>
             </div>
             <FixedBar area="bottom" size="64px">
-              <Box flex alignX="center" expandX>
-                Bottom
-              </Box>
+              <Jumps />
             </FixedBar>
           </>
         );
