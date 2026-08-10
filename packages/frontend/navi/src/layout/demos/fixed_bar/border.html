@@ -7,7 +7,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>FixedBar — border and thickness</title>
+    <title>FixedBar — border and size</title>
     <link rel="stylesheet" href="./_shell.css" />
   </head>
   <body>
@@ -20,12 +20,12 @@
 
       const App = () => {
         const [border, setBorder] = useState(true);
-        const [thickness, setThickness] = useState(56);
+        const [height, setHeight] = useState(56);
         return (
           <>
-            <FixedBar area="top" border={border} thickness={thickness}>
+            <FixedBar area="top" border={border} height={height}>
               <Box flex alignX="center" expandX>
-                border={String(border)} · thickness={thickness}
+                border={String(border)} · height={height}
               </Box>
             </FixedBar>
             <div className="page">
@@ -33,10 +33,8 @@
                 <Button onClick={() => setBorder(!border)}>
                   {border ? "border={false}" : "border={true}"}
                 </Button>
-                <Button
-                  onClick={() => setThickness(thickness === 56 ? 88 : 56)}
-                >
-                  thickness {thickness === 56 ? "88" : "56"}
+                <Button onClick={() => setHeight(height === 56 ? 88 : 56)}>
+                  height {height === 56 ? "88" : "56"}
                 </Button>
               </Box>
               {rows()}

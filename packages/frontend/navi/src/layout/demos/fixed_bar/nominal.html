@@ -28,6 +28,7 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import {
+        Box,
         FixedBar,
         Icon,
         Link,
@@ -41,13 +42,15 @@
       const HOME = route("/");
       const GAMES = route("/games");
       const CREATE = route("/create");
+      const JOIN = route("/join");
       const PROFILE = route("/profile");
-      setupRoutes([HOME, GAMES, CREATE, PROFILE]);
+      setupRoutes([HOME, GAMES, CREATE, JOIN, PROFILE]);
 
       const TITLES = new Map([
         [HOME, "Accueil"],
         [GAMES, "Mes parties"],
         [CREATE, "Créer"],
+        [JOIN, "Rejoindre"],
         [PROFILE, "Profil"],
       ]);
 
@@ -88,13 +91,15 @@
         }
         return (
           <>
-            <FixedBar area="top" thickness={44}>
-              <Title as="h1" margin="0" size="16">
-                {title}
-              </Title>
+            <FixedBar area="top" height={48}>
+              <Box flex alignX="center" alignY="center" expandX>
+                <Title as="h1" margin="0" size="16">
+                  {title}
+                </Title>
+              </Box>
             </FixedBar>
-            <div className="page">{rows()}</div>
-            <FixedBar as="nav" area="bottom" thickness={54}>
+            <div className="page">{rows(20)}</div>
+            <FixedBar as="nav" area="bottom" height={54}>
               <NavItem route={HOME} label="Accueil">
                 <NavIcon path="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
               </NavItem>
@@ -105,6 +110,9 @@
                 <span className="cta">
                   <NavIcon path="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
                 </span>
+              </NavItem>
+              <NavItem route={JOIN} label="Rejoindre">
+                <NavIcon path="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
               </NavItem>
               <NavItem route={PROFILE} label="Profil">
                 <NavIcon path="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
