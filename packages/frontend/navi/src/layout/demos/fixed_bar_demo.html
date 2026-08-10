@@ -145,6 +145,44 @@
           </div>
 
           <div className="demo-section">
+            <Heading id="scrollbar">The document scrollbar</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/scrollbar.html"
+                caption="a page short enough to need no scrollbar"
+                height={420}
+                scale={0.75}
+              />
+              <Screen
+                src="./fixed_bar/scrollbar.html?long"
+                caption="the same page, scrolling — press the button on either one"
+                height={420}
+                scale={0.75}
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
+            <Heading id="scrollbar-gutter">
+              scrollbar-gutter: stable both-edges
+            </Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/scrollbar.html?gutter"
+                caption="short page, the room kept on both edges"
+                height={420}
+                scale={0.75}
+              />
+              <Screen
+                src="./fixed_bar/scrollbar.html?gutter&long"
+                caption="the same page, scrolling"
+                height={420}
+                scale={0.75}
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
             <Heading id="anchors">Scrolling to something</Heading>
             <div className="screens">
               <Screen

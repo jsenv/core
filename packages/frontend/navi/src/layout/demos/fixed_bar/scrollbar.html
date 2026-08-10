@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>FixedBar — the width the document scrollbar takes</title>
+    <link rel="stylesheet" href="./_shell.css" />
+    <style>
+      /* A scrollbar that takes room: macOS draws overlay scrollbars over the
+         page, and styling them is what puts a classic one back — without it
+         there is nothing to see here on a Mac. */
+      ::-webkit-scrollbar {
+        width: 12px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #9ca3af;
+        border-radius: 6px;
+      }
+      .measure {
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Where the bar ends when nothing takes room on the right, drawn just
+         under it. Its width is read in vw — the viewport WITH its scrollbar —
+         so it stays put while the bar moves, and the two red blocks stop being
+         stacked by exactly what the scrollbar took. */
+      .edge-guide {
+        position: fixed;
+        top: 48px;
+        left: 0;
+        z-index: 2;
+        display: flex;
+        width: 100vw;
+        justify-content: center;
+        pointer-events: none;
+      }
+      .edge-guide > span {
+        display: flex;
+        width: min(100vw, var(--navi-fixed-bar-max-width));
+        justify-content: end;
+      }
+      .edge-guide > span::after {
+        width: 24px;
+        height: 10px;
+        background: #ef4444;
+        content: "";
+      }
+      .bar-edge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 24px;
+        height: 100%;
+        background: #ef4444;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-fixed-bar-space></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useLayoutEffect, useRef, useState } from "preact/hooks";
+      import { Box, Button, FixedBar, Text } from "@jsenv/navi";
+      import { rows } from "./_page.jsx";
+
+      const searchParams = new URL(window.location).searchParams;
+      const LONG_AT_START = searchParams.has("long");
+      if (searchParams.has("gutter")) {
+        document.documentElement.style.scrollbarGutter = "stable both-edges";
+      }
+
+      const App = () => {
+        const [long, setLong] = useState(LONG_AT_START);
+        const barRef = useRef(null);
+        const [measures, setMeasures] = useState(null);
+
+        useLayoutEffect(() => {
+          const { width } = barRef.current.getBoundingClientRect();
+          setMeasures({
+            bar: Math.round(width),
+            document: document.documentElement.clientWidth,
+            window: window.innerWidth,
+          });
+        }, [long]);
+
+        return (
+          <>
+            <FixedBar area="top" height={48} ref={barRef}>
+              <Box flex alignX="center" alignY="center" spacing="m" expandX>
+                <Text className="measure" size="xs">
+                  bar {measures ? measures.bar : "…"}px
+                </Text>
+                <Text className="measure" size="xs">
+                  document {measures ? measures.document : "…"}px
+                </Text>
+                <Text className="measure" size="xs">
+                  window {measures ? measures.window : "…"}px
+                </Text>
+              </Box>
+              <div className="bar-edge" />
+            </FixedBar>
+            <div className="edge-guide">
+              <span />
+            </div>
+            <div className="page">
+              <Box paddingBottom="m">
+                <Button
+                  onClick={() => {
+                    setLong(!long);
+                  }}
+                >
+                  {long ? "Raccourcir la page" : "Rallonger la page"}
+                </Button>
+              </Box>
+              {rows(long ? 40 : 3)}
+            </div>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>
