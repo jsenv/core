@@ -427,7 +427,6 @@
         borderWidth,
         cornerRadius,
         borderColor,
-        fullStrokeWidth,
         panelTRCornerR,
         panelTLCornerL,
         tabsBelow,
@@ -461,7 +460,7 @@
               d={centerlinePath}
               fill="white"
               stroke={borderColor}
-              stroke-width={fullStrokeWidth ? borderWidth : 1}
+              stroke-width={borderWidth}
             />
           </svg>
         );
@@ -540,7 +539,6 @@
         b,
         r,
         borderColor,
-        fullStrokeWidth,
         wideLabels,
         tallContent,
         tabsBelow,
@@ -674,7 +672,6 @@
                 borderWidth={b}
                 cornerRadius={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 panelTRCornerR={panelSize.panelTRCornerR}
                 panelTLCornerL={panelSize.panelTLCornerL}
                 tabsBelow={tabsBelow}
@@ -703,7 +700,6 @@
         return {
           b: Number(get("b", 20)),
           r: Number(get("r", 30)),
-          fullStrokeWidth: get("fullStrokeWidth", "false") === "true",
           wideLabels: get("wideLabels", "false") === "true",
           tallContent: get("tallContent", "false") === "true",
           tabAlign: get("tabAlign", "start"),
@@ -723,9 +719,6 @@
         const init = readParams();
         const [b, setB] = useState(init.b);
         const [r, setR] = useState(init.r);
-        const [fullStrokeWidth, setFullStrokeWidth] = useState(
-          init.fullStrokeWidth,
-        );
         const [wideLabels, setWideLabels] = useState(init.wideLabels);
         const [tallContent, setTallContent] = useState(init.tallContent);
         const [tabAlign, setTabAlign] = useState(init.tabAlign);
@@ -736,7 +729,6 @@
           writeParams({
             b,
             r,
-            fullStrokeWidth,
             wideLabels,
             tallContent,
             tabAlign,
@@ -760,22 +752,6 @@
                     onInput={(e) => update("b", Number(e.target.value), setB)}
                   />
                   <output>{b}px</output>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <input
-                    id="fullwidth-checkbox"
-                    type="checkbox"
-                    checked={fullStrokeWidth}
-                    onChange={(e) =>
-                      update(
-                        "fullStrokeWidth",
-                        e.target.checked,
-                        setFullStrokeWidth,
-                      )
-                    }
-                  />
-                  <label for="fullwidth-checkbox">Full stroke width</label>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -841,7 +817,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
@@ -851,7 +826,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
@@ -861,7 +835,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
@@ -882,7 +855,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
@@ -893,7 +865,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
@@ -904,7 +875,6 @@
                 b={b}
                 r={r}
                 borderColor={borderColor}
-                fullStrokeWidth={fullStrokeWidth}
                 wideLabels={wideLabels}
                 tallContent={tallContent}
                 tabAlign={tabAlign}
