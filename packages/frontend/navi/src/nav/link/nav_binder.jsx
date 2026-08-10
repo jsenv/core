@@ -121,7 +121,8 @@ const measureDrawing = ({ navEl, panelEl, panelPosition, vertical }) => {
 
   const navRect = navEl.getBoundingClientRect();
   const panelRect = panelEl.getBoundingClientRect();
-  const unionLeft = navRect.left < panelRect.left ? navRect.left : panelRect.left;
+  const unionLeft =
+    navRect.left < panelRect.left ? navRect.left : panelRect.left;
   const unionTop = navRect.top < panelRect.top ? navRect.top : panelRect.top;
   const unionRight =
     navRect.right > panelRect.right ? navRect.right : panelRect.right;
