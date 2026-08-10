@@ -655,16 +655,22 @@
             ref={wrapperRef}
             style={{ position: "relative", display: "inline-block" }}
           >
-            {/* The unified SVG sits behind everything, covering tabstrip + panel */}
+            {/* The unified SVG sits behind everything, covering tabstrip + panel.
+                The junction border band is drawn INSIDE the tab row (tabs overlap
+                it by b), so in the below case the panel region extends b past the
+                panel box into the tab row, and the drawn tab row is b shorter
+                than the DOM tab row. */}
             {panelSize && (
               <BinderSvg
                 tabX={panelSize.tabLeft}
                 tabWidth={panelSize.tabWidth}
                 tabRowHeight={
-                  tabsBelow ? panelSize.tabRowHeight : panelSize.top - b
+                  tabsBelow ? panelSize.tabRowHeight - b : panelSize.top - b
                 }
                 panelWidth={panelSize.width}
-                panelHeight={panelSize.height + b}
+                panelHeight={
+                  tabsBelow ? panelSize.height + 2 * b : panelSize.height + b
+                }
                 borderWidth={b}
                 cornerRadius={r}
                 borderColor={borderColor}
