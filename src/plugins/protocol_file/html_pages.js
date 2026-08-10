@@ -6,7 +6,9 @@
  * of them, the page switcher (cmd+K) opens one in the current tab. Whoever asks
  * gets the same answer.
  *
- * Each page comes with what kind of page it is, read from where it sits and
+ * Each page comes with where its file is (so it can be opened in an editor as
+ * well as in the browser) and with what kind of page it is, read from where it
+ * sits and
  * what it is called — the two conventions this repo already follows:
  * - "experiment": something tried out, under a lab/ directory or named
  *   *_experiment.html;
@@ -107,6 +109,10 @@ export const createHtmlPageLister = ({ rootDirectoryUrl }) => {
       );
       return {
         url: `/${relativeUrl}`,
+        // Where the file actually is, so whoever wants to open it in an editor
+        // rather than in the browser has what GET /.internal/open_file/* asks
+        // for (a file url) without having to know the root directory.
+        fileUrl,
         kind: readKind(meta),
         // Relative to the root and without its trailing slash, which is how a
         // tree names its own nodes.

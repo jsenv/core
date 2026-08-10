@@ -1,6 +1,8 @@
 /*
  * cmd+K (ctrl+K elsewhere) on any page the dev server serves opens a list of
- * the .html files it serves, filter as you type, Enter to go there.
+ * the .html files it serves, filter as you type, Enter to go there. cmd+E
+ * (ctrl+E elsewhere) opens a page's file in the editor instead of going to it:
+ * the current page from anywhere, the selected row from inside the switcher.
  *
  * The list is the one the filesystem plugin already publishes for everyone
  * (GET /.internal/pages.json, see protocol_file/html_pages.js) — this only adds

@@ -30,10 +30,11 @@
               the surface. Nothing else. This is the whole feature when the
               design has square corners, and it is worth knowing how little it
               costs.
-          B — concave corners as two pseudo-elements, each a rounded square
-              whose offset box-shadow paints the area around the curve.
-          C — the same two corners, carved with a mask instead: one
-              radial-gradient per corner, transparent inside the circle.
+          B — the two corners painted by a single radial-gradient each: bar
+              colour inside the disc, the line as a ring at its edge, surface
+              outside. No extra element, and the line follows the curve.
+          C — the same disc carved with a mask instead, for when what sits
+              behind the bar is not a flat colour one can name.
 
         Not tried, and why: `clip-path: path()` is CSS but takes absolute
         coordinates only — no percentages — so it would need the same
@@ -173,67 +174,75 @@
         content: "";
       }
 
-      /* ── B: concave corners drawn with an offset box-shadow ─────────────
-         A square with ONE rounded corner casts a shadow of itself, offset by
-         the radius: what lands next to the curve is the surface colour, and
-         the curve itself stays uncovered. Two of them, mirrored, and the
-         surface flows into the tab through a rounded notch.
-         The border line is a second, slightly larger copy underneath. */
-      .technique-b .tab[aria-selected="true"]::before,
-      .technique-b .tab[aria-selected="true"]::after {
-        z-index: 1;
-      }
+      /* The geometry both B and C draw, stated once.
+
+         The corner square sits beside the open tab, hanging from the row's top
+         line, R by R. The surface boundary through it is a quarter circle
+         centred on the square's corner AWAY from the tab and AWAY from the
+         line — bottom-left for the notch on the left, bottom-right for the one
+         on the right. Inside that disc is bar; outside it is surface. Getting
+         that centre wrong is the whole difficulty: any other corner curves the
+         notch the wrong way. */
+
+      /* ── B: one radial-gradient, shape and line together ────────────────
+         Inside the disc, bar colour. A ring one border wide at the edge of
+         the disc, the line. Outside, surface. Three stops, no extra element,
+         and the line follows the curve for free. Needs the colours to be
+         known and opaque — see C when they are not. */
       .technique-b .tab[aria-selected="true"] .corner {
         position: absolute;
         top: calc(-1 * var(--border));
         width: var(--radius);
-        height: var(--radius);
+        height: calc(var(--radius) + var(--border));
       }
       .technique-b .tab[aria-selected="true"] .corner.left {
         left: calc(-1 * var(--radius));
-        background: var(--tab-bg);
-        border-bottom-right-radius: var(--radius);
-        box-shadow: var(--border) var(--border) 0 var(--border) var(--line);
-      }
-      .technique-b .tab[aria-selected="true"] .corner.left::after {
-        position: absolute;
-        inset: 0;
-        background: var(--surface);
-        border-bottom-right-radius: var(--radius);
-        transform: translate(0, var(--border));
-        content: "";
+        background: radial-gradient(
+          circle at 0 100%,
+          var(--tab-bg) 0 calc(var(--radius) - var(--border)),
+          var(--line) calc(var(--radius) - var(--border)) var(--radius),
+          var(--surface) var(--radius)
+        );
       }
       .technique-b .tab[aria-selected="true"] .corner.right {
         right: calc(-1 * var(--radius));
-        background: var(--tab-bg);
-        border-bottom-left-radius: var(--radius);
-        box-shadow: calc(-1 * var(--border)) var(--border) 0 var(--border)
-          var(--line);
-      }
-      .technique-b .tab[aria-selected="true"] .corner.right::after {
-        position: absolute;
-        inset: 0;
-        background: var(--surface);
-        border-bottom-left-radius: var(--radius);
-        transform: translate(0, var(--border));
-        content: "";
+        background: radial-gradient(
+          circle at 100% 100%,
+          var(--tab-bg) 0 calc(var(--radius) - var(--border)),
+          var(--line) calc(var(--radius) - var(--border)) var(--radius),
+          var(--surface) var(--radius)
+        );
       }
 
-      /* ── C: the same corners carved with a mask ─────────────────────────
-         The square is painted in the surface colour and a radial-gradient
-         mask makes the quarter-disc transparent, leaving the concave shape.
-         The line is the same square, one border bigger, behind it. */
+      /* ── C: the same disc, carved with a mask ───────────────────────────
+         The square is painted surface and the mask removes the disc, so
+         whatever is behind the bar shows through instead of a colour we had
+         to name. The line is a second copy behind, one border bigger. */
       .technique-c .tab[aria-selected="true"] .corner {
         position: absolute;
         top: calc(-1 * var(--border));
         width: var(--radius);
-        height: var(--radius);
+        height: calc(var(--radius) + var(--border));
         background: var(--surface);
+      }
+      .technique-c .tab[aria-selected="true"] .corner::before {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--line);
+        content: "";
       }
       .technique-c .tab[aria-selected="true"] .corner.left {
         left: calc(-1 * var(--radius));
         mask: radial-gradient(
-          circle var(--radius) at 0 0,
+          circle var(--radius) at 0 100%,
+          transparent 0 99.5%,
+          #000 100%
+        );
+      }
+      .technique-c .tab[aria-selected="true"] .corner.left::before {
+        mask: radial-gradient(
+          circle calc(var(--radius) - var(--border)) at 0 100%,
           transparent 0 99.5%,
           #000 100%
         );
@@ -241,29 +250,14 @@
       .technique-c .tab[aria-selected="true"] .corner.right {
         right: calc(-1 * var(--radius));
         mask: radial-gradient(
-          circle var(--radius) at 100% 0,
-          transparent 0 99.5%,
-          #000 100%
-        );
-      }
-      /* the line, drawn as a bigger copy sitting behind */
-      .technique-c .tab[aria-selected="true"] .corner::before {
-        position: absolute;
-        inset: calc(-1 * var(--border)) 0 0 0;
-        z-index: -1;
-        background: var(--line);
-        content: "";
-      }
-      .technique-c .tab[aria-selected="true"] .corner.left::before {
-        mask: radial-gradient(
-          circle var(--radius) at 0 var(--border),
+          circle var(--radius) at 100% 100%,
           transparent 0 99.5%,
           #000 100%
         );
       }
       .technique-c .tab[aria-selected="true"] .corner.right::before {
         mask: radial-gradient(
-          circle var(--radius) at 100% var(--border),
+          circle calc(var(--radius) - var(--border)) at 100% 100%,
           transparent 0 99.5%,
           #000 100%
         );
@@ -311,8 +305,8 @@
         },
         {
           className: "technique-b",
-          title: "B — box-shadow corners",
-          note: "Two rounded squares whose offset shadow paints around the curve.",
+          title: "B — radial-gradient corners",
+          note: "One gradient per corner: bar inside the disc, the line as a ring at its edge, surface outside.",
           corners: true,
         },
         {

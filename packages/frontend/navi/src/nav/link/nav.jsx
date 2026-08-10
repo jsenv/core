@@ -101,20 +101,48 @@ const css = /* css */ `
       }
     }
 
+    /* Folder tabs: the current tab and the panel share one surface. The tab
+       carries the panel's border on 3 sides and paints the 4th with the panel
+       background, so the line opens where they meet. The negative margin makes
+       the two borders overlap on that side — without it the panel's own line
+       would still be drawn under the tab. */
     &[data-panel-border-connection] {
-      --nav-border-width: 10px;
+      --nav-border-width: 1px;
+      --nav-border-color: gray;
+      --nav-tab-border-radius: 5px;
+
+      --x-nav-panel-background: var(
+        --nav-panel-background,
+        var(--link-background-current, white)
+      );
+
       position: relative;
       z-index: 1;
 
       .navi_link {
         border: var(--nav-border-width) solid transparent;
 
-        &[data-tab-selected] {
-          border-color: gray;
-          border-bottom-color: var(--nav-background);
+        &[data-href-current] {
+          border-color: var(--nav-border-color);
+        }
+      }
 
-          border-top-left-radius: 5px;
-          border-top-right-radius: 5px;
+      &[data-panel-position="after"] {
+        margin-bottom: calc(-1 * var(--nav-border-width));
+
+        .navi_link[data-href-current] {
+          border-bottom-color: var(--x-nav-panel-background);
+          border-top-left-radius: var(--nav-tab-border-radius);
+          border-top-right-radius: var(--nav-tab-border-radius);
+        }
+      }
+      &[data-panel-position="before"] {
+        margin-top: calc(-1 * var(--nav-border-width));
+
+        .navi_link[data-href-current] {
+          border-top-color: var(--x-nav-panel-background);
+          border-bottom-right-radius: var(--nav-tab-border-radius);
+          border-bottom-left-radius: var(--nav-tab-border-radius);
         }
       }
     }

@@ -1169,97 +1169,207 @@
         );
       };
 
-      const Binder = () => {
+      const BINDER_TABS = [
+        { id: "approved", label: "Approved", count: 3, countColor: "#1976d2" },
+        { id: "pending", label: "Pending", count: 2, countColor: "#dc2626" },
+        { id: "rejected", label: "Rejected", count: 20, countColor: "#dc2626" },
+      ];
+      const FolderTabs = ({
+        panelPosition = "after",
+        borderWidth = "1px",
+        borderColor = "#9ca3af",
+        surface = "#ffffff",
+        surfaceColor = "#111827",
+        tabBackground = "transparent",
+        tabColor = "#6b7280",
+        tabRadius = "0px",
+        panelRadius = "0px",
+      }) => {
         const [active, setActive] = useState("approved");
+        const nav = (
+          <Nav
+            style={{
+              "--nav-border-width": borderWidth,
+              "--nav-border-color": borderColor,
+              "--nav-tab-border-radius": tabRadius,
+              "--link-background": tabBackground,
+              "--link-color": tabColor,
+              "--link-background-current": surface,
+              "--link-color-current": surfaceColor,
+            }}
+            panelPosition={panelPosition}
+            panelBorderConnection
+          >
+            {BINDER_TABS.map(({ id, label, count, countColor }) => (
+              <Link
+                key={id}
+                appearance="tab"
+                column
+                spacing="xs"
+                alignY="center"
+                paddingX="m"
+                paddingY="s"
+                bold
+                uppercase
+                current={active === id}
+                onClick={() => setActive(id)}
+              >
+                {label}
+                <BadgeCount background={countColor} color="white">
+                  {count}
+                </BadgeCount>
+              </Link>
+            ))}
+          </Nav>
+        );
+        const panel = (
+          <Box
+            role="region"
+            padding="m"
+            background={surface}
+            color={surfaceColor}
+            border={`${borderWidth} solid ${borderColor}`}
+            borderRadius={
+              panelPosition === "after"
+                ? `0 0 ${panelRadius} ${panelRadius}`
+                : `${panelRadius} ${panelRadius} 0 0`
+            }
+          >
+            {BINDER_TABS.find(({ id }) => id === active).count} items in{" "}
+            {active}.
+          </Box>
+        );
+        return panelPosition === "after" ? (
+          <>
+            {nav}
+            {panel}
+          </>
+        ) : (
+          <>
+            {panel}
+            {nav}
+          </>
+        );
+      };
+
+      const Binder = () => {
         return (
           <Box as="section" className="demo-section">
             <Title as="h2">Binder / Folder Tabs</Title>
             <Text className="note">
-              "Intercalaire / classeur" style — tabs with category badges. Uses{" "}
-              <code>indicator="none"</code>, a bottom border on the wrapper to
-              simulate the panel separator, and <code>BadgeCount</code>.{" "}
-              <em>
-                The "open bottom on selected tab" effect requires future Nav
-                support; this is the closest approximation with current options.
-              </em>
+              <code>panelBorderConnection</code> opens the border between the
+              current tab and the panel; <code>panelPosition</code> says on
+              which side the panel sits.
             </Text>
+
+            <Title as="h3">Panel after the tabs</Title>
             <div className="example-block">
-              <Box padding="m" background="lightgrey">
-                <Nav
-                  style={{
-                    "--nav-border-width": "10px",
-                    "--link-background": "transparent",
-                    "--link-color": "#9ca3af",
-                    "--link-background-hover": "#f9fafb",
-                    "--link-color-hover": "#374151",
-                    "--link-background-current": "#ffffff",
-                    "--link-color-current": "#111827",
-                  }}
-                  panelPosition="after"
-                  panelBorderConnection
-                >
-                  <Link
-                    appearance="tab"
-                    column
-                    alignY="center"
-                    spacing="xs"
-                    current={active === "approved"}
-                    onClick={() => setActive("approved")}
-                    paddingX="m"
-                    bold
-                    uppercase
-                  >
-                    Approved
-                    <BadgeCount background="#1976d2" color="white">
-                      3
-                    </BadgeCount>
-                  </Link>
-                  <Link
-                    appearance="tab"
-                    column
-                    alignY="center"
-                    spacing="xs"
-                    current={active === "pending"}
-                    onClick={() => setActive("pending")}
-                    paddingX="m"
-                    bold
-                    uppercase
-                  >
-                    Pending
-                    <BadgeCount background="red" color="white">
-                      2
-                    </BadgeCount>
-                  </Link>
-                  <Link
-                    appearance="tab"
-                    column
-                    alignY="center"
-                    spacing="xs"
-                    current={active === "rejected"}
-                    onClick={() => setActive("rejected")}
-                    paddingX="m"
-                    bold
-                    uppercase
-                  >
-                    Rejected
-                    <BadgeCount background="red" color="white">
-                      20
-                    </BadgeCount>
-                  </Link>
-                </Nav>
-                <Box
-                  role="region"
-                  padding="m"
-                  border="10px solid grey"
-                  background="#ffffff"
-                  relative
-                  top="-1"
-                  style="border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;"
-                >
-                  {active === "approved"
-                    ? "These 3 items have been reviewed and approved."
-                    : "These 2 items are awaiting review."}
-                </Box>
+              <div className="caption">Square, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Square, 1px, tabs on a grey strip</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs tabBackground="#e5e7eb" />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Rounded tabs, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs tabRadius="8px" panelRadius="8px" />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Rounded tabs, 3px blue</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  borderWidth="3px"
+                  borderColor="#1976d2"
+                  tabRadius="10px"
+                  panelRadius="10px"
+                  tabColor="#1e40af"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">No border, colors only</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  borderWidth="0px"
+                  tabBackground="#cbd5e1"
+                  tabColor="#475569"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Dark surface, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  surface="#1f2937"
+                  surfaceColor="#f9fafb"
+                  borderColor="#111827"
+                  tabColor="#4b5563"
+                  tabRadius="8px"
+                  panelRadius="8px"
+                />
+              </Box>
+            </div>
+
+            <Title as="h3">Panel before the tabs</Title>
+            <div className="example-block">
+              <div className="caption">Square, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs panelPosition="before" />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Rounded tabs, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  tabRadius="8px"
+                  panelRadius="8px"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Rounded tabs, 3px blue</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  borderWidth="3px"
+                  borderColor="#1976d2"
+                  tabRadius="10px"
+                  panelRadius="10px"
+                  tabColor="#1e40af"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">No border, colors only</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  borderWidth="0px"
+                  tabBackground="#cbd5e1"
+                  tabColor="#475569"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Dark surface, 1px</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  surface="#1f2937"
+                  surfaceColor="#f9fafb"
+                  borderColor="#111827"
+                  tabColor="#4b5563"
+                  tabRadius="8px"
+                  panelRadius="8px"
+                />
               </Box>
             </div>
           </Box>
