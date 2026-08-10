@@ -6,6 +6,7 @@
 import { toChildArray } from "preact";
 
 import { Box } from "../../box/box.jsx";
+import { NavBinderSvg } from "./nav_binder.jsx";
 import { NavContext } from "./nav_context.js";
 
 const css = /* css */ `
@@ -118,6 +119,56 @@ const css = /* css */ `
         }
       }
     }
+
+    /* Binder variant: the border around nav + panel is a single SVG path
+       (see nav_binder.jsx). The nav must NOT create a stacking context so
+       links, svg and the panel sibling can interleave in the parent one:
+       inactive links (z 0) under the svg border band (z 1, drawn over their
+       panel-side margin edge), current link and panel content above (z 2). */
+    &[data-variant="binder"] {
+      --nav-border-width: 2px;
+      --nav-border-radius: 8px;
+      --nav-border-color: light-dark(#bbbbbb, #555555);
+      --nav-background: light-dark(#ffffff, #1e1e1e);
+      --link-background-current: transparent;
+      position: relative;
+
+      .navi_link {
+        position: relative;
+        z-index: 0;
+
+        &[data-href-current] {
+          z-index: 2;
+        }
+      }
+
+      /* The margin on the panel side hosts the junction border band the
+         tabs overlap; corners away from the panel are rounded. */
+      &:not([data-vertical])[data-panel-position="after"] .navi_link {
+        margin-bottom: var(--nav-border-width);
+        border-radius: var(--nav-border-radius) var(--nav-border-radius) 0 0;
+      }
+      &:not([data-vertical])[data-panel-position="before"] .navi_link {
+        margin-top: var(--nav-border-width);
+        border-radius: 0 0 var(--nav-border-radius) var(--nav-border-radius);
+      }
+      &[data-vertical][data-panel-position="after"] .navi_link {
+        margin-right: var(--nav-border-width);
+        border-radius: var(--nav-border-radius) 0 0 var(--nav-border-radius);
+      }
+      &[data-vertical][data-panel-position="before"] .navi_link {
+        margin-left: var(--nav-border-width);
+        border-radius: 0 var(--nav-border-radius) var(--nav-border-radius) 0;
+      }
+    }
+  }
+
+  /* The panel (nav sibling) must paint above the binder svg fill — see the
+     stacking note in the binder block above. */
+  .navi_nav[data-variant="binder"][data-panel-position="after"] + *,
+  :has(+ .navi_nav[data-variant="binder"][data-panel-position="before"]) {
+    position: relative;
+    z-index: 2;
   }
 `;
 
@@ -133,6 +184,16 @@ const NavStyleCSSVars = {
   paddingLeft: "--nav-padding-left",
   background: "--nav-background",
 };
+/**
+ * @param {"binder"} [variant] - `"binder"` draws the nav and its panel as one
+ *   shape: a single border wraps both, and the current tab opens into the
+ *   panel through concave junction curves. The panel is the nav's sibling
+ *   element (next sibling for `panelPosition="after"` — the default — previous
+ *   sibling for `"before"`) and is expected to bring no background/border of
+ *   its own: the variant draws them. Themed via CSS vars on the nav:
+ *   `--nav-border-width`, `--nav-border-radius`, `--nav-border-color`,
+ *   `--nav-background`.
+ */
 export const Nav = ({
   children,
   spacing,
@@ -140,6 +201,7 @@ export const Nav = ({
   expand,
   expandX,
   linkBorderRadiusInherit,
+  variant,
   panelPosition, // before or after
   panelBorderConnection,
   ...props
@@ -147,6 +209,10 @@ export const Nav = ({
   import.meta.css = css;
 
   children = toChildArray(children);
+
+  if (variant === "binder" && panelPosition === undefined) {
+    panelPosition = "after";
+  }
 
   return (
     <Box
@@ -157,6 +223,7 @@ export const Nav = ({
       data-link-border-radius-inherit={linkBorderRadiusInherit ? "" : undefined}
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
+      data-variant={variant}
       data-panel-position={panelPosition}
       data-panel-border-connection={panelBorderConnection ? "" : undefined}
       expand={expand}
@@ -165,7 +232,12 @@ export const Nav = ({
       {...props}
       styleCSSVars={NavStyleCSSVars}
     >
-      <NavContext.Provider value={true}>{children}</NavContext.Provider>
+      <NavContext.Provider value={true}>
+        {variant === "binder" && (
+          <NavBinderSvg panelPosition={panelPosition} vertical={vertical} />
+        )}
+        {children}
+      </NavContext.Provider>
     </Box>
   );
 };
