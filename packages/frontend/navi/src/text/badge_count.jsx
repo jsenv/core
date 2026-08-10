@@ -19,8 +19,40 @@ const css = /* css */ `
     --x-background-color: var(--background-color, var(--x-background));
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
-    --padding-x: 0.5em;
-    --padding-y: 0.2em;
+    --badge-count-padding-x-default: 0.5em;
+    --badge-count-padding-y-default: 0.2em;
+
+    /* Each side resolves the most specific value it was given, from the side
+       itself down to the axis, the shorthand, then the default. */
+    --x-badge-count-padding-top: var(
+      --badge-count-padding-top,
+      var(
+        --badge-count-padding-y,
+        var(--badge-count-padding, var(--badge-count-padding-y-default))
+      )
+    );
+    --x-badge-count-padding-right: var(
+      --badge-count-padding-right,
+      var(
+        --badge-count-padding-x,
+        var(--badge-count-padding, var(--badge-count-padding-x-default))
+      )
+    );
+    --x-badge-count-padding-bottom: var(
+      --badge-count-padding-bottom,
+      var(
+        --badge-count-padding-y,
+        var(--badge-count-padding, var(--badge-count-padding-y-default))
+      )
+    );
+    --x-badge-count-padding-left: var(
+      --badge-count-padding-left,
+      var(
+        --badge-count-padding-x,
+        var(--badge-count-padding, var(--badge-count-padding-x-default))
+      )
+    );
+
     position: relative;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -44,10 +76,10 @@ const css = /* css */ `
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-top: var(--padding-y);
-      padding-right: var(--padding-x);
-      padding-bottom: var(--padding-y);
-      padding-left: var(--padding-x);
+      padding-top: var(--x-badge-count-padding-top);
+      padding-right: var(--x-badge-count-padding-right);
+      padding-bottom: var(--x-badge-count-padding-bottom);
+      padding-left: var(--x-badge-count-padding-left);
       line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color);

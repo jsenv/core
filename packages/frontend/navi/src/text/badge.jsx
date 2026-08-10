@@ -10,8 +10,41 @@ const css = /* css */ `
   }
   .navi_badge {
     --font-size: 0.7em;
-    --padding-x: 0.8em;
-    --padding-y: 0.4em;
+    --badge-padding-x-default: 0.8em;
+    --badge-padding-y-default: 0.4em;
+
+    /* Each side resolves the most specific value it was given, from the side
+       itself down to the axis, the shorthand, then the default. Resolved once
+       here because the close button below reuses these to cancel the badge
+       padding on the edge it sits on. */
+    --x-badge-padding-top: var(
+      --badge-padding-top,
+      var(
+        --badge-padding-y,
+        var(--badge-padding, var(--badge-padding-y-default))
+      )
+    );
+    --x-badge-padding-right: var(
+      --badge-padding-right,
+      var(
+        --badge-padding-x,
+        var(--badge-padding, var(--badge-padding-x-default))
+      )
+    );
+    --x-badge-padding-bottom: var(
+      --badge-padding-bottom,
+      var(
+        --badge-padding-y,
+        var(--badge-padding, var(--badge-padding-y-default))
+      )
+    );
+    --x-badge-padding-left: var(
+      --badge-padding-left,
+      var(
+        --badge-padding-x,
+        var(--badge-padding, var(--badge-padding-x-default))
+      )
+    );
 
     --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
     --x-background-color: var(--background-color, var(--x-background));
@@ -23,10 +56,10 @@ const css = /* css */ `
     position: relative;
     display: inline;
     max-width: 200px;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
+    padding-top: var(--x-badge-padding-top);
+    padding-right: var(--x-badge-padding-right);
+    padding-bottom: var(--x-badge-padding-bottom);
+    padding-left: var(--x-badge-padding-left);
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -50,25 +83,25 @@ const css = /* css */ `
 
     [role="button"] {
       display: inline-flex;
-      margin-top: calc(-1 * var(--padding-y));
-      margin-bottom: calc(-1 * var(--padding-y));
-      padding-top: var(--padding-y);
-      padding-right: calc(var(--padding-x) / 2);
-      padding-bottom: var(--padding-y);
-      padding-left: calc(var(--padding-x) / 2);
+      margin-top: calc(-1 * var(--x-badge-padding-top));
+      margin-bottom: calc(-1 * var(--x-badge-padding-bottom));
+      padding-top: var(--x-badge-padding-top);
+      padding-right: calc(var(--x-badge-padding-right) / 2);
+      padding-bottom: var(--x-badge-padding-bottom);
+      padding-left: calc(var(--x-badge-padding-left) / 2);
       align-items: center;
       cursor: pointer;
       pointer-events: auto;
       user-select: none;
 
       &:first-child {
-        margin-left: calc(-1 * var(--padding-x));
+        margin-left: calc(-1 * var(--x-badge-padding-left));
         border-top-left-radius: inherit;
         border-bottom-left-radius: inherit;
       }
 
       &:last-child {
-        margin-right: calc(-1 * var(--padding-x));
+        margin-right: calc(-1 * var(--x-badge-padding-right));
         border-top-right-radius: inherit;
         border-bottom-right-radius: inherit;
       }
@@ -103,8 +136,13 @@ export const Badge = ({ children, className, ...props }) => {
 const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
+  padding: "--badge-padding",
+  paddingX: "--badge-padding-x",
+  paddingY: "--badge-padding-y",
+  paddingTop: "--badge-padding-top",
+  paddingRight: "--badge-padding-right",
+  paddingBottom: "--badge-padding-bottom",
+  paddingLeft: "--badge-padding-left",
   backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",

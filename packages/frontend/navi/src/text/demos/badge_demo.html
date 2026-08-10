@@ -31,8 +31,9 @@
             <Link href="#inline">3. Inline with text</Link>
             <Link href="#text-color">4. Automatic text color</Link>
             <Link href="#font-sizes">5. Font sizes</Link>
-            <Link href="#badge-with-button">6. Badge with button</Link>
-            <Link href="#overflow">7. Overflow with long text</Link>
+            <Link href="#padding">6. Padding</Link>
+            <Link href="#badge-with-button">7. Badge with button</Link>
+            <Link href="#overflow">8. Overflow with long text</Link>
           </Box>
         </Box>
       );
@@ -138,6 +139,43 @@
               Large text
               <Badge background="#2196f3">Tag</Badge>
             </Text>
+          </Box>
+        </Box>
+      );
+
+      const PaddingCase = ({ label, ...props }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text style={{ fontSize: "0.8em", opacity: 0.7 }}>{label}</Text>
+          <Box flex="x" spacing="s" alignY="center">
+            <Badge background="#2196f3" {...props}>
+              Tag
+            </Badge>
+            <Badge background="#2196f3" {...props}>
+              Tag
+              <Badge.Button aria-label="Remove">×</Badge.Button>
+            </Badge>
+          </Box>
+        </Box>
+      );
+
+      const PaddingSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#padding" />
+            Padding
+          </Title>
+          <Box flex="y" spacing="m" alignX="start">
+            <PaddingCase label="default" />
+            <PaddingCase label='padding="0.2em"' padding="0.2em" />
+            <PaddingCase label='paddingX="2em"' paddingX="2em" />
+            <PaddingCase label='paddingY="1em"' paddingY="1em" />
+            <PaddingCase label='paddingLeft="2em"' paddingLeft="2em" />
+            <PaddingCase label='paddingRight="2em"' paddingRight="2em" />
+            <PaddingCase
+              label='padding="1em" paddingRight="0.2em"'
+              padding="1em"
+              paddingRight="0.2em"
+            />
           </Box>
         </Box>
       );
@@ -276,6 +314,7 @@
           <InlineWithTextSection />
           <DarkBackgroundSection />
           <FontSizesSection />
+          <PaddingSection />
           <BadgeWithButtonSection />
           <OverflowSection />
         </div>
