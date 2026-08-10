@@ -28,6 +28,7 @@ import { toChildArray } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
+import { Link } from "../link/link.jsx";
 import { buildBinderPath } from "./binder_path.js";
 
 const css = /* css */ `
@@ -88,6 +89,21 @@ const css = /* css */ `
 
   .navi_binder_tabs {
     display: flex;
+    /* The page decides how wide the binder is; the tab row only fills it.
+       Sizing it to 0 keeps its labels out of the binder's intrinsic size (a
+       long one would otherwise stretch the whole thing) while min-size brings
+       it back to the width the page settled on — which is what leaves the
+       labels something to truncate against. */
+    .navi_binder[data-tabs-position="top"] &,
+    .navi_binder[data-tabs-position="bottom"] & {
+      width: 0;
+      min-width: 100%;
+    }
+    .navi_binder[data-tabs-position="left"] &,
+    .navi_binder[data-tabs-position="right"] & {
+      height: 0;
+      min-height: 100%;
+    }
     /* Tabs of unequal size line up on the page side, so the junction band is
        one straight line whatever their content. */
     .navi_binder[data-tabs-position="top"] & {
@@ -108,18 +124,40 @@ const css = /* css */ `
   .navi_binder_tab {
     position: relative;
     z-index: 0;
+    /* A flex item refuses to go under its content unless told to; without this
+       a long label widens the tab row instead of truncating. */
+    min-width: 0;
+    min-height: 0;
     /* The border is part of the tab's box on every tab, current one included
        (transparent there — the path draws it), so opening a tab never moves
        anything. */
     padding: var(--binder-padding-y) var(--binder-padding-x);
+    flex: 0 1 auto;
     color: var(--binder-tab-color);
     font: inherit;
+    text-align: center;
+    text-decoration: none;
     background: var(--binder-tab-background);
     border: var(--binder-border-width) solid var(--binder-tab-border-color);
     cursor: pointer;
+    /* "stretch" is an equal share each, whatever a tab holds — a basis read
+       from the content would hand the longest label the widest tab. */
+    .navi_binder[data-tabs-align="stretch"] & {
+      flex: 1 1 0;
+    }
 
-    &:hover {
+    /* The navi attributes rather than the CSS pseudo-classes: they are what a
+       demo can hold with pseudoState={{ ":focus-visible": true }}. */
+    &[data-hover] {
       background: var(--binder-tab-background-hover);
+    }
+    /* The ring would be cut by the neighbours and by the outline band around
+       it, so it is drawn inside and lifted above them. */
+    &[data-focus-visible] {
+      z-index: 3;
+      outline: var(--navi-focus-outline-width) solid
+        var(--navi-focus-outline-color);
+      outline-offset: calc(-1 * var(--navi-focus-outline-width));
     }
     &[data-current] {
       z-index: 2;
@@ -161,6 +199,25 @@ const css = /* css */ `
     .navi_binder[data-tabs-position="right"] &:not(:first-child) {
       margin-inline-start: 0;
       margin-top: calc(-1 * var(--binder-border-width));
+    }
+  }
+
+  /* A tab that grows with its label would push the binder wider than the page
+     it opens; by default a label stays on one line and is cut with an ellipsis.
+     maxLines={n} lets it use n lines, maxLines={false} lets it wrap freely. */
+  .navi_binder_tab_label {
+    display: block;
+
+    &[data-max-lines="1"] {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    &[data-max-lines]:not([data-max-lines="1"]) {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: var(--binder-tab-max-lines);
     }
   }
 
@@ -235,6 +292,10 @@ const TABS_ALIGN_TO_JUSTIFY_CONTENT = {
  *   side of the page the tabs sit on.
  * @param {"start"|"center"|"end"|"stretch"} [props.tabsAlign="stretch"] - How
  *   the tabs spread along that side.
+ * @param {number|false} [props.maxLines=1] - How many lines a tab label may
+ *   use before being cut with an ellipsis; `false` lets it wrap freely. A tab
+ *   is never allowed to widen the binder past the page it opens, so the
+ *   default keeps every label on one line. Overridable per item.
  * @param {string|number} [props.borderWidth] - Thickness of the whole outline,
  *   the inactive tabs included. It is added to the paddings, so a thick border
  *   grows the binder instead of closing in on the text.
@@ -249,6 +310,7 @@ export const Binder = ({
   onChange,
   tabsPosition = "top",
   tabsAlign = "stretch",
+  maxLines = 1,
   borderWidth,
   borderRadius,
   paddingX,
@@ -258,19 +320,38 @@ export const Binder = ({
 }) => {
   import.meta.css = css;
 
-  const items = toChildArray(children).map((child, index) => ({
-    value: child.props.value === undefined ? index : child.props.value,
-    label: child.props.label,
-    content: child.props.children,
-    props: child.props,
-  }));
+  const items = toChildArray(children).map((child, index) => {
+    const {
+      value: itemValue,
+      label,
+      children: content,
+      ...tabProps
+    } = child.props;
+    return {
+      value: itemValue === undefined ? index : itemValue,
+      label,
+      content,
+      // Everything else belongs to the tab: an item is how one styles and
+      // configures the control that opens it.
+      tabProps,
+    };
+  });
 
   const [valueOwnState, setValueOwnState] = useState(
     defaultValue === undefined ? items[0]?.value : defaultValue,
   );
-  const currentValue = value === undefined ? valueOwnState : value;
-  const currentIndex = items.findIndex((item) => item.value === currentValue);
+  // Reading the routes' signals during render is what re-renders the binder on
+  // navigation — the same way a Link updates itself.
+  const routedIndex = items.findIndex((item) => isRouteMatching(item.tabProps));
+  const currentIndex =
+    routedIndex === -1
+      ? items.findIndex(
+          (item) =>
+            item.value === (value === undefined ? valueOwnState : value),
+        )
+      : routedIndex;
   const currentItem = currentIndex === -1 ? items[0] : items[currentIndex];
+  const currentValue = currentItem?.value;
 
   const open = (item) => {
     if (value === undefined) {
@@ -311,6 +392,7 @@ export const Binder = ({
       ref={rootRef}
       baseClassName="navi_binder"
       data-tabs-position={tabsPosition}
+      data-tabs-align={tabsAlign}
       borderWidth={withPixelUnit(borderWidth)}
       borderRadius={withPixelUnit(borderRadius)}
       paddingX={withPixelUnit(paddingX)}
@@ -334,28 +416,18 @@ export const Binder = ({
           justifyContent: TABS_ALIGN_TO_JUSTIFY_CONTENT[tabsAlign],
         }}
       >
-        {items.map((item, index) => {
-          const isCurrent = item === currentItem;
-          return (
-            <button
-              key={item.value}
-              ref={(element) => {
-                tabRefs.current[index] = element;
-              }}
-              type="button"
-              role="tab"
-              className="navi_binder_tab"
-              aria-selected={isCurrent}
-              tabIndex={isCurrent ? 0 : -1}
-              data-current={isCurrent ? "" : undefined}
-              style={{ flexGrow: tabsAlign === "stretch" ? 1 : 0 }}
-              onClick={() => open(item)}
-              onKeyDown={onKeyDown}
-            >
-              {item.label}
-            </button>
-          );
-        })}
+        {items.map((item, index) => (
+          <BinderTab
+            key={item.value}
+            item={item}
+            index={index}
+            tabRefs={tabRefs}
+            current={item === currentItem}
+            maxLines={maxLines}
+            onOpen={() => open(item)}
+            onKeyDown={onKeyDown}
+          />
+        ))}
       </div>
       <div className="navi_binder_page" role="tabpanel">
         {currentItem?.content}
@@ -369,12 +441,106 @@ export const Binder = ({
  *   position among its siblings.
  * @param {import("preact").ComponentChildren} [props.label] - What the tab
  *   shows.
+ * @param {import("../route.js").Route} [props.route] - Makes the tab a `Link`
+ *   to that route, and the binder follows the url: the open item is the one
+ *   whose route matches, no `value`/`onChange` needed.
+ * @param {string} [props.href] - Same, for a plain url.
  * @param {import("preact").ComponentChildren} [props.children] - The page.
+ *
+ * Every other prop goes to the tab (a `Box`, or a `Link` when routed): an item
+ * styles and configures the control that opens it.
  */
-// Read by Binder, never rendered: an item is a declaration of a tab and its
+// Read by Binder, never rendered on its own: an item declares a tab AND its
 // page, and the binder needs both before it renders either.
 const BinderItem = () => null;
 Binder.Item = BinderItem;
+
+const isRouteMatching = ({ route, routeParams }) => {
+  if (!route) {
+    return false;
+  }
+  if (!route.matchingSignal.value) {
+    return false;
+  }
+  return route.matchesParams(routeParams);
+};
+
+const BinderTab = ({
+  item,
+  index,
+  tabRefs,
+  current,
+  maxLines,
+  onOpen,
+  onKeyDown,
+}) => {
+  const { label, tabProps } = item;
+  const {
+    maxLines: itemMaxLines = maxLines,
+    route,
+    href,
+    onClick,
+    ...rest
+  } = tabProps;
+
+  const sharedProps = {
+    "ref": (element) => {
+      tabRefs.current[index] = element;
+    },
+    "role": "tab",
+    "aria-selected": current,
+    "tabIndex": current ? 0 : -1,
+    "data-current": current ? "" : undefined,
+    onKeyDown,
+    ...rest,
+  };
+  const labelNode = (
+    <span
+      className="navi_binder_tab_label"
+      data-max-lines={itemMaxLines || undefined}
+      style={
+        itemMaxLines > 1
+          ? { "--binder-tab-max-lines": itemMaxLines }
+          : undefined
+      }
+    >
+      {label}
+    </span>
+  );
+
+  if (route || href) {
+    return (
+      <Link
+        baseClassName="navi_binder_tab"
+        route={route}
+        href={href}
+        routeParams={tabProps.routeParams}
+        current={current}
+        hrefFallback={false}
+        onClick={onClick}
+        {...sharedProps}
+      >
+        {labelNode}
+      </Link>
+    );
+  }
+  return (
+    <Box
+      as="button"
+      type="button"
+      baseClassName="navi_binder_tab"
+      pseudoClasses={BINDER_TAB_PSEUDO_CLASSES}
+      onClick={(event) => {
+        onOpen();
+        onClick?.(event);
+      }}
+      {...sharedProps}
+    >
+      {labelNode}
+    </Box>
+  );
+};
+const BINDER_TAB_PSEUDO_CLASSES = [":hover", ":active", ":focus-visible"];
 
 const BinderOutline = ({
   rootRef,

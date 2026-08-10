@@ -24,16 +24,12 @@ export const parseCSSTransform = (transformString, normalize) => {
 
   const transformObj = {};
 
-  // Parse transform functions
-  const transformPattern = /(\w+)\(([^)]+)\)/g;
-  let match;
-
-  while ((match = transformPattern.exec(transformString)) !== null) {
-    const [, functionName, value] = match;
-
+  for (const { functionName, value, source } of readTransformFunctions(
+    transformString,
+  )) {
     // Handle matrix functions specially
     if (functionName === "matrix" || functionName === "matrix3d") {
-      const matrixComponents = parseMatrixTransform(match[0]);
+      const matrixComponents = parseMatrixTransform(source);
       if (matrixComponents) {
         // Only add non-default values to preserve original information
         Object.assign(transformObj, matrixComponents);
@@ -51,6 +47,42 @@ export const parseCSSTransform = (transformString, normalize) => {
 
   // Return undefined if no properties were extracted (preserves original information)
   return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+};
+
+// Cuts "translateX(10px) translateY(env(safe-area-inset-top))" into its
+// functions. Parentheses are counted rather than matched with a regex: a
+// transform value may hold calc(), env(), min()… and stopping at the first ")"
+// truncates them.
+const TRANSFORM_FUNCTION_START_REGEX = /(\w+)\(/g;
+const readTransformFunctions = (transformString) => {
+  const transformFunctions = [];
+  TRANSFORM_FUNCTION_START_REGEX.lastIndex = 0;
+  let match;
+  while ((match = TRANSFORM_FUNCTION_START_REGEX.exec(transformString))) {
+    const valueStart = match.index + match[0].length;
+    let depth = 1;
+    let index = valueStart;
+    while (index < transformString.length && depth > 0) {
+      const char = transformString[index];
+      if (char === "(") {
+        depth++;
+      } else if (char === ")") {
+        depth--;
+      }
+      index++;
+    }
+    if (depth > 0) {
+      // Unbalanced: nothing reliable left to read after this point.
+      break;
+    }
+    transformFunctions.push({
+      functionName: match[1],
+      value: transformString.slice(valueStart, index - 1),
+      source: transformString.slice(match.index, index),
+    });
+    TRANSFORM_FUNCTION_START_REGEX.lastIndex = index;
+  }
+  return transformFunctions;
 };
 // Parse a matrix transform and extract simple transform components when possible
 const parseMatrixTransform = (matrixString) => {

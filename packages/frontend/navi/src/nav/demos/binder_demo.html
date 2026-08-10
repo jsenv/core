@@ -59,9 +59,25 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { Box, Binder, Link, BadgeCount } from "@jsenv/navi";
+      import {
+        Box,
+        Binder,
+        Link,
+        BadgeCount,
+        Icon,
+        HomeSvg,
+        UserSvg,
+        SettingsSvg,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
       import { DemoHeader } from "../../internal/demo_header.jsx";
       import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const APPROVED_ROUTE = route("/approved");
+      const PENDING_ROUTE = route("/pending");
+      const ARCHIVED_ROUTE = route("/archived");
+      setupRoutes([APPROVED_ROUTE, PENDING_ROUTE, ARCHIVED_ROUTE]);
 
       const Heading = ({ level = 2, id, children }) => {
         const Tag = `h${level}`;
@@ -102,7 +118,11 @@
           <BorderRadiusDemo />
           <ColorsDemo />
           <DarkDemo />
-          <RichLabelsDemo />
+          <LabelDemo />
+          <ItemPropsDemo />
+          <StatesDemo />
+          <SizingDemo />
+          <RoutesDemo />
         </div>
       );
 
@@ -266,35 +286,280 @@
         </div>
       );
 
-      const RichLabelsDemo = () => (
+      const LabelDemo = () => (
         <div className="demo-section">
-          <Heading id="rich-labels">label</Heading>
-          <Binder borderWidth={2} borderRadius={6} tabsAlign="start">
-            <Binder.Item
-              value="approved"
-              label={
-                <>
-                  Approved <BadgeCount background="#1976d2">3</BadgeCount>
-                </>
-              }
-            >
+          <Heading id="label">label</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>with an icon</legend>
+              <Binder tabsAlign="start" defaultValue="pending">
+                <Binder.Item
+                  value="approved"
+                  label={
+                    <>
+                      <Icon size="14">
+                        <HomeSvg />
+                      </Icon>{" "}
+                      Approved
+                    </>
+                  }
+                >
+                  <div style={{ width: "360px" }}>
+                    These 3 items have been reviewed and approved.
+                  </div>
+                </Binder.Item>
+                <Binder.Item
+                  value="pending"
+                  label={
+                    <>
+                      <Icon size="14">
+                        <UserSvg />
+                      </Icon>{" "}
+                      Pending
+                    </>
+                  }
+                >
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+                <Binder.Item
+                  value="archived"
+                  label={
+                    <>
+                      <Icon size="14">
+                        <SettingsSvg />
+                      </Icon>{" "}
+                      Archived
+                    </>
+                  }
+                >
+                  <div style={{ width: "360px" }}>No archived items yet.</div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>with a badge</legend>
+              <RichLabelsBinder />
+            </fieldset>
+          </Box>
+        </div>
+      );
+
+      const RichLabelsBinder = () => (
+        <Binder borderWidth={2} borderRadius={6} tabsAlign="start">
+          <Binder.Item
+            value="approved"
+            label={
+              <>
+                Approved <BadgeCount background="#1976d2">3</BadgeCount>
+              </>
+            }
+          >
+            <div style={{ width: "360px" }}>
+              These 3 items have been reviewed and approved.
+            </div>
+          </Binder.Item>
+          <Binder.Item
+            value="pending"
+            label={
+              <>
+                Pending <BadgeCount background="#eb364b">2</BadgeCount>
+              </>
+            }
+          >
+            <div style={{ width: "360px" }}>
+              These 2 items are awaiting review.
+            </div>
+          </Binder.Item>
+          <Binder.Item value="archived" label="Archived">
+            <div style={{ width: "360px" }}>No archived items yet.</div>
+          </Binder.Item>
+        </Binder>
+      );
+
+      const ItemPropsDemo = () => (
+        <div className="demo-section">
+          <Heading id="item-props">Styling one item</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>default</legend>
+              <Binder defaultValue="pending">{pages()}</Binder>
+            </fieldset>
+            <fieldset>
+              <legend>
+                an item carries its own props to its tab (paddingX, background,
+                color, bold)
+              </legend>
+              <Binder defaultValue="pending">
+                <Binder.Item value="approved" label="Approved" bold>
+                  <div style={{ width: "360px" }}>
+                    These 3 items have been reviewed and approved.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label="Pending" paddingX="l">
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+                <Binder.Item
+                  value="archived"
+                  label="Archived"
+                  background="#fde8ea"
+                  color="#b3243a"
+                >
+                  <div style={{ width: "360px" }}>No archived items yet.</div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+          </Box>
+        </div>
+      );
+
+      const StatesDemo = () => (
+        <div className="demo-section">
+          <Heading id="states">États</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>focus visible on a closed tab</legend>
+              <Binder defaultValue="pending">
+                <Binder.Item
+                  value="approved"
+                  label="Approved"
+                  pseudoState={{ ":focus-visible": true }}
+                >
+                  <div style={{ width: "360px" }}>
+                    These 3 items have been reviewed and approved.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label="Pending">
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="archived" label="Archived">
+                  <div style={{ width: "360px" }}>No archived items yet.</div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>focus visible on the open tab</legend>
+              <Binder defaultValue="pending">
+                <Binder.Item value="approved" label="Approved">
+                  <div style={{ width: "360px" }}>
+                    These 3 items have been reviewed and approved.
+                  </div>
+                </Binder.Item>
+                <Binder.Item
+                  value="pending"
+                  label="Pending"
+                  pseudoState={{ ":focus-visible": true }}
+                >
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="archived" label="Archived">
+                  <div style={{ width: "360px" }}>No archived items yet.</div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>hover (put the pointer on a closed tab)</legend>
+              <Binder defaultValue="pending">{pages()}</Binder>
+            </fieldset>
+          </Box>
+        </div>
+      );
+
+      const LONG_LABEL =
+        "Approved by the reviewing committee last quarter and archived since";
+
+      const SizingDemo = () => (
+        <div className="demo-section">
+          <Heading id="sizing">Sizing</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>maxLines=1 (default) — one line, ellipsis</legend>
+              <Binder defaultValue="long">
+                <Binder.Item value="long" label={LONG_LABEL}>
+                  <div style={{ width: "360px" }}>
+                    The tab never widens the binder past its page.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label="Pending">
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>maxLines=2</legend>
+              <Binder maxLines={2} defaultValue="long">
+                <Binder.Item value="long" label={LONG_LABEL}>
+                  <div style={{ width: "360px" }}>
+                    The tab never widens the binder past its page.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label="Pending">
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>
+                maxLines={false} — wraps, the tab row grows taller
+              </legend>
+              <Binder maxLines={false} defaultValue="long">
+                <Binder.Item value="long" label={LONG_LABEL}>
+                  <div style={{ width: "360px" }}>
+                    The tab never widens the binder past its page.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label="Pending">
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>one item opting out of the binder's maxLines</legend>
+              <Binder defaultValue="long">
+                <Binder.Item value="long" label={LONG_LABEL} maxLines={false}>
+                  <div style={{ width: "360px" }}>
+                    The tab never widens the binder past its page.
+                  </div>
+                </Binder.Item>
+                <Binder.Item value="pending" label={LONG_LABEL}>
+                  <div style={{ width: "360px" }}>
+                    These 2 items are awaiting review.
+                  </div>
+                </Binder.Item>
+              </Binder>
+            </fieldset>
+          </Box>
+        </div>
+      );
+
+      const RoutesDemo = () => (
+        <div className="demo-section">
+          <Heading id="routes">route</Heading>
+          <Binder>
+            <Binder.Item route={APPROVED_ROUTE} label="Approved">
               <div style={{ width: "360px" }}>
                 These 3 items have been reviewed and approved.
               </div>
             </Binder.Item>
-            <Binder.Item
-              value="pending"
-              label={
-                <>
-                  Pending <BadgeCount background="#eb364b">2</BadgeCount>
-                </>
-              }
-            >
+            <Binder.Item route={PENDING_ROUTE} label="Pending">
               <div style={{ width: "360px" }}>
                 These 2 items are awaiting review.
               </div>
             </Binder.Item>
-            <Binder.Item key="archived" value="archived" label="Archived">
+            <Binder.Item route={ARCHIVED_ROUTE} label="Archived">
               <div style={{ width: "360px" }}>No archived items yet.</div>
             </Binder.Item>
           </Binder>

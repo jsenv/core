@@ -130,33 +130,6 @@ const globalCSSKeywordSet = new Set([
   "unset",
   "revert",
 ]);
-// Keywords that should NOT get automatic units when used with properties from:
-// - pxPropertySet (width, height, fontSize, etc.)
-// - degPropertySet (rotate, skew, etc.)
-// - unitlessPropertySet (opacity, zIndex, etc.)
-// This prevents auto-unit addition: e.g., width: "auto" stays "auto", not "autopx"
-const unitlessKeywordSet = new Set([
-  ...globalCSSKeywordSet,
-  // Size/dimension keywords for pxPropertySet properties
-  "fit-content",
-  "min-content",
-  "max-content",
-  // Font size keywords for fontSize
-  "medium",
-  "small",
-  "large",
-  "x-small",
-  "x-large",
-  "xx-small",
-  "xx-large",
-  "smaller",
-  "larger",
-  // Border width keywords for borderWidth properties
-  "thin",
-  "thick",
-  // Line height keyword (though lineHeight is handled specially)
-  "normal",
-]);
 // Keywords for backgroundImage property that should NOT be wrapped in url()
 // Used to prevent: background: "none" becoming background: "url(none)"
 const backgroundKeywordSet = new Set([
@@ -193,9 +166,27 @@ const getUnit = (value) => {
   }
   return "";
 };
-// Check if value already has a unit
-const isUnitless = (value) => getUnit(value) === "";
 export const hasCSSSizeUnit = (value) => cssSizeUnitSet.has(getUnit(value));
+
+// A single number and nothing else — the only shape a unit may be appended to.
+// Everything else already says what it is: a unit ("2em"), a keyword ("auto"),
+// a CSS expression ("env(safe-area-inset-top)", "calc(…)") or a list of those
+// ("0 auto", "10px env(safe-area-inset-right)"). Asking "is this one number"
+// covers them all at once; listing what must be left alone (keywords, then
+// functions, then lists…) only ever covers what someone thought of.
+const isBareNumber = (value) => {
+  if (value === "") {
+    return false;
+  }
+  return !isNaN(Number(value));
+};
+// The same number, carrying exactly the unit asked for, and nothing else.
+const isBareNumberWithUnit = (value, unit) => {
+  if (!value.endsWith(unit)) {
+    return false;
+  }
+  return isBareNumber(value.slice(0, -unit.length));
+};
 
 // url(
 // linear-gradient(
@@ -456,23 +447,21 @@ const isCSSKeyword = (value) => {
 };
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
-    // CSS variables and CSS functions like calc() must be passed through as-is
-    if (isCSSFunction(value)) {
-      return value;
-    }
-    // Keep strings as-is (including %, em, rem, auto, none, etc.)
+    value = value.trim();
     if (preferedType === "string") {
-      if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {
+      // Everything that is not a lone number already carries its own meaning
+      // and goes to the DOM untouched: "2em", "auto", "env(safe-area-inset-top)",
+      // "calc(…)", "0 auto", "10px env(safe-area-inset-right)".
+      if (unit && isBareNumber(value)) {
         return `${value}${unit}`;
       }
       return value;
     }
-    // convert to number if possible (font-size: "12px" -> fontSize:12, opacity: "0.5" -> opacity: 0.5)
-    if (!unit || value.endsWith(unit)) {
-      const numericValue = parseFloat(value);
-      if (!isNaN(numericValue)) {
-        return numericValue;
-      }
+    // A number to work with, only when the value is exactly one:
+    // "12px" -> 12, "0.5" -> 0.5. "10px 20px" is a list and "calc(…)" is an
+    // expression — parseFloat would silently keep their first number.
+    if (unit ? isBareNumberWithUnit(value, unit) : isBareNumber(value)) {
+      return parseFloat(value);
     }
     return value;
   }
