@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <!-- viewport-fit=cover, without which every env(safe-area-inset-*) is 0 -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>App bars demo</title>
+    <style>
+      :root {
+        --navi-app-max-width: 600px;
+      }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #eef1f5;
+      }
+      /* The app shell: a scrolling column bounded like the bars, with the
+         overflow that makes position:sticky unusable for them. */
+      #app {
+        max-width: var(--navi-app-max-width);
+        min-height: 100dvh;
+        margin: 0 auto;
+        background: white;
+        overflow-x: auto;
+      }
+      .page {
+        padding: 16px;
+      }
+      .filler {
+        margin-bottom: 8px;
+        padding: 12px;
+        background: #f3f5f9;
+        border-radius: 6px;
+      }
+      .last {
+        padding: 12px;
+        color: white;
+        background: #16a34a;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app" data-navi-app-bar-space></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        BottomNavBar,
+        TopBar,
+        TopBarSlot,
+        Box,
+        Link,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
+
+      const HOME_ROUTE = route("/");
+      const GAMES_ROUTE = route("/games");
+      const GAMES_READY_ROUTE = route("/games/ready");
+      const CREATE_ROUTE = route("/create");
+      const PROFILE_ROUTE = route("/profile");
+      setupRoutes([
+        HOME_ROUTE,
+        GAMES_ROUTE,
+        GAMES_READY_ROUTE,
+        CREATE_ROUTE,
+        PROFILE_ROUTE,
+      ]);
+
+      const HomeSvg = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
+        </svg>
+      );
+      const GamesSvg = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1.5-5.09L6.91 11.3l-1.41 1.41 5 5 8-8-1.41-1.41-6.59 6.61z" />
+        </svg>
+      );
+      const PlusSvg = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+        </svg>
+      );
+      const ProfileSvg = () => (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+        </svg>
+      );
+
+      const ShortPage = () => (
+        <div className="page">
+          <p>
+            A page shorter than the screen. The bottom bar stays at the bottom
+            of the viewport, not under this text.
+          </p>
+          <p>No top bar here, so nothing is reserved above.</p>
+        </div>
+      );
+
+      const LongPage = ({ title }) => (
+        <div className="page">
+          <TopBar title={title} />
+          {Array.from({ length: 30 }, (_, index) => (
+            <div key={index} className="filler">
+              Row {index + 1}
+            </div>
+          ))}
+          <div className="last">
+            Last row — scroll to the end: it clears the bottom bar exactly.
+          </div>
+        </div>
+      );
+
+      const CreatePage = () => (
+        <div className="page">
+          <TopBar title="Créer" />
+          <p>The central call to action opens this one.</p>
+        </div>
+      );
+
+      const App = () => {
+        const gamesActive =
+          GAMES_ROUTE.matchingSignal.value ||
+          GAMES_READY_ROUTE.matchingSignal.value;
+        return (
+          <>
+            <TopBarSlot />
+            {HOME_ROUTE.matchingSignal.value && <ShortPage />}
+            {gamesActive && <LongPage title="Mes parties" />}
+            {CREATE_ROUTE.matchingSignal.value && <CreatePage />}
+            {PROFILE_ROUTE.matchingSignal.value && <LongPage title="Profil" />}
+            <BottomNavBar aria-label="Navigation principale">
+              <BottomNavBar.Item
+                route={HOME_ROUTE}
+                label="Accueil"
+                icon={<HomeSvg />}
+              />
+              <BottomNavBar.Item
+                route={GAMES_ROUTE}
+                label="Mes parties"
+                icon={<GamesSvg />}
+                active={gamesActive}
+              />
+              <BottomNavBar.CTAItem
+                route={CREATE_ROUTE}
+                label="Créer"
+                icon={<PlusSvg />}
+              />
+              <BottomNavBar.Item
+                route={PROFILE_ROUTE}
+                label="Profil"
+                icon={<ProfileSvg />}
+              />
+            </BottomNavBar>
+          </>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

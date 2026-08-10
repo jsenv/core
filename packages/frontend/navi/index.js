@@ -87,6 +87,9 @@ export { rawUrlPart, setBaseUrl } from "./src/nav/route_pattern.js";
 export { Link } from "./src/nav/link/link.jsx";
 export { Nav } from "./src/nav/link/nav.jsx";
 export { Binder } from "./src/nav/binder/binder.jsx";
+// App chrome (mobile-first layout bars)
+export { BottomNavBar } from "./src/layout/app_bar/bottom_nav_bar.jsx";
+export { TopBar, TopBarSlot } from "./src/layout/app_bar/top_bar.jsx";
 // debug/tests
 export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
 
