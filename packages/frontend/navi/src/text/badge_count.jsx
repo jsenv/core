@@ -87,33 +87,48 @@ const css = /* css */ `
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
-        /* Sized by its height and aspect ratio, so there is no box left for
-           padding to grow: any padding would push the digit out of the circle.
-           A padding prop is ignored on this shape by design. */
-        padding: 0;
+        /* The digit sits in a square content box that the radius rounds into a
+           circle, so no padding is needed to obtain the shape. Sizing is
+           content-box: a padding prop then grows the square from the outside —
+           a bigger circle, or a pill on one axis — instead of eating into it
+           and pushing the digit out. */
+        --badge-count-padding-x-default: 0;
+        --badge-count-padding-y-default: 0;
 
         display: inline-block;
-        aspect-ratio: 1/1;
+        box-sizing: content-box;
+        width: 1.6em;
         height: 1.6em;
         text-align: center;
         line-height: 1.6em;
+        /* Larger than any half-height it can reach, so the shape stays fully
+           round whatever the padding adds. */
+        border-radius: 100em;
       }
     }
 
     /* Circle */
     &[data-circle] {
       --x-number-font-size: var(--font-size);
+      /* Same as the single char ellipse: the radius comes from the number of
+         characters, padding grows it from the outside. */
+      --badge-count-padding-x-default: 0;
+      --badge-count-padding-y-default: 0;
 
       display: inline-flex;
       box-sizing: content-box;
       aspect-ratio: 1/1;
       width: var(--x-radius);
       height: var(--x-radius);
+      padding-top: var(--x-badge-count-padding-top);
+      padding-right: var(--x-badge-count-padding-right);
+      padding-bottom: var(--x-badge-count-padding-bottom);
+      padding-left: var(--x-badge-count-padding-left);
       align-items: center;
       justify-content: center;
       background: var(--x-background);
       background-color: var(--x-background-color);
-      border-radius: 50%;
+      border-radius: 100em;
 
       &[data-single-char] {
         --x-radius: 1.6em;

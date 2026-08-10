@@ -1262,22 +1262,18 @@
         </Box>
       );
 
-      const PaddingCase = ({ label, ...props }) => (
+      const PaddingCase = ({ label, values = [7, 42, 1247], ...props }) => (
         <Box flex="y" spacing="xs" alignX="start">
           <Text style={{ fontSize: "0.8em", opacity: 0.7 }}>{label}</Text>
           <Box row spacing="s" alignY="center">
-            <Text>
-              Items
-              <BadgeCount background="#2196f3" {...props}>
-                {42}
-              </BadgeCount>
-            </Text>
-            <Text>
-              Items
-              <BadgeCount background="#2196f3" {...props}>
-                {1247}
-              </BadgeCount>
-            </Text>
+            {values.map((value) => (
+              <Text key={value}>
+                Items
+                <BadgeCount background="#2196f3" {...props}>
+                  {value}
+                </BadgeCount>
+              </Text>
+            ))}
           </Box>
         </Box>
       );
@@ -1300,36 +1296,21 @@
             />
           </Box>
 
-          <Title as="h3">Formes dimensionnées par le nombre</Title>
-          <Paragraph>
-            Un seul chiffre, et la forme circulaire : la taille vient du nombre
-            de caractères, le padding ne s'y applique pas.
-          </Paragraph>
+          <Title as="h3">Forme circulaire</Title>
           <Box flex="y" spacing="m" alignX="start">
-            <Box row spacing="s" alignY="center">
-              <Text>
-                Items
-                <BadgeCount background="#2196f3">{7}</BadgeCount>
-              </Text>
-              <Text>
-                Items
-                <BadgeCount background="#2196f3" paddingX="1.5em">
-                  {7}
-                </BadgeCount>
-              </Text>
-              <Text>
-                Items
-                <BadgeCount background="#2196f3" circle>
-                  {42}
-                </BadgeCount>
-              </Text>
-              <Text>
-                Items
-                <BadgeCount background="#2196f3" circle paddingX="1.5em">
-                  {42}
-                </BadgeCount>
-              </Text>
-            </Box>
+            <PaddingCase label="défaut" circle values={[7, 42, 127]} />
+            <PaddingCase
+              label='padding="0.4em"'
+              circle
+              values={[7, 42, 127]}
+              padding="0.4em"
+            />
+            <PaddingCase
+              label='paddingX="1.5em"'
+              circle
+              values={[7, 42, 127]}
+              paddingX="1.5em"
+            />
           </Box>
         </Box>
       );
