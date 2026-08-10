@@ -108,7 +108,12 @@ const css = /* css */ `
     aspect-ratio: inherit;
     padding-top: var(--x-link-padding-top);
     padding-right: var(--x-link-padding-right);
-    padding-bottom: var(--link-loading-outline-size);
+    /* The loading underline is drawn inside the box: its own room is kept at
+       the bottom on top of whatever padding was asked for, so a link that
+       starts loading never reflows. */
+    padding-bottom: calc(
+      var(--x-link-padding-bottom) + var(--link-loading-outline-size)
+    );
     padding-left: var(--x-link-padding-left);
     color: var(--x-link-color);
     text-decoration: var(--x-link-text-decoration);

@@ -24,10 +24,9 @@
  *    out of layout.
  */
 
-import { useCallback } from "preact/hooks";
+import { useLayoutEffect, useRef } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import { useComposeElementRef } from "../../box/ref_composition/use_element_ref.js";
 import { FIXED_BAR_SPACE_CSS, setFixedBarSpace } from "./fixed_bar_space.js";
 
 const css = /* css */ `
@@ -151,11 +150,12 @@ export const FixedBar = ({
   children,
   area = "top",
   border = true,
-  ref,
   ...props
 }) => {
   import.meta.css = css;
 
+  const defaultRef = useRef();
+  props.ref = props.ref || defaultRef;
   // Whichever of width/height crosses the edge the bar sits on is what the
   // content has to be given back — and the bar's border box already IS that:
   // the size it was given, plus the safe-area padding added outside it.
@@ -163,27 +163,19 @@ export const FixedBar = ({
   // anywhere — a prop, a theme variable, the content itself — is reserved just
   // the same, and each `env()` inset stays the browser's business alone.
   const vertical = area === "left" || area === "right";
-  const syncBar = useCallback(
-    (barEl) => {
-      // border-box, because what moves the reserve is as often the padding —
-      // the safe-area inset changing on rotation — as the size itself, and a
-      // content-box observation would report only the second. observe() also
-      // delivers once on its own, before the first paint: that initial delivery
-      // is the first publication, no eager measure needed (and none wanted, as
-      // this runs before Box has written the size onto the element).
-      const resizeObserver = new ResizeObserver(() => {
-        const { width, height } = barEl.getBoundingClientRect();
-        setFixedBarSpace(area, `${vertical ? width : height}px`);
-      });
-      resizeObserver.observe(barEl, { box: "border-box" });
-      return () => {
-        resizeObserver.disconnect();
-        setFixedBarSpace(area, null);
-      };
-    },
-    [area, vertical],
-  );
-  const barRef = useComposeElementRef(syncBar, ref);
+  const { ref } = props;
+
+  useLayoutEffect(() => {
+    const barElement = ref.current;
+    if (!barElement) {
+      return undefined;
+    }
+    const { width, height } = barElement.getBoundingClientRect();
+    setFixedBarSpace(area, `${vertical ? width : height}px`);
+    return () => {
+      setFixedBarSpace(area, null);
+    };
+  }, [area]);
 
   return (
     <Box
@@ -191,7 +183,6 @@ export const FixedBar = ({
       data-area={area}
       data-border={border ? undefined : "none"}
       {...props}
-      ref={barRef}
       styleCSSVars={FixedBarStyleCSSVars}
     >
       {children}

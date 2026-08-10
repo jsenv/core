@@ -101,15 +101,19 @@ const css = /* css */ `
       }
     }
 
-    /* Folder tabs: the current tab and the panel share one surface. The tab
-       carries the panel's border on 3 sides and paints the 4th with the panel
-       background, so the line opens where they meet. The negative margin makes
-       the two borders overlap on that side — without it the panel's own line
-       would still be drawn under the tab. */
-    &[data-panel-border-connection] {
-      --nav-border-width: 1px;
-      --nav-border-color: gray;
-      --nav-tab-border-radius: 5px;
+    /* Folder tabs: the current tab and the panel share one surface. Every tab
+       carries the panel's line on the side facing it, and the current one
+       paints that side with the panel background instead, so the line opens
+       there. The negative margin makes the two lines overlap — without it the
+       panel's own line would still be drawn under the tabs; and since a tab
+       background is painted under its border too, a tab with a background of
+       its own would otherwise hide the panel's line over its width.
+
+       The line is 1px and never thicker: past that, the corner where a square
+       tab meets the panel shows the miter as a visible notch. */
+    &[data-panel-position] {
+      --nav-border-color: transparent;
+      --nav-tab-border-radius: 0px;
 
       --x-nav-panel-background: var(
         --nav-panel-background,
@@ -120,7 +124,7 @@ const css = /* css */ `
       z-index: 1;
 
       .navi_link {
-        border: var(--nav-border-width) solid transparent;
+        border: 1px solid transparent;
 
         &[data-href-current] {
           border-color: var(--nav-border-color);
@@ -128,21 +132,29 @@ const css = /* css */ `
       }
 
       &[data-panel-position="after"] {
-        margin-bottom: calc(-1 * var(--nav-border-width));
+        margin-bottom: -1px;
 
-        .navi_link[data-href-current] {
-          border-bottom-color: var(--x-nav-panel-background);
-          border-top-left-radius: var(--nav-tab-border-radius);
-          border-top-right-radius: var(--nav-tab-border-radius);
+        .navi_link {
+          border-bottom-color: var(--nav-border-color);
+
+          &[data-href-current] {
+            border-bottom-color: var(--x-nav-panel-background);
+            border-top-left-radius: var(--nav-tab-border-radius);
+            border-top-right-radius: var(--nav-tab-border-radius);
+          }
         }
       }
       &[data-panel-position="before"] {
-        margin-top: calc(-1 * var(--nav-border-width));
+        margin-top: -1px;
 
-        .navi_link[data-href-current] {
-          border-top-color: var(--x-nav-panel-background);
-          border-bottom-right-radius: var(--nav-tab-border-radius);
-          border-bottom-left-radius: var(--nav-tab-border-radius);
+        .navi_link {
+          border-top-color: var(--nav-border-color);
+
+          &[data-href-current] {
+            border-top-color: var(--x-nav-panel-background);
+            border-bottom-right-radius: var(--nav-tab-border-radius);
+            border-bottom-left-radius: var(--nav-tab-border-radius);
+          }
         }
       }
     }
@@ -168,8 +180,7 @@ export const Nav = ({
   expand,
   expandX,
   linkBorderRadiusInherit,
-  panelPosition, // before or after
-  panelBorderConnection,
+  panelPosition, // "before" or "after": which side the panel sits on, turning the nav into folder tabs
   ...props
 }) => {
   import.meta.css = css;
@@ -186,7 +197,6 @@ export const Nav = ({
       data-expand={expand || expandX ? "" : undefined}
       data-vertical={vertical ? "" : undefined}
       data-panel-position={panelPosition}
-      data-panel-border-connection={panelBorderConnection ? "" : undefined}
       expand={expand}
       expandX={expandX}
       spacing={spacing}

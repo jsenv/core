@@ -1176,8 +1176,7 @@
       ];
       const FolderTabs = ({
         panelPosition = "after",
-        borderWidth = "1px",
-        borderColor = "#9ca3af",
+        borderColor = "transparent",
         surface = "#ffffff",
         surfaceColor = "#111827",
         tabBackground = "transparent",
@@ -1189,7 +1188,6 @@
         const nav = (
           <Nav
             style={{
-              "--nav-border-width": borderWidth,
               "--nav-border-color": borderColor,
               "--nav-tab-border-radius": tabRadius,
               "--link-background": tabBackground,
@@ -1198,7 +1196,6 @@
               "--link-color-current": surfaceColor,
             }}
             panelPosition={panelPosition}
-            panelBorderConnection
           >
             {BINDER_TABS.map(({ id, label, count, countColor }) => (
               <Link
@@ -1208,7 +1205,8 @@
                 spacing="xs"
                 alignY="center"
                 paddingX="m"
-                paddingY="s"
+                paddingTop={panelPosition === "after" ? "s" : "xs"}
+                paddingBottom={panelPosition === "before" ? "s" : "xs"}
                 bold
                 uppercase
                 current={active === id}
@@ -1228,7 +1226,7 @@
             padding="m"
             background={surface}
             color={surfaceColor}
-            border={`${borderWidth} solid ${borderColor}`}
+            border={`1px solid ${borderColor}`}
             borderRadius={
               panelPosition === "after"
                 ? `0 0 ${panelRadius} ${panelRadius}`
@@ -1257,54 +1255,60 @@
           <Box as="section" className="demo-section">
             <Title as="h2">Binder / Folder Tabs</Title>
             <Text className="note">
-              <code>panelBorderConnection</code> opens the border between the
-              current tab and the panel; <code>panelPosition</code> says on
-              which side the panel sits.
+              <code>panelPosition</code> says which side the panel sits on and
+              opens the line between it and the current tab.
             </Text>
 
             <Title as="h3">Panel after the tabs</Title>
             <div className="example-block">
-              <div className="caption">Square, 1px</div>
+              <div className="caption">Colors only</div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Square, 1px, tabs on a grey strip</div>
+              <div className="caption">
+                Colors only, tabs on their own background
+              </div>
               <Box padding="m" background="#e8eaed">
-                <FolderTabs tabBackground="#e5e7eb" />
+                <FolderTabs tabBackground="#cbd5e1" tabColor="#475569" />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Rounded tabs, 1px</div>
+              <div className="caption">Grey line</div>
               <Box padding="m" background="#e8eaed">
-                <FolderTabs tabRadius="8px" panelRadius="8px" />
+                <FolderTabs borderColor="#9ca3af" />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Rounded tabs, 3px blue</div>
+              <div className="caption">Grey line, tabs on a grey strip</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs borderColor="#9ca3af" tabBackground="#e5e7eb" />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Grey line, rounded tabs</div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs
-                  borderWidth="3px"
+                  borderColor="#9ca3af"
+                  tabRadius="8px"
+                  panelRadius="8px"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Blue line, rounded tabs</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
                   borderColor="#1976d2"
+                  tabColor="#1e40af"
                   tabRadius="10px"
                   panelRadius="10px"
-                  tabColor="#1e40af"
                 />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">No border, colors only</div>
-              <Box padding="m" background="#e8eaed">
-                <FolderTabs
-                  borderWidth="0px"
-                  tabBackground="#cbd5e1"
-                  tabColor="#475569"
-                />
-              </Box>
-            </div>
-            <div className="example-block">
-              <div className="caption">Dark surface, 1px</div>
+              <div className="caption">Dark surface</div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs
                   surface="#1f2937"
@@ -1319,47 +1323,52 @@
 
             <Title as="h3">Panel before the tabs</Title>
             <div className="example-block">
-              <div className="caption">Square, 1px</div>
+              <div className="caption">Colors only</div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs panelPosition="before" />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Rounded tabs, 1px</div>
+              <div className="caption">
+                Colors only, tabs on their own background
+              </div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs
                   panelPosition="before"
-                  tabRadius="8px"
-                  panelRadius="8px"
-                />
-              </Box>
-            </div>
-            <div className="example-block">
-              <div className="caption">Rounded tabs, 3px blue</div>
-              <Box padding="m" background="#e8eaed">
-                <FolderTabs
-                  panelPosition="before"
-                  borderWidth="3px"
-                  borderColor="#1976d2"
-                  tabRadius="10px"
-                  panelRadius="10px"
-                  tabColor="#1e40af"
-                />
-              </Box>
-            </div>
-            <div className="example-block">
-              <div className="caption">No border, colors only</div>
-              <Box padding="m" background="#e8eaed">
-                <FolderTabs
-                  panelPosition="before"
-                  borderWidth="0px"
                   tabBackground="#cbd5e1"
                   tabColor="#475569"
                 />
               </Box>
             </div>
             <div className="example-block">
-              <div className="caption">Dark surface, 1px</div>
+              <div className="caption">Grey line</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs panelPosition="before" borderColor="#9ca3af" />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Grey line, tabs on a grey strip</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  borderColor="#9ca3af"
+                  tabBackground="#e5e7eb"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Grey line, rounded tabs</div>
+              <Box padding="m" background="#e8eaed">
+                <FolderTabs
+                  panelPosition="before"
+                  borderColor="#9ca3af"
+                  tabRadius="8px"
+                  panelRadius="8px"
+                />
+              </Box>
+            </div>
+            <div className="example-block">
+              <div className="caption">Dark surface</div>
               <Box padding="m" background="#e8eaed">
                 <FolderTabs
                   panelPosition="before"
