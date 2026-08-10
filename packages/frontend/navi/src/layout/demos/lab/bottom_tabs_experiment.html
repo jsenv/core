@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Bottom tabs without SVG — experiment</title>
+    <style>
+      /*
+        Question this file exists to answer: can the "tab opens into the
+        content" junction be drawn WITHOUT an SVG?
+
+        Why it matters. The binder draws one path over the whole shape, which
+        means measuring the DOM and re-measuring whenever anything moves. At the
+        bottom of a page that is fatal: to keep the tab row in place while the
+        document scrolls it has to be `position: sticky`, and an absolutely
+        positioned path over the binder does not follow a sticky child. Drawing
+        that lives ON the tab has no such problem — it sticks with it.
+
+        Second thing this settles: at the bottom of the page the surface reaches
+        the edge of the screen, so it must NOT be rounded there. A radius there
+        carves an empty notch out of the corner of the screen. Only the junction
+        with the content is rounded. The toggle below shows the wrong version.
+
+        Three techniques, same shape:
+          A — no radius at all. The current tab drops its top border and shares
+              the surface. Nothing else. This is the whole feature when the
+              design has square corners, and it is worth knowing how little it
+              costs.
+          B — concave corners as two pseudo-elements, each a rounded square
+              whose offset box-shadow paints the area around the curve.
+          C — the same two corners, carved with a mask instead: one
+              radial-gradient per corner, transparent inside the circle.
+
+        Not tried, and why: `clip-path: path()` is CSS but takes absolute
+        coordinates only — no percentages — so it would need the same
+        measuring pass the SVG needs, which is the thing being avoided.
+        `clip-path: polygon()` has no curves.
+      */
+      :root {
+        --surface: #ffffff;
+        --line: #b9c0cb;
+        --tab-bg: #eef1f5;
+        --tab-color: #6b7280;
+        --radius: 14px;
+        --border: 2px;
+        --bar-height: 62px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #e8eaed;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.3rem;
+      }
+      .controls {
+        display: flex;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+        font-size: 0.85rem;
+      }
+      .controls label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .screens {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .screen {
+        display: flex;
+        width: 320px;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .screen > h2 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+      .screen > p {
+        margin: 0;
+        color: #5b6472;
+        font-size: 0.8rem;
+      }
+
+      /* The phone: a scrolling document with the tab row stuck to its bottom.
+         Nothing here is `fixed` — the point is that a sticky row keeps working
+         while the document itself scrolls. */
+      .phone {
+        height: 320px;
+        background: var(--surface);
+        border: 1px solid #cbd2dc;
+        border-radius: 10px;
+        overflow: auto;
+      }
+      .page {
+        padding: 10px;
+        padding-bottom: 0;
+        font-size: 0.85rem;
+      }
+      .row {
+        margin-bottom: 6px;
+        padding: 8px;
+        background: #f3f5f9;
+        border-radius: 6px;
+      }
+
+      /* ── The tab row ─────────────────────────────────────────────────────
+         Sticky, not fixed: it belongs to the document that scrolls under it.
+         The row's top line is a border on the row itself; the current tab
+         punches a hole in it by covering it with the surface. */
+      .tabs {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        display: flex;
+        height: var(--bar-height);
+        align-items: stretch;
+        background: var(--tab-bg);
+        border-top: var(--border) solid var(--line);
+      }
+      .tab {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        flex: 1 1 0;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        color: var(--tab-color);
+        font: inherit;
+        font-size: 0.75rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
+      .tab .dot {
+        width: 16px;
+        height: 16px;
+        background: currentColor;
+        border-radius: 50%;
+      }
+
+      /* The open tab IS the surface: it reaches the bottom edge of the screen,
+         and it covers the row's top line over its own width. That single
+         rectangle, one pixel taller than the border, is technique A entirely. */
+      .tab[aria-selected="true"] {
+        color: #111827;
+        background: var(--surface);
+      }
+      .tab[aria-selected="true"]::after {
+        position: absolute;
+        top: calc(-1 * var(--border));
+        right: 0;
+        left: 0;
+        height: var(--border);
+        background: var(--surface);
+        content: "";
+      }
+
+      /* ── B: concave corners drawn with an offset box-shadow ─────────────
+         A square with ONE rounded corner casts a shadow of itself, offset by
+         the radius: what lands next to the curve is the surface colour, and
+         the curve itself stays uncovered. Two of them, mirrored, and the
+         surface flows into the tab through a rounded notch.
+         The border line is a second, slightly larger copy underneath. */
+      .technique-b .tab[aria-selected="true"]::before,
+      .technique-b .tab[aria-selected="true"]::after {
+        z-index: 1;
+      }
+      .technique-b .tab[aria-selected="true"] .corner {
+        position: absolute;
+        top: calc(-1 * var(--border));
+        width: var(--radius);
+        height: var(--radius);
+      }
+      .technique-b .tab[aria-selected="true"] .corner.left {
+        left: calc(-1 * var(--radius));
+        background: var(--tab-bg);
+        border-bottom-right-radius: var(--radius);
+        box-shadow: var(--border) var(--border) 0 var(--border) var(--line);
+      }
+      .technique-b .tab[aria-selected="true"] .corner.left::after {
+        position: absolute;
+        inset: 0;
+        background: var(--surface);
+        border-bottom-right-radius: var(--radius);
+        transform: translate(0, var(--border));
+        content: "";
+      }
+      .technique-b .tab[aria-selected="true"] .corner.right {
+        right: calc(-1 * var(--radius));
+        background: var(--tab-bg);
+        border-bottom-left-radius: var(--radius);
+        box-shadow: calc(-1 * var(--border)) var(--border) 0 var(--border)
+          var(--line);
+      }
+      .technique-b .tab[aria-selected="true"] .corner.right::after {
+        position: absolute;
+        inset: 0;
+        background: var(--surface);
+        border-bottom-left-radius: var(--radius);
+        transform: translate(0, var(--border));
+        content: "";
+      }
+
+      /* ── C: the same corners carved with a mask ─────────────────────────
+         The square is painted in the surface colour and a radial-gradient
+         mask makes the quarter-disc transparent, leaving the concave shape.
+         The line is the same square, one border bigger, behind it. */
+      .technique-c .tab[aria-selected="true"] .corner {
+        position: absolute;
+        top: calc(-1 * var(--border));
+        width: var(--radius);
+        height: var(--radius);
+        background: var(--surface);
+      }
+      .technique-c .tab[aria-selected="true"] .corner.left {
+        left: calc(-1 * var(--radius));
+        mask: radial-gradient(
+          circle var(--radius) at 0 0,
+          transparent 0 99.5%,
+          #000 100%
+        );
+      }
+      .technique-c .tab[aria-selected="true"] .corner.right {
+        right: calc(-1 * var(--radius));
+        mask: radial-gradient(
+          circle var(--radius) at 100% 0,
+          transparent 0 99.5%,
+          #000 100%
+        );
+      }
+      /* the line, drawn as a bigger copy sitting behind */
+      .technique-c .tab[aria-selected="true"] .corner::before {
+        position: absolute;
+        inset: calc(-1 * var(--border)) 0 0 0;
+        z-index: -1;
+        background: var(--line);
+        content: "";
+      }
+      .technique-c .tab[aria-selected="true"] .corner.left::before {
+        mask: radial-gradient(
+          circle var(--radius) at 0 var(--border),
+          transparent 0 99.5%,
+          #000 100%
+        );
+      }
+      .technique-c .tab[aria-selected="true"] .corner.right::before {
+        mask: radial-gradient(
+          circle var(--radius) at 100% var(--border),
+          transparent 0 99.5%,
+          #000 100%
+        );
+      }
+
+      /* The mistake worth seeing: rounding the surface where it meets the
+         bottom of the screen carves an empty notch out of the corner. */
+      .round-bottom .tab[aria-selected="true"] {
+        border-bottom-right-radius: var(--radius);
+        border-bottom-left-radius: var(--radius);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Bottom tabs, no SVG</h1>
+    <p style="margin: 0 0 16px; color: #5b6472; font-size: 0.85rem">
+      Scroll each screen: the row is sticky, and its drawing sticks with it.
+    </p>
+    <div class="controls">
+      <label>
+        radius
+        <input id="radius" type="range" min="0" max="28" value="14" />
+        <output id="radius-out">14px</output>
+      </label>
+      <label>
+        border
+        <input id="border" type="range" min="1" max="6" value="2" />
+        <output id="border-out">2px</output>
+      </label>
+      <label>
+        <input id="round-bottom" type="checkbox" />
+        round the bottom too (the mistake)
+      </label>
+    </div>
+    <div class="screens" id="screens"></div>
+
+    <script type="module">
+      const TABS = ["Accueil", "Parties", "Profil"];
+      const TECHNIQUES = [
+        {
+          className: "technique-a",
+          title: "A — no radius",
+          note: "The open tab drops the row's top line over its own width. Set radius to 0 to compare the others against it.",
+          corners: false,
+        },
+        {
+          className: "technique-b",
+          title: "B — box-shadow corners",
+          note: "Two rounded squares whose offset shadow paints around the curve.",
+          corners: true,
+        },
+        {
+          className: "technique-c",
+          title: "C — masked corners",
+          note: "The same two squares, the quarter-disc carved out by a radial-gradient mask.",
+          corners: true,
+        },
+      ];
+
+      const buildScreen = ({ className, title, note, corners }) => {
+        const screen = document.createElement("div");
+        screen.className = "screen";
+        const rows = Array.from(
+          { length: 14 },
+          (_, index) => `<div class="row">Row ${index + 1}</div>`,
+        ).join("");
+        const tabs = TABS.map(
+          (label, index) => `
+            <button
+              class="tab"
+              role="tab"
+              aria-selected="${index === 1}"
+            >${corners ? '<span class="corner left"></span><span class="corner right"></span>' : ""}<span class="dot"></span>${label}</button>`,
+        ).join("");
+        screen.innerHTML = `
+          <h2>${title}</h2>
+          <p>${note}</p>
+          <div class="phone ${className}">
+            <div class="page">${rows}</div>
+            <div class="tabs" role="tablist">${tabs}</div>
+          </div>`;
+        screen.querySelector(".tabs").addEventListener("click", (event) => {
+          const tab = event.target.closest(".tab");
+          if (!tab) {
+            return;
+          }
+          for (const other of screen.querySelectorAll(".tab")) {
+            other.setAttribute("aria-selected", String(other === tab));
+          }
+        });
+        return screen;
+      };
+
+      const screens = document.getElementById("screens");
+      for (const technique of TECHNIQUES) {
+        screens.appendChild(buildScreen(technique));
+      }
+
+      const bindRange = (id, cssVar) => {
+        const input = document.getElementById(id);
+        const output = document.getElementById(`${id}-out`);
+        const apply = () => {
+          document.documentElement.style.setProperty(
+            cssVar,
+            `${input.value}px`,
+          );
+          output.textContent = `${input.value}px`;
+        };
+        input.addEventListener("input", apply);
+        apply();
+      };
+      bindRange("radius", "--radius");
+      bindRange("border", "--border");
+
+      document
+        .getElementById("round-bottom")
+        .addEventListener("change", (event) => {
+          for (const phone of document.querySelectorAll(".phone")) {
+            phone.classList.toggle("round-bottom", event.target.checked);
+          }
+        });
+    </script>
+  </body>
+</html>
