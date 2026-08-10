@@ -64,20 +64,14 @@ const css = /* css */ `
     box-shadow: 0 -1px 0 var(--navi-app-bar-border-color);
   }
 
+  /* The arrangement is passed as Box props (see BottomNavBarItem): a Box
+     writes its own layout, and a class would only fight it. What is left here
+     is what no prop says — an equal share each, narrower than its label if the
+     row is tight. */
   .navi_bottom_nav_bar_item {
-    display: flex;
     min-width: 0;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: var(--navi-xxs);
-    color: var(--navi-bottom-nav-bar-color);
+    flex-basis: 0;
     text-decoration: none;
-
-    &[data-href-current] {
-      color: var(--navi-bottom-nav-bar-color-current);
-    }
   }
 
   /* The app's main gesture, raised out of the row in a filled pill. */
@@ -129,16 +123,27 @@ export const BottomNavBar = ({ children, ...props }) => {
  *
  * Every other prop goes to the `Link` it renders.
  */
-const BottomNavBarItem = ({ icon, label, active, ...props }) => {
+const BOTTOM_NAV_BAR_ITEM_STYLE = {
+  "color": "var(--navi-bottom-nav-bar-color)",
+  ":-navi-href-current": {
+    color: "var(--navi-bottom-nav-bar-color-current)",
+  },
+};
+const BottomNavBarItem = ({ icon, label, active, children, ...props }) => {
   return (
     <Link
       baseClassName="navi_bottom_nav_bar_item"
       current={active}
       underline={false}
       hrefFallback={false}
+      flex="y"
+      alignX="center"
+      alignY="center"
+      spacing="xxs"
+      style={BOTTOM_NAV_BAR_ITEM_STYLE}
       {...props}
     >
-      {icon && <Icon size="l">{icon}</Icon>}
+      {children || (icon && <Icon size="l">{icon}</Icon>)}
       {label && <Text size="xs">{label}</Text>}
     </Link>
   );
@@ -146,23 +151,16 @@ const BottomNavBarItem = ({ icon, label, active, ...props }) => {
 BottomNavBar.Item = BottomNavBarItem;
 
 /**
- * The same entry, drawn as the filled pill a mobile bar puts in the middle for
- * the one thing the app is for.
+ * The same entry with its icon in a filled pill raised out of the row — what a
+ * mobile bar puts in the middle for the one thing the app is for.
  */
-const BottomNavBarCTAItem = ({ icon, label, active, ...props }) => {
+const BottomNavBarCTAItem = ({ icon, ...props }) => {
   return (
-    <Link
-      baseClassName="navi_bottom_nav_bar_item"
-      current={active}
-      underline={false}
-      hrefFallback={false}
-      {...props}
-    >
+    <BottomNavBarItem {...props}>
       <span className="navi_bottom_nav_bar_cta">
         <Icon size="l">{icon}</Icon>
       </span>
-      {label && <Text size="xs">{label}</Text>}
-    </Link>
+    </BottomNavBarItem>
   );
 };
 BottomNavBar.CTAItem = BottomNavBarCTAItem;
