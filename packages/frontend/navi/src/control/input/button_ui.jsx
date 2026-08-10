@@ -2,6 +2,7 @@ import { useContext } from "preact/hooks";
 
 import { Box, BoxForwardedPropsContext } from "../../box/box.jsx";
 import { LoadingOutline } from "../../graphic/loading/loading_outline.jsx";
+import { useDocumentUrl } from "../../nav/browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../../nav/browser_integration/href_target_info.js";
 import { Text, markAsOutsideTextFlow } from "../../text/text.jsx";
 import { useAccentColorAttributes } from "../../utils/use_accent_color_attributes.js";
@@ -53,6 +54,11 @@ const css = /* css */ `
         black
       );
       --button-color-hover: var(--button-color);
+      /* Current: the button points at the page one is already on. Nothing by
+         default — it is a nav item that wants to say so, not every button. */
+      --button-border-color-current: var(--button-border-color);
+      --button-background-color-current: var(--button-background-color);
+      --button-color-current: var(--button-color);
       /* Pressed */
       --button-border-color-pressed: color-mix(
         in srgb,
@@ -96,6 +102,13 @@ const css = /* css */ `
   .navi_button {
     --x-button-outline-offset: var(--button-outline-offset);
     --x-button-border-color: var(--button-border-color);
+    /* The shorthand wins over the parts when it is given, which is what makes
+       border="none" remove the line: the parts alone can only ever describe
+       a border, never the absence of one. */
+    --x-button-border: var(
+      --button-border,
+      var(--button-border-width) solid var(--x-button-border-color)
+    );
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
@@ -159,9 +172,7 @@ const css = /* css */ `
         --x-button-background-color,
         var(--x-button-background)
       );
-      border-width: var(--button-border-width);
-      border-style: solid;
-      border-color: var(--x-button-border-color);
+      border: var(--x-button-border);
       border-radius: inherit;
       outline-width: var(--button-outline-width);
       outline-color: var(--button-outline-color);
@@ -182,6 +193,12 @@ const css = /* css */ `
       }
     }
 
+    /* Current */
+    &[data-href-current] {
+      --x-button-border-color: var(--button-border-color-current);
+      --x-button-background-color: var(--button-background-color-current);
+      --x-button-color: var(--button-color-current);
+    }
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
@@ -328,6 +345,21 @@ const css = /* css */ `
         --x-button-background-color: transparent;
       }
     }
+    /* Last word on the shrink, over whatever the variant decided: the variant
+       guesses from how the button is drawn, and that guess is wrong as soon as
+       the content is a box of its own — a discrete button holding a filled
+       pill reads as a button being pressed, not as its content flinching. */
+    &[data-press-effect="scale"][data-pressed] {
+      .navi_button_content {
+        transform: scale(0.9);
+      }
+    }
+    &[data-press-effect="none"][data-pressed] {
+      .navi_button_content {
+        transform: none;
+      }
+    }
+
     &[data-icon] {
       --button-padding: 0;
       display: inline-flex;
@@ -391,6 +423,7 @@ export const ButtonUI = (props) => {
 
     // visual
     variant,
+    pressEffect,
     icon,
     cta,
     spacing,
@@ -406,13 +439,16 @@ export const ButtonUI = (props) => {
   const { basePseudoState, children } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
 
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
+  useDocumentUrl();
   const isLink = href !== undefined;
   let as = "button";
   let innerTarget;
   let innerRel;
+  let innerCurrent;
   if (isLink) {
     as = "a";
-    const { isSameSite } = getHrefTargetInfo(href);
+    const { isSameSite, isCurrent } = getHrefTargetInfo(href);
     innerTarget =
       target === undefined ? (isSameSite ? undefined : "_blank") : target;
     innerRel =
@@ -421,7 +457,15 @@ export const ButtonUI = (props) => {
           ? undefined
           : "noopener noreferrer"
         : rel;
+    innerCurrent = isCurrent;
   }
+  // For a button that has only an href: nothing else knows it points at the
+  // page one is on. A route says so through `pseudoState`, which Box lays over
+  // this one.
+  buttonControlHostProps.basePseudoState = {
+    ...basePseudoState,
+    ":-navi-href-current": innerCurrent,
+  };
 
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
@@ -442,6 +486,7 @@ export const ButtonUI = (props) => {
       type="button"
       spacing={undefined}
       cta={undefined}
+      pressEffect={undefined}
       ref={ref}
       as={as}
       href={href}
@@ -469,6 +514,7 @@ export const ButtonUI = (props) => {
         e.preventDefault();
       }}
       data-variant={variant}
+      data-press-effect={pressEffect}
       data-icon={icon ? "" : undefined}
       data-cta={cta ? "" : undefined}
       data-callout-arrow-x="center"
@@ -528,6 +574,11 @@ const ButtonStyleCSSVars = {
   ":-navi-pressed": {
     borderColor: "--button-border-color-pressed",
   },
+  ":-navi-href-current": {
+    backgroundColor: "--button-background-color-current",
+    borderColor: "--button-border-color-current",
+    color: "--button-color-current",
+  },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
     borderColor: "--button-border-color-readonly",
@@ -540,6 +591,7 @@ const ButtonStyleCSSVars = {
   },
 };
 const ButtonPseudoClasses = [
+  ":-navi-href-current",
   ":hover",
   ":active",
   ":-navi-pressed",

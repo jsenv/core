@@ -51,6 +51,11 @@ Object.assign(PSEUDO_CLASSES, {
   ":visited": {
     attribute: "data-visited",
   },
+  // Written by whoever knows the current url — a Link from its href, a Button
+  // from its route — so it lives here rather than with one of them.
+  ":-navi-href-current": {
+    attribute: "data-href-current",
+  },
 });
 const definePseudoClass = (pseudoClass, definition) => {
   PSEUDO_CLASSES[pseudoClass] = definition;

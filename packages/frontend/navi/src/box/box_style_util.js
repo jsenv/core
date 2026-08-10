@@ -69,6 +69,16 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
+// How much of the free space an expanding item claims next to its siblings:
+// expand={30} between four expand={18} is the wide one in the middle. A bare
+// `expand` claims one share, like everyone else asking for their part.
+const expandWeight = (value) => {
+  if (value === true || value === "") {
+    return 1;
+  }
+  return value;
+};
+
 const LAYOUT_PROPS = {
   // all are handled by navi-attributes
   inline: () => {},
@@ -176,7 +186,7 @@ const DIMENSION_PROPS = {
         return { flexGrow: 1 };
       }
       // Parent is flex-x: grow as flex item
-      return { flexGrow: 1, flexBasis: "0%" };
+      return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
@@ -200,7 +210,7 @@ const DIMENSION_PROPS = {
         return { flexGrow: 1 };
       }
       // Parent is flex-y: grow as flex item
-      return { flexGrow: 1, flexBasis: "0%" };
+      return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {

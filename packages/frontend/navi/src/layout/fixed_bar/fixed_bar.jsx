@@ -39,10 +39,11 @@ const css = /* css */ `
       --navi-fixed-bar-background: var(--navi-surface-color);
       --navi-fixed-bar-border-width: 1px;
       --navi-fixed-bar-border-color: var(--navi-separator-color-default);
-      /* Along the bar only: room so its content never touches the end of the
-         strip. Across it there is nothing to add — that direction is what the
-         width/height prop names. */
-      --navi-fixed-bar-padding: var(--navi-s);
+      /* Along the bar only — across it there is nothing to add, that direction
+         is what the width/height prop names. None by default: a row of items
+         sharing the whole strip is as common as a toolbar wanting air at its
+         ends, and only the second can ask. */
+      --navi-fixed-bar-padding: 0px;
     }
   }
 

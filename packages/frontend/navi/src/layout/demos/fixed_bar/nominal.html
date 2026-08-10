@@ -9,19 +9,6 @@
     />
     <title>FixedBar — the nominal app: a top bar and a bottom nav</title>
     <link rel="stylesheet" href="./_shell.css" />
-    <style>
-      .cta {
-        display: flex;
-        width: 30px;
-        height: 30px;
-        margin-top: -4px;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        background: #2563eb;
-        border-radius: 50%;
-      }
-    </style>
   </head>
   <body>
     <div id="app" data-navi-fixed-bar-space></div>
@@ -29,6 +16,7 @@
       import { render } from "preact";
       import {
         Box,
+        Button,
         FixedBar,
         Icon,
         Link,
@@ -36,6 +24,7 @@
         Title,
         route,
         setupRoutes,
+        Nav,
       } from "@jsenv/navi";
       import { rows } from "./_page.jsx";
 
@@ -59,20 +48,19 @@
         ":-navi-href-current": { color: "#2563eb" },
       };
       const NavItem = ({ route, label, children }) => (
-        <Link
+        <Button
+          variant="discrete"
+          flex
+          align="center"
           route={route}
-          underline={false}
-          hrefFallback={false}
-          flex="y"
-          alignX="center"
-          alignY="center"
-          spacing="xxs"
-          expandX
+          expand={19}
           style={NAV_ITEM_STYLE}
         >
-          {children}
-          <Text size="xs">{label}</Text>
-        </Link>
+          <Text flex="y" spacing="xxs">
+            {children}
+            <Text size="xs">{label}</Text>
+          </Text>
+        </Button>
       );
       const NavIcon = ({ path }) => (
         <Icon size="l">
@@ -81,6 +69,40 @@
           </svg>
         </Icon>
       );
+      // The one thing the app is for, at the center of the bar: a Button rather
+      // than a Link, so pressing it shrinks under the finger like the buttons
+      // of the page it opens.
+      const CreateNavItem = () => {
+        const current = CREATE.matchingSignal.value;
+        return (
+          <Button
+            route={CREATE}
+            variant="discrete"
+            pressEffect="scale"
+            paddingY="0"
+            expand={25}
+            flex
+            align="center"
+            style={NAV_ITEM_STYLE}
+          >
+            <Text flex="y" spacing="xxs" align="center">
+              <Icon
+                flex
+                align="center"
+                width="30px"
+                height="30px"
+                circle
+                background={current ? "#1d4ed8" : "#2563eb"}
+                color="white"
+                boxShadow={current ? "0 0 0 3px #bfdbfe" : undefined}
+              >
+                <NavIcon path="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </Icon>
+              <Text size="xs">Créer une partie</Text>
+            </Text>
+          </Button>
+        );
+      };
 
       const App = () => {
         let title = "Accueil";
@@ -100,23 +122,21 @@
             </FixedBar>
             <div className="page">{rows(20)}</div>
             <FixedBar as="nav" area="bottom" height={54}>
-              <NavItem route={HOME} label="Accueil">
-                <NavIcon path="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
-              </NavItem>
-              <NavItem route={GAMES} label="Parties">
-                <NavIcon path="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 15-5-5 1.41-1.41L10.5 14.17l6.59-6.59L18.5 9l-8 8z" />
-              </NavItem>
-              <NavItem route={CREATE} label="Créer">
-                <span className="cta">
-                  <NavIcon path="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                </span>
-              </NavItem>
-              <NavItem route={JOIN} label="Rejoindre">
-                <NavIcon path="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-              </NavItem>
-              <NavItem route={PROFILE} label="Profil">
-                <NavIcon path="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-              </NavItem>
+              <Nav expand alignY="center" spacing="0">
+                <NavItem route={HOME} label="Accueil">
+                  <NavIcon path="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
+                </NavItem>
+                <NavItem route={GAMES} label="Parties">
+                  <NavIcon path="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 15-5-5 1.41-1.41L10.5 14.17l6.59-6.59L18.5 9l-8 8z" />
+                </NavItem>
+                <CreateNavItem />
+                <NavItem route={JOIN} label="Rejoindre">
+                  <NavIcon path="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+                </NavItem>
+                <NavItem route={PROFILE} label="Profil">
+                  <NavIcon path="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </NavItem>
+              </Nav>
             </FixedBar>
           </>
         );

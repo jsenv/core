@@ -416,9 +416,6 @@ Object.assign(PSEUDO_CLASSES, {
   ":-navi-href-anchor": {
     attribute: "data-href-anchor",
   },
-  ":-navi-href-current": {
-    attribute: "data-href-current",
-  },
 });
 
 /**

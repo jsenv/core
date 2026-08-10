@@ -11,7 +11,7 @@ export const ButtonRouteResolver = (props) => {
 
 const ButtonWithRoute = (props) => {
   const Next = useNextResolver();
-  const { route, routeParams, children, ...rest } = props;
+  const { route, routeParams, children, pseudoState, ...rest } = props;
   if (import.meta.dev) {
     assertRoute(route);
   }
@@ -20,10 +20,12 @@ const ButtonWithRoute = (props) => {
   const paramsAreMatching = route.matchesParams(routeParams);
   const linkMatching = matching && paramsAreMatching;
 
+  // Merged into whatever the caller already holds: a button can be forced into
+  // a state for a demo and still learn its own current-ness from its route.
   return (
     <Next
       href={url}
-      data-href-current={linkMatching ? "" : undefined}
+      pseudoState={{ ...pseudoState, ":-navi-href-current": linkMatching }}
       {...rest}
     >
       {children || route.buildRelativeUrl(routeParams)}
