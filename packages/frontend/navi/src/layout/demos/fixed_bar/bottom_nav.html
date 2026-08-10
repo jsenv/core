@@ -10,24 +10,6 @@
     <title>FixedBar — area="bottom", a nav in it</title>
     <link rel="stylesheet" href="./_shell.css" />
     <style>
-      .nav_item {
-        display: flex;
-        min-width: 0;
-        flex: 1 1 0;
-        flex-direction: column;
-        align-items: center;
-        gap: 2px;
-        color: #6b7280;
-        font-size: 12px;
-        text-decoration: none;
-      }
-      .nav_item[data-href-current] {
-        color: #2563eb;
-      }
-      .nav_item svg {
-        width: 24px;
-        height: 24px;
-      }
       .cta {
         display: flex;
         width: 32px;
@@ -46,7 +28,14 @@
 
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { FixedBar, Link, route, setupRoutes } from "@jsenv/navi";
+      import {
+        FixedBar,
+        Icon,
+        Link,
+        Text,
+        route,
+        setupRoutes,
+      } from "@jsenv/navi";
 
       const HOME = route("/");
       const GAMES = route("/games");
@@ -54,18 +43,35 @@
       const PROFILE = route("/profile");
       setupRoutes([HOME, GAMES, CREATE, PROFILE]);
 
+      // Layout as props, not as a class: a Box writes its own layout, and a
+      // class would only fight it.
+      const NAV_ITEM_STYLE = {
+        "color": "#6b7280",
+        ":-navi-href-current": { color: "#2563eb" },
+      };
       const NavItem = ({ route, label, children }) => (
         <Link
           route={route}
-          baseClassName="nav_item"
           underline={false}
           hrefFallback={false}
+          flex="y"
+          alignX="center"
+          alignY="center"
+          spacing="xxs"
+          expandX
+          style={NAV_ITEM_STYLE}
         >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            {children}
-          </svg>
-          {label}
+          {children}
+          <Text size="xs">{label}</Text>
         </Link>
+      );
+
+      const NavIcon = ({ path }) => (
+        <Icon size="l">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d={path} />
+          </svg>
+        </Icon>
       );
 
       const App = () => (
@@ -80,26 +86,18 @@
           </div>
           <FixedBar as="nav" area="bottom" size="64px">
             <NavItem route={HOME} label="Accueil">
-              <path d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
+              <NavIcon path="M12 3 2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
             </NavItem>
             <NavItem route={GAMES} label="Parties">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 15-5-5 1.41-1.41L10.5 14.17l6.59-6.59L18.5 9l-8 8z" />
+              <NavIcon path="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 15-5-5 1.41-1.41L10.5 14.17l6.59-6.59L18.5 9l-8 8z" />
             </NavItem>
-            <Link
-              route={CREATE}
-              baseClassName="nav_item"
-              underline={false}
-              hrefFallback={false}
-            >
+            <NavItem route={CREATE} label="Créer">
               <span className="cta">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-                </svg>
+                <NavIcon path="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </span>
-              Créer
-            </Link>
+            </NavItem>
             <NavItem route={PROFILE} label="Profil">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              <NavIcon path="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
             </NavItem>
           </FixedBar>
         </>
