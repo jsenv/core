@@ -87,10 +87,14 @@ const css = /* css */ `
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
+        /* Sized by its height and aspect ratio, so there is no box left for
+           padding to grow: any padding would push the digit out of the circle.
+           A padding prop is ignored on this shape by design. */
+        padding: 0;
+
         display: inline-block;
         aspect-ratio: 1/1;
         height: 1.6em;
-        padding: 0;
         text-align: center;
         line-height: 1.6em;
       }
@@ -224,11 +228,16 @@ export const BadgeCount = ({
     </TextAnchor>
   );
 };
-const BadgeStyleCSSVars = {
+const BadgeCountStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
+  padding: "--badge-count-padding",
+  paddingX: "--badge-count-padding-x",
+  paddingY: "--badge-count-padding-y",
+  paddingTop: "--badge-count-padding-top",
+  paddingRight: "--badge-count-padding-right",
+  paddingBottom: "--badge-count-padding-bottom",
+  paddingLeft: "--badge-count-padding-left",
   backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",
@@ -276,7 +285,7 @@ const BadgeCountEllipse = ({
       data-loading={loading ? "" : undefined}
       data-single-char={charCount === 1 ? "" : undefined}
       {...props}
-      styleCSSVars={BadgeStyleCSSVars}
+      styleCSSVars={BadgeCountStyleCSSVars}
       spacing="pre"
     >
       {loading ? (
@@ -309,7 +318,7 @@ const BadgeCountCircle = ({
       data-four-chars={charCount === 4 ? "" : undefined}
       data-value-overflow={hasOverflow ? "" : undefined}
       {...props}
-      styleCSSVars={BadgeStyleCSSVars}
+      styleCSSVars={BadgeCountStyleCSSVars}
       spacing="pre"
     >
       {loading ? (

@@ -45,6 +45,7 @@
             <BadgePositioningSection />
             <NoWrapSection />
             <BigNumbersSection />
+            <PaddingSection />
           </div>
         );
       };
@@ -329,6 +330,7 @@
               8. Association texte + badge (pas de coupure)
             </Link>
             <Link href="#big-numbers">9. Grands nombres</Link>
+            <Link href="#padding">10. Padding</Link>
           </Box>
         </Box>
       );
@@ -1260,6 +1262,78 @@
         </Box>
       );
 
+      const PaddingCase = ({ label, ...props }) => (
+        <Box flex="y" spacing="xs" alignX="start">
+          <Text style={{ fontSize: "0.8em", opacity: 0.7 }}>{label}</Text>
+          <Box row spacing="s" alignY="center">
+            <Text>
+              Items
+              <BadgeCount background="#2196f3" {...props}>
+                {42}
+              </BadgeCount>
+            </Text>
+            <Text>
+              Items
+              <BadgeCount background="#2196f3" {...props}>
+                {1247}
+              </BadgeCount>
+            </Text>
+          </Box>
+        </Box>
+      );
+
+      const PaddingSection = () => (
+        <Box as="section" marginBottom="xl">
+          <Title as="h2">
+            <Link anchor href="#padding" />
+            Padding
+          </Title>
+          <Box flex="y" spacing="m" alignX="start">
+            <PaddingCase label="défaut" />
+            <PaddingCase label='padding="0.6em"' padding="0.6em" />
+            <PaddingCase label='paddingX="1.5em"' paddingX="1.5em" />
+            <PaddingCase label='paddingY="0.8em"' paddingY="0.8em" />
+            <PaddingCase
+              label='padding="0.8em" paddingRight="0.1em"'
+              padding="0.8em"
+              paddingRight="0.1em"
+            />
+          </Box>
+
+          <Title as="h3">Formes dimensionnées par le nombre</Title>
+          <Paragraph>
+            Un seul chiffre, et la forme circulaire : la taille vient du nombre
+            de caractères, le padding ne s'y applique pas.
+          </Paragraph>
+          <Box flex="y" spacing="m" alignX="start">
+            <Box row spacing="s" alignY="center">
+              <Text>
+                Items
+                <BadgeCount background="#2196f3">{7}</BadgeCount>
+              </Text>
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" paddingX="1.5em">
+                  {7}
+                </BadgeCount>
+              </Text>
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" circle>
+                  {42}
+                </BadgeCount>
+              </Text>
+              <Text>
+                Items
+                <BadgeCount background="#2196f3" circle paddingX="1.5em">
+                  {42}
+                </BadgeCount>
+              </Text>
+            </Box>
+          </Box>
+        </Box>
+      );
+
       const BigNumbersSection = () => (
         <Box as="section" marginBottom="xl">
           <Title as="h2">
@@ -1418,9 +1492,7 @@
             </div>
 
             <div>
-              <Caption>
-                Avec BadgeCount — tess avec nombre encor eplus grand
-              </Caption>
+              <Caption>Avec BadgeCount — nombre encore plus grand</Caption>
               <div
                 style={{
                   width: "120px",
@@ -1433,6 +1505,29 @@
                 <Text>
                   Vous avez
                   <BadgeCount background="#4caf50" color="white">
+                    10000000000000
+                  </BadgeCount>
+                  messages
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Caption>
+                Avec BadgeCount — nombre encore plus grand + maxLines=1
+              </Caption>
+              <div
+                style={{
+                  width: "120px",
+                  border: "1px solid #ddd",
+                  padding: "8px",
+                  backgroundColor: "#e8f5e8",
+                  lineHeight: "1.6",
+                }}
+              >
+                <Text>
+                  Vous avez
+                  <BadgeCount maxLines={1} background="#4caf50" color="white">
                     10000000000000
                   </BadgeCount>
                   messages
