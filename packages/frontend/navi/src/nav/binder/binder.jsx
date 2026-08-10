@@ -28,8 +28,8 @@ import { toChildArray } from "preact";
 import { useCallback, useLayoutEffect, useRef, useState } from "preact/hooks";
 
 import { Box } from "../../box/box.jsx";
-import { Link } from "../link/link.jsx";
 import { buildBinderPath } from "./binder_path.js";
+import { BinderItemContext } from "./binder_context.js";
 
 const css = /* css */ `
   @layer navi {
@@ -340,16 +340,18 @@ export const Binder = ({
   const [valueOwnState, setValueOwnState] = useState(
     defaultValue === undefined ? items[0]?.value : defaultValue,
   );
-  // Reading the routes' signals during render is what re-renders the binder on
-  // navigation — the same way a Link updates itself.
-  const routedIndex = items.findIndex((item) => isRouteMatching(item.tabProps));
-  const currentIndex =
-    routedIndex === -1
-      ? items.findIndex(
-          (item) =>
-            item.value === (value === undefined ? valueOwnState : value),
-        )
-      : routedIndex;
+  // A tab holding a Link knows it is the current one (its route matches) before
+  // the binder could work it out, and says so — see BinderItemContext.
+  const [reportedValue, setReportedValue] = useState(undefined);
+  let wantedValue;
+  if (value !== undefined) {
+    wantedValue = value;
+  } else if (reportedValue !== undefined) {
+    wantedValue = reportedValue;
+  } else {
+    wantedValue = valueOwnState;
+  }
+  const currentIndex = items.findIndex((item) => item.value === wantedValue);
   const currentItem = currentIndex === -1 ? items[0] : items[currentIndex];
   const currentValue = currentItem?.value;
 
@@ -358,6 +360,16 @@ export const Binder = ({
       setValueOwnState(item.value);
     }
     onChange?.(item.value);
+  };
+  const reportCurrent = (item, current) => {
+    setReportedValue((previous) => {
+      if (current) {
+        return item.value;
+      }
+      // Only the tab that claimed it may withdraw it, otherwise the tabs that
+      // just stopped being current would erase the one that just became it.
+      return previous === item.value ? undefined : previous;
+    });
   };
 
   const vertical = tabsPosition === "left" || tabsPosition === "right";
@@ -426,6 +438,7 @@ export const Binder = ({
             maxLines={maxLines}
             onOpen={() => open(item)}
             onKeyDown={onKeyDown}
+            onReportCurrent={(current) => reportCurrent(item, current)}
           />
         ))}
       </div>
@@ -455,16 +468,7 @@ export const Binder = ({
 const BinderItem = () => null;
 Binder.Item = BinderItem;
 
-const isRouteMatching = ({ route, routeParams }) => {
-  if (!route) {
-    return false;
-  }
-  if (!route.matchingSignal.value) {
-    return false;
-  }
-  return route.matchesParams(routeParams);
-};
-
+const BINDER_TAB_PSEUDO_CLASSES = [":hover", ":active", ":focus-visible"];
 const BinderTab = ({
   item,
   index,
@@ -473,74 +477,47 @@ const BinderTab = ({
   maxLines,
   onOpen,
   onKeyDown,
+  onReportCurrent,
 }) => {
   const { label, tabProps } = item;
-  const {
-    maxLines: itemMaxLines = maxLines,
-    route,
-    href,
-    onClick,
-    ...rest
-  } = tabProps;
+  const { maxLines: itemMaxLines = maxLines, onClick, ...rest } = tabProps;
 
-  const sharedProps = {
-    "ref": (element) => {
-      tabRefs.current[index] = element;
-    },
-    "role": "tab",
-    "aria-selected": current,
-    "tabIndex": current ? 0 : -1,
-    "data-current": current ? "" : undefined,
-    onKeyDown,
-    ...rest,
-  };
-  const labelNode = (
-    <span
-      className="navi_binder_tab_label"
-      data-max-lines={itemMaxLines || undefined}
-      style={
-        itemMaxLines > 1
-          ? { "--binder-tab-max-lines": itemMaxLines }
-          : undefined
-      }
-    >
-      {label}
-    </span>
-  );
-
-  if (route || href) {
-    return (
-      <Link
-        baseClassName="navi_binder_tab"
-        route={route}
-        href={href}
-        routeParams={tabProps.routeParams}
-        current={current}
-        hrefFallback={false}
-        onClick={onClick}
-        {...sharedProps}
-      >
-        {labelNode}
-      </Link>
-    );
-  }
   return (
     <Box
       as="button"
       type="button"
       baseClassName="navi_binder_tab"
       pseudoClasses={BINDER_TAB_PSEUDO_CLASSES}
+      ref={(element) => {
+        tabRefs.current[index] = element;
+      }}
+      role="tab"
+      aria-selected={current}
+      tabIndex={current ? 0 : -1}
+      data-current={current ? "" : undefined}
       onClick={(event) => {
         onOpen();
         onClick?.(event);
       }}
-      {...sharedProps}
+      onKeyDown={onKeyDown}
+      {...rest}
     >
-      {labelNode}
+      <BinderItemContext.Provider value={onReportCurrent}>
+        <span
+          className="navi_binder_tab_label"
+          data-max-lines={itemMaxLines || undefined}
+          style={
+            itemMaxLines > 1
+              ? { "--binder-tab-max-lines": itemMaxLines }
+              : undefined
+          }
+        >
+          {label}
+        </span>
+      </BinderItemContext.Provider>
     </Box>
   );
 };
-const BINDER_TAB_PSEUDO_CLASSES = [":hover", ":active", ":focus-visible"];
 
 const BinderOutline = ({
   rootRef,

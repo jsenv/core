@@ -549,17 +549,26 @@
         <div className="demo-section">
           <Heading id="routes">route</Heading>
           <Binder>
-            <Binder.Item route={APPROVED_ROUTE} label="Approved">
+            <Binder.Item
+              value="approved"
+              label={<Link route={APPROVED_ROUTE}>Approved</Link>}
+            >
               <div style={{ width: "360px" }}>
                 These 3 items have been reviewed and approved.
               </div>
             </Binder.Item>
-            <Binder.Item route={PENDING_ROUTE} label="Pending">
+            <Binder.Item
+              value="pending"
+              label={<Link route={PENDING_ROUTE}>Pending</Link>}
+            >
               <div style={{ width: "360px" }}>
                 These 2 items are awaiting review.
               </div>
             </Binder.Item>
-            <Binder.Item route={ARCHIVED_ROUTE} label="Archived">
+            <Binder.Item
+              value="archived"
+              label={<Link route={ARCHIVED_ROUTE}>Archived</Link>}
+            >
               <div style={{ width: "360px" }}>No archived items yet.</div>
             </Binder.Item>
           </Binder>

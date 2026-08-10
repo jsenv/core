@@ -1,4 +1,4 @@
-import { useContext, useRef } from "preact/hooks";
+import { useContext, useLayoutEffect, useRef } from "preact/hooks";
 
 import { PSEUDO_CLASSES } from "../../box/pseudo_styles.js";
 import { useControlProps } from "../../control/control_hooks.jsx";
@@ -20,6 +20,7 @@ import { markAsOutsideTextFlow, Text } from "../../text/text.jsx";
 import { useDocumentUrl } from "../browser_integration/document_url_signal.js";
 import { getHrefTargetInfo } from "../browser_integration/href_target_info.js";
 import { useIsVisited } from "../browser_integration/use_is_visited.js";
+import { BinderItemContext } from "../binder/binder_context.js";
 import { assertRoute, useRouteStatus } from "../route.js";
 import { useDimColorWhen } from "./use_dim_color.js";
 
@@ -366,6 +367,22 @@ const LinkStyleCSSVars = {
     color: "--link-color-selected",
   },
 };
+// A link placed inside a binder tab tells that tab whether it is the current
+// one. The binder cannot know: which page an url opens is the link's business,
+// and it is settled before the binder renders anything.
+const useReportCurrentToBinderItem = (current) => {
+  const reportCurrent = useContext(BinderItemContext);
+  useLayoutEffect(() => {
+    if (!reportCurrent) {
+      return undefined;
+    }
+    reportCurrent(current);
+    return () => {
+      reportCurrent(false);
+    };
+  }, [reportCurrent, current]);
+};
+
 const LinkPseudoClasses = [
   ":hover",
   ":active",
@@ -546,6 +563,7 @@ const LinkPlain = (props) => {
   useDocumentUrl();
   const { isSameSite, isAnchor, isCurrent } = getHrefTargetInfo(href);
   const innerCurrent = current || isCurrent;
+  useReportCurrentToBinderItem(innerCurrent);
   controlHostProps.basePseudoState = {
     ...basePseudoState,
     ":visited": visited,
