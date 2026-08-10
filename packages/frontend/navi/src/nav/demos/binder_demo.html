@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Binder Demo</title>
+    <style>
+      body {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #f5f5f5;
+      }
+
+      .demo-section {
+        margin-bottom: 40px;
+        padding: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .demo-section h2 {
+        margin: 0 0 20px 0;
+        padding-bottom: 10px;
+        color: #333;
+        font-size: 1.4rem;
+        border-bottom: 2px solid #ddd;
+      }
+
+      fieldset {
+        margin: 15px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      legend {
+        padding: 0 10px;
+        color: #555;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .dark-stage {
+        padding: 24px;
+        color: #e6e6e6;
+        background: #16181d;
+        border-radius: 8px;
+        color-scheme: dark;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { Box, Binder, Link, BadgeCount } from "@jsenv/navi";
+      import { DemoHeader } from "../../internal/demo_header.jsx";
+      import { DocumentToc } from "../../internal/document_toc.jsx";
+
+      const Heading = ({ level = 2, id, children }) => {
+        const Tag = `h${level}`;
+        return (
+          <Tag id={id}>
+            <Link anchor revealOnInteraction href={`#${id}`}>
+              #
+            </Link>
+            {children}
+          </Tag>
+        );
+      };
+
+      // A plain function, not a component: a binder reads its items from its
+      // own children, so they have to BE its children.
+      const pages = (width = "360px") => [
+        <Binder.Item key="approved" value="approved" label="Approved">
+          <div style={{ width }}>
+            These 3 items have been reviewed and approved.
+          </div>
+        </Binder.Item>,
+        <Binder.Item key="pending" value="pending" label="Pending">
+          <div style={{ width }}>These 2 items are awaiting review.</div>
+        </Binder.Item>,
+        <Binder.Item key="archived" value="archived" label="Archived">
+          <div style={{ width }}>No archived items yet.</div>
+        </Binder.Item>,
+      ];
+
+      const App = () => (
+        <div>
+          <DemoHeader title="Binder" />
+          <TableOfContents />
+          <NominalDemo />
+          <TabsPositionDemo />
+          <TabsAlignDemo />
+          <BorderWidthDemo />
+          <BorderRadiusDemo />
+          <ColorsDemo />
+          <DarkDemo />
+          <RichLabelsDemo />
+        </div>
+      );
+
+      const TableOfContents = () => (
+        <div className="demo-section">
+          <h2>Table of contents</h2>
+          <DocumentToc />
+        </div>
+      );
+
+      const NominalDemo = () => (
+        <div className="demo-section">
+          <Heading id="nominal">Cas nominal</Heading>
+          <Binder>{pages()}</Binder>
+        </div>
+      );
+
+      const TabsPositionDemo = () => (
+        <div className="demo-section">
+          <Heading id="tabs-position">tabsPosition</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            {["top", "bottom", "left", "right"].map((position) => (
+              <fieldset key={position}>
+                <legend>
+                  tabsPosition="{position}"
+                  {position === "top" ? " (default)" : ""}
+                </legend>
+                <Binder tabsPosition={position} defaultValue="pending">
+                  {pages()}
+                </Binder>
+              </fieldset>
+            ))}
+          </Box>
+        </div>
+      );
+
+      const TabsAlignDemo = () => (
+        <div className="demo-section">
+          <Heading id="tabs-align">tabsAlign</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            {["stretch", "start", "center", "end"].map((align) => (
+              <fieldset key={align}>
+                <legend>
+                  tabsAlign="{align}"{align === "stretch" ? " (default)" : ""}
+                </legend>
+                <Binder tabsAlign={align} defaultValue="pending">
+                  {pages()}
+                </Binder>
+              </fieldset>
+            ))}
+          </Box>
+        </div>
+      );
+
+      const BorderWidthDemo = () => (
+        <div className="demo-section">
+          <Heading id="border-width">borderWidth</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            {[undefined, 3, 10].map((borderWidth) => (
+              <fieldset key={String(borderWidth)}>
+                <legend>
+                  {borderWidth === undefined
+                    ? "borderWidth (default)"
+                    : `borderWidth=${borderWidth}`}
+                </legend>
+                <Binder borderWidth={borderWidth} defaultValue="pending">
+                  {pages()}
+                </Binder>
+              </fieldset>
+            ))}
+          </Box>
+        </div>
+      );
+
+      const BorderRadiusDemo = () => (
+        <div className="demo-section">
+          <Heading id="border-radius">borderRadius</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            {[0, undefined, 10, 20].map((borderRadius) => (
+              <fieldset key={String(borderRadius)}>
+                <legend>
+                  {borderRadius === undefined
+                    ? "borderRadius (default)"
+                    : `borderRadius=${borderRadius}`}
+                </legend>
+                <Binder
+                  borderRadius={borderRadius}
+                  borderWidth={3}
+                  defaultValue="pending"
+                >
+                  {pages()}
+                </Binder>
+              </fieldset>
+            ))}
+          </Box>
+        </div>
+      );
+
+      const ColorsDemo = () => (
+        <div className="demo-section">
+          <Heading id="colors">Colors</Heading>
+          <Box flex="y" spacing="l" alignX="start">
+            <fieldset>
+              <legend>default</legend>
+              <Binder defaultValue="pending">{pages()}</Binder>
+            </fieldset>
+            <fieldset>
+              <legend>borderColor + background</legend>
+              <Binder
+                borderColor="#1976d2"
+                background="#f2f8fe"
+                defaultValue="pending"
+              >
+                {pages()}
+              </Binder>
+            </fieldset>
+            <fieldset>
+              <legend>tabBorderColor + tabBackground + tabColor</legend>
+              <Binder
+                borderColor="#1976d2"
+                background="#f2f8fe"
+                tabBorderColor="#90caf9"
+                tabBackground="#e3f2fd"
+                tabColor="#5c7fa3"
+                defaultValue="pending"
+              >
+                {pages()}
+              </Binder>
+            </fieldset>
+          </Box>
+        </div>
+      );
+
+      const DarkDemo = () => (
+        <div className="demo-section">
+          <Heading id="dark">On a dark surface</Heading>
+          <div className="dark-stage">
+            <Box flex="y" spacing="l" alignX="start">
+              <fieldset style={{ borderColor: "#333842" }}>
+                <legend>default (follows color-scheme)</legend>
+                <Binder defaultValue="pending">{pages()}</Binder>
+              </fieldset>
+              <fieldset style={{ borderColor: "#333842" }}>
+                <legend>tuned for the surface it sits on</legend>
+                <Binder
+                  borderWidth={2}
+                  borderRadius={8}
+                  borderColor="#4a5160"
+                  background="#20242c"
+                  tabBackground="#191c22"
+                  tabBorderColor="#343b47"
+                  tabColor="#8b93a3"
+                  tabBackgroundHover="#262b34"
+                  defaultValue="pending"
+                >
+                  {pages()}
+                </Binder>
+              </fieldset>
+            </Box>
+          </div>
+        </div>
+      );
+
+      const RichLabelsDemo = () => (
+        <div className="demo-section">
+          <Heading id="rich-labels">label</Heading>
+          <Binder borderWidth={2} borderRadius={6} tabsAlign="start">
+            <Binder.Item
+              value="approved"
+              label={
+                <>
+                  Approved <BadgeCount background="#1976d2">3</BadgeCount>
+                </>
+              }
+            >
+              <div style={{ width: "360px" }}>
+                These 3 items have been reviewed and approved.
+              </div>
+            </Binder.Item>
+            <Binder.Item
+              value="pending"
+              label={
+                <>
+                  Pending <BadgeCount background="#eb364b">2</BadgeCount>
+                </>
+              }
+            >
+              <div style={{ width: "360px" }}>
+                These 2 items are awaiting review.
+              </div>
+            </Binder.Item>
+            <Binder.Item key="archived" value="archived" label="Archived">
+              <div style={{ width: "360px" }}>No archived items yet.</div>
+            </Binder.Item>
+          </Binder>
+        </div>
+      );
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

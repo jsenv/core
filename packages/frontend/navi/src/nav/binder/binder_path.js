@@ -1,206 +1,22 @@
 /**
- * The <Nav variant="binder"> border: a single SVG filled path wrapping the nav
- * AND its panel (the nav's sibling element, per panelPosition), so the current
- * tab visually merges into the panel through concave "s-curve" junctions.
+ * The binder outline: one closed path wrapping the tab row AND the page, with
+ * the current tab opening into the page through concave junction curves.
  *
- * Why SVG instead of CSS borders:
- * 1. The current tab must have no border on the panel side so it merges with
- *    the panel — CSS cannot omit one side of a border while keeping the
- *    surrounding corners intact.
- * 2. The corners where the tab meets the panel need an inward (concave) curve,
- *    the opposite of what CSS border-radius produces.
+ * Why a path instead of CSS borders — CSS cannot do either of these:
+ *   1. Omit one side of a border while keeping the surrounding corners intact
+ *      (the current tab has no border on the page side, so it merges with it).
+ *   2. Curve a corner inward (concave), which is what a tab-to-page junction
+ *      is. `border-radius` only bulges outward.
  *
- * The path is built in "path space" where the main axis (along the tab row)
- * is x. Tabs left/right reuse the top/bottom builders and transpose the
- * result (x/y swap — a mirror transform, hence the arc sweep flip).
+ * Everything here is in "path space": the main axis (along the tab row) is x
+ * and the cross axis goes from the tabs toward the page, whatever the real
+ * orientation. Tabs left/right reuse the top/bottom builders and transpose the
+ * result at the end.
  *
- * The component measures the DOM (nav, current link, panel sibling) rather
- * than receiving sizes as props: the drawn shape must follow whatever layout
- * produced, including content-driven sizes it cannot know ahead of time.
- * Configuration is read from CSS vars on the nav (--nav-border-width,
- * --nav-border-radius, --nav-border-color, --nav-background) so the variant
- * is themed the same way as the rest of the nav.
+ * The path is a centerline: it runs half a border-width inside the box edges,
+ * so a stroke of `borderWidth` covers exactly the border area the CSS borders
+ * of the inactive tabs occupy, and the two line up.
  */
-
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
-
-export const NavBinderSvg = ({ panelPosition, vertical }) => {
-  const svgRef = useRef(null);
-  const [drawing, setDrawing] = useState(null);
-  const lastDrawingJsonRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const svgEl = svgRef.current;
-    const navEl = svgEl.closest(".navi_nav");
-    const panelEl =
-      panelPosition === "before"
-        ? navEl.previousElementSibling
-        : navEl.nextElementSibling;
-
-    const measure = () => {
-      const nextDrawing = measureDrawing({
-        navEl,
-        panelEl,
-        panelPosition,
-        vertical,
-      });
-      // Our own svg updates re-trigger the observers; only set state on
-      // actual geometry change so the loop settles.
-      const nextDrawingJson = JSON.stringify(nextDrawing);
-      if (nextDrawingJson === lastDrawingJsonRef.current) {
-        return;
-      }
-      lastDrawingJsonRef.current = nextDrawingJson;
-      setDrawing(nextDrawing);
-    };
-
-    const resizeObserver = new ResizeObserver(measure);
-    resizeObserver.observe(navEl);
-    if (panelEl) {
-      resizeObserver.observe(panelEl);
-    }
-    const mutationObserver = new MutationObserver(measure);
-    mutationObserver.observe(navEl, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-    });
-    measure();
-    return () => {
-      resizeObserver.disconnect();
-      mutationObserver.disconnect();
-    };
-  }, [panelPosition, vertical]);
-
-  return (
-    <svg
-      ref={svgRef}
-      aria-hidden="true"
-      style={{
-        position: "absolute",
-        left: drawing ? `${drawing.left}px` : "0",
-        top: drawing ? `${drawing.top}px` : "0",
-        overflow: "visible",
-        pointerEvents: "none",
-        zIndex: 1,
-      }}
-      width={drawing ? drawing.width : 0}
-      height={drawing ? drawing.height : 0}
-    >
-      {drawing && (
-        <path
-          d={drawing.path}
-          fill={drawing.background}
-          stroke={drawing.borderColor}
-          stroke-width={drawing.borderWidth}
-        />
-      )}
-    </svg>
-  );
-};
-
-const measureDrawing = ({ navEl, panelEl, panelPosition, vertical }) => {
-  if (!panelEl) {
-    return null;
-  }
-  const linkEls = navEl.querySelectorAll(".navi_link");
-  if (linkEls.length === 0) {
-    return null;
-  }
-  const currentLinkEl = navEl.querySelector(".navi_link[data-href-current]");
-  if (!currentLinkEl) {
-    return null;
-  }
-
-  const navComputedStyle = getComputedStyle(navEl);
-  const readVar = (name) => navComputedStyle.getPropertyValue(name).trim();
-  const borderWidth = parseFloat(readVar("--nav-border-width")) || 0;
-  const cornerRadius = parseFloat(readVar("--nav-border-radius")) || 0;
-  const borderColor = readVar("--nav-border-color") || "grey";
-  const background = readVar("--nav-background") || "white";
-
-  const navRect = navEl.getBoundingClientRect();
-  const panelRect = panelEl.getBoundingClientRect();
-  const unionLeft =
-    navRect.left < panelRect.left ? navRect.left : panelRect.left;
-  const unionTop = navRect.top < panelRect.top ? navRect.top : panelRect.top;
-  const unionRight =
-    navRect.right > panelRect.right ? navRect.right : panelRect.right;
-  const unionBottom =
-    navRect.bottom > panelRect.bottom ? navRect.bottom : panelRect.bottom;
-  const unionWidth = unionRight - unionLeft;
-  const unionHeight = unionBottom - unionTop;
-
-  // Path space: the main axis runs along the tab row (x for top/bottom tabs,
-  // y for left/right tabs), the cross axis goes from tabs toward the panel.
-  const toPathSpace = (rect) => {
-    if (vertical) {
-      return {
-        start: rect.top - unionTop,
-        size: rect.height,
-        crossStart: rect.left - unionLeft,
-        crossEnd: rect.right - unionLeft,
-      };
-    }
-    return {
-      start: rect.left - unionLeft,
-      size: rect.width,
-      crossStart: rect.top - unionTop,
-      crossEnd: rect.bottom - unionTop,
-    };
-  };
-
-  const tabsFirst = panelPosition !== "before";
-  const tabsPosition = vertical
-    ? tabsFirst
-      ? "left"
-      : "right"
-    : tabsFirst
-      ? "top"
-      : "bottom";
-
-  const mainSize = vertical ? unionHeight : unionWidth;
-  const crossSize = vertical ? unionWidth : unionHeight;
-  const current = toPathSpace(currentLinkEl.getBoundingClientRect());
-  const first = toPathSpace(linkEls[0].getBoundingClientRect());
-  const last = toPathSpace(linkEls[linkEls.length - 1].getBoundingClientRect());
-
-  // The junction border band is drawn INSIDE the tab row (tabs overlap it by
-  // borderWidth — their margin on the panel side leaves the room for it).
-  let tabRowHeight;
-  let panelHeight;
-  if (tabsFirst) {
-    tabRowHeight = current.crossEnd;
-    panelHeight = crossSize - current.crossEnd;
-  } else {
-    panelHeight = current.crossStart + borderWidth;
-    tabRowHeight = crossSize - current.crossStart - borderWidth;
-  }
-
-  const path = buildBinderCenterlinePath({
-    tabX: current.start,
-    tabWidth: current.size,
-    tabRowHeight,
-    panelWidth: mainSize,
-    panelHeight,
-    borderWidth,
-    cornerRadius,
-    gapBeforeTabs: first.start,
-    gapAfterTabs: mainSize - (last.start + last.size),
-    tabsPosition,
-  });
-
-  return {
-    left: unionLeft - navRect.left,
-    top: unionTop - navRect.top,
-    width: unionWidth,
-    height: unionHeight,
-    path,
-    borderWidth,
-    borderColor,
-    background,
-  };
-};
 
 // Low-level arc helpers: produce SVG arc commands with an explicit sweep flag.
 // sweep=1 → clockwise arc; sweep=0 → counter-clockwise arc.
@@ -246,10 +62,22 @@ const transposePath = (commands) =>
     return command;
   });
 
-// "left"/"right" reuse the "top"/"bottom" builders in a coordinate space
-// where the main axis (along the tab row) is x — the result is then
-// transposed so the tab row runs vertically.
-const buildBinderCenterlinePath = ({
+/**
+ * @param {object} params
+ * @param {number} params.tabX - Where the current tab starts along the tab row.
+ * @param {number} params.tabWidth - Its size along the tab row.
+ * @param {number} params.tabRowHeight - From the outer edge of the tab row to
+ *   the junction line where tabs meet the page.
+ * @param {number} params.panelWidth - The whole binder, along the tab row.
+ * @param {number} params.panelHeight - From the junction line to the far edge
+ *   of the page.
+ * @param {number} params.gapBeforeTabs - Free room before the first tab, and
+ * @param {number} params.gapAfterTabs - after the last one: a page corner on
+ *   the tab-row side is only rounded when its gap has room for the radius.
+ * @param {"top"|"bottom"|"left"|"right"} params.tabsPosition
+ * @returns {string} An SVG path `d` attribute.
+ */
+export const buildBinderPath = ({
   tabX,
   tabWidth,
   tabRowHeight,
