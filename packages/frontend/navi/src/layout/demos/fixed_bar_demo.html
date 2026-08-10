@@ -31,23 +31,39 @@
       .screens {
         display: flex;
         flex-wrap: wrap;
-        gap: 24px;
+        gap: 20px;
       }
+      /* Each screen is a real phone-sized window, scaled down: the page inside
+         keeps a phone's viewport — its layout, its scrolling — while taking a
+         third of the room here, so the cases sit side by side instead of being
+         scrolled past one at a time. */
       .screen {
+        --screen-width: 390px;
+        --screen-height: 680px;
+        --screen-scale: 0.55;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
       }
-      .screen > iframe {
-        width: 390px;
-        height: 640px;
-        background: white;
+      .screen > .viewport {
+        width: calc(var(--screen-width) * var(--screen-scale));
+        height: calc(var(--screen-height) * var(--screen-scale));
         border: 1px solid #cbd2dc;
-        border-radius: 12px;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .screen iframe {
+        display: block;
+        width: var(--screen-width);
+        height: var(--screen-height);
+        background: white;
+        border: none;
+        transform: scale(var(--screen-scale));
+        transform-origin: top left;
       }
       .screen > a {
         color: #1a237e;
-        font-size: 13px;
+        font-size: 12px;
       }
     </style>
   </head>
@@ -75,7 +91,9 @@
       // against a real window.
       const Screen = ({ src, caption }) => (
         <div className="screen">
-          <iframe src={src} title={caption} />
+          <div className="viewport">
+            <iframe src={src} title={caption} />
+          </div>
           <a href={src} target="_blank" rel="noreferrer">
             {caption} ↗
           </a>
@@ -111,6 +129,30 @@
               <Screen
                 src="./fixed_bar/top_and_bottom.html"
                 caption="two bars, and one that comes and goes"
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
+            <Heading id="anchors">Scrolling to something</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/top.html"
+                caption="press ↑ first / middle / ↓ last"
+              />
+              <Screen
+                src="./fixed_bar/top_and_bottom.html"
+                caption="the same, with a bar on each side"
+              />
+            </div>
+          </div>
+
+          <div className="demo-section">
+            <Heading id="binder">A bottom nav drawn by a Binder</Heading>
+            <div className="screens">
+              <Screen
+                src="./fixed_bar/binder_nav.html"
+                caption="Binder as the app shell, tabs at the bottom"
               />
             </div>
           </div>

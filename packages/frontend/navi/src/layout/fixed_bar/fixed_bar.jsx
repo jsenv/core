@@ -103,7 +103,11 @@ const css = /* css */ `
   }
 `;
 
-const FixedBarStyleCSSVars = {
+// Written into the element's own style rather than handed to Box as style
+// props: several of these names already mean something else to a Box ("size"
+// is its font size), and a bar's size is its thickness on whichever axis it
+// sits — a meaning only this component can give them.
+const FIXED_BAR_CSS_VARS = {
   size: "--navi-fixed-bar-size",
   maxWidth: "--navi-fixed-bar-max-width",
   background: "--navi-fixed-bar-background",
@@ -144,11 +148,26 @@ export const FixedBar = ({
   area = "top",
   size,
   maxWidth,
+  background,
   borderWidth,
+  borderColor,
   border = true,
+  style,
   ...props
 }) => {
   import.meta.css = css;
+
+  const ownStyle = { ...style };
+  const setVar = (name, value) => {
+    if (value !== undefined) {
+      ownStyle[FIXED_BAR_CSS_VARS[name]] = withPixelUnit(value);
+    }
+  };
+  setVar("size", size);
+  setVar("maxWidth", maxWidth);
+  setVar("background", background);
+  setVar("borderWidth", borderWidth);
+  setVar("borderColor", borderColor);
 
   // The reserve is published on <html>, where a `size` given as a prop — set
   // on the bar itself — would not be readable: it has to be the expression,
@@ -169,11 +188,8 @@ export const FixedBar = ({
       baseClassName="navi_fixed_bar"
       data-area={area}
       data-border={border ? undefined : "none"}
-      size={withPixelUnit(size)}
-      maxWidth={withPixelUnit(maxWidth)}
-      borderWidth={withPixelUnit(borderWidth)}
+      style={ownStyle}
       {...props}
-      styleCSSVars={FixedBarStyleCSSVars}
     >
       {children}
     </Box>
