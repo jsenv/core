@@ -1,0 +1,33 @@
+/* The shell every fixed_bar demo page shares: a column bounded like the bars,
+   with the overflow that makes position:sticky unusable for them. */
+:root {
+  --navi-fixed-bar-max-width: 600px;
+}
+body {
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #eef1f5;
+}
+#app {
+  max-width: var(--navi-fixed-bar-max-width);
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: white;
+  overflow-x: auto;
+}
+.page {
+  padding: 16px;
+}
+.row {
+  margin-bottom: 8px;
+  padding: 12px;
+  background: #f3f5f9;
+  border-radius: 6px;
+}
+.last {
+  padding: 12px;
+  color: white;
+  background: #16a34a;
+  border-radius: 6px;
+}
