@@ -6422,6 +6422,16 @@ const applyOnTwoProps = (propA, propB) => {
   };
 };
 
+// How much of the free space an expanding item claims next to its siblings:
+// expand={30} between four expand={18} is the wide one in the middle. A bare
+// `expand` claims one share, like everyone else asking for their part.
+const expandWeight = (value) => {
+  if (value === true || value === "") {
+    return 1;
+  }
+  return value;
+};
+
 const LAYOUT_PROPS = {
   // all are handled by navi-attributes
   inline: () => {},
@@ -6529,7 +6539,7 @@ const DIMENSION_PROPS = {
         return { flexGrow: 1 };
       }
       // Parent is flex-x: grow as flex item
-      return { flexGrow: 1, flexBasis: "0%" };
+      return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-y" || parentBoxFlow === "inline-flex-y") {
       return {
@@ -6553,7 +6563,7 @@ const DIMENSION_PROPS = {
         return { flexGrow: 1 };
       }
       // Parent is flex-y: grow as flex item
-      return { flexGrow: 1, flexBasis: "0%" };
+      return { flexGrow: expandWeight(value), flexBasis: "0%" };
     }
     if (parentBoxFlow === "flex-x" || parentBoxFlow === "inline-flex-x") {
       return {
@@ -7833,6 +7843,11 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":visited": {
     attribute: "data-visited",
+  },
+  // Written by whoever knows the current url — a Link from its href, a Button
+  // from its route — so it lives here rather than with one of them.
+  ":-navi-href-current": {
+    attribute: "data-href-current",
   },
 });
 const definePseudoClass = (pseudoClass, definition) => {
@@ -30354,9 +30369,6 @@ Object.assign(PSEUDO_CLASSES, {
   },
   ":-navi-href-anchor": {
     attribute: "data-href-anchor"
-  },
-  ":-navi-href-current": {
-    attribute: "data-href-current"
   }
 });
 
@@ -31958,15 +31970,16 @@ installImportMetaCssBuild(import.meta);/**
  * 2. **It gives its space back.** Being fixed it covers the content: without a
  *    reserve the end of a long page stays under it, unreachable. It publishes
  *    what it takes on <html> — see fixed_bar_space.js.
- * 3. **It reaches under the notch.** `env(safe-area-inset-*)` pushes the
- *    content in while the background keeps running to the edge of the screen.
- *    Note that every `env(safe-area-inset-*)` is 0 unless the page asks for
- *    it: `<meta name="viewport" content="…, viewport-fit=cover">`.
- * 4. **Its hairline is a box-shadow, not a border.** `width`/`height` is the
- *    bar's content box, so the safe-area padding adds outside it: the size you
- *    asked for is the size the content gets, whatever the device does. A real
- *    border would eat into it; a box-shadow draws the identical line and stays
- *    out of layout.
+ * 3. **It reaches under the notch.** `env(safe-area-inset-*)` is padding, so
+ *    the content is pushed in while the background keeps running to the edge of
+ *    the screen. Across the bar that inset is added to `width`/`height` too, so
+ *    the size asked for is the size the content gets whatever the device does;
+ *    along the bar it adds to the padding asked for. Note that every
+ *    `env(safe-area-inset-*)` is 0 unless the page asks for it:
+ *    `<meta name="viewport" content="…, viewport-fit=cover">`.
+ * 4. **Its hairline is a box-shadow, not a border.** A real border would eat
+ *    into the size; a box-shadow draws the identical line and stays out of
+ *    layout.
  */
 const css$M = /* css */`
   @layer navi {
@@ -31977,11 +31990,11 @@ const css$M = /* css */`
       --navi-fixed-bar-background: var(--navi-surface-color);
       --navi-fixed-bar-border-width: 1px;
       --navi-fixed-bar-border-color: var(--navi-separator-color-default);
-      /* Along the bar only: room so its content never touches the edge of the
-         screen. Across it there is nothing to add — that direction is what the
-         width/height prop names, and padding there would only make the bar
-         thicker than the size asked for. */
-      --navi-fixed-bar-padding: var(--navi-s);
+      /* Along the bar only — across it there is nothing to add, that direction
+         is what the width/height prop names. None by default: a row of items
+         sharing the whole strip is as common as a toolbar wanting air at its
+         ends, and only the second can ask. */
+      --navi-fixed-bar-padding: 0px;
     }
   }
 
@@ -31991,58 +32004,69 @@ const css$M = /* css */`
     position: fixed;
     z-index: 1;
     display: flex;
-    /* content-box against an app that is border-box everywhere else: the size
-       stays bare and the safe-area padding adds OUTSIDE it, so a bar asked for
-       56px still shows 56px of bar under the notch instead of 56px minus it. */
-    box-sizing: content-box;
+    box-sizing: border-box;
     margin: auto;
     align-items: center;
     background: var(--navi-fixed-bar-background);
 
+    /* Along the bar, the two insets that can bite into it there are added to
+       the padding asked for: in landscape the notch is on a side, and a top bar
+       whose padding ignored it would put its first item under it. */
     &[data-area="top"],
     &[data-area="bottom"] {
       right: 0;
       left: 0;
       /* No width of its own: pinned to both edges, the used width absorbs the
-         padding instead of being inflated by it — which a content-box
-         "width: 100%" would do. max-width then narrows it and the auto
-         margins re-center it. */
+         padding instead of being inflated by it. max-width then narrows it and
+         the auto margins re-center it. */
       max-width: var(--navi-fixed-bar-max-width);
-      height: var(--navi-fixed-bar-height);
-      padding-right: var(--navi-fixed-bar-padding);
-      padding-left: var(--navi-fixed-bar-padding);
+      padding-right: calc(
+        var(--navi-fixed-bar-padding) + env(safe-area-inset-right)
+      );
+      padding-left: calc(
+        var(--navi-fixed-bar-padding) + env(safe-area-inset-left)
+      );
     }
     &[data-area="left"],
     &[data-area="right"] {
       top: 0;
       bottom: 0;
-      width: var(--navi-fixed-bar-width);
-      padding-top: var(--navi-fixed-bar-padding);
-      padding-bottom: var(--navi-fixed-bar-padding);
+      padding-top: calc(
+        var(--navi-fixed-bar-padding) + env(safe-area-inset-top)
+      );
+      padding-bottom: calc(
+        var(--navi-fixed-bar-padding) + env(safe-area-inset-bottom)
+      );
       flex-direction: column;
     }
 
-    /* The inset on this edge alone: the one the bar is pinned to. */
+    /* Across the bar, the inset of the edge it is pinned to is padding AND is
+       added to the size: the background then runs under the notch while the
+       content keeps the whole width/height asked for. */
     &[data-area="top"] {
       top: 0;
+      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-top));
       padding-top: env(safe-area-inset-top);
       box-shadow: 0 var(--navi-fixed-bar-border-width) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="bottom"] {
       bottom: 0;
+      height: calc(var(--navi-fixed-bar-height) + env(safe-area-inset-bottom));
       padding-bottom: env(safe-area-inset-bottom);
       box-shadow: 0 calc(-1 * var(--navi-fixed-bar-border-width)) 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="left"] {
       left: 0;
+      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-left));
       padding-left: env(safe-area-inset-left);
       box-shadow: var(--navi-fixed-bar-border-width) 0 0
         var(--navi-fixed-bar-border-color);
     }
     &[data-area="right"] {
       right: 0;
+      width: calc(var(--navi-fixed-bar-width) + env(safe-area-inset-right));
       padding-right: env(safe-area-inset-right);
       box-shadow: calc(-1 * var(--navi-fixed-bar-border-width)) 0 0
         var(--navi-fixed-bar-border-color);
@@ -32053,6 +32077,11 @@ const css$M = /* css */`
   }
 `;
 const FixedBarStyleCSSVars = {
+  // width/height go through the vars the size calc reads: written as plain
+  // inline styles they would land on the border box and the safe-area inset
+  // would eat into the size asked for.
+  width: "--navi-fixed-bar-width",
+  height: "--navi-fixed-bar-height",
   maxWidth: "--navi-fixed-bar-max-width",
   padding: "--navi-fixed-bar-padding",
   background: "--navi-fixed-bar-background",
@@ -32076,8 +32105,8 @@ const FixedBarStyleCSSVars = {
  *   the window it is pinned to.
  * @param {string|number} [props.height] - For a bar on the top or bottom
  * @param {string|number} [props.width] - …and for one on a side. The safe-area
- *   inset is NOT included in it: the inset is added outside, and the content
- *   keeps the size asked for.
+ *   inset is NOT part of it: it is added on top, so the content keeps the size
+ *   asked for.
  * @param {boolean} [props.border=true] - The hairline on the content side.
  *   Drawn with a box-shadow so it never eats into the size; give it a
  *   `borderWidth`/`borderColor`, or `border={false}` for none.
@@ -32095,10 +32124,10 @@ const FixedBar = ({
   props.ref = props.ref || defaultRef;
   // Whichever of width/height crosses the edge the bar sits on is what the
   // content has to be given back — and the bar's border box already IS that:
-  // the size it was given, plus the safe-area padding added outside it.
-  // Measured rather than rebuilt as a calc() expression, so a size coming from
-  // anywhere — a prop, a theme variable, the content itself — is reserved just
-  // the same, and each `env()` inset stays the browser's business alone.
+  // the size it was given plus the inset of that edge. Measured rather than
+  // rebuilt as a calc() expression, so a size coming from anywhere — a prop, a
+  // theme variable, the content itself — is reserved just the same, and each
+  // `env()` inset stays the browser's business alone.
   const vertical = area === "left" || area === "right";
   const {
     ref
@@ -35220,6 +35249,7 @@ const ButtonWithRoute = props => {
     route,
     routeParams,
     children,
+    pseudoState,
     ...rest
   } = props;
   const url = route.buildUrl(routeParams);
@@ -35228,9 +35258,15 @@ const ButtonWithRoute = props => {
   } = useRouteStatus(route);
   const paramsAreMatching = route.matchesParams(routeParams);
   const linkMatching = matching && paramsAreMatching;
+
+  // Merged into whatever the caller already holds: a button can be forced into
+  // a state for a demo and still learn its own current-ness from its route.
   return jsx(Next, {
     href: url,
-    "data-href-current": linkMatching ? "" : undefined,
+    pseudoState: {
+      ...pseudoState,
+      ":-navi-href-current": linkMatching
+    },
     ...rest,
     children: children || route.buildRelativeUrl(routeParams)
   });
@@ -35272,6 +35308,11 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
         black
       );
       --button-color-hover: var(--button-color);
+      /* Current: the button points at the page one is already on. Nothing by
+         default — it is a nav item that wants to say so, not every button. */
+      --button-border-color-current: var(--button-border-color);
+      --button-background-color-current: var(--button-background-color);
+      --button-color-current: var(--button-color);
       /* Pressed */
       --button-border-color-pressed: color-mix(
         in srgb,
@@ -35315,6 +35356,13 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
   .navi_button {
     --x-button-outline-offset: var(--button-outline-offset);
     --x-button-border-color: var(--button-border-color);
+    /* The shorthand wins over the parts when it is given, which is what makes
+       border="none" remove the line: the parts alone can only ever describe
+       a border, never the absence of one. */
+    --x-button-border: var(
+      --button-border,
+      var(--button-border-width) solid var(--x-button-border-color)
+    );
     --x-button-background: var(--button-background);
     --x-button-background-color: var(--button-background-color);
     --x-button-color: var(--button-color);
@@ -35378,9 +35426,7 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
         --x-button-background-color,
         var(--x-button-background)
       );
-      border-width: var(--button-border-width);
-      border-style: solid;
-      border-color: var(--x-button-border-color);
+      border: var(--x-button-border);
       border-radius: inherit;
       outline-width: var(--button-outline-width);
       outline-color: var(--button-outline-color);
@@ -35401,6 +35447,12 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
       }
     }
 
+    /* Current */
+    &[data-href-current] {
+      --x-button-border-color: var(--button-border-color-current);
+      --x-button-background-color: var(--button-background-color-current);
+      --x-button-color: var(--button-color-current);
+    }
     /* Hover */
     &[data-hover] {
       --x-button-border-color: var(--button-border-color-hover);
@@ -35547,6 +35599,21 @@ installImportMetaCssBuild(import.meta);const css$E = /* css */`
         --x-button-background-color: transparent;
       }
     }
+    /* Last word on the shrink, over whatever the variant decided: the variant
+       guesses from how the button is drawn, and that guess is wrong as soon as
+       the content is a box of its own — a discrete button holding a filled
+       pill reads as a button being pressed, not as its content flinching. */
+    &[data-press-effect="scale"][data-pressed] {
+      .navi_button_content {
+        transform: scale(0.9);
+      }
+    }
+    &[data-press-effect="none"][data-pressed] {
+      .navi_button_content {
+        transform: none;
+      }
+    }
+
     &[data-icon] {
       --button-padding: 0;
       display: inline-flex;
@@ -35607,6 +35674,7 @@ const ButtonUI = props => {
     rel,
     // visual
     variant,
+    pressEffect,
     icon,
     cta,
     spacing
@@ -35620,18 +35688,31 @@ const ButtonUI = props => {
     children
   } = buttonControlHostProps;
   const loading = basePseudoState[":-navi-loading"];
+
+  // subscribe to document url to re-render and re-compute getHrefTargetInfo
+  useDocumentUrl();
   const isLink = href !== undefined;
   let as = "button";
   let innerTarget;
   let innerRel;
+  let innerCurrent;
   if (isLink) {
     as = "a";
     const {
-      isSameSite
+      isSameSite,
+      isCurrent
     } = getHrefTargetInfo(href);
     innerTarget = target === undefined ? isSameSite ? undefined : "_blank" : target;
     innerRel = rel === undefined ? isSameSite ? undefined : "noopener noreferrer" : rel;
+    innerCurrent = isCurrent;
   }
+  // For a button that has only an href: nothing else knows it points at the
+  // page one is on. A route says so through `pseudoState`, which Box lays over
+  // this one.
+  buttonControlHostProps.basePseudoState = {
+    ...basePseudoState,
+    ":-navi-href-current": innerCurrent
+  };
   const visualSelector = ".navi_button_content";
   useAccentColorAttributes(ref, null, {
     elementSelector: visualSelector
@@ -35651,6 +35732,7 @@ const ButtonUI = props => {
     type: "button",
     spacing: undefined,
     cta: undefined,
+    pressEffect: undefined,
     ref: ref,
     as: as,
     href: href,
@@ -35680,6 +35762,7 @@ const ButtonUI = props => {
       e.preventDefault();
     },
     "data-variant": variant,
+    "data-press-effect": pressEffect,
     "data-icon": icon ? "" : undefined,
     "data-cta": cta ? "" : undefined,
     "data-callout-arrow-x": "center"
@@ -35741,6 +35824,11 @@ const ButtonStyleCSSVars = {
   ":-navi-pressed": {
     borderColor: "--button-border-color-pressed"
   },
+  ":-navi-href-current": {
+    backgroundColor: "--button-background-color-current",
+    borderColor: "--button-border-color-current",
+    color: "--button-color-current"
+  },
   ":read-only": {
     backgroundColor: "--button-background-color-readonly",
     borderColor: "--button-border-color-readonly",
@@ -35752,7 +35840,7 @@ const ButtonStyleCSSVars = {
     color: "--button-color-disabled"
   }
 };
-const ButtonPseudoClasses = [":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
+const ButtonPseudoClasses = [":-navi-href-current", ":hover", ":active", ":-navi-pressed", ":focus", ":focus-visible", ":read-only", ":disabled", ":-navi-loading"];
 const ButtonPseudoElements = ["::-navi-loader"];
 const ButtonShadow = () => {
   return jsx("span", {
