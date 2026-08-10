@@ -47001,8 +47001,41 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
   }
   .navi_badge {
     --font-size: 0.7em;
-    --padding-x: 0.8em;
-    --padding-y: 0.4em;
+    --badge-padding-x-default: 0.8em;
+    --badge-padding-y-default: 0.4em;
+
+    /* Each side resolves the most specific value it was given, from the side
+       itself down to the axis, the shorthand, then the default. Resolved once
+       here because the close button below reuses these to cancel the badge
+       padding on the edge it sits on. */
+    --x-badge-padding-top: var(
+      --badge-padding-top,
+      var(
+        --badge-padding-y,
+        var(--badge-padding, var(--badge-padding-y-default))
+      )
+    );
+    --x-badge-padding-right: var(
+      --badge-padding-right,
+      var(
+        --badge-padding-x,
+        var(--badge-padding, var(--badge-padding-x-default))
+      )
+    );
+    --x-badge-padding-bottom: var(
+      --badge-padding-bottom,
+      var(
+        --badge-padding-y,
+        var(--badge-padding, var(--badge-padding-y-default))
+      )
+    );
+    --x-badge-padding-left: var(
+      --badge-padding-left,
+      var(
+        --badge-padding-x,
+        var(--badge-padding, var(--badge-padding-x-default))
+      )
+    );
 
     --x-background: var(--background, light-dark(#e0e0e0, #3a3a3a));
     --x-background-color: var(--background-color, var(--x-background));
@@ -47014,10 +47047,10 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
     position: relative;
     display: inline;
     max-width: 200px;
-    padding-top: var(--padding-y);
-    padding-right: var(--padding-x);
-    padding-bottom: var(--padding-y);
-    padding-left: var(--padding-x);
+    padding-top: var(--x-badge-padding-top);
+    padding-right: var(--x-badge-padding-right);
+    padding-bottom: var(--x-badge-padding-bottom);
+    padding-left: var(--x-badge-padding-left);
     align-items: stretch;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -47041,25 +47074,25 @@ installImportMetaCssBuild(import.meta);const css$t = /* css */`
 
     [role="button"] {
       display: inline-flex;
-      margin-top: calc(-1 * var(--padding-y));
-      margin-bottom: calc(-1 * var(--padding-y));
-      padding-top: var(--padding-y);
-      padding-right: calc(var(--padding-x) / 2);
-      padding-bottom: var(--padding-y);
-      padding-left: calc(var(--padding-x) / 2);
+      margin-top: calc(-1 * var(--x-badge-padding-top));
+      margin-bottom: calc(-1 * var(--x-badge-padding-bottom));
+      padding-top: var(--x-badge-padding-top);
+      padding-right: calc(var(--x-badge-padding-right) / 2);
+      padding-bottom: var(--x-badge-padding-bottom);
+      padding-left: calc(var(--x-badge-padding-left) / 2);
       align-items: center;
       cursor: pointer;
       pointer-events: auto;
       user-select: none;
 
       &:first-child {
-        margin-left: calc(-1 * var(--padding-x));
+        margin-left: calc(-1 * var(--x-badge-padding-left));
         border-top-left-radius: inherit;
         border-bottom-left-radius: inherit;
       }
 
       &:last-child {
-        margin-right: calc(-1 * var(--padding-x));
+        margin-right: calc(-1 * var(--x-badge-padding-right));
         border-top-right-radius: inherit;
         border-bottom-right-radius: inherit;
       }
@@ -47087,16 +47120,21 @@ const Badge = ({
     bold: true,
     maxLines: 1,
     ...props,
-    styleCSSVars: BadgeStyleCSSVars$1,
+    styleCSSVars: BadgeStyleCSSVars,
     spacing: jsx("span", {}),
     children: children
   });
 };
-const BadgeStyleCSSVars$1 = {
+const BadgeStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
+  padding: "--badge-padding",
+  paddingX: "--badge-padding-x",
+  paddingY: "--badge-padding-y",
+  paddingTop: "--badge-padding-top",
+  paddingRight: "--badge-padding-right",
+  paddingBottom: "--badge-padding-bottom",
+  paddingLeft: "--badge-padding-left",
   backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",
@@ -56715,8 +56753,40 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
     --x-background-color: var(--background-color, var(--x-background));
     --x-color-contrasting: var(--navi-color-white);
     --x-color: var(--color, var(--x-color-contrasting));
-    --padding-x: 0.5em;
-    --padding-y: 0.2em;
+    --badge-count-padding-x-default: 0.5em;
+    --badge-count-padding-y-default: 0.2em;
+
+    /* Each side resolves the most specific value it was given, from the side
+       itself down to the axis, the shorthand, then the default. */
+    --x-badge-count-padding-top: var(
+      --badge-count-padding-top,
+      var(
+        --badge-count-padding-y,
+        var(--badge-count-padding, var(--badge-count-padding-y-default))
+      )
+    );
+    --x-badge-count-padding-right: var(
+      --badge-count-padding-right,
+      var(
+        --badge-count-padding-x,
+        var(--badge-count-padding, var(--badge-count-padding-x-default))
+      )
+    );
+    --x-badge-count-padding-bottom: var(
+      --badge-count-padding-bottom,
+      var(
+        --badge-count-padding-y,
+        var(--badge-count-padding, var(--badge-count-padding-y-default))
+      )
+    );
+    --x-badge-count-padding-left: var(
+      --badge-count-padding-left,
+      var(
+        --badge-count-padding-x,
+        var(--badge-count-padding, var(--badge-count-padding-x-default))
+      )
+    );
+
     position: relative;
     color: var(--x-color);
     font-size: var(--font-size);
@@ -56740,10 +56810,10 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
 
     /* Ellipse */
     &[data-ellipse] {
-      padding-top: var(--padding-y);
-      padding-right: var(--padding-x);
-      padding-bottom: var(--padding-y);
-      padding-left: var(--padding-x);
+      padding-top: var(--x-badge-count-padding-top);
+      padding-right: var(--x-badge-count-padding-right);
+      padding-bottom: var(--x-badge-count-padding-bottom);
+      padding-left: var(--x-badge-count-padding-left);
       line-height: normal;
       background: var(--x-background);
       background-color: var(--x-background-color);
@@ -56751,29 +56821,48 @@ installImportMetaCssBuild(import.meta);const css$b = /* css */`
 
       /* For ellipse + single char force the circle aspect as it's prettier */
       &[data-single-char] {
+        /* The digit sits in a square content box that the radius rounds into a
+           circle, so no padding is needed to obtain the shape. Sizing is
+           content-box: a padding prop then grows the square from the outside —
+           a bigger circle, or a pill on one axis — instead of eating into it
+           and pushing the digit out. */
+        --badge-count-padding-x-default: 0;
+        --badge-count-padding-y-default: 0;
+
         display: inline-block;
-        aspect-ratio: 1/1;
+        box-sizing: content-box;
+        width: 1.6em;
         height: 1.6em;
-        padding: 0;
         text-align: center;
         line-height: 1.6em;
+        /* Larger than any half-height it can reach, so the shape stays fully
+           round whatever the padding adds. */
+        border-radius: 100em;
       }
     }
 
     /* Circle */
     &[data-circle] {
       --x-number-font-size: var(--font-size);
+      /* Same as the single char ellipse: the radius comes from the number of
+         characters, padding grows it from the outside. */
+      --badge-count-padding-x-default: 0;
+      --badge-count-padding-y-default: 0;
 
       display: inline-flex;
       box-sizing: content-box;
       aspect-ratio: 1/1;
       width: var(--x-radius);
       height: var(--x-radius);
+      padding-top: var(--x-badge-count-padding-top);
+      padding-right: var(--x-badge-count-padding-right);
+      padding-bottom: var(--x-badge-count-padding-bottom);
+      padding-left: var(--x-badge-count-padding-left);
       align-items: center;
       justify-content: center;
       background: var(--x-background);
       background-color: var(--x-background-color);
-      border-radius: 50%;
+      border-radius: 100em;
 
       &[data-single-char] {
         --x-radius: 1.6em;
@@ -56875,11 +56964,16 @@ const BadgeCount = ({
     })
   });
 };
-const BadgeStyleCSSVars = {
+const BadgeCountStyleCSSVars = {
   borderWidth: "--border-width",
   borderRadius: "--border-radius",
-  paddingRight: "--padding-right",
-  paddingLeft: "--padding-left",
+  padding: "--badge-count-padding",
+  paddingX: "--badge-count-padding-x",
+  paddingY: "--badge-count-padding-y",
+  paddingTop: "--badge-count-padding-top",
+  paddingRight: "--badge-count-padding-right",
+  paddingBottom: "--badge-count-padding-bottom",
+  paddingLeft: "--badge-count-padding-left",
   backgroundColor: "--background-color",
   background: "--background",
   borderColor: "--border-color",
@@ -56918,7 +57012,7 @@ const BadgeCountEllipse = ({
     "data-loading": loading ? "" : undefined,
     "data-single-char": charCount === 1 ? "" : undefined,
     ...props,
-    styleCSSVars: BadgeStyleCSSVars,
+    styleCSSVars: BadgeCountStyleCSSVars,
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDotsSvg, {})
@@ -56944,7 +57038,7 @@ const BadgeCountCircle = ({
     "data-four-chars": charCount === 4 ? "" : undefined,
     "data-value-overflow": hasOverflow ? "" : undefined,
     ...props,
-    styleCSSVars: BadgeStyleCSSVars,
+    styleCSSVars: BadgeCountStyleCSSVars,
     spacing: "pre",
     children: loading ? jsx(Icon, {
       children: jsx(LoadingDotsSvg, {})
