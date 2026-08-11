@@ -70,8 +70,11 @@ const SeparatorContext = createContext(null);
 // Set by <List itemTransition>: each row then gets a view-transition-name of
 // its own, so a change wrapped in a view transition animates row by row.
 const ItemTransitionContext = createContext(false);
-// Hands out where each run of rows starts (see createOrderCursor).
-const ListCursorContext = createContext(null);
+// What the list knows about the collection as a whole: how many rows it has,
+// which of them it actually holds, and where each child's rows start. Filled in
+// by the children as they render (see createListVirtual), read by everything
+// that must reserve room for what is not rendered.
+const ListVirtualContext = createContext(null);
 // Set around each row a run of items renders (see ListItems): which row of the
 // collection it is, and where it stands among the rows the list holds. Carried
 // by context rather than injected into whatever vnode renderItem returned, so
@@ -87,9 +90,6 @@ const css = /* css */ `
       --list-border-width: 0px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
-      /* Air above and below a skeleton bar, so a run of them reads as several
-         rows rather than one block. */
-      --list-skeleton-bar-gap: 5px;
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
@@ -373,48 +373,12 @@ const css = /* css */ `
     list-style: none;
     /* background: pink; */
   }
-  /* Room held for rows that were never loaded (see List's own count): unlike
-     the rows that are merely windowed out, these are not one scroll event away
-     from being drawn — something has to be fetched first, and saying so is the
-     whole point. One bar per row, at the rhythm of a row, so scrolling into
-     them reads as content on its way. The mask cuts the shimmer into bars;
-     painting them as a repeating background instead would need a second layer
-     to hold the animation. */
-  .navi_list_virtual_filler[navi-virtual-filler-unloaded] {
-    background-image: linear-gradient(
-      90deg,
-      #e0e0e0 25%,
-      #f0f0f0 50%,
-      #e0e0e0 75%
-    );
-    background-size: 200% 100%;
-    mask-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0 var(--list-skeleton-bar-gap),
-      black var(--list-skeleton-bar-gap)
-        calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap)),
-      transparent calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap))
-        var(--virtual-item-size)
-    );
-    animation: navi_list_skeleton_shimmer 1.5s infinite;
-  }
   &[data-horizontal] {
     --list-max-height: none;
 
     .navi_list_virtual_filler {
       width: var(--size-to-fill, 0px);
       height: 100%;
-    }
-    .navi_list_virtual_filler[navi-virtual-filler-unloaded] {
-      mask-image: repeating-linear-gradient(
-        to right,
-        transparent 0 var(--list-skeleton-bar-gap),
-        black var(--list-skeleton-bar-gap)
-          calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap)),
-        transparent
-          calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap))
-          var(--virtual-item-size)
-      );
     }
   }
 
@@ -567,15 +531,6 @@ const css = /* css */ `
     order: 2;
   }
 
-  @keyframes navi_list_skeleton_shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
-  }
-
   ::highlight(navi-search-match) {
     color: var(--list-item-color-highlight);
     background-color: var(--list-item-background-color-highlight);
@@ -647,7 +602,6 @@ const ListUI = (props) => {
     expand,
     onListVisibleItemsChange,
     virtualItemSize,
-    count,
     onItemsMissing,
     loadMargin = 5,
     initialScrollToItem,
@@ -658,6 +612,7 @@ const ListUI = (props) => {
     searchNoMatchMode = "remove",
     loading,
     loadingFallback = "skeleton",
+    loadingSkeletonCount = 3,
     loadingSkeletonTemplate,
     error,
     horizontal,
@@ -725,13 +680,14 @@ const ListUI = (props) => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
-  // A new pass every time the list renders: its children are about to be laid
-  // out again, in order, and each run of rows takes its place from this.
-  const cursorRef = useRef(null);
-  if (!cursorRef.current) {
-    cursorRef.current = createOrderCursor();
+  // A new pass every time the list renders: its children are about to say
+  // again, in order, which rows of the collection they stand for.
+  const virtualRef = useRef(null);
+  if (!virtualRef.current) {
+    virtualRef.current = createListVirtual();
   }
-  cursorRef.current.openPass();
+  const virtual = virtualRef.current;
+  virtual.openPass();
 
   const {
     virtualItemSizeSignal,
@@ -743,7 +699,7 @@ const ListUI = (props) => {
     tracker,
     renderBudget,
     virtualItemSize,
-    count,
+    virtual,
     onItemsMissing,
     loadMargin,
     initialScrollToItem,
@@ -757,7 +713,10 @@ const ListUI = (props) => {
   };
 
   const noMatchCount = tracker.noMatchCountSignal.value;
-  const itemCount = tracker.countSignal.value;
+  // What the list stands for, which is not always what it holds: a run saying
+  // it covers 60 rows is not an empty list while it waits for the first of
+  // them (see List.Items).
+  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
   const searching = Boolean(searchText);
   const fallbackDisabled = fallback !== undefined && !fallback;
@@ -808,7 +767,7 @@ const ListUI = (props) => {
       const template = loadingSkeletonTemplate ?? <ListItem skeleton />;
       const skeletons = [];
       let skeletonIndex = 0;
-      while (skeletonIndex < resolveSkeletonCount(count, renderBudget)) {
+      while (skeletonIndex < loadingSkeletonCount) {
         if (separator && skeletonIndex > 0) {
           skeletons.push(
             cloneElement(resolveSeparatorVnode(separator, skeletonIndex - 1), {
@@ -901,8 +860,7 @@ const ListUI = (props) => {
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
-        count={count}
-        cursor={cursorRef.current}
+        virtual={virtual}
         pendingScrollRef={pendingScrollRef}
       >
         {content}
@@ -931,7 +889,6 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
- *   count?: number,
  *   onItemsMissing?: (detail: {start: number, end: number, count: number}) => void | Promise<any>,
  *   loadMargin?: number | string,
  *   initialScrollToItem?: string | {id: string, block?: "start" | "center" | "end" | "nearest"},
@@ -942,6 +899,7 @@ const ListFirstResolver = (props) => {
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   loading?: boolean,
  *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
+ *   loadingSkeletonCount?: number,
  *   loadingSkeletonTemplate?: import("preact").ComponentChildren,
  *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
@@ -956,26 +914,22 @@ const ListFirstResolver = (props) => {
  *   [key: string]: any,
  * }>}
  * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
- *   What to display in place of the items while `loading`: `"skeleton"` renders
- *   `count` placeholder rows (look: `loadingSkeletonTemplate`), `"loader"` a
- *   single centered spinner, and anything else is rendered as-is in a row of
- *   its own. A falsy value displays nothing.
- * @param {number} [props.count]
- *   How many items the collection holds in total — not how many are passed as
- *   children. Give it when the children are only a slice of a larger whole
- *   (infinite scroll, paginated backend), together with where that slice sits
- *   (`<List.Items itemStart>`): the list then reserves the room of what is
- *   missing on either side — so the scrollbar tells the truth, and scrolling
- *   into what is not loaded shows rows on their way rather than a hole — and
- *   reports what it lacks through `onItemsMissing`. While `loading` it is also
- *   how many skeleton rows are drawn. Defaults to what is rendered.
+ *   What to display in place of the items while `loading` — that is, while
+ *   there is nothing to show at all: `"skeleton"` renders
+ *   `loadingSkeletonCount` placeholder rows (look:
+ *   `loadingSkeletonTemplate`), `"loader"` a single centered spinner, and
+ *   anything else is rendered as-is in a row of its own. A falsy value
+ *   displays nothing. A list that knows how many rows it will have has no use
+ *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
+ *   as skeletons in place, one per row, virtualized like the rest.
  * @param {(detail: {start: number, end: number, count: number}) => void|Promise<any>} [props.onItemsMissing]
- *   The user is about to look at rows the list does not have: `start` and
- *   `end` are the absolute indexes of that range (inclusive), so this fires
- *   just as well on reaching an edge as on jumping the scrollbar into the
- *   middle of a region that was never loaded. Returning a promise holds the
- *   next call until it settles; one range at a time, and the same range is
- *   never asked for twice in a row while nothing has been loaded.
+ *   The user is about to look at rows the list stands for but does not have
+ *   (see `<List.Items count>`): `start` and `end` are the indexes of that
+ *   range in the collection, inclusive — so this fires just as well on
+ *   reaching an edge as on jumping the scrollbar into the middle of a region
+ *   that was never loaded. Returning a promise holds the next call until it
+ *   settles; one range at a time, and the same range is never asked for twice
+ *   in a row while nothing has been loaded.
  * @param {number|string} [props.loadMargin=5]
  *   How far outside the visible band `onItemsMissing` looks ahead: a number of
  *   rows, or an explicit distance (`"300px"`).
@@ -1011,8 +965,7 @@ const ListContent = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
-  count,
-  cursor,
+  virtual,
   pendingScrollRef,
   children,
 }) => {
@@ -1050,8 +1003,7 @@ const ListContent = ({
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
-        count={count}
-        cursor={cursor}
+        virtual={virtual}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           {children}
@@ -1083,7 +1035,7 @@ const useListScrollSync = ({
   tracker,
   renderBudget,
   virtualItemSize,
-  count,
+  virtual,
   onItemsMissing,
   loadMargin,
   initialScrollToItem,
@@ -1099,13 +1051,6 @@ const useListScrollSync = ({
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
-  // Where the loaded rows sit in the whole collection, read at the moment it is
-  // needed rather than threaded through: it changes on every commit while the
-  // scroll listener is installed once.
-  const countRef = useRef(null);
-  countRef.current = count;
-  const getVirtualBounds = () =>
-    getVirtualBoundsOf(tracker.visibleItemsSignal.peek(), countRef.current);
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -1134,12 +1079,9 @@ const useListScrollSync = ({
     if (itemCount === 0) {
       return;
     }
-    let index = items.findIndex((i) => i.id === item.id);
-    if (index === -1) {
+    const index = item.index;
+    if (index === undefined) {
       return;
-    }
-    if (index >= itemCount) {
-      index = itemCount - 1;
     }
 
     const scrollItemIntoView = (itemEl) => {
@@ -1358,7 +1300,6 @@ const useListScrollSync = ({
           virtualItemSizeSignal,
           renderWindowRef,
           horizontal,
-          placeholderCountStart: getVirtualBounds().before,
         });
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
@@ -1404,10 +1345,14 @@ const useListScrollSync = ({
   // rows it has are a slice of a larger whole, and which slice is missing is
   // not always "the one after the last" — dragging the scrollbar lands in the
   // middle of a region that was never loaded just as easily.
-  const missingStateRef = useRef({ busy: false, range: null, boundsKey: null });
+  const missingStateRef = useRef({ busy: false, range: null, heldKey: null });
   const missingRef = useRef(null);
   missingRef.current = { onItemsMissing, loadMargin };
-  const requestItems = (start, end, boundsKey) => {
+  const requestItems = (start, end) => {
+    const onItemsMissing = missingRef.current.onItemsMissing;
+    if (!onItemsMissing) {
+      return;
+    }
     const state = missingStateRef.current;
     if (state.busy) {
       return;
@@ -1416,26 +1361,27 @@ const useListScrollSync = ({
     // can only produce the same answer — and a single flick of the wheel fires
     // dozens of scroll events, a source with nothing left to send changes
     // nothing at all.
+    const heldKey = `${virtual.totalSignal.peek()}:${tracker.countSignal.peek()}`;
     const asked = state.range;
     if (
       asked &&
-      state.boundsKey === boundsKey &&
+      state.heldKey === heldKey &&
       start >= asked.start &&
       end <= asked.end
     ) {
       return;
     }
     state.range = { start, end };
-    state.boundsKey = boundsKey;
+    state.heldKey = heldKey;
     state.busy = true;
     debugScroll(`items missing: [${start}, ${end}]`);
     const release = () => {
       state.busy = false;
     };
-    const result = missingRef.current.onItemsMissing({
+    const result = onItemsMissing({
       start,
       end,
-      count: countRef.current,
+      count: virtual.totalSignal.peek(),
     });
     if (result && typeof result.then === "function") {
       result.then(release, release);
@@ -1443,82 +1389,57 @@ const useListScrollSync = ({
       release();
     }
   };
+  virtual.requestItems = requestItems;
   const checkMissingItems = () => {
-    const { onItemsMissing, loadMargin } = missingRef.current;
-    if (!onItemsMissing || !ref.current) {
+    if (!missingRef.current.onItemsMissing || !ref.current) {
       return;
     }
-    const count = countRef.current;
-    if (count === undefined) {
-      return;
-    }
-    const visibleItems = tracker.visibleItemsSignal.peek();
-    const loadedCount = visibleItems.length;
-    if (loadedCount === 0) {
-      // Nothing on screen to measure against — not even a row height. The
-      // first row is the one thing we can name; asking for it is what gets
-      // the list started.
-      if (count > 0) {
-        requestItems(0, 0, "empty");
-      }
+    const total = virtual.totalSignal.peek();
+    if (total === 0) {
       return;
     }
     const virtualItemSize = virtualItemSizeSignal.peek();
     if (virtualItemSize === 0) {
       return;
     }
-    const firstIndex = visibleItems[0].index;
-    const lastIndex = visibleItems[loadedCount - 1].index;
-    const { before, after } = getVirtualBounds();
     const viewportRect = getScrollerViewportRect(getScroller());
     const listRect = getListEl().getBoundingClientRect();
-    const margin = resolveLoadMargin(loadMargin, virtualItemSize);
-    // The band the loaded rows occupy on screen, and the band the user is
-    // about to look at. Everything outside the first and inside the second is
-    // what has to be fetched.
-    const loadedFrom =
-      (horizontal ? listRect.left : listRect.top) + before * virtualItemSize;
-    const loadedTo =
-      (horizontal ? listRect.right : listRect.bottom) - after * virtualItemSize;
-    const wantedFrom =
-      (horizontal ? viewportRect.left : viewportRect.top) - margin;
-    const wantedTo =
-      (horizontal ? viewportRect.right : viewportRect.bottom) + margin;
-    // A position outside the loaded band falls on a reserved row: how many rows
-    // away it is, is the distance divided by the room one row is given.
-    const rowIndexAt = (pos) => {
-      if (pos < loadedFrom) {
-        return firstIndex - Math.ceil((loadedFrom - pos) / virtualItemSize);
-      }
-      if (pos > loadedTo) {
-        return lastIndex + Math.ceil((pos - loadedTo) / virtualItemSize);
-      }
-      return null;
-    };
-    const wantedFromIndex = rowIndexAt(wantedFrom);
-    const wantedToIndex = rowIndexAt(wantedTo);
-    const boundsKey = `${firstIndex}:${lastIndex}:${loadedCount}`;
-    if (wantedFromIndex !== null && wantedFromIndex < firstIndex) {
-      const start = wantedFromIndex < 0 ? 0 : wantedFromIndex;
-      const end =
-        wantedToIndex !== null && wantedToIndex < firstIndex
-          ? wantedToIndex
-          : firstIndex - 1;
-      if (end >= start) {
-        requestItems(start, end, boundsKey);
-        return;
-      }
+    const margin = resolveLoadMargin(
+      missingRef.current.loadMargin,
+      virtualItemSize,
+    );
+    // The band the user is about to look at, in rows of the collection.
+    const listStart = horizontal ? listRect.left : listRect.top;
+    const bandFrom =
+      (horizontal ? viewportRect.left : viewportRect.top) - listStart - margin;
+    const bandTo =
+      (horizontal ? viewportRect.right : viewportRect.bottom) -
+      listStart +
+      margin;
+    let first = Math.floor(bandFrom / virtualItemSize);
+    let last = Math.floor(bandTo / virtualItemSize);
+    if (first < 0) {
+      first = 0;
     }
-    if (wantedToIndex !== null && wantedToIndex > lastIndex) {
-      const start =
-        wantedFromIndex !== null && wantedFromIndex > lastIndex
-          ? wantedFromIndex
-          : lastIndex + 1;
-      const end = wantedToIndex > count - 1 ? count - 1 : wantedToIndex;
-      if (end >= start) {
-        requestItems(start, end, boundsKey);
-      }
+    if (last > total - 1) {
+      last = total - 1;
     }
+    let missingStart = -1;
+    let missingEnd = -1;
+    let index = first;
+    while (index <= last) {
+      if (!virtual.holds(index)) {
+        if (missingStart === -1) {
+          missingStart = index;
+        }
+        missingEnd = index;
+      }
+      index++;
+    }
+    if (missingStart === -1) {
+      return;
+    }
+    requestItems(missingStart, missingEnd);
   };
   // A list that fits in its scroller never emits a scroll event, so nothing
   // would ever ask for the rest. Only while it does not overflow: as soon as
@@ -1545,11 +1466,8 @@ const useListScrollSync = ({
   // on changes it attributes to a scroll, and the fillers resize in the very
   // same commit — so the row at the top of the viewport is measured before the
   // commit and put back at the same offset after it.
-  const itemCount = tracker.countSignal.peek();
-  const anchoringApplies = count !== undefined || itemCount > renderBudget;
   const anchorRef = useRef(null);
   if (
-    anchoringApplies &&
     !searchText &&
     !anchorRef.current &&
     !pendingScrollRef.current &&
@@ -1558,7 +1476,7 @@ const useListScrollSync = ({
     anchorRef.current = captureScrollAnchor({
       scrollerEl: getScroller(),
       listEl: getListEl(),
-      visibleItems: tracker.visibleItemsSignal.peek(),
+      items: tracker.visibleItemsSignal.peek(),
       horizontal,
     });
   }
@@ -1568,30 +1486,31 @@ const useListScrollSync = ({
       anchorRef.current = null;
       return;
     }
-    const visibleItems = tracker.visibleItemsSignal.peek();
-    const indexNow = visibleItems.findIndex((i) => i.id === anchor.id);
-    if (indexNow === -1) {
+    const items = tracker.visibleItemsSignal.peek();
+    const itemNow = items.find((i) => i.id === anchor.id);
+    if (!itemNow) {
       anchorRef.current = null;
       return;
     }
-    const indexShift = indexNow - anchor.index;
+    const indexShift = itemNow.index - anchor.index;
     if (indexShift !== 0) {
-      // The render window addresses items by index: rows inserted before the
-      // anchor renumbered everything after them, so the window must follow or
-      // it would frame a different slice of the list entirely. The anchor is
-      // kept — where it must land does not change — but its index is now the
-      // new one, so the commit that follows compares against it and moves on
-      // to the scroll correction.
-      anchor.index = indexNow;
+      // The render window addresses rows by their place in the collection:
+      // rows inserted before the anchor renumbered everything after them, so
+      // the window must follow or it would frame a different part of the list
+      // entirely. The anchor is kept — where it must land does not change —
+      // but its index is now the new one, so the commit that follows compares
+      // against it and moves on to the scroll correction.
+      anchor.index = itemNow.index;
       const { start, end } = renderWindowRef.current;
       const windowSize = end - start;
       const startShifted = start + indexShift;
       let startWanted = startShifted < 0 ? 0 : startShifted;
+      const total = virtual.totalSignal.peek();
       // Same normalization as the scroll listener: a window running past the
-      // last item slides back instead of framing fewer items than its budget
-      // allows — every item that fits in it must stay rendered.
-      if (startWanted + windowSize > visibleItems.length) {
-        startWanted = visibleItems.length - windowSize;
+      // last row slides back instead of framing fewer rows than its budget
+      // allows — every row that fits in it must stay rendered.
+      if (startWanted + windowSize > total) {
+        startWanted = total - windowSize;
         if (startWanted < 0) {
           startWanted = 0;
         }
@@ -1601,7 +1520,7 @@ const useListScrollSync = ({
         updateRenderWindow(
           startWanted,
           endWanted,
-          `${indexShift} item(s) inserted before the anchored item`,
+          `${indexShift} row(s) inserted before the anchored row`,
         );
         return;
       }
@@ -1642,8 +1561,8 @@ const useListScrollSync = ({
     const onScroll = () => {
       updateCurrentScroll();
       checkMissingItems();
-      const visibleItemCount = tracker.visibleCountSignal.peek();
-      if (visibleItemCount <= renderBudget) {
+      const total = virtual.totalSignal.peek();
+      if (total <= renderBudget) {
         return;
       }
       const oneRealListItemInDom = Boolean(
@@ -1664,7 +1583,6 @@ const useListScrollSync = ({
         virtualItemSizeSignal,
         renderWindowRef,
         horizontal,
-        placeholderCountStart: getVirtualBounds().before,
       });
       if (!scrollInfo) {
         return;
@@ -1673,9 +1591,9 @@ const useListScrollSync = ({
       reason = hitReason;
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, index - half);
-      let newEnd = Math.min(visibleItemCount, newStart + renderBudget);
-      if (newEnd === visibleItemCount) {
-        newStart = Math.max(0, visibleItemCount - renderBudget);
+      let newEnd = Math.min(total, newStart + renderBudget);
+      if (newEnd === total) {
+        newStart = Math.max(0, total - renderBudget);
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
@@ -1737,44 +1655,9 @@ const resolveLoadMargin = (loadMargin, virtualItemSize) => {
   const itemSize = virtualItemSize || LOAD_MARGIN_ITEM_SIZE_FALLBACK;
   return loadMargin * itemSize;
 };
-// How many rows of the collection are missing on either side of the loaded
-// ones. Each item knows its own place in the whole (its `index`), so the room
-// to reserve before them is where the first one sits, and the room after them
-// is whatever `count` says is left. Without a count, nothing is missing after
-// the last one — a list that was given everything is the common case.
-const getVirtualBoundsOf = (items, count) => {
-  const loadedCount = items.length;
-  if (loadedCount === 0) {
-    return { before: 0, after: count === undefined ? 0 : count };
-  }
-  const firstIndex = items[0].index;
-  const lastIndex = items[loadedCount - 1].index;
-  if (!Number.isFinite(firstIndex) || !Number.isFinite(lastIndex)) {
-    return { before: 0, after: 0 };
-  }
-  const after = count === undefined ? 0 : count - 1 - lastIndex;
-  return {
-    before: firstIndex > 0 ? firstIndex : 0,
-    after: after > 0 ? after : 0,
-  };
-};
-// While loading, one skeleton row per item to come — but never more than the
-// list would render at once, since the rest would be windowed out anyway.
-const LOADING_SKELETON_COUNT_DEFAULT = 3;
-const resolveSkeletonCount = (count, renderBudget) => {
-  if (count === undefined) {
-    return LOADING_SKELETON_COUNT_DEFAULT;
-  }
-  return count > renderBudget ? renderBudget : count;
-};
 // The row the user is looking at, and where it sits: what must not move when
 // the list is rebuilt around it.
-const captureScrollAnchor = ({
-  scrollerEl,
-  listEl,
-  visibleItems,
-  horizontal,
-}) => {
+const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
   if (!scrollerEl || !listEl) {
     return null;
   }
@@ -1795,14 +1678,14 @@ const captureScrollAnchor = ({
     if (!itemEl) {
       continue;
     }
-    const index = visibleItems.findIndex((i) => i.id === itemEl.id);
-    if (index === -1) {
+    const item = items.find((i) => i.id === itemEl.id);
+    if (!item) {
       continue;
     }
     const itemRect = itemEl.getBoundingClientRect();
     return {
-      id: itemEl.id,
-      index,
+      id: item.id,
+      index: item.index,
       offset: horizontal
         ? itemRect.left - viewportRect.left
         : itemRect.top - viewportRect.top,
@@ -1832,9 +1715,9 @@ const getListVisibleScanRange = (viewportRect, listRect, horizontal) => {
   return { from, to, crossPos };
 };
 
-// Returns the item located at the current scroll position of a list container.
-// Uses DOM hit-testing to find visible items/fillers; falls back to index
-// estimation via virtualItemSize or renderWindow.start.
+// Which row of the collection sits at the current scroll position. Uses DOM
+// hit-testing when a real row is there to be hit, and the row size when what is
+// on screen is only reserved room.
 // Returns { index, item, reason } or null if nothing can be determined.
 const getScrollInfo = ({
   scrollValues,
@@ -1844,7 +1727,6 @@ const getScrollInfo = ({
   virtualItemSizeSignal,
   renderWindowRef,
   horizontal,
-  placeholderCountStart = 0,
 }) => {
   const items = tracker.itemsSignal.peek();
   const viewportRect = getScrollerViewportRect(scrollerEl);
@@ -1888,8 +1770,7 @@ const getScrollInfo = ({
       return null;
     }
     // How much of the list is above (or left of) the top of the viewport — the
-    // list is not necessarily flush against the top of the scroller, and the
-    // placeholders before it stand for rows that are not tracked items.
+    // list is not necessarily flush against the top of the scroller.
     const listOffsetInViewport =
       (horizontal ? viewportRect.left : viewportRect.top) -
       (horizontal ? listRect.left : listRect.top);
@@ -1899,15 +1780,12 @@ const getScrollInfo = ({
     const scrollAsked = horizontal ? scrollValues.left : scrollValues.top;
     const positionInItems =
       (listOffsetInViewport + (scrollAsked - scrollNow)) / virtualItemSize;
-    const estimatedIndex = Math.floor(positionInItems) - placeholderCountStart;
-    const index = Math.min(
-      items.length - 1,
-      estimatedIndex < 0 ? 0 : estimatedIndex,
-    );
+    const estimatedIndex = Math.floor(positionInItems);
+    const index = estimatedIndex < 0 ? 0 : estimatedIndex;
     return {
-      item: items[index],
+      item: items.find((i) => i.index === index),
       index,
-      reason: `${reasonPrefix}, estimated at ${index} (${items[index]?.value})`,
+      reason: `${reasonPrefix}, estimated at ${index}`,
     };
   };
   if (hitFiller) {
@@ -1915,30 +1793,30 @@ const getScrollInfo = ({
   }
   if (hitEl) {
     const hitId = hitEl.id;
-    const index = items.findIndex((i) => i.id === hitId);
-    if (index === -1) {
+    const item = items.find((i) => i.id === hitId);
+    if (!item) {
       return null;
     }
     return {
-      item: items[index],
-      index,
-      reason: `hit item at ${index} (${items[index].value})`,
+      item,
+      index: item.index,
+      reason: `hit item at ${item.index} (${item.value})`,
     };
   }
   // Neither a real item nor a filler was hit within listEl — e.g. part of
   // the scan range fell outside the page's actually reachable viewport
   // (docked devtools shrinks it, for one). Keeping the stale renderWindow
-  // here (as this used to do) means the DOM never gets asked to catch up
-  // with a scrollTop that may have jumped far away — the user ends up
-  // staring at filler space. Same estimate as the hitFiller case is a safe
-  // fallback: it only needs the scroll position, not a successful hit-test.
+  // here means the DOM never gets asked to catch up with a scrollTop that may
+  // have jumped far away — the user ends up staring at filler space. Same
+  // estimate as the hitFiller case is a safe fallback: it only needs the
+  // scroll position, not a successful hit-test.
   const estimated = estimateFromScrollPos("no hit");
   if (estimated) {
     return estimated;
   }
   const fallbackIndex = renderWindowRef.current.start;
   return {
-    item: items[fallbackIndex],
+    item: items.find((i) => i.index === fallbackIndex),
     index: fallbackIndex,
     reason: "no hit, no virtualItemSize yet",
   };
@@ -2046,8 +1924,7 @@ const UnorderedList = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
-  count,
-  cursor,
+  virtual,
   fallback,
   searchFallback,
   searching,
@@ -2079,31 +1956,35 @@ const UnorderedList = ({
       <BeforeFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
-        tracker={tracker}
-        count={count}
       />
       {!suppressFallback && (
         <SearchFallback
           searchFallback={searchFallback}
           searching={searching}
           tracker={tracker}
+          virtual={virtual}
         />
       )}
       {!suppressFallback && (
-        <Fallback fallback={fallback} searching={searching} tracker={tracker} />
+        <Fallback
+          fallback={fallback}
+          searching={searching}
+          tracker={tracker}
+          virtual={virtual}
+        />
       )}
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
             <ItemTransitionContext.Provider value={Boolean(itemTransition)}>
               <ListItemTrackerContext.Provider value={tracker}>
-                <ListCursorContext.Provider value={cursor}>
+                <ListVirtualContext.Provider value={virtual}>
                   <ListRowContext.Provider value={null}>
                     <ListColumnsContext.Provider value={columns || null}>
                       {children}
                     </ListColumnsContext.Provider>
                   </ListRowContext.Provider>
-                </ListCursorContext.Provider>
+                </ListVirtualContext.Provider>
               </ListItemTrackerContext.Provider>
             </ItemTransitionContext.Provider>
           </SeparatorContext.Provider>
@@ -2112,8 +1993,7 @@ const UnorderedList = ({
       <AfterFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
-        tracker={tracker}
-        count={count}
+        virtual={virtual}
       />
     </Box>
   );
@@ -2122,8 +2002,8 @@ const UnorderedList = ({
 // The "no match" message. Shown when a search left nothing to display: either
 // every matchable item has match=false (in-list filtering), or the list is empty
 // during an active search (filtering done outside the list, so itemCount is 0).
-const SearchFallback = ({ tracker, searchFallback, searching }) => {
-  const itemCount = tracker.countSignal.value;
+const SearchFallback = ({ tracker, virtual, searchFallback, searching }) => {
+  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
   const showMatchFallback = allNoMatch || (searching && itemCount === 0);
@@ -2151,8 +2031,8 @@ const SearchFallback = ({ tracker, searchFallback, searching }) => {
 };
 // The "empty list" message. Not shown during a search — an empty search result
 // is a "no match" state (SearchFallback), not an empty-list state.
-const Fallback = ({ tracker, fallback, searching }) => {
-  const itemCount = tracker.countSignal.value;
+const Fallback = ({ tracker, virtual, fallback, searching }) => {
+  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const showFallback = itemCount === 0 && !searching;
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
@@ -2175,66 +2055,33 @@ const Fallback = ({ tracker, fallback, searching }) => {
     </ListItem>
   );
 };
-// Two reservations, never one: rows that exist but are windowed out are blank
-// space (they are one scroll event away from being drawn), while rows that were
-// never loaded wear the skeleton — the user scrolling into them must see
-// content on its way, not a hole. They are kept as separate elements because
-// they say different things, and because the unloaded ones always come first
-// (they are the lower indexes).
-const BeforeFiller = ({
-  virtualItemSizeSignal,
-  renderWindowStart,
-  tracker,
-  count,
-}) => {
+// The room held for the rows the render window leaves out. Rows the list does
+// not hold yet are NOT part of it — they are drawn as skeleton rows by whoever
+// stands for them (see ListItems), because a row on its way is content, not a
+// gap.
+const BeforeFiller = ({ virtualItemSizeSignal, renderWindowStart }) => {
   const virtualItemSize = virtualItemSizeSignal.value;
-  const { before } = getVirtualBoundsOf(
-    tracker.visibleItemsSignal.value,
-    count,
-  );
   return (
-    <>
-      <VirtualFiller
-        edge="before"
-        unloaded
-        itemCount={before}
-        virtualItemSize={virtualItemSize}
-      />
-      <VirtualFiller
-        edge="before"
-        itemCount={renderWindowStart}
-        virtualItemSize={virtualItemSize}
-      />
-    </>
+    <VirtualFiller
+      edge="before"
+      itemCount={renderWindowStart}
+      virtualItemSize={virtualItemSize}
+    />
   );
 };
-const AfterFiller = ({
-  virtualItemSizeSignal,
-  renderWindowEnd,
-  tracker,
-  count,
-}) => {
-  const visibleItems = tracker.visibleItemsSignal.value;
+const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, virtual }) => {
+  const total = virtual.totalSignal.value;
   const virtualItemSize = virtualItemSizeSignal.value;
-  const { after } = getVirtualBoundsOf(visibleItems, count);
-  const itemsAfterWindow = visibleItems.length - renderWindowEnd;
+  const itemsAfterWindow = total - renderWindowEnd;
   return (
-    <>
-      <VirtualFiller
-        edge="after"
-        itemCount={itemsAfterWindow > 0 ? itemsAfterWindow : 0}
-        virtualItemSize={virtualItemSize}
-      />
-      <VirtualFiller
-        edge="after"
-        unloaded
-        itemCount={after}
-        virtualItemSize={virtualItemSize}
-      />
-    </>
+    <VirtualFiller
+      edge="after"
+      itemCount={itemsAfterWindow > 0 ? itemsAfterWindow : 0}
+      virtualItemSize={virtualItemSize}
+    />
   );
 };
-const VirtualFiller = ({ edge, unloaded, itemCount, virtualItemSize }) => {
+const VirtualFiller = ({ edge, itemCount, virtualItemSize }) => {
   const sizeToFill = itemCount * virtualItemSize;
   if (!sizeToFill) {
     return null;
@@ -2244,12 +2091,9 @@ const VirtualFiller = ({ edge, unloaded, itemCount, virtualItemSize }) => {
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
       navi-virtual-filler={edge}
-      // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler-unloaded={unloaded ? "" : undefined}
       aria-hidden
       style={{
         "--size-to-fill": `${sizeToFill}px`,
-        "--virtual-item-size": `${virtualItemSize}px`,
       }}
     />
   );
@@ -2298,7 +2142,11 @@ const ListItemRowResolver = (props) => {
   if (!row) {
     return <Next {...props} />;
   }
-  return <Next {...props} id={props.id || row.id} index={row.index} />;
+  // eslint-disable-next-line no-unused-vars
+  const { id, index, value, ...rowProps } = row;
+  return (
+    <Next {...rowProps} {...props} id={props.id || row.id} index={row.index} />
+  );
 };
 const ListItemPresentationResolver = (props) => {
   const Next = useNextResolver();
@@ -2359,15 +2207,11 @@ const ListItemUI = (props) => {
       "ListItem is missing an explicit id prop. Provide a stable id so pointed/selected state survives search reordering.",
     );
   }
-  if (identityMatters && props.index === undefined) {
-    console.warn(
-      "ListItem is missing an explicit index prop. Provide an index so item ordering is stable regardless of render order.",
-    );
-  }
   const idDefault = useId();
   props.id = props.id || idDefault;
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
+  const virtual = useContext(ListVirtualContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
   // The run this row belongs to, when it comes from one (see ListItems): it
   // registered the row, decided it is inside the render window, and placed its
@@ -2401,8 +2245,15 @@ const ListItemUI = (props) => {
     }
     return <ListItemReal {...props} />;
   }
+  // A row declared on its own stands for one row of the collection, at the
+  // place where the child declared before it left off. An explicit `index`
+  // still wins: it is how a caller says where a row belongs when declaration
+  // order is not it (a search reorders rows without moving them in the DOM).
+  if (!props.filtered) {
+    props.index = virtual.take(props.id, 1, props.index);
+  }
   const item = props;
-  const visibleIndex = tracker.useTrackItem(item);
+  tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
   const groupVisibleIndex = groupTracker
     ? groupTracker.useTrackItem(item)
@@ -2416,10 +2267,8 @@ const ListItemUI = (props) => {
   if (props.hidden) {
     return <ListItemReal {...props} />;
   }
-  if (visibleIndex === -1) {
-    return null;
-  }
-  if (visibleIndex < renderWindow.start || visibleIndex >= renderWindow.end) {
+  const index = props.index;
+  if (index < renderWindow.start || index >= renderWindow.end) {
     return <ListItemVoid />;
   }
   const listItemVnode = <ListItemReal {...props} />;
@@ -2437,13 +2286,12 @@ const ListItemUI = (props) => {
   //   - inside a group: each group has its own item tracker and group
   //     items don't reorder, so groupVisibleIndex is reliable
   const isFirstInList =
-    groupVisibleIndex === null ? props.index === 0 : groupVisibleIndex === 0;
+    groupVisibleIndex === null ? index === 0 : groupVisibleIndex === 0;
   if (!separator || isFirstInList) {
     return listItemVnode;
   }
   // separatorIndex is only used as the function-form argument (gap index)
-  const separatorIndex =
-    groupVisibleIndex === null ? visibleIndex : groupVisibleIndex;
+  const separatorIndex = groupVisibleIndex === null ? index : groupVisibleIndex;
 
   const separatorVnode = resolveSeparatorVnode(separator, separatorIndex - 1);
   return (
@@ -2711,12 +2559,12 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
  *               Required when items need to be targeted programmatically from
  *               outside the list. Auto-generated internally if omitted.
- *   index     — 0-based position in the collection the item belongs to. Required
- *               for virtualization to work correctly. Pass the array map index
- *               — or, when the rendered items are only a slice of a larger
- *               whole (see List's own `count`), the item's absolute position in
- *               that whole: this is how the list knows which part of the
- *               collection it is showing and what is missing around it.
+ *   index     — where the row belongs in the collection. Defaults to where the
+ *               row declared before it left off, so a list written as a list of
+ *               rows needs nothing. Pass it to say something declaration order
+ *               cannot: a search that reorders rows without moving them, a row
+ *               standing for a precise place in a larger whole. Rows given as
+ *               data (see List.Items) are numbered by the run itself.
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
@@ -2771,40 +2619,65 @@ export const ListItem = createComponentResolver([
 ]);
 List.Item = ListItem;
 
-// Where each run of rows starts. A <List.Items> knows how many rows it holds
-// but not what was declared before it, so the list hands out the positions as
-// its children render — in order, which is the only thing needed to place them.
+// Everything the list knows about the collection while its children are being
+// rendered: how many rows it has in total, which of them are actually held, and
+// where each child's rows start.
 //
-// A run re-rendering ON ITS OWN (its own state changed, the list did not
-// render) must keep the place it was given: nothing before it moved. Hence the
-// pass — only a render of the list itself opens a new one, and within a pass a
-// run takes its place exactly once.
-const createOrderCursor = () => {
+// A child knows how many rows it stands for but not what was declared before
+// it, so the list hands out the places as its children render — in order, which
+// is the only thing needed to place them. A child re-rendering ON ITS OWN (its
+// own state changed, the list did not render) keeps the place it was given:
+// nothing before it moved. Hence the pass — only a render of the list itself
+// opens a new one, and within a pass a child takes its place exactly once.
+const createListVirtual = () => {
+  const totalSignal = signal(0);
+  const coverageByOwner = new Map();
+  const placeByOwner = new Map();
   let passId = 0;
   let nextIndex = 0;
-  let nextRank = 0;
-  const placeByOwner = new Map();
+
   return {
+    totalSignal,
     openPass: () => {
       passId++;
       nextIndex = 0;
-      nextRank = 0;
     },
-    take: (ownerId, itemCount, indexStart) => {
+    take: (ownerId, rowCount, indexStart) => {
       const placeTaken = placeByOwner.get(ownerId);
       if (placeTaken && placeTaken.passId === passId) {
-        return placeTaken;
+        return placeTaken.index;
       }
-      // index is the place in the whole collection (what a caller holding only
-      // a slice of it names through itemStart), rank the place among the rows
-      // the list actually holds — the render window speaks in ranks.
       const index = indexStart === undefined ? nextIndex : indexStart;
-      const place = { passId, index, rank: nextRank };
-      nextIndex = index + itemCount;
-      nextRank += itemCount;
-      placeByOwner.set(ownerId, place);
-      return place;
+      placeByOwner.set(ownerId, { passId, index });
+      nextIndex = index + rowCount;
+      totalSignal.value = nextIndex;
+      return index;
     },
+    // Which rows a child actually holds. What no child covers is a row the
+    // list stands for but does not have — a skeleton on screen, and something
+    // to fetch (see onItemsMissing).
+    setCoverage: (ownerId, coverage) => {
+      coverageByOwner.set(ownerId, coverage);
+    },
+    dropCoverage: (ownerId) => {
+      coverageByOwner.delete(ownerId);
+    },
+    holds: (index) => {
+      if (coverageByOwner.size === 0) {
+        // Nobody said otherwise: a list given its rows one by one holds them
+        // all by construction.
+        return true;
+      }
+      for (const coverage of coverageByOwner.values()) {
+        if (index >= coverage.start && index <= coverage.end) {
+          return true;
+        }
+      }
+      return false;
+    },
+    // Set by the list itself (see useListScrollSync): what a child calls when
+    // it finds it is standing for rows it does not have.
+    requestItems: null,
   };
 };
 
@@ -2812,10 +2685,11 @@ const createOrderCursor = () => {
  * List.Items — a run of rows given as data rather than as one component each.
  *
  * The list renders `renderItem` only for the rows inside its render window; the
- * others cost nothing but their place. This is what lets a list hold a slice of
- * a large collection: `itemStart` says where the slice sits in the whole, and
- * List's own `count` says how big the whole is (see List's `count` and
- * `onItemsMissing`).
+ * others cost nothing but their place. And when the run stands for more rows
+ * than it holds (`count` larger than `items`, which is what a slice of a
+ * paginated collection looks like), the rows it does not have are drawn as
+ * skeletons as soon as they enter the window — and asked for, through List's
+ * own `onItemsMissing`.
  *
  * Several runs can live in one list, next to plain `<List.Item>` children and
  * inside `<List.Group>`s; each takes its place in declaration order.
@@ -2823,65 +2697,119 @@ const createOrderCursor = () => {
  * @type {import("preact").FunctionComponent<{
  *   items: any[],
  *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
+ *   count?: number,
  *   itemStart?: number,
+ *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
+ *   itemProps?: (item: any, index: number) => object,
  *   getItemId?: (item: any, index: number) => string,
  * }>}
+ * @param {number} [props.count]
+ *   How many rows of the collection this run stands for. Larger than
+ *   `items.length` means the rest is not loaded yet. Defaults to `items.length`.
  * @param {number} [props.itemStart]
- *   The absolute index of `items[0]` in the collection the run is a slice of.
- *   Defaults to right after whatever was declared before it.
+ *   Where `items[0]` sits among those rows. Defaults to the run's own start,
+ *   which is where the child declared before it left off.
+ * @param {false|(index: number) => any} [props.renderSkeleton]
+ *   What to draw for a row the run does not hold. Defaults to a
+ *   `<List.Item skeleton>`; `false` leaves the row empty (its room is still
+ *   held, or the list would jump as it loads).
+ * @param {(item: any, index: number) => object} [props.itemProps]
+ *   The props of the row this item stands for — `value`, `selectable`,
+ *   `selected`, `disabled`… They are both applied to the rendered row and
+ *   registered with the list, so what the list decides from them (which row is
+ *   selected, where to open) holds for rows that are not rendered too.
  * @param {(item: any, index: number) => string} [props.getItemId]
  *   The id to give a row — the one it answers to from outside the list
  *   (--navi-select, --navi-scroll, initialScrollToItem). Defaults to an id
- *   derived from the run and the row's index, which is stable as long as
- *   `itemStart` places the rows the same way.
+ *   derived from the run and the row's place in it.
  */
-export const ListItems = ({ items, renderItem, itemStart, getItemId }) => {
+const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
+export const ListItems = ({
+  items,
+  renderItem,
+  count,
+  itemStart,
+  renderSkeleton,
+  itemProps,
+  getItemId,
+}) => {
   const ownerId = useId();
-  const cursor = useContext(ListCursorContext);
+  const virtual = useContext(ListVirtualContext);
   const tracker = useContext(ListItemTrackerContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
-  const place = cursor.take(ownerId, items.length, itemStart);
+  const rowCount = count === undefined ? items.length : count;
+  const runStart = virtual.take(ownerId, rowCount);
+  // Where the rows it actually holds sit: `itemStart` is an absolute place in
+  // the collection, so a run that starts before the rows it holds is one whose
+  // beginning is not loaded.
+  const heldStart = itemStart === undefined ? runStart : itemStart;
+  const idOf = (item, index) =>
+    getItemId ? getItemId(item, index) : `${ownerId}_${index}`;
 
   const itemDataList = [];
   let i = 0;
   while (i < items.length) {
     const item = items[i];
-    const index = place.index + i;
+    const index = heldStart + i;
     itemDataList.push({
-      id: getItemId ? getItemId(item, index) : `${ownerId}_${index}`,
+      ...(itemProps ? itemProps(item, index) : null),
+      id: idOf(item, index),
       index,
       value: item,
     });
     i++;
   }
   tracker.useTrackItemList(itemDataList);
+  virtual.setCoverage(ownerId, {
+    start: heldStart,
+    end: heldStart + items.length - 1,
+  });
+  useLayoutEffect(() => {
+    return () => {
+      virtual.dropCoverage(ownerId);
+    };
+  }, []);
 
   const rows = [];
-  let rowIndex = 0;
-  while (rowIndex < itemDataList.length) {
-    const rank = place.rank + rowIndex;
-    if (rank < renderWindow.start || rank >= renderWindow.end) {
-      rowIndex++;
-      continue;
+  const from = renderWindow.start > runStart ? renderWindow.start : runStart;
+  const runEnd = runStart + rowCount;
+  const to = renderWindow.end < runEnd ? renderWindow.end : runEnd;
+  let index = from;
+  while (index < to) {
+    const held = index >= heldStart && index < heldStart + items.length;
+    const itemData = held ? itemDataList[index - heldStart] : null;
+    const key = itemData ? itemData.id : `${ownerId}_skeleton_${index}`;
+    let rowVnode;
+    if (itemData) {
+      rowVnode = renderItem(itemData.value, index);
+    } else if (renderSkeleton === false) {
+      // The row must still take its room: without it the rows below would
+      // climb up and slide back down as the answer arrives.
+      rowVnode = <ListItem skeleton style={SKELETON_HIDDEN_STYLE} />;
+    } else if (renderSkeleton) {
+      rowVnode = renderSkeleton(index);
+    } else {
+      rowVnode = <ListItem skeleton />;
     }
-    const itemData = itemDataList[rowIndex];
-    const rowVnode = renderItem(itemData.value, itemData.index);
     if (rowVnode) {
-      if (separator && itemData.index > 0) {
+      if (separator && index > 0) {
         rows.push(
-          cloneElement(resolveSeparatorVnode(separator, itemData.index - 1), {
-            key: `${itemData.id}_separator`,
+          cloneElement(resolveSeparatorVnode(separator, index - 1), {
+            key: `${key}_separator`,
           }),
         );
       }
       rows.push(
-        <ListRowContext.Provider key={itemData.id} value={itemData}>
+        <ListRowContext.Provider
+          key={key}
+          value={itemData || { id: key, index }}
+        >
           {rowVnode}
         </ListRowContext.Provider>,
       );
     }
-    rowIndex++;
+    index++;
   }
   return rows;
 };

@@ -189,7 +189,6 @@
               maxHeight="420px"
               borderWidth="1"
               paddingY="s"
-              count={MESSAGE_COUNT}
               onItemsMissing={loadRange}
               initialScrollToItem={{
                 id: `message_${LAST_INDEX}`,
@@ -198,6 +197,7 @@
             >
               <List.Items
                 items={range.messages}
+                count={MESSAGE_COUNT}
                 itemStart={loadedFrom}
                 getItemId={(message) => `message_${message.index}`}
                 renderItem={(message) => <MessageItem message={message} />}
