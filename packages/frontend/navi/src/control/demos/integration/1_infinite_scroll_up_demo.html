@@ -20,11 +20,6 @@
         font-size: 1.1rem;
         scroll-margin-top: 12px;
       }
-      h3 {
-        margin: 16px 0 4px;
-        font-size: 0.95rem;
-        scroll-margin-top: 12px;
-      }
       .demo-section {
         margin-bottom: 24px;
         padding: 24px;
@@ -33,25 +28,18 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         scroll-margin-top: 16px;
       }
-      .stats {
-        display: flex;
-        padding: 8px 12px;
-        flex-wrap: wrap;
-        gap: 18px;
-        color: #d4d4d4;
-        font-size: 0.8rem;
-        font-family: monospace;
-        background: #1e1e1e;
-        border-radius: 6px;
-      }
       .stat-label {
         color: #888;
+        font-size: 0.8rem;
+        font-family: monospace;
       }
       .stat-value {
-        color: #4ec9b0;
+        color: #2b7a5b;
+        font-size: 0.8rem;
+        font-family: monospace;
       }
       .stat-value[data-busy] {
-        color: #ce9178;
+        color: #b5651d;
       }
       /* Une ligne fixe posée devant la liste: ce qui est dessous ne doit pas
          bouger quand des lignes arrivent au-dessus. */
@@ -72,8 +60,8 @@
         );
         pointer-events: none;
       }
-      /* Le cadre de la section 6: une barre en haut, une en bas, et entre les
-         deux un seul ascenseur — celui de la page qu'elles encadrent. */
+      /* Une barre en haut, une en bas, et entre les deux un seul ascenseur:
+         celui de la page qu'elles encadrent. */
       .page-frame {
         display: flex;
         height: 360px;
@@ -171,13 +159,11 @@
           players,
         };
       };
+      const createGames = (from, count) =>
+        Array.from({ length: count }, (_, i) => createGame(from + i));
 
-      const FRONTIER_GAMES = Array.from({ length: 50 }, (_, i) =>
-        createGame(FRONTIER_INDEX - 25 + i),
-      );
-      const TWO_THOUSAND_GAMES = Array.from({ length: 2000 }, (_, i) =>
-        createGame(i),
-      );
+      const FRONTIER_GAMES = createGames(FRONTIER_INDEX - 25, 50);
+      const TWO_THOUSAND_GAMES = createGames(0, 2000);
 
       const requestCountSignal = signal(0);
       const inFlightSignal = signal(0);
@@ -187,13 +173,7 @@
         return new Promise((resolve) => {
           setTimeout(() => {
             inFlightSignal.value--;
-            const games = [];
-            let i = 0;
-            while (i < count) {
-              games.push(createGame(from + i));
-              i++;
-            }
-            resolve(games);
+            resolve(createGames(from, count));
           }, latency);
         });
       };
@@ -239,13 +219,14 @@
 
       // Une partie: la date, l'adversaire, le score s'il a eu lieu, et la liste
       // des joueurs — dont la longueur varie d'une partie à l'autre.
-      const GameItem = ({ listId, game, index, uniformHeight }) => {
+      // index est la place de la partie dans les 5000, pas dans le tableau rendu.
+      const GameItem = ({ listId, game, uniformHeight }) => {
         const isMonthStart = game.date.getDate() <= 2;
         const players = uniformHeight ? game.players.slice(0, 1) : game.players;
         return (
           <ListItem
             id={`${listId}_${game.index}`}
-            index={index}
+            index={game.index}
             value={game.index}
             paddingX="m"
             paddingY="s"
@@ -274,47 +255,64 @@
         );
       };
 
-      // Le fil complet: ce qui est chargé, et de quel index il commence. Les
-      // deux changent ensemble — préfixer 50 parties déplace le début d'autant.
-      const useGameFeed = ({ initialFrom, initialCount, latency }) => {
+      // Le fil: une tranche des 5000 parties, et l'index où elle commence.
+      // La liste réclame un intervalle d'index; on l'étend à une page entière,
+      // on l'ajoute au bord qu'il touche — et s'il ne touche rien (on a sauté
+      // au milieu du passé), on repart d'une tranche neuve autour de lui.
+      const useGameFeed = ({ from, count, latency, onLoad }) => {
         const [range, setRange] = useState(() => ({
-          from: initialFrom,
-          games: Array.from({ length: initialCount }, (_, i) =>
-            createGame(initialFrom + i),
-          ),
+          from,
+          games: createGames(from, count),
         }));
-        const loadBefore = async () => {
-          const { from } = range;
-          if (from === 0) {
+        const loadedFrom = range.from;
+        const loadedTo = range.from + range.games.length - 1;
+
+        const loadRange = async ({ start, end }) => {
+          onLoad?.(`demande ${start}…${end}`);
+          if (end >= loadedFrom - 1 && start < loadedFrom) {
+            const wanted = loadedFrom - start;
+            const size = wanted < PAGE_SIZE ? PAGE_SIZE : wanted;
+            const first = loadedFrom - size < 0 ? 0 : loadedFrom - size;
+            const games = await fetchGames(first, loadedFrom - first, latency);
+            onLoad?.(`reçu ${first}…${loadedFrom - 1}`);
+            setRange((current) => ({
+              from: first,
+              games: [...games, ...current.games],
+            }));
             return;
           }
-          const count = from < PAGE_SIZE ? from : PAGE_SIZE;
-          const page = await fetchGames(from - count, count, latency);
-          setRange((current) => ({
-            from: current.from - count,
-            games: [...page, ...current.games],
-          }));
-        };
-        const loadAfter = async () => {
-          const end = range.from + range.games.length;
-          if (end >= TOTAL_COUNT) {
+          if (start <= loadedTo + 1 && end > loadedTo) {
+            const wanted = end - loadedTo;
+            const size = wanted < PAGE_SIZE ? PAGE_SIZE : wanted;
+            const last =
+              loadedTo + size > TOTAL_COUNT - 1
+                ? TOTAL_COUNT - 1
+                : loadedTo + size;
+            const games = await fetchGames(
+              loadedTo + 1,
+              last - loadedTo,
+              latency,
+            );
+            onLoad?.(`reçu ${loadedTo + 1}…${last}`);
+            setRange((current) => ({
+              from: current.from,
+              games: [...current.games, ...games],
+            }));
             return;
           }
-          const remaining = TOTAL_COUNT - end;
-          const count = remaining < PAGE_SIZE ? remaining : PAGE_SIZE;
-          const page = await fetchGames(end, count, latency);
-          setRange((current) => ({
-            from: current.from,
-            games: [...current.games, ...page],
-          }));
+          const size =
+            end - start + 1 < PAGE_SIZE ? PAGE_SIZE : end - start + 1;
+          const first = start + size > TOTAL_COUNT ? TOTAL_COUNT - size : start;
+          const games = await fetchGames(first, size, latency);
+          onLoad?.(`reçu ${first}…${first + size - 1} (saut)`);
+          setRange({ from: first, games });
         };
+
         return {
-          from: range.from,
+          from: loadedFrom,
+          to: loadedTo,
           games: range.games,
-          placeholderCountStart: range.from,
-          placeholderCountEnd: TOTAL_COUNT - (range.from + range.games.length),
-          loadBefore,
-          loadAfter,
+          loadRange,
         };
       };
 
@@ -332,7 +330,7 @@
             <DocumentToc />
           </div>
           <NominalDemo />
-          <PlaceholderDemo />
+          <CountDemo />
           <PrependDemo />
           <ThrottleDemo />
           <VariableHeightDemo />
@@ -343,21 +341,22 @@
       const NominalDemo = () => {
         const [latency, setLatency] = useState(400);
         const feed = useGameFeed({
-          initialFrom: FRONTIER_INDEX - 25,
-          initialCount: 50,
+          from: FRONTIER_INDEX - 25,
+          count: 50,
           latency,
         });
 
         return (
           <Section id="nominal" title="Cas nominal">
             <Caption>
-              4000 parties passées, 1000 à venir, 50 chargées. On ouvre sur la
-              frontière et on remonte.
+              5000 parties, 50 chargées. On ouvre sur la frontière passé / à
+              venir, on remonte — et on peut aussi jeter l'ascenseur au milieu
+              du passé.
             </Caption>
             <Box flex="y" spacing="s" style="margin-top: 12px">
               <Box flex alignY="center" spacing="m">
                 <label>
-                  latence{" "}
+                  <span className="stat-label">latence </span>
                   <select
                     value={latency}
                     onChange={(e) => setLatency(Number(e.target.value))}
@@ -367,9 +366,7 @@
                     <option value="1500">1500 ms</option>
                   </select>
                 </label>
-                <Stat label="chargées" value={feed.games.length} />
-                <Stat label="avant" value={feed.placeholderCountStart} />
-                <Stat label="après" value={feed.placeholderCountEnd} />
+                <Stat label="chargées" value={`${feed.from}…${feed.to}`} />
                 <Stat
                   label="en vol"
                   value={inFlightSignal.value}
@@ -381,20 +378,13 @@
                 maxHeight="420px"
                 borderWidth="1"
                 separator
+                count={TOTAL_COUNT}
+                onItemsMissing={feed.loadRange}
+                loadMargin={8}
                 initialScrollToItem={`nominal_${FRONTIER_INDEX}`}
-                placeholderCountStart={feed.placeholderCountStart}
-                placeholderCountEnd={feed.placeholderCountEnd}
-                reachThreshold={8}
-                onReachStart={feed.loadBefore}
-                onReachEnd={feed.loadAfter}
               >
-                {feed.games.map((game, index) => (
-                  <GameItem
-                    key={game.index}
-                    listId="nominal"
-                    game={game}
-                    index={index}
-                  />
+                {feed.games.map((game) => (
+                  <GameItem key={game.index} listId="nominal" game={game} />
                 ))}
               </List>
             </Box>
@@ -402,62 +392,47 @@
         );
       };
 
-      const PlaceholderDemo = () => {
-        const games = FRONTIER_GAMES;
-
-        return (
-          <Section id="placeholders" title="Réserver la place">
-            <Box flex="y" spacing="m" style="margin-top: 12px">
-              <Box flex="y" spacing="xs">
-                <Caption>50 parties chargées, rien de réservé</Caption>
-                <List maxHeight="220px" borderWidth="1" separator>
-                  {games.map((game, index) => (
-                    <GameItem
-                      key={game.index}
-                      listId="reserve_none"
-                      game={game}
-                      index={index}
-                      uniformHeight
-                    />
-                  ))}
-                </List>
-              </Box>
-              <Box flex="y" spacing="xs">
-                <Caption>
-                  les mêmes 50, placeholderCountStart=3975 et
-                  placeholderCountEnd=975
-                </Caption>
-                <List
-                  maxHeight="220px"
-                  borderWidth="1"
-                  separator
-                  placeholderCountStart={FRONTIER_INDEX - 25}
-                  placeholderCountEnd={TOTAL_COUNT - (FRONTIER_INDEX + 25)}
-                >
-                  {games.map((game, index) => (
-                    <GameItem
-                      key={game.index}
-                      listId="reserve_both"
-                      game={game}
-                      index={index}
-                      uniformHeight
-                    />
-                  ))}
-                </List>
-              </Box>
+      const CountDemo = () => (
+        <Section id="count" title="count">
+          <Box flex="y" spacing="m" style="margin-top: 12px">
+            <Box flex="y" spacing="xs">
+              <Caption>50 parties, index 0 à 49, sans count</Caption>
+              <List maxHeight="220px" borderWidth="1" separator>
+                {createGames(0, 50).map((game) => (
+                  <GameItem
+                    key={game.index}
+                    listId="count_none"
+                    game={game}
+                    uniformHeight
+                  />
+                ))}
+              </List>
             </Box>
-          </Section>
-        );
-      };
+            <Box flex="y" spacing="xs">
+              <Caption>50 parties, index 3975 à 4024, count=5000</Caption>
+              <List
+                maxHeight="220px"
+                borderWidth="1"
+                separator
+                count={TOTAL_COUNT}
+              >
+                {FRONTIER_GAMES.map((game) => (
+                  <GameItem
+                    key={game.index}
+                    listId="count_total"
+                    game={game}
+                    uniformHeight
+                  />
+                ))}
+              </List>
+            </Box>
+          </Box>
+        </Section>
+      );
 
       const PrependDemo = () => {
-        const [range, setRange] = useState(() => ({
-          from: 500,
-          count: 120,
-        }));
-        const games = Array.from({ length: range.count }, (_, i) =>
-          createGame(range.from + i),
-        );
+        const [range, setRange] = useState(() => ({ from: 500, count: 120 }));
+        const games = createGames(range.from, range.count);
 
         return (
           <Section id="prepend" title="Insérer en tête">
@@ -486,8 +461,10 @@
                 >
                   50 parties en dessous
                 </Button>
-                <Stat label="chargées" value={games.length} />
-                <Stat label="depuis" value={range.from} />
+                <Stat
+                  label="chargées"
+                  value={`${range.from}…${range.from + range.count - 1}`}
+                />
               </Box>
               <div className="anchored-list">
                 <div className="ruler"></div>
@@ -496,15 +473,10 @@
                   borderWidth="1"
                   separator
                   renderBudget={40}
-                  placeholderCountStart={range.from}
+                  count={TOTAL_COUNT}
                 >
-                  {games.map((game, index) => (
-                    <GameItem
-                      key={game.index}
-                      listId="prepend"
-                      game={game}
-                      index={index}
-                    />
+                  {games.map((game) => (
+                    <GameItem key={game.index} listId="prepend" game={game} />
                   ))}
                 </List>
               </div>
@@ -516,56 +488,44 @@
       const ThrottleDemo = () => {
         const [log, setLog] = useState([]);
         const feed = useGameFeed({
-          initialFrom: TOTAL_COUNT - 60,
-          initialCount: 60,
+          from: TOTAL_COUNT - 60,
+          count: 60,
           latency: 1500,
+          onLoad: (line) => setLog((current) => [line, ...current]),
         });
-        const loadBefore = async () => {
-          const at = feed.from;
-          setLog((current) => [
-            `demande ${at - PAGE_SIZE}…${at - 1}`,
-            ...current,
-          ]);
-          await feed.loadBefore();
-          setLog((current) => [`reçu ${at - PAGE_SIZE}…${at - 1}`, ...current]);
-        };
 
         return (
           <Section id="throttle" title="Une requête à la fois">
-            <Caption>Latence 1500 ms, seuil 12 lignes.</Caption>
+            <Caption>Latence 1500 ms, marge de 12 lignes.</Caption>
             <Box flex="y" spacing="s" style="margin-top: 12px">
-              <Box flex alignY="center" spacing="m">
-                <Stat label="chargées" value={feed.games.length} />
-                <Stat
-                  label="en vol"
-                  value={inFlightSignal.value}
-                  busy={inFlightSignal.value > 0}
-                />
-              </Box>
+              <Stat
+                label="en vol"
+                value={inFlightSignal.value}
+                busy={inFlightSignal.value > 0}
+              />
               <Box flex spacing="m" alignY="start">
                 <List
                   maxHeight="320px"
                   borderWidth="1"
                   separator
-                  width="480px"
-                  placeholderCountStart={feed.placeholderCountStart}
-                  reachThreshold={12}
-                  onReachStart={loadBefore}
+                  width="460px"
+                  count={TOTAL_COUNT}
+                  onItemsMissing={feed.loadRange}
+                  loadMargin={12}
                 >
-                  {feed.games.map((game, index) => (
+                  {feed.games.map((game) => (
                     <GameItem
                       key={game.index}
                       listId="throttle"
                       game={game}
-                      index={index}
                       uniformHeight
                     />
                   ))}
                 </List>
-                <List maxHeight="320px" borderWidth="1" width="220px">
+                <List maxHeight="320px" borderWidth="1" width="240px">
                   {log.map((line, index) => (
                     <ListItem
-                      key={`${line}_${log.length - index}`}
+                      key={`${log.length - index}`}
                       id={`throttle_log_${log.length - index}`}
                       index={index}
                       paddingX="s"
@@ -582,15 +542,13 @@
       };
 
       const VariableHeightDemo = () => {
-        const games = TWO_THOUSAND_GAMES;
         const renderList = (listId, uniformHeight) => (
           <List maxHeight="300px" borderWidth="1" separator>
-            {games.map((game, index) => (
+            {TWO_THOUSAND_GAMES.map((game) => (
               <GameItem
                 key={game.index}
                 listId={listId}
                 game={game}
-                index={index}
                 uniformHeight={uniformHeight}
               />
             ))}
@@ -617,11 +575,10 @@
       };
 
       const ParentScrollerDemo = () => {
-        const [latency] = useState(300);
         const feed = useGameFeed({
-          initialFrom: FRONTIER_INDEX - 25,
-          initialCount: 50,
-          latency,
+          from: FRONTIER_INDEX - 25,
+          count: 50,
+          latency: 300,
         });
 
         return (
@@ -632,8 +589,7 @@
             </Caption>
             <Box flex="y" spacing="s" style="margin-top: 12px">
               <Box flex alignY="center" spacing="m">
-                <Stat label="chargées" value={feed.games.length} />
-                <Stat label="avant" value={feed.placeholderCountStart} />
+                <Stat label="chargées" value={`${feed.from}…${feed.to}`} />
                 <Stat
                   label="en vol"
                   value={inFlightSignal.value}
@@ -651,20 +607,13 @@
                   <List
                     scroller="parent"
                     separator
+                    count={TOTAL_COUNT}
+                    onItemsMissing={feed.loadRange}
+                    loadMargin="400px"
                     initialScrollToItem={`parent_${FRONTIER_INDEX}`}
-                    placeholderCountStart={feed.placeholderCountStart}
-                    placeholderCountEnd={feed.placeholderCountEnd}
-                    reachThreshold="400px"
-                    onReachStart={feed.loadBefore}
-                    onReachEnd={feed.loadAfter}
                   >
-                    {feed.games.map((game, index) => (
-                      <GameItem
-                        key={game.index}
-                        listId="parent"
-                        game={game}
-                        index={index}
-                      />
+                    {feed.games.map((game) => (
+                      <GameItem key={game.index} listId="parent" game={game} />
                     ))}
                   </List>
                   <p>

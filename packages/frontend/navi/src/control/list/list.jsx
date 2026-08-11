@@ -591,11 +591,9 @@ const ListUI = (props) => {
     expand,
     onListVisibleItemsChange,
     virtualItemSize,
-    placeholderCountStart = 0,
-    placeholderCountEnd = 0,
-    onReachStart,
-    onReachEnd,
-    reachThreshold = 5,
+    count,
+    onItemsMissing,
+    loadMargin = 5,
     initialScrollToItem,
     scroller = "self",
     lockSize,
@@ -604,7 +602,6 @@ const ListUI = (props) => {
     searchNoMatchMode = "remove",
     loading,
     loadingFallback = "skeleton",
-    loadingSkeletonCount = 3,
     loadingSkeletonTemplate,
     error,
     horizontal,
@@ -683,11 +680,9 @@ const ListUI = (props) => {
     tracker,
     renderBudget,
     virtualItemSize,
-    placeholderCountStart,
-    placeholderCountEnd,
-    onReachStart,
-    onReachEnd,
-    reachThreshold,
+    count,
+    onItemsMissing,
+    loadMargin,
     initialScrollToItem,
     scroller,
     searchText,
@@ -750,7 +745,7 @@ const ListUI = (props) => {
       const template = loadingSkeletonTemplate ?? <ListItem skeleton />;
       const skeletons = [];
       let skeletonIndex = 0;
-      while (skeletonIndex < loadingSkeletonCount) {
+      while (skeletonIndex < resolveSkeletonCount(count, renderBudget)) {
         if (separator && skeletonIndex > 0) {
           skeletons.push(
             cloneElement(resolveSeparatorVnode(separator, skeletonIndex - 1), {
@@ -843,8 +838,7 @@ const ListUI = (props) => {
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
-        placeholderCountStart={placeholderCountStart}
-        placeholderCountEnd={placeholderCountEnd}
+        count={count}
         pendingScrollRef={pendingScrollRef}
       >
         {content}
@@ -873,11 +867,9 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
- *   placeholderCountStart?: number,
- *   placeholderCountEnd?: number,
- *   onReachStart?: (detail: {edge: string, distance: number, itemCount: number, placeholderCountStart: number, placeholderCountEnd: number}) => void | Promise<any>,
- *   onReachEnd?: (detail: {edge: string, distance: number, itemCount: number, placeholderCountStart: number, placeholderCountEnd: number}) => void | Promise<any>,
- *   reachThreshold?: number | string,
+ *   count?: number,
+ *   onItemsMissing?: (detail: {start: number, end: number, count: number}) => void | Promise<any>,
+ *   loadMargin?: number | string,
  *   initialScrollToItem?: string | {id: string, block?: "start" | "center" | "end" | "nearest"},
  *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
@@ -886,7 +878,6 @@ const ListFirstResolver = (props) => {
  *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
  *   loading?: boolean,
  *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
- *   loadingSkeletonCount?: number,
  *   loadingSkeletonTemplate?: import("preact").ComponentChildren,
  *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
@@ -902,25 +893,28 @@ const ListFirstResolver = (props) => {
  * }>}
  * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
  *   What to display in place of the items while `loading`: `"skeleton"` renders
- *   `loadingSkeletonCount` placeholder rows (look: `loadingSkeletonTemplate`),
- *   `"loader"` a single centered spinner, and anything else is rendered as-is
- *   in a row of its own. A falsy value displays nothing.
- * @param {number} [props.placeholderCountStart=0]
- *   How many rows exist before the ones passed as children but have not been
- *   loaded yet. They take no DOM node: the list only reserves their room, so
- *   the scrollbar tells the truth about the whole collection and the user can
- *   scroll into what is not there yet. `placeholderCountEnd` does the same
- *   after the last child.
- * @param {(detail: object) => void|Promise<any>} [props.onReachStart]
- *   Called when the scroll comes within `reachThreshold` of the first LOADED
- *   row — the moment to fetch what comes before it. Returning a promise holds
- *   the next call until it settles; without one, the call repeats only once
- *   the item/placeholder counts have changed, so a burst of scroll events
- *   produces a single request and a source with nothing left to give goes
- *   quiet. `onReachEnd` is the same at the other edge.
- * @param {number|string} [props.reachThreshold=5]
- *   How early `onReachStart`/`onReachEnd` fire: a number of rows, or an
- *   explicit distance (`"300px"`).
+ *   `count` placeholder rows (look: `loadingSkeletonTemplate`), `"loader"` a
+ *   single centered spinner, and anything else is rendered as-is in a row of
+ *   its own. A falsy value displays nothing.
+ * @param {number} [props.count]
+ *   How many items the collection holds in total — not how many are passed as
+ *   children. Give it when the children are only a slice of a larger whole
+ *   (infinite scroll, paginated backend) and each item carries its ABSOLUTE
+ *   `index` in that whole: the list then knows where the slice sits, reserves
+ *   the room of what is missing on either side (so the scrollbar tells the
+ *   truth and one can scroll into what is not loaded), and reports what it
+ *   lacks through `onItemsMissing`. While `loading` it is also how many
+ *   skeleton rows are drawn. Defaults to what is rendered.
+ * @param {(detail: {start: number, end: number, count: number}) => void|Promise<any>} [props.onItemsMissing]
+ *   The user is about to look at rows the list does not have: `start` and
+ *   `end` are the absolute indexes of that range (inclusive), so this fires
+ *   just as well on reaching an edge as on jumping the scrollbar into the
+ *   middle of a region that was never loaded. Returning a promise holds the
+ *   next call until it settles; one range at a time, and the same range is
+ *   never asked for twice in a row while nothing has been loaded.
+ * @param {number|string} [props.loadMargin=5]
+ *   How far outside the visible band `onItemsMissing` looks ahead: a number of
+ *   rows, or an explicit distance (`"300px"`).
  * @param {string|{id: string, block?: string}} [props.initialScrollToItem]
  *   The row to open the list on, the first time it is displayed (the frontier
  *   between past and future in a timeline, for instance). Works on a row that
@@ -953,8 +947,7 @@ const ListContent = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
-  placeholderCountStart,
-  placeholderCountEnd,
+  count,
   pendingScrollRef,
   children,
 }) => {
@@ -992,8 +985,7 @@ const ListContent = ({
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
-        placeholderCountStart={placeholderCountStart}
-        placeholderCountEnd={placeholderCountEnd}
+        count={count}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           {children}
@@ -1025,11 +1017,9 @@ const useListScrollSync = ({
   tracker,
   renderBudget,
   virtualItemSize,
-  placeholderCountStart,
-  placeholderCountEnd,
-  onReachStart,
-  onReachEnd,
-  reachThreshold,
+  count,
+  onItemsMissing,
+  loadMargin,
   initialScrollToItem,
   scroller,
   searchText,
@@ -1043,11 +1033,13 @@ const useListScrollSync = ({
   );
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
-  // The virtual geometry the scroll math needs, read at the moment it is needed
-  // rather than threaded through: it changes on every commit while the scroll
-  // listener is installed once.
-  const virtualRef = useRef(null);
-  virtualRef.current = { placeholderCountStart, placeholderCountEnd };
+  // Where the loaded rows sit in the whole collection, read at the moment it is
+  // needed rather than threaded through: it changes on every commit while the
+  // scroll listener is installed once.
+  const countRef = useRef(null);
+  countRef.current = count;
+  const getVirtualBounds = () =>
+    getVirtualBoundsOf(tracker.visibleItemsSignal.peek(), countRef.current);
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -1287,7 +1279,7 @@ const useListScrollSync = ({
           virtualItemSizeSignal,
           renderWindowRef,
           horizontal,
-          placeholderCountStart: virtualRef.current.placeholderCountStart,
+          placeholderCountStart: getVirtualBounds().before,
         });
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
@@ -1328,94 +1320,132 @@ const useListScrollSync = ({
     return undefined;
   });
 
-  // Reaching an edge is measured against the LOADED range, not the list box:
-  // the placeholders stand for rows the caller has not given us yet, so the
-  // moment worth reporting is when the rows we actually hold are about to run
-  // out — that is when there is something to fetch.
-  const reachStateRef = useRef({
-    start: { busy: false, key: null },
-    end: { busy: false, key: null },
-  });
-  const reachRef = useRef(null);
-  reachRef.current = { onReachStart, onReachEnd, reachThreshold };
-  const fireReach = (edge, detail) => {
-    const handler =
-      edge === "start"
-        ? reachRef.current.onReachStart
-        : reachRef.current.onReachEnd;
-    if (!handler) {
-      return;
-    }
-    const state = reachStateRef.current[edge];
+  // What the user is about to look at and the list does not hold. Told in
+  // absolute indexes, because that is the only thing the caller can act on: the
+  // rows it has are a slice of a larger whole, and which slice is missing is
+  // not always "the one after the last" — dragging the scrollbar lands in the
+  // middle of a region that was never loaded just as easily.
+  const missingStateRef = useRef({ busy: false, range: null, boundsKey: null });
+  const missingRef = useRef(null);
+  missingRef.current = { onItemsMissing, loadMargin };
+  const requestItems = (start, end, boundsKey) => {
+    const state = missingStateRef.current;
     if (state.busy) {
       return;
     }
-    // What the caller has already been given. Asking again for the same thing
+    // A range already asked for while the list held exactly what it holds now
     // can only produce the same answer — and a single flick of the wheel fires
-    // dozens of scroll events, a backend with nothing left to send changes
+    // dozens of scroll events, a source with nothing left to send changes
     // nothing at all.
-    const key = `${detail.itemCount}:${detail.placeholderCountStart}:${detail.placeholderCountEnd}`;
-    if (state.key === key) {
+    const asked = state.range;
+    if (
+      asked &&
+      state.boundsKey === boundsKey &&
+      start >= asked.start &&
+      end <= asked.end
+    ) {
       return;
     }
-    state.key = key;
+    state.range = { start, end };
+    state.boundsKey = boundsKey;
     state.busy = true;
-    debugScroll(`reach ${edge} (${Math.round(detail.distance)}px away)`);
-    const releaseEdge = () => {
+    debugScroll(`items missing: [${start}, ${end}]`);
+    const release = () => {
       state.busy = false;
     };
-    const result = handler(detail);
+    const result = missingRef.current.onItemsMissing({
+      start,
+      end,
+      count: countRef.current,
+    });
     if (result && typeof result.then === "function") {
-      result.then(releaseEdge, releaseEdge);
+      result.then(release, release);
     } else {
-      releaseEdge();
+      release();
     }
   };
-  const checkReach = () => {
-    const { onReachStart, onReachEnd, reachThreshold } = reachRef.current;
-    if (!onReachStart && !onReachEnd) {
+  const checkMissingItems = () => {
+    const { onItemsMissing, loadMargin } = missingRef.current;
+    if (!onItemsMissing || !ref.current) {
       return;
     }
-    if (!ref.current) {
+    const count = countRef.current;
+    if (count === undefined) {
+      return;
+    }
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    const loadedCount = visibleItems.length;
+    if (loadedCount === 0) {
+      // Nothing on screen to measure against — not even a row height. The
+      // first row is the one thing we can name; asking for it is what gets
+      // the list started.
+      if (count > 0) {
+        requestItems(0, 0, "empty");
+      }
       return;
     }
     const virtualItemSize = virtualItemSizeSignal.peek();
-    const threshold = resolveReachThreshold(reachThreshold, virtualItemSize);
-    const { placeholderCountStart, placeholderCountEnd } = virtualRef.current;
+    if (virtualItemSize === 0) {
+      return;
+    }
+    const firstIndex = visibleItems[0].index;
+    const lastIndex = visibleItems[loadedCount - 1].index;
+    const { before, after } = getVirtualBounds();
     const viewportRect = getScrollerViewportRect(getScroller());
     const listRect = getListEl().getBoundingClientRect();
-    const detail = {
-      itemCount: tracker.countSignal.peek(),
-      placeholderCountStart,
-      placeholderCountEnd,
-      distance: 0,
+    const margin = resolveLoadMargin(loadMargin, virtualItemSize);
+    // The band the loaded rows occupy on screen, and the band the user is
+    // about to look at. Everything outside the first and inside the second is
+    // what has to be fetched.
+    const loadedFrom =
+      (horizontal ? listRect.left : listRect.top) + before * virtualItemSize;
+    const loadedTo =
+      (horizontal ? listRect.right : listRect.bottom) - after * virtualItemSize;
+    const wantedFrom =
+      (horizontal ? viewportRect.left : viewportRect.top) - margin;
+    const wantedTo =
+      (horizontal ? viewportRect.right : viewportRect.bottom) + margin;
+    // A position outside the loaded band falls on a reserved row: how many rows
+    // away it is, is the distance divided by the room one row is given.
+    const rowIndexAt = (pos) => {
+      if (pos < loadedFrom) {
+        return firstIndex - Math.ceil((loadedFrom - pos) / virtualItemSize);
+      }
+      if (pos > loadedTo) {
+        return lastIndex + Math.ceil((pos - loadedTo) / virtualItemSize);
+      }
+      return null;
     };
-    const loadedStart =
-      (horizontal ? listRect.left : listRect.top) +
-      placeholderCountStart * virtualItemSize;
-    const loadedEnd =
-      (horizontal ? listRect.right : listRect.bottom) -
-      placeholderCountEnd * virtualItemSize;
-    const distanceToStart =
-      (horizontal ? viewportRect.left : viewportRect.top) - loadedStart;
-    const distanceToEnd =
-      loadedEnd - (horizontal ? viewportRect.right : viewportRect.bottom);
-    if (distanceToStart <= threshold) {
-      fireReach("start", {
-        ...detail,
-        edge: "start",
-        distance: distanceToStart,
-      });
+    const wantedFromIndex = rowIndexAt(wantedFrom);
+    const wantedToIndex = rowIndexAt(wantedTo);
+    const boundsKey = `${firstIndex}:${lastIndex}:${loadedCount}`;
+    if (wantedFromIndex !== null && wantedFromIndex < firstIndex) {
+      const start = wantedFromIndex < 0 ? 0 : wantedFromIndex;
+      const end =
+        wantedToIndex !== null && wantedToIndex < firstIndex
+          ? wantedToIndex
+          : firstIndex - 1;
+      if (end >= start) {
+        requestItems(start, end, boundsKey);
+        return;
+      }
     }
-    if (distanceToEnd <= threshold) {
-      fireReach("end", { ...detail, edge: "end", distance: distanceToEnd });
+    if (wantedToIndex !== null && wantedToIndex > lastIndex) {
+      const start =
+        wantedFromIndex !== null && wantedFromIndex > lastIndex
+          ? wantedFromIndex
+          : lastIndex + 1;
+      const end = wantedToIndex > count - 1 ? count - 1 : wantedToIndex;
+      if (end >= start) {
+        requestItems(start, end, boundsKey);
+      }
     }
   };
   // A list that fits in its scroller never emits a scroll event, so nothing
   // would ever ask for the rest. Only while it does not overflow: as soon as
   // it does, scrolling takes over.
   useLayoutEffect(() => {
-    if (!ref.current || (!onReachStart && !onReachEnd)) {
+    if (!ref.current || !onItemsMissing) {
       return;
     }
     const scrollerEl = getScroller();
@@ -1428,7 +1458,7 @@ const useListScrollSync = ({
     if (scrollSize > clientSize) {
       return;
     }
-    checkReach();
+    checkMissingItems();
   });
 
   // Inserting rows above what the user is looking at must not move it by a
@@ -1437,10 +1467,7 @@ const useListScrollSync = ({
   // same commit — so the row at the top of the viewport is measured before the
   // commit and put back at the same offset after it.
   const itemCount = tracker.countSignal.peek();
-  const anchoringApplies =
-    placeholderCountStart > 0 ||
-    placeholderCountEnd > 0 ||
-    itemCount > renderBudget;
+  const anchoringApplies = count !== undefined || itemCount > renderBudget;
   const anchorRef = useRef(null);
   if (
     anchoringApplies &&
@@ -1525,7 +1552,7 @@ const useListScrollSync = ({
     const listEl = getListEl();
     const onScroll = () => {
       updateCurrentScroll();
-      checkReach();
+      checkMissingItems();
       const visibleItemCount = tracker.visibleCountSignal.peek();
       if (visibleItemCount <= renderBudget) {
         return;
@@ -1548,7 +1575,7 @@ const useListScrollSync = ({
         virtualItemSizeSignal,
         renderWindowRef,
         horizontal,
-        placeholderCountStart: virtualRef.current.placeholderCountStart,
+        placeholderCountStart: getVirtualBounds().before,
       });
       if (!scrollInfo) {
         return;
@@ -1610,16 +1637,46 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
   }
   return document.scrollingElement;
 };
-// reachThreshold is a number of items ("start loading 5 rows before the end")
-// or an explicit distance ("300px").
-const REACH_THRESHOLD_ITEM_SIZE_FALLBACK = 40;
-const resolveReachThreshold = (reachThreshold, virtualItemSize) => {
-  if (typeof reachThreshold === "string") {
-    const parsed = parseFloat(reachThreshold);
+// loadMargin is a number of rows ("look 5 rows past what is on screen") or an
+// explicit distance ("300px").
+const LOAD_MARGIN_ITEM_SIZE_FALLBACK = 40;
+const resolveLoadMargin = (loadMargin, virtualItemSize) => {
+  if (typeof loadMargin === "string") {
+    const parsed = parseFloat(loadMargin);
     return Number.isFinite(parsed) ? parsed : 0;
   }
-  const itemSize = virtualItemSize || REACH_THRESHOLD_ITEM_SIZE_FALLBACK;
-  return reachThreshold * itemSize;
+  const itemSize = virtualItemSize || LOAD_MARGIN_ITEM_SIZE_FALLBACK;
+  return loadMargin * itemSize;
+};
+// How many rows of the collection are missing on either side of the loaded
+// ones. Each item knows its own place in the whole (its `index`), so the room
+// to reserve before them is where the first one sits, and the room after them
+// is whatever `count` says is left. Without a count, nothing is missing after
+// the last one — a list that was given everything is the common case.
+const getVirtualBoundsOf = (items, count) => {
+  const loadedCount = items.length;
+  if (loadedCount === 0) {
+    return { before: 0, after: count === undefined ? 0 : count };
+  }
+  const firstIndex = items[0].index;
+  const lastIndex = items[loadedCount - 1].index;
+  if (!Number.isFinite(firstIndex) || !Number.isFinite(lastIndex)) {
+    return { before: 0, after: 0 };
+  }
+  const after = count === undefined ? 0 : count - 1 - lastIndex;
+  return {
+    before: firstIndex > 0 ? firstIndex : 0,
+    after: after > 0 ? after : 0,
+  };
+};
+// While loading, one skeleton row per item to come — but never more than the
+// list would render at once, since the rest would be windowed out anyway.
+const LOADING_SKELETON_COUNT_DEFAULT = 3;
+const resolveSkeletonCount = (count, renderBudget) => {
+  if (count === undefined) {
+    return LOADING_SKELETON_COUNT_DEFAULT;
+  }
+  return count > renderBudget ? renderBudget : count;
 };
 // The row the user is looking at, and where it sits: what must not move when
 // the list is rebuilt around it.
@@ -1900,8 +1957,7 @@ const UnorderedList = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
-  placeholderCountStart,
-  placeholderCountEnd,
+  count,
   fallback,
   searchFallback,
   searching,
@@ -1933,7 +1989,8 @@ const UnorderedList = ({
       <BeforeFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
-        placeholderCountStart={placeholderCountStart}
+        tracker={tracker}
+        count={count}
       />
       {!suppressFallback && (
         <SearchFallback
@@ -1961,8 +2018,8 @@ const UnorderedList = ({
       <AfterFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
-        placeholderCountEnd={placeholderCountEnd}
         tracker={tracker}
+        count={count}
       />
     </Box>
   );
@@ -2027,10 +2084,15 @@ const Fallback = ({ tracker, fallback, searching }) => {
 const BeforeFiller = ({
   virtualItemSizeSignal,
   renderWindowStart,
-  placeholderCountStart,
+  tracker,
+  count,
 }) => {
   const virtualItemSize = virtualItemSizeSignal.value;
-  const numberOfItemsBefore = renderWindowStart + placeholderCountStart;
+  const { before } = getVirtualBoundsOf(
+    tracker.visibleItemsSignal.value,
+    count,
+  );
+  const numberOfItemsBefore = renderWindowStart + before;
   const sizeToFillBefore = numberOfItemsBefore * virtualItemSize;
 
   if (!sizeToFillBefore) {
@@ -2051,14 +2113,15 @@ const BeforeFiller = ({
 const AfterFiller = ({
   virtualItemSizeSignal,
   renderWindowEnd,
-  placeholderCountEnd,
   tracker,
+  count,
 }) => {
-  const visibleItemCount = tracker.visibleCountSignal.value;
+  const visibleItems = tracker.visibleItemsSignal.value;
   const virtualItemSize = virtualItemSizeSignal.value;
-  const itemsAfterWindow = visibleItemCount - renderWindowEnd;
+  const { after } = getVirtualBoundsOf(visibleItems, count);
+  const itemsAfterWindow = visibleItems.length - renderWindowEnd;
   const numberOfItemsAfter =
-    (itemsAfterWindow > 0 ? itemsAfterWindow : 0) + placeholderCountEnd;
+    (itemsAfterWindow > 0 ? itemsAfterWindow : 0) + after;
   const sizeToFillAfter = numberOfItemsAfter * virtualItemSize;
 
   if (!sizeToFillAfter) {
@@ -2510,8 +2573,12 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
  *               Required when items need to be targeted programmatically from
  *               outside the list. Auto-generated internally if omitted.
- *   index     — 0-based position in the list. Required for virtualization to work
- *               correctly. Pass the array map index.
+ *   index     — 0-based position in the collection the item belongs to. Required
+ *               for virtualization to work correctly. Pass the array map index
+ *               — or, when the rendered items are only a slice of a larger
+ *               whole (see List's own `count`), the item's absolute position in
+ *               that whole: this is how the list knows which part of the
+ *               collection it is showing and what is missing around it.
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.

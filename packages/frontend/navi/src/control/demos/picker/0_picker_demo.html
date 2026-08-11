@@ -1262,12 +1262,7 @@
 
       // `articles` is what the server gave us — empty until the load settles.
       const ArticleList = ({ articles, loading, selectedId }) => (
-        <List
-          selectable
-          command="--navi-send"
-          loading={loading}
-          loadingSkeletonCount={3}
-        >
+        <List selectable command="--navi-send" loading={loading} count={3}>
           {articles.map((article, i) => (
             <ListItem
               selectable

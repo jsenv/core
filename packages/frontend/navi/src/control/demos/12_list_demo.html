@@ -1566,7 +1566,7 @@
             <LoadButton phase={phase} onLoad={load} />
             <List
               loading={loading}
-              loadingSkeletonCount={SOME_FRUITS.length}
+              count={SOME_FRUITS.length}
               loadingSkeletonTemplate={
                 <ListItem skeleton paddingX="m" paddingY="m" />
               }
@@ -1585,7 +1585,7 @@
             <LoadButton phase={phase} onLoad={load} />
             <List
               loading={loading}
-              loadingSkeletonCount={PEOPLE.length}
+              count={PEOPLE.length}
               loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
               expandX
             >
@@ -1605,7 +1605,7 @@
             <List
               separator
               loading={loading}
-              loadingSkeletonCount={PEOPLE.length}
+              count={PEOPLE.length}
               loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
               expandX
             >
@@ -1626,13 +1626,12 @@
             </Heading>
             <p>
               While loading, a list shows placeholder content in place of its
-              items — <code>loadingSkeletonCount</code> skeleton rows by
-              default, a single spinner with{" "}
-              <code>loadingFallback="loader"</code>, or whatever element is
-              passed as <code>loadingFallback</code>. The <code>error</code>{" "}
-              prop replaces them with an inline callout. The examples below
-              start on their skeleton — press <em>Load</em> to watch it swap for
-              the real content.
+              items — one skeleton row per <code>count</code> by default, a
+              single spinner with <code>loadingFallback="loader"</code>, or
+              whatever element is passed as <code>loadingFallback</code>. The{" "}
+              <code>error</code> prop replaces them with an inline callout. The
+              examples below start on their skeleton — press <em>Load</em> to
+              watch it swap for the real content.
             </p>
             <Heading level={3} id="loading-states">
               States
@@ -1682,9 +1681,9 @@
             </Heading>
             <p>
               Pass a <code>loadingSkeletonTemplate</code> so the placeholder
-              matches the real rows' padding, and a{" "}
-              <code>loadingSkeletonCount</code> equal to the expected item count
-              so the list keeps the same height across the swap.
+              matches the real rows' padding, and a <code>count</code> equal to
+              the expected item count so the list keeps the same height across
+              the swap.
             </p>
             <CustomPaddingExample />
 
@@ -1696,9 +1695,8 @@
               <code>loadingSkeletonTemplate</code> reproduces it with one{" "}
               <code>&lt;Text loading&gt;</code> per line, each sized to mimic
               the real content — a short title bar over a wide address bar;{" "}
-              <code>loadingSkeletonCount</code> matches the known length. Press{" "}
-              <em>Load</em> to see how closely the placeholder tracks the loaded
-              rows.
+              <code>count</code> matches the known length. Press <em>Load</em>{" "}
+              to see how closely the placeholder tracks the loaded rows.
             </p>
             <TitleSubtitleExample />
 
