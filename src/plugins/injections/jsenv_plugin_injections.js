@@ -26,11 +26,23 @@ export const jsenvPluginInjections = (rawAssociations) => {
           { injectionsGetter: rawAssociations },
           context.rootDirectoryUrl,
         );
-        getInjections = (urlInfo) => {
+        const getInjectionsGetter = (urlInfo) => {
           const { injectionsGetter } = URL_META.applyAssociations({
             url: asUrlWithoutSearch(urlInfo.url),
             associations: resolvedAssociations,
           });
+          if (injectionsGetter) {
+            return injectionsGetter;
+          }
+          if (urlInfo.isInline) {
+            // content inlined into a file (a <script> inside html) is authored in that
+            // file, so injections configured for the file must reach it too
+            return getInjectionsGetter(urlInfo.firstReference.ownerUrlInfo);
+          }
+          return null;
+        };
+        getInjections = (urlInfo) => {
+          const injectionsGetter = getInjectionsGetter(urlInfo);
           if (!injectionsGetter) {
             return null;
           }

@@ -1,7 +1,7 @@
-# [backend_url_in_attribute](../../injections_html_attribute_build.test.mjs)
+# [backend_url_in_resource_hints](../../injections_html_build.test.mjs)
 
 ```js
-run()
+buildClient(import.meta.resolve("./client_resource_hints/"))
 ```
 
 # 1/2 write file "./build/main.html"

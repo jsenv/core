@@ -146,6 +146,9 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        In JS files the value is injected as a JS literal (a string value brings its own quotes),
  *        everywhere else it is injected as-is, so it can be concatenated:
  *        `href="__BACKEND_URL__/users/me"`.
+ *        An html url pattern also covers what is inlined in that html: an inline
+ *        `<script>window.backendUrl = __BACKEND_URL__;</script>` gets the JS literal,
+ *        which is how a value is shared with every js file of the page.
  *        Use INJECTIONS.optional(value) for a placeholder that may be absent from the file
  *        and INJECTIONS.global(value) to inject `Object.assign(window, { ... })` instead of
  *        replacing a placeholder.
