@@ -4,7 +4,7 @@ import {
   scrollIntoViewScoped,
 } from "@jsenv/dom";
 import { signal } from "@preact/signals";
-import { cloneElement, createContext } from "preact";
+import { cloneElement, createContext, Fragment } from "preact";
 import {
   useContext,
   useId,
@@ -54,6 +54,8 @@ const RENDER_BUDGET_DEFAULT = 100;
 // Attribute used on <li> elements rendered by ListItemReal so the scroll listener
 // and filler-height calculation can find real items without matching presentation ones.
 const REAL_LIST_ITEM_SELECTOR = `[navi-list-item-real]`;
+// Rows standing in for content that has not arrived (see List's renderSkeleton).
+const SKELETON_LIST_ITEM_CLASS = "navi_list_item_skeleton";
 
 // Carries the render window {start, end} (or null = render all) from
 // List down to each ListItem.
@@ -87,7 +89,11 @@ const css = /* css */ `
     .navi_list_container {
       --list-outline-width: 1px;
       --list-border-radius: 4px;
-      --list-border-width: 0px;
+      /* A list is a box with rows in it: it says where it starts and where it
+         ends. The default is on the -default var, not on --list-border-width
+         itself, so that the borderWidth prop (which writes the latter inline)
+         wins wherever a default is put in its way — see the popup case. */
+      --list-border-width-default: 1px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
     }
@@ -117,9 +123,21 @@ const css = /* css */ `
     background: var(--list-background-color);
   }
 
+  /* A list that IS the content of a popup draws no border of its own: the popup
+     already drew it, and two frames around the same rows read as a box in a box
+     (the Picker's list, a select's suggestions). Only the default is dropped —
+     a borderWidth asked for explicitly still applies. */
+  :where([popover], dialog) > .navi_list_container,
+  .navi_list_container[popover] {
+    --list-border-width-default: 0px;
+  }
+
   .navi_list_container {
     --x-list-border-radius: var(--list-border-radius);
-    --x-list-border-width: var(--list-border-width);
+    --x-list-border-width: var(
+      --list-border-width,
+      var(--list-border-width-default)
+    );
     --x-list-border-color: var(--list-border-color);
     --x-list-background-color: var(--list-background-color);
     /* When typing inside an input browser tries to keep caret visible */
@@ -463,7 +481,7 @@ const css = /* css */ `
       user-select: none;
     }
   }
-  /* Loading placeholders (see List's loading / loadingFallback / loadingSkeletonTemplate).
+  /* Loading placeholders (see List's loading / loadingFallback / renderSkeleton).
      A skeleton row reuses <Text loading> for the shimmer bar; the loader row
      centers a spinner; a custom loadingFallback is only given a row to live in,
      its own markup does the layout. */
@@ -612,7 +630,7 @@ const ListUI = (props) => {
     loading,
     loadingFallback = "skeleton",
     loadingSkeletonCount = 3,
-    loadingSkeletonTemplate,
+    renderSkeleton,
     error,
     horizontal,
     spacing,
@@ -708,6 +726,7 @@ const ListUI = (props) => {
 
   virtual.virtualItemSizeSignal = virtualItemSizeSignal;
   virtual.horizontal = Boolean(horizontal);
+  virtual.renderSkeleton = renderSkeleton;
 
   const getItemById = (itemId) => {
     return tracker.itemsSignal.peek().find((item) => item.id === itemId);
@@ -765,7 +784,6 @@ const ListUI = (props) => {
       // Skeleton rows draw their own separators: they never reach ListItemUI
       // (where real items get theirs from SeparatorContext), and without them
       // the list would visibly gain its dividers only once loaded.
-      const template = loadingSkeletonTemplate ?? <ListItem skeleton />;
       const skeletons = [];
       let skeletonIndex = 0;
       while (skeletonIndex < loadingSkeletonCount) {
@@ -777,9 +795,13 @@ const ListUI = (props) => {
           );
         }
         skeletons.push(
-          cloneElement(template, {
-            key: `navi-list-skeleton-${skeletonIndex}`,
-          }),
+          <Fragment key={`navi-list-skeleton-${skeletonIndex}`}>
+            {renderSkeleton ? (
+              renderSkeleton(skeletonIndex)
+            ) : (
+              <ListItem skeleton />
+            )}
+          </Fragment>,
         );
         skeletonIndex++;
       }
@@ -902,7 +924,7 @@ const ListFirstResolver = (props) => {
  *   loading?: boolean,
  *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
  *   loadingSkeletonCount?: number,
- *   loadingSkeletonTemplate?: import("preact").ComponentChildren,
+ *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
  *   lockSize?: boolean,
@@ -915,11 +937,16 @@ const ListFirstResolver = (props) => {
  *   children?: import("preact").ComponentChildren,
  *   [key: string]: any,
  * }>}
+ * @param {false|((index: number) => any)} [props.renderSkeleton]
+ *   What a row on its way looks like — a row of the shape the real ones will
+ *   have, so nothing moves when they arrive. Used for the rows a `<List.Items>`
+ *   stands for and does not hold yet, and for the placeholder rows drawn while
+ *   the whole list is `loading`. Defaults to a bare `<List.Item skeleton>`.
  * @param {"skeleton"|"loader"|import("preact").ComponentChildren} [props.loadingFallback="skeleton"]
  *   What to display in place of the items while `loading` — that is, while
  *   there is nothing to show at all: `"skeleton"` renders
  *   `loadingSkeletonCount` placeholder rows (look:
- *   `loadingSkeletonTemplate`), `"loader"` a single centered spinner, and
+ *   `renderSkeleton`), `"loader"` a single centered spinner, and
  *   anything else is rendered as-is in a row of its own. A falsy value
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
@@ -1059,9 +1086,13 @@ const useListScrollSync = ({
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
 
-  const [renderWindow, setRenderWindow] = useState({
-    start: 0,
-    end: renderBudget,
+  const [renderWindow, setRenderWindow] = useState(() => {
+    // Opening somewhere else than the beginning starts by framing there: the
+    // rows the list will draw are the rows it will ask for.
+    const start =
+      typeof startAt === "number" ? startAt - Math.floor(renderBudget / 2) : 0;
+    const startClamped = start < 0 ? 0 : start;
+    return { start: startClamped, end: startClamped + renderBudget };
   });
   const renderWindowRef = useRef(null);
   renderWindowRef.current = renderWindow;
@@ -1356,7 +1387,8 @@ const useListScrollSync = ({
   // user does.
   useLayoutEffect(() => {
     if (
-      startAt !== "end" ||
+      startAt === "start" ||
+      startAt === undefined ||
       startPlaceRef.current.userTookOver ||
       !ref.current
     ) {
@@ -1377,15 +1409,24 @@ const useListScrollSync = ({
         return;
       }
       const scrollerEl = getScroller();
+      if (startAt === "end") {
+        if (horizontal) {
+          scrollerEl.scrollLeft = scrollerEl.scrollWidth;
+        } else {
+          scrollerEl.scrollTop = scrollerEl.scrollHeight;
+        }
+        return;
+      }
+      const rowPosition = startAt * virtualItemSizeSignal.peek();
       if (horizontal) {
-        scrollerEl.scrollLeft = scrollerEl.scrollWidth;
+        scrollerEl.scrollLeft = rowPosition;
       } else {
-        scrollerEl.scrollTop = scrollerEl.scrollHeight;
+        scrollerEl.scrollTop = rowPosition;
       }
     });
   });
   useLayoutEffect(() => {
-    if (startAt !== "end" || !ref.current) {
+    if (startAt === "start" || startAt === undefined || !ref.current) {
       return undefined;
     }
     const scrollerEl = getScroller();
@@ -1764,7 +1805,16 @@ const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
 // for is the room a run of rows takes together — separators and group labels
 // included — not the height of one <li>.
 const measureItemSize = (listEl, horizontal) => {
-  const itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
+  let itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
+  if (itemEls.length === 0) {
+    // Nothing real yet: a list that knows how many rows it has draws them as
+    // skeletons before it holds any of them, and their height is what it can
+    // reserve room with — a list arriving at its full height rather than
+    // growing into it. They are only ever measured while no real row is there
+    // to be measured instead; once one is, they take the size they are given
+    // (see ListItems) and cannot drag the average.
+    itemEls = listEl.querySelectorAll(`.${SKELETON_LIST_ITEM_CLASS}`);
+  }
   if (itemEls.length === 0) {
     return 0;
   }
@@ -2101,7 +2151,7 @@ const ListItemPresentation = (props) => {
 // A <List.Item skeleton> — a non-interactive placeholder row shown while a list
 // is loading. It is presentation-only (not tracked, not selectable, aria-hidden)
 // and reuses <Text loading> for the shimmer. Box layout props (padding, spacing…)
-// pass through so a loadingSkeletonTemplate can match the real items' metrics; and when
+// pass through so a renderSkeleton row can match the real items' metrics; and when
 // children are provided they render as-is, so a template can reproduce a
 // multi-part item (e.g. title + subtitle) out of several <Text loading> bars.
 const ListItemSkeletonResolver = (props) => {
@@ -2126,7 +2176,7 @@ const ListItemSkeleton = (props) => {
       paddingY={paddingY}
       {...rest}
       {...columnsOverrideProps}
-      baseClassName="navi_list_item navi_list_item_skeleton"
+      baseClassName={`navi_list_item ${SKELETON_LIST_ITEM_CLASS}`}
     >
       {children ?? <Text loading />}
     </Box>
@@ -2506,9 +2556,9 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
  *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
- *               instead of a real item. Used as the List `loadingSkeletonTemplate`
- *               while `loading`; Box layout props (padding…) pass through so the
- *               placeholder can match the real items' metrics.
+ *               instead of a real item. This is what a `renderSkeleton` returns
+ *               for a row on its way; Box layout props (padding…) pass through
+ *               so the placeholder can match the real items' metrics.
  *   value     — the JS value emitted by the list's action/uiAction when this item
  *               is selected. Can be any type (string, number, object…).
  *   selected  — controlled selected state. Pass `selected === value` (single) or
@@ -2583,6 +2633,7 @@ const createListVirtual = () => {
     startAt: "start",
     horizontal: false,
     virtualItemSizeSignal: null,
+    renderSkeleton: undefined,
     openPass: (renderBudget, startAt) => {
       virtual.renderBudget = renderBudget;
       virtual.startAt = startAt;
@@ -2671,6 +2722,8 @@ export const ListItems = ({
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const store = useItemStore({ items, count, itemsAction });
+  const renderRowSkeleton =
+    renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
   // and the rows drawn stop short of where the scroll says they are.
   const virtualItemSize = virtual.virtualItemSizeSignal.value;
@@ -2731,12 +2784,12 @@ export const ListItems = ({
     let rowVnode;
     if (itemData) {
       rowVnode = renderItem(itemData.value, rowIndex);
-    } else if (renderSkeleton === false) {
+    } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
       rowVnode = <ListItem skeleton style={SKELETON_HIDDEN_STYLE} />;
-    } else if (renderSkeleton) {
-      rowVnode = renderSkeleton(rowIndex);
+    } else if (renderRowSkeleton) {
+      rowVnode = renderRowSkeleton(rowIndex);
     } else {
       rowVnode = <ListItem skeleton />;
     }
@@ -2786,7 +2839,7 @@ const useItemStore = ({ items, count, itemsAction }) => {
     ? count === undefined
       ? items.length
       : count
-    : (pages.count ?? virtual.renderBudget);
+    : (pages.count ?? count ?? virtual.renderBudget);
 
   const store = {
     rowCount,
@@ -2818,8 +2871,19 @@ const useItemStore = ({ items, count, itemsAction }) => {
       let start = missingStart;
       let end = missingEnd;
       if (!controlled && pages.count === undefined) {
-        start = virtual.startAt === "end" ? -budget : 0;
-        end = virtual.startAt === "end" ? -1 : budget - 1;
+        const startAt = virtual.startAt;
+        if (startAt === "end") {
+          // Counting back from the end, the way an HTTP range does: a list
+          // opening on its last rows asks for them before it knows how many
+          // there are.
+          start = -budget;
+          end = -1;
+        } else {
+          const first =
+            typeof startAt === "number" ? startAt - Math.floor(budget / 2) : 0;
+          start = first < 0 ? 0 : first;
+          end = start + budget - 1;
+        }
       }
       useLayoutEffect(() => {
         if (start === -1) {

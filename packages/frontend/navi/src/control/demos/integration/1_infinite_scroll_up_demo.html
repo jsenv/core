@@ -61,14 +61,15 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { signal } from "@preact/signals";
       import { Box, Button, List, ListItem, Text } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { FakeBackend } from "../../../internal/fake_backend.jsx";
 
       // La conversation entière vit "sur le serveur"; le front n'en tient que
       // les pages qu'il a demandées.
       const MESSAGE_COUNT = 200;
       const PAGE_MAX = 25;
+      const LAST_READ_INDEX = 96;
 
       const PHRASES = [
         "ok",
@@ -90,12 +91,10 @@
         time: `${9 + Math.floor(index / 8)}h${String((index * 7) % 60).padStart(2, "0")}`,
       });
 
-      const inFlightSignal = signal(0);
-      const requestLogSignal = signal([]);
-      // Le backend: on lui demande un intervalle, il répond ce qu'il a — jamais
-      // plus de PAGE_MAX lignes — en disant où ça tombe et combien il y en a en
-      // tout. Un début négatif compte depuis la fin (Range: items=-25).
-      const fetchMessages = ({ start, end }, latency) => {
+      // Ce que le serveur répond à un intervalle: jamais plus de PAGE_MAX
+      // lignes, en disant où ça tombe et combien il y en a en tout. Un début
+      // négatif compte depuis la fin (Range: items=-25).
+      const readPage = ({ start, end }) => {
         let from = start < 0 ? MESSAGE_COUNT + start : start;
         let to = end < 0 ? MESSAGE_COUNT + end : end;
         if (from < 0) {
@@ -108,33 +107,14 @@
           // On rend la fin de l'intervalle demandé: c'est de là qu'on remonte.
           from = to - PAGE_MAX + 1;
         }
-        inFlightSignal.value++;
-        requestLogSignal.value = [
-          `${start}…${end} → ${from}…${to}`,
-          ...requestLogSignal.value,
-        ].slice(0, 6);
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            inFlightSignal.value--;
-            const items = [];
-            let index = from;
-            while (index <= to) {
-              items.push(createMessage(index));
-              index++;
-            }
-            resolve({ items, start: from, count: MESSAGE_COUNT });
-          }, latency);
-        });
+        const items = [];
+        let index = from;
+        while (index <= to) {
+          items.push(createMessage(index));
+          index++;
+        }
+        return { items, start: from, count: MESSAGE_COUNT };
       };
-
-      const Stat = ({ label, value, busy }) => (
-        <span>
-          <span className="stat-label">{label} </span>
-          <span className="stat-value" data-busy={busy ? "" : undefined}>
-            {value}
-          </span>
-        </span>
-      );
 
       const MessageItem = ({ message }) => (
         <ListItem paddingX="m" paddingY="xs">
@@ -161,72 +141,75 @@
         </ListItem>
       );
 
-      const Thread = ({ latency }) => (
-        <List maxHeight="220px" borderWidth="1" startAt="end" renderBudget={30}>
+      const Thread = ({ startAt, action }) => (
+        <List
+          maxHeight="220px"
+          renderBudget={30}
+          startAt={startAt}
+          renderSkeleton={(index) => <MessageSkeleton index={index} />}
+        >
           <List.Items
-            itemsAction={(range) => fetchMessages(range, latency)}
+            count={MESSAGE_COUNT}
+            itemsAction={async (range) => {
+              await action(range);
+              return readPage(range);
+            }}
             getItemId={(message) => `message_${message.index}`}
             renderItem={(message) => <MessageItem message={message} />}
-            renderSkeleton={(index) => <MessageSkeleton index={index} />}
           />
         </List>
       );
 
-      const RequestLog = () => (
-        <Box flex="y" spacing="xs">
-          {requestLogSignal.value.map((line, index) => (
-            <Text key={`${line}_${index}`} size="xs" color="#777">
-              {line}
-            </Text>
-          ))}
-        </Box>
-      );
-
-      const App = () => {
-        const [latency, setLatency] = useState(600);
+      const Section = ({ title, caption, startAt }) => {
         const [threadKey, setThreadKey] = useState(0);
-
         return (
-          <Box flex="y" spacing="l">
-            <DemoHeader
-              title="Messagerie (scroll infini vers le haut)"
-              previous={{
-                href: "./0_address_autocomplete_demo.html",
-                label: "Adresse avec autocomplete",
-              }}
-            />
-            <div className="demo-section">
-              <h2>Cas nominal</h2>
-              <Box flex="y" spacing="m" style="margin-top: 12px">
-                <Box flex alignY="center" spacing="m">
-                  <label>
-                    <span className="stat-label">latence </span>
-                    <select
-                      value={latency}
-                      onChange={(e) => setLatency(Number(e.target.value))}
-                    >
-                      <option value="0">0 ms</option>
-                      <option value="600">600 ms</option>
-                      <option value="2000">2000 ms</option>
-                    </select>
-                  </label>
-                  <Stat label="total" value={MESSAGE_COUNT} />
-                  <Stat
-                    label="en vol"
-                    value={inFlightSignal.value}
-                    busy={inFlightSignal.value > 0}
-                  />
-                  <Button onClick={() => setThreadKey(threadKey + 1)}>
-                    recharger
-                  </Button>
-                </Box>
-                <Thread key={threadKey} latency={latency} />
-                <RequestLog />
+          <div className="demo-section">
+            <h2>{title}</h2>
+            <Box flex="y" spacing="m" style="margin-top: 8px">
+              <Box flex alignY="center" spacing="m">
+                <Text size="s" color="#555">
+                  {caption}
+                </Text>
+                <Button onClick={() => setThreadKey(threadKey + 1)}>
+                  recharger
+                </Button>
               </Box>
-            </div>
-          </Box>
+              <FakeBackend value={`${MESSAGE_COUNT} messages`}>
+                {({ action }) => (
+                  <Thread key={threadKey} startAt={startAt} action={action} />
+                )}
+              </FakeBackend>
+            </Box>
+          </div>
         );
       };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Messagerie (scroll infini)"
+            previous={{
+              href: "./0_address_autocomplete_demo.html",
+              label: "Adresse avec autocomplete",
+            }}
+          />
+          <Section
+            title="On arrive sur le dernier message"
+            caption='startAt="end"'
+            startAt="end"
+          />
+          <Section
+            title="On reprend là où on s'était arrêté"
+            caption={`startAt={${LAST_READ_INDEX}}`}
+            startAt={LAST_READ_INDEX}
+          />
+          <Section
+            title="On arrive sur le premier message"
+            caption='startAt="start"'
+            startAt="start"
+          />
+        </Box>
+      );
 
       render(<App />, document.getElementById("app"));
     </script>

@@ -1567,9 +1567,9 @@
             <List
               loading={loading}
               count={SOME_FRUITS.length}
-              loadingSkeletonTemplate={
+              renderSkeleton={() => (
                 <ListItem skeleton paddingX="m" paddingY="m" />
-              }
+              )}
               expandX
             >
               {renderFruitItems(SOME_FRUITS, undefined, { paddingY: "m" })}
@@ -1586,7 +1586,7 @@
             <List
               loading={loading}
               count={PEOPLE.length}
-              loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              renderSkeleton={() => PERSON_SKELETON_TEMPLATE}
               expandX
             >
               {PEOPLE.map((person, i) => (
@@ -1606,7 +1606,7 @@
               separator
               loading={loading}
               count={PEOPLE.length}
-              loadingSkeletonTemplate={PERSON_SKELETON_TEMPLATE}
+              renderSkeleton={() => PERSON_SKELETON_TEMPLATE}
               expandX
             >
               {PEOPLE.map((person, i) => (
@@ -1671,7 +1671,7 @@
               Default skeleton
             </Heading>
             <p>
-              No <code>loadingSkeletonTemplate</code> — each row is a full-width{" "}
+              No <code>renderSkeleton</code> — each row is a full-width{" "}
               <code>&lt;Text loading&gt;</code> bar.
             </p>
             <DefaultSkeletonExample />
@@ -1680,10 +1680,9 @@
               Custom padding
             </Heading>
             <p>
-              Pass a <code>loadingSkeletonTemplate</code> so the placeholder
-              matches the real rows' padding, and a <code>count</code> equal to
-              the expected item count so the list keeps the same height across
-              the swap.
+              Pass a <code>renderSkeleton</code> so the placeholder matches the
+              real rows' padding, and a <code>count</code> equal to the expected
+              item count so the list keeps the same height across the swap.
             </p>
             <CustomPaddingExample />
 
@@ -1692,7 +1691,7 @@
             </Heading>
             <p>
               When items have their own arrangement, the{" "}
-              <code>loadingSkeletonTemplate</code> reproduces it with one{" "}
+              <code>renderSkeleton</code> reproduces it with one{" "}
               <code>&lt;Text loading&gt;</code> per line, each sized to mimic
               the real content — a short title bar over a wide address bar;{" "}
               <code>count</code> matches the known length. Press <em>Load</em>{" "}
