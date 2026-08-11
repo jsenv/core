@@ -67,7 +67,14 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { Box, Button, List, ListItem, Text } from "@jsenv/navi";
+      import {
+        Box,
+        Button,
+        List,
+        ListItem,
+        SelectableInput,
+        Text,
+      } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import { FakeBackend } from "../../../internal/fake_backend.jsx";
 
@@ -158,7 +165,15 @@
         </ListItem>
       );
 
-      const Thread = ({ startAt, action }) => (
+      // Le vrai réseau: un délai qu'on subit, sans personne pour répondre à la
+      // place du serveur.
+      const LATENCY = 500;
+      const fetchPage = (range) =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(readPage(range)), LATENCY);
+        });
+
+      const Thread = ({ startAt, itemsAction }) => (
         <List
           maxHeight="220px"
           expandX
@@ -168,18 +183,15 @@
         >
           <List.Items
             count={MESSAGE_COUNT}
-            itemsAction={async (range) => {
-              await action(range);
-              return readPage(range);
-            }}
+            itemsAction={itemsAction}
             getItemId={(message) => `message_${message.index}`}
             renderItem={(message) => <MessageItem message={message} />}
           />
         </List>
       );
 
-      const Section = ({ title, caption, startAt }) => {
-        const [threadKey, setThreadKey] = useState(0);
+      const Section = ({ title, caption, children }) => {
+        const [key, setKey] = useState(0);
         return (
           <div className="demo-section">
             <h2>{title}</h2>
@@ -188,24 +200,117 @@
                 <Text size="s" color="#555">
                   {caption}
                 </Text>
-                <Button onClick={() => setThreadKey(threadKey + 1)}>
-                  recharger
-                </Button>
+                <Button onClick={() => setKey(key + 1)}>recharger</Button>
               </Box>
-              <FakeBackend value={`${MESSAGE_COUNT} messages`}>
-                {({ action }) => (
-                  <Thread key={threadKey} startAt={startAt} action={action} />
-                )}
-              </FakeBackend>
+              {children(key)}
             </Box>
           </div>
+        );
+      };
+
+      // Les parties de padel: des lignes qu'on choisit, pas qu'on lit. La
+      // sélection est décrite par itemProps, donc la liste la connaît aussi
+      // pour les lignes qu'elle ne rend pas.
+      const COURTS = ["Court 1", "Court 2", "Court couvert", "Court extérieur"];
+      const NIVEAUX = ["P25", "P50", "P100", "P250"];
+      const GAME_COUNT = 3000;
+      const createGame = (index) => ({
+        index,
+        court: COURTS[index % COURTS.length],
+        level: NIVEAUX[index % NIVEAUX.length],
+        players: 1 + (index % 4),
+        day: `${1 + (index % 28)}/0${1 + (index % 9)}`,
+        hour: `${8 + (index % 12)}h${index % 2 ? "30" : "00"}`,
+      });
+      const readGamePage = ({ start, end }) => {
+        let from = start < 0 ? GAME_COUNT + start : start;
+        let to = end < 0 ? GAME_COUNT + end : end;
+        if (from < 0) {
+          from = 0;
+        }
+        if (to > GAME_COUNT - 1) {
+          to = GAME_COUNT - 1;
+        }
+        const items = [];
+        let index = from;
+        while (index <= to) {
+          items.push(createGame(index));
+          index++;
+        }
+        return { items, start: from, count: GAME_COUNT };
+      };
+
+      const GameItem = ({ game }) => (
+        <List.Item flex alignY="center" spacing="s" paddingX="m" paddingY="s">
+          <SelectableInput />
+          <Text weight="bold">{game.level}</Text>
+          <Text>{game.court}</Text>
+          <Text size="s" color="#777">
+            {game.day} · {game.hour}
+          </Text>
+          <Text size="s" color={game.players === 4 ? "#a72" : "#2a7"}>
+            {game.players}/4 joueurs
+          </Text>
+        </List.Item>
+      );
+      const GameSkeleton = () => (
+        <List.Item
+          skeleton
+          flex
+          alignY="center"
+          spacing="s"
+          paddingX="m"
+          paddingY="s"
+        >
+          <Text loading width="60px">
+            {"\u00a0"}
+          </Text>
+          <Text loading width="180px">
+            {"\u00a0"}
+          </Text>
+        </List.Item>
+      );
+
+      const GameList = () => {
+        const [selected, setSelected] = useState(null);
+        return (
+          <Box flex="y" spacing="s">
+            <List
+              selectable
+              maxHeight="260px"
+              expandX
+              renderBudget={30}
+              separator
+              action={(value) => setSelected(value)}
+              renderSkeleton={() => <GameSkeleton />}
+            >
+              <List.Items
+                count={GAME_COUNT}
+                itemsAction={(range) =>
+                  new Promise((resolve) => {
+                    setTimeout(() => resolve(readGamePage(range)), LATENCY);
+                  })
+                }
+                getItemId={(game) => `game_${game.index}`}
+                itemProps={(game) => ({
+                  selectable: true,
+                  value: game.index,
+                  selected: selected === game.index,
+                })}
+                renderItem={(game) => <GameItem game={game} />}
+              />
+            </List>
+            <Text size="s" color="#555">
+              partie choisie: {selected === null ? "aucune" : `#${selected}`}
+            </Text>
+          </Box>
         );
       };
 
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader
-            title="Messagerie (scroll infini)"
+            title="Listes infinies"
             previous={{
               href: "./0_address_autocomplete_demo.html",
               label: "Adresse avec autocomplete",
@@ -214,18 +319,48 @@
           <Section
             title="On arrive sur le dernier message"
             caption='startAt="end"'
-            startAt="end"
-          />
+          >
+            {(key) => (
+              <Thread key={key} startAt="end" itemsAction={fetchPage} />
+            )}
+          </Section>
           <Section
             title="On reprend là où on s'était arrêté"
             caption={`startAt={${LAST_READ_INDEX}}`}
-            startAt={LAST_READ_INDEX}
-          />
+          >
+            {(key) => (
+              <Thread
+                key={key}
+                startAt={LAST_READ_INDEX}
+                itemsAction={fetchPage}
+              />
+            )}
+          </Section>
           <Section
-            title="On arrive sur le premier message"
-            caption='startAt="start"'
-            startAt="start"
-          />
+            title="Une partie à rejoindre"
+            caption="3000 parties, une seule à choisir"
+          >
+            {(key) => <GameList key={key} />}
+          </Section>
+          <Section
+            title="Chaque page, à la main"
+            caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
+          >
+            {(key) => (
+              <FakeBackend value={`${MESSAGE_COUNT} messages`}>
+                {({ action }) => (
+                  <Thread
+                    key={key}
+                    startAt="end"
+                    itemsAction={async (range) => {
+                      await action(range);
+                      return readPage(range);
+                    }}
+                  />
+                )}
+              </FakeBackend>
+            )}
+          </Section>
         </Box>
       );
 

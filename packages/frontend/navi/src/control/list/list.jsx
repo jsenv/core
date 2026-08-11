@@ -518,14 +518,6 @@ const css = /* css */ `
     font-size: 1em;
     line-height: 1.4;
   }
-  [navi-virtual-filler="after"] {
-    /* for some reason preact ends up puttin this element before the list items in some scenarios
-     I've noticed that removing the ItemIndexToScrollOnMountRefContext.Provider
-     does fix this issue (I suppose it's because it cause on less render of the list which is the problematic one)
-     this order ENSURE that even when preact hallucinates we are still correctly putting the bottom filler
-     after the list items */
-    order: 1;
-  }
   /* A control that IS the row — a direct child of the item, so it spans it —
      must keep its loading outline within its own box: the scroll container is
      overflow:auto, and the couple pixels the outline normally draws outside
@@ -882,7 +874,6 @@ const ListUI = (props) => {
         columns={columns}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemSizeSignal={virtualItemSizeSignal}
         virtual={virtual}
         pendingScrollRef={pendingScrollRef}
       >
@@ -999,7 +990,6 @@ const ListContent = ({
   columns,
   tracker,
   renderWindow,
-  virtualItemSizeSignal,
   virtual,
   pendingScrollRef,
   children,
@@ -1037,7 +1027,6 @@ const ListContent = ({
         {...listProps}
         tracker={tracker}
         renderWindow={renderWindow}
-        virtualItemSizeSignal={virtualItemSizeSignal}
         virtual={virtual}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
@@ -1900,7 +1889,6 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
 const UnorderedList = ({
   tracker,
   renderWindow,
-  virtualItemSizeSignal,
   virtual,
   fallback,
   searchFallback,
@@ -1930,10 +1918,6 @@ const UnorderedList = ({
       spacing={spacing}
       baseClassName="navi_list"
     >
-      <BeforeFiller
-        virtualItemSizeSignal={virtualItemSizeSignal}
-        renderWindowStart={renderWindow.start}
-      />
       {!suppressFallback && (
         <SearchFallback
           searchFallback={searchFallback}
@@ -1967,11 +1951,6 @@ const UnorderedList = ({
           </SeparatorContext.Provider>
         </RenderWindowContext.Provider>
       </SearchNoMatchModeContext.Provider>
-      <AfterFiller
-        virtualItemSizeSignal={virtualItemSizeSignal}
-        renderWindowEnd={renderWindow.end}
-        virtual={virtual}
-      />
     </Box>
   );
 };
@@ -2030,32 +2009,6 @@ const Fallback = ({ tracker, virtual, fallback, searching }) => {
     >
       {fallback}
     </ListItem>
-  );
-};
-// The room held for the rows the render window leaves out. Rows the list does
-// not hold yet are NOT part of it — they are drawn as skeleton rows by whoever
-// stands for them (see ListItems), because a row on its way is content, not a
-// gap.
-const BeforeFiller = ({ virtualItemSizeSignal, renderWindowStart }) => {
-  const virtualItemSize = virtualItemSizeSignal.value;
-  return (
-    <VirtualFiller
-      edge="before"
-      itemCount={renderWindowStart}
-      virtualItemSize={virtualItemSize}
-    />
-  );
-};
-const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, virtual }) => {
-  const total = virtual.totalSignal.value;
-  const virtualItemSize = virtualItemSizeSignal.value;
-  const itemsAfterWindow = total - renderWindowEnd;
-  return (
-    <VirtualFiller
-      edge="after"
-      itemCount={itemsAfterWindow > 0 ? itemsAfterWindow : 0}
-      virtualItemSize={virtualItemSize}
-    />
   );
 };
 const VirtualFiller = ({ edge, itemCount, virtualItemSize }) => {
@@ -2120,7 +2073,7 @@ const ListItemRowResolver = (props) => {
     return <Next {...props} />;
   }
   // eslint-disable-next-line no-unused-vars
-  const { id, index, value, rowMinHeight, rowMinWidth, ...rowProps } = row;
+  const { id, index, item, rowMinHeight, rowMinWidth, ...rowProps } = row;
   return (
     <Next
       {...rowProps}
@@ -2193,7 +2146,6 @@ const ListItemUI = (props) => {
   }
   const idDefault = useId();
   props.id = props.id || idDefault;
-  const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const virtual = useContext(ListVirtualContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
@@ -2252,9 +2204,6 @@ const ListItemUI = (props) => {
     return <ListItemReal {...props} />;
   }
   const index = props.index;
-  if (index < renderWindow.start || index >= renderWindow.end) {
-    return <ListItemVoid />;
-  }
   const listItemVnode = <ListItemReal {...props} />;
   // For separator decision, we need to know "am I the first visible item?".
   // We deliberately do NOT use tracker's visibleIndex here because, during a
@@ -2284,13 +2233,6 @@ const ListItemUI = (props) => {
       {listItemVnode}
     </>
   );
-};
-// When an item is outside the render window it cannot render a DOM node.
-// If it wants to scroll into view it sets scrollTop so the scroll event
-// shifts the window; once the item mounts as ListItemReal its layout effect
-// calls scrollIntoViewWithStickyAwareness to fine-tune the position.
-const ListItemVoid = () => {
-  return null;
 };
 const ListItemReal = (props) => {
   const {
@@ -2743,14 +2685,21 @@ export const ListItems = ({
   const runEnd = runStart + store.rowCount;
   const heldStart = itemStart === undefined ? runStart : itemStart;
   const getItemAt = (index) => store.getItem(index, heldStart);
+  const windowFrom =
+    renderWindow.start > runStart ? renderWindow.start : runStart;
+  const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
+  store.forget(windowFrom, windowTo);
 
   const itemDataList = [];
   store.eachHeld(heldStart, (item, index) => {
     itemDataList.push({
+      // What the row stands for, which is what selecting it emits — the item
+      // itself unless itemProps names something else (an id, a code).
+      value: item,
       ...(itemProps ? itemProps(item, index) : null),
       id: getItemId ? getItemId(item, index) : `${ownerId}_${index}`,
       index,
-      value: item,
+      item,
     });
   });
   tracker.useTrackItemList(itemDataList);
@@ -2758,9 +2707,6 @@ export const ListItems = ({
   // What the list is about to draw and the run does not have. Asked for as one
   // range: a caller answering with less than that (a page at a time) is asked
   // again for the rest, and one that answers with nothing is not asked twice.
-  const windowFrom =
-    renderWindow.start > runStart ? renderWindow.start : runStart;
-  const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
   let missingStart = -1;
   let missingEnd = -1;
   let scanIndex = windowFrom;
@@ -2797,13 +2743,27 @@ export const ListItems = ({
     failureRowIndex = looked < from ? from : looked > to ? to : looked;
   }
   const rows = [];
+  // The room held for this run's own rows that the window leaves out. It
+  // belongs to the run and not to the list: a list is not necessarily made of
+  // one run, and what sits before or after it (a header, rows given one by
+  // one) is not virtualized at all.
+  if (windowFrom > runStart) {
+    rows.push(
+      <VirtualFiller
+        key="navi-list-filler-before"
+        edge="before"
+        itemCount={windowFrom - runStart}
+        virtualItemSize={virtualItemSize}
+      />,
+    );
+  }
   let rowIndex = windowFrom;
   while (rowIndex < windowTo) {
     const itemData = itemDataByIndex.get(rowIndex);
     const key = itemData ? itemData.id : `${ownerId}_skeleton_${rowIndex}`;
     let rowVnode;
     if (itemData) {
-      rowVnode = renderItem(itemData.value, rowIndex);
+      rowVnode = renderItem(itemData.item, rowIndex);
     } else if (store.failure && rowIndex === failureRowIndex) {
       // One row says it, at the top of the hole; the others below keep holding
       // the room, so nothing moves when the retry succeeds.
@@ -2845,6 +2805,16 @@ export const ListItems = ({
     }
     rowIndex++;
   }
+  if (runEnd > windowTo) {
+    rows.push(
+      <VirtualFiller
+        key="navi-list-filler-after"
+        edge="after"
+        itemCount={runEnd - windowTo}
+        virtualItemSize={virtualItemSize}
+      />,
+    );
+  }
   return rows;
 };
 List.Items = ListItems;
@@ -2874,6 +2844,13 @@ const ListItemsFailure = ({ error, retry }) => {
     </ListItem>
   );
 };
+
+// How many rows a run keeps in memory before it starts dropping the ones it is
+// not about to draw, and how many it keeps on either side of the window when it
+// does. Sized so that a normal back-and-forth around what is on screen never
+// hits the network again.
+const ITEM_STORE_MAX = 1000;
+const ITEM_STORE_KEEP_AROUND = 250;
 
 // The rows a run has, and how it gets more. Two shapes behind one reader: the
 // caller holds them (items/count/itemStart), or the run asked for them and
@@ -2907,6 +2884,22 @@ const useItemStore = ({ items, count, itemsAction }) => {
   const store = {
     rowCount,
     failure,
+    // JS memory is cheap next to the DOM, but a long enough scroll accumulates
+    // everything it ever went through. Rows far from what is on screen are
+    // dropped and simply asked for again if the user goes back — the same
+    // trade the render window makes, one order of magnitude further out.
+    forget: (windowFrom, windowTo) => {
+      if (controlled || pages.byIndex.size <= ITEM_STORE_MAX) {
+        return;
+      }
+      const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
+      const keepTo = windowTo + ITEM_STORE_KEEP_AROUND;
+      for (const index of pages.byIndex.keys()) {
+        if (index < keepFrom || index > keepTo) {
+          pages.byIndex.delete(index);
+        }
+      }
+    },
     retry: () => {
       const request = requestRef.current;
       request.start = -1;
