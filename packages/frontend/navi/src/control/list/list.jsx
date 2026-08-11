@@ -1564,6 +1564,7 @@ const useListScrollSync = ({
         return;
       }
       const { index, reason: hitReason } = scrollInfo;
+      virtual.visibleIndex = index;
       reason = hitReason;
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, index - half);
@@ -2630,6 +2631,11 @@ const createListVirtual = () => {
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
+    // The row at the top of what is on screen, as the scroll last saw it.
+    // What a run needs it for: to put a sentence about missing rows where it
+    // will be read, rather than at the top of a range that may be well above
+    // the fold.
+    visibleIndex: 0,
     openPass: (renderBudget, startAt) => {
       virtual.renderBudget = renderBudget;
       virtual.startAt = startAt;
@@ -2709,6 +2715,7 @@ export const ListItems = ({
   itemStart,
   onItemsMissing,
   renderSkeleton,
+  renderError,
   itemProps,
   getItemId,
 }) => {
@@ -2772,6 +2779,23 @@ export const ListItems = ({
   for (const itemData of itemDataList) {
     itemDataByIndex.set(itemData.index, itemData);
   }
+  // Where the sentence goes when rows are missing: on the row the user is
+  // looking at, clamped to the rows that are actually missing. Putting it at
+  // the top of the failed range would put it off screen as often as not — a
+  // range asked for counting back from the end (the very first ask, before the
+  // count is known) does not even have a row of its own to sit on.
+  let failureRowIndex = -1;
+  if (store.failure) {
+    const failStart = store.failure.start;
+    const failEnd = store.failure.end;
+    let from = failStart < 0 || failStart < windowFrom ? windowFrom : failStart;
+    let to = failEnd < 0 || failEnd > windowTo - 1 ? windowTo - 1 : failEnd;
+    if (from > to) {
+      from = to;
+    }
+    const looked = virtual.visibleIndex;
+    failureRowIndex = looked < from ? from : looked > to ? to : looked;
+  }
   const rows = [];
   let rowIndex = windowFrom;
   while (rowIndex < windowTo) {
@@ -2780,6 +2804,19 @@ export const ListItems = ({
     let rowVnode;
     if (itemData) {
       rowVnode = renderItem(itemData.value, rowIndex);
+    } else if (store.failure && rowIndex === failureRowIndex) {
+      // One row says it, at the top of the hole; the others below keep holding
+      // the room, so nothing moves when the retry succeeds.
+      rowVnode = renderError ? (
+        renderError({
+          error: store.failure.error,
+          retry: store.retry,
+          start: store.failure.start,
+          end: store.failure.end,
+        })
+      ) : (
+        <ListItemsFailure error={store.failure.error} retry={store.retry} />
+      );
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -2812,6 +2849,32 @@ export const ListItems = ({
 };
 List.Items = ListItems;
 
+// What is drawn where rows were asked for and never came: the sentence and the
+// way out, in the row itself — the rest of the list is fine, so replacing all
+// of it (List's own `error`) would be a lie.
+const ListItemsFailure = ({ error, retry }) => {
+  return (
+    <ListItem
+      role="presentation"
+      baseClassName="navi_list_item navi_list_error"
+    >
+      <span className="navi_list_error_icon" aria-hidden="true">
+        ⚠
+      </span>
+      <span className="navi_list_item_error_message">
+        {error && error.message ? error.message : naviI18n("list.rows_failed")}
+      </span>
+      <button
+        type="button"
+        className="navi_list_item_error_dismiss"
+        onClick={retry}
+      >
+        {naviI18n("list.rows_retry")}
+      </button>
+    </ListItem>
+  );
+};
+
 // The rows a run has, and how it gets more. Two shapes behind one reader: the
 // caller holds them (items/count/itemStart), or the run asked for them and
 // keeps what came back — a page saying where it lands and how many rows there
@@ -2825,6 +2888,10 @@ const useItemStore = ({ items, count, itemsAction }) => {
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
   const requestRef = useRef({ busy: false, start: -1, end: -1, held: -1 });
+  // The rows asked for that never came. Kept as a range so the list can say
+  // where the hole is, and cleared by a retry — which is what makes the same
+  // range askable again (see the request memory just above).
+  const [failure, setFailure] = useState(null);
 
   const controlled = items !== undefined;
   const virtual = useContext(ListVirtualContext);
@@ -2839,6 +2906,14 @@ const useItemStore = ({ items, count, itemsAction }) => {
 
   const store = {
     rowCount,
+    failure,
+    retry: () => {
+      const request = requestRef.current;
+      request.start = -1;
+      request.end = -1;
+      request.held = -1;
+      setFailure(null);
+    },
     getItem: (index, heldStart) => {
       if (controlled) {
         return items[index - heldStart];
@@ -2912,6 +2987,7 @@ const useItemStore = ({ items, count, itemsAction }) => {
           if (!page) {
             return;
           }
+          setFailure(null);
           const pageItems = Array.isArray(page) ? page : page.items;
           const pageStart = Array.isArray(page) ? 0 : (page.start ?? 0);
           const pageCount = Array.isArray(page)
@@ -2925,11 +3001,19 @@ const useItemStore = ({ items, count, itemsAction }) => {
           pages.count = pageCount;
           setPageVersion((version) => version + 1);
         };
-        const result = itemsAction({ start, end });
+        const failed = (error) => {
+          request.busy = false;
+          setFailure({ start, end, error });
+        };
+        let result;
+        try {
+          result = itemsAction({ start, end });
+        } catch (e) {
+          failed(e);
+          return;
+        }
         if (result && typeof result.then === "function") {
-          result.then(done, () => {
-            request.busy = false;
-          });
+          result.then(done, failed);
         } else {
           done(result);
         }

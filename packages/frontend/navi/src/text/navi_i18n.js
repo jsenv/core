@@ -264,6 +264,14 @@ naviI18n.addAll({
     en: "No item matches this search. The rest is shown below.",
     fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
   },
+  "list.rows_failed": {
+    en: "These rows could not be loaded.",
+    fr: "Ces lignes n'ont pas pu être chargées.",
+  },
+  "list.rows_retry": {
+    en: "Retry",
+    fr: "Réessayer",
+  },
 });
 
 // Badge list messages

@@ -74,7 +74,7 @@
       // La conversation entière vit "sur le serveur"; le front n'en tient que
       // les pages qu'il a demandées.
       const MESSAGE_COUNT = 200;
-      const PAGE_MAX = 25;
+      const PAGE_MAX = 50;
       const LAST_READ_INDEX = 96;
 
       const PHRASES = [
@@ -99,7 +99,7 @@
 
       // Ce que le serveur répond à un intervalle: jamais plus de PAGE_MAX
       // lignes, en disant où ça tombe et combien il y en a en tout. Un début
-      // négatif compte depuis la fin (Range: items=-25).
+      // négatif compte depuis la fin (Range: items=-30).
       const readPage = ({ start, end }) => {
         let from = start < 0 ? MESSAGE_COUNT + start : start;
         let to = end < 0 ? MESSAGE_COUNT + end : end;
