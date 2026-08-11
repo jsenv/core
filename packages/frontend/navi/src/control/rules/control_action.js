@@ -127,6 +127,12 @@ export const tryActionAfterInteractionAllowed = (
     meta = {},
     reportOnInvalid,
     onInvalid,
+    // A question to ask before the action runs at all, read off the control
+    // that requested it rather than passed down from each call site: a
+    // confirmation belongs to the button the user pressed, and that button is
+    // the requester whichever route brought the request here (its own action,
+    // or a --navi-send that resolved it as the form's submitter).
+    confirmMessage = requester?.getAttribute?.("data-confirm") || undefined,
   },
 ) => {
   const controlHost = findControlHost(element) || element;
@@ -188,6 +194,7 @@ export const tryActionAfterInteractionAllowed = (
       action,
       method,
       meta,
+      confirmMessage,
     });
   }
   return true;

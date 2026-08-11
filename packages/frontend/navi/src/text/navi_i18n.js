@@ -66,6 +66,10 @@ naviI18n.addAll({
     en: "Define",
     fr: "Définir",
   },
+  "button.confirm": {
+    en: "Confirm",
+    fr: "Confirmer",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()

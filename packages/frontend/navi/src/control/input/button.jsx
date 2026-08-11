@@ -14,6 +14,13 @@ const ButtonFirstResolver = (props) => {
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
 
+  // `confirm`: a question to answer before the action runs. Written onto the
+  // element rather than kept as a prop because the action is not always
+  // requested by this button's own React tree — a submit button hands the send
+  // to the form around it, and what asks the question there is the requester
+  // element (see tryActionAfterInteractionAllowed in control_action.js).
+  props["data-confirm"] = props.confirm;
+
   return <Next {...props} />;
 };
 

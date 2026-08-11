@@ -1,4 +1,7 @@
 import "./src/navi_css_vars.js";
+// Registers the popup an action with a `confirm` asks its question in — the
+// action path only knows how to ask, not how to show (see src/action/confirm.js).
+import "./src/action/confirm_popup.jsx";
 
 // actions
 export { ActionRenderer } from "./src/action/action_renderer.jsx";

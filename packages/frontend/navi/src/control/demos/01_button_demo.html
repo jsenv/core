@@ -214,6 +214,9 @@
                       Inside a form — own action
                     </a>
                   </li>
+                  <li>
+                    <a href="#confirm">confirm</a>
+                  </li>
                 </ol>
               </li>
               <li>
@@ -553,6 +556,123 @@
         );
       };
 
+      const ConfirmDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <div class="demo-section" id="confirm">
+            <h2>confirm</h2>
+
+            <div class="states-section">
+              <div class="states-title">confirm</div>
+              <p class="states-description">
+                The action runs only once the question is answered. Cancelling —
+                the cancel button, Escape, a click outside — aborts it.
+              </p>
+
+              <fieldset>
+                <legend>No confirm</legend>
+                <Button
+                  action={() => {
+                    push("Delete action");
+                  }}
+                >
+                  Delete
+                </Button>
+              </fieldset>
+
+              <fieldset>
+                <legend>confirm="Delete this file?"</legend>
+                <Button
+                  confirm="Delete this file?"
+                  action={() => {
+                    push("Delete action");
+                  }}
+                  onActionAborted={() => {
+                    push("Delete aborted");
+                  }}
+                >
+                  Delete
+                </Button>
+              </fieldset>
+
+              <fieldset>
+                <legend>confirm + async action (800ms)</legend>
+                <Button
+                  confirm="Delete this file?"
+                  action={async () => {
+                    push("Delete action");
+                    await new Promise((r) => setTimeout(r, 800));
+                  }}
+                  onActionAborted={() => {
+                    push("Delete aborted");
+                  }}
+                >
+                  Delete
+                </Button>
+              </fieldset>
+
+              <fieldset>
+                <legend>confirm on a submit button</legend>
+                <Form
+                  action={async ({ email }) => {
+                    push("Form action", { email });
+                    await new Promise((r) => setTimeout(r, 800));
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Input
+                      type="email"
+                      name="email"
+                      placeholder="new@address.com"
+                    />
+                    <Button
+                      type="submit"
+                      confirm="Change the address every notification is sent to?"
+                    >
+                      Save
+                    </Button>
+                  </Box>
+                </Form>
+              </fieldset>
+
+              <fieldset>
+                <legend>confirm on one of two submit buttons</legend>
+                <Form
+                  action={async ({ title, submitAction }) => {
+                    push("Form action", { title, submitAction });
+                    await new Promise((r) => setTimeout(r, 800));
+                  }}
+                >
+                  <Box flex="y" spacing="s" alignX="start">
+                    <Input
+                      type="text"
+                      name="title"
+                      placeholder="Article title…"
+                    />
+                    <Box flex="x" spacing="s">
+                      <Button type="submit" name="submitAction" value="draft">
+                        Save as draft
+                      </Button>
+                      <Button
+                        type="submit"
+                        name="submitAction"
+                        value="publish"
+                        confirm="Publish this article for everyone?"
+                      >
+                        Publish
+                      </Button>
+                    </Box>
+                  </Box>
+                </Form>
+              </fieldset>
+
+              <CallLog entries={entries} onClear={clear} />
+            </div>
+          </div>
+        );
+      };
+
       const InteractivityDemo = () => {
         return (
           <>
@@ -560,6 +680,7 @@
             <InsideFormSimpleDemo />
             <InsideFormNamedButtonsDemo />
             <InsideFormOwnActionDemo />
+            <ConfirmDemo />
           </>
         );
       };

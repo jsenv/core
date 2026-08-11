@@ -42,6 +42,11 @@ export const CONTROL_ATTRIBUTE_SET = new Set([
   "data-callout-position",
   "data-callout-position-fixed",
 
+  // The question to answer before the action this control requests may run —
+  // read back off the element by tryActionAfterInteractionAllowed, hence an
+  // attribute and not just a prop (see control_action.js).
+  "data-confirm",
+
   "data-testid", // playwright, cypress
   "data-separator", // used by InputGroup paste-to-fill
 ]);
@@ -51,6 +56,7 @@ export const CONTROL_PROP_SET = new Set([
   ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
+  "confirm",
   "actionEvent",
   "actionAfterChange",
   "actionOnMouseDown",
