@@ -184,7 +184,6 @@
           <List.Items
             count={MESSAGE_COUNT}
             itemsAction={itemsAction}
-            getItemId={(message) => `message_${message.index}`}
             renderItem={(message) => <MessageItem message={message} />}
           />
         </List>
@@ -291,7 +290,6 @@
                     setTimeout(() => resolve(readGamePage(range)), LATENCY);
                   })
                 }
-                getItemId={(game) => `game_${game.index}`}
                 itemProps={(game) => ({
                   selectable: true,
                   value: game.index,

@@ -182,6 +182,11 @@ const css = /* css */ `
       max-height: var(--list-max-height, inherit);
       flex-wrap: inherit;
       overflow: auto;
+      /* The list keeps its own rows still (see the scroll anchoring in
+         list.jsx): two of them doing it at once compensate for each other's
+         compensation, and the browser's own is blind to the fillers resizing
+         under it anyway. */
+      overflow-anchor: none;
       overscroll-behavior: inherit; /* inherit select behavior */
       scrollbar-width: inherit;
     }
@@ -1134,7 +1139,7 @@ const useListScrollSync = ({
     const { start, end } = renderWindowRef.current;
     const isInWindow = index >= start && index < end;
     if (isInWindow) {
-      const itemEl = document.getElementById(item.id);
+      const itemEl = findRowElement(getListEl(), item.id);
       if (itemEl) {
         scrollItemIntoView(itemEl);
         return;
@@ -1160,6 +1165,13 @@ const useListScrollSync = ({
   };
 
   const startPlaceRef = useRef({ userTookOver: false });
+  // Set around a scroll the list performs itself. What it protects against is
+  // not the scroll event as such, but what the listener would conclude from it:
+  // the position it is about to read was chosen to keep the rows where they
+  // are, so re-deriving the window from it — through an estimate that is
+  // precisely what needed compensating — would send the window somewhere the
+  // user never asked to go.
+  const scrolledByListRef = useRef(false);
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
     const scrollerEl = getScroller();
@@ -1498,7 +1510,7 @@ const useListScrollSync = ({
       }
     }
     anchorRef.current = null;
-    const anchorEl = document.getElementById(anchor.id);
+    const anchorEl = findRowElement(getListEl(), anchor.id);
     if (!anchorEl) {
       return;
     }
@@ -1513,8 +1525,9 @@ const useListScrollSync = ({
       return;
     }
     debugScroll(
-      `anchored item drifted by ${Math.round(drift)}px, compensating scroll`,
+      `anchored row ${anchor.id} drifted by ${Math.round(drift)}px, compensating scroll`,
     );
+    scrolledByListRef.current = true;
     if (horizontal) {
       scrollerEl.scrollLeft += drift;
     } else {
@@ -1532,6 +1545,10 @@ const useListScrollSync = ({
     const listEl = getListEl();
     const onScroll = () => {
       updateCurrentScroll();
+      if (scrolledByListRef.current) {
+        scrolledByListRef.current = false;
+        return;
+      }
       const total = virtual.totalSignal.peek();
       if (total <= renderBudget) {
         return;
@@ -1610,6 +1627,15 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
   }
   return document.scrollingElement;
 };
+// The row with that id, IN THIS LIST. Not document.getElementById: an id is
+// only ever unique within a list — two lists on the same page can be showing
+// the same collection — and a list acting on a row that belongs to another one
+// is a spectacular kind of wrong (it scrolls to hold still something it is not
+// even showing).
+const findRowElement = (listEl, id) => {
+  return listEl.querySelector(`[id="${CSS.escape(id)}"]`);
+};
+
 // The row the user is looking at, and where it sits: what must not move when
 // the list is rebuilt around it.
 const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
@@ -1777,20 +1803,16 @@ const getScrollInfo = ({
   };
 };
 
-// Rows are not all the same height (a card grows with its content, a month
-// header slips in between), so the size the fillers reserve is an average of
-// what has actually been rendered so far. It moves by a fraction of the
-// difference at a time: a filler that resized to the full new estimate on every
-// window slide would make the scrollbar jump under the thumb.
-const VIRTUAL_ITEM_SIZE_SMOOTHING = 0.25;
 // Under this, rewriting the size would churn the fillers for a sub-pixel gain.
 const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
 // Measures the rows currently in the DOM, edge to edge: what a filler stands in
 // for is the room a run of rows takes together — separators and group labels
 // included — not the height of one <li>.
 const measureItemSize = (listEl, horizontal) => {
+  let fromSkeletons = false;
   let itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
   if (itemEls.length === 0) {
+    fromSkeletons = true;
     // Nothing real yet: a list that knows how many rows it has draws them as
     // skeletons before it holds any of them, and their height is what it can
     // reserve room with — a list arriving at its full height rather than
@@ -1800,14 +1822,21 @@ const measureItemSize = (listEl, horizontal) => {
     itemEls = listEl.querySelectorAll(`.${SKELETON_LIST_ITEM_CLASS}`);
   }
   if (itemEls.length === 0) {
-    return 0;
+    return null;
   }
   const firstRect = itemEls[0].getBoundingClientRect();
   const lastRect = itemEls[itemEls.length - 1].getBoundingClientRect();
   const span = horizontal
     ? lastRect.right - firstRect.left
     : lastRect.bottom - firstRect.top;
-  return span / itemEls.length;
+  if (span <= 0) {
+    return null;
+  }
+  return {
+    size: span / itemEls.length,
+    rowCount: itemEls.length,
+    fromSkeletons,
+  };
 };
 
 const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
@@ -1820,6 +1849,34 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
     virtualSizeSignal.value = virtualItemSizeProp;
   }
+  // Every row ever measured has a say, and an equal one. An average over a
+  // growing sample settles; a running average of the last window measured
+  // chases it, and since the fillers hold (total - window) rows, a moving
+  // average moves the whole scrollbar every time the window slides over rows
+  // that are a little taller than usual.
+  const samplesRef = useRef(null);
+  if (!samplesRef.current) {
+    samplesRef.current = { sum: 0, count: 0, fromSkeletons: true };
+  }
+  const feedSample = (measure) => {
+    const samples = samplesRef.current;
+    if (samples.fromSkeletons && !measure.fromSkeletons) {
+      // What a row on its way looks like was a stand-in for what a row looks
+      // like. The first real ones settle the question.
+      samples.sum = 0;
+      samples.count = 0;
+      samples.fromSkeletons = false;
+    } else if (!samples.fromSkeletons && measure.fromSkeletons) {
+      return;
+    }
+    samples.sum += measure.size * measure.rowCount;
+    samples.count += measure.rowCount;
+    const next = samples.sum / samples.count;
+    const current = virtualSizeSignal.peek();
+    if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
+      virtualSizeSignal.value = next;
+    }
+  };
   // Re-measured during render, not in a layout effect: the fillers read this
   // signal while rendering just below, so the new size lands in the same commit
   // as the rows it was measured on. Written from a layout effect it would
@@ -1828,13 +1885,9 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
   if (!virtualItemSizeProp && sizeAlreadyKnown && ref.current) {
     const listEl = ref.current.querySelector(".navi_list");
-    const sample = listEl ? measureItemSize(listEl, horizontal) : 0;
-    if (sample > 0) {
-      const current = virtualSizeSignal.peek();
-      const next = current + (sample - current) * VIRTUAL_ITEM_SIZE_SMOOTHING;
-      if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
-        virtualSizeSignal.value = next;
-      }
+    const measure = listEl ? measureItemSize(listEl, horizontal) : null;
+    if (measure) {
+      feedSample(measure);
     }
   }
   useLayoutEffect(() => {
@@ -1845,9 +1898,13 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
     if (!listEl) {
       return undefined;
     }
-    const measuredSize = measureItemSize(listEl, horizontal);
-    if (measuredSize > 0) {
-      virtualSizeSignal.value = measuredSize;
+    const measure = measureItemSize(listEl, horizontal);
+    if (measure) {
+      const samples = samplesRef.current;
+      samples.sum = measure.size * measure.rowCount;
+      samples.count = measure.rowCount;
+      samples.fromSkeletons = measure.fromSkeletons;
+      virtualSizeSignal.value = measure.size;
       return undefined;
     }
     const firstListItem =
@@ -2633,7 +2690,6 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   onItemsMissing?: (range: {start: number, end: number}) => void,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   itemProps?: (item: any, index: number) => object,
- *   getItemId?: (item: any, index: number) => string,
  * }>}
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for a row the run does not hold. Defaults to a
@@ -2644,10 +2700,6 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   `selected`, `disabled`… They are both applied to the rendered row and
  *   registered with the list, so what the list decides from them (which row is
  *   selected, where to open) holds for rows that are not rendered too.
- * @param {(item: any, index: number) => string} [props.getItemId]
- *   The id to give a row — the one it answers to from outside the list
- *   (--navi-select, --navi-scroll, initialScrollToItem). Defaults to an id
- *   derived from the run and the row's place in it.
  */
 export const ListItems = ({
   renderItem,
@@ -2659,7 +2711,6 @@ export const ListItems = ({
   renderSkeleton,
   renderError,
   itemProps,
-  getItemId,
 }) => {
   const ownerId = useId();
   const virtual = useContext(ListVirtualContext);
@@ -2697,7 +2748,11 @@ export const ListItems = ({
       // itself unless itemProps names something else (an id, a code).
       value: item,
       ...(itemProps ? itemProps(item, index) : null),
-      id: getItemId ? getItemId(item, index) : `${ownerId}_${index}`,
+      // The row answers to its own id when the item carries one — that is what
+      // addresses it from outside (--navi-select, --navi-scroll) — and
+      // otherwise to one made from the run and its place, unique within the
+      // list, which is all an id has to be.
+      id: item && item.id !== undefined ? item.id : `${ownerId}_${index}`,
       index,
       item,
     });
