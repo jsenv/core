@@ -51,6 +51,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
+ * @param {object} [params.injections] - Values to inject into files, as `{ urlPattern: getInjections }`. Keys are url patterns relative to sourceDirectoryUrl (`"./index.html"`, `"**\/*.js"`), values are functions receiving `urlInfo` and returning (or resolving to) an object of placeholders to replace, named `__LIKE_THIS__` by convention. In JS the value is injected as a JS literal (a string brings its own quotes), everywhere else as-is so it can be concatenated: `href="__BACKEND_URL__/users/me"`. See `INJECTIONS.optional` and `INJECTIONS.global`.
  * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
  * @param {string} [params.sourcemaps="inline"] - Sourcemap mode.
  * @param {AbortSignal} [params.signal] - Abort to stop the server.

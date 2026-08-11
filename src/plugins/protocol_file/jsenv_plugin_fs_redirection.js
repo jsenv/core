@@ -98,6 +98,10 @@ export const jsenvPluginFsRedirection = ({
           }
           const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
+          if (!requestedUrl) {
+            // the SPA fallback answers a request; during build there is none
+            return null;
+          }
           const closestHtmlRootFile = getClosestHtmlRootFile(
             requestedUrl,
             rootDirectoryUrl,
