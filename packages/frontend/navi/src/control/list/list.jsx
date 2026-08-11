@@ -70,6 +70,14 @@ const SeparatorContext = createContext(null);
 // Set by <List itemTransition>: each row then gets a view-transition-name of
 // its own, so a change wrapped in a view transition animates row by row.
 const ItemTransitionContext = createContext(false);
+// Hands out where each run of rows starts (see createOrderCursor).
+const ListCursorContext = createContext(null);
+// Set around each row a run of items renders (see ListItems): which row of the
+// collection it is, and where it stands among the rows the list holds. Carried
+// by context rather than injected into whatever vnode renderItem returned, so
+// that returning a component of one's own — instead of a bare <List.Item> —
+// works the same way.
+const ListRowContext = createContext(null);
 
 const css = /* css */ `
   @layer navi {
@@ -717,6 +725,13 @@ const ListUI = (props) => {
       onListVisibleItemsChange?.(tracker.visibleItemsSignal.peek());
     },
   });
+  // A new pass every time the list renders: its children are about to be laid
+  // out again, in order, and each run of rows takes its place from this.
+  const cursorRef = useRef(null);
+  if (!cursorRef.current) {
+    cursorRef.current = createOrderCursor();
+  }
+  cursorRef.current.openPass();
 
   const {
     virtualItemSizeSignal,
@@ -887,6 +902,7 @@ const ListUI = (props) => {
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
         count={count}
+        cursor={cursorRef.current}
         pendingScrollRef={pendingScrollRef}
       >
         {content}
@@ -947,12 +963,12 @@ const ListFirstResolver = (props) => {
  * @param {number} [props.count]
  *   How many items the collection holds in total — not how many are passed as
  *   children. Give it when the children are only a slice of a larger whole
- *   (infinite scroll, paginated backend) and each item carries its ABSOLUTE
- *   `index` in that whole: the list then knows where the slice sits, reserves
- *   the room of what is missing on either side (so the scrollbar tells the
- *   truth and one can scroll into what is not loaded), and reports what it
- *   lacks through `onItemsMissing`. While `loading` it is also how many
- *   skeleton rows are drawn. Defaults to what is rendered.
+ *   (infinite scroll, paginated backend), together with where that slice sits
+ *   (`<List.Items itemStart>`): the list then reserves the room of what is
+ *   missing on either side — so the scrollbar tells the truth, and scrolling
+ *   into what is not loaded shows rows on their way rather than a hole — and
+ *   reports what it lacks through `onItemsMissing`. While `loading` it is also
+ *   how many skeleton rows are drawn. Defaults to what is rendered.
  * @param {(detail: {start: number, end: number, count: number}) => void|Promise<any>} [props.onItemsMissing]
  *   The user is about to look at rows the list does not have: `start` and
  *   `end` are the absolute indexes of that range (inclusive), so this fires
@@ -996,6 +1012,7 @@ const ListContent = ({
   renderWindow,
   virtualItemSizeSignal,
   count,
+  cursor,
   pendingScrollRef,
   children,
 }) => {
@@ -1034,6 +1051,7 @@ const ListContent = ({
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
         count={count}
+        cursor={cursor}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           {children}
@@ -2029,6 +2047,7 @@ const UnorderedList = ({
   renderWindow,
   virtualItemSizeSignal,
   count,
+  cursor,
   fallback,
   searchFallback,
   searching,
@@ -2078,9 +2097,13 @@ const UnorderedList = ({
           <SeparatorContext.Provider value={separator ?? null}>
             <ItemTransitionContext.Provider value={Boolean(itemTransition)}>
               <ListItemTrackerContext.Provider value={tracker}>
-                <ListColumnsContext.Provider value={columns || null}>
-                  {children}
-                </ListColumnsContext.Provider>
+                <ListCursorContext.Provider value={cursor}>
+                  <ListRowContext.Provider value={null}>
+                    <ListColumnsContext.Provider value={columns || null}>
+                      {children}
+                    </ListColumnsContext.Provider>
+                  </ListRowContext.Provider>
+                </ListCursorContext.Provider>
               </ListItemTrackerContext.Provider>
             </ItemTransitionContext.Provider>
           </SeparatorContext.Provider>
@@ -2264,6 +2287,19 @@ const ListItemFirstResolver = (props) => {
 
   return <Next {...props} />;
 };
+// A row produced by <List.Items> is given its identity here rather than by the
+// caller: the run knows which row of the collection this is. It has to happen
+// before the rest of the chain, since what comes next derives from the id (a
+// selectable row names its input after it, keyboard navigation addresses rows
+// by it).
+const ListItemRowResolver = (props) => {
+  const Next = useNextResolver();
+  const row = useContext(ListRowContext);
+  if (!row) {
+    return <Next {...props} />;
+  }
+  return <Next {...props} id={props.id || row.id} index={row.index} />;
+};
 const ListItemPresentationResolver = (props) => {
   const Next = useNextResolver();
 
@@ -2333,6 +2369,10 @@ const ListItemUI = (props) => {
   const renderWindow = useContext(RenderWindowContext);
   const tracker = useContext(ListItemTrackerContext);
   const searchNoMatchMode = useContext(SearchNoMatchModeContext);
+  // The run this row belongs to, when it comes from one (see ListItems): it
+  // registered the row, decided it is inside the render window, and placed its
+  // separator. All that is left here is to draw it.
+  const row = useContext(ListRowContext);
   // There is no standalone match/matchScore/highlight prop — participation
   // in a matching system (search, filter…) only goes through `matchInfo`
   // (e.g. useSearchText's getItemMatchInfo(item): { match, matchScore,
@@ -2354,6 +2394,12 @@ const ListItemUI = (props) => {
     } else if (searchNoMatchMode === "muted") {
       props.muted = true;
     }
+  }
+  if (row) {
+    if (props.filtered) {
+      return null;
+    }
+    return <ListItemReal {...props} />;
   }
   const item = props;
   const visibleIndex = tracker.useTrackItem(item);
@@ -2716,6 +2762,7 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  */
 export const ListItem = createComponentResolver([
   ListItemFirstResolver,
+  ListItemRowResolver,
   ListItemSkeletonResolver,
   ListItemSelectableResolver,
   ListItemHeaderOrFooterResolver,
@@ -2723,6 +2770,122 @@ export const ListItem = createComponentResolver([
   ListItemUI,
 ]);
 List.Item = ListItem;
+
+// Where each run of rows starts. A <List.Items> knows how many rows it holds
+// but not what was declared before it, so the list hands out the positions as
+// its children render — in order, which is the only thing needed to place them.
+//
+// A run re-rendering ON ITS OWN (its own state changed, the list did not
+// render) must keep the place it was given: nothing before it moved. Hence the
+// pass — only a render of the list itself opens a new one, and within a pass a
+// run takes its place exactly once.
+const createOrderCursor = () => {
+  let passId = 0;
+  let nextIndex = 0;
+  let nextRank = 0;
+  const placeByOwner = new Map();
+  return {
+    openPass: () => {
+      passId++;
+      nextIndex = 0;
+      nextRank = 0;
+    },
+    take: (ownerId, itemCount, indexStart) => {
+      const placeTaken = placeByOwner.get(ownerId);
+      if (placeTaken && placeTaken.passId === passId) {
+        return placeTaken;
+      }
+      // index is the place in the whole collection (what a caller holding only
+      // a slice of it names through itemStart), rank the place among the rows
+      // the list actually holds — the render window speaks in ranks.
+      const index = indexStart === undefined ? nextIndex : indexStart;
+      const place = { passId, index, rank: nextRank };
+      nextIndex = index + itemCount;
+      nextRank += itemCount;
+      placeByOwner.set(ownerId, place);
+      return place;
+    },
+  };
+};
+
+/**
+ * List.Items — a run of rows given as data rather than as one component each.
+ *
+ * The list renders `renderItem` only for the rows inside its render window; the
+ * others cost nothing but their place. This is what lets a list hold a slice of
+ * a large collection: `itemStart` says where the slice sits in the whole, and
+ * List's own `count` says how big the whole is (see List's `count` and
+ * `onItemsMissing`).
+ *
+ * Several runs can live in one list, next to plain `<List.Item>` children and
+ * inside `<List.Group>`s; each takes its place in declaration order.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   items: any[],
+ *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
+ *   itemStart?: number,
+ *   getItemId?: (item: any, index: number) => string,
+ * }>}
+ * @param {number} [props.itemStart]
+ *   The absolute index of `items[0]` in the collection the run is a slice of.
+ *   Defaults to right after whatever was declared before it.
+ * @param {(item: any, index: number) => string} [props.getItemId]
+ *   The id to give a row — the one it answers to from outside the list
+ *   (--navi-select, --navi-scroll, initialScrollToItem). Defaults to an id
+ *   derived from the run and the row's index, which is stable as long as
+ *   `itemStart` places the rows the same way.
+ */
+export const ListItems = ({ items, renderItem, itemStart, getItemId }) => {
+  const ownerId = useId();
+  const cursor = useContext(ListCursorContext);
+  const tracker = useContext(ListItemTrackerContext);
+  const renderWindow = useContext(RenderWindowContext);
+  const separator = useContext(SeparatorContext);
+  const place = cursor.take(ownerId, items.length, itemStart);
+
+  const itemDataList = [];
+  let i = 0;
+  while (i < items.length) {
+    const item = items[i];
+    const index = place.index + i;
+    itemDataList.push({
+      id: getItemId ? getItemId(item, index) : `${ownerId}_${index}`,
+      index,
+      value: item,
+    });
+    i++;
+  }
+  tracker.useTrackItemList(itemDataList);
+
+  const rows = [];
+  let rowIndex = 0;
+  while (rowIndex < itemDataList.length) {
+    const rank = place.rank + rowIndex;
+    if (rank < renderWindow.start || rank >= renderWindow.end) {
+      rowIndex++;
+      continue;
+    }
+    const itemData = itemDataList[rowIndex];
+    const rowVnode = renderItem(itemData.value, itemData.index);
+    if (rowVnode) {
+      if (separator && itemData.index > 0) {
+        rows.push(
+          cloneElement(resolveSeparatorVnode(separator, itemData.index - 1), {
+            key: `${itemData.id}_separator`,
+          }),
+        );
+      }
+      rows.push(
+        <ListRowContext.Provider key={itemData.id} value={itemData}>
+          {rowVnode}
+        </ListRowContext.Provider>,
+      );
+    }
+    rowIndex++;
+  }
+  return rows;
+};
+List.Items = ListItems;
 
 /**
  * ListGroup — a labeled group of list items.

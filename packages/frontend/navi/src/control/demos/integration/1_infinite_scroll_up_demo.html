@@ -115,15 +115,8 @@
         </span>
       );
 
-      // index est la place du message dans la conversation entière, pas dans
-      // le tableau rendu.
       const MessageItem = ({ message }) => (
-        <ListItem
-          id={`message_${message.index}`}
-          index={message.index}
-          paddingX="m"
-          paddingY="xs"
-        >
+        <ListItem paddingX="m" paddingY="xs">
           <Box flex="y" alignX={message.mine ? "end" : "start"} expandX>
             <div className="bubble" data-mine={message.mine ? "" : undefined}>
               <Text>{message.text}</Text>
@@ -203,9 +196,12 @@
                 block: "end",
               }}
             >
-              {range.messages.map((message) => (
-                <MessageItem key={message.index} message={message} />
-              ))}
+              <List.Items
+                items={range.messages}
+                itemStart={loadedFrom}
+                getItemId={(message) => `message_${message.index}`}
+                renderItem={(message) => <MessageItem message={message} />}
+              />
             </List>
           </Box>
         );

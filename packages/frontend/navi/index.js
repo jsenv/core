@@ -137,7 +137,12 @@ export {
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";
-export { List, ListItem, ListItemGroup } from "./src/control/list/list.jsx";
+export {
+  List,
+  ListItem,
+  ListItemGroup,
+  ListItems,
+} from "./src/control/list/list.jsx";
 export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---
