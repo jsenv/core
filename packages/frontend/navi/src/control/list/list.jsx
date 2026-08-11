@@ -157,6 +157,20 @@ const css = /* css */ `
       scrollbar-width: inherit;
     }
 
+    /* scroller="parent": the list does not scroll, the ancestor it lives in
+       does. Its own scroll box must then be transparent to layout — otherwise
+       it would cap the list at a height of its own and start a second, nested
+       scroll inside the page's. */
+    &[data-scroller="parent"] {
+      max-height: none;
+      overflow: visible;
+
+      .navi_list_scroll_container {
+        max-height: none;
+        overflow: visible;
+      }
+    }
+
     &[data-expand-x] {
       width: 100%;
     }
@@ -577,6 +591,13 @@ const ListUI = (props) => {
     expand,
     onListVisibleItemsChange,
     virtualItemSize,
+    placeholderCountStart = 0,
+    placeholderCountEnd = 0,
+    onReachStart,
+    onReachEnd,
+    reachThreshold = 5,
+    initialScrollToItem,
+    scroller = "self",
     lockSize,
     columns,
     searchText,
@@ -662,6 +683,13 @@ const ListUI = (props) => {
     tracker,
     renderBudget,
     virtualItemSize,
+    placeholderCountStart,
+    placeholderCountEnd,
+    onReachStart,
+    onReachEnd,
+    reachThreshold,
+    initialScrollToItem,
+    scroller,
     searchText,
     horizontal,
   });
@@ -769,6 +797,7 @@ const ListUI = (props) => {
       baseClassName="navi_list_container"
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
+      data-scroller={scroller === "parent" ? "parent" : undefined}
       data-expand-x={expandX || expand ? "" : undefined}
       data-expand-y={expandY || expand ? "" : undefined}
       expandX={expandX}
@@ -814,6 +843,8 @@ const ListUI = (props) => {
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
+        placeholderCountStart={placeholderCountStart}
+        placeholderCountEnd={placeholderCountEnd}
         pendingScrollRef={pendingScrollRef}
       >
         {content}
@@ -842,6 +873,13 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
+ *   placeholderCountStart?: number,
+ *   placeholderCountEnd?: number,
+ *   onReachStart?: (detail: {edge: string, distance: number, itemCount: number, placeholderCountStart: number, placeholderCountEnd: number}) => void | Promise<any>,
+ *   onReachEnd?: (detail: {edge: string, distance: number, itemCount: number, placeholderCountStart: number, placeholderCountEnd: number}) => void | Promise<any>,
+ *   reachThreshold?: number | string,
+ *   initialScrollToItem?: string | {id: string, block?: "start" | "center" | "end" | "nearest"},
+ *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
@@ -867,6 +905,31 @@ const ListFirstResolver = (props) => {
  *   `loadingSkeletonCount` placeholder rows (look: `loadingSkeletonTemplate`),
  *   `"loader"` a single centered spinner, and anything else is rendered as-is
  *   in a row of its own. A falsy value displays nothing.
+ * @param {number} [props.placeholderCountStart=0]
+ *   How many rows exist before the ones passed as children but have not been
+ *   loaded yet. They take no DOM node: the list only reserves their room, so
+ *   the scrollbar tells the truth about the whole collection and the user can
+ *   scroll into what is not there yet. `placeholderCountEnd` does the same
+ *   after the last child.
+ * @param {(detail: object) => void|Promise<any>} [props.onReachStart]
+ *   Called when the scroll comes within `reachThreshold` of the first LOADED
+ *   row — the moment to fetch what comes before it. Returning a promise holds
+ *   the next call until it settles; without one, the call repeats only once
+ *   the item/placeholder counts have changed, so a burst of scroll events
+ *   produces a single request and a source with nothing left to give goes
+ *   quiet. `onReachEnd` is the same at the other edge.
+ * @param {number|string} [props.reachThreshold=5]
+ *   How early `onReachStart`/`onReachEnd` fire: a number of rows, or an
+ *   explicit distance (`"300px"`).
+ * @param {string|{id: string, block?: string}} [props.initialScrollToItem]
+ *   The row to open the list on, the first time it is displayed (the frontier
+ *   between past and future in a timeline, for instance). Works on a row that
+ *   is outside the initial render window: the window moves there first.
+ * @param {"self"|"parent"} [props.scroller="self"]
+ *   Which box scrolls. `"self"` gives the list a scroll box of its own;
+ *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
+ *   (the page, a panel) — no scroll box nested inside another one, no height
+ *   to compute.
  */
 export const List = createComponentResolver([
   ListFirstResolver,
@@ -890,6 +953,8 @@ const ListContent = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
+  placeholderCountStart,
+  placeholderCountEnd,
   pendingScrollRef,
   children,
 }) => {
@@ -927,6 +992,8 @@ const ListContent = ({
         tracker={tracker}
         renderWindow={renderWindow}
         virtualItemSizeSignal={virtualItemSizeSignal}
+        placeholderCountStart={placeholderCountStart}
+        placeholderCountEnd={placeholderCountEnd}
       >
         <PendingScrollRefContext.Provider value={pendingScrollRef}>
           {children}
@@ -958,6 +1025,13 @@ const useListScrollSync = ({
   tracker,
   renderBudget,
   virtualItemSize,
+  placeholderCountStart,
+  placeholderCountEnd,
+  onReachStart,
+  onReachEnd,
+  reachThreshold,
+  initialScrollToItem,
+  scroller,
   searchText,
   horizontal,
 }) => {
@@ -967,6 +1041,13 @@ const useListScrollSync = ({
     virtualItemSize,
     horizontal,
   );
+  const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
+  const getListEl = () => ref.current.querySelector(".navi_list");
+  // The virtual geometry the scroll math needs, read at the moment it is needed
+  // rather than threaded through: it changes on every commit while the scroll
+  // listener is installed once.
+  const virtualRef = useRef(null);
+  virtualRef.current = { placeholderCountStart, placeholderCountEnd };
 
   const [renderWindow, setRenderWindow] = useState({
     start: 0,
@@ -986,7 +1067,7 @@ const useListScrollSync = ({
   };
 
   const pendingScrollRef = useRef();
-  const scrollToItem = (item, { event, reason }) => {
+  const scrollToItem = (item, { event, reason, block: blockRequested }) => {
     if (!item) {
       return;
     }
@@ -1007,17 +1088,16 @@ const useListScrollSync = ({
       const trigger = `"${event.type}" on ${getElementSignature(event.target)} (${reason})`;
       // When we display the list we prefer to have selected item at the center
       // otherwise, usually when focused by arrow nav, we want to keep it into view close to the nearest edge
-      const block = event.type === "navi_displayed" ? "center" : "nearest";
+      const block =
+        blockRequested ||
+        (event.type === "navi_displayed" ? "center" : "nearest");
       const scrollToItemCall = `${getElementSignature(itemEl)}.scrollIntoView({ block: "${block}", container: "nearest" })`;
-      const listScrollContainerEl = ref.current.querySelector(
-        `.navi_list_scroll_container`,
-      );
       debugScroll(`${trigger} -> ${scrollToItemCall}`);
       scrollIntoViewScoped(itemEl, {
-        container: listScrollContainerEl,
+        container: getScroller(),
         block,
       });
-      const listEl = ref.current.querySelector(".navi_list");
+      const listEl = getListEl();
       dispatchPublicCustomEvent(listEl, "navi_scroll", {
         event,
         item,
@@ -1054,11 +1134,9 @@ const useListScrollSync = ({
 
   const currentScrollRef = useRef(null);
   const updateCurrentScroll = () => {
-    const listScrollContainerEl = ref.current.querySelector(
-      `.navi_list_scroll_container`,
-    );
-    const currentScrollLeft = listScrollContainerEl.scrollLeft;
-    const currentScrollTop = listScrollContainerEl.scrollTop;
+    const scrollerEl = getScroller();
+    const currentScrollLeft = scrollerEl.scrollLeft;
+    const currentScrollTop = scrollerEl.scrollTop;
     const renderWindow = renderWindowRef.current;
     currentScrollRef.current = {
       left: currentScrollLeft,
@@ -1098,6 +1176,26 @@ const useListScrollSync = ({
       }
       hasBeenDisplayedRef.current = true;
       const items = tracker.itemsSignal.peek();
+      // Opening on a precise row (a timeline opening on the frontier between
+      // past and future, for instance) wins over the selected-item default:
+      // the caller named the row it wants to land on.
+      if (initialScrollToItem) {
+        const { id, block = "start" } =
+          typeof initialScrollToItem === "string"
+            ? { id: initialScrollToItem }
+            : initialScrollToItem;
+        const initialItem = items.find((i) => i.id === id);
+        if (initialItem) {
+          scrollToItem(initialItem, {
+            event: new CustomEvent("navi_displayed", {
+              detail: { originalEvent: openEvent },
+            }),
+            reason: "initialScrollToItem",
+            block,
+          });
+          return;
+        }
+      }
       const firstSelected = items.find((i) => {
         if (i.selected) {
           return true;
@@ -1137,9 +1235,7 @@ const useListScrollSync = ({
   const topMatchScoresKeyRef = useRef("");
   const restoreScrollRafRef = useRef(null);
   useLayoutEffect(() => {
-    const listScrollContainerEl = ref.current?.querySelector(
-      `.navi_list_scroll_container`,
-    );
+    const listScrollContainerEl = ref.current ? getScroller() : null;
     if (!listScrollContainerEl) {
       return undefined;
     }
@@ -1183,19 +1279,21 @@ const useListScrollSync = ({
         // However we have a contract with outside to inside which item is scrolled
         // (used by keyboard nav to enable anchoring the item for list item nav with arrow keys)
         // so we do our best to give that item back
-        const { item } = getScrollInfo(
-          savedScroll,
-          listScrollContainerEl,
+        const { item } = getScrollInfo({
+          scrollValues: savedScroll,
+          scrollerEl: listScrollContainerEl,
+          listEl: getListEl(),
           tracker,
           virtualItemSizeSignal,
           renderWindowRef,
           horizontal,
-        );
+          placeholderCountStart: virtualRef.current.placeholderCountStart,
+        });
         listScrollContainerEl.scrollTo({
           left: savedScroll.left,
           top: savedScroll.top,
         });
-        const listEl = ref.current.querySelector(".navi_list");
+        const listEl = getListEl();
         dispatchPublicCustomEvent(listEl, "navi_scroll", {
           item,
           event: new CustomEvent("navi_scroll_restore"),
@@ -1230,18 +1328,204 @@ const useListScrollSync = ({
     return undefined;
   });
 
+  // Reaching an edge is measured against the LOADED range, not the list box:
+  // the placeholders stand for rows the caller has not given us yet, so the
+  // moment worth reporting is when the rows we actually hold are about to run
+  // out — that is when there is something to fetch.
+  const reachStateRef = useRef({
+    start: { busy: false, key: null },
+    end: { busy: false, key: null },
+  });
+  const reachRef = useRef(null);
+  reachRef.current = { onReachStart, onReachEnd, reachThreshold };
+  const fireReach = (edge, detail) => {
+    const handler =
+      edge === "start"
+        ? reachRef.current.onReachStart
+        : reachRef.current.onReachEnd;
+    if (!handler) {
+      return;
+    }
+    const state = reachStateRef.current[edge];
+    if (state.busy) {
+      return;
+    }
+    // What the caller has already been given. Asking again for the same thing
+    // can only produce the same answer — and a single flick of the wheel fires
+    // dozens of scroll events, a backend with nothing left to send changes
+    // nothing at all.
+    const key = `${detail.itemCount}:${detail.placeholderCountStart}:${detail.placeholderCountEnd}`;
+    if (state.key === key) {
+      return;
+    }
+    state.key = key;
+    state.busy = true;
+    debugScroll(`reach ${edge} (${Math.round(detail.distance)}px away)`);
+    const releaseEdge = () => {
+      state.busy = false;
+    };
+    const result = handler(detail);
+    if (result && typeof result.then === "function") {
+      result.then(releaseEdge, releaseEdge);
+    } else {
+      releaseEdge();
+    }
+  };
+  const checkReach = () => {
+    const { onReachStart, onReachEnd, reachThreshold } = reachRef.current;
+    if (!onReachStart && !onReachEnd) {
+      return;
+    }
+    if (!ref.current) {
+      return;
+    }
+    const virtualItemSize = virtualItemSizeSignal.peek();
+    const threshold = resolveReachThreshold(reachThreshold, virtualItemSize);
+    const { placeholderCountStart, placeholderCountEnd } = virtualRef.current;
+    const viewportRect = getScrollerViewportRect(getScroller());
+    const listRect = getListEl().getBoundingClientRect();
+    const detail = {
+      itemCount: tracker.countSignal.peek(),
+      placeholderCountStart,
+      placeholderCountEnd,
+      distance: 0,
+    };
+    const loadedStart =
+      (horizontal ? listRect.left : listRect.top) +
+      placeholderCountStart * virtualItemSize;
+    const loadedEnd =
+      (horizontal ? listRect.right : listRect.bottom) -
+      placeholderCountEnd * virtualItemSize;
+    const distanceToStart =
+      (horizontal ? viewportRect.left : viewportRect.top) - loadedStart;
+    const distanceToEnd =
+      loadedEnd - (horizontal ? viewportRect.right : viewportRect.bottom);
+    if (distanceToStart <= threshold) {
+      fireReach("start", {
+        ...detail,
+        edge: "start",
+        distance: distanceToStart,
+      });
+    }
+    if (distanceToEnd <= threshold) {
+      fireReach("end", { ...detail, edge: "end", distance: distanceToEnd });
+    }
+  };
+  // A list that fits in its scroller never emits a scroll event, so nothing
+  // would ever ask for the rest. Only while it does not overflow: as soon as
+  // it does, scrolling takes over.
+  useLayoutEffect(() => {
+    if (!ref.current || (!onReachStart && !onReachEnd)) {
+      return;
+    }
+    const scrollerEl = getScroller();
+    const scrollSize = horizontal
+      ? scrollerEl.scrollWidth
+      : scrollerEl.scrollHeight;
+    const clientSize = horizontal
+      ? scrollerEl.clientWidth
+      : scrollerEl.clientHeight;
+    if (scrollSize > clientSize) {
+      return;
+    }
+    checkReach();
+  });
+
+  // Inserting rows above what the user is looking at must not move it by a
+  // single pixel. The browser will not do it for us — overflow-anchor gives up
+  // on changes it attributes to a scroll, and the fillers resize in the very
+  // same commit — so the row at the top of the viewport is measured before the
+  // commit and put back at the same offset after it.
+  const itemCount = tracker.countSignal.peek();
+  const anchoringApplies =
+    placeholderCountStart > 0 ||
+    placeholderCountEnd > 0 ||
+    itemCount > renderBudget;
+  const anchorRef = useRef(null);
+  if (
+    anchoringApplies &&
+    !searchText &&
+    !anchorRef.current &&
+    !pendingScrollRef.current &&
+    ref.current
+  ) {
+    anchorRef.current = captureScrollAnchor({
+      scrollerEl: getScroller(),
+      listEl: getListEl(),
+      visibleItems: tracker.visibleItemsSignal.peek(),
+      horizontal,
+    });
+  }
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current;
+    if (!anchor || !ref.current) {
+      anchorRef.current = null;
+      return;
+    }
+    const visibleItems = tracker.visibleItemsSignal.peek();
+    const indexNow = visibleItems.findIndex((i) => i.id === anchor.id);
+    if (indexNow === -1) {
+      anchorRef.current = null;
+      return;
+    }
+    const indexShift = indexNow - anchor.index;
+    if (indexShift !== 0) {
+      // The render window addresses items by index: rows inserted before the
+      // anchor renumbered everything after them, so the window must follow or
+      // it would frame a different slice of the list entirely. The anchor is
+      // kept — where it must land does not change — but its index is now the
+      // new one, so the commit that follows compares against it and moves on
+      // to the scroll correction.
+      anchor.index = indexNow;
+      const { start, end } = renderWindowRef.current;
+      const startShifted = start + indexShift;
+      const startWanted = startShifted < 0 ? 0 : startShifted;
+      const endWanted = startWanted + (end - start);
+      if (startWanted !== start || endWanted !== end) {
+        updateRenderWindow(
+          startWanted,
+          endWanted,
+          `${indexShift} item(s) inserted before the anchored item`,
+        );
+        return;
+      }
+    }
+    anchorRef.current = null;
+    const anchorEl = document.getElementById(anchor.id);
+    if (!anchorEl) {
+      return;
+    }
+    const scrollerEl = getScroller();
+    const viewportRect = getScrollerViewportRect(scrollerEl);
+    const anchorRect = anchorEl.getBoundingClientRect();
+    const offsetNow = horizontal
+      ? anchorRect.left - viewportRect.left
+      : anchorRect.top - viewportRect.top;
+    const drift = offsetNow - anchor.offset;
+    if (drift === 0) {
+      return;
+    }
+    debugScroll(
+      `anchored item drifted by ${Math.round(drift)}px, compensating scroll`,
+    );
+    if (horizontal) {
+      scrollerEl.scrollLeft += drift;
+    } else {
+      scrollerEl.scrollTop += drift;
+    }
+  });
+
   // Scroll listener — slides the window as the user scrolls.
   useLayoutEffect(() => {
     const listContainerEl = ref.current;
     if (!listContainerEl) {
       return undefined;
     }
-    const listScrollContainerEl = listContainerEl.querySelector(
-      `.navi_list_scroll_container`,
-    );
-    const listEl = listContainerEl.querySelector(".navi_list");
+    const scrollerEl = getScroller();
+    const listEl = getListEl();
     const onScroll = () => {
       updateCurrentScroll();
+      checkReach();
       const visibleItemCount = tracker.visibleCountSignal.peek();
       if (visibleItemCount <= renderBudget) {
         return;
@@ -1253,17 +1537,19 @@ const useListScrollSync = ({
         return;
       }
       let reason = "";
-      const scrollInfo = getScrollInfo(
-        {
-          left: listScrollContainerEl.scrollLeft,
-          top: listScrollContainerEl.scrollTop,
+      const scrollInfo = getScrollInfo({
+        scrollValues: {
+          left: scrollerEl.scrollLeft,
+          top: scrollerEl.scrollTop,
         },
-        listScrollContainerEl,
+        scrollerEl,
+        listEl,
         tracker,
         virtualItemSizeSignal,
         renderWindowRef,
         horizontal,
-      );
+        placeholderCountStart: virtualRef.current.placeholderCountStart,
+      });
       if (!scrollInfo) {
         return;
       }
@@ -1277,13 +1563,17 @@ const useListScrollSync = ({
       }
       updateRenderWindow(newStart, newEnd, reason);
     };
-    listScrollContainerEl.addEventListener("scroll", onScroll, {
+    // A page-level scroller does not emit "scroll" on the element itself
+    // (document.scrollingElement); the document does.
+    const scrollEventTarget =
+      scrollerEl === document.scrollingElement ? document : scrollerEl;
+    scrollEventTarget.addEventListener("scroll", onScroll, {
       passive: true,
     });
     return () => {
-      listScrollContainerEl.removeEventListener("scroll", onScroll);
+      scrollEventTarget.removeEventListener("scroll", onScroll);
     };
-  }, [renderBudget]);
+  }, [renderBudget, scroller]);
 
   return {
     virtualItemSizeSignal,
@@ -1292,35 +1582,142 @@ const useListScrollSync = ({
     scrollToItem,
   };
 };
+// The band of the scroller the user actually sees. A page-level scroller is
+// the viewport itself — its own box is the whole document, which says nothing
+// about what is on screen.
+const getScrollerViewportRect = (scrollerEl) => {
+  if (scrollerEl === document.scrollingElement) {
+    const width = document.documentElement.clientWidth;
+    const height = document.documentElement.clientHeight;
+    return { top: 0, left: 0, right: width, bottom: height, width, height };
+  }
+  return scrollerEl.getBoundingClientRect();
+};
+// scroller="parent": the list virtualizes against the scroll box it lives in
+// instead of one of its own.
+const getScrollerEl = (listContainerEl, scroller, horizontal) => {
+  if (scroller !== "parent") {
+    return listContainerEl.querySelector(`.navi_list_scroll_container`);
+  }
+  let ancestor = listContainerEl.parentElement;
+  while (ancestor) {
+    const style = window.getComputedStyle(ancestor);
+    const overflow = horizontal ? style.overflowX : style.overflowY;
+    if (overflow === "auto" || overflow === "scroll") {
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return document.scrollingElement;
+};
+// reachThreshold is a number of items ("start loading 5 rows before the end")
+// or an explicit distance ("300px").
+const REACH_THRESHOLD_ITEM_SIZE_FALLBACK = 40;
+const resolveReachThreshold = (reachThreshold, virtualItemSize) => {
+  if (typeof reachThreshold === "string") {
+    const parsed = parseFloat(reachThreshold);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  const itemSize = virtualItemSize || REACH_THRESHOLD_ITEM_SIZE_FALLBACK;
+  return reachThreshold * itemSize;
+};
+// The row the user is looking at, and where it sits: what must not move when
+// the list is rebuilt around it.
+const captureScrollAnchor = ({
+  scrollerEl,
+  listEl,
+  visibleItems,
+  horizontal,
+}) => {
+  if (!scrollerEl || !listEl) {
+    return null;
+  }
+  const viewportRect = getScrollerViewportRect(scrollerEl);
+  const listRect = listEl.getBoundingClientRect();
+  const scanRange = getListVisibleScanRange(viewportRect, listRect, horizontal);
+  if (!scanRange) {
+    return null;
+  }
+  for (let pos = scanRange.from + 1; pos < scanRange.to; pos += 8) {
+    const x = horizontal ? pos : scanRange.crossPos;
+    const y = horizontal ? scanRange.crossPos : pos;
+    const el = document.elementFromPoint(x, y);
+    if (!el || !listEl.contains(el)) {
+      continue;
+    }
+    const itemEl = el.closest(REAL_LIST_ITEM_SELECTOR);
+    if (!itemEl) {
+      continue;
+    }
+    const index = visibleItems.findIndex((i) => i.id === itemEl.id);
+    if (index === -1) {
+      continue;
+    }
+    const itemRect = itemEl.getBoundingClientRect();
+    return {
+      id: itemEl.id,
+      index,
+      offset: horizontal
+        ? itemRect.left - viewportRect.left
+        : itemRect.top - viewportRect.top,
+    };
+  }
+  return null;
+};
+// The part of the list that is on screen, along the scrolling axis. Both edges
+// matter: the scroller may be larger than the list (scroller="parent") as well
+// as smaller (the list scrolls inside its own box).
+const getListVisibleScanRange = (viewportRect, listRect, horizontal) => {
+  const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
+  const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
+  const listFrom = horizontal ? listRect.left : listRect.top;
+  const listTo = horizontal ? listRect.right : listRect.bottom;
+  const from = listFrom > viewportFrom ? listFrom : viewportFrom;
+  const to = listTo < viewportTo ? listTo : viewportTo;
+  if (to - from < 2) {
+    return null;
+  }
+  // Where to put the probe on the other axis: inside the list, inside the
+  // viewport.
+  const crossFrom = horizontal ? listRect.top : listRect.left;
+  const crossViewportFrom = horizontal ? viewportRect.top : viewportRect.left;
+  const crossPos =
+    (crossFrom > crossViewportFrom ? crossFrom : crossViewportFrom) + 1;
+  return { from, to, crossPos };
+};
+
 // Returns the item located at the current scroll position of a list container.
 // Uses DOM hit-testing to find visible items/fillers; falls back to index
 // estimation via virtualItemSize or renderWindow.start.
 // Returns { index, item, reason } or null if nothing can be determined.
-const getScrollInfo = (
+const getScrollInfo = ({
   scrollValues,
-  listScrollContainerEl,
+  scrollerEl,
+  listEl,
   tracker,
   virtualItemSizeSignal,
   renderWindowRef,
   horizontal,
-) => {
-  const listEl = listScrollContainerEl.querySelector(".navi_list");
+  placeholderCountStart = 0,
+}) => {
   const items = tracker.itemsSignal.peek();
-  const containerRect = listScrollContainerEl.getBoundingClientRect();
+  const viewportRect = getScrollerViewportRect(scrollerEl);
+  const listRect = listEl.getBoundingClientRect();
   let hitEl = null;
   let hitFiller = null;
-  const scrollPos = horizontal ? scrollValues.left : scrollValues.top;
-  // Start scanning from the center of the viewport along the main axis.
-  // The render window places half its budget before and half after the hit index.
-  // Anchoring to the center maximises how many rendered items fall within the
-  // visible area.
-  const scanStart = horizontal
-    ? (containerRect.left + containerRect.right) / 2
-    : (containerRect.top + containerRect.bottom) / 2;
-  const scanEnd = horizontal ? containerRect.right : containerRect.bottom;
+  const scanRange = getListVisibleScanRange(viewportRect, listRect, horizontal);
+  if (!scanRange) {
+    return null;
+  }
+  // Start scanning from the center of the visible part of the list along the
+  // main axis. The render window places half its budget before and half after
+  // the hit index. Anchoring to the center maximises how many rendered items
+  // fall within the visible area.
+  const scanStart = (scanRange.from + scanRange.to) / 2;
+  const scanEnd = scanRange.to;
   for (let pos = scanStart; pos < scanEnd; pos += 4) {
-    const x = horizontal ? pos : containerRect.left + 1;
-    const y = horizontal ? containerRect.top + 1 : pos;
+    const x = horizontal ? pos : scanRange.crossPos;
+    const y = horizontal ? scanRange.crossPos : pos;
     const el = document.elementFromPoint(x, y);
     if (!el || !listEl.contains(el)) {
       continue;
@@ -1344,8 +1741,23 @@ const getScrollInfo = (
     if (virtualItemSize === 0) {
       return null;
     }
-    const estimatedIndex = Math.floor(scrollPos / virtualItemSize);
-    const index = Math.min(items.length - 1, estimatedIndex);
+    // How much of the list is above (or left of) the top of the viewport — the
+    // list is not necessarily flush against the top of the scroller, and the
+    // placeholders before it stand for rows that are not tracked items.
+    const listOffsetInViewport =
+      (horizontal ? viewportRect.left : viewportRect.top) -
+      (horizontal ? listRect.left : listRect.top);
+    // scrollValues may describe a position the scroller is not at yet (a scroll
+    // about to be restored): the difference is what the rects cannot show.
+    const scrollNow = horizontal ? scrollerEl.scrollLeft : scrollerEl.scrollTop;
+    const scrollAsked = horizontal ? scrollValues.left : scrollValues.top;
+    const positionInItems =
+      (listOffsetInViewport + (scrollAsked - scrollNow)) / virtualItemSize;
+    const estimatedIndex = Math.floor(positionInItems) - placeholderCountStart;
+    const index = Math.min(
+      items.length - 1,
+      estimatedIndex < 0 ? 0 : estimatedIndex,
+    );
     return {
       item: items[index],
       index,
@@ -1386,6 +1798,30 @@ const getScrollInfo = (
   };
 };
 
+// Rows are not all the same height (a card grows with its content, a month
+// header slips in between), so the size the fillers reserve is an average of
+// what has actually been rendered so far. It moves by a fraction of the
+// difference at a time: a filler that resized to the full new estimate on every
+// window slide would make the scrollbar jump under the thumb.
+const VIRTUAL_ITEM_SIZE_SMOOTHING = 0.25;
+// Under this, rewriting the size would churn the fillers for a sub-pixel gain.
+const VIRTUAL_ITEM_SIZE_EPSILON = 0.5;
+// Measures the rows currently in the DOM, edge to edge: what a filler stands in
+// for is the room a run of rows takes together — separators and group labels
+// included — not the height of one <li>.
+const measureItemSize = (listEl, horizontal) => {
+  const itemEls = listEl.querySelectorAll(REAL_LIST_ITEM_SELECTOR);
+  if (itemEls.length === 0) {
+    return 0;
+  }
+  const firstRect = itemEls[0].getBoundingClientRect();
+  const lastRect = itemEls[itemEls.length - 1].getBoundingClientRect();
+  const span = horizontal
+    ? lastRect.right - firstRect.left
+    : lastRect.bottom - firstRect.top;
+  return span / itemEls.length;
+};
+
 const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   const virtualSizeSignalRef = useRef(null);
   if (!virtualSizeSignalRef.current) {
@@ -1395,6 +1831,23 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
   // propagate prop changes to the signal
   if (virtualItemSizeProp && virtualSizeSignal.peek() !== virtualItemSizeProp) {
     virtualSizeSignal.value = virtualItemSizeProp;
+  }
+  // Re-measured during render, not in a layout effect: the fillers read this
+  // signal while rendering just below, so the new size lands in the same commit
+  // as the rows it was measured on. Written from a layout effect it would
+  // resize them one commit later — after the scroll anchoring of that commit
+  // had already run, which is exactly the jump anchoring exists to prevent.
+  const sizeAlreadyKnown = virtualSizeSignal.peek() !== 0;
+  if (!virtualItemSizeProp && sizeAlreadyKnown && ref.current) {
+    const listEl = ref.current.querySelector(".navi_list");
+    const sample = listEl ? measureItemSize(listEl, horizontal) : 0;
+    if (sample > 0) {
+      const current = virtualSizeSignal.peek();
+      const next = current + (sample - current) * VIRTUAL_ITEM_SIZE_SMOOTHING;
+      if (Math.abs(next - current) > VIRTUAL_ITEM_SIZE_EPSILON) {
+        virtualSizeSignal.value = next;
+      }
+    }
   }
   useLayoutEffect(() => {
     if (virtualSizeSignal.peek() !== 0) {
@@ -1408,8 +1861,7 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
     if (!firstListItem) {
       return undefined;
     }
-    const rect = firstListItem.getBoundingClientRect();
-    const measuredSize = horizontal ? rect.width : rect.height;
+    const measuredSize = measureItemSize(listEl, horizontal);
     if (measuredSize > 0) {
       virtualSizeSignal.value = measuredSize;
       return undefined;
@@ -1448,6 +1900,8 @@ const UnorderedList = ({
   tracker,
   renderWindow,
   virtualItemSizeSignal,
+  placeholderCountStart,
+  placeholderCountEnd,
   fallback,
   searchFallback,
   searching,
@@ -1479,6 +1933,7 @@ const UnorderedList = ({
       <BeforeFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowStart={renderWindow.start}
+        placeholderCountStart={placeholderCountStart}
       />
       {!suppressFallback && (
         <SearchFallback
@@ -1506,6 +1961,7 @@ const UnorderedList = ({
       <AfterFiller
         virtualItemSizeSignal={virtualItemSizeSignal}
         renderWindowEnd={renderWindow.end}
+        placeholderCountEnd={placeholderCountEnd}
         tracker={tracker}
       />
     </Box>
@@ -1568,9 +2024,13 @@ const Fallback = ({ tracker, fallback, searching }) => {
     </ListItem>
   );
 };
-const BeforeFiller = ({ virtualItemSizeSignal, renderWindowStart }) => {
+const BeforeFiller = ({
+  virtualItemSizeSignal,
+  renderWindowStart,
+  placeholderCountStart,
+}) => {
   const virtualItemSize = virtualItemSizeSignal.value;
-  const numberOfItemsBefore = renderWindowStart;
+  const numberOfItemsBefore = renderWindowStart + placeholderCountStart;
   const sizeToFillBefore = numberOfItemsBefore * virtualItemSize;
 
   if (!sizeToFillBefore) {
@@ -1588,10 +2048,17 @@ const BeforeFiller = ({ virtualItemSizeSignal, renderWindowStart }) => {
     />
   );
 };
-const AfterFiller = ({ virtualItemSizeSignal, renderWindowEnd, tracker }) => {
+const AfterFiller = ({
+  virtualItemSizeSignal,
+  renderWindowEnd,
+  placeholderCountEnd,
+  tracker,
+}) => {
   const visibleItemCount = tracker.visibleCountSignal.value;
   const virtualItemSize = virtualItemSizeSignal.value;
-  const numberOfItemsAfter = Math.max(visibleItemCount - renderWindowEnd, 0);
+  const itemsAfterWindow = visibleItemCount - renderWindowEnd;
+  const numberOfItemsAfter =
+    (itemsAfterWindow > 0 ? itemsAfterWindow : 0) + placeholderCountEnd;
   const sizeToFillAfter = numberOfItemsAfter * virtualItemSize;
 
   if (!sizeToFillAfter) {
