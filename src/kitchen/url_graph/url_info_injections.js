@@ -16,7 +16,8 @@ export const INJECTIONS = {
    * (without this a missing placeholder is reported as a warning).
    */
   optional: (value) => {
-    if (value && value[injectionSymbol] === "optional") {
+    if (value && value[injectionSymbol]) {
+      // a global injection is not a placeholder, it can't be missing from the file
       return value;
     }
     return { [injectionSymbol]: "optional", value };

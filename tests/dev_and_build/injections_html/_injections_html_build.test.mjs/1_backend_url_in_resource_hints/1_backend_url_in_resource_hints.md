@@ -1,7 +1,9 @@
 # [backend_url_in_resource_hints](../../injections_html_build.test.mjs)
 
 ```js
-buildClient(import.meta.resolve("./client_resource_hints/"))
+buildClient(import.meta.resolve("./resource_hints/client/"), {
+  injections: backendUrlInjections,
+})
 ```
 
 # 1/2 write file "./build/main.html"
