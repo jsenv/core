@@ -161,6 +161,7 @@
       const Thread = ({ startAt, action }) => (
         <List
           maxHeight="220px"
+          expandX
           renderBudget={30}
           startAt={startAt}
           renderSkeleton={(index) => <MessageSkeleton index={index} />}
