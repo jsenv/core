@@ -1547,12 +1547,6 @@ const useListScrollSync = ({
       if (total <= renderBudget) {
         return;
       }
-      const oneRealListItemInDom = Boolean(
-        listEl.querySelector(REAL_LIST_ITEM_SELECTOR),
-      );
-      if (!oneRealListItemInDom) {
-        return;
-      }
       let reason = "";
       const scrollInfo = getScrollInfo({
         scrollValues: {
@@ -1861,13 +1855,15 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
     if (!listEl) {
       return undefined;
     }
-    const firstListItem = listEl.querySelector(REAL_LIST_ITEM_SELECTOR);
-    if (!firstListItem) {
-      return undefined;
-    }
     const measuredSize = measureItemSize(listEl, horizontal);
     if (measuredSize > 0) {
       virtualSizeSignal.value = measuredSize;
+      return undefined;
+    }
+    const firstListItem =
+      listEl.querySelector(REAL_LIST_ITEM_SELECTOR) ||
+      listEl.querySelector(`.${SKELETON_LIST_ITEM_CLASS}`);
+    if (!firstListItem) {
       return undefined;
     }
     // A real, mounted item never legitimately measures zero — this means

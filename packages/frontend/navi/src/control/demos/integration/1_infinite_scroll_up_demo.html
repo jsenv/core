@@ -52,6 +52,12 @@
         color: #1a1a2e;
         background: #eceff4;
       }
+      .bubble[data-loading] {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        background: #f2f4f7;
+      }
     </style>
   </head>
   <body>
@@ -130,11 +136,22 @@
       );
 
       // Une bulle qui n'est pas encore arrivée: même place, même côté, même
-      // allure — seul le texte manque.
+      // gabarit — seul le texte manque. C'est cette hauteur-là que la liste
+      // réserve pour les 200 messages avant d'en avoir vu un seul.
       const MessageSkeleton = ({ index }) => (
         <ListItem skeleton paddingX="m" paddingY="xs">
           <Box flex="y" alignX={index % 3 === 0 ? "end" : "start"} expandX>
-            <Text loading width={`${40 + ((index * 13) % 45)}%`}>
+            <div className="bubble" data-loading="">
+              <Text loading width={`${90 + ((index * 37) % 180)}px`}>
+                {"\u00a0"}
+              </Text>
+              {index % 4 === 0 && (
+                <Text loading width={`${60 + ((index * 23) % 120)}px`}>
+                  {"\u00a0"}
+                </Text>
+              )}
+            </div>
+            <Text size="xs" color="#999">
               {"\u00a0"}
             </Text>
           </Box>
