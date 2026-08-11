@@ -79,6 +79,9 @@ const css = /* css */ `
       --list-border-width: 0px;
       --list-border-color: light-dark(#ccc, #555);
       --list-background-color: light-dark(#fff, #1e1e1e);
+      /* Air above and below a skeleton bar, so a run of them reads as several
+         rows rather than one block. */
+      --list-skeleton-bar-gap: 5px;
     }
     .navi_list_item {
       --list-item-padding-x-default: 0px;
@@ -362,12 +365,48 @@ const css = /* css */ `
     list-style: none;
     /* background: pink; */
   }
+  /* Room held for rows that were never loaded (see List's own count): unlike
+     the rows that are merely windowed out, these are not one scroll event away
+     from being drawn — something has to be fetched first, and saying so is the
+     whole point. One bar per row, at the rhythm of a row, so scrolling into
+     them reads as content on its way. The mask cuts the shimmer into bars;
+     painting them as a repeating background instead would need a second layer
+     to hold the animation. */
+  .navi_list_virtual_filler[navi-virtual-filler-unloaded] {
+    background-image: linear-gradient(
+      90deg,
+      #e0e0e0 25%,
+      #f0f0f0 50%,
+      #e0e0e0 75%
+    );
+    background-size: 200% 100%;
+    mask-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 var(--list-skeleton-bar-gap),
+      black var(--list-skeleton-bar-gap)
+        calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap)),
+      transparent calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap))
+        var(--virtual-item-size)
+    );
+    animation: navi_list_skeleton_shimmer 1.5s infinite;
+  }
   &[data-horizontal] {
     --list-max-height: none;
 
     .navi_list_virtual_filler {
       width: var(--size-to-fill, 0px);
       height: 100%;
+    }
+    .navi_list_virtual_filler[navi-virtual-filler-unloaded] {
+      mask-image: repeating-linear-gradient(
+        to right,
+        transparent 0 var(--list-skeleton-bar-gap),
+        black var(--list-skeleton-bar-gap)
+          calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap)),
+        transparent
+          calc(var(--virtual-item-size) - var(--list-skeleton-bar-gap))
+          var(--virtual-item-size)
+      );
     }
   }
 
@@ -518,6 +557,15 @@ const css = /* css */ `
     bottom: 0;
     z-index: 1;
     order: 2;
+  }
+
+  @keyframes navi_list_skeleton_shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   ::highlight(navi-search-match) {
@@ -1178,12 +1226,25 @@ const useListScrollSync = ({
             : initialScrollToItem;
         const initialItem = items.find((i) => i.id === id);
         if (initialItem) {
-          scrollToItem(initialItem, {
-            event: new CustomEvent("navi_displayed", {
-              detail: { originalEvent: openEvent },
-            }),
-            reason: "initialScrollToItem",
-            block,
+          const scrollToInitialItem = () => {
+            scrollToItem(initialItem, {
+              event: new CustomEvent("navi_displayed", {
+                detail: { originalEvent: openEvent },
+              }),
+              reason: "initialScrollToItem",
+              block,
+            });
+          };
+          scrollToInitialItem();
+          // The room held for the rows around the loaded ones only takes its
+          // size once a row has been measured — one render later — and the
+          // fillers growing move everything below them. Asking again once that
+          // has happened is what actually lands on the row; a microtask still
+          // runs before the frame is painted, so nothing of the intermediate
+          // state is ever seen.
+          queueMicrotask(() => {
+            scrollToInitialItem();
+            checkMissingItems();
           });
           return;
         }
@@ -1505,9 +1566,19 @@ const useListScrollSync = ({
       // to the scroll correction.
       anchor.index = indexNow;
       const { start, end } = renderWindowRef.current;
+      const windowSize = end - start;
       const startShifted = start + indexShift;
-      const startWanted = startShifted < 0 ? 0 : startShifted;
-      const endWanted = startWanted + (end - start);
+      let startWanted = startShifted < 0 ? 0 : startShifted;
+      // Same normalization as the scroll listener: a window running past the
+      // last item slides back instead of framing fewer items than its budget
+      // allows — every item that fits in it must stay rendered.
+      if (startWanted + windowSize > visibleItems.length) {
+        startWanted = visibleItems.length - windowSize;
+        if (startWanted < 0) {
+          startWanted = 0;
+        }
+      }
+      const endWanted = startWanted + windowSize;
       if (startWanted !== start || endWanted !== end) {
         updateRenderWindow(
           startWanted,
@@ -2081,6 +2152,12 @@ const Fallback = ({ tracker, fallback, searching }) => {
     </ListItem>
   );
 };
+// Two reservations, never one: rows that exist but are windowed out are blank
+// space (they are one scroll event away from being drawn), while rows that were
+// never loaded wear the skeleton — the user scrolling into them must see
+// content on its way, not a hole. They are kept as separate elements because
+// they say different things, and because the unloaded ones always come first
+// (they are the lower indexes).
 const BeforeFiller = ({
   virtualItemSizeSignal,
   renderWindowStart,
@@ -2092,22 +2169,20 @@ const BeforeFiller = ({
     tracker.visibleItemsSignal.value,
     count,
   );
-  const numberOfItemsBefore = renderWindowStart + before;
-  const sizeToFillBefore = numberOfItemsBefore * virtualItemSize;
-
-  if (!sizeToFillBefore) {
-    return null;
-  }
   return (
-    <li
-      className="navi_list_virtual_filler"
-      // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="before"
-      aria-hidden
-      style={{
-        "--size-to-fill": `${sizeToFillBefore}px`,
-      }}
-    />
+    <>
+      <VirtualFiller
+        edge="before"
+        unloaded
+        itemCount={before}
+        virtualItemSize={virtualItemSize}
+      />
+      <VirtualFiller
+        edge="before"
+        itemCount={renderWindowStart}
+        virtualItemSize={virtualItemSize}
+      />
+    </>
   );
 };
 const AfterFiller = ({
@@ -2120,21 +2195,38 @@ const AfterFiller = ({
   const virtualItemSize = virtualItemSizeSignal.value;
   const { after } = getVirtualBoundsOf(visibleItems, count);
   const itemsAfterWindow = visibleItems.length - renderWindowEnd;
-  const numberOfItemsAfter =
-    (itemsAfterWindow > 0 ? itemsAfterWindow : 0) + after;
-  const sizeToFillAfter = numberOfItemsAfter * virtualItemSize;
-
-  if (!sizeToFillAfter) {
+  return (
+    <>
+      <VirtualFiller
+        edge="after"
+        itemCount={itemsAfterWindow > 0 ? itemsAfterWindow : 0}
+        virtualItemSize={virtualItemSize}
+      />
+      <VirtualFiller
+        edge="after"
+        unloaded
+        itemCount={after}
+        virtualItemSize={virtualItemSize}
+      />
+    </>
+  );
+};
+const VirtualFiller = ({ edge, unloaded, itemCount, virtualItemSize }) => {
+  const sizeToFill = itemCount * virtualItemSize;
+  if (!sizeToFill) {
     return null;
   }
   return (
     <li
       className="navi_list_virtual_filler"
       // eslint-disable-next-line react/no-unknown-property
-      navi-virtual-filler="after"
+      navi-virtual-filler={edge}
+      // eslint-disable-next-line react/no-unknown-property
+      navi-virtual-filler-unloaded={unloaded ? "" : undefined}
       aria-hidden
       style={{
-        "--size-to-fill": `${sizeToFillAfter}px`,
+        "--size-to-fill": `${sizeToFill}px`,
+        "--virtual-item-size": `${virtualItemSize}px`,
       }}
     />
   );

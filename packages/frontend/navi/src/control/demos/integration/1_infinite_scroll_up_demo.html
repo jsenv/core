@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>Fil de parties (scroll infini vers le haut)</title>
+    <title>Messagerie (scroll infini vers le haut)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -12,13 +12,12 @@
         background: #f5f5f5;
       }
       #container {
-        max-width: 900px;
+        max-width: 720px;
         margin: 0 auto;
       }
       h2 {
         margin: 0 0 4px;
         font-size: 1.1rem;
-        scroll-margin-top: 12px;
       }
       .demo-section {
         margin-bottom: 24px;
@@ -26,7 +25,6 @@
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        scroll-margin-top: 16px;
       }
       .stat-label {
         color: #888;
@@ -41,46 +39,18 @@
       .stat-value[data-busy] {
         color: #b5651d;
       }
-      /* Une ligne fixe posée devant la liste: ce qui est dessous ne doit pas
-         bouger quand des lignes arrivent au-dessus. */
-      .anchored-list {
-        position: relative;
+      .bubble {
+        max-width: 78%;
+        padding: 8px 12px;
+        border-radius: 14px;
       }
-      .ruler {
-        position: absolute;
-        top: 160px;
-        right: 0;
-        left: 0;
-        z-index: 2;
-        height: 2px;
-        background: repeating-linear-gradient(
-          to right,
-          #d33 0 8px,
-          transparent 8px 16px
-        );
-        pointer-events: none;
-      }
-      /* Une barre en haut, une en bas, et entre les deux un seul ascenseur:
-         celui de la page qu'elles encadrent. */
-      .page-frame {
-        display: flex;
-        height: 360px;
-        flex-direction: column;
-        background: #fff;
-        border: 1px solid #ccd;
-        border-radius: 8px;
-      }
-      .page-frame-bar {
-        padding: 10px 14px;
-        flex: none;
+      .bubble[data-mine] {
         color: #fff;
-        font-size: 0.85rem;
-        background: #34406b;
+        background: #3b6ef5;
       }
-      .page-frame-scroll {
-        padding: 0 14px;
-        flex: 1;
-        overflow: auto;
+      .bubble:not([data-mine]) {
+        color: #1a1a2e;
+        background: #eceff4;
       }
     </style>
   </head>
@@ -92,121 +62,49 @@
       import { render } from "preact";
       import { useState } from "preact/hooks";
       import { signal } from "@preact/signals";
-      import { Box, Button, Link, List, ListItem, Text } from "@jsenv/navi";
+      import { Box, Button, List, ListItem, Text } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
-      import { DocumentToc } from "../../../internal/document_toc.jsx";
 
-      const PAST_COUNT = 4000;
-      const FUTURE_COUNT = 1000;
-      const TOTAL_COUNT = PAST_COUNT + FUTURE_COUNT;
-      const PAGE_SIZE = 50;
-      // On ouvre le fil sur la frontière: la première partie à venir.
-      const FRONTIER_INDEX = PAST_COUNT;
+      // La conversation entière vit "sur le serveur"; le front n'en tient
+      // qu'une tranche, et en demande 3 de plus à chaque fois qu'il remonte.
+      const MESSAGE_COUNT = 60;
+      const PAGE_SIZE = 3;
+      const LAST_INDEX = MESSAGE_COUNT - 1;
 
-      const ADVERSAIRES = [
-        "Les Coyotes",
-        "AS Bellevue",
-        "FC Rivière",
-        "Étoile du Nord",
-        "Les Marmottes",
-        "US Chantilly",
-        "Racing Ponts",
-        "SC Trois-Chênes",
-      ];
-      const JOUEURS = [
-        "Camille",
-        "Sacha",
-        "Noor",
-        "Éliott",
-        "Ambre",
-        "Jules",
-        "Lou",
-        "Naïm",
-        "Iris",
-        "Timéo",
-      ];
-      const MOIS = [
-        "janvier",
-        "février",
-        "mars",
-        "avril",
-        "mai",
-        "juin",
-        "juillet",
-        "août",
-        "septembre",
-        "octobre",
-        "novembre",
-        "décembre",
+      const PHRASES = [
+        "ok",
+        "je te confirme demain matin",
+        "on se retrouve devant la salle, comme la dernière fois",
+        "j'ai relu le compte-rendu: il manque le point sur les licences, le reste me va. Tu veux que je le complète ou tu préfères le faire toi ?",
+        "parfait",
+        "attends je regarde",
+        "c'est bon de mon côté, j'ai envoyé le mail hier soir et j'ai eu une réponse ce matin. Ils sont d'accord sur le principe, ils veulent juste décaler d'une semaine.",
+        "merci !",
+        "je te rappelle dans 10 min",
+        "franchement bien joué pour hier, tout le monde en parle encore. On refait ça quand ?",
       ];
 
-      const createGame = (index) => {
-        const date = new Date(2019, 0, 6);
-        date.setDate(date.getDate() + index * 2);
-        const playerCount = 1 + ((index * 7) % 6);
-        const players = [];
-        let i = 0;
-        while (i < playerCount) {
-          players.push(JOUEURS[(index + i * 3) % JOUEURS.length]);
-          i++;
-        }
-        return {
-          index,
-          date,
-          opponent: ADVERSAIRES[index % ADVERSAIRES.length],
-          score:
-            index < PAST_COUNT ? `${index % 5} - ${(index * 3) % 4}` : null,
-          players,
-        };
-      };
-      const createGames = (from, count) =>
-        Array.from({ length: count }, (_, i) => createGame(from + i));
+      const createMessage = (index) => ({
+        index,
+        mine: index % 3 === 0,
+        text: PHRASES[index % PHRASES.length],
+        time: `${9 + Math.floor(index / 8)}h${String((index * 7) % 60).padStart(2, "0")}`,
+      });
+      const createMessages = (from, count) =>
+        Array.from({ length: count }, (_, i) => createMessage(from + i));
 
-      const FRONTIER_GAMES = createGames(FRONTIER_INDEX - 25, 50);
-      const TWO_THOUSAND_GAMES = createGames(0, 2000);
-
-      const requestCountSignal = signal(0);
       const inFlightSignal = signal(0);
-      const fetchGames = (from, count, latency) => {
+      const requestCountSignal = signal(0);
+      const fetchMessages = (from, count, latency) => {
         requestCountSignal.value++;
         inFlightSignal.value++;
         return new Promise((resolve) => {
           setTimeout(() => {
             inFlightSignal.value--;
-            resolve(createGames(from, count));
+            resolve(createMessages(from, count));
           }, latency);
         });
       };
-
-      const formatDay = (date) =>
-        `${date.getDate()} ${MOIS[date.getMonth()]} ${date.getFullYear()}`;
-
-      const Heading = ({ level = 2, id, children, ...rest }) => {
-        const Tag = `h${level}`;
-        return (
-          <Tag {...rest}>
-            <Link anchor revealOnInteraction href={`#${id}`}>
-              #
-            </Link>
-            {children}
-          </Tag>
-        );
-      };
-
-      const Section = ({ id, title, children }) => (
-        <div className="demo-section">
-          <Heading level={2} id={id}>
-            {title}
-          </Heading>
-          {children}
-        </div>
-      );
-
-      const Caption = ({ children }) => (
-        <Text size="s" color="#555">
-          {children}
-        </Text>
-      );
 
       const Stat = ({ label, value, busy }) => (
         <span>
@@ -217,415 +115,138 @@
         </span>
       );
 
-      // Une partie: la date, l'adversaire, le score s'il a eu lieu, et la liste
-      // des joueurs — dont la longueur varie d'une partie à l'autre.
-      // index est la place de la partie dans les 5000, pas dans le tableau rendu.
-      const GameItem = ({ listId, game, uniformHeight }) => {
-        const isMonthStart = game.date.getDate() <= 2;
-        const players = uniformHeight ? game.players.slice(0, 1) : game.players;
-        return (
-          <ListItem
-            id={`${listId}_${game.index}`}
-            index={game.index}
-            value={game.index}
-            paddingX="m"
-            paddingY="s"
-          >
-            <Box flex="y" spacing="xs">
-              {isMonthStart && !uniformHeight && (
-                <Text size="s" weight="bold" color="#8a6d3b">
-                  {MOIS[game.date.getMonth()]} {game.date.getFullYear()}
-                </Text>
-              )}
-              <Box flex alignY="baseline" spacing="s">
-                <Text weight="bold">#{game.index}</Text>
-                <Text>{game.opponent}</Text>
-                <Text size="s" color="#777">
-                  {formatDay(game.date)}
-                </Text>
-                <Text size="s" color={game.score ? "#2a7" : "#a72"}>
-                  {game.score || "à venir"}
-                </Text>
-              </Box>
-              <Text size="s" color="#666">
-                {players.join(" · ")}
-              </Text>
-            </Box>
-          </ListItem>
-        );
-      };
+      // index est la place du message dans la conversation entière, pas dans
+      // le tableau rendu.
+      const MessageItem = ({ message }) => (
+        <ListItem
+          id={`message_${message.index}`}
+          index={message.index}
+          paddingX="m"
+          paddingY="xs"
+        >
+          <Box flex="y" alignX={message.mine ? "end" : "start"} expandX>
+            <div className="bubble" data-mine={message.mine ? "" : undefined}>
+              <Text>{message.text}</Text>
+            </div>
+            <Text size="xs" color="#999">
+              #{message.index} · {message.time}
+            </Text>
+          </Box>
+        </ListItem>
+      );
 
-      // Le fil: une tranche des 5000 parties, et l'index où elle commence.
-      // La liste réclame un intervalle d'index; on l'étend à une page entière,
-      // on l'ajoute au bord qu'il touche — et s'il ne touche rien (on a sauté
-      // au milieu du passé), on repart d'une tranche neuve autour de lui.
-      const useGameFeed = ({ from, count, latency, onLoad }) => {
+      const Thread = ({ latency }) => {
         const [range, setRange] = useState(() => ({
-          from,
-          games: createGames(from, count),
+          from: MESSAGE_COUNT - PAGE_SIZE,
+          messages: createMessages(MESSAGE_COUNT - PAGE_SIZE, PAGE_SIZE),
         }));
         const loadedFrom = range.from;
-        const loadedTo = range.from + range.games.length - 1;
+        const loadedTo = range.from + range.messages.length - 1;
 
         const loadRange = async ({ start, end }) => {
-          onLoad?.(`demande ${start}…${end}`);
           if (end >= loadedFrom - 1 && start < loadedFrom) {
-            const wanted = loadedFrom - start;
-            const size = wanted < PAGE_SIZE ? PAGE_SIZE : wanted;
-            const first = loadedFrom - size < 0 ? 0 : loadedFrom - size;
-            const games = await fetchGames(first, loadedFrom - first, latency);
-            onLoad?.(`reçu ${first}…${loadedFrom - 1}`);
+            const first =
+              loadedFrom - PAGE_SIZE < 0 ? 0 : loadedFrom - PAGE_SIZE;
+            const messages = await fetchMessages(
+              first,
+              loadedFrom - first,
+              latency,
+            );
             setRange((current) => ({
               from: first,
-              games: [...games, ...current.games],
+              messages: [...messages, ...current.messages],
             }));
             return;
           }
           if (start <= loadedTo + 1 && end > loadedTo) {
-            const wanted = end - loadedTo;
-            const size = wanted < PAGE_SIZE ? PAGE_SIZE : wanted;
             const last =
-              loadedTo + size > TOTAL_COUNT - 1
-                ? TOTAL_COUNT - 1
-                : loadedTo + size;
-            const games = await fetchGames(
+              loadedTo + PAGE_SIZE > LAST_INDEX
+                ? LAST_INDEX
+                : loadedTo + PAGE_SIZE;
+            const messages = await fetchMessages(
               loadedTo + 1,
               last - loadedTo,
               latency,
             );
-            onLoad?.(`reçu ${loadedTo + 1}…${last}`);
             setRange((current) => ({
               from: current.from,
-              games: [...current.games, ...games],
+              messages: [...current.messages, ...messages],
             }));
             return;
           }
-          const size =
-            end - start + 1 < PAGE_SIZE ? PAGE_SIZE : end - start + 1;
-          const first = start + size > TOTAL_COUNT ? TOTAL_COUNT - size : start;
-          const games = await fetchGames(first, size, latency);
-          onLoad?.(`reçu ${first}…${first + size - 1} (saut)`);
-          setRange({ from: first, games });
+          // L'ascenseur a sauté loin: on repart d'une tranche neuve autour de
+          // ce qui est demandé.
+          const messages = await fetchMessages(start, end - start + 1, latency);
+          setRange({ from: start, messages });
         };
 
-        return {
-          from: loadedFrom,
-          to: loadedTo,
-          games: range.games,
-          loadRange,
-        };
-      };
-
-      const App = () => (
-        <Box flex="y" spacing="l">
-          <DemoHeader
-            title="Fil de parties (scroll infini vers le haut)"
-            previous={{
-              href: "./0_address_autocomplete_demo.html",
-              label: "Adresse avec autocomplete",
-            }}
-          />
-          <div className="demo-section">
-            <h2 style="margin: 0 0 4px">Sommaire</h2>
-            <DocumentToc />
-          </div>
-          <NominalDemo />
-          <CountDemo />
-          <PrependDemo />
-          <ThrottleDemo />
-          <VariableHeightDemo />
-          <ParentScrollerDemo />
-        </Box>
-      );
-
-      const NominalDemo = () => {
-        const [latency, setLatency] = useState(400);
-        const feed = useGameFeed({
-          from: FRONTIER_INDEX - 25,
-          count: 50,
-          latency,
-        });
-
         return (
-          <Section id="nominal" title="Cas nominal">
-            <Caption>
-              5000 parties, 50 chargées. On ouvre sur la frontière passé / à
-              venir, on remonte — et on peut aussi jeter l'ascenseur au milieu
-              du passé.
-            </Caption>
-            <Box flex="y" spacing="s" style="margin-top: 12px">
-              <Box flex alignY="center" spacing="m">
-                <label>
-                  <span className="stat-label">latence </span>
-                  <select
-                    value={latency}
-                    onChange={(e) => setLatency(Number(e.target.value))}
-                  >
-                    <option value="0">0 ms</option>
-                    <option value="400">400 ms</option>
-                    <option value="1500">1500 ms</option>
-                  </select>
-                </label>
-                <Stat label="chargées" value={`${feed.from}…${feed.to}`} />
-                <Stat
-                  label="en vol"
-                  value={inFlightSignal.value}
-                  busy={inFlightSignal.value > 0}
-                />
-                <Stat label="requêtes" value={requestCountSignal.value} />
-              </Box>
-              <List
-                maxHeight="420px"
-                borderWidth="1"
-                separator
-                count={TOTAL_COUNT}
-                onItemsMissing={feed.loadRange}
-                loadMargin={8}
-                initialScrollToItem={`nominal_${FRONTIER_INDEX}`}
-              >
-                {feed.games.map((game) => (
-                  <GameItem key={game.index} listId="nominal" game={game} />
-                ))}
-              </List>
-            </Box>
-          </Section>
-        );
-      };
-
-      const CountDemo = () => (
-        <Section id="count" title="count">
-          <Box flex="y" spacing="m" style="margin-top: 12px">
-            <Box flex="y" spacing="xs">
-              <Caption>50 parties, index 0 à 49, sans count</Caption>
-              <List maxHeight="220px" borderWidth="1" separator>
-                {createGames(0, 50).map((game) => (
-                  <GameItem
-                    key={game.index}
-                    listId="count_none"
-                    game={game}
-                    uniformHeight
-                  />
-                ))}
-              </List>
-            </Box>
-            <Box flex="y" spacing="xs">
-              <Caption>50 parties, index 3975 à 4024, count=5000</Caption>
-              <List
-                maxHeight="220px"
-                borderWidth="1"
-                separator
-                count={TOTAL_COUNT}
-              >
-                {FRONTIER_GAMES.map((game) => (
-                  <GameItem
-                    key={game.index}
-                    listId="count_total"
-                    game={game}
-                    uniformHeight
-                  />
-                ))}
-              </List>
-            </Box>
-          </Box>
-        </Section>
-      );
-
-      const PrependDemo = () => {
-        const [range, setRange] = useState(() => ({ from: 500, count: 120 }));
-        const games = createGames(range.from, range.count);
-
-        return (
-          <Section id="prepend" title="Insérer en tête">
-            <Caption>
-              La ligne rouge est fixe. Ce qui est dessous doit y rester.
-            </Caption>
-            <Box flex="y" spacing="s" style="margin-top: 12px">
-              <Box flex spacing="s" alignY="center">
-                <Button
-                  onClick={() =>
-                    setRange((current) => ({
-                      from: current.from - 50,
-                      count: current.count + 50,
-                    }))
-                  }
-                >
-                  50 parties au-dessus
-                </Button>
-                <Button
-                  onClick={() =>
-                    setRange((current) => ({
-                      from: current.from,
-                      count: current.count + 50,
-                    }))
-                  }
-                >
-                  50 parties en dessous
-                </Button>
-                <Stat
-                  label="chargées"
-                  value={`${range.from}…${range.from + range.count - 1}`}
-                />
-              </Box>
-              <div className="anchored-list">
-                <div className="ruler"></div>
-                <List
-                  maxHeight="320px"
-                  borderWidth="1"
-                  separator
-                  renderBudget={40}
-                  count={TOTAL_COUNT}
-                >
-                  {games.map((game) => (
-                    <GameItem key={game.index} listId="prepend" game={game} />
-                  ))}
-                </List>
-              </div>
-            </Box>
-          </Section>
-        );
-      };
-
-      const ThrottleDemo = () => {
-        const [log, setLog] = useState([]);
-        const feed = useGameFeed({
-          from: TOTAL_COUNT - 60,
-          count: 60,
-          latency: 1500,
-          onLoad: (line) => setLog((current) => [line, ...current]),
-        });
-
-        return (
-          <Section id="throttle" title="Une requête à la fois">
-            <Caption>Latence 1500 ms, marge de 12 lignes.</Caption>
-            <Box flex="y" spacing="s" style="margin-top: 12px">
+          <Box flex="y" spacing="s">
+            <Box flex alignY="center" spacing="m">
+              <Stat label="chargés" value={`${loadedFrom}…${loadedTo}`} />
+              <Stat label="total" value={MESSAGE_COUNT} />
               <Stat
                 label="en vol"
                 value={inFlightSignal.value}
                 busy={inFlightSignal.value > 0}
               />
-              <Box flex spacing="m" alignY="start">
-                <List
-                  maxHeight="320px"
-                  borderWidth="1"
-                  separator
-                  width="460px"
-                  count={TOTAL_COUNT}
-                  onItemsMissing={feed.loadRange}
-                  loadMargin={12}
-                >
-                  {feed.games.map((game) => (
-                    <GameItem
-                      key={game.index}
-                      listId="throttle"
-                      game={game}
-                      uniformHeight
-                    />
-                  ))}
-                </List>
-                <List maxHeight="320px" borderWidth="1" width="240px">
-                  {log.map((line, index) => (
-                    <ListItem
-                      key={`${log.length - index}`}
-                      id={`throttle_log_${log.length - index}`}
-                      index={index}
-                      paddingX="s"
-                      paddingY="xs"
+              <Stat label="requêtes" value={requestCountSignal.value} />
+            </Box>
+            <List
+              maxHeight="420px"
+              borderWidth="1"
+              paddingY="s"
+              count={MESSAGE_COUNT}
+              onItemsMissing={loadRange}
+              initialScrollToItem={{
+                id: `message_${LAST_INDEX}`,
+                block: "end",
+              }}
+            >
+              {range.messages.map((message) => (
+                <MessageItem key={message.index} message={message} />
+              ))}
+            </List>
+          </Box>
+        );
+      };
+
+      const App = () => {
+        const [latency, setLatency] = useState(600);
+        const [threadKey, setThreadKey] = useState(0);
+
+        return (
+          <Box flex="y" spacing="l">
+            <DemoHeader
+              title="Messagerie (scroll infini vers le haut)"
+              previous={{
+                href: "./0_address_autocomplete_demo.html",
+                label: "Adresse avec autocomplete",
+              }}
+            />
+            <div className="demo-section">
+              <h2>Cas nominal</h2>
+              <Box flex="y" spacing="m" style="margin-top: 12px">
+                <Box flex alignY="center" spacing="m">
+                  <label>
+                    <span className="stat-label">latence </span>
+                    <select
+                      value={latency}
+                      onChange={(e) => setLatency(Number(e.target.value))}
                     >
-                      <Text size="s">{line}</Text>
-                    </ListItem>
-                  ))}
-                </List>
+                      <option value="0">0 ms</option>
+                      <option value="600">600 ms</option>
+                      <option value="2000">2000 ms</option>
+                    </select>
+                  </label>
+                  <Button onClick={() => setThreadKey(threadKey + 1)}>
+                    recharger
+                  </Button>
+                </Box>
+                <Thread key={threadKey} latency={latency} />
               </Box>
-            </Box>
-          </Section>
-        );
-      };
-
-      const VariableHeightDemo = () => {
-        const renderList = (listId, uniformHeight) => (
-          <List maxHeight="300px" borderWidth="1" separator>
-            {TWO_THOUSAND_GAMES.map((game) => (
-              <GameItem
-                key={game.index}
-                listId={listId}
-                game={game}
-                uniformHeight={uniformHeight}
-              />
-            ))}
-          </List>
-        );
-
-        return (
-          <Section id="variable" title="Hauteurs variables">
-            <Box flex="y" spacing="m" style="margin-top: 12px">
-              <Box flex="y" spacing="xs">
-                <Caption>2000 parties, toutes de la même hauteur</Caption>
-                {renderList("uniform", true)}
-              </Box>
-              <Box flex="y" spacing="xs">
-                <Caption>
-                  2000 parties, de 1 à 6 joueurs et un en-tête de mois tous les
-                  15 jours
-                </Caption>
-                {renderList("variable", false)}
-              </Box>
-            </Box>
-          </Section>
-        );
-      };
-
-      const ParentScrollerDemo = () => {
-        const feed = useGameFeed({
-          from: FRONTIER_INDEX - 25,
-          count: 50,
-          latency: 300,
-        });
-
-        return (
-          <Section id="scroller-parent" title='scroller="parent"'>
-            <Caption>
-              La liste ne scrolle pas: la page entre les deux barres scrolle, et
-              la liste se virtualise dedans.
-            </Caption>
-            <Box flex="y" spacing="s" style="margin-top: 12px">
-              <Box flex alignY="center" spacing="m">
-                <Stat label="chargées" value={`${feed.from}…${feed.to}`} />
-                <Stat
-                  label="en vol"
-                  value={inFlightSignal.value}
-                  busy={inFlightSignal.value > 0}
-                />
-              </Box>
-              <div className="page-frame">
-                <div className="page-frame-bar">mes parties</div>
-                <div className="page-frame-scroll">
-                  <p>
-                    <Text size="s" color="#666">
-                      Du contenu de page au-dessus de la liste.
-                    </Text>
-                  </p>
-                  <List
-                    scroller="parent"
-                    separator
-                    count={TOTAL_COUNT}
-                    onItemsMissing={feed.loadRange}
-                    loadMargin="400px"
-                    initialScrollToItem={`parent_${FRONTIER_INDEX}`}
-                  >
-                    {feed.games.map((game) => (
-                      <GameItem key={game.index} listId="parent" game={game} />
-                    ))}
-                  </List>
-                  <p>
-                    <Text size="s" color="#666">
-                      Et du contenu de page en dessous.
-                    </Text>
-                  </p>
-                </div>
-                <div className="page-frame-bar">accueil · parties · profil</div>
-              </div>
-            </Box>
-          </Section>
+            </div>
+          </Box>
         );
       };
 
