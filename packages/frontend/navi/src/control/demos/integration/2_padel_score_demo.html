@@ -162,15 +162,22 @@
       };
 
       const TieBreakWheel = ({ name, defaultValue }) => (
-        <Wheel name={name} type="integer" size="l" defaultValue={defaultValue}>
+        <Wheel
+          name={name}
+          type="integer"
+          size="l"
+          defaultValue={defaultValue}
+          // La place de deux chiffres, réservée une fois pour toutes: sans
+          // largeur, une molette est aussi large que les lignes affichées, et
+          // elle s'élargit en passant de 9 à 10 — la popup entière bouge sous
+          // le doigt en pleine inertie.
+          width="5ch"
+        >
           {TIE_BREAK_POINTS.map((point) => (
             <Wheel.Item
               key={point}
               value={point}
-              paddingX="m"
-              // Aussi large à 7 qu'à 50: sans ça la molette se rétrécit d'un
-              // caractère en passant sous 10, et la popup bouge sous le doigt.
-              minWidth="2ch"
+              paddingX="1ch"
               alignX="center"
             >
               {point}

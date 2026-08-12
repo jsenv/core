@@ -3228,7 +3228,13 @@ const jsenvPluginWebResolution = () => {
         if (ownerUrlInfo.originalUrl?.startsWith("http")) {
           return new URL(resource, ownerUrlInfo.originalUrl);
         }
-        const url = new URL(resource.slice(1), ownerUrlInfo.entryUrlInfo.url);
+        // "/x" is the web meaning of a root-relative url: the root of what is
+        // served, which is the source directory — not the directory the entry
+        // point happens to sit in.
+        const url = new URL(
+          resource.slice(1),
+          ownerUrlInfo.context.rootDirectoryUrl,
+        );
         return url;
       }
       // baseUrl happens second argument to new URL() is different from
@@ -11154,7 +11160,16 @@ const devServerPluginServeSourceFiles = ({
         }
       }
     });
-    const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
+    // A client we cannot identify (curl, fetch, a healthcheck, a proxy dropping
+    // the user agent) is assumed to be one of the runtimes the project targets.
+    // Treating it as a runtime supporting nothing would serve it the js module
+    // fallback, breaking tooling perfectly capable of ES modules; an actual
+    // ancient browser hiding its identity fails loudly instead, which is the
+    // cheaper of the two mistakes.
+    const clientRuntimeCompat =
+      runtimeName === "unknown"
+        ? runtimeCompat
+        : { [runtimeName]: runtimeVersion };
 
     kitchen = createKitchen({
       name: runtimeId,
