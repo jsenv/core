@@ -39,6 +39,7 @@ export const createBuildSpecifierManager = ({
   buildDirectoryUrl,
   assetsDirectory,
   buildUrlsGenerator,
+  entryKey,
   base,
   length = 8,
 
@@ -77,6 +78,7 @@ export const createBuildSpecifierManager = ({
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
         assetsDirectory,
+        entryKey,
       });
     }
 
@@ -1134,9 +1136,14 @@ export const createBuildSpecifierManager = ({
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
-            const buildUrlVersioned = asBuildUrlVersioned({
-              buildSpecifierVersioned,
-              buildDirectoryUrl,
+            // The version goes on the build url, not on the specifier: a
+            // specifier is written for one importer to read (base: "./" makes
+            // it relative to that importer, base: "https://cdn…" makes it
+            // absolute elsewhere) and says nothing about where the file lands.
+            const buildUrlVersioned = injectVersionIntoBuildSpecifier({
+              buildSpecifier: buildUrl,
+              version: versionMap.get(urlInfo),
+              versioningMethod,
             });
             const buildRelativeUrlVersioned = urlToRelativeUrl(
               buildUrlVersioned,
@@ -1378,23 +1385,6 @@ const injectVersionIntoBuildSpecifier = ({
       return `${basename}-${version}${extension}`;
     },
   );
-};
-
-const asBuildUrlVersioned = ({
-  buildSpecifierVersioned,
-  buildDirectoryUrl,
-}) => {
-  if (buildSpecifierVersioned[0] === "/") {
-    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
-  }
-  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
-  if (buildUrl.startsWith(buildDirectoryUrl)) {
-    return buildUrl;
-  }
-  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
-  // let's move url to build directory
-  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
-  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };
 
 const targetsAFileThatDoesNotExist = (url) => {

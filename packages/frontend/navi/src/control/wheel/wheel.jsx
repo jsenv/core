@@ -342,6 +342,15 @@ const css = /* css */ `
       --wheel-window-inset: calc((100% - var(--wheel-item-height)) / 2);
       --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
 
+      /* As wide as the rows ON SCREEN, which is not the same as "as wide as
+         the widest value": the rows are a handful of recycled slots, so a wheel
+         whose labels are not all the same width resizes as one scrolls — "9"
+         becoming "10" widens it mid-glide, and whatever holds it (a popup)
+         moves under the finger. Give such a wheel a width and the question is
+         settled once; the per-row padding stays where it is, inside it, and
+         stays scrollable. Digits are the case where this does not arise on its
+         own: data-wheel-type="integer" makes them tabular above, so they all
+         advance the same — until one of them takes a digit more. */
       width: fit-content;
 
       .navi_wheel_viewport {
@@ -426,6 +435,9 @@ const css = /* css */ `
       --wheel-window-inset: calc((100% - var(--wheel-item-width)) / 2);
       --wheel-band-inset: calc((100% - var(--wheel-emphasis-size)) / 2);
 
+      /* The cross axis follows the rows on screen — same story as the vertical
+         branch above, and the same answer: say a height when the rows are not
+         all as tall as each other. */
       height: fit-content;
 
       .navi_wheel_viewport {

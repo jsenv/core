@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Score de padel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 620px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .intro {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        margin: 0 0 16px;
+        color: #555;
+        font-size: 13px;
+      }
+      /* Une feuille de match: une colonne par set, une ligne par équipe. Les
+         cases sont écrites set par set (l'entête, les deux équipes, le
+         tie-break), ce qui est aussi l'ordre dans lequel on les remplit — la
+         grille les range en colonnes sans que le DOM ait à suivre l'ordre
+         visuel des lignes. */
+      .scoreboard {
+        display: grid;
+        width: fit-content;
+        grid-auto-flow: column;
+        grid-template-rows: auto auto auto auto;
+        align-items: center;
+        gap: 6px 10px;
+      }
+      .scoreboard_team {
+        padding-right: 6px;
+        font-weight: 600;
+      }
+      .scoreboard_set {
+        color: #777;
+        font-size: 12px;
+        text-align: center;
+      }
+      .scoreboard_tie_break {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* Le picker est sans habillage et vient se poser sur le bouton: c'est
+         depuis lui que la popup s'ouvre, donc c'est le bouton qu'elle doit
+         suivre. */
+      .tie_break_cta {
+        position: relative;
+        display: inline-flex;
+      }
+      .tie_break_cta > .navi_picker {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+      }
+      .result {
+        margin: 16px 0 0;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Score de padel</h1>
+      <p class="intro">
+        Un bloc-notes, pas une feuille homologuée: les sets et les deux équipes
+        sont la seule structure imposée, le reste suit ce qui a été joué.
+      </p>
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { Fragment, render } from "preact";
+      import { useId, useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Form,
+        NumberSpin,
+        Picker,
+        Text,
+        Wheel,
+        WheelGroup,
+        useInputGroup,
+      } from "@jsenv/navi";
+
+      const GAME_MAX = 9;
+      const gameCount = (value) => {
+        const number = Number(value);
+        return Number.isInteger(number) && value !== "" ? number : undefined;
+      };
+
+      // Un set joué, c'est deux chiffres et un vainqueur. Rien de plus: 6-4,
+      // 7-6 et 7-2 se valent ici, parce qu'on note ce qui s'est passé sur le
+      // terrain plutôt qu'un format déclaré à l'avance.
+      const isSetPlayed = ({ us, them }) => {
+        const a = gameCount(us);
+        const b = gameCount(them);
+        if (a === undefined || b === undefined) {
+          return false;
+        }
+        return a !== b;
+      };
+
+      // Un jeu d'écart, et un seul: c'est là, et seulement là, qu'un tie-break
+      // a pu se jouer. À deux jeux ou plus le set s'est joué au jeu, il n'y a
+      // rien à noter et rien à proposer.
+      const couldBeTieBreak = (set) => {
+        if (!isSetPlayed(set)) {
+          return false;
+        }
+        const gap = gameCount(set.us) - gameCount(set.them);
+        return gap === 1 || gap === -1;
+      };
+
+      // Le tie-break le plus probable, celui qu'on ne veut pas avoir à saisir:
+      // joué en 7, et l'autre équipe en a pris 4. Les molettes s'ouvrent là,
+      // à un cran ou deux de la plupart des scores.
+      const TIE_BREAK_PROPOSED = { us: 7, them: 4 };
+      const TIE_BREAK_POINTS = Array.from({ length: 51 }, (_, i) => i);
+
+      const tieBreakLabel = (tieBreak) =>
+        tieBreak ? `${tieBreak.us}-${tieBreak.them}` : undefined;
+
+      // Combien de colonnes sont à l'écran: deux, et une de plus tant que la
+      // dernière est jouée. Déduit des scores plutôt que compté à part —
+      // corriger un set qui n'en est plus un referme la colonne qu'il avait
+      // ouverte.
+      const setCountShown = (sets, minSetCount, maxSetCount) => {
+        let count = minSetCount;
+        while (count < maxSetCount && isSetPlayed(sets[count - 1])) {
+          count++;
+        }
+        return count;
+      };
+
+      const TieBreakWheel = ({ name, defaultValue }) => (
+        <Wheel
+          name={name}
+          type="integer"
+          size="l"
+          defaultValue={defaultValue}
+          // La place de deux chiffres, réservée une fois pour toutes: sans
+          // largeur, une molette est aussi large que les lignes affichées, et
+          // elle s'élargit en passant de 9 à 10 — la popup entière bouge sous
+          // le doigt en pleine inertie.
+          width="5ch"
+        >
+          {TIE_BREAK_POINTS.map((point) => (
+            <Wheel.Item
+              key={point}
+              value={point}
+              paddingX="1ch"
+              alignX="center"
+            >
+              {point}
+            </Wheel.Item>
+          ))}
+        </Wheel>
+      );
+
+      // Le score d'un tie-break ne se tape pas: il se choisit, et seulement si
+      // on en a envie. Le bouton dit lequel a été noté, ou invite à le noter;
+      // le picker derrière lui est ce qui tient la valeur, l'ouvre, la rend au
+      // formulaire et se rouvre dessus quand on veut la corriger.
+      const TieBreakPicker = ({ id, name, label, tieBreak, onChange }) => (
+        <span className="tie_break_cta">
+          {/* Aussi court que la colonne est étroite: le bouton est sous les
+              jeux, et un mot de plus élargirait le set entier. Ce que
+              "tie?" ne dit pas, le titre de la popup le dit. */}
+          <Button
+            variant="discrete"
+            size="s"
+            color={tieBreak ? undefined : "#777"}
+            aria-label={label}
+            command="--navi-open"
+            commandFor={id}
+          >
+            {tieBreak ? `(${tieBreakLabel(tieBreak)})` : "tie?"}
+          </Button>
+          <Picker
+            id={id}
+            name={name}
+            type="form"
+            variant="headless"
+            defaultValue={tieBreak ?? TIE_BREAK_PROPOSED}
+            action={onChange}
+            popupWidthFitContent
+          >
+            <Box flex="y" alignX="center" padding="m" spacing="m">
+              <Text bold>Score du tie-break</Text>
+              <WheelGroup frameBorder border="none">
+                <TieBreakWheel
+                  name="us"
+                  defaultValue={tieBreak?.us ?? TIE_BREAK_PROPOSED.us}
+                />
+                <WheelGroup.Separator size="l">
+                  <Text color="#6b7280">–</Text>
+                </WheelGroup.Separator>
+                <TieBreakWheel
+                  name="them"
+                  defaultValue={tieBreak?.them ?? TIE_BREAK_PROPOSED.them}
+                />
+              </WheelGroup>
+            </Box>
+          </Picker>
+        </span>
+      );
+
+      const EMPTY_SET = { us: "", them: "", tieBreak: undefined };
+      const fillSets = (sets, count) =>
+        Array.from({ length: count }, (_, index) => ({
+          ...EMPTY_SET,
+          ...sets[index],
+        }));
+
+      const PadelScore = ({
+        teamUs = "Nous",
+        teamThem = "Eux",
+        defaultSets = [],
+        minSetCount = 2,
+        maxSetCount = 5,
+      }) => {
+        const [sets, setSets] = useState(() =>
+          fillSets(defaultSets, maxSetCount),
+        );
+        const boardRef = useRef(null);
+        // Plusieurs feuilles cohabitent sur la page, et un picker s'ouvre par
+        // son id: il faut qu'il soit celui de CETTE feuille.
+        const boardId = useId();
+        // Ce qui fait sauter la saisie d'une case à l'autre: une case pleine
+        // passe la main à la suivante, et ←→ font le tour du tableau.
+        useInputGroup(boardRef);
+
+        const countShown = setCountShown(sets, minSetCount, maxSetCount);
+        const write = (setIndex, key) => (value) => {
+          setSets((previous) =>
+            previous.map((set, index) =>
+              index === setIndex ? { ...set, [key]: value } : set,
+            ),
+          );
+        };
+
+        return (
+          <div className="scoreboard" ref={boardRef}>
+            <div />
+            <div className="scoreboard_team">{teamUs}</div>
+            <div className="scoreboard_team">{teamThem}</div>
+            <div />
+            {sets.slice(0, countShown).map((set, index) => (
+              <Fragment key={index}>
+                <div className="scoreboard_set">Set {index + 1}</div>
+                <NumberSpin
+                  name={`set${index + 1}_us`}
+                  min={0}
+                  max={GAME_MAX}
+                  value={set.us}
+                  uiAction={write(index, "us")}
+                  controlProps={{
+                    "aria-label": `${teamUs}, set ${index + 1}`,
+                  }}
+                  width="52px"
+                />
+                <NumberSpin
+                  name={`set${index + 1}_them`}
+                  min={0}
+                  max={GAME_MAX}
+                  value={set.them}
+                  uiAction={write(index, "them")}
+                  controlProps={{
+                    "aria-label": `${teamThem}, set ${index + 1}`,
+                  }}
+                  width="52px"
+                />
+                <div className="scoreboard_tie_break">
+                  {couldBeTieBreak(set) && (
+                    <TieBreakPicker
+                      id={`${boardId}_set${index + 1}_tie_break_picker`}
+                      name={`set${index + 1}_tie_break`}
+                      label={`Score du tie-break, set ${index + 1}`}
+                      tieBreak={set.tieBreak}
+                      onChange={write(index, "tieBreak")}
+                    />
+                  )}
+                </div>
+              </Fragment>
+            ))}
+          </div>
+        );
+      };
+
+      const setsFromFormData = (data) => {
+        const sets = [];
+        for (let i = 1; i <= 5; i++) {
+          const us = data[`set${i}_us`];
+          const them = data[`set${i}_them`];
+          if (us === undefined || them === undefined) {
+            continue;
+          }
+          const tieBreak = tieBreakLabel(data[`set${i}_tie_break`]);
+          sets.push(tieBreak ? `${us}/${them}(${tieBreak})` : `${us}/${them}`);
+        }
+        return sets.join(" ");
+      };
+
+      const NominalSection = () => {
+        const [scoreSent, setScoreSent] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Cas nominal</h2>
+            <p className="caption">
+              Deux sets à remplir. Un chiffre par case, la saisie passe à la
+              suivante toute seule; ↑↓ montent et descendent le jeu, ←→ vont
+              d'une case à l'autre.
+            </p>
+            <Form
+              action={(data) => {
+                setScoreSent(setsFromFormData(data));
+              }}
+            >
+              <Box flex="y" alignX="start" spacing="l">
+                <PadelScore />
+                <Button type="submit">Valider</Button>
+              </Box>
+            </Form>
+            {scoreSent && <p className="result">{scoreSent}</p>}
+          </div>
+        );
+      };
+
+      const App = () => (
+        <>
+          <NominalSection />
+
+          <div className="demo-section">
+            <h2>Deux sets joués</h2>
+            <p className="caption">
+              Un troisième set à remplir, apparu de lui-même. Ramener le
+              deuxième à 6-6 le referme.
+            </p>
+            <PadelScore
+              defaultSets={[
+                { us: "6", them: "4" },
+                { us: "4", them: "6" },
+              ]}
+            />
+          </div>
+
+          <div className="demo-section">
+            <h2>Deux tie-breaks</h2>
+            <p className="caption">
+              Un set noté, l'autre pas: le bouton invite, il n'exige rien. Les
+              molettes s'ouvrent sur 7-4, et sur ce qui a été noté quand il y a
+              quelque chose à corriger.
+            </p>
+            <PadelScore
+              defaultSets={[
+                { us: "7", them: "6", tieBreak: { us: 7, them: 5 } },
+                { us: "6", them: "7" },
+              ]}
+            />
+          </div>
+
+          <div className="demo-section">
+            <h2>Un format à soi</h2>
+            <p className="caption">
+              7-2 est un set joué comme un autre, et à deux jeux d'écart il n'y
+              a pas de tie-break à noter.
+            </p>
+            <PadelScore
+              defaultSets={[
+                { us: "7", them: "2" },
+                { us: "3", them: "7" },
+              ]}
+            />
+          </div>
+
+          <div className="demo-section">
+            <h2>maxSetCount</h2>
+            <p className="caption">
+              Cinq sets par défaut, et rien après le cinquième.
+            </p>
+            <PadelScore
+              defaultSets={[
+                { us: "6", them: "4" },
+                { us: "4", them: "6" },
+                { us: "7", them: "6", tieBreak: { us: 12, them: 10 } },
+                { us: "2", them: "6" },
+                { us: "6", them: "3" },
+              ]}
+            />
+          </div>
+
+          <div className="demo-section">
+            <h2>minSetCount</h2>
+            <p className="caption">
+              Une seule colonne au départ, pour un match qui se joue en un set.
+            </p>
+            <PadelScore minSetCount={1} maxSetCount={3} />
+          </div>
+        </>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

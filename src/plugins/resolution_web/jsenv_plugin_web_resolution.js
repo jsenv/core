@@ -9,7 +9,13 @@ export const jsenvPluginWebResolution = () => {
         if (ownerUrlInfo.originalUrl?.startsWith("http")) {
           return new URL(resource, ownerUrlInfo.originalUrl);
         }
-        const url = new URL(resource.slice(1), ownerUrlInfo.entryUrlInfo.url);
+        // "/x" is the web meaning of a root-relative url: the root of what is
+        // served, which is the source directory — not the directory the entry
+        // point happens to sit in.
+        const url = new URL(
+          resource.slice(1),
+          ownerUrlInfo.context.rootDirectoryUrl,
+        );
         return url;
       }
       // baseUrl happens second argument to new URL() is different from

@@ -2,25 +2,30 @@
  * A value one steps through, one press at a time: what is chosen sits between
  * the way back and the way on, and the two of them are the whole control.
  *
- * Days for now — DaySpin below — but nothing here is about days except how
- * one is written and what "one step" adds. The name says where this is going:
- * a picker whose value is stepped rather than typed (a month, a page, a size),
- * shown as the picker it is.
+ * `Spin` knows nothing about what it steps through. It is handed how to move
+ * one step (`valueAtStep`), how to tell two values apart (`compareValues`) and
+ * what to write for one (`renderValue`); everything else — the frame, the two
+ * ways out, the ends one cannot go past, the value a form carries — is the
+ * same whatever the value is. `DaySpin` and `NumberSpin` at the bottom are two
+ * of those answers, and a caller can write a third.
+ *
+ * The middle is one of two things, and that is the only real fork here:
+ *
+ * - a value one PICKS (`DaySpin`): a headless picker holds it, pressing the
+ *   middle opens it, and the three slides of a looping container show the one
+ *   before, this one and the one after — a window over a row with no end.
+ * - a value one TYPES (`editable`, `NumberSpin`): the middle IS the field.
+ *   Nothing travels — one cannot slide what is being typed into — and the
+ *   arrows step the value where the caret already is.
  *
  * A picker, so it lives here: what one presses in the middle IS a picker, and
  * the stepping is a way of showing it. It is headless and behind the three
  * slides — there is one value being chosen, so there is one picker for it.
  *
- * Three slides for a row with no end, kept by a looping slide container: a
- * press travels by one, then the window comes back to the middle while the
- * value moves one step under it (see its `loop`/`onLoop`). So the three are
- * only ever "the one before, this one, the one after".
- *
- * Two things take the keyboard and no more: the container (arrows step,
- * Enter/Space open the picker) and the two chevrons. What is in the middle is
- * not a control — a click on the container opens the picker by command — which
- * is what keeps the focus where the travel happens instead of moving it into a
- * slide that is about to leave.
+ * Two things take the keyboard and no more: the middle (the container in the
+ * picking case, the field in the typing one) and nothing else — the chevrons
+ * refuse it on purpose, which is what keeps the focus where the travel happens
+ * instead of moving it into a slide that is about to leave.
  */
 
 import { useContext, useId, useLayoutEffect, useRef } from "preact/hooks";
@@ -47,6 +52,7 @@ import {
   ReadOnlyContext,
 } from "../control_context.js";
 import { useControlUIState } from "../control_hooks.jsx";
+import { Input } from "../input/input.jsx";
 import { openCallout } from "../rules/callout/callout.js";
 import {
   dispatchRequestResetUIState,
@@ -66,7 +72,7 @@ const css = /* css */ `
 
   .navi_picker_spin {
     /* The padding is written on what is inside the box rather than on the box
-       — the day takes all four sides, the two chevrons only the vertical ones
+       — the value takes all four sides, the two chevrons only the vertical ones
        — so the four sides are resolved once here, in the side-then-axis-then
        -shorthand order a Box resolves them in. What writes them: the padding
        props, through PICKER_SPIN_STYLE_CSS_VARS below. */
@@ -100,7 +106,7 @@ const css = /* css */ `
     );
     /* What the loading outline is drawn around. */
     position: relative;
-    /* Written in the control font, like the picker it wraps: the day and its
+    /* Written in the control font, like the picker it wraps: the value and its
        two chevrons are a control, not running text. */
     font-size: var(--navi-control-font-size);
     font-family: var(--navi-control-font-family);
@@ -118,16 +124,19 @@ const css = /* css */ `
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
   }
-  /* The days hold the keyboard, and this box wears their ring: the container
-     fills it, so its own ring would be drawn a pixel inside this border and
-     two rings that close together read as a mistake. Same offer a dialog and a
-     popover answer (data-focus-outline-delegate, see slide_container.jsx), and
-     the same reply — the delegate stands down.
+  /* The middle holds the keyboard, and this box wears its ring: whatever is in
+     there fills it, so a ring of its own would be drawn a pixel inside this
+     border and two rings that close together read as a mistake. Same offer a
+     dialog and a popover answer (data-focus-outline-delegate, see
+     slide_container.jsx), and the same reply — the delegate stands down; a
+     field says it with an outline of zero width instead (see Spin's own
+     outlineWidth below).
      Said on this box too (the first selector): nothing focuses it for real —
-     it is the container that takes the keyboard — but it is where the ring is
+     it is the middle that takes the keyboard — but it is where the ring is
      drawn, so a demo can hold it there and show what it looks like. */
   .navi_picker_spin[data-focus-visible],
-  .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]) {
+  .navi_picker_spin:has([data-focus-outline-delegate][data-focus-visible]),
+  .navi_picker_spin:has(.navi_input[data-focus-visible]) {
     outline-style: solid;
   }
   .navi_picker_spin [data-focus-outline-delegate] {
@@ -178,6 +187,14 @@ const css = /* css */ `
     width: min(100%, var(--picker-spin-picker-width, 12ch));
     translate: -50% 0;
   }
+  /* A middle one types into is the field itself: it takes the whole room
+     between the chevrons rather than sitting in the centre of it, so the
+     caret is where the value is and a click anywhere in the middle lands in
+     the field. */
+  .navi_picker_spin_middle > .navi_input {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
   /* Where the padding lands: all four sides on the value, the two vertical
      ones on the chevrons below — the same number above and below is what makes
      the three one line rather than three boxes, while sideways it is the room
@@ -203,9 +220,9 @@ const css = /* css */ `
   .navi_picker_spin[data-disabled] [data-slide-container] {
     cursor: default;
   }
-  /* Kept inside its own slide: the three days share one cell, so anything
-     sticking out would be written across the two beside it. A day too long for
-     the box simply wraps — the box grows, and the words are all there; say
+  /* Kept inside its own slide: the three values share one cell, so anything
+     sticking out would be written across the two beside it. A value too long
+     for the box simply wraps — the box grows, and the words are all there; say
      maxLines to cut it instead, which the text itself knows how to do. */
   .navi_picker_spin [data-slide] > * {
     max-width: 100%;
@@ -281,53 +298,73 @@ const css = /* css */ `
 
 /**
  * @type {import("preact").FunctionComponent<{
- *   value?: string,
- *   defaultValue?: string,
- *   signal?: import("@preact/signals").Signal<string>,
+ *   value?: any,
+ *   defaultValue?: any,
+ *   signal?: import("@preact/signals").Signal<any>,
  *   name?: string,
- *   min?: string,
- *   max?: string,
+ *   min?: any,
+ *   max?: any,
  *   step?: number,
+ *   type?: string,
+ *   editable?: boolean,
+ *   growsUpward?: boolean,
+ *   fallbackValue?: any,
+ *   valueAtStep: (value: any, count: number) => any,
+ *   compareValues?: (a: any, b: any) => number,
+ *   renderValue?: (value: any) => import("preact").ComponentChildren,
+ *   controlProps?: object,
  *   duration?: number,
- *   lang?: string,
- *   renderDay?: (day: string) => import("preact").ComponentChildren,
+ *   vertical?: boolean,
  *   previousLabel?: string,
  *   nextLabel?: string,
  *   [key: string]: any,
  * }>}
- * @param {string} [value] The day shown, as "YYYY-MM-DD". Held from above:
- *   `uiAction` says when it should move. Say `signal` for a two-way binding
- *   instead, or `defaultValue` to let the spin hold the day itself.
- * @param {number} [step=1] How many days a press covers — 7 for a week at a
- *   time, and the label then names the day one lands on, as it always does.
+ * @param {any} [value] The value shown. Held from above: `uiAction` says when
+ *   it should move. Say `signal` for a two-way binding instead, or
+ *   `defaultValue` to let the spin hold the value itself.
+ * @param {(value: any, count: number) => any} valueAtStep What is `count` steps
+ *   away from `value` — the whole of what a spin has to know about what it
+ *   steps through. Called with -1 and +1 (times `step`) for the two ways out.
+ * @param {(a: any, b: any) => number} [compareValues] Which of two values comes
+ *   first, the way a sort comparator answers. Only `min`/`max` need it, and the
+ *   default compares them as they compare with `<` — which is what an ISO date
+ *   wants and what a number does not.
+ * @param {any} [fallbackValue] What is shown when nobody said anything: a spin
+ *   always shows a value, so there is always one to fall back on.
+ * @param {string} [type="text"] What kind of value it is, handed to the control
+ *   holding it — a picker's `type` ("date", "time"…) or an input's.
+ * @param {boolean} [editable] The middle is typed into rather than pressed:
+ *   the field IS the middle, and nothing travels. Without it the value is
+ *   picked — a headless picker behind three slides that travel one step at a
+ *   press.
+ * @param {object} [controlProps] Anything else the control in the middle takes
+ *   (`inputMode`, `maxLength`, `placeholder`…).
+ * @param {number} [step=1] How many steps a press covers.
  * @param {number} [duration=250] How long a travel takes, in milliseconds.
- * @param {string} [min] The first day one can reach, as "YYYY-MM-DD"; `max` is
- *   the last. Beyond them the travel simply does not happen and the chevron
- *   that way says so.
- * @param {"long"|"short"|"numeric"} [format="long"] How the date is written.
- *   Long by default, since this is a control one reads rather than a column
- *   one scans; `short` where the room is not there.
+ * @param {any} [min] The first value one can reach; `max` is the last. Beyond
+ *   them the travel simply does not happen and the chevron that way says so.
  * @param {string} [padding] The room around the value, `paddingX`/`paddingY`
  *   and the four sides included. It goes on what is inside the box rather than
- *   on the box: above and below it is taken by the day AND by the two chevrons,
- *   which is what makes the three the same height; sideways it is the room
- *   between the day and the chevron beside it. Left unsaid it is the padding
- *   every picker takes (`--navi-picker-padding-x-default` and its `-y` twin),
- *   so a theme that spaces its fields spaces this one with them.
- * @param {number} [maxLines] How many lines the day may take before it is cut
- *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a day
+ *   on the box: above and below it is taken by the value AND by the two
+ *   chevrons, which is what makes the three the same height; sideways it is the
+ *   room between the value and the chevron beside it. Left unsaid it is the
+ *   padding every picker takes (`--navi-picker-padding-x-default` and its `-y`
+ *   twin), so a theme that spaces its fields spaces this one with them.
+ * @param {number} [maxLines] How many lines the value may take before it is cut
+ *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a value
  *   too long for the box wraps, and the box grows.
  * @param {boolean} [vertical] The same control standing up: the ways out above
- *   and below rather than left and right, and the days travelling upwards.
+ *   and below rather than left and right.
+ * @param {boolean} [growsUpward] Which end of a standing spin holds the value
+ *   one steps up to. Off by default — what one walks through comes from below,
+ *   the way the next line of a list does. On for a quantity: pressing ▲ has to
+ *   mean a bigger number. Nothing to say about a spin lying down, where the way
+ *   on is always to the right.
  * Everything a box takes is taken here too — `width`, `borderWidth`,
  * `borderRadius`, `backgroundColor`: this IS a box, and its corners are passed
  * on to the chevrons sitting in them.
- * @param {(day: string) => import("preact").ComponentChildren} [renderDay] What
- *   to write for a day. Defaults to the date plus what it is to today when
- *   there is a word for it ("samedi 8 août (demain)"), since a day near now is
- *   read as a distance from now before it is read as a date.
  */
-export const DaySpin = ({
+export const Spin = ({
   value,
   defaultValue,
   uiAction,
@@ -337,106 +374,113 @@ export const DaySpin = ({
   max,
   step = 1,
   duration = 250,
-  lang,
-  format = "long",
+  type = "text",
+  editable,
+  growsUpward,
+  fallbackValue,
+  valueAtStep,
+  compareValues = compareValuesDefault,
+  renderValue = renderValueDefault,
+  controlProps,
   vertical,
   readOnly,
   disabled,
   loading,
   maxLines,
-  renderDay = renderDayDefault,
   previousLabel,
   nextLabel,
   ...rest
 }) => {
   import.meta.css = css;
   const id = useId();
-  const containerId = `${id}_days`;
-  const pickerId = `${id}_picker`;
-  // The picker holds the day, and it is asked rather than shadowed: `value`,
-  // `defaultValue` and `signal` are handed to it untouched (see below), it
-  // settles which of them wins — and what a form makes of each — and this reads
-  // the answer back. Nothing of that story is told twice.
-  const pickerRef = useRef();
-  const dayFallback = firstDayAllowed({ min, max, step });
-  const day =
-    useControlUIState(pickerRef, value ?? defaultValue ?? signalProp?.peek()) ??
-    dayFallback;
+  const containerId = `${id}_values`;
+  const controlId = `${id}_control`;
+  // The control holds the value, and it is asked rather than shadowed:
+  // `value`, `defaultValue` and `signal` are handed to it untouched (see
+  // below), it settles which of them wins — and what a form makes of each —
+  // and this reads the answer back. Nothing of that story is told twice.
+  const controlRef = useRef();
+  const middleRef = useRef();
+  const valueShown =
+    useControlUIState(
+      controlRef,
+      value ?? defaultValue ?? signalProp?.peek(),
+    ) ?? fallbackValue;
 
   // …and the other way round when a signal was handed over: a bound signal is
-  // the day, wherever it is moved from — the url, a back/forward, a button
-  // elsewhere on the page — and the control follows it. A picker seeded from a
+  // the value, wherever it is moved from — the url, a back/forward, a button
+  // elsewhere on the page — and the control follows it. A control seeded from a
   // signal only writes back into it (see resolveInputProps), which is enough
-  // for a field one only ever types into and not for a day that is also moved
-  // from outside. Undefined is not a day: the signal has nothing to say, so the
-  // control goes back to what it started on.
-  const signalDay = signalProp ? signalProp.value : undefined;
-  // The day as of the render this effect belongs to, and not one the closure
+  // for a field one only ever types into and not for a value that is also moved
+  // from outside. Undefined is not a value: the signal has nothing to say, so
+  // the control goes back to what it started on.
+  const signalValue = signalProp ? signalProp.value : undefined;
+  // The value as of the render this effect belongs to, and not one the closure
   // captured a while ago: a step writes the signal, the signal brings us back
-  // here, and comparing against a stale day would set it a second time — one
+  // here, and comparing against a stale value would set it a second time — one
   // uiAction per step becoming two.
-  const dayRef = useRef(day);
-  dayRef.current = day;
+  const valueRef = useRef(valueShown);
+  valueRef.current = valueShown;
   useLayoutEffect(() => {
-    const pickerEl = pickerRef.current;
-    if (!signalProp || !pickerEl) {
+    const controlEl = controlRef.current;
+    if (!signalProp || !controlEl) {
       return;
     }
-    if (signalDay === undefined) {
-      dispatchRequestResetUIState(pickerEl);
+    if (signalValue === undefined) {
+      dispatchRequestResetUIState(controlEl);
       return;
     }
-    if (signalDay !== dayRef.current) {
-      dispatchRequestSetUIState(pickerEl, signalDay, {});
+    if (signalValue !== valueRef.current) {
+      dispatchRequestSetUIState(controlEl, signalValue, {});
     }
-  }, [signalDay]);
+  }, [signalValue]);
 
-  // A step is a change made to the picker, not beside it: it goes in the way a
+  // A step is a change made to the control, not beside it: it goes in the way a
   // paste or a pick from the calendar goes in, so the signal, the form and
   // `uiAction` all learn about it from the same place — and the event that
   // asked for it travels with it, which is how `uiAction` can tell a chevron
   // from the calendar.
-  // What asked for the day being set, while it is being set: the picker
+  // What asked for the value being set, while it is being set: the control
   // announces the change as its own input event, which says nothing of what
   // started it — so it is held here for the length of the dispatch and handed
-  // to uiAction below. That is how a caller tells a chevron from the calendar.
+  // to uiAction below.
   const stepEventRef = useRef(null);
-  const setDay = (dayNext, event) => {
+  const setValue = (valueNext, event) => {
     stepEventRef.current = event;
     try {
-      dispatchRequestSetUIState(pickerRef.current, dayNext, { event });
+      dispatchRequestSetUIState(controlRef.current, valueNext, { event });
     } finally {
       stepEventRef.current = null;
     }
   };
 
   // Passed through rather than defaulted here: a prop nobody wrote must not
-  // reach the picker at all (it reads the presence of `value`, not its
+  // reach the control at all (it reads the presence of `value`, not its
   // content), so each is added only if it was given.
-  const dayProps = {};
+  const valueProps = {};
   if (value !== undefined) {
-    dayProps.value = value;
+    valueProps.value = value;
   } else {
     if (signalProp) {
-      dayProps.signal = signalProp;
+      valueProps.signal = signalProp;
     }
-    // A day is always shown, so the picker always HOLDS one: what was named, or
-    // what the signal starts on, or today (the nearest day a min/max/step
-    // leaves reachable). Said as a default rather than as a value, so a form
-    // reads the day shown as an answer one can send rather than as something it
-    // already holds — and said even when a signal is bound, because a signal
-    // with nothing in it would otherwise leave the picker empty while the
-    // spin shows a day, and a form has nothing to send about an empty field.
-    dayProps.defaultValue =
+    // A value is always shown, so the control always HOLDS one: what was named,
+    // or what the signal starts on, or the fallback. Said as a default rather
+    // than as a value, so a form reads what is shown as an answer one can send
+    // rather than as something it already holds — and said even when a signal
+    // is bound, because a signal with nothing in it would otherwise leave the
+    // control empty while the spin shows a value, and a form has nothing to
+    // send about an empty field.
+    valueProps.defaultValue =
       defaultValue ??
       signalProp?.options?.getDefaultValue?.(false) ??
-      dayFallback;
+      fallbackValue;
   }
 
   // Told from above as often as said here: a form running its action puts
   // every control inside it out of service (that is how the chevrons grey out
-  // by themselves), and the day they sit around must fade with them — it is one
-  // control, not a box with three moods.
+  // by themselves), and the value they sit around must fade with them — it is
+  // one control, not a box with three moods.
   const readOnlyFromAbove = useContext(ReadOnlyContext);
   const loadingFromAbove = useContext(LoadingContext);
   const disabledFromAbove = useContext(DisabledContext);
@@ -465,12 +509,81 @@ export const DaySpin = ({
     return undefined;
   };
 
-  const dayTextProps = { lang, format, maxLines };
+  const valuePrevious = valueAtStep(valueShown, -step);
+  const valueNext = valueAtStep(valueShown, step);
+  const hasMin = min !== undefined && min !== "";
+  const hasMax = max !== undefined && max !== "";
+  const previousAllowed = !hasMin || compareValues(valuePrevious, min) >= 0;
+  const nextAllowed = !hasMax || compareValues(valueNext, max) <= 0;
 
-  const dayPrevious = addDays(day, -step);
-  const dayNext = addDays(day, step);
-  const previousAllowed = !min || dayPrevious >= min;
-  const nextAllowed = !max || dayNext <= max;
+  // Where the keyboard is put back after a press on a chevron: whatever holds
+  // it in this spin, so one can keep going with the keys where one was. Found
+  // in the middle rather than by id — a field's id lands on the box around it,
+  // and what takes the keyboard is the input inside.
+  const focusMiddle = () => {
+    const target = editable
+      ? middleRef.current?.querySelector(".navi_control_input")
+      : document.getElementById(containerId);
+    target?.focus({ preventScroll: true });
+  };
+
+  // Which end of a standing spin holds the value one steps UP to. A quantity
+  // grows upwards — pressing ▲ on a number means a bigger number, and anything
+  // else is read as a bug. What one walks through does the opposite: the day
+  // after today arrives from below, the way the next line of a list does.
+  const startIsNext = vertical && growsUpward;
+  const valueAtStart = startIsNext ? valueNext : valuePrevious;
+  const valueAtEnd = startIsNext ? valuePrevious : valueNext;
+  const startAllowed = startIsNext ? nextAllowed : previousAllowed;
+  const endAllowed = startIsNext ? previousAllowed : nextAllowed;
+
+  const wayOut = (atStart) => {
+    const isNext = atStart ? startIsNext : !startIsNext;
+    return (
+      <WayOut
+        unavailableMessage={wayOutMessage(
+          atStart ? startAllowed : endAllowed,
+          isNext ? "spin.nothing_after" : "spin.nothing_before",
+        )}
+        label={
+          isNext
+            ? (nextLabel ?? naviI18n("spin.next"))
+            : (previousLabel ?? naviI18n("spin.previous"))
+        }
+        onPress={(e) => {
+          focusMiddle();
+          if (editable) {
+            setValue(atStart ? valueAtStart : valueAtEnd, e);
+            return;
+          }
+          // A direction on the map, not a value: the slides are laid out from
+          // start to end (see below), so the way out at the start walks
+          // backwards through them whichever value sits there.
+          const command = atStart
+            ? vertical
+              ? "--navi-up"
+              : "--navi-left"
+            : vertical
+              ? "--navi-down"
+              : "--navi-right";
+          triggerNaviCommand(e.currentTarget, command, e);
+        }}
+        commandFor={editable ? undefined : containerId}
+      >
+        {atStart ? (
+          vertical ? (
+            <ChevronUpSvg />
+          ) : (
+            <ChevronLeftSvg />
+          )
+        ) : vertical ? (
+          <ChevronDownSvg />
+        ) : (
+          <ChevronRightSvg />
+        )}
+      </WayOut>
+    );
+  };
 
   return (
     <Box
@@ -486,130 +599,156 @@ export const DaySpin = ({
       data-readonly={readOnlyResolved ? "" : undefined}
       data-disabled={disabledResolved ? "" : undefined}
     >
-      {/* Around the whole box, the way a button wears it: the day is on its
-          way somewhere, and it is the day one is looking at. */}
+      {/* Around the whole box, the way a button wears it: the value is on its
+          way somewhere, and it is the value one is looking at. */}
       <LoadingOutline
         loading={loading}
         color="var(--navi-loader-color)"
         inset={-2}
       />
-      <WayOut
-        command={vertical ? "--navi-up" : "--navi-left"}
-        containerId={containerId}
-        unavailableMessage={wayOutMessage(
-          previousAllowed,
-          "spin.nothing_before",
+      {wayOut(true)}
+      <div className="navi_picker_spin_middle" ref={middleRef}>
+        {editable ? (
+          <Input
+            ref={controlRef}
+            type={type}
+            name={name}
+            {...controlProps}
+            {...valueProps}
+            min={min}
+            max={max}
+            step={step}
+            readOnly={readOnly}
+            disabled={disabled}
+            loading={loading}
+            // No frame of its own inside a frame, and no ring of its own
+            // either: the spin draws both (see the CSS above), and an outline
+            // of zero width is how a field stands down without its focus
+            // state being touched.
+            variant="discrete"
+            outlineWidth="0"
+            textAlign="center"
+            expandX
+            uiAction={(valueNext, event) => {
+              uiAction?.(valueNext, stepEventRef.current ?? event);
+            }}
+          />
+        ) : (
+          <>
+            {/* One picker for the three values, behind them: what a press on
+                the value opens, and what holds the value for a form. */}
+            <Picker
+              ref={controlRef}
+              id={controlId}
+              type={type}
+              variant="headless"
+              name={name}
+              {...controlProps}
+              // Whatever was said about the value, said to the picker: a
+              // `value` it holds, a `signal` it follows, a `defaultValue` it
+              // merely starts on — including what a form makes of the
+              // difference (it HOLDS a value and has nothing to send back,
+              // where a default is a suggestion and confirming it is an
+              // answer).
+              {...valueProps}
+              min={min}
+              max={max}
+              readOnly={readOnly}
+              disabled={disabled}
+              loading={loading}
+              uiAction={(valueNext, event) => {
+                uiAction?.(valueNext, stepEventRef.current ?? event);
+              }}
+            />
+            <SlideContainer
+              id={containerId}
+              layout={vertical ? "column" : "row"}
+              // What is left beside the two chevrons, whatever the values it
+              // holds are long: a control that resizes as one steps through it
+              // is a control one has to aim at twice.
+              expandX
+              defaultCurrent="current"
+              duration={`${duration}ms`}
+              // The three values are a window over an endless row: the
+              // container plays the travel and comes back to the middle, and
+              // the value moves one step here, in onLoop, as it lands.
+              loop
+              onLoop={({ dx, dy, event }) => {
+                // One step, whichever axis it came from: the map is a line, so
+                // only one of the two is ever anything but zero. Towards the
+                // end of the line is a step forward, unless the line was laid
+                // out the other way round (startIsNext). The event goes with
+                // it — it is what says a chevron (or an arrow key) asked for
+                // this value.
+                const towardsEnd = dx || dy;
+                setValue(
+                  valueAtStep(
+                    valueShown,
+                    (startIsNext ? -towardsEnd : towardsEnd) * step,
+                  ),
+                  event,
+                );
+              }}
+              // The whole middle opens the picker — a command, like the
+              // chevrons send one, and no button of its own: the value would
+              // then be one more Tab stop, and the focus would follow it out of
+              // the box as it travels.
+              commandFor={controlId}
+              // Sent whatever state the control is in: the picker is the one
+              // that knows it cannot be opened right now, and refusing there is
+              // what says so out loud (read-only, busy). Refusing here would be
+              // a press that does nothing and explains nothing.
+              // preventDefault, because a <Label> around the whole control
+              // forwards a click to what it labels — the picker — and that
+              // would open the calendar a second time, right after this command
+              // did.
+              onClick={(e) => {
+                e.preventDefault();
+                triggerNaviCommand(e.currentTarget, "--navi-open", e);
+              }}
+            >
+              {/* Three places, not three values: "start" is the one above (or
+                  to the left), whichever value the spin puts there. */}
+              <Slide area="start" flex align="center">
+                {renderValue(valueAtStart, { maxLines })}
+              </Slide>
+              <Slide
+                area="current"
+                flex
+                align="center"
+                // The values a min/max leaves out are simply not reachable: the
+                // way out is closed on the slide being left, so a key, a
+                // chevron and a command are all stopped by the same thing.
+                preventNavPrevious={!startAllowed}
+                preventNavNext={!endAllowed}
+              >
+                {renderValue(valueShown, { maxLines })}
+              </Slide>
+              <Slide area="end" flex align="center">
+                {renderValue(valueAtEnd, { maxLines })}
+              </Slide>
+            </SlideContainer>
+          </>
         )}
-        label={previousLabel ?? naviI18n("spin.previous")}
-      >
-        {vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}
-      </WayOut>
-      {/* One box for the value and the picker behind it: the picker is
-          headless, so what the browser anchors its calendar to is whatever box
-          is positioned around it — and that has to be the value one pressed. */}
-      <div className="navi_picker_spin_middle">
-        {/* One picker for the three days, behind them: what a press on the day
-          opens, and what holds the day for a form. */}
-        <Picker
-          ref={pickerRef}
-          id={pickerId}
-          type="date"
-          variant="headless"
-          name={name}
-          // Whatever was said about the day, said to the picker: a `value` it
-          // holds, a `signal` it follows, a `defaultValue` it merely starts on —
-          // including what a form makes of the difference (it HOLDS a value and
-          // has nothing to send back, where a default is a suggestion and
-          // confirming it is an answer). A day is always shown, so there is
-          // always a default: today, when nobody named one.
-          {...dayProps}
-          min={min}
-          max={max}
-          readOnly={readOnly}
-          disabled={disabled}
-          loading={loading}
-          uiAction={(dayNext, event) => {
-            uiAction?.(dayNext, stepEventRef.current ?? event);
-          }}
-        />
-        <SlideContainer
-          id={containerId}
-          layout={vertical ? "column" : "row"}
-          // What is left beside the two chevrons, whatever the days it holds are
-          // long: a control that resizes as one steps through it is a control one
-          // has to aim at twice.
-          expandX
-          defaultCurrent="current"
-          duration={`${duration}ms`}
-          // The three days are a window over an endless row: the container plays
-          // the travel and comes back to the middle, and the day moves one step
-          // here, in onLoop, as it lands.
-          loop
-          onLoop={({ dx, dy, event }) => {
-            // One step, whichever axis it came from: the map is a line, so only
-            // one of the two is ever anything but zero. The event goes with it —
-            // it is what says a chevron (or an arrow key) asked for this day.
-            setDay(addDays(day, (dx || dy) * step), event);
-          }}
-          // The whole middle opens the calendar — a command, like the chevrons
-          // send one, and no button of its own: the day would then be one more
-          // Tab stop, and the focus would follow it out of the box as it travels.
-          commandFor={pickerId}
-          // Sent whatever state the control is in: the picker is the one that
-          // knows it cannot be opened right now, and refusing there is what says
-          // so out loud (read-only, busy). Refusing here would be a press that
-          // does nothing and explains nothing.
-          // preventDefault, because a <Label> around the whole control forwards
-          // a click to what it labels — the picker — and that would open the
-          // calendar a second time, right after this command did.
-          onClick={(e) => {
-            e.preventDefault();
-            triggerNaviCommand(e.currentTarget, "--navi-open", e);
-          }}
-        >
-          <Slide area="previous" flex align="center">
-            {renderDay(dayPrevious, dayTextProps)}
-          </Slide>
-          <Slide
-            area="current"
-            flex
-            align="center"
-            // The days a min/max leaves out are simply not reachable: the way out
-            // is closed on the slide being left, so a key, a chevron and a
-            // command are all stopped by the same thing.
-            preventNavPrevious={!previousAllowed}
-            preventNavNext={!nextAllowed}
-          >
-            {renderDay(day, dayTextProps)}
-          </Slide>
-          <Slide area="next" flex align="center">
-            {renderDay(dayNext, dayTextProps)}
-          </Slide>
-        </SlideContainer>
       </div>
-      <WayOut
-        command={vertical ? "--navi-down" : "--navi-right"}
-        containerId={containerId}
-        unavailableMessage={wayOutMessage(nextAllowed, "spin.nothing_after")}
-        label={nextLabel ?? naviI18n("spin.next")}
-      >
-        {vertical ? <ChevronDownSvg /> : <ChevronRightSvg />}
-      </WayOut>
+      {wayOut(false)}
     </Box>
   );
 };
 
 // A way out is a place one presses, not a control: no <button>, on purpose.
 // A <button> is labelable, so a <Label> wrapping the whole spin would bind
-// to the first chevron instead of to the picker — the thing that actually holds
-// the value — and a form would carry two more controls that answer for nothing.
-// It is not focusable either: the keyboard walks the days on the container (see
-// its own tabIndex), where the arrows already mean this.
+// to the first chevron instead of to the control — the thing that actually
+// holds the value — and a form would carry two more controls that answer for
+// nothing.
+// It is not focusable either: the keyboard walks the values on the middle (see
+// the container's own tabIndex, or the field's), where the arrows already mean
+// this.
 const WayOut = ({
-  command,
-  containerId,
+  commandFor,
   unavailableMessage,
   label,
+  onPress,
   children,
 }) => (
   <Box
@@ -628,34 +767,30 @@ const WayOut = ({
     // about.
     data-callout-arrow-x="center"
     // Read by triggerNaviCommand below the same way it reads a button's own.
-    commandfor={containerId}
+    commandfor={commandFor}
     flex
     align="center"
     // A press, answered where it starts: mousedown rather than click, which is
     // what makes holding one feel immediate — and the click after it is stopped
     // below, so a <Label> wrapping the whole control does not forward it to the
-    // picker and open the calendar on the way past.
+    // control and open the calendar on the way past.
     onClick={(e) => {
       e.preventDefault();
     }}
     onMouseDown={(e) => {
-      // No focus, no text selection: the keyboard is put on the days below.
+      // No focus, no text selection: the keyboard is put on the middle below.
       e.preventDefault();
-      const wayOutElement = e.currentTarget;
       if (unavailableMessage) {
         // Why it does nothing, said where one pressed: a control would have
         // done this through its own interaction gate, and this one has none.
         openCallout(unavailableMessage, {
-          anchorElement: wayOutElement,
+          anchorElement: e.currentTarget,
           status: "info",
           openingEvent: e,
         });
         return;
       }
-      // The keyboard follows the press: the days are where the arrows work, so
-      // pressing a chevron leaves one able to keep going with the keys.
-      document.getElementById(containerId)?.focus({ preventScroll: true });
-      triggerNaviCommand(wayOutElement, command, e);
+      onPress(e);
     }}
   >
     <Icon>{children}</Icon>
@@ -666,8 +801,8 @@ const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
 
 // A padding written on this box would sit between its border and the chevrons,
 // which are meant to reach the corners they are rounded by — so each padding
-// prop becomes a variable instead, and the CSS above hands it to the day and to
-// the chevrons themselves. Same trick, and same var chain, as Picker's.
+// prop becomes a variable instead, and the CSS above hands it to the value and
+// to the chevrons themselves. Same trick, and same var chain, as Picker's.
 const PICKER_SPIN_STYLE_CSS_VARS = {
   padding: "--picker-spin-padding",
   paddingX: "--picker-spin-padding-x",
@@ -677,6 +812,135 @@ const PICKER_SPIN_STYLE_CSS_VARS = {
   paddingBottom: "--picker-spin-padding-bottom",
   paddingLeft: "--picker-spin-padding-left",
 };
+
+// Two values compared the way `<` compares them: right for an ISO day, a time
+// or anything else written so that its order IS its alphabetical order. A
+// number is the exception, and NumberSpin below says so.
+const compareValuesDefault = (a, b) => {
+  if (a < b) {
+    return -1;
+  }
+  if (a > b) {
+    return 1;
+  }
+  return 0;
+};
+
+const renderValueDefault = (value) => String(value ?? "");
+
+/**
+ * A whole number one steps through and types into: the field IS the middle, so
+ * the value can be typed as readily as stepped, and the two chevrons stand
+ * above and below it by default — sideways they would be where the caret
+ * moves — with the bigger number up top.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   value?: number|string,
+ *   defaultValue?: number|string,
+ *   min?: number,
+ *   max?: number,
+ *   step?: number,
+ *   [key: string]: any,
+ * }>}
+ * @param {number} [min=0] The lowest number one can reach; `max` is the
+ *   highest. They also bound what typing can produce, and how wide the field
+ *   is asked to be (see `maxLength`).
+ */
+export const NumberSpin = ({
+  min = 0,
+  max,
+  step = 1,
+  vertical = true,
+  growsUpward = true,
+  controlProps,
+  ...rest
+}) => (
+  <Spin
+    type="navi_number"
+    editable
+    growsUpward={growsUpward}
+    min={min}
+    max={max}
+    step={step}
+    vertical={vertical}
+    fallbackValue={min}
+    valueAtStep={(value, count) => numberAtStep(value, count, min)}
+    compareValues={(a, b) => Number(a) - Number(b)}
+    controlProps={{
+      // The numeric keypad on a phone, and — through
+      // input_resolver_mode — the "this field is full" event a group of
+      // fields moves along on (see useInputGroup).
+      inputMode: "numeric",
+      maxLength: max === undefined ? undefined : String(max).length,
+      ...controlProps,
+    }}
+    {...rest}
+  />
+);
+
+// One step away, bounds included: a step past `max` is a real number that
+// simply is not allowed, and Spin is the one that reads it as "nothing that
+// way" — clamping here would answer the chevron before it had a chance to say
+// so. A field mid-edit holding nothing (or nothing numeric) starts from `min`.
+const numberAtStep = (value, count, min) => {
+  const number = Number(value);
+  if (value === "" || value === undefined || Number.isNaN(number)) {
+    return min;
+  }
+  return number + count;
+};
+
+/**
+ * A day one steps through: the date plus what it is to today when there is a
+ * word for it, and a calendar behind it for the day that is far from here.
+ *
+ * @type {import("preact").FunctionComponent<{
+ *   value?: string,
+ *   defaultValue?: string,
+ *   signal?: import("@preact/signals").Signal<string>,
+ *   name?: string,
+ *   min?: string,
+ *   max?: string,
+ *   step?: number,
+ *   lang?: string,
+ *   renderDay?: (day: string) => import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [value] The day shown, as "YYYY-MM-DD".
+ * @param {number} [step=1] How many days a press covers — 7 for a week at a
+ *   time, and the label then names the day one lands on, as it always does.
+ * @param {string} [min] The first day one can reach, as "YYYY-MM-DD"; `max` is
+ *   the last.
+ * @param {"long"|"short"|"numeric"} [format="long"] How the date is written.
+ *   Long by default, since this is a control one reads rather than a column
+ *   one scans; `short` where the room is not there.
+ * @param {(day: string) => import("preact").ComponentChildren} [renderDay] What
+ *   to write for a day. Defaults to the date plus what it is to today when
+ *   there is a word for it ("samedi 8 août (demain)"), since a day near now is
+ *   read as a distance from now before it is read as a date.
+ */
+export const DaySpin = ({
+  min,
+  max,
+  step = 1,
+  lang,
+  format = "long",
+  renderDay = renderDayDefault,
+  ...rest
+}) => (
+  <Spin
+    type="date"
+    min={min}
+    max={max}
+    step={step}
+    fallbackValue={firstDayAllowed({ min, max, step })}
+    valueAtStep={addDays}
+    renderValue={(day, { maxLines }) =>
+      renderDay(day, { lang, format, maxLines })
+    }
+    {...rest}
+  />
+);
 
 // The date, and what it is to today when that is something one has a word for:
 // "samedi 8 août (demain)" says both where one is and how far that is, and only

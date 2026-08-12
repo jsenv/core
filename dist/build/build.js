@@ -6551,7 +6551,13 @@ const jsenvPluginWebResolution = () => {
         if (ownerUrlInfo.originalUrl?.startsWith("http")) {
           return new URL(resource, ownerUrlInfo.originalUrl);
         }
-        const url = new URL(resource.slice(1), ownerUrlInfo.entryUrlInfo.url);
+        // "/x" is the web meaning of a root-relative url: the root of what is
+        // served, which is the source directory — not the directory the entry
+        // point happens to sit in.
+        const url = new URL(
+          resource.slice(1),
+          ownerUrlInfo.context.rootDirectoryUrl,
+        );
         return url;
       }
       // baseUrl happens second argument to new URL() is different from
@@ -10364,6 +10370,7 @@ const createBuildSpecifierManager = ({
   buildDirectoryUrl,
   assetsDirectory,
   buildUrlsGenerator,
+  entryKey,
   base,
   length = 8,
 
@@ -10402,6 +10409,7 @@ const createBuildSpecifierManager = ({
         urlInfo,
         ownerUrlInfo: reference.ownerUrlInfo,
         assetsDirectory,
+        entryKey,
       });
     }
 
@@ -11459,9 +11467,14 @@ const createBuildSpecifierManager = ({
           let contentKey;
           // if to guard for html where versioned build specifier is not generated
           if (buildSpecifierVersioned) {
-            const buildUrlVersioned = asBuildUrlVersioned({
-              buildSpecifierVersioned,
-              buildDirectoryUrl,
+            // The version goes on the build url, not on the specifier: a
+            // specifier is written for one importer to read (base: "./" makes
+            // it relative to that importer, base: "https://cdn…" makes it
+            // absolute elsewhere) and says nothing about where the file lands.
+            const buildUrlVersioned = injectVersionIntoBuildSpecifier({
+              buildSpecifier: buildUrl,
+              version: versionMap.get(urlInfo),
+              versioningMethod,
             });
             const buildRelativeUrlVersioned = urlToRelativeUrl(
               buildUrlVersioned,
@@ -11705,23 +11718,6 @@ const injectVersionIntoBuildSpecifier = ({
   );
 };
 
-const asBuildUrlVersioned = ({
-  buildSpecifierVersioned,
-  buildDirectoryUrl,
-}) => {
-  if (buildSpecifierVersioned[0] === "/") {
-    return new URL(buildSpecifierVersioned.slice(1), buildDirectoryUrl).href;
-  }
-  const buildUrl = new URL(buildSpecifierVersioned, buildDirectoryUrl).href;
-  if (buildUrl.startsWith(buildDirectoryUrl)) {
-    return buildUrl;
-  }
-  // it's likely "base" parameter was set to an url origin like "https://cdn.example.com"
-  // let's move url to build directory
-  const { pathname, search, hash } = new URL(buildSpecifierVersioned);
-  return `${buildDirectoryUrl}${pathname}${search}${hash}`;
-};
-
 const targetsAFileThatDoesNotExist = (url) => {
   if (!url.startsWith("file:")) {
     return false;
@@ -11759,12 +11755,41 @@ const createBuildUrlsGenerator = ({
   };
 
   const nameSetPerDirectoryMap = new Map();
-  const generate = (url, { urlInfo, ownerUrlInfo, assetsDirectory }) => {
-    const buildUrlFromMap = buildUrlMap.get(url);
+  const reserveName = (directoryPath, urlName) => {
+    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
+    if (!nameSet) {
+      nameSet = new Set();
+      nameSetPerDirectoryMap.set(directoryPath, nameSet);
+    }
+    let [basename, extension] = splitFileExtension(urlName);
+    extension = extensionMappings[extension] || extension;
+    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
+    let integer = 1;
+    while (nameSet.has(nameCandidate)) {
+      integer++;
+      nameCandidate = `${basename}${integer}${extension}`;
+    }
+    nameSet.add(nameCandidate);
+    return nameCandidate;
+  };
+  const generate = (
+    url,
+    { urlInfo, ownerUrlInfo, assetsDirectory, entryKey },
+  ) => {
+    // A url already inside the build directory names a chunk a bundler just
+    // produced, and each entry point is bundled on its own: two of them
+    // routinely produce a chunk of the same name holding different code (the
+    // shared dependencies of THAT entry point, exported under names decided by
+    // THAT bundle). They are told apart by the entry point they come from —
+    // sharing the file would leave one entry importing exports the file on disk
+    // does not have.
+    const insideBuildDirectory = urlIsOrIsInsideOf(url, buildDirectoryUrl);
+    const key = insideBuildDirectory ? `${entryKey} ${url}` : url;
+    const buildUrlFromMap = buildUrlMap.get(key);
     if (buildUrlFromMap) {
       return buildUrlFromMap;
     }
-    if (urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
+    if (insideBuildDirectory) {
       if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
         const ownerDirectoryPath = determineDirectoryPath({
           sourceDirectoryUrl,
@@ -11776,11 +11801,18 @@ const createBuildUrlsGenerator = ({
         buildUrl = injectQueryParams(buildUrl, {
           dynamic_import_id: undefined,
         });
-        associateBuildUrl(url, buildUrl);
+        associateBuildUrl(key, buildUrl);
         return buildUrl;
       }
-      associateBuildUrl(url, url);
-      return url;
+      const urlObject = new URL(url);
+      const chunkDirectoryPath = urlToRelativeUrl(
+        new URL("./", urlObject),
+        buildDirectoryUrl,
+      );
+      const chunkName = reserveName(chunkDirectoryPath, urlToFilename(url));
+      const buildUrl = `${buildDirectoryUrl}${chunkDirectoryPath}${chunkName}${urlObject.search}${urlObject.hash}`;
+      associateBuildUrl(key, buildUrl);
+      return buildUrl;
     }
     if (urlInfo.type === "entry_build") {
       const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
@@ -11812,25 +11844,10 @@ const createBuildUrlsGenerator = ({
       urlInfo,
       ownerUrlInfo,
     });
-    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
-    if (!nameSet) {
-      nameSet = new Set();
-      nameSetPerDirectoryMap.set(directoryPath, nameSet);
-    }
     const urlObject = new URL(url);
     injectQueryParams(urlObject, { dynamic_import_id: undefined });
     let { search, hash } = urlObject;
-    let urlName = getUrlName(url, urlInfo);
-    let [basename, extension] = splitFileExtension(urlName);
-    extension = extensionMappings[extension] || extension;
-    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
-    let integer = 1;
-    while (nameSet.has(nameCandidate)) {
-      integer++;
-      nameCandidate = `${basename}${integer}${extension}`;
-    }
-    const name = nameCandidate;
-    nameSet.add(name);
+    const name = reserveName(directoryPath, getUrlName(url, urlInfo));
     const buildUrl = `${buildDirectoryUrl}${directoryPath}${name}${search}${hash}`;
     associateBuildUrl(url, buildUrl);
     return buildUrl;
@@ -13217,6 +13234,7 @@ const prepareEntryPointBuild = async (
         base,
         assetsDirectory,
         buildUrlsGenerator,
+        entryKey: sourceRelativeUrl,
 
         versioning,
         versioningMethod,
