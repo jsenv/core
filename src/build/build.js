@@ -1249,6 +1249,7 @@ const prepareEntryPointBuild = async (
         base,
         assetsDirectory,
         buildUrlsGenerator,
+        entryKey: sourceRelativeUrl,
 
         versioning,
         versioningMethod,

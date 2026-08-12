@@ -31,12 +31,41 @@ export const createBuildUrlsGenerator = ({
   };
 
   const nameSetPerDirectoryMap = new Map();
-  const generate = (url, { urlInfo, ownerUrlInfo, assetsDirectory }) => {
-    const buildUrlFromMap = buildUrlMap.get(url);
+  const reserveName = (directoryPath, urlName) => {
+    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
+    if (!nameSet) {
+      nameSet = new Set();
+      nameSetPerDirectoryMap.set(directoryPath, nameSet);
+    }
+    let [basename, extension] = splitFileExtension(urlName);
+    extension = extensionMappings[extension] || extension;
+    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
+    let integer = 1;
+    while (nameSet.has(nameCandidate)) {
+      integer++;
+      nameCandidate = `${basename}${integer}${extension}`;
+    }
+    nameSet.add(nameCandidate);
+    return nameCandidate;
+  };
+  const generate = (
+    url,
+    { urlInfo, ownerUrlInfo, assetsDirectory, entryKey },
+  ) => {
+    // A url already inside the build directory names a chunk a bundler just
+    // produced, and each entry point is bundled on its own: two of them
+    // routinely produce a chunk of the same name holding different code (the
+    // shared dependencies of THAT entry point, exported under names decided by
+    // THAT bundle). They are told apart by the entry point they come from —
+    // sharing the file would leave one entry importing exports the file on disk
+    // does not have.
+    const insideBuildDirectory = urlIsOrIsInsideOf(url, buildDirectoryUrl);
+    const key = insideBuildDirectory ? `${entryKey} ${url}` : url;
+    const buildUrlFromMap = buildUrlMap.get(key);
     if (buildUrlFromMap) {
       return buildUrlFromMap;
     }
-    if (urlIsOrIsInsideOf(url, buildDirectoryUrl)) {
+    if (insideBuildDirectory) {
       if (ownerUrlInfo.searchParams.has("dynamic_import_id")) {
         const ownerDirectoryPath = determineDirectoryPath({
           sourceDirectoryUrl,
@@ -48,11 +77,18 @@ export const createBuildUrlsGenerator = ({
         buildUrl = injectQueryParams(buildUrl, {
           dynamic_import_id: undefined,
         });
-        associateBuildUrl(url, buildUrl);
+        associateBuildUrl(key, buildUrl);
         return buildUrl;
       }
-      associateBuildUrl(url, url);
-      return url;
+      const urlObject = new URL(url);
+      const chunkDirectoryPath = urlToRelativeUrl(
+        new URL("./", urlObject),
+        buildDirectoryUrl,
+      );
+      const chunkName = reserveName(chunkDirectoryPath, urlToFilename(url));
+      const buildUrl = `${buildDirectoryUrl}${chunkDirectoryPath}${chunkName}${urlObject.search}${urlObject.hash}`;
+      associateBuildUrl(key, buildUrl);
+      return buildUrl;
     }
     if (urlInfo.type === "entry_build") {
       const buildUrl = new URL(urlInfo.filenameHint, buildDirectoryUrl).href;
@@ -84,25 +120,10 @@ export const createBuildUrlsGenerator = ({
       urlInfo,
       ownerUrlInfo,
     });
-    let nameSet = nameSetPerDirectoryMap.get(directoryPath);
-    if (!nameSet) {
-      nameSet = new Set();
-      nameSetPerDirectoryMap.set(directoryPath, nameSet);
-    }
     const urlObject = new URL(url);
     injectQueryParams(urlObject, { dynamic_import_id: undefined });
     let { search, hash } = urlObject;
-    let urlName = getUrlName(url, urlInfo);
-    let [basename, extension] = splitFileExtension(urlName);
-    extension = extensionMappings[extension] || extension;
-    let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
-    let integer = 1;
-    while (nameSet.has(nameCandidate)) {
-      integer++;
-      nameCandidate = `${basename}${integer}${extension}`;
-    }
-    const name = nameCandidate;
-    nameSet.add(name);
+    const name = reserveName(directoryPath, getUrlName(url, urlInfo));
     const buildUrl = `${buildDirectoryUrl}${directoryPath}${name}${search}${hash}`;
     associateBuildUrl(url, buildUrl);
     return buildUrl;
