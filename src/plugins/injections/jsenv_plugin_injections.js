@@ -29,11 +29,20 @@ export const jsenvPluginInjections = (rawAssociations) => {
           { injectionsGetter: rawAssociations },
           context.rootDirectoryUrl,
         );
-        const findInjectionsGetter = (urlInfo) => {
+        const findInjectionsGetterForUrl = (url) => {
           const { injectionsGetter } = URL_META.applyAssociations({
-            url: asUrlWithoutSearch(urlInfo.url),
+            url: asUrlWithoutSearch(url),
             associations: resolvedAssociations,
           });
+          return injectionsGetter;
+        };
+        // an url written by an injection cannot be resolved during reference analysis;
+        // errors use this to tell the file holds injections and suggest "jsenv-ignore"
+        context.hasInjections = (url) => {
+          return Boolean(findInjectionsGetterForUrl(url));
+        };
+        const findInjectionsGetter = (urlInfo) => {
+          const injectionsGetter = findInjectionsGetterForUrl(urlInfo.url);
           if (injectionsGetter) {
             return { injectionsGetter, isInherited: false };
           }

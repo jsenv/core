@@ -4,11 +4,17 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write 2 files into "./.jsenv/chrome@149.0.0/"
+# 1/3 console.warn
+
+```console
+"@jsenv/ast" is installed in 6.8.5 but package.json declares 6.8.4, run npm install
+```
+
+# 2/3 write 2 files into "./.jsenv/chrome@149.0.0/"
 
 see [./.jsenv/chrome@149.0.0/](./.jsenv/chrome@149.0.0/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 {

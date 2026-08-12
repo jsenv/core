@@ -53,7 +53,15 @@
         import { initDependencyStatus } from "/@fs@jsenv/core/src/plugins/dependency_status/client/dependency_status.js";
             
         initDependencyStatus({
-          "problems": []
+          "problems": [
+            {
+              "packageName": "@jsenv/ast",
+              "declaredVersion": "6.8.4",
+              "declaredBy": "@jsenv/core",
+              "installedVersion": "6.8.5",
+              "state": "outdated"
+            }
+          ]
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">

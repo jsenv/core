@@ -78,7 +78,7 @@ ${reason}`,
   }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
-    ...detailsFromPlaceholderInSpecifier(reference),
+    ...detailsFromInjectionsOnOwner(reference),
     ...detailsFromValueThrown(error),
   });
 };
@@ -140,7 +140,7 @@ ${reason}`,
       return createFailedToFetchUrlContentError({
         code: "NOT_FOUND",
         reason: "no entry on filesystem",
-        ...detailsFromPlaceholderInSpecifier(urlInfo.firstReference),
+        ...detailsFromInjectionsOnOwner(urlInfo.firstReference),
       });
     }
   }
@@ -373,21 +373,29 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-// a value looking like "__BACKEND_URL__", meant to be replaced by an injection
-const placeholderRegexp = /__[A-Z0-9][A-Z0-9_]*__/;
-const detailsFromPlaceholderInSpecifier = (reference) => {
-  if (!reference || !placeholderRegexp.test(reference.specifier)) {
+// An url written by an injection cannot be resolved: the placeholder is still there
+// when references are analyzed. Rather than guessing what a placeholder looks like
+// (the key is free-form), tell the file it comes from: injections are configured for it.
+const detailsFromInjectionsOnOwner = (reference) => {
+  if (!reference) {
+    return {};
+  }
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.type !== "html") {
+    // "jsenv-ignore" is an html attribute
+    return {};
+  }
+  const { hasInjections } = ownerUrlInfo.context;
+  if (!hasInjections || !hasInjections(ownerUrlInfo.url)) {
     return {};
   }
   const { node, attributeName } = reference.astInfo || {};
-  const example =
-    node && attributeName
-      ? `<${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`
-      : `<link jsenv-ignore rel="preload" href="${reference.specifier}" />`;
+  if (!node || !attributeName) {
+    return {};
+  }
   return {
-    suggestion: `"${reference.specifier}" contains a placeholder; jsenv resolves it as a regular url before injections replace it.
-Add "jsenv-ignore" on the html tag so jsenv leaves that url alone:
-${example}`,
+    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, add "jsenv-ignore" so jsenv leaves that url alone:
+<${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
   };
 };
 
