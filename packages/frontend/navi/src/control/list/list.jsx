@@ -503,6 +503,22 @@ const css = /* css */ `
   .navi_list_loading_fallback {
     display: flex;
   }
+  /* The room of rows that were asked for and never came (see List.Items). It
+     keeps their height — the scrollbar has no reason to move because a fetch
+     failed — and what it says is stuck to the top of it, so it is on screen for
+     as long as the hole is. */
+  .navi_list_failed_rows {
+    display: block;
+    height: var(--size-to-fill, 0px);
+    flex-shrink: 0;
+    list-style: none;
+
+    > * {
+      position: sticky;
+      top: 0;
+    }
+  }
+
   /* Error state (List error prop): an inline callout describing why the list
      failed to load, shown in place of the items. */
   .navi_list_error {
@@ -1107,6 +1123,57 @@ const useListScrollSync = ({
     const renderWindow = { start: newStart, end: newEnd };
     renderWindowRef.current = renderWindow;
     setRenderWindow(renderWindow);
+  };
+
+  // While the list is held somewhere, its window is not free state: it is
+  // around that place. Deriving it rather than waiting for the scroll listener
+  // to catch up is what keeps a list opening on its last rows from asking for
+  // its first ones — it would have drawn them, for the one commit before it
+  // jumped.
+  const holdWindow = () => {
+    if (startPlaceRef.current.userTookOver) {
+      virtual.holdPending = false;
+      return;
+    }
+    // Held somewhere it has not reached yet: what the window frames right now
+    // is not what it will frame, so nothing should be fetched for it.
+    virtual.holdPending =
+      scrolledWanted !== "start" && scrolledWanted !== undefined;
+    const total = virtual.totalSignal.peek();
+    if (total <= renderBudget) {
+      return;
+    }
+    const half = Math.floor(renderBudget / 2);
+    let wantedStart = null;
+    if (scrolledWanted === "end") {
+      wantedStart = total - renderBudget;
+    } else if (typeof scrolledWanted === "number") {
+      wantedStart = scrolledWanted - half;
+    } else if (scrolledWanted && scrolledWanted.id !== undefined) {
+      const rowIndex = virtual.locateRow(scrolledWanted.id);
+      if (rowIndex !== null) {
+        wantedStart = rowIndex - half;
+      }
+    }
+    if (wantedStart === null) {
+      return;
+    }
+    if (wantedStart < 0) {
+      wantedStart = 0;
+    }
+    if (wantedStart + renderBudget > total) {
+      wantedStart = total - renderBudget;
+    }
+    const { start, end } = renderWindowRef.current;
+    if (wantedStart === start && end - start === renderBudget) {
+      virtual.holdPending = false;
+      return;
+    }
+    renderWindowRef.current = {
+      start: wantedStart,
+      end: wantedStart + renderBudget,
+    };
+    virtual.holdPending = false;
   };
 
   const pendingScrollRef = useRef();
@@ -1748,9 +1815,10 @@ const useListScrollSync = ({
     };
   }, [renderBudget, scroller]);
 
+  holdWindow();
   return {
     virtualItemSizeSignal,
-    renderWindow,
+    renderWindow: renderWindowRef.current,
     pendingScrollRef,
     scrollToItem,
   };
@@ -2813,6 +2881,9 @@ const createListVirtual = () => {
     // are.
     renderBudget: 0,
     scrolled: "start",
+    // The list is on its way somewhere: what the window frames is not what it
+    // is about to frame, so a run must not fetch for it (see holdWindow).
+    holdPending: false,
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
@@ -3058,18 +3129,24 @@ export const ListItems = ({
   // the top of the failed range would put it off screen as often as not — a
   // range asked for counting back from the end (the very first ask, before the
   // count is known) does not even have a row of its own to sit on.
-  let failureRowIndex = -1;
-  if (store.failure) {
-    const failStart = store.failure.start;
-    const failEnd = store.failure.end;
-    let from = failStart < 0 || failStart < windowFrom ? windowFrom : failStart;
-    let to = failEnd < 0 || failEnd > windowTo - 1 ? windowTo - 1 : failEnd;
-    if (from > to) {
-      from = to;
-    }
-    const looked = virtual.visibleIndex;
-    failureRowIndex = looked < from ? from : looked > to ? to : looked;
-  }
+  // Where rows were asked for and never came: the whole run of them becomes one
+  // band, which says it once instead of once per row — and holds exactly the
+  // room those rows had, so nothing above or below moves and the scrollbar does
+  // not jump. What it says is stuck to the top of the band: as long as any part
+  // of the hole is on screen, the sentence is too, without a callout floating
+  // away from what it is about.
+  const failureFrom =
+    store.failure === null
+      ? -1
+      : store.failure.start < 0 || store.failure.start < windowFrom
+        ? windowFrom
+        : store.failure.start;
+  const failureTo =
+    store.failure === null
+      ? -1
+      : store.failure.end < 0 || store.failure.end > windowTo - 1
+        ? windowTo - 1
+        : store.failure.end;
   const rows = [];
   // Rows that belong together, as the data says (a day of messages, a month of
   // games): consecutive rows sharing a group key are wrapped in one group, so
@@ -3122,6 +3199,32 @@ export const ListItems = ({
   }
   let rowIndex = windowFrom;
   while (rowIndex < windowTo) {
+    if (rowIndex >= failureFrom && rowIndex <= failureTo) {
+      closeGroup();
+      const failedRowCount = failureTo - rowIndex + 1;
+      rows.push(
+        <li
+          key={`${ownerId}_failure_${failureFrom}`}
+          className="navi_list_failed_rows"
+          style={{
+            "--size-to-fill": `${failedRowCount * virtualItemSize}px`,
+          }}
+        >
+          {renderError ? (
+            renderError({
+              error: store.failure.error,
+              retry: store.retry,
+              start: store.failure.start,
+              end: store.failure.end,
+            })
+          ) : (
+            <ListItemsFailure error={store.failure.error} retry={store.retry} />
+          )}
+        </li>,
+      );
+      rowIndex = failureTo + 1;
+      continue;
+    }
     const item = getItemAt(rowIndex);
     const key =
       item === undefined
@@ -3130,19 +3233,6 @@ export const ListItems = ({
     let rowVnode;
     if (item !== undefined) {
       rowVnode = renderItem(item, rowIndex);
-    } else if (store.failure && rowIndex === failureRowIndex) {
-      // One row says it, at the top of the hole; the others below keep holding
-      // the room, so nothing moves when the retry succeeds.
-      rowVnode = renderError ? (
-        renderError({
-          error: store.failure.error,
-          retry: store.retry,
-          start: store.failure.start,
-          end: store.failure.end,
-        })
-      ) : (
-        <ListItemsFailure error={store.failure.error} retry={store.retry} />
-      );
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
@@ -3201,7 +3291,8 @@ List.Items = ListItems;
 // of it (List's own `error`) would be a lie.
 const ListItemsFailure = ({ error, retry }) => {
   return (
-    <ListItem
+    <Box
+      as="div"
       role="presentation"
       baseClassName="navi_list_item navi_list_error"
     >
@@ -3218,7 +3309,7 @@ const ListItemsFailure = ({ error, retry }) => {
       >
         {naviI18n("list.rows_retry")}
       </button>
-    </ListItem>
+    </Box>
   );
 };
 
@@ -3323,6 +3414,9 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
       }
       useLayoutEffect(() => {
         if (start === -1) {
+          return;
+        }
+        if (virtual.holdPending && pages.count !== undefined) {
           return;
         }
         const request = requestRef.current;
