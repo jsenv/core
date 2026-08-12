@@ -2668,12 +2668,16 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  * a list that says how many rows it has.
  *
  * Where the rows come from, two ways:
- * - `itemsAction({ start, end })` — the run asks for what it is about to draw
- *   and keeps what it gets. Answer with the rows (an array), or with a page
- *   the way an HTTP range does: `{ items, start, count }` — these rows, at
- *   this place, out of that many. A negative `start` counts back from the end,
- *   like `Range: items=-25`, which is what a list opening on its last rows
- *   asks for before it knows how many there are. May be async.
+ * - `itemsAction(range)` — the run asks for what it is about to draw and keeps
+ *   what it gets. The range says the same thing three ways, so a source can
+ *   read it however it paginates: `{ start, end }` (places in the collection,
+ *   a negative `start` counting back from the end like `Range: items=-25` —
+ *   which is what a list opening on its last rows asks for before it knows how
+ *   many there are), `limit` (how many rows), and `before`/`after` (the id of
+ *   the row the missing ones hang from, for a source paginating by cursor).
+ *   Answer with the rows (an array), or with a page the way a Content-Range
+ *   does: `{ items, start, count }` — these rows, at this place, out of that
+ *   many. May be async.
  * - `items` — the caller holds them and says where they sit (`itemStart`) and
  *   how many there are in all (`count`); `onItemsMissing({ start, end })` then
  *   reports what the list would draw and does not have.
@@ -2687,10 +2691,21 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   items?: any[],
  *   count?: number,
  *   itemStart?: number,
- *   onItemsMissing?: (range: {start: number, end: number}) => void,
+ *   pageSize?: number,
+ *   memoryBudget?: number,
+ *   onItemsMissing?: (range: object) => void,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   itemProps?: (item: any, index: number) => object,
  * }>}
+ * @param {number} [props.pageSize]
+ *   How many rows to ask for at a time. A turn of the wheel opens a hole three
+ *   rows wide; asking for exactly that would ask again at the next turn.
+ *   Defaults to List's own `renderBudget` — what the list would draw at once.
+ * @param {number} [props.memoryBudget=1000]
+ *   How many rows the run keeps in memory. Past that, the ones far from what is
+ *   on screen are dropped (and asked for again if the user goes back) — the
+ *   same trade the render window makes with the DOM, one order of magnitude
+ *   further out. `0` keeps everything.
  * @param {false|(index: number) => any} [props.renderSkeleton]
  *   What to draw for a row the run does not hold. Defaults to a
  *   `<List.Item skeleton>`; `false` leaves the row empty (its room is still
@@ -2707,6 +2722,8 @@ export const ListItems = ({
   items,
   count,
   itemStart,
+  pageSize,
+  memoryBudget,
   onItemsMissing,
   renderSkeleton,
   renderError,
@@ -2717,7 +2734,7 @@ export const ListItems = ({
   const tracker = useContext(ListItemTrackerContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
-  const store = useItemStore({ items, count, itemsAction });
+  const store = useItemStore({ items, count, itemsAction, memoryBudget });
   const renderRowSkeleton =
     renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
@@ -2758,6 +2775,10 @@ export const ListItems = ({
     });
   });
   tracker.useTrackItemList(itemDataList);
+  const itemDataByIndex = new Map();
+  for (const itemData of itemDataList) {
+    itemDataByIndex.set(itemData.index, itemData);
+  }
 
   // What the list is about to draw and the run does not have. Asked for as one
   // range: a caller answering with less than that (a page at a time) is asked
@@ -2774,12 +2795,50 @@ export const ListItems = ({
     }
     scanIndex++;
   }
-  store.useRequestMissing(missingStart, missingEnd, onItemsMissing);
-
-  const itemDataByIndex = new Map();
-  for (const itemData of itemDataList) {
-    itemDataByIndex.set(itemData.index, itemData);
+  // Asked for a page at a time, not for the exact hole: a hole three rows wide
+  // is what one turn of the wheel opens, and a source answering three rows at a
+  // time is asked again at the next turn. The page is grown from the edge the
+  // hole is on, which is the direction the user is going.
+  let askStart = missingStart;
+  let askEnd = missingEnd;
+  if (missingStart !== -1) {
+    const rowsPerPage = pageSize || virtual.renderBudget;
+    const holeSize = missingEnd - missingStart + 1;
+    if (holeSize < rowsPerPage) {
+      // Which way the page grows: away from the rows already held, which is
+      // the way the user is going.
+      const heldBelow = store.holds(missingEnd + 1, heldStart);
+      const heldAbove = store.holds(missingStart - 1, heldStart);
+      if (heldBelow && !heldAbove) {
+        askStart = missingEnd - rowsPerPage + 1;
+      } else if (heldAbove && !heldBelow) {
+        askEnd = missingStart + rowsPerPage - 1;
+      } else {
+        // A hole with nothing on either side (the scrollbar was thrown into
+        // territory never visited): grow it both ways around what is on
+        // screen.
+        const grow = Math.floor((rowsPerPage - holeSize) / 2);
+        askStart = missingStart - grow;
+        askEnd = missingEnd + grow;
+      }
+    }
+    if (askStart < 0) {
+      askStart = 0;
+    }
+    if (askEnd > runEnd - 1) {
+      askEnd = runEnd - 1;
+    }
   }
+  // The row the missing ones hang from, when there is one: a source paginating
+  // by cursor ("the 50 before this one") needs a row to count from, and an
+  // index is not that — rows can be inserted while the list is being read.
+  const rowBefore = itemDataByIndex.get(askEnd + 1);
+  const rowAfter = itemDataByIndex.get(askStart - 1);
+  store.useRequestMissing(askStart, askEnd, onItemsMissing, {
+    before: rowBefore ? rowBefore.id : undefined,
+    after: rowAfter ? rowAfter.id : undefined,
+  });
+
   // Where the sentence goes when rows are missing: on the row the user is
   // looking at, clamped to the rows that are actually missing. Putting it at
   // the top of the failed range would put it off screen as often as not — a
@@ -2904,7 +2963,7 @@ const ListItemsFailure = ({ error, retry }) => {
 // not about to draw, and how many it keeps on either side of the window when it
 // does. Sized so that a normal back-and-forth around what is on screen never
 // hits the network again.
-const ITEM_STORE_MAX = 1000;
+const ITEM_STORE_MAX_DEFAULT = 1000;
 const ITEM_STORE_KEEP_AROUND = 250;
 
 // The rows a run has, and how it gets more. Two shapes behind one reader: the
@@ -2912,7 +2971,7 @@ const ITEM_STORE_KEEP_AROUND = 250;
 // keeps what came back — a page saying where it lands and how many rows there
 // are in all is enough to place it, so the pages need not be contiguous nor
 // arrive in order.
-const useItemStore = ({ items, count, itemsAction }) => {
+const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
   const pagesRef = useRef(null);
   if (!pagesRef.current) {
     pagesRef.current = { byIndex: new Map(), count: undefined };
@@ -2944,7 +3003,9 @@ const useItemStore = ({ items, count, itemsAction }) => {
     // dropped and simply asked for again if the user goes back — the same
     // trade the render window makes, one order of magnitude further out.
     forget: (windowFrom, windowTo) => {
-      if (controlled || pages.byIndex.size <= ITEM_STORE_MAX) {
+      const budget =
+        memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
+      if (controlled || !budget || pages.byIndex.size <= budget) {
         return;
       }
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
@@ -2981,7 +3042,8 @@ const useItemStore = ({ items, count, itemsAction }) => {
         visit(item, index);
       }
     },
-    useRequestMissing: (missingStart, missingEnd, onItemsMissing) => {
+    holds: (index, heldStart) => store.getItem(index, heldStart) !== undefined,
+    useRequestMissing: (missingStart, missingEnd, onItemsMissing, cursor) => {
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
@@ -3025,8 +3087,16 @@ const useItemStore = ({ items, count, itemsAction }) => {
         request.start = start;
         request.end = end;
         request.held = held;
+        const range = {
+          start,
+          end,
+          limit: end - start + 1,
+          before: cursor.before,
+          after: cursor.after,
+          count: controlled ? count : pages.count,
+        };
         if (!itemsAction) {
-          onItemsMissing?.({ start, end });
+          onItemsMissing?.(range);
           return;
         }
         request.busy = true;
@@ -3055,7 +3125,7 @@ const useItemStore = ({ items, count, itemsAction }) => {
         };
         let result;
         try {
-          result = itemsAction({ start, end });
+          result = itemsAction(range);
         } catch (e) {
           failed(e);
           return;
