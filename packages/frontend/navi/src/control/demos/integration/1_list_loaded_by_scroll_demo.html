@@ -277,7 +277,7 @@
         return (
           <Section
             title="On arrive sur le dernier message"
-            caption='startAt="end"'
+            caption='defaultScrolled="end"'
           >
             <Box flex alignX="start">
               <Button onClick={() => setKey(key + 1)}>recharger</Button>
@@ -287,7 +287,7 @@
               maxHeight="220px"
               expandX
               renderBudget={30}
-              startAt="end"
+              defaultScrolled="end"
               renderSkeleton={(index) => <MessagePlaceholder index={index} />}
             >
               <List.Items
@@ -317,7 +317,7 @@
               maxHeight="220px"
               expandX
               renderBudget={30}
-              startAt="end"
+              defaultScrolled="end"
               renderSkeleton={(index) => <MessagePlaceholder index={index} />}
             >
               <List.Items
@@ -346,7 +346,7 @@
         return (
           <Section
             title="On reprend là où on s'était arrêté"
-            caption="onPositionChange → startAt={{ id, offset }}"
+            caption="onScrolledChange → scrolled={{ id, offset }}"
           >
             <Box flex alignY="center" spacing="m">
               <Button
@@ -395,8 +395,9 @@
                 maxHeight="220px"
                 expandX
                 renderBudget={30}
-                startAt={saved ? { ...saved, fallback: "end" } : "end"}
-                onPositionChange={setPosition}
+                scrolled={saved}
+                defaultScrolled="end"
+                onScrolledChange={setPosition}
                 renderSkeleton={(index) => <MessagePlaceholder index={index} />}
               >
                 <List.Items
@@ -540,7 +541,7 @@
                   maxHeight="220px"
                   expandX
                   renderBudget={30}
-                  startAt="end"
+                  defaultScrolled="end"
                   renderSkeleton={(index) => (
                     <MessagePlaceholder index={index} />
                   )}

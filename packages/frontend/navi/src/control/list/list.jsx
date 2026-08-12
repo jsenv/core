@@ -616,8 +616,9 @@ const ListUI = (props) => {
     expand,
     onListVisibleItemsChange,
     virtualItemSize,
-    startAt = "start",
-    onPositionChange,
+    scrolled,
+    defaultScrolled = "start",
+    onScrolledChange,
     scroller = "self",
     lockSize,
     columns,
@@ -700,7 +701,7 @@ const ListUI = (props) => {
     virtualRef.current = createListVirtual();
   }
   const virtual = virtualRef.current;
-  virtual.openPass(renderBudget, startAt);
+  virtual.openPass(renderBudget, scrolled ?? defaultScrolled);
 
   const {
     virtualItemSizeSignal,
@@ -713,8 +714,9 @@ const ListUI = (props) => {
     renderBudget,
     virtualItemSize,
     virtual,
-    startAt,
-    onPositionChange,
+    scrolled,
+    defaultScrolled,
+    onScrolledChange,
     scroller,
     searchText,
     horizontal,
@@ -909,8 +911,9 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
- *   startAt?: "start" | "end" | number | {id: string, offset?: number, fallback?: "start" | "end"},
- *   onPositionChange?: (position: {id: string, index: number, offset: number}) => void,
+ *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
+ *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
+ *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
@@ -946,26 +949,31 @@ const ListFirstResolver = (props) => {
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
  *   as skeletons in place, one per row, virtualized like the rest.
- * @param {"start"|"end"|number|{id: string, offset?: number, fallback?: "start"|"end"}} [props.startAt="start"]
- *   Where the list opens. `"end"` is a thread read backwards — the last rows
- *   are the ones to show, and the ones asked for first. A number opens on that
- *   row of the collection. `{id, offset}` — what `onPositionChange` hands out
- *   — comes back to a NAMED row, `offset` pixels below the top of the view:
- *   the row is asked for by name (see the range's own `around`), then put back
- *   by measuring it, so it lands where it was even if rows were inserted
- *   before it in the meantime — and wherever the position was taken from, since
- *   the row is measured on this screen rather than computed from the one it
- *   was saved on. `fallback` says where to open when that row is gone (a
- *   message deleted since); it defaults to the start.
+ * @param {"start"|"end"|number|{id: string, offset?: number}} [props.defaultScrolled="start"]
+ *   Where the list opens, after which the user owns the scroll. `"end"` is a
+ *   thread read backwards — the last rows are the ones to show, and the ones
+ *   asked for first. A number opens on that row of the collection. `{id,
+ *   offset}` — what `onScrolledChange` hands out — opens on a NAMED row,
+ *   `offset` pixels below the top of the view: the row is asked for by name
+ *   (see the range's own `around`), then put back by MEASURING it, so it lands
+ *   where it was even if rows were inserted before it, and whatever the screen
+ *   it was saved on.
+ * @param {"start"|"end"|number|{id: string, offset?: number}} [props.scrolled]
+ *   The same, but held: the list goes back there every time this changes, even
+ *   after the user has scrolled — the caller owns where the list is (see
+ *   `defaultScrolled` for the uncontrolled form, and `open`/`defaultOpen`
+ *   elsewhere in navi for the same pair). When the named row turns out not to
+ *   exist — a message deleted since — the list opens at `defaultScrolled`
+ *   instead.
  *
  *   In every form the list holds itself there while it is still finding out
  *   how many rows there are and how tall one is, and lets go the moment the
  *   user reaches for the list.
- * @param {(position: {id: string, index: number, offset: number}) => void} [props.onPositionChange]
+ * @param {(scrolled: {id: string, index: number, offset: number}) => void} [props.onScrolledChange]
  *   Where the list is, as the user scrolls: the row at the top of the view and
- *   how far above the fold it sits. Keep it to come back to it later through
- *   `startAt` — an index would not do, since rows get inserted while a list is
- *   being read.
+ *   how far below the top of the view it starts. Keep it to come back to it
+ *   later through `scrolled`/`defaultScrolled` — an index would not do, since
+ *   rows get inserted while a list is being read.
  * @param {"self"|"parent"} [props.scroller="self"]
  *   Which box scrolls. `"self"` gives the list a scroll box of its own;
  *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
@@ -1063,8 +1071,9 @@ const useListScrollSync = ({
   renderBudget,
   virtualItemSize,
   virtual,
-  startAt,
-  onPositionChange,
+  scrolled,
+  defaultScrolled,
+  onScrolledChange,
   scroller,
   searchText,
   horizontal,
@@ -1081,8 +1090,9 @@ const useListScrollSync = ({
   const [renderWindow, setRenderWindow] = useState(() => {
     // Opening somewhere else than the beginning starts by framing there: the
     // rows the list will draw are the rows it will ask for.
+    const openAt = scrolled ?? defaultScrolled;
     const start =
-      typeof startAt === "number" ? startAt - Math.floor(renderBudget / 2) : 0;
+      typeof openAt === "number" ? openAt - Math.floor(renderBudget / 2) : 0;
     const startClamped = start < 0 ? 0 : start;
     return { start: startClamped, end: startClamped + renderBudget };
   });
@@ -1162,7 +1172,22 @@ const useListScrollSync = ({
     );
   };
 
-  const startPlaceRef = useRef({ userTookOver: false });
+  // Where the list must be: what the caller holds it at (`scrolled`), or where
+  // it opens and then lets go (`defaultScrolled`). A `scrolled` that changes is
+  // the caller moving the list, so the hold is armed again — that is what makes
+  // it controlled.
+  // Nothing to hold it at (a position not saved yet) is not a position: the
+  // list opens where it opens.
+  const scrolledWanted = scrolled ?? defaultScrolled;
+  const scrolledFallback =
+    scrolled === undefined || scrolled === null
+      ? "start"
+      : (defaultScrolled ?? "start");
+  const startPlaceRef = useRef({ userTookOver: false, wanted: scrolledWanted });
+  if (startPlaceRef.current.wanted !== scrolledWanted) {
+    startPlaceRef.current.wanted = scrolledWanted;
+    startPlaceRef.current.userTookOver = false;
+  }
   // The row the scroll is held onto across a commit (see the anchoring below).
   // A deliberate move — opening the list somewhere, coming back to a row — is
   // the list saying where it wants to be: whatever it was holding onto before
@@ -1362,8 +1387,8 @@ const useListScrollSync = ({
   // as much as the user does.
   useLayoutEffect(() => {
     if (
-      startAt === "start" ||
-      startAt === undefined ||
+      scrolledWanted === "start" ||
+      scrolledWanted === undefined ||
       startPlaceRef.current.userTookOver ||
       !ref.current
     ) {
@@ -1379,12 +1404,12 @@ const useListScrollSync = ({
     // it was — measured, not computed from an estimate, which is what makes
     // the position exact whatever the rows in between turn out to weigh. Until
     // it is drawn, the most this can do is aim the window at it.
-    let openAt = startAt;
-    if (startAt.id !== undefined) {
+    let openAt = scrolledWanted;
+    if (typeof scrolledWanted === "object" && scrolledWanted.id !== undefined) {
       // Only whoever holds the rows can say where that one sits: the list
       // itself knows the rows it has drawn, and this one is precisely the one
       // it has not drawn yet.
-      const rowIndex = virtual.locateRow(startAt.id);
+      const rowIndex = virtual.locateRow(scrolledWanted.id);
       if (rowIndex === null) {
         // A page has come back and that row is not in it: it is gone (a
         // message deleted, a game cancelled). Waiting for it forever would
@@ -1393,8 +1418,8 @@ const useListScrollSync = ({
         if (virtual.pagesSignal.peek() === 0) {
           return;
         }
-        openAt = startAt.fallback || "start";
-        if (openAt === "start") {
+        openAt = scrolledFallback;
+        if (openAt === "start" || openAt === undefined) {
           startPlaceRef.current.userTookOver = true;
           return;
         }
@@ -1406,7 +1431,7 @@ const useListScrollSync = ({
           updateRenderWindow(
             wantedStart,
             wantedStart + (end - start),
-            `opening on row ${startAt.id}`,
+            `opening on row ${scrolledWanted.id}`,
           );
           return;
         }
@@ -1422,7 +1447,7 @@ const useListScrollSync = ({
       }
       return;
     }
-    if (openAt.id !== undefined) {
+    if (typeof openAt === "object" && openAt.id !== undefined) {
       const rowEl = findRowElement(getListEl(), openAt.id);
       if (!rowEl) {
         return;
@@ -1458,7 +1483,11 @@ const useListScrollSync = ({
     }
   });
   useLayoutEffect(() => {
-    if (startAt === "start" || startAt === undefined || !ref.current) {
+    if (
+      scrolledWanted === "start" ||
+      scrolledWanted === undefined ||
+      !ref.current
+    ) {
       return undefined;
     }
     const scrollerEl = getScroller();
@@ -1474,14 +1503,14 @@ const useListScrollSync = ({
         scrollerEl.removeEventListener(type, takeOver);
       }
     };
-  }, [startAt, scroller]);
+  }, [scrolledWanted, scroller]);
 
   // Where the list is, said the way it can be given back to it: the row at the
   // top of what is on screen, and how far above the fold it sits. An index
   // would not do — rows get inserted while a list is being read, and the row
   // one was looking at is then somewhere else.
-  const onPositionChangeRef = useRef(null);
-  onPositionChangeRef.current = onPositionChange;
+  const onScrolledChangeRef = useRef(null);
+  onScrolledChangeRef.current = onScrolledChange;
   // Where the list was at the last thing that moved it. Kept whether anyone
   // asked for it or not: it is what a resize needs to put things back.
   const positionRef = useRef(null);
@@ -1499,7 +1528,7 @@ const useListScrollSync = ({
       return;
     }
     positionRef.current = position;
-    onPositionChangeRef.current?.({
+    onScrolledChangeRef.current?.({
       id: position.id,
       index: position.index,
       offset: position.offset,
@@ -2783,7 +2812,7 @@ const createListVirtual = () => {
     // exactly that, or the rows drawn would not reach where the list says they
     // are.
     renderBudget: 0,
-    startAt: "start",
+    scrolled: "start",
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
@@ -2792,9 +2821,9 @@ const createListVirtual = () => {
     // will be read, rather than at the top of a range that may be well above
     // the fold.
     visibleIndex: 0,
-    openPass: (renderBudget, startAt) => {
+    openPass: (renderBudget, scrolled) => {
       virtual.renderBudget = renderBudget;
-      virtual.startAt = startAt;
+      virtual.scrolled = scrolled;
       passId++;
       nextIndex = 0;
     },
@@ -3269,23 +3298,25 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
       let end = missingEnd;
       let around;
       if (pages.count === undefined) {
-        const startAt = virtual.startAt;
-        if (startAt === "end") {
+        const scrolled = virtual.scrolled;
+        if (scrolled === "end") {
           // Counting back from the end, the way an HTTP range does: a list
           // opening on its last rows asks for them before it knows how many
           // there are.
           start = -budget;
           end = -1;
-        } else if (startAt && startAt.id !== undefined) {
+        } else if (scrolled && scrolled.id !== undefined) {
           // The list cannot say where that row is — that is the whole point of
           // naming it — so it asks for it by name and reads back where it
           // landed (see the page's own `start`).
           start = 0;
           end = budget - 1;
-          around = startAt.id;
+          around = scrolled.id;
         } else {
           const first =
-            typeof startAt === "number" ? startAt - Math.floor(budget / 2) : 0;
+            typeof scrolled === "number"
+              ? scrolled - Math.floor(budget / 2)
+              : 0;
           start = first < 0 ? 0 : first;
           end = start + budget - 1;
         }
