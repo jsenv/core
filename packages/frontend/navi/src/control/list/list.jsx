@@ -909,7 +909,7 @@ const ListFirstResolver = (props) => {
  *   popover?: boolean,
  *   renderBudget?: number | string,
  *   virtualItemSize?: number,
- *   startAt?: "start" | "end" | number | {id: string, offset?: number},
+ *   startAt?: "start" | "end" | number | {id: string, offset?: number, fallback?: "start" | "end"},
  *   onPositionChange?: (position: {id: string, index: number, offset: number}) => void,
  *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
@@ -946,16 +946,21 @@ const ListFirstResolver = (props) => {
  *   displays nothing. A list that knows how many rows it will have has no use
  *   for this — see `<List.Items count>`, whose not-yet-loaded rows are drawn
  *   as skeletons in place, one per row, virtualized like the rest.
- * @param {"start"|"end"|number|{id: string, offset?: number}} [props.startAt="start"]
+ * @param {"start"|"end"|number|{id: string, offset?: number, fallback?: "start"|"end"}} [props.startAt="start"]
  *   Where the list opens. `"end"` is a thread read backwards — the last rows
  *   are the ones to show, and the ones asked for first. A number opens on that
  *   row of the collection. `{id, offset}` — what `onPositionChange` hands out
  *   — comes back to a NAMED row, `offset` pixels below the top of the view:
  *   the row is asked for by name (see the range's own `around`), then put back
  *   by measuring it, so it lands where it was even if rows were inserted
- *   before it in the meantime. In every form the list holds itself there while
- *   it is still finding out how many rows there are and how tall one is, and
- *   lets go the moment the user reaches for the list.
+ *   before it in the meantime — and wherever the position was taken from, since
+ *   the row is measured on this screen rather than computed from the one it
+ *   was saved on. `fallback` says where to open when that row is gone (a
+ *   message deleted since); it defaults to the start.
+ *
+ *   In every form the list holds itself there while it is still finding out
+ *   how many rows there are and how tall one is, and lets go the moment the
+ *   user reaches for the list.
  * @param {(position: {id: string, index: number, offset: number}) => void} [props.onPositionChange]
  *   Where the list is, as the user scrolls: the row at the top of the view and
  *   how far above the fold it sits. Keep it to come back to it later through
@@ -1374,28 +1379,41 @@ const useListScrollSync = ({
     // it was — measured, not computed from an estimate, which is what makes
     // the position exact whatever the rows in between turn out to weigh. Until
     // it is drawn, the most this can do is aim the window at it.
+    let openAt = startAt;
     if (startAt.id !== undefined) {
       // Only whoever holds the rows can say where that one sits: the list
       // itself knows the rows it has drawn, and this one is precisely the one
       // it has not drawn yet.
       const rowIndex = virtual.locateRow(startAt.id);
       if (rowIndex === null) {
-        return;
-      }
-      const { start, end } = renderWindowRef.current;
-      if (rowIndex < start || rowIndex >= end) {
-        const half = Math.floor((end - start) / 2);
-        const wantedStart = rowIndex - half < 0 ? 0 : rowIndex - half;
-        updateRenderWindow(
-          wantedStart,
-          wantedStart + (end - start),
-          `opening on row ${startAt.id}`,
-        );
-        return;
+        // A page has come back and that row is not in it: it is gone (a
+        // message deleted, a game cancelled). Waiting for it forever would
+        // leave the list wherever the first page landed, which is nowhere in
+        // particular — open where the caller said to open when that happens.
+        if (virtual.pagesSignal.peek() === 0) {
+          return;
+        }
+        openAt = startAt.fallback || "start";
+        if (openAt === "start") {
+          startPlaceRef.current.userTookOver = true;
+          return;
+        }
+      } else {
+        const { start, end } = renderWindowRef.current;
+        if (rowIndex < start || rowIndex >= end) {
+          const half = Math.floor((end - start) / 2);
+          const wantedStart = rowIndex - half < 0 ? 0 : rowIndex - half;
+          updateRenderWindow(
+            wantedStart,
+            wantedStart + (end - start),
+            `opening on row ${startAt.id}`,
+          );
+          return;
+        }
       }
     }
     const scrollerEl = getScroller();
-    if (startAt === "end") {
+    if (openAt === "end") {
       anchorRef.current = null;
       if (horizontal) {
         scrollerEl.scrollLeft = scrollerEl.scrollWidth;
@@ -1404,14 +1422,18 @@ const useListScrollSync = ({
       }
       return;
     }
-    if (startAt.id !== undefined) {
-      const rowEl = findRowElement(getListEl(), startAt.id);
+    if (openAt.id !== undefined) {
+      const rowEl = findRowElement(getListEl(), openAt.id);
       if (!rowEl) {
         return;
       }
       const viewportRect = getScrollerViewportRect(scrollerEl);
       const rowRect = rowEl.getBoundingClientRect();
-      const offsetWanted = startAt.offset || 0;
+      const offsetWanted = resolveOpenOffset(
+        openAt.offset || 0,
+        horizontal ? viewportRect.width : viewportRect.height,
+        horizontal ? rowRect.width : rowRect.height,
+      );
       const offsetNow = horizontal
         ? rowRect.left - viewportRect.left
         : rowRect.top - viewportRect.top;
@@ -1427,7 +1449,7 @@ const useListScrollSync = ({
       }
       return;
     }
-    const rowPosition = startAt * virtualItemSizeSignal.peek();
+    const rowPosition = openAt * virtualItemSizeSignal.peek();
     anchorRef.current = null;
     if (horizontal) {
       scrollerEl.scrollLeft = rowPosition;
@@ -1458,11 +1480,13 @@ const useListScrollSync = ({
   // top of what is on screen, and how far above the fold it sits. An index
   // would not do — rows get inserted while a list is being read, and the row
   // one was looking at is then somewhere else.
+  const onPositionChangeRef = useRef(null);
+  onPositionChangeRef.current = onPositionChange;
+  // Where the list was at the last thing that moved it. Kept whether anyone
+  // asked for it or not: it is what a resize needs to put things back.
   const positionRef = useRef(null);
-  positionRef.current = onPositionChange;
   const reportPosition = () => {
-    const onPositionChange = positionRef.current;
-    if (!onPositionChange || !ref.current) {
+    if (!ref.current) {
       return;
     }
     const position = captureScrollAnchor({
@@ -1474,12 +1498,64 @@ const useListScrollSync = ({
     if (!position) {
       return;
     }
-    onPositionChange({
+    positionRef.current = position;
+    onPositionChangeRef.current?.({
       id: position.id,
       index: position.index,
       offset: position.offset,
     });
   };
+
+  // A list that gets narrower rewraps every row it holds, so everything below
+  // moves and the reader loses their place — the very thing scrolling a long
+  // list is supposed to protect. The row that was at the top goes back to
+  // where it was, measured on the new layout.
+  useLayoutEffect(() => {
+    if (!ref.current) {
+      return undefined;
+    }
+    const scrollerEl = getScroller();
+    let firstObservation = true;
+    const observer = new ResizeObserver(() => {
+      if (firstObservation) {
+        firstObservation = false;
+        return;
+      }
+      const position = positionRef.current;
+      if (!position) {
+        return;
+      }
+      const rowEl = findRowElement(getListEl(), position.id);
+      if (!rowEl) {
+        return;
+      }
+      const viewportRect = getScrollerViewportRect(scrollerEl);
+      const rowRect = rowEl.getBoundingClientRect();
+      const offsetNow = horizontal
+        ? rowRect.left - viewportRect.left
+        : rowRect.top - viewportRect.top;
+      const delta =
+        offsetNow -
+        resolveOpenOffset(
+          position.offset,
+          horizontal ? viewportRect.width : viewportRect.height,
+          horizontal ? rowRect.width : rowRect.height,
+        );
+      if (delta > -0.5 && delta < 0.5) {
+        return;
+      }
+      anchorRef.current = null;
+      if (horizontal) {
+        scrollerEl.scrollLeft += delta;
+      } else {
+        scrollerEl.scrollTop += delta;
+      }
+    });
+    observer.observe(scrollerEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, [scroller]);
 
   // Inserting rows above what the user is looking at must not move it by a
   // single pixel. The browser will not do it for us — overflow-anchor gives up
@@ -1678,6 +1754,24 @@ const getScrollerEl = (listContainerEl, scroller, horizontal) => {
   }
   return document.scrollingElement;
 };
+// A row must be worth looking at once put back where it was. The offset comes
+// from wherever the position was taken — another screen, another window size,
+// rows that wrap differently — so it is not necessarily a place this view has:
+// keep enough of the row on screen for it to be the answer to "take me back
+// there".
+const OPEN_ROW_MIN_VISIBLE = 24;
+const resolveOpenOffset = (offset, viewportSize, rowSize) => {
+  const lowest = -rowSize + OPEN_ROW_MIN_VISIBLE;
+  const highest = viewportSize - OPEN_ROW_MIN_VISIBLE;
+  if (offset < lowest) {
+    return lowest < 0 ? lowest : 0;
+  }
+  if (offset > highest) {
+    return highest < 0 ? 0 : highest;
+  }
+  return offset;
+};
+
 // The row with that id, IN THIS LIST. Not document.getElementById: an id is
 // only ever unique within a list — two lists on the same page can be showing
 // the same collection — and a list acting on a row that belongs to another one

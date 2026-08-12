@@ -172,6 +172,12 @@
         const first = serverMessages[0].number;
         serverMessages.unshift(...createMessages(count, first - count));
       };
+      const deleteMessage = (id) => {
+        const index = serverMessages.findIndex((m) => m.id === id);
+        if (index > -1) {
+          serverMessages.splice(index, 1);
+        }
+      };
 
       // La réponse à un intervalle: jamais plus de PAGE_MAX messages, en
       // disant où ça tombe et combien il y en a en tout. Un début négatif
@@ -359,6 +365,16 @@
               >
                 5 messages plus anciens arrivent
               </Button>
+              <Button
+                disabled={!position}
+                onClick={() => {
+                  deleteMessage(position.id);
+                  setSaved(position);
+                  setKey(key + 1);
+                }}
+              >
+                ce message est supprimé
+              </Button>
               <span className="caption">
                 {position
                   ? `${position.id} @${Math.round(position.offset)}`
@@ -379,7 +395,7 @@
                 maxHeight="220px"
                 expandX
                 renderBudget={30}
-                startAt={saved || "end"}
+                startAt={saved ? { ...saved, fallback: "end" } : "end"}
                 onPositionChange={setPosition}
                 renderSkeleton={(index) => <MessagePlaceholder index={index} />}
               >
@@ -396,7 +412,7 @@
             </div>
             <Text size="s" color="#555">
               {saved
-                ? `la liste a rouvert sur ${saved.id}: son haut doit toucher la ligne rouge`
+                ? `la liste a rouvert sur ${saved.id}: son haut doit toucher la ligne rouge — sauf si ce message n'existe plus, auquel cas elle rouvre sur le dernier (fallback)`
                 : "faites défiler, puis quittez et revenez"}
             </Text>
           </Section>
