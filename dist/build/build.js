@@ -628,9 +628,10 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-// An url written by an injection cannot be resolved: the placeholder is still there
-// when references are analyzed. Rather than guessing what a placeholder looks like
-// (the key is free-form), tell the file it comes from: injections are configured for it.
+// Injections write urls in html attributes before references are analyzed, so an url
+// that still cannot be resolved may be a placeholder no injection replaced. Rather than
+// guessing what a placeholder looks like (the key is free-form), tell the file it comes
+// from: injections are configured for it.
 const detailsFromInjectionsOnOwner = (reference) => {
   if (!reference) {
     return {};
@@ -649,7 +650,7 @@ const detailsFromInjectionsOnOwner = (reference) => {
     return {};
   }
   return {
-    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, add "jsenv-ignore" so jsenv leaves that url alone:
+    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, check the placeholder spelling, or add "jsenv-ignore" so jsenv leaves that url alone:
 <${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
   };
 };
@@ -2101,6 +2102,9 @@ const createUrlInfo = (url, context) => {
     contentFinalized: false,
     contentSideEffects: [],
     contentInjections: {},
+    // placeholders already consumed somewhere else than the content (in a specifier),
+    // so that not finding them in the content is not worth a warning
+    contentInjectionUsedKeySet: new Set(),
 
     sourcemap: null,
     sourcemapIsWrong: false,
@@ -2413,6 +2417,13 @@ const INJECTIONS = {
   },
 };
 
+const readInjectionValue = (injection) => {
+  if (injection && injection[injectionSymbol]) {
+    return injection.value;
+  }
+  return injection;
+};
+
 const isPlaceholderInjection = (value) => {
   return (
     !value || !value[injectionSymbol] || value[injectionSymbol] !== "global"
@@ -2486,7 +2497,7 @@ const injectPlaceholderReplacements = (
   for (const { key, isOptional, value } of placeholderReplacements) {
     let index = content.indexOf(key);
     if (index === -1) {
-      if (!isOptional) {
+      if (!isOptional && !urlInfo.contentInjectionUsedKeySet.has(key)) {
         urlInfo.context.logger.warn(
           `placeholder "${key}" not found in ${urlInfo.url}.
 --- suggestion a ---
@@ -2511,7 +2522,7 @@ return {
       magicSource.replace({
         start,
         end,
-        replacement: asReplacement(value, urlInfo),
+        replacement: asReplacement(value, urlInfo.type),
       });
       index = content.indexOf(key, end);
     }
@@ -2522,8 +2533,8 @@ return {
 // In JS the placeholder stands for a value, so it must be substituted by a literal.
 // Everywhere else (html attributes and text, css, ...) it stands for a piece of text
 // and is substituted as-is, so it can be concatenated: href="__BACKEND_URL__/users/me"
-const asReplacement = (value, urlInfo) => {
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+const asReplacement = (value, type) => {
+  if (type === "js_classic" || type === "js_module") {
     return JSON.stringify(value, null, "  ");
   }
   if (typeof value === "string") {
@@ -4675,6 +4686,25 @@ const testAppliesDuring = (plugin, kitchen) => {
   );
 };
 
+// A bare specifier ("preact", "@jsenv/core/x.js") is resolved by node esm resolution,
+// everything else ("/a.js", "./a.js", "http://example.com/a.js") by url resolution
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
+  }
+};
+
 /*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
@@ -5616,7 +5646,7 @@ const parseAndTransformJsReferences = async (
     let filenameHint;
     if (
       externalReferenceInfo.subtype === "import_dynamic" &&
-      isBareSpecifier$2(externalReferenceInfo.specifier)
+      isBareSpecifier(externalReferenceInfo.specifier)
     ) {
       filenameHint = `${externalReferenceInfo.specifier}.js`;
     }
@@ -5704,23 +5734,6 @@ const parseAndTransformJsReferences = async (
   }
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
-};
-
-const isBareSpecifier$2 = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };
 
 const jsenvPluginReferenceExpectedTypes = () => {
@@ -6113,7 +6126,7 @@ const createBuildPackageConditions = (
     for (const key of keys) {
       const associatedValue = packageConditionsConfig[key];
 
-      if (!isBareSpecifier$1(key)) {
+      if (!isBareSpecifier(key)) {
         const url = new URL(key, rootDirectoryUrl);
         associationsRaw[url] = associatedValue;
         continue;
@@ -6148,7 +6161,7 @@ const createBuildPackageConditions = (
     );
     resolveConditionsFromSpecifier = (specifier, importer, { resolver }) => {
       let associatedValue;
-      if (isBareSpecifier$1(specifier)) {
+      if (isBareSpecifier(specifier)) {
         const { url } = resolver({
           specifier,
           parentUrl: importer,
@@ -6173,7 +6186,7 @@ const createBuildPackageConditions = (
     const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
     // https://nodejs.org/api/esm.html#resolver-algorithm-specification
     const devResolver = (specifier, importer, { resolver }) => {
-      if (isBareSpecifier$1(specifier)) {
+      if (isBareSpecifier(specifier)) {
         const { url } = resolver({
           specifier,
           parentUrl: importer,
@@ -6237,7 +6250,7 @@ const createBuildPackageConditions = (
           const associations = URL_META.resolveAssociations(
             { applies: value },
             (pattern) => {
-              if (isBareSpecifier$1(pattern)) {
+              if (isBareSpecifier(pattern)) {
                 try {
                   if (pattern.endsWith("/")) {
                     // avoid package path not exported
@@ -6260,7 +6273,7 @@ const createBuildPackageConditions = (
             },
           );
           customResolver = (specifier, importer, { resolver }) => {
-            if (isBareSpecifier$1(specifier)) {
+            if (isBareSpecifier(specifier)) {
               const { url } = resolver({
                 specifier,
                 parentUrl: importer,
@@ -6390,23 +6403,6 @@ const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {
       return fallbackResolver(params);
     }
   };
-};
-
-const isBareSpecifier$1 = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };
 
 const jsenvPluginNodeEsmResolution = ({
@@ -7676,6 +7672,7 @@ const jsenvPluginInjections = (rawAssociations) => {
     }
     return null;
   };
+  const injectionsForUrlInfoMap = new WeakMap();
   let getInjections = null;
 
   return {
@@ -7694,8 +7691,8 @@ const jsenvPluginInjections = (rawAssociations) => {
           });
           return injectionsGetter;
         };
-        // an url written by an injection cannot be resolved during reference analysis;
-        // errors use this to tell the file holds injections and suggest "jsenv-ignore"
+        // errors and the build read this to know an unresolved url may come from
+        // an injection, and word what they report accordingly
         context.hasInjections = (url) => {
           return Boolean(findInjectionsGetterForUrl(url));
         };
@@ -7749,14 +7746,59 @@ const jsenvPluginInjections = (rawAssociations) => {
           contentInjections: defaultInjections,
         };
       }
+      injectionsForUrlInfoMap.set(urlInfo, injections);
       return {
-        contentInjections: {
-          ...defaultInjections,
-          ...injections,
-        },
+        contentInjections: { ...defaultInjections, ...injections },
       };
     },
+    // The content still holds the placeholders when references are analyzed: they are
+    // replaced at the very end, once the type of every inline content is known.
+    // A specifier must not wait for that, it would resolve "__BACKEND_URL__/users/me"
+    // as a file sitting next to the document. Only the placeholder is resolved here,
+    // then the specifier goes to whoever resolves this kind of url (node esm, web, ...)
+    resolveReference: (reference) => {
+      const { ownerUrlInfo } = reference;
+      const injections = injectionsForUrlInfoMap.get(ownerUrlInfo);
+      if (!injections) {
+        return null;
+      }
+      const { specifier, keySet } = injectIntoSpecifier(
+        reference.specifier,
+        injections,
+      );
+      if (keySet.size === 0) {
+        return null;
+      }
+      reference.specifier = specifier;
+      for (const key of keySet) {
+        // rewriting the specifier takes the placeholder out of the content,
+        // so the injection step must not expect to find it there
+        ownerUrlInfo.contentInjectionUsedKeySet.add(key);
+      }
+      return null;
+    },
   };
+};
+
+const injectIntoSpecifier = (specifier, injections) => {
+  let specifierInjected = specifier;
+  const keySet = new Set();
+  for (const key of Object.keys(injections)) {
+    if (!specifierInjected.includes(key)) {
+      continue;
+    }
+    const injection = injections[key];
+    if (!isPlaceholderInjection(injection)) {
+      continue;
+    }
+    const value = readInjectionValue(injection);
+    if (typeof value !== "string") {
+      continue;
+    }
+    specifierInjected = specifierInjected.replaceAll(key, value);
+    keySet.add(key);
+  }
+  return { specifier: specifierInjected, keySet };
 };
 
 // What a file inlines (a <script> or a <style> inside html) is authored in that file
@@ -9833,8 +9875,10 @@ const getCorePlugins = ({
     ...(packageBundle
       ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
       : []),
-    jsenvPluginReferenceAnalysis(referenceAnalysis),
+    // before reference analysis: an url written by an injection must hold its
+    // final value when references are analyzed
     jsenvPluginInjections(injections),
+    jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginTranspilation(transpilation),
     // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),
@@ -11177,7 +11221,7 @@ const createBuildSpecifierManager = ({
 
     prepareResyncResourceHints: ({ registerHtmlRefine }) => {
       const hintToInjectMap = new Map();
-      registerHtmlRefine((htmlAst, { registerHtmlMutation }) => {
+      registerHtmlRefine((htmlAst, { registerHtmlMutation, htmlUrlInfo }) => {
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             if (getHtmlNodeAttribute(node, "jsenv-ignore") !== undefined) {
@@ -11201,12 +11245,39 @@ const createBuildSpecifierManager = ({
               return;
             }
             const rawUrl = href;
+            if (targetsAFileThatDoesNotExist(rawUrl)) {
+              // this hint never designated anything, so nothing can explain its
+              // removal; taking away markup written by hand on a guess is worse
+              // than leaving it there
+              logger.warn(
+                createDetailedMessage(
+                  `${UNICODE.WARNING} resource hint kept as is: "${href}" cannot be resolved`,
+                  {
+                    "html file": htmlUrlInfo.url,
+                    ...(rawKitchen.context.hasInjections
+                      ? {
+                          suggestion: `when that url is written by an injection, jsenv resolves it in html attributes before analyzing references; check the placeholder spelling`,
+                        }
+                      : {}),
+                  },
+                ),
+              );
+              // the build url means nothing for something jsenv could not resolve,
+              // and it would leak a local path into the build
+              registerHtmlMutation(() => {
+                setHtmlNodeAttributes(node, {
+                  href: urlToRelativeUrl(rawUrl, htmlUrlInfo.url),
+                });
+              });
+              return;
+            }
             const finalUrl = internalRedirections.get(rawUrl) || rawUrl;
             const urlInfo = finalKitchen.graph.getUrlInfo(finalUrl);
             if (!urlInfo) {
-              if (rel === "preconnect" || rel === "dns-prefetch") {
-                // preconnect/dns-prefetch hints refer to origins, not specific resources in the graph.
-                // Keep them as-is — the author knows what external domains will be used at runtime.
+              if (!href.startsWith("file:")) {
+                // the hint designates a resource jsenv does not own: an origin for
+                // preconnect/dns-prefetch, a remote file for the others. The author
+                // knows what the page will request at runtime, keep it as-is.
                 return;
               }
               logger.warn(
@@ -11649,6 +11720,16 @@ const asBuildUrlVersioned = ({
   // let's move url to build directory
   const { pathname, search, hash } = new URL(buildSpecifierVersioned);
   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
+};
+
+const targetsAFileThatDoesNotExist = (url) => {
+  if (!url.startsWith("file:")) {
+    return false;
+  }
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  urlObject.hash = "";
+  return !existsSync(urlObject);
 };
 
 // import { ANSI } from "@jsenv/humanize";
@@ -13374,7 +13455,10 @@ const prepareEntryPointBuild = async (
               const registerHtmlMutation = (callback) => {
                 htmlMutationCallbackSet.add(callback);
               };
-              htmlRefine(htmlAst, { registerHtmlMutation });
+              htmlRefine(htmlAst, {
+                registerHtmlMutation,
+                htmlUrlInfo: urlInfo,
+              });
               for (const htmlMutationCallback of htmlMutationCallbackSet) {
                 htmlMutationCallback();
               }
@@ -13457,23 +13541,6 @@ const prepareEntryPointBuild = async (
       };
     },
   };
-};
-
-const isBareSpecifier = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };
 
 export { build };
