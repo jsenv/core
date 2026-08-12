@@ -724,6 +724,7 @@ const ListUI = (props) => {
     renderWindow,
     scrollToItem,
     pendingScrollRef,
+    captureAnchor,
   } = useListScrollSync({
     ref,
     tracker,
@@ -738,6 +739,7 @@ const ListUI = (props) => {
     horizontal,
   });
 
+  virtual.captureAnchor = captureAnchor;
   virtual.virtualItemSizeSignal = virtualItemSizeSignal;
   virtual.horizontal = Boolean(horizontal);
   virtual.renderSkeleton = renderSkeleton;
@@ -1103,6 +1105,34 @@ const useListScrollSync = ({
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
 
+  // The row the scroll holds onto across a change of geometry, and where it
+  // sat when that change was decided. Captured at the two moments the list
+  // knows its own geometry is about to change — the window moving, a page
+  // arriving — because at those moments the DOM still shows the state to
+  // preserve. Capturing on every render instead would mean capturing at
+  // moments where there is nothing to preserve, and missing the ones where
+  // there is.
+  const anchorRef = useRef(null);
+  const captureAnchor = () => {
+    if (anchorRef.current || !ref.current || pendingScrollRef.current) {
+      return;
+    }
+    if (
+      !startPlaceRef.current.userTookOver &&
+      scrolledWanted !== "start" &&
+      scrolledWanted !== undefined
+    ) {
+      // The list is holding itself somewhere; that is what owns the scroll.
+      return;
+    }
+    anchorRef.current = captureScrollAnchor({
+      scrollerEl: getScroller(),
+      listEl: getListEl(),
+      items: tracker.visibleItemsSignal.peek(),
+      horizontal,
+    });
+  };
+
   const [renderWindow, setRenderWindow] = useState(() => {
     // Opening somewhere else than the beginning starts by framing there: the
     // rows the list will draw are the rows it will ask for.
@@ -1119,6 +1149,7 @@ const useListScrollSync = ({
     if (newStart === start && newEnd === end) {
       return;
     }
+    captureAnchor();
     debugScroll(`updateRenderWindow(${newStart}, ${newEnd}, "${reason}")`);
     const renderWindow = { start: newStart, end: newEnd };
     renderWindowRef.current = renderWindow;
@@ -1275,11 +1306,6 @@ const useListScrollSync = ({
     // eslint-disable-next-line no-unused-expressions
     virtualItemSizeSignal.value;
   }
-  // The row the scroll is held onto across a commit (see the anchoring below).
-  // A deliberate move — opening the list somewhere, coming back to a row — is
-  // the list saying where it wants to be: whatever it was holding onto before
-  // no longer applies, or the correction would undo the move.
-  const anchorRef = useRef(null);
   // Set around a scroll the list performs itself. What it protects against is
   // not the scroll event as such, but what the listener would conclude from it:
   // the position it is about to read was chosen to keep the rows where they
@@ -1537,17 +1563,11 @@ const useListScrollSync = ({
     const scrollerEl = getScroller();
     if (openAt === "end") {
       anchorRef.current = null;
-      console.info(
-        `[place] before write: scrollHeight=${Math.round(scrollerEl.scrollHeight)} client=${Math.round(scrollerEl.clientHeight)} top=${Math.round(scrollerEl.scrollTop)}`,
-      );
       if (horizontal) {
         scrollerEl.scrollLeft = scrollerEl.scrollWidth;
       } else {
         scrollerEl.scrollTop = scrollerEl.scrollHeight;
       }
-      console.info(
-        `[place] after write: top=${Math.round(scrollerEl.scrollTop)} max=${Math.round(scrollerEl.scrollHeight - scrollerEl.clientHeight)}`,
-      );
       return;
     }
     if (typeof openAt === "object" && openAt.id !== undefined) {
@@ -1658,12 +1678,20 @@ const useListScrollSync = ({
       return undefined;
     }
     const scrollerEl = getScroller();
-    const observer = new ResizeObserver(() => {
-      // Held somewhere: its own height changing is the end of the list moving,
-      // so it aims at it again. Nothing else can tell it — the size of a row is
-      // measured here but read by the runs, so a size that settles re-renders
-      // THEM, not this.
-      if (onGeometryChangeRef.current()) {
+    const listEl = getListEl();
+    const observer = new ResizeObserver((entries) => {
+      // Two things resize here, and they call for opposite answers. The LIST
+      // growing is its own content settling: only a list holding itself
+      // somewhere cares (the end it aims at has moved), and a list the user is
+      // reading must not be touched — its rows are held still by the anchoring,
+      // which this would undo. The SCROLLER resizing is the window around it
+      // changing shape, and then the row that was at the top goes back where it
+      // was.
+      const listResized = entries.some((entry) => entry.target === listEl);
+      if (listResized && onGeometryChangeRef.current()) {
+        return;
+      }
+      if (!entries.some((entry) => entry.target === scrollerEl)) {
         return;
       }
       const position = positionRef.current;
@@ -1697,7 +1725,7 @@ const useListScrollSync = ({
       }
     });
     observer.observe(scrollerEl);
-    observer.observe(getListEl());
+    observer.observe(listEl);
     return () => {
       observer.disconnect();
     };
@@ -1708,20 +1736,6 @@ const useListScrollSync = ({
   // on changes it attributes to a scroll, and the fillers resize in the very
   // same commit — so the row at the top of the viewport is measured before the
   // commit and put back at the same offset after it.
-  if (
-    !heldSomewhere &&
-    !searchText &&
-    !anchorRef.current &&
-    !pendingScrollRef.current &&
-    ref.current
-  ) {
-    anchorRef.current = captureScrollAnchor({
-      scrollerEl: getScroller(),
-      listEl: getListEl(),
-      items: tracker.visibleItemsSignal.peek(),
-      horizontal,
-    });
-  }
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
     if (!anchor || !ref.current || heldSomewhere) {
@@ -1767,9 +1781,9 @@ const useListScrollSync = ({
         return;
       }
     }
-    anchorRef.current = null;
     const anchorEl = findRowElement(getListEl(), anchor.id);
     if (!anchorEl) {
+      anchorRef.current = null;
       return;
     }
     const scrollerEl = getScroller();
@@ -1780,11 +1794,14 @@ const useListScrollSync = ({
       : anchorRect.top - viewportRect.top;
     const drift = offsetNow - anchor.offset;
     if (drift === 0) {
+      // Nothing moved in this commit — which does not mean nothing will: what
+      // was captured is a change that has not landed yet (a page merged into a
+      // run re-renders the run, and this list a commit later). The anchor is
+      // kept until it has something to correct, and dropped the moment the
+      // user scrolls, which is the one thing that makes it stale.
       return;
     }
-    debugScroll(
-      `anchored row ${anchor.id} drifted by ${Math.round(drift)}px, compensating scroll`,
-    );
+    anchorRef.current = null;
     scrolledByListRef.current = true;
     if (horizontal) {
       scrollerEl.scrollLeft += drift;
@@ -1803,6 +1820,8 @@ const useListScrollSync = ({
     const listEl = getListEl();
     const onScroll = () => {
       updateCurrentScroll();
+      // Where the user is now is where things must be held from now on.
+      anchorRef.current = null;
       if (scrolledByListRef.current) {
         // The window stays where it is — the position it would be re-derived
         // from was chosen to keep the rows still — but where the list is has
@@ -1872,6 +1891,7 @@ const useListScrollSync = ({
     renderWindow: renderWindowRef.current,
     pendingScrollRef,
     scrollToItem,
+    captureAnchor,
   };
 };
 // The band of the scroller the user actually sees. A page-level scroller is
@@ -1979,12 +1999,26 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
 // matter: the scroller may be larger than the list (scroller="parent") as well
 // as smaller (the list scrolls inside its own box).
 const getListVisibleScanRange = (viewportRect, listRect, horizontal) => {
+  // The screen has a say too: what is asked here is answered by
+  // elementFromPoint, which only knows about points that are actually on it. A
+  // list whose scroll box hangs below the fold of the page would otherwise be
+  // probed where nothing can be hit — and would silently stop keeping its rows
+  // still, which is exactly when it matters.
+  const screenTo = horizontal
+    ? document.documentElement.clientWidth
+    : document.documentElement.clientHeight;
   const viewportFrom = horizontal ? viewportRect.left : viewportRect.top;
   const viewportTo = horizontal ? viewportRect.right : viewportRect.bottom;
   const listFrom = horizontal ? listRect.left : listRect.top;
   const listTo = horizontal ? listRect.right : listRect.bottom;
-  const from = listFrom > viewportFrom ? listFrom : viewportFrom;
-  const to = listTo < viewportTo ? listTo : viewportTo;
+  let from = listFrom > viewportFrom ? listFrom : viewportFrom;
+  let to = listTo < viewportTo ? listTo : viewportTo;
+  if (from < 0) {
+    from = 0;
+  }
+  if (to > screenTo) {
+    to = screenTo;
+  }
   if (to - from < 2) {
     return null;
   }
@@ -2167,8 +2201,14 @@ const useVirtualItemSizeSignal = (ref, virtualItemSizeProp = 0, horizontal) => {
       samples.sum = 0;
       samples.count = 0;
       samples.fromSkeletons = false;
-    } else if (!samples.fromSkeletons && measure.fromSkeletons) {
-      return;
+    } else if (measure.fromSkeletons) {
+      if (!samples.fromSkeletons || samples.count > 0) {
+        // Rows on their way are given the size this very estimate holds, so
+        // measuring them again says nothing — and would say it in a loop: the
+        // size sets their height, their height sets the size. They seed it
+        // once, when there is nothing else to go on, and never again.
+        return;
+      }
     }
     samples.sum += measure.size * measure.rowCount;
     samples.count += measure.rowCount;
@@ -2935,6 +2975,9 @@ const createListVirtual = () => {
     // The list is on its way somewhere: what the window frames is not what it
     // is about to frame, so a run must not fetch for it (see holdWindow).
     holdPending: false,
+    // Called by a run just before rows land in it: what is on screen must not
+    // move because something arrived above it. Set by the list itself.
+    captureAnchor: () => {},
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
@@ -3515,9 +3558,6 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           if (stillWanted) {
             return;
           }
-          console.info(
-            `[abort] request ${request.start}..${request.end} window ${windowFrom}..${windowTo}`,
-          );
           request.controller?.abort();
           request.busy = false;
         }
@@ -3563,6 +3603,9 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           const pageCount = Array.isArray(page)
             ? pageItems.length
             : (page.count ?? pageStart + pageItems.length);
+          // Before the rows land: what is on screen has to stay where it is,
+          // and the DOM still shows the state to hold onto.
+          virtual.captureAnchor();
           let i = 0;
           while (i < pageItems.length) {
             pages.byIndex.set(pageStart + i, pageItems[i]);
