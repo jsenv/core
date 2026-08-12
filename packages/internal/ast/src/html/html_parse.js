@@ -120,6 +120,7 @@ export const stringifyHtmlAst = (
                   "inlined-from-href": undefined,
                   "jsenv-cooked-by": undefined,
                   "jsenv-inlined-by": undefined,
+                  "jsenv-ignore": undefined,
                   "jsenv-injected-by": undefined,
                   "jsenv-debug": undefined,
                   "content-indented": undefined,

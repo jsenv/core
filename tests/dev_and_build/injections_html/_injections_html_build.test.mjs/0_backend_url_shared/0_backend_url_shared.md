@@ -14,7 +14,9 @@ see [./build/](./build/)
 {
   "fromGlobal": "https://api.example.com/users/me",
   "fromTextNode": "https://api.example.com",
-  "fromAttribute": "https://api.example.com/users/me"
+  "fromAttribute": "https://api.example.com/users/me",
+  "fromInlineStyle": '"https://api.example.com"',
+  "fromInjectedGlobal": "1.2.3"
 }
 ```
 

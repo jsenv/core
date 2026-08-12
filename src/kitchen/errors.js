@@ -78,6 +78,7 @@ ${reason}`,
   }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
+    ...detailsFromPlaceholderInSpecifier(reference),
     ...detailsFromValueThrown(error),
   });
 };
@@ -139,6 +140,7 @@ ${reason}`,
       return createFailedToFetchUrlContentError({
         code: "NOT_FOUND",
         reason: "no entry on filesystem",
+        ...detailsFromPlaceholderInSpecifier(urlInfo.firstReference),
       });
     }
   }
@@ -369,6 +371,24 @@ const getFirstReferenceInProject = (reference) => {
   }
   const { firstReference } = ownerUrlInfo;
   return getFirstReferenceInProject(firstReference);
+};
+
+// a value looking like "__BACKEND_URL__", meant to be replaced by an injection
+const placeholderRegexp = /__[A-Z0-9][A-Z0-9_]*__/;
+const detailsFromPlaceholderInSpecifier = (reference) => {
+  if (!reference || !placeholderRegexp.test(reference.specifier)) {
+    return {};
+  }
+  const { node, attributeName } = reference.astInfo || {};
+  const example =
+    node && attributeName
+      ? `<${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`
+      : `<link jsenv-ignore rel="preload" href="${reference.specifier}" />`;
+  return {
+    suggestion: `"${reference.specifier}" contains a placeholder; jsenv resolves it as a regular url before injections replace it.
+Add "jsenv-ignore" on the html tag so jsenv leaves that url alone:
+${example}`,
+  };
 };
 
 const detailsFromPluginController = (jsenvPluginsController) => {

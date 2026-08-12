@@ -4,7 +4,7 @@
  * value can differ from the build one (a local api instead of the deployed one).
  */
 
-import { startDevServer } from "@jsenv/core";
+import { INJECTIONS, startDevServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotDevTests } from "@jsenv/core/tests/snapshot_dev_tests.js";
 import { chromium } from "playwright";
@@ -19,6 +19,7 @@ const run = async () => {
           // ("https://localhost:4000"); a snapshot cannot, ports and localhost
           // are normalized out of it
           __BACKEND_URL__: "https://api.dev.example.com",
+          appVersion: INJECTIONS.global("1.2.3"),
         };
       },
     },

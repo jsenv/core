@@ -1,6 +1,9 @@
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch, urlToRelativeUrl } from "@jsenv/urls";
-import { INJECTIONS } from "../../kitchen/url_graph/url_info_injections.js";
+import {
+  INJECTIONS,
+  isPlaceholderInjection,
+} from "../../kitchen/url_graph/url_info_injections.js";
 
 export const jsenvPluginInjections = (rawAssociations) => {
   const getDefaultInjections = (urlInfo) => {
@@ -62,9 +65,7 @@ export const jsenvPluginInjections = (rawAssociations) => {
           if (!injections || !isInherited) {
             return injections;
           }
-          // the file holds several inline contents; a placeholder configured for the file
-          // is expected in one of them, not in each
-          return asOptionalInjections(injections);
+          return asInheritedInjections(injections);
         };
       }
     },
@@ -91,10 +92,22 @@ export const jsenvPluginInjections = (rawAssociations) => {
   };
 };
 
-const asOptionalInjections = (injections) => {
-  const optionalInjections = {};
+// What a file inlines (a <script> or a <style> inside html) is authored in that file
+// and inherits its injections, with two adjustments:
+// - a global belongs to the file itself, injecting it into each inline content would
+//   repeat it and reach types that cannot receive globals (css)
+// - a placeholder configured for the file is expected in one of its inline contents,
+//   not in each, so a missing one is not worth a warning
+const asInheritedInjections = (injections) => {
+  const inheritedInjections = {};
   for (const key of Object.keys(injections)) {
-    optionalInjections[key] = INJECTIONS.optional(injections[key]);
+    const value = injections[key];
+    if (isPlaceholderInjection(value)) {
+      inheritedInjections[key] = INJECTIONS.optional(value);
+    }
   }
-  return optionalInjections;
+  if (Object.keys(inheritedInjections).length === 0) {
+    return null;
+  }
+  return inheritedInjections;
 };

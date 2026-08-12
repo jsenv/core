@@ -3,9 +3,17 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <link jsenv-ignore="" rel="preload" as="fetch" crossorigin="use-credentials" href="https://api.example.com/users/me">
-    <link jsenv-ignore="" rel="preconnect" href="https://api.example.com">
+    <link rel="preload" as="fetch" crossorigin="use-credentials" href="https://api.example.com/users/me">
+    <link rel="preconnect" href="https://api.example.com">
   </head>
+  <body>
+    <jsenv-scripts>
+      <script>
+        Object.assign(window, {
+          "appVersion": "1.2.3"
+        });</script>
+    </jsenv-scripts>
+  
 
-  <body></body>
+  </body>
 </html>

@@ -14,7 +14,9 @@ see [./.jsenv/chrome@149.0.0/](./.jsenv/chrome@149.0.0/)
 {
   "fromGlobal": "https://api.dev.example.com/users/me",
   "fromTextNode": "https://api.dev.example.com",
-  "fromAttribute": "https://api.dev.example.com/users/me"
+  "fromAttribute": "https://api.dev.example.com/users/me",
+  "fromInlineStyle": '"https://api.dev.example.com"',
+  "fromInjectedGlobal": "1.2.3"
 }
 ```
 

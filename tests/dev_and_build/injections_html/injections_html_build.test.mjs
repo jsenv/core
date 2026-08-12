@@ -15,7 +15,7 @@
  * substitutes it per request, so the same build files serve every deployment.
  */
 
-import { build, startBuildServer } from "@jsenv/core";
+import { build, INJECTIONS, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_tests.js";
 import { readFileSync } from "node:fs";
@@ -41,6 +41,9 @@ const backendUrlInjections = {
   "./main.html": () => {
     return {
       __BACKEND_URL__: "https://api.example.com",
+      // a global is injected into the document itself, never into what it inlines
+      // (its <style> could not receive it)
+      appVersion: INJECTIONS.global("1.2.3"),
     };
   },
 };

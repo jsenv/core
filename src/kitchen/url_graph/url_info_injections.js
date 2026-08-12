@@ -1,4 +1,5 @@
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
+import { createDetailedMessage } from "@jsenv/humanize";
 import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
 
 const injectionSymbol = Symbol.for("jsenv_injection");
@@ -150,7 +151,14 @@ export const injectGlobals = (content, globals, urlInfo) => {
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
     return globalsInjectorOnJs(content, globals, urlInfo);
   }
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+  throw new Error(
+    createDetailedMessage(`cannot inject globals into "${urlInfo.type}"`, {
+      file: urlInfo.url,
+      ...(urlInfo.isInline
+        ? { "inline content of": urlInfo.inlineUrlSite.url }
+        : {}),
+    }),
+  );
 };
 const globalInjectorOnHtml = (content, globals, urlInfo) => {
   // ideally we would inject an importmap but browser support is too low

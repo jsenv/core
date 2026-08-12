@@ -3,16 +3,28 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
+    <style>:root {
+  --backend-url: "https://api.example.com";
+}
+</style>
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script>
+        Object.assign(window, {
+          "appVersion": "1.2.3"
+        });</script>
+    </jsenv-scripts>
     <script>
 
       window.backendUrl = "https://api.example.com";
       window.resultPromise = new Promise((resolve) => {
         window.resolveResultPromise = resolve;
       });</script>
-  </head>
+  
 
-  <body>
+  
     <p data-backend-url="https://api.example.com/users/me">https://api.example.com</p>
-    <script type="module" src="/js/main.js?v=a3720481"></script>
+    <script type="module" src="/js/main.js?v=dbcfe8ce"></script>
   </body>
 </html>
