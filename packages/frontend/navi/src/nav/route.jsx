@@ -135,11 +135,12 @@ const collectBranches = (children) => {
     if (nodeChildren) {
       const { matchingBranch: matchingChild } = collectBranches(nodeChildren);
       const branch = { type: "container", node: child };
+      const guardMatching = route ? route.matchingSignal.value : false;
       if (!matchingBranch) {
         if (matchingChild) {
           // Real leaf match inside — always select this container
           matchingBranch = branch;
-        } else if (route && route.matchingSignal.value) {
+        } else if (guardMatching) {
           // No leaf match but an explicit route guard matches — select this
           // container so it can render its own fallback inside its layout
           matchingBranch = branch;
@@ -151,11 +152,14 @@ const collectBranches = (children) => {
       }
     } else {
       const branch = { type: "leaf", node: child };
-      if (
-        !matchingBranch &&
-        route.matchingSignal.value &&
-        (!routeParams || route.matchesParams(routeParams))
-      ) {
+      // every signal is read even once a match is found: reading is what
+      // subscribes the container to it, and a branch that is skipped today is
+      // the one that must wake the container up tomorrow
+      const matching = route.matchingSignal.value;
+      const paramsMatching = routeParams
+        ? route.matchesParams(routeParams)
+        : true;
+      if (!matchingBranch && matching && paramsMatching) {
         matchingBranch = branch;
       }
     }

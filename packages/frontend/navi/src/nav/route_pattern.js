@@ -27,6 +27,23 @@ setBaseUrl(
 );
 
 /**
+ * The single place where "this param was not provided, take the signal value"
+ * happens while building a url. A weak param qualifies one visit, not the
+ * screen: it enters a url only when the caller names it (or when it is already
+ * in the url being preserved), so here it always reads as absent.
+ * Not reading the signal also keeps the built url from depending on it.
+ */
+const readSignalForUrlBuild = (connection) => {
+  if (!connection || !connection.signal) {
+    return undefined;
+  }
+  if (connection.weak) {
+    return undefined;
+  }
+  return connection.signal.value;
+};
+
+/**
  * Creates a custom route pattern matcher
  */
 export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
@@ -100,7 +117,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         // Parameter was explicitly provided - always respect explicit parameters
         continue;
       }
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
         resolvedParams[paramName] = signalValue;
@@ -113,7 +130,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         // Parameter was explicitly provided - always respect explicit parameters
         continue;
       }
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
         resolvedParams[paramName] = signalValue;
@@ -156,7 +173,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           continue;
         }
 
-        const ancestorSignalValue = ancestorConnection.signal.value;
+        const ancestorSignalValue = readSignalForUrlBuild(ancestorConnection);
         if (
           ancestorSignalValue !== undefined &&
           ancestorSignalValue !== ancestorConnection.getDefaultValue()
@@ -234,7 +251,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           if (childParam in resolvedParams) {
             continue;
           }
-          const childSignalValue = childConnection.signal.value;
+          const childSignalValue = readSignalForUrlBuild(childConnection);
           // Only include if not already resolved and is non-default
           if (
             childSignalValue !== undefined &&
@@ -276,7 +293,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
       } else {
         // Parameter not provided but signal has a value
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (connection.isCustomValue(signalValue)) {
           // Only include custom values
           filtered[paramName] = signalValue;
@@ -295,7 +312,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
       } else {
         // Parameter not provided but signal has a value
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (connection.isCustomValue(signalValue)) {
           // Only include custom values
           filtered[paramName] = signalValue;
@@ -312,7 +329,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   const canReachLiteralValue = (literalValue, params, literalPosition) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
-      const signalValue = conn.signal.value;
+      const signalValue = readSignalForUrlBuild(conn);
       const userValue = params[conn.paramName];
       const effectiveValue = userValue !== undefined ? userValue : signalValue;
       return (
@@ -341,7 +358,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       return false;
     }
     return connsAtPosition.some((conn) => {
-      const signalValue = conn.signal.value;
+      const signalValue = readSignalForUrlBuild(conn);
       return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
   };
@@ -396,7 +413,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
               pathConnectionMap.get(paramName) ||
               queryConnectionMap.get(paramName);
             if (parentConnection) {
-              parentParamValue = parentConnection.signal.value;
+              parentParamValue = readSignalForUrlBuild(parentConnection);
             }
           }
 
@@ -481,7 +498,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       paramValue = item.userValue;
     } else {
       paramName = item.paramName;
-      paramValue = item.signal.value;
+      paramValue = readSignalForUrlBuild(item);
       // Only include custom parent signal values (not using defaults)
       if (paramValue === undefined || !item.isCustomValue(paramValue)) {
         return { isCompatible: true, shouldInclude: false };
@@ -588,7 +605,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         if (!siblingConnection) {
           continue;
         }
-        const siblingSignalValue = siblingConnection.signal.value;
+        const siblingSignalValue = readSignalForUrlBuild(siblingConnection);
         if (siblingSignalValue === undefined) {
           continue;
         }
@@ -632,7 +649,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         const explicitValue = params[paramName];
         const connection =
           pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
-        const signalValue = connection ? connection.signal.value : undefined;
+        const signalValue = readSignalForUrlBuild(connection);
 
         // Check if the parameter has the required value
         if (
@@ -686,7 +703,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           hasActiveParams = true;
         }
       } else {
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (signalValue !== undefined) {
           // No explicit override - use signal value
           childParams[paramName] = signalValue;
@@ -903,7 +920,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
         // If explicitly undefined, don't include it (which means don't use child route)
       } else {
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (
           signalValue !== undefined &&
           connection.isCustomValue(signalValue)
@@ -943,7 +960,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           continue; // Already have this parameter
         }
 
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         // Only include custom signal values (not using defaults)
         if (
           signalValue !== undefined &&
@@ -1125,7 +1142,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           paramName,
           connection,
         ] of childPatternObj.pathConnectionMap) {
-          const signalValue = connection.signal.value;
+          const signalValue = readSignalForUrlBuild(connection);
           if (
             signalValue !== undefined &&
             connection.isCustomValue(signalValue)
@@ -1147,7 +1164,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           paramName,
           connection,
         ] of childPatternObj.queryConnectionMap) {
-          const signalValue = connection.signal.value;
+          const signalValue = readSignalForUrlBuild(connection);
           if (
             signalValue !== undefined &&
             connection.isCustomValue(signalValue)
@@ -1770,7 +1787,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       );
       for (const conn of targetAncestor.connections) {
         console.debug(
-          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${conn.signal.value}, isCustom=${conn.isCustomValue(conn.signal.value)}`,
+          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${readSignalForUrlBuild(conn)}, isCustom=${conn.isCustomValue(readSignalForUrlBuild(conn))}`,
         );
       }
     }
@@ -1787,7 +1804,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
 
       // Only include if not already processed and has custom value (not default)
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
@@ -1833,7 +1850,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
 
         // Only inherit custom values (not defaults) that we don't already have
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (
           signalValue !== undefined &&
           connection.isCustomValue(signalValue)
@@ -1921,7 +1938,7 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
 
         // Only inherit if we don't have this param and parent has custom value (not default)
-        const parentSignalValue = parentConnection.signal.value;
+        const parentSignalValue = readSignalForUrlBuild(parentConnection);
         if (
           parentSignalValue !== undefined &&
           parentConnection.isCustomValue(parentSignalValue)
@@ -2009,7 +2026,36 @@ export const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   // search params are updated. When buildMostPreciseUrl performs an ancestor
   // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
   // as-is because the built pathname will differ from the route's own base pathname.
+  // Weak params are never inherited from their signal, but a url that already
+  // carries one keeps it: staying on the same screen while another param
+  // changes must not end the visit this param qualifies.
+  const carryOverWeakParams = (currentUrl, params) => {
+    let paramsWithWeak = params;
+    for (const [paramName, connection] of [
+      ...pathConnectionMap,
+      ...queryConnectionMap,
+    ]) {
+      if (!connection.weak || paramName in paramsWithWeak) {
+        continue;
+      }
+      const currentValue = connection.signal.peek();
+      if (currentValue === undefined) {
+        continue;
+      }
+      const currentParams = applyOn(currentUrl);
+      if (!currentParams || currentParams[paramName] === undefined) {
+        continue;
+      }
+      if (paramsWithWeak === params) {
+        paramsWithWeak = { ...params };
+      }
+      paramsWithWeak[paramName] = currentParams[paramName];
+    }
+    return paramsWithWeak;
+  };
+
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
+    params = carryOverWeakParams(currentUrl, params);
     const relativeBuiltUrl = buildMostPreciseUrl(params);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);
@@ -2266,7 +2312,7 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
         if (
           connection &&
           connection.signal &&
-          connection.signal.value === undefined &&
+          readSignalForUrlBuild(connection) === undefined &&
           !hasDefault
         ) {
           isOptional = true;

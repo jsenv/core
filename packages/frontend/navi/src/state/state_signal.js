@@ -60,6 +60,11 @@ if (import.meta.hot) {
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
+ *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
+ *   value, and it goes back to the default value when the route stops matching. Use it for params like an
+ *   "edit this one" id, where every other link to the screen must lead to the plain screen.
+ *   Incompatible with `persists` (throws).
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -132,7 +137,14 @@ export const stateSignal = (defaultValue, options = {}) => {
     default: staticFallback,
     ignoreArrayOrder,
     autoFix,
+    weak = false,
   } = options;
+
+  if (weak && persists) {
+    throw new TypeError(
+      `stateSignal "${id}": weak and persists are contradictory — a weak param qualifies one visit, it cannot be restored from a previous session.`,
+    );
+  }
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =

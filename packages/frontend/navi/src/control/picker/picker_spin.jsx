@@ -123,6 +123,10 @@ const css = /* css */ `
        keyboard here (see navi-focus-delegate below). */
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
+    /* No grey flash under a finger: what a press does is said by the chevron's
+       own background, and the browser's rectangle is drawn square over corners
+       that are round. Inherited, so the three pieces inside get it too. */
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* The middle holds the keyboard, and this box wears its ring: whatever is in
      there fills it, so a ring of its own would be drawn a pixel inside this
@@ -249,7 +253,12 @@ const css = /* css */ `
     border-radius: 0;
     cursor: pointer;
   }
-  .navi_picker_spin > .navi_picker_spin_way_out:hover {
+  /* Said as data-hover rather than :hover: a touch browser synthesizes the
+     enter and never the leave, so a CSS :hover would stay grey under the last
+     chevron pressed until something else was touched. What tracks it (see
+     pseudo_styles.js) knows there is no hover on such a device and simply does
+     not set the attribute. */
+  .navi_picker_spin > .navi_picker_spin_way_out[data-hover] {
     background: color-mix(in srgb, currentColor 8%, transparent);
   }
   /* Nothing that way: still there, still pressable — pressing it is how one
@@ -275,22 +284,28 @@ const css = /* css */ `
      of a rounded spin is rounded there too, and nowhere else — the two corners
      it does not own stay at the 0 above. Said with inherit rather than clipped
      away with overflow, which would cut the focus ring of the very button it
-     rounds. */
+     rounds.
+     Which chevron is which is asked of the chevron itself (data-way-out) rather
+     than of its place among its siblings: the loading outline is a <span> too
+     and it is written first, so :first-of-type named IT and the chevron at the
+     start went unrounded. */
   .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out:first-of-type {
+    > .navi_picker_spin_way_out[data-way-out="start"] {
     border-start-start-radius: inherit;
     border-end-start-radius: inherit;
   }
   .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out:last-of-type {
+    > .navi_picker_spin_way_out[data-way-out="end"] {
     border-start-end-radius: inherit;
     border-end-end-radius: inherit;
   }
-  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:first-of-type {
+  .navi_picker_spin[data-vertical]
+    > .navi_picker_spin_way_out[data-way-out="start"] {
     border-start-start-radius: inherit;
     border-start-end-radius: inherit;
   }
-  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:last-of-type {
+  .navi_picker_spin[data-vertical]
+    > .navi_picker_spin_way_out[data-way-out="end"] {
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
   }
@@ -541,6 +556,7 @@ export const Spin = ({
     const isNext = atStart ? startIsNext : !startIsNext;
     return (
       <WayOut
+        atStart={atStart}
         unavailableMessage={wayOutMessage(
           atStart ? startAllowed : endAllowed,
           isNext ? "spin.nothing_after" : "spin.nothing_before",
@@ -745,6 +761,7 @@ export const Spin = ({
 // the container's own tabIndex, or the field's), where the arrows already mean
 // this.
 const WayOut = ({
+  atStart,
   commandFor,
   unavailableMessage,
   label,
@@ -754,6 +771,13 @@ const WayOut = ({
   <Box
     as="span"
     baseClassName="navi_picker_spin_way_out"
+    // Which end of the box it sits in, said by the chevron rather than read
+    // from its place among its siblings: that is what the corners it is
+    // rounded by are keyed on (see the CSS above).
+    data-way-out={atStart ? "start" : "end"}
+    // Tracked rather than left to CSS :hover, which stays on after a tap on a
+    // touch device (see the CSS above).
+    pseudoClasses={WAY_OUT_PSEUDO_CLASSES}
     // Announced as a button because that is what it is to whoever cannot see
     // the chevron — and marked unavailable rather than removed when there is
     // nothing that way, so it keeps its place.
@@ -798,6 +822,7 @@ const WayOut = ({
 );
 
 const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+const WAY_OUT_PSEUDO_CLASSES = [":hover"];
 
 // A padding written on this box would sit between its border and the chevrons,
 // which are meant to reach the corners they are rounded by — so each padding

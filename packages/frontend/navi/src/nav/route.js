@@ -273,7 +273,10 @@ export const route = (pattern, { searchParams } = {}) => {
       });
     };
     route.matchesParams = (providedParams) => {
-      const currentParams = route.params;
+      // paramsSignal (not route.params) so a component calling this during render
+      // subscribes to param changes: a navigation from /games/me/a to /games/me/b
+      // leaves matchingSignal untouched, only the params change.
+      const currentParams = route.paramsSignal.value;
       const resolvedParams = routePattern.resolveParams({
         ...currentParams,
         ...providedParams,
@@ -640,6 +643,22 @@ This prevents cross-test pollution and ensures clean state.`,
                 if (inSameFamily) {
                   matchingRouteInSameFamily = true;
                 }
+              }
+
+              // A weak param qualifies one visit: leaving the route ends it,
+              // whatever the family and whatever the default. Coming back by a
+              // url that does not carry the param comes back to a blank screen.
+              if (connection.weak) {
+                if (!parameterExtractedByMatchingRoute) {
+                  const defaultValue = connection.getDefaultValue();
+                  if (debug) {
+                    console.debug(
+                      `[route] weak param ${paramName}: route no longer matching, back to ${defaultValue}`,
+                    );
+                  }
+                  paramSignal.value = defaultValue;
+                }
+                continue;
               }
 
               // Only reset signal if:

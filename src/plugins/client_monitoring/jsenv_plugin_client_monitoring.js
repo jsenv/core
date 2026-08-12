@@ -22,7 +22,9 @@
  *     - "clients_list"    the whole registry (the dashboard renders it)
  *     - "client_log"      a single log line (a monitor appends it)
  *     - "client_activity" a single qualified activity (a monitor appends it)
- *     - "client_here"     a client just appeared/resumed (every page can toast it)
+ *     - "client_here"     a networked client just appeared/resumed (every page
+ *                         can toast it); never sent for the main client, which
+ *                         is the person reading the toast
  *     - "client_command"  pilot one client (navigate/reload its tab) from the
  *                         dashboard; the matching reporter runs it
  *   Server events are broadcast, so consumers filter what they care about.
@@ -37,7 +39,7 @@
  *
  * The monitoring script is injected into EVERY cooked page, including our own
  * dashboard and monitor pages — so opening one of those counts as a connected
- * client, and any open page gets toasted when another client appears.
+ * client, and any open page gets toasted when another networked client appears.
  *
  * Pages:
  * - /.internal/clients     → dashboard listing every client seen
@@ -370,12 +372,25 @@ export const jsenvPluginClientMonitoring = () => {
     pruneTabs(client);
     pruneClients();
 
-    if (firstEver) {
-      sendClientHere({ reason: "new", client: serializeClient(client) });
-      sendClientsList();
-    } else if (!wasOnline) {
-      // A report after a long quiet spell means the client was picked back up.
-      sendClientHere({ reason: "resumed", client: serializeClient(client) });
+    if (firstEver || !wasOnline) {
+      // The toast invites the reader to monitor the client that just appeared,
+      // so it is only worth showing for a client there is something to watch:
+      // one reaching the server over the network. The machine running the dev
+      // server is the person reading the toast — it browses over localhost, its
+      // devtools are one keystroke away and nothing is captured for it, so
+      // announcing it means interrupting someone about themselves. It happens
+      // more than one would think: the client id lives in localStorage, so the
+      // same browser gets a fresh id per origin (localhost vs 127.0.0.1 vs the
+      // LAN ip, another port) and in private windows, and each of those looks
+      // like a brand new client to the server.
+      if (!isLocalIp(client.ip)) {
+        sendClientHere({
+          // A report after a long quiet spell means the client was picked back
+          // up rather than newly seen.
+          reason: firstEver ? "new" : "resumed",
+          client: serializeClient(client),
+        });
+      }
       sendClientsList();
     }
 

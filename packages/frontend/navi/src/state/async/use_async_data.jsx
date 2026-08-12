@@ -158,6 +158,15 @@ const useActionAsyncData = (action, { loadingEffect, errorEffect }) => {
     return [staleData, true, undefined];
   }
 
+  // An action without params has nothing to run and no one to start it: this is
+  // where a route action lands when its params getter returns false. It is not a
+  // load in progress, so there is nothing to wait for — suspending here would
+  // throw a promise that never settles, and the whole <Loading> subtree would
+  // stay hidden for good, silently.
+  if (runningState !== RUNNING && action.paramsSignal.peek() === undefined) {
+    return [action.dataSignal.peek(), false, undefined];
+  }
+
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = { reason, action };
