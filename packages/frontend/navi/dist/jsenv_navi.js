@@ -1663,6 +1663,11 @@ const generateSignalId = () => {
  * @param {"string" | "number" | "boolean" | "object"} [options.type="string"] - Type for localStorage serialization/deserialization
  * @param {number} [options.step] - For number type: step size for precision. Values will be rounded to nearest multiple of step.
  * @param {Array} [options.oneOf] - Array of valid values for validation. Signal will be marked invalid if value is not in this array
+ * @param {boolean} [options.weak=false] - The param qualifies one visit, not the screen: it is written into a
+ *   url only when explicitly named (`routeParams={{ edit: id }}`), never inherited from the signal's current
+ *   value, and it goes back to the default value when the route stops matching. Use it for params like an
+ *   "edit this one" id, where every other link to the screen must lead to the plain screen.
+ *   Incompatible with `persists` (throws).
  * @param {boolean} [options.debug=false] - Enable debug logging for this signal's operations
  * @returns {import("@preact/signals").Signal} A signal that can be synchronized with a source signal and/or persisted in localStorage. The signal includes a `validity` property for validation state.
  *
@@ -1735,7 +1740,14 @@ const stateSignal = (defaultValue, options = {}) => {
     default: staticFallback,
     ignoreArrayOrder,
     autoFix,
+    weak = false,
   } = options;
+
+  if (weak && persists) {
+    throw new TypeError(
+      `stateSignal "${id}": weak and persists are contradictory — a weak param qualifies one visit, it cannot be restored from a previous session.`,
+    );
+  }
 
   // Check if defaultValue is a signal (dynamic default) or static value
   const isDynamicDefault =
@@ -2100,6 +2112,23 @@ setBaseUrl(
 );
 
 /**
+ * The single place where "this param was not provided, take the signal value"
+ * happens while building a url. A weak param qualifies one visit, not the
+ * screen: it enters a url only when the caller names it (or when it is already
+ * in the url being preserved), so here it always reads as absent.
+ * Not reading the signal also keeps the built url from depending on it.
+ */
+const readSignalForUrlBuild = (connection) => {
+  if (!connection || !connection.signal) {
+    return undefined;
+  }
+  if (connection.weak) {
+    return undefined;
+  }
+  return connection.signal.value;
+};
+
+/**
  * Creates a custom route pattern matcher
  */
 const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
@@ -2173,7 +2202,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         // Parameter was explicitly provided - always respect explicit parameters
         continue;
       }
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
         resolvedParams[paramName] = signalValue;
@@ -2186,7 +2215,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         // Parameter was explicitly provided - always respect explicit parameters
         continue;
       }
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Parameter was not provided, check signal value
         resolvedParams[paramName] = signalValue;
@@ -2229,7 +2258,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           continue;
         }
 
-        const ancestorSignalValue = ancestorConnection.signal.value;
+        const ancestorSignalValue = readSignalForUrlBuild(ancestorConnection);
         if (
           ancestorSignalValue !== undefined &&
           ancestorSignalValue !== ancestorConnection.getDefaultValue()
@@ -2307,7 +2336,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           if (childParam in resolvedParams) {
             continue;
           }
-          const childSignalValue = childConnection.signal.value;
+          const childSignalValue = readSignalForUrlBuild(childConnection);
           // Only include if not already resolved and is non-default
           if (
             childSignalValue !== undefined &&
@@ -2349,7 +2378,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
       } else {
         // Parameter not provided but signal has a value
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (connection.isCustomValue(signalValue)) {
           // Only include custom values
           filtered[paramName] = signalValue;
@@ -2368,7 +2397,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
       } else {
         // Parameter not provided but signal has a value
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (connection.isCustomValue(signalValue)) {
           // Only include custom values
           filtered[paramName] = signalValue;
@@ -2385,7 +2414,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   const canReachLiteralValue = (literalValue, params, literalPosition) => {
     // Check parent's own parameters (signals and user params)
     const parentCanProvide = connections.some((conn) => {
-      const signalValue = conn.signal.value;
+      const signalValue = readSignalForUrlBuild(conn);
       const userValue = params[conn.paramName];
       const effectiveValue = userValue !== undefined ? userValue : signalValue;
       return (
@@ -2414,7 +2443,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       return false;
     }
     return connsAtPosition.some((conn) => {
-      const signalValue = conn.signal.value;
+      const signalValue = readSignalForUrlBuild(conn);
       return signalValue === literalValue && conn.isCustomValue(signalValue);
     });
   };
@@ -2469,7 +2498,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
               pathConnectionMap.get(paramName) ||
               queryConnectionMap.get(paramName);
             if (parentConnection) {
-              parentParamValue = parentConnection.signal.value;
+              parentParamValue = readSignalForUrlBuild(parentConnection);
             }
           }
 
@@ -2554,7 +2583,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       paramValue = item.userValue;
     } else {
       paramName = item.paramName;
-      paramValue = item.signal.value;
+      paramValue = readSignalForUrlBuild(item);
       // Only include custom parent signal values (not using defaults)
       if (paramValue === undefined || !item.isCustomValue(paramValue)) {
         return { isCompatible: true, shouldInclude: false };
@@ -2661,7 +2690,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         if (!siblingConnection) {
           continue;
         }
-        const siblingSignalValue = siblingConnection.signal.value;
+        const siblingSignalValue = readSignalForUrlBuild(siblingConnection);
         if (siblingSignalValue === undefined) {
           continue;
         }
@@ -2705,7 +2734,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         const explicitValue = params[paramName];
         const connection =
           pathConnectionMap.get(paramName) || queryConnectionMap.get(paramName);
-        const signalValue = connection ? connection.signal.value : undefined;
+        const signalValue = readSignalForUrlBuild(connection);
 
         // Check if the parameter has the required value
         if (
@@ -2759,7 +2788,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           hasActiveParams = true;
         }
       } else {
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (signalValue !== undefined) {
           // No explicit override - use signal value
           childParams[paramName] = signalValue;
@@ -2976,7 +3005,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
         // If explicitly undefined, don't include it (which means don't use child route)
       } else {
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (
           signalValue !== undefined &&
           connection.isCustomValue(signalValue)
@@ -3016,7 +3045,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           continue; // Already have this parameter
         }
 
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         // Only include custom signal values (not using defaults)
         if (
           signalValue !== undefined &&
@@ -3198,7 +3227,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           paramName,
           connection,
         ] of childPatternObj.pathConnectionMap) {
-          const signalValue = connection.signal.value;
+          const signalValue = readSignalForUrlBuild(connection);
           if (
             signalValue !== undefined &&
             connection.isCustomValue(signalValue)
@@ -3220,7 +3249,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
           paramName,
           connection,
         ] of childPatternObj.queryConnectionMap) {
-          const signalValue = connection.signal.value;
+          const signalValue = readSignalForUrlBuild(connection);
           if (
             signalValue !== undefined &&
             connection.isCustomValue(signalValue)
@@ -3840,7 +3869,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       );
       for (const conn of targetAncestor.connections) {
         console.debug(
-          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${conn.signal.value}, isCustom=${conn.isCustomValue(conn.signal.value)}`,
+          `[${pattern}] tryDirectOptimization: Target connection ${conn.paramName}: value=${readSignalForUrlBuild(conn)}, isCustom=${conn.isCustomValue(readSignalForUrlBuild(conn))}`,
         );
       }
     }
@@ -3857,7 +3886,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
       }
 
       // Only include if not already processed and has custom value (not default)
-      const signalValue = connection.signal.value;
+      const signalValue = readSignalForUrlBuild(connection);
       if (signalValue !== undefined) {
         // Don't include path parameters that correspond to literal segments we're optimizing away
         const targetParam = targetParams.find((p) => p.name === paramName);
@@ -3903,7 +3932,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
 
         // Only inherit custom values (not defaults) that we don't already have
-        const signalValue = connection.signal.value;
+        const signalValue = readSignalForUrlBuild(connection);
         if (
           signalValue !== undefined &&
           connection.isCustomValue(signalValue)
@@ -3989,7 +4018,7 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
         }
 
         // Only inherit if we don't have this param and parent has custom value (not default)
-        const parentSignalValue = parentConnection.signal.value;
+        const parentSignalValue = readSignalForUrlBuild(parentConnection);
         if (
           parentSignalValue !== undefined &&
           parentConnection.isCustomValue(parentSignalValue)
@@ -4075,7 +4104,36 @@ const createRoutePattern = (pattern, { searchParams = {} } = {}) => {
   // search params are updated. When buildMostPreciseUrl performs an ancestor
   // optimisation (e.g. "/map/isochrone/compare" → "/map/isochrone") it is trusted
   // as-is because the built pathname will differ from the route's own base pathname.
+  // Weak params are never inherited from their signal, but a url that already
+  // carries one keeps it: staying on the same screen while another param
+  // changes must not end the visit this param qualifies.
+  const carryOverWeakParams = (currentUrl, params) => {
+    let paramsWithWeak = params;
+    for (const [paramName, connection] of [
+      ...pathConnectionMap,
+      ...queryConnectionMap,
+    ]) {
+      if (!connection.weak || paramName in paramsWithWeak) {
+        continue;
+      }
+      const currentValue = connection.signal.peek();
+      if (currentValue === undefined) {
+        continue;
+      }
+      const currentParams = applyOn(currentUrl);
+      if (!currentParams || currentParams[paramName] === undefined) {
+        continue;
+      }
+      if (paramsWithWeak === params) {
+        paramsWithWeak = { ...params };
+      }
+      paramsWithWeak[paramName] = currentParams[paramName];
+    }
+    return paramsWithWeak;
+  };
+
   const buildUrlPreservingPath = (currentUrl, params = {}) => {
+    params = carryOverWeakParams(currentUrl, params);
     const relativeBuiltUrl = buildMostPreciseUrl(params);
     if (!currentUrl) {
       return resolveRouteUrl(relativeBuiltUrl);
@@ -4332,7 +4390,7 @@ const parsePattern = (pattern, { pathConnectionMap, queryConnectionMap }) => {
         if (
           connection &&
           connection.signal &&
-          connection.signal.value === undefined &&
+          readSignalForUrlBuild(connection) === undefined &&
           !hasDefault
         ) {
           isOptional = true;
@@ -5516,7 +5574,10 @@ const route = (pattern, { searchParams } = {}) => {
       });
     };
     route.matchesParams = (providedParams) => {
-      const currentParams = route.params;
+      // paramsSignal (not route.params) so a component calling this during render
+      // subscribes to param changes: a navigation from /games/me/a to /games/me/b
+      // leaves matchingSignal untouched, only the params change.
+      const currentParams = route.paramsSignal.value;
       const resolvedParams = routePattern.resolveParams({
         ...currentParams,
         ...providedParams,
@@ -5881,6 +5942,22 @@ This prevents cross-test pollution and ensures clean state.`,
                 if (inSameFamily) {
                   matchingRouteInSameFamily = true;
                 }
+              }
+
+              // A weak param qualifies one visit: leaving the route ends it,
+              // whatever the family and whatever the default. Coming back by a
+              // url that does not carry the param comes back to a blank screen.
+              if (connection.weak) {
+                if (!parameterExtractedByMatchingRoute) {
+                  const defaultValue = connection.getDefaultValue();
+                  if (debug) {
+                    console.debug(
+                      `[route] weak param ${paramName}: route no longer matching, back to ${defaultValue}`,
+                    );
+                  }
+                  paramSignal.value = defaultValue;
+                }
+                continue;
               }
 
               // Only reset signal if:
@@ -31360,6 +31437,15 @@ const useActionAsyncData = (action, {
     return [staleData, true, undefined];
   }
 
+  // An action without params has nothing to run and no one to start it: this is
+  // where a route action lands when its params getter returns false. It is not a
+  // load in progress, so there is nothing to wait for — suspending here would
+  // throw a promise that never settles, and the whole <Loading> subtree would
+  // stay hidden for good, silently.
+  if (runningState !== RUNNING && action.paramsSignal.peek() === undefined) {
+    return [action.dataSignal.peek(), false, undefined];
+  }
+
   // IDLE or RUNNING with loadingEffect: "delegate" — suspend
   const reason = runningState === RUNNING ? "loading" : "idle";
   loadingRef.current = {
@@ -33534,11 +33620,12 @@ const collectBranches = children => {
         type: "container",
         node: child
       };
+      const guardMatching = route ? route.matchingSignal.value : false;
       if (!matchingBranch) {
         if (matchingChild) {
           // Real leaf match inside — always select this container
           matchingBranch = branch;
-        } else if (route && route.matchingSignal.value) {
+        } else if (guardMatching) {
           // No leaf match but an explicit route guard matches — select this
           // container so it can render its own fallback inside its layout
           matchingBranch = branch;
@@ -33556,7 +33643,12 @@ const collectBranches = children => {
         type: "leaf",
         node: child
       };
-      if (!matchingBranch && route.matchingSignal.value && (!routeParams || route.matchesParams(routeParams))) {
+      // every signal is read even once a match is found: reading is what
+      // subscribes the container to it, and a branch that is skipped today is
+      // the one that must wake the container up tomorrow
+      const matching = route.matchingSignal.value;
+      const paramsMatching = routeParams ? route.matchesParams(routeParams) : true;
+      if (!matchingBranch && matching && paramsMatching) {
         matchingBranch = branch;
       }
     }
@@ -52047,6 +52139,10 @@ const css$p = /* css */`
        keyboard here (see navi-focus-delegate below). */
     outline-color: var(--navi-focus-outline-color);
     outline-offset: 0px;
+    /* No grey flash under a finger: what a press does is said by the chevron's
+       own background, and the browser's rectangle is drawn square over corners
+       that are round. Inherited, so the three pieces inside get it too. */
+    -webkit-tap-highlight-color: var(--navi-control-tap-highlight-color);
   }
   /* The middle holds the keyboard, and this box wears its ring: whatever is in
      there fills it, so a ring of its own would be drawn a pixel inside this
@@ -52173,7 +52269,12 @@ const css$p = /* css */`
     border-radius: 0;
     cursor: pointer;
   }
-  .navi_picker_spin > .navi_picker_spin_way_out:hover {
+  /* Said as data-hover rather than :hover: a touch browser synthesizes the
+     enter and never the leave, so a CSS :hover would stay grey under the last
+     chevron pressed until something else was touched. What tracks it (see
+     pseudo_styles.js) knows there is no hover on such a device and simply does
+     not set the attribute. */
+  .navi_picker_spin > .navi_picker_spin_way_out[data-hover] {
     background: color-mix(in srgb, currentColor 8%, transparent);
   }
   /* Nothing that way: still there, still pressable — pressing it is how one
@@ -52199,22 +52300,28 @@ const css$p = /* css */`
      of a rounded spin is rounded there too, and nowhere else — the two corners
      it does not own stay at the 0 above. Said with inherit rather than clipped
      away with overflow, which would cut the focus ring of the very button it
-     rounds. */
+     rounds.
+     Which chevron is which is asked of the chevron itself (data-way-out) rather
+     than of its place among its siblings: the loading outline is a <span> too
+     and it is written first, so :first-of-type named IT and the chevron at the
+     start went unrounded. */
   .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out:first-of-type {
+    > .navi_picker_spin_way_out[data-way-out="start"] {
     border-start-start-radius: inherit;
     border-end-start-radius: inherit;
   }
   .navi_picker_spin:not([data-vertical])
-    > .navi_picker_spin_way_out:last-of-type {
+    > .navi_picker_spin_way_out[data-way-out="end"] {
     border-start-end-radius: inherit;
     border-end-end-radius: inherit;
   }
-  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:first-of-type {
+  .navi_picker_spin[data-vertical]
+    > .navi_picker_spin_way_out[data-way-out="start"] {
     border-start-start-radius: inherit;
     border-start-end-radius: inherit;
   }
-  .navi_picker_spin[data-vertical] > .navi_picker_spin_way_out:last-of-type {
+  .navi_picker_spin[data-vertical]
+    > .navi_picker_spin_way_out[data-way-out="end"] {
     border-end-end-radius: inherit;
     border-end-start-radius: inherit;
   }
@@ -52455,6 +52562,7 @@ const Spin = ({
   const wayOut = atStart => {
     const isNext = atStart ? startIsNext : !startIsNext;
     return jsx(WayOut, {
+      atStart: atStart,
       unavailableMessage: wayOutMessage(atStart ? startAllowed : endAllowed, isNext ? "spin.nothing_after" : "spin.nothing_before"),
       label: isNext ? nextLabel ?? naviI18n("spin.next") : previousLabel ?? naviI18n("spin.previous"),
       onPress: e => {
@@ -52632,6 +52740,7 @@ const Spin = ({
 // the container's own tabIndex, or the field's), where the arrows already mean
 // this.
 const WayOut = ({
+  atStart,
   commandFor,
   unavailableMessage,
   label,
@@ -52640,6 +52749,17 @@ const WayOut = ({
 }) => jsx(Box, {
   as: "span",
   baseClassName: "navi_picker_spin_way_out"
+  // Which end of the box it sits in, said by the chevron rather than read
+  // from its place among its siblings: that is what the corners it is
+  // rounded by are keyed on (see the CSS above).
+  ,
+
+  "data-way-out": atStart ? "start" : "end"
+  // Tracked rather than left to CSS :hover, which stays on after a tap on a
+  // touch device (see the CSS above).
+  ,
+
+  pseudoClasses: WAY_OUT_PSEUDO_CLASSES
   // Announced as a button because that is what it is to whoever cannot see
   // the chevron — and marked unavailable rather than removed when there is
   // nothing that way, so it keeps its place.
@@ -52691,6 +52811,7 @@ const WayOut = ({
   })
 });
 const PICKER_SPIN_PSEUDO_CLASSES = [":hover", ":focus-visible"];
+const WAY_OUT_PSEUDO_CLASSES = [":hover"];
 
 // A padding written on this box would sit between its border and the chevrons,
 // which are meant to reach the corners they are rounded by — so each padding
