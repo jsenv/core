@@ -307,6 +307,7 @@ const css = /* css */ `
  *   step?: number,
  *   type?: string,
  *   editable?: boolean,
+ *   growsUpward?: boolean,
  *   fallbackValue?: any,
  *   valueAtStep: (value: any, count: number) => any,
  *   compareValues?: (a: any, b: any) => number,
@@ -353,7 +354,12 @@ const css = /* css */ `
  *   with an ellipsis — `maxLines={1}` keeps it on one line. Without it a value
  *   too long for the box wraps, and the box grows.
  * @param {boolean} [vertical] The same control standing up: the ways out above
- *   and below rather than left and right, and the values travelling upwards.
+ *   and below rather than left and right.
+ * @param {boolean} [growsUpward] Which end of a standing spin holds the value
+ *   one steps up to. Off by default — what one walks through comes from below,
+ *   the way the next line of a list does. On for a quantity: pressing ▲ has to
+ *   mean a bigger number. Nothing to say about a spin lying down, where the way
+ *   on is always to the right.
  * Everything a box takes is taken here too — `width`, `borderWidth`,
  * `borderRadius`, `backgroundColor`: this IS a box, and its corners are passed
  * on to the chevrons sitting in them.
@@ -370,6 +376,7 @@ export const Spin = ({
   duration = 250,
   type = "text",
   editable,
+  growsUpward,
   fallbackValue,
   valueAtStep,
   compareValues = compareValuesDefault,
@@ -520,48 +527,63 @@ export const Spin = ({
     target?.focus({ preventScroll: true });
   };
 
-  const wayOutBefore = (
-    <WayOut
-      unavailableMessage={wayOutMessage(previousAllowed, "spin.nothing_before")}
-      label={previousLabel ?? naviI18n("spin.previous")}
-      onPress={(e) => {
-        focusMiddle();
-        if (editable) {
-          setValue(valuePrevious, e);
-          return;
+  // Which end of a standing spin holds the value one steps UP to. A quantity
+  // grows upwards — pressing ▲ on a number means a bigger number, and anything
+  // else is read as a bug. What one walks through does the opposite: the day
+  // after today arrives from below, the way the next line of a list does.
+  const startIsNext = vertical && growsUpward;
+  const valueAtStart = startIsNext ? valueNext : valuePrevious;
+  const valueAtEnd = startIsNext ? valuePrevious : valueNext;
+  const startAllowed = startIsNext ? nextAllowed : previousAllowed;
+  const endAllowed = startIsNext ? previousAllowed : nextAllowed;
+
+  const wayOut = (atStart) => {
+    const isNext = atStart ? startIsNext : !startIsNext;
+    return (
+      <WayOut
+        unavailableMessage={wayOutMessage(
+          atStart ? startAllowed : endAllowed,
+          isNext ? "spin.nothing_after" : "spin.nothing_before",
+        )}
+        label={
+          isNext
+            ? (nextLabel ?? naviI18n("spin.next"))
+            : (previousLabel ?? naviI18n("spin.previous"))
         }
-        triggerNaviCommand(
-          e.currentTarget,
-          vertical ? "--navi-up" : "--navi-left",
-          e,
-        );
-      }}
-      commandFor={editable ? undefined : containerId}
-    >
-      {vertical ? <ChevronUpSvg /> : <ChevronLeftSvg />}
-    </WayOut>
-  );
-  const wayOutAfter = (
-    <WayOut
-      unavailableMessage={wayOutMessage(nextAllowed, "spin.nothing_after")}
-      label={nextLabel ?? naviI18n("spin.next")}
-      onPress={(e) => {
-        focusMiddle();
-        if (editable) {
-          setValue(valueNext, e);
-          return;
-        }
-        triggerNaviCommand(
-          e.currentTarget,
-          vertical ? "--navi-down" : "--navi-right",
-          e,
-        );
-      }}
-      commandFor={editable ? undefined : containerId}
-    >
-      {vertical ? <ChevronDownSvg /> : <ChevronRightSvg />}
-    </WayOut>
-  );
+        onPress={(e) => {
+          focusMiddle();
+          if (editable) {
+            setValue(atStart ? valueAtStart : valueAtEnd, e);
+            return;
+          }
+          // A direction on the map, not a value: the slides are laid out from
+          // start to end (see below), so the way out at the start walks
+          // backwards through them whichever value sits there.
+          const command = atStart
+            ? vertical
+              ? "--navi-up"
+              : "--navi-left"
+            : vertical
+              ? "--navi-down"
+              : "--navi-right";
+          triggerNaviCommand(e.currentTarget, command, e);
+        }}
+        commandFor={editable ? undefined : containerId}
+      >
+        {atStart ? (
+          vertical ? (
+            <ChevronUpSvg />
+          ) : (
+            <ChevronLeftSvg />
+          )
+        ) : vertical ? (
+          <ChevronDownSvg />
+        ) : (
+          <ChevronRightSvg />
+        )}
+      </WayOut>
+    );
+  };
 
   return (
     <Box
@@ -584,7 +606,7 @@ export const Spin = ({
         color="var(--navi-loader-color)"
         inset={-2}
       />
-      {wayOutBefore}
+      {wayOut(true)}
       <div className="navi_picker_spin_middle" ref={middleRef}>
         {editable ? (
           <Input
@@ -653,10 +675,19 @@ export const Spin = ({
               loop
               onLoop={({ dx, dy, event }) => {
                 // One step, whichever axis it came from: the map is a line, so
-                // only one of the two is ever anything but zero. The event goes
-                // with it — it is what says a chevron (or an arrow key) asked
-                // for this value.
-                setValue(valueAtStep(valueShown, (dx || dy) * step), event);
+                // only one of the two is ever anything but zero. Towards the
+                // end of the line is a step forward, unless the line was laid
+                // out the other way round (startIsNext). The event goes with
+                // it — it is what says a chevron (or an arrow key) asked for
+                // this value.
+                const towardsEnd = dx || dy;
+                setValue(
+                  valueAtStep(
+                    valueShown,
+                    (startIsNext ? -towardsEnd : towardsEnd) * step,
+                  ),
+                  event,
+                );
               }}
               // The whole middle opens the picker — a command, like the
               // chevrons send one, and no button of its own: the value would
@@ -676,8 +707,10 @@ export const Spin = ({
                 triggerNaviCommand(e.currentTarget, "--navi-open", e);
               }}
             >
-              <Slide area="previous" flex align="center">
-                {renderValue(valuePrevious, { maxLines })}
+              {/* Three places, not three values: "start" is the one above (or
+                  to the left), whichever value the spin puts there. */}
+              <Slide area="start" flex align="center">
+                {renderValue(valueAtStart, { maxLines })}
               </Slide>
               <Slide
                 area="current"
@@ -686,19 +719,19 @@ export const Spin = ({
                 // The values a min/max leaves out are simply not reachable: the
                 // way out is closed on the slide being left, so a key, a
                 // chevron and a command are all stopped by the same thing.
-                preventNavPrevious={!previousAllowed}
-                preventNavNext={!nextAllowed}
+                preventNavPrevious={!startAllowed}
+                preventNavNext={!endAllowed}
               >
                 {renderValue(valueShown, { maxLines })}
               </Slide>
-              <Slide area="next" flex align="center">
-                {renderValue(valueNext, { maxLines })}
+              <Slide area="end" flex align="center">
+                {renderValue(valueAtEnd, { maxLines })}
               </Slide>
             </SlideContainer>
           </>
         )}
       </div>
-      {wayOutAfter}
+      {wayOut(false)}
     </Box>
   );
 };
@@ -799,7 +832,7 @@ const renderValueDefault = (value) => String(value ?? "");
  * A whole number one steps through and types into: the field IS the middle, so
  * the value can be typed as readily as stepped, and the two chevrons stand
  * above and below it by default — sideways they would be where the caret
- * moves.
+ * moves — with the bigger number up top.
  *
  * @type {import("preact").FunctionComponent<{
  *   value?: number|string,
@@ -818,12 +851,14 @@ export const NumberSpin = ({
   max,
   step = 1,
   vertical = true,
+  growsUpward = true,
   controlProps,
   ...rest
 }) => (
   <Spin
     type="navi_number"
     editable
+    growsUpward={growsUpward}
     min={min}
     max={max}
     step={step}
