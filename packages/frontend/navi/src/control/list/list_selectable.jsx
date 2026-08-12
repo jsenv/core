@@ -82,7 +82,7 @@ const css = /* css */ `
 
   .navi_list_container[navi-selectable] {
     .navi_list_fallback,
-    .navi_list_no_match_fallback {
+    .navi_list_search_fallback {
       --list-item-padding-x-default: inherit;
       --list-item-padding-y-default: inherit;
     }
@@ -229,13 +229,7 @@ const ListSelectable = (props) => {
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
-  const {
-    ref,
-    multiple,
-    selectedIndicator = "backgroundColor",
-    focusGroupDirection,
-    focusGroupWrap,
-  } = props;
+  const { ref, multiple, focusGroupDirection, focusGroupWrap } = props;
   // What the list holds, which is not the same as what its rows say. A list
   // draws the rows it needs and no more: the selected one may be scrolled out
   // of the window, or filtered out of the view. Aggregating over the rows that
@@ -296,8 +290,8 @@ const ListSelectable = (props) => {
   // <input navi-list>) navigates from. Defaults to the first selected item,
   // else the first navigable item. Updated when:
   //   - an item's real input gains focus (via Tab, click, etc.)
-  //   - the controller dispatches navi_request_list_nav
-  // The current id is announced via navi_list_current_change (bubbling) so a
+  //   - the controller dispatches navi_request_nav
+  // The current id is announced via navi_current_change (bubbling) so a
   // connected input can update its aria-controls / aria-activedescendant.
   const currentIdRef = useRef(null);
   const setCurrentId = (id, event) => {
@@ -366,9 +360,6 @@ const ListSelectable = (props) => {
   const listVnode = (
     <Next
       navi-selectable=""
-      navi-has-selected-background={
-        selectedIndicator === "backgroundColor" ? "" : undefined
-      }
       {...listControlRootProps}
       {...listControlProps}
       // "loading" is a control prop, so useControlgroupProps consumes it (into
@@ -379,7 +370,6 @@ const ListSelectable = (props) => {
       name={undefined}
       value={undefined}
       defaultValue={undefined}
-      selectedIndicator={undefined}
       selectable={undefined}
       multiple={undefined}
       focusGroupDirection={undefined}
@@ -558,8 +548,6 @@ const ListItemSelectable = (props) => {
     });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
-  // const disabled = basePseudoState[":disabled"];
-  // const loading = basePseudoState[":-navi-loading"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -618,8 +606,6 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":-navi-loading",
   ":-navi-pointed",
   ":-navi-selected",
-  ":disabled",
-  ":read-only",
 ];
 const SelectableRealInput = (props) => {
   // here for some reason we can't use <Input, so instead we use <Box
@@ -633,7 +619,6 @@ const SelectableRealInput = (props) => {
       navi-visually-hidden=""
       navi-selectable-real-input=""
       data-callout-arrow-x="center"
-      // navi-debug
     />
   );
 };

@@ -42,7 +42,6 @@ const PendingScrollRefContext = createContext(null);
 //   "remove"              — remove from DOM (default)
 //   "invisible_and_inert" — keep in DOM, invisible and non-interactive (preserves layout, no content visible)
 //   "muted"               — keep in DOM, visible but opacified and still interactive
-//   "below"               — keep in DOM, fully visible, pushed below matching items via CSS order
 const SearchNoMatchModeContext = createContext("remove");
 
 // When total rendered items exceeds renderBudget, a render window [start, end)
@@ -235,7 +234,6 @@ const css = /* css */ `
       position: absolute;
       inset: unset;
       display: none;
-      min-width: var(--list-anchor-width, 0px);
       max-width: 95vw;
       margin: 0;
       padding: 0;
@@ -245,11 +243,6 @@ const css = /* css */ `
       }
       .navi_list {
         width: 100%;
-      }
-
-      &[data-anchor-hidden] {
-        opacity: 0;
-        pointer-events: none;
       }
     }
   }
@@ -394,9 +387,8 @@ const css = /* css */ `
     height: var(--size-to-fill, 0px);
     flex-shrink: 0; /* prevent eventual flex parent from shrinking fillers */
     list-style: none;
-    /* background: pink; */
   }
-  &[data-horizontal] {
+  .navi_list_container[data-horizontal] {
     --list-max-height: none;
 
     .navi_list_virtual_filler {
@@ -490,9 +482,6 @@ const css = /* css */ `
      A skeleton row reuses <Text loading> for the shimmer bar; the loader row
      centers a spinner; a custom loadingFallback is only given a row to live in,
      its own markup does the layout. */
-  .navi_list_item_skeleton {
-    /* pointer-events: none; */
-  }
   .navi_list_loader {
     display: flex;
     padding: 12px;
@@ -762,7 +751,8 @@ const ListUI = (props) => {
     searchFallback !== undefined && !searchFallback;
   // No item is visible when the list is empty (filtering may happen outside the
   // list, dropping itemCount to 0) or when a search removed them all — only the
-  // "remove" mode empties the view; "muted"/"below"/… keep items on screen.
+  // "remove" mode empties the view; "muted"/"invisible_and_inert" keep items on
+  // screen.
   const noVisibleItems =
     itemCount === 0 || (allNoMatch && searchNoMatchMode === "remove");
   // Which fallback message actually renders (mirrors SearchFallback / Fallback
@@ -861,7 +851,6 @@ const ListUI = (props) => {
       expandX={expandX}
       expandY={expandY}
       expand={expand}
-      navi-zero-match={allNoMatch ? "" : undefined}
       navi-nothing-to-display={nothingToDisplay ? "" : undefined}
       navi-loading={loading ? "" : undefined}
       navi-error={error ? "" : undefined}
@@ -887,8 +876,9 @@ const ListUI = (props) => {
       <ListContent
         role={role}
         fallback={fallback}
+        fallbackShown={emptyFallbackShown}
         searchFallback={searchFallback}
-        searching={searching}
+        searchFallbackShown={searchFallbackShown}
         loading={loading}
         error={error}
         searchNoMatchMode={searchNoMatchMode}
@@ -927,8 +917,11 @@ const ListFirstResolver = (props) => {
  *   action?: (value: any) => void,
  *   uiAction?: (value: any) => void,
  *   popover?: boolean,
+ *   role?: string,
  *   renderBudget?: number | string,
+ *   renderBudgetSkipCheck?: boolean,
  *   virtualItemSize?: number,
+ *   onListVisibleItemsChange?: (visibleItems: any[]) => void,
  *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
@@ -936,13 +929,14 @@ const ListFirstResolver = (props) => {
  *   fallback?: import("preact").ComponentChildren,
  *   searchFallback?: import("preact").ComponentChildren,
  *   searchText?: string,
- *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted" | "below",
+ *   searchNoMatchMode?: "remove" | "invisible_and_inert" | "muted",
  *   loading?: boolean,
  *   loadingFallback?: "skeleton" | "loader" | import("preact").ComponentChildren,
  *   loadingSkeletonCount?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   error?: boolean | import("preact").ComponentChildren,
  *   separator?: boolean | import("preact").ComponentChildren,
+ *   itemTransition?: boolean,
  *   lockSize?: boolean,
  *   horizontal?: boolean,
  *   spacing?: string,
@@ -1006,8 +1000,9 @@ export const List = createComponentResolver([
 const ListContent = ({
   role,
   fallback,
+  fallbackShown,
   searchFallback,
-  searching,
+  searchFallbackShown,
   loading,
   error,
   searchNoMatchMode,
@@ -1029,8 +1024,9 @@ const ListContent = ({
       <UnorderedList
         role={role}
         fallback={fallback}
+        fallbackShown={fallbackShown}
         searchFallback={searchFallback}
-        searching={searching}
+        searchFallbackShown={searchFallbackShown}
         loading={loading}
         error={error}
         searchNoMatchMode={searchNoMatchMode}
@@ -1484,6 +1480,7 @@ const useListScrollSync = ({
     // -> scroll to the top
     scrollToItem(visibleItems[0], {
       event: new CustomEvent("navi_list_top_match_change"),
+      reason: "top match changed",
     });
     return undefined;
   });
@@ -1835,7 +1832,6 @@ const useListScrollSync = ({
       if (total <= renderBudget) {
         return;
       }
-      let reason = "";
       const scrollInfo = getScrollInfo({
         scrollValues: {
           left: scrollerEl.scrollLeft,
@@ -1851,9 +1847,7 @@ const useListScrollSync = ({
       if (!scrollInfo) {
         return;
       }
-      const { index, reason: hitReason } = scrollInfo;
-      virtual.visibleIndex = index;
-      reason = hitReason;
+      const { index, reason } = scrollInfo;
       // Recentering on every row crossed would rebuild the whole window a few
       // times a second, and a window rebuilt is every row of it rendered
       // again. It only moves once what is on screen comes near one of its
@@ -2289,8 +2283,9 @@ const UnorderedList = ({
   renderWindow,
   virtual,
   fallback,
+  fallbackShown,
   searchFallback,
-  searching,
+  searchFallbackShown,
   loading,
   error,
   searchNoMatchMode,
@@ -2316,22 +2311,10 @@ const UnorderedList = ({
       spacing={spacing}
       baseClassName="navi_list"
     >
-      {!suppressFallback && (
-        <SearchFallback
-          searchFallback={searchFallback}
-          searching={searching}
-          tracker={tracker}
-          virtual={virtual}
-        />
+      {!suppressFallback && searchFallbackShown && (
+        <SearchFallback searchFallback={searchFallback} />
       )}
-      {!suppressFallback && (
-        <Fallback
-          fallback={fallback}
-          searching={searching}
-          tracker={tracker}
-          virtual={virtual}
-        />
-      )}
+      {!suppressFallback && fallbackShown && <Fallback fallback={fallback} />}
       <SearchNoMatchModeContext.Provider value={searchNoMatchMode}>
         <RenderWindowContext.Provider value={renderWindow}>
           <SeparatorContext.Provider value={separator ?? null}>
@@ -2353,60 +2336,34 @@ const UnorderedList = ({
   );
 };
 
-// The "no match" message. Shown when a search left nothing to display: either
-// every matchable item has match=false (in-list filtering), or the list is empty
-// during an active search (filtering done outside the list, so itemCount is 0).
-const SearchFallback = ({ tracker, virtual, searchFallback, searching }) => {
-  // eslint-disable-next-line no-unused-expressions
-  virtual.pagesSignal.value;
-  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
-  const noMatchCount = tracker.noMatchCountSignal.value;
-  const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
-  const showMatchFallback = allNoMatch || (searching && itemCount === 0);
-
+// The "no match" message. Whether it shows is decided by ListUI (see its
+// searchFallbackShown): a search left nothing to display, and the caller did
+// not disable it.
+const SearchFallback = ({ searchFallback }) => {
   if (searchFallback === undefined) {
     searchFallback = naviI18n("list.no_match");
-  }
-  if (!searchFallback) {
-    // explicitely disabled by user (<List searchFallback={false|null|''}>)
-    return null;
-  }
-  if (!showMatchFallback) {
-    return null;
   }
   return (
     <ListItem
       role="presentation"
       className="navi_list_item navi_list_search_fallback"
-      hidden={!showMatchFallback}
       navi-default={typeof searchFallback === "string" ? "" : undefined}
     >
       {searchFallback}
     </ListItem>
   );
 };
-// The "empty list" message. Not shown during a search — an empty search result
-// is a "no match" state (SearchFallback), not an empty-list state.
-const Fallback = ({ tracker, virtual, fallback, searching }) => {
-  // eslint-disable-next-line no-unused-expressions
-  virtual.pagesSignal.value;
-  const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
-  const showFallback = itemCount === 0 && !searching;
+// The "empty list" message. Whether it shows is decided by ListUI (see its
+// emptyFallbackShown) — not during a search: an empty search result is a
+// "no match" state (SearchFallback), not an empty-list state.
+const Fallback = ({ fallback }) => {
   if (fallback === undefined) {
     fallback = naviI18n("list.empty");
-  }
-  if (!fallback) {
-    // explicitely disabled by user (<List fallback={false|null|''}>)
-    return null;
-  }
-  if (!showFallback) {
-    return null;
   }
   return (
     <ListItem
       role="presentation"
       className="navi_list_item navi_list_fallback"
-      hidden={!showFallback}
       navi-default={typeof fallback === "string" ? "" : undefined}
     >
       {fallback}
@@ -2609,7 +2566,7 @@ const ListItemUI = (props) => {
     return (
       <>
         {cloneElement(resolveSeparatorVnode(separator, props.index - 1), {
-          style: HIDDEN_SEPARATOR_STYLE,
+          style: VISIBILITY_HIDDEN_STYLE,
         })}
         <ListItemReal {...props} />
       </>
@@ -2760,8 +2717,6 @@ const ListItemReal = (props) => {
       as="li"
       baseClassName="navi_list_item"
       styleCSSVars={LIST_ITEM_STYLE_CSS_VARS}
-      pseudoClasses={LIST_ITEM_PSEUDO_CLASSES}
-      pseudoElements={LIST_ITEM_PSEUDO_ELEMENTS}
       id={id}
       navi-list-item-real=""
       {...rest}
@@ -2879,13 +2834,7 @@ const LIST_ITEM_STYLE_CSS_VARS = {
     color: "--list-item-color-disabled",
     backgroundColor: "--list-item-background-color-disabled",
   },
-  "::highlight": {
-    color: "--suggestion-color-highlight",
-    backgroundColor: "--suggestion-background-color-highlight",
-  },
 };
-const LIST_ITEM_PSEUDO_CLASSES = [];
-const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
 
 /**
  * ListItem — one row of a list.
@@ -2894,53 +2843,84 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  * declared; drawn by a <List.Items>, the run gives it its place and its id.
  * Either way the row registers itself with the list, which is what makes what
  * it says about itself (its value, whether it is selected) the one description
- * of it.
+ * of it. Props not listed here are forwarded to the rendered <li> (Box layout
+ * props included).
  *
- * Props:
- *   id        — HTML element id AND the stable identifier used by external commands
- *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
- *               Required when items need to be targeted programmatically from
- *               outside the list. Auto-generated internally if omitted.
- *   selectable — when true, the item participates in selection (radio or checkbox
- *               depending on whether the parent List has `multiple`). Requires
- *               `value` and typically a <SelectableInput /> child.
- *   skeleton  — render a non-interactive placeholder row (a shimmering bar)
- *               instead of a real item. This is what a `renderSkeleton` returns
- *               for a row on its way; Box layout props (padding…) pass through
- *               so the placeholder can match the real items' metrics.
- *   value     — the JS value emitted by the list's action/uiAction when this item
- *               is selected. Can be any type (string, number, object…).
- *   selected  — controlled selected state. Pass `selected === value` (single) or
- *               `selected.includes(value)` (multiple) from parent state.
- *   error     — what this row stood for failed: the message replaces its
- *               content, styled like the list's own error. `true` shows a
- *               generic sentence.
- *   loading   — the row is waiting on something: it draws a loading outline and,
- *               like readOnly, stops taking clicks. Works on any item, not only
- *               a selectable one — a list is edited row by row. Pass "adding" or
- *               "removing" rather than true to say WHAT it is waiting for, which
- *               is what a press on it then answers.
- *   readOnly  — the row cannot be acted on: dimmed and click-through-proof,
- *               buttons inside it included.
- *   filtered  — when true, item is excluded from visible count and removed from DOM entirely
- *   hidden    — when true, item is excluded from visible count (no virtual scroll height)
- *               but stays in DOM with the native HTML hidden attribute
- *   matchInfo — participation in a matching system (search, filter…): the
- *               object useSearchText's getItemMatchInfo(item) returns
- *               (or any object shaped the same way):
- *                 <ListItem matchInfo={getItemMatchInfo(item)} />
- *               There is no standalone match/matchScore/highlight prop —
- *               matchInfo is the only way to wire this up:
- *                 match       — false is interpreted per the List's own
- *                               searchNoMatchMode ("remove" -> filtered,
- *                               "invisible_and_inert" -> hidden,
- *                               "muted" -> muted).
- *                 matchScore  — this row's search relevance score (higher =
- *                               more relevant). Only read for search-driven
- *                               scroll-to-top-match behavior.
- *                 matchRanges — array of [start, end] ranges to highlight via
- *                               CSS Highlight API.
- *   ...rest   — forwarded to the rendered <li> element
+ * @type {import("preact").FunctionComponent<{
+ *   id?: string,
+ *   selectable?: boolean,
+ *   value?: any,
+ *   selected?: boolean,
+ *   defaultSelected?: boolean,
+ *   pointed?: boolean,
+ *   selectableArea?: "all" | "manual",
+ *   skeleton?: boolean,
+ *   error?: boolean | import("preact").ComponentChildren,
+ *   onErrorDismiss?: (event: Event) => void,
+ *   loading?: boolean | "adding" | "removing",
+ *   readOnly?: boolean,
+ *   filtered?: boolean,
+ *   hidden?: boolean,
+ *   matchInfo?: {match: boolean, matchScore?: number, matchRanges?: Array<[number, number]>},
+ *   children?: import("preact").ComponentChildren,
+ *   [key: string]: any,
+ * }>}
+ * @param {string} [props.id]
+ *   HTML element id AND the stable identifier used by external commands
+ *   (--navi-select, --navi-unselect, --navi-scroll, --navi-update). Required
+ *   when items need to be targeted programmatically from outside the list;
+ *   auto-generated if omitted.
+ * @param {boolean} [props.selectable]
+ *   The item participates in selection (radio or checkbox depending on whether
+ *   the parent List has `multiple`). Requires `value` and typically a
+ *   <SelectableInput /> child.
+ * @param {any} [props.value]
+ *   The JS value emitted by the list's action/uiAction when this item is
+ *   selected. Can be any type (string, number, object…).
+ * @param {boolean} [props.selected]
+ *   Controlled selected state. Pass `selected === value` (single) or
+ *   `selected.includes(value)` (multiple) from parent state. `defaultSelected`
+ *   is the uncontrolled form.
+ * @param {boolean} [props.pointed]
+ *   Controlled "pointed" state (the :-navi-pointed pseudo state): the row a
+ *   connected control designates without selecting it.
+ * @param {"all"|"manual"} [props.selectableArea="all"]
+ *   "all" makes the whole row the click target for selection; "manual" leaves
+ *   that to the row's own content (its <SelectableInput />).
+ * @param {boolean} [props.skeleton]
+ *   Render a non-interactive placeholder row (a shimmering bar) instead of a
+ *   real item. This is what a `renderSkeleton` returns for a row on its way;
+ *   Box layout props (padding…) pass through so the placeholder can match the
+ *   real items' metrics.
+ * @param {boolean|import("preact").ComponentChildren} [props.error]
+ *   What this row stood for failed: the message replaces its content, styled
+ *   like the list's own error. `true` shows a generic sentence. When
+ *   `onErrorDismiss` is given, a dismiss button is drawn next to the message
+ *   and calls it.
+ * @param {boolean|"adding"|"removing"} [props.loading]
+ *   The row is waiting on something: it draws a loading outline and, like
+ *   readOnly, stops taking clicks. Works on any item, not only a selectable
+ *   one — a list is edited row by row. Pass "adding" or "removing" rather than
+ *   true to say WHAT it is waiting for, which is what a press on it then
+ *   answers.
+ * @param {boolean} [props.readOnly]
+ *   The row cannot be acted on: dimmed and click-through-proof, buttons inside
+ *   it included.
+ * @param {boolean} [props.filtered]
+ *   Excluded from the visible count and removed from the DOM entirely.
+ * @param {boolean} [props.hidden]
+ *   Excluded from the visible count (no virtual scroll height) but kept in the
+ *   DOM, invisible and inert — layout is preserved.
+ * @param {{match: boolean, matchScore?: number, matchRanges?: Array<[number, number]>}} [props.matchInfo]
+ *   Participation in a matching system (search, filter…): the object
+ *   useSearchText's getItemMatchInfo(item) returns, or any object shaped the
+ *   same way. There is no standalone match/matchScore/highlight prop —
+ *   matchInfo is the only way to wire this up. `match: false` is interpreted
+ *   per the List's own searchNoMatchMode ("remove" -> filtered,
+ *   "invisible_and_inert" -> hidden, "muted" -> muted). `matchScore` is the
+ *   row's search relevance (higher = more relevant), only read for the
+ *   search-driven scroll-to-top-match behavior. `matchRanges` are [start, end]
+ *   ranges highlighted via the CSS Highlight API.
  */
 export const ListItem = createComponentResolver([
   ListItemFirstResolver,
@@ -2994,11 +2974,6 @@ const createListVirtual = () => {
     horizontal: false,
     virtualItemSizeSignal: null,
     renderSkeleton: undefined,
-    // The row at the top of what is on screen, as the scroll last saw it.
-    // What a run needs it for: to put a sentence about missing rows where it
-    // will be read, rather than at the top of a range that may be well above
-    // the fold.
-    visibleIndex: 0,
     openPass: (renderBudget, scrolled) => {
       virtual.renderBudget = renderBudget;
       virtual.scrolled = scrolled;
@@ -3036,8 +3011,7 @@ const createListVirtual = () => {
   return virtual;
 };
 
-const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
-const HIDDEN_SEPARATOR_STYLE = { visibility: "hidden" };
+const VISIBILITY_HIDDEN_STYLE = { visibility: "hidden" };
 
 /**
  * List.Items — a run of rows given as data rather than as one component each.
@@ -3057,7 +3031,9 @@ const HIDDEN_SEPARATOR_STYLE = { visibility: "hidden" };
  * `before`/`after`/`around` (the id of a row to count from, for a source
  * paginating by cursor). Answer with the rows (an array — that is all of
  * them), or with a page the way a Content-Range does: `{ items, start, count }`
- * — these rows, at this place, out of that many. May be async.
+ * — these rows, at this place, out of that many. May be async. The range also
+ * carries a `signal`, aborted when the list stops wanting those rows (the
+ * window has moved on) — pass it to fetch to call the request off.
  *
  * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
  * What it gives back is kept, so a collection that changes as a whole (a search
@@ -3075,7 +3051,7 @@ const HIDDEN_SEPARATOR_STYLE = { visibility: "hidden" };
  *
  * @type {import("preact").FunctionComponent<{
  *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
- *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number}) => any,
+ *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number, signal: AbortSignal}) => any,
  *   count?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
@@ -3105,7 +3081,7 @@ const HIDDEN_SEPARATOR_STYLE = { visibility: "hidden" };
  *   What to draw for a row the run does not hold. Defaults to List's own
  *   `renderSkeleton`, then to a bare `<List.Item skeleton>`; `false` leaves the
  *   row empty (its room is still held, or the list would jump as it loads).
- * @param {(failure: object) => any} [props.renderError]
+ * @param {(failure: {error: any, retry: () => void, start: number, end: number}) => any} [props.renderError]
  *   What to draw where rows were asked for and never came: given the `error`,
  *   a `retry` to call, and the `start`/`end` of the range that failed. Defaults
  *   to an inline message with a retry button, drawn on the row the user is
@@ -3281,7 +3257,7 @@ export const ListItems = ({
     );
     group = null;
   };
-  const pushRow = (rowKey, rowNode, item, rowIndex) => {
+  const pushRow = (rowNode, item, rowIndex) => {
     const groupKey =
       groupBy && item !== undefined ? groupBy(item, rowIndex) : undefined;
     if (groupKey === undefined) {
@@ -3352,7 +3328,7 @@ export const ListItems = ({
     } else if (renderRowSkeleton === false) {
       // The row must still take its room: without it the rows below would
       // climb up and slide back down as the answer arrives.
-      rowVnode = <ListItem skeleton style={SKELETON_HIDDEN_STYLE} />;
+      rowVnode = <ListItem skeleton style={VISIBILITY_HIDDEN_STYLE} />;
     } else if (renderRowSkeleton) {
       rowVnode = renderRowSkeleton(rowIndex);
     } else {
@@ -3361,7 +3337,6 @@ export const ListItems = ({
     if (rowVnode) {
       if (separator && rowIndex > 0) {
         pushRow(
-          `${key}_separator`,
           cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
             key: `${key}_separator`,
           }),
@@ -3370,7 +3345,6 @@ export const ListItems = ({
         );
       }
       pushRow(
-        key,
         <ListRowContext.Provider
           key={key}
           value={

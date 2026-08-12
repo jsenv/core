@@ -1415,7 +1415,6 @@
           <List
             selectable
             multiple={multiple}
-            selectedIndicator="backgroundColor"
             style={customStyle}
             action={(v) => {
               setSelected(multiple ? (v ?? []) : (v ?? null));
@@ -1443,11 +1442,7 @@
           <div id="bg-color" className="demo-section">
             <h2>Background color indicator</h2>
             <p>
-              Pass <code>selectedIndicator="backgroundColor"</code> to{" "}
-              <code>SelectableList</code> to highlight selected items with a
-              background color. This is opt-in — by default no background is
-              applied so the visual indicator is entirely up to{" "}
-              <code>Selectable.Input</code>. Override{" "}
+              Selected items are highlighted with a background color. Override{" "}
               <code>--list-item-background-color-selected</code> to customize
               the color.
             </p>
@@ -1849,7 +1844,6 @@
               </div>
               <List
                 selectable
-                selectedIndicator="backgroundColor"
                 action={(value) => {
                   setSelected(value);
                 }}
@@ -1897,7 +1891,6 @@
               horizontal
               spacing="xs"
               borderWidth="0"
-              selectedIndicator="backgroundColor"
               action={(v) => {
                 setSelected(v ?? null);
               }}
@@ -1934,7 +1927,6 @@
               multiple
               spacing="xs"
               borderWidth="0"
-              selectedIndicator="backgroundColor"
               action={(v) => {
                 setSelected(v ?? []);
               }}
@@ -1970,7 +1962,6 @@
               horizontal
               spacing="xs"
               borderWidth="0"
-              selectedIndicator="backgroundColor"
               style={{ "--list-item-outline-color": "yellow" }}
               action={(v) => {
                 setSelected(v ?? null);
