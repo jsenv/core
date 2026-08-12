@@ -574,8 +574,7 @@ const css = /* css */ `
     }
     .navi_list_item_group_list {
       display: flex;
-      width: max-content;
-      min-width: 100%;
+      width: 100%;
       margin: 0;
       padding: 0;
       flex-direction: column;
@@ -1691,6 +1690,7 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
   if (!scanRange) {
     return null;
   }
+  let fallbackAnchor = null;
   for (let pos = scanRange.from + 1; pos < scanRange.to; pos += 8) {
     const x = horizontal ? pos : scanRange.crossPos;
     const y = horizontal ? scanRange.crossPos : pos;
@@ -1707,15 +1707,22 @@ const captureScrollAnchor = ({ scrollerEl, listEl, items, horizontal }) => {
       continue;
     }
     const itemRect = itemEl.getBoundingClientRect();
-    return {
-      id: item.id,
-      index: item.index,
-      offset: horizontal
-        ? itemRect.left - viewportRect.left
-        : itemRect.top - viewportRect.top,
-    };
+    const offset = horizontal
+      ? itemRect.left - viewportRect.left
+      : itemRect.top - viewportRect.top;
+    const anchor = { id: item.id, index: item.index, offset };
+    if (offset >= 0) {
+      return anchor;
+    }
+    // The row under the top of the view starts above it. Good enough to hold
+    // the list still, but as a position to hand out and come back to, the row
+    // that STARTS in the view says it better — "this row, that far below the
+    // top" reads, and can be drawn. Keep looking; this one is the fallback.
+    if (!fallbackAnchor) {
+      fallbackAnchor = anchor;
+    }
   }
-  return null;
+  return fallbackAnchor;
 };
 // The part of the list that is on screen, along the scrolling axis. Both edges
 // matter: the scroller may be larger than the list (scroller="parent") as well
@@ -2730,20 +2737,22 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  * for them — which is what makes an infinitely scrolled list nothing more than
  * a list that says how many rows it has.
  *
- * Where the rows come from, two ways:
- * - `itemsAction(range)` — the run asks for what it is about to draw and keeps
- *   what it gets. The range says the same thing three ways, so a source can
- *   read it however it paginates: `{ start, end }` (places in the collection,
- *   a negative `start` counting back from the end like `Range: items=-25` —
- *   which is what a list opening on its last rows asks for before it knows how
- *   many there are), `limit` (how many rows), and `before`/`after` (the id of
- *   the row the missing ones hang from, for a source paginating by cursor).
- *   Answer with the rows (an array), or with a page the way a Content-Range
- *   does: `{ items, start, count }` — these rows, at this place, out of that
- *   many. May be async.
- * - `items` — the caller holds them and says where they sit (`itemStart`) and
- *   how many there are in all (`count`). Rows it does not have are drawn as
- *   skeletons until it does.
+ * The rows come from `itemsAction(range)`: the run asks for what it is about to
+ * draw and keeps what it gets. The range says the same thing three ways, so a
+ * source can read it however it paginates — `{ start, end }` (places in the
+ * collection, a negative `start` counting back from the end like
+ * `Range: items=-25`, which is what a list opening on its last rows asks for
+ * before it knows how many there are), `limit` (how many rows), and
+ * `before`/`after`/`around` (the id of a row to count from, for a source
+ * paginating by cursor). Answer with the rows (an array — that is all of
+ * them), or with a page the way a Content-Range does: `{ items, start, count }`
+ * — these rows, at this place, out of that many. May be async.
+ *
+ * A collection held in memory answers synchronously: `itemsAction={() => rows}`.
+ * What it gives back is kept, so a collection that changes as a whole (a search
+ * reordering it) is a different collection: give the run a `key` that changes
+ * with it, the way one does for anything else that is not the same thing
+ * anymore.
  *
  * A row says what it is where it is drawn: `renderItem` returns a
  * `<List.Item>` carrying its own props (`selectable`, `value`, `selected`…),
@@ -2755,10 +2764,8 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *
  * @type {import("preact").FunctionComponent<{
  *   renderItem: (item: any, index: number) => import("preact").ComponentChildren,
- *   itemsAction?: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number}) => any,
- *   items?: any[],
+ *   itemsAction: (range: {start: number, end: number, limit: number, before?: string, after?: string, around?: string, count?: number}) => any,
  *   count?: number,
- *   itemStart?: number,
  *   groupBy?: (item: any, index: number) => any,
  *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
  *   pageSize?: number,
@@ -2796,9 +2803,7 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
 export const ListItems = ({
   renderItem,
   itemsAction,
-  items,
   count,
-  itemStart,
   pageSize,
   memoryBudget,
   groupBy,
@@ -2810,7 +2815,7 @@ export const ListItems = ({
   const virtual = useContext(ListVirtualContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
-  const store = useItemStore({ items, count, itemsAction, memoryBudget });
+  const store = useItemStore({ count, itemsAction, memoryBudget });
   const renderRowSkeleton =
     renderSkeleton === undefined ? virtual.renderSkeleton : renderSkeleton;
   // A row on its way takes the room the list reserves for it: anything else
@@ -2827,8 +2832,7 @@ export const ListItems = ({
 
   const runStart = virtual.take(ownerId, store.rowCount);
   const runEnd = runStart + store.rowCount;
-  const heldStart = itemStart === undefined ? runStart : itemStart;
-  const getItemAt = (index) => store.getItem(index, heldStart);
+  const getItemAt = (index) => store.getItem(index);
   const windowFrom =
     renderWindow.start > runStart ? renderWindow.start : runStart;
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
@@ -2845,7 +2849,7 @@ export const ListItems = ({
   // rows it has drawn (they register themselves, see ListItemUI).
   virtual.setRowLocator(ownerId, (id) => {
     let found = null;
-    store.eachHeld(heldStart, (item, index) => {
+    store.eachHeld((item, index) => {
       if (found === null && idOf(item, index) === id) {
         found = index;
       }
@@ -2885,8 +2889,8 @@ export const ListItems = ({
     if (holeSize < rowsPerPage) {
       // Which way the page grows: away from the rows already held, which is
       // the way the user is going.
-      const heldBelow = store.holds(missingEnd + 1, heldStart);
-      const heldAbove = store.holds(missingStart - 1, heldStart);
+      const heldBelow = store.holds(missingEnd + 1);
+      const heldAbove = store.holds(missingStart - 1);
       if (heldBelow && !heldAbove) {
         askStart = missingEnd - rowsPerPage + 1;
       } else if (heldAbove && !heldBelow) {
@@ -3098,7 +3102,7 @@ const ITEM_STORE_KEEP_AROUND = 250;
 // keeps what came back — a page saying where it lands and how many rows there
 // are in all is enough to place it, so the pages need not be contiguous nor
 // arrive in order.
-const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
+const useItemStore = ({ count, itemsAction, memoryBudget }) => {
   const pagesRef = useRef(null);
   if (!pagesRef.current) {
     pagesRef.current = { byIndex: new Map(), count: undefined };
@@ -3111,16 +3115,11 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
   // range askable again (see the request memory just above).
   const [failure, setFailure] = useState(null);
 
-  const controlled = items !== undefined;
   const virtual = useContext(ListVirtualContext);
   // Before the first answer a run does not know how many rows it stands for.
   // It stands for a windowful of them: a list that is about to be filled looks
   // like rows on their way, not like an empty list.
-  const rowCount = controlled
-    ? count === undefined
-      ? items.length
-      : count
-    : (pages.count ?? count ?? virtual.renderBudget);
+  const rowCount = pages.count ?? count ?? virtual.renderBudget;
 
   const store = {
     rowCount,
@@ -3132,7 +3131,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
     forget: (windowFrom, windowTo) => {
       const budget =
         memoryBudget === undefined ? ITEM_STORE_MAX_DEFAULT : memoryBudget;
-      if (controlled || !budget || pages.byIndex.size <= budget) {
+      if (!budget || pages.byIndex.size <= budget) {
         return;
       }
       const keepFrom = windowFrom - ITEM_STORE_KEEP_AROUND;
@@ -3150,26 +3149,13 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
       request.held = -1;
       setFailure(null);
     },
-    getItem: (index, heldStart) => {
-      if (controlled) {
-        return items[index - heldStart];
-      }
-      return pages.byIndex.get(index);
-    },
-    eachHeld: (heldStart, visit) => {
-      if (controlled) {
-        let i = 0;
-        while (i < items.length) {
-          visit(items[i], heldStart + i);
-          i++;
-        }
-        return;
-      }
+    getItem: (index) => pages.byIndex.get(index),
+    eachHeld: (visit) => {
       for (const [index, item] of pages.byIndex) {
         visit(item, index);
       }
     },
-    holds: (index, heldStart) => store.getItem(index, heldStart) !== undefined,
+    holds: (index) => pages.byIndex.has(index),
     useRequestMissing: (missingStart, missingEnd, cursor) => {
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
@@ -3179,7 +3165,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
       let start = missingStart;
       let end = missingEnd;
       let around;
-      if (!controlled && pages.count === undefined) {
+      if (pages.count === undefined) {
         const startAt = virtual.startAt;
         if (startAt === "end") {
           // Counting back from the end, the way an HTTP range does: a list
@@ -3209,7 +3195,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
         if (request.busy) {
           return;
         }
-        const held = controlled ? items.length : pages.byIndex.size;
+        const held = pages.byIndex.size;
         // Asking again for a range that was already asked for, having received
         // nothing since, can only produce the same answer.
         if (
@@ -3229,11 +3215,8 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
           limit: end - start + 1,
           before: cursor.before,
           after: cursor.after,
-          count: controlled ? count : pages.count,
+          count: pages.count,
         };
-        if (!itemsAction) {
-          return;
-        }
         request.busy = true;
         const done = (page) => {
           request.busy = false;

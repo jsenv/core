@@ -365,7 +365,8 @@
                 separator
               >
                 <List.Items
-                  items={orderedItems}
+                  key={searchText}
+                  itemsAction={() => orderedItems}
                   renderItem={(item, index) => (
                     <ListItem
                       value={item}

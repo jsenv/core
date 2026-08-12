@@ -50,25 +50,51 @@
         gap: 4px;
         background: #f2f4f7;
       }
-      /* La ligne posée à l'offset sauvegardé, devant la liste. */
+      /* Le jour, en travers du fil: une ligne de chaque côté et la date au
+         milieu. Opaque parce qu'elle est collante — les messages passent
+         dessous. */
+      .day-thread .navi_list_item_group .navi_list_item_group_label {
+        display: flex;
+        padding: 10px 12px 6px;
+        align-items: center;
+        gap: 10px;
+        color: #8a8f98;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #fff;
+      }
+      .day-thread .navi_list_item_group .navi_list_item_group_label::before,
+      .day-thread .navi_list_item_group .navi_list_item_group_label::after {
+        flex: 1;
+        border-top: 1px solid #e2e5ea;
+        content: "";
+      }
+
+      /* La ligne posée à l'offset mémorisé, par-dessus la liste: le haut du
+         message repris doit venir s'y coller. */
       .ruler-frame {
         position: relative;
-        /* De la place au-dessus de la liste: le haut du message repris est
-           souvent juste au-dessus du pli, donc la ligne qui le marque tombe
-           en dehors du cadre. */
-        padding-top: 90px;
       }
       .ruler {
         position: absolute;
-        right: 0;
-        left: 0;
+        right: 1px;
+        left: 1px;
         z-index: 2;
         height: 0;
         border-top: 2px dashed #d33;
         pointer-events: none;
       }
-      /* Le message dont la position est mémorisée: son haut doit venir se
-         poser sur la ligne rouge. */
+      .ruler::after {
+        position: absolute;
+        top: 2px;
+        right: 0;
+        padding: 1px 4px;
+        color: #fff;
+        font-size: 0.65rem;
+        background: #d33;
+        content: attr(data-label);
+      }
       .navi_list_item[data-marked] {
         box-shadow: inset 0 2px 0 #d33;
       }
@@ -244,7 +270,9 @@
             title="On arrive sur le dernier message"
             caption='startAt="end"'
           >
-            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
             <List
               key={key}
               maxHeight="220px"
@@ -271,9 +299,12 @@
             title="Groupés par jour"
             caption="groupBy + renderGroupLabel"
           >
-            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
             <List
               key={key}
+              className="day-thread"
               maxHeight="220px"
               expandX
               renderBudget={30}
@@ -336,7 +367,8 @@
               {saved && (
                 <div
                   className="ruler"
-                  style={{ top: `${90 + saved.offset}px` }}
+                  data-label={`${saved.id} @${Math.round(saved.offset)}px`}
+                  style={{ top: `${1 + saved.offset}px` }}
                 ></div>
               )}
               <List
@@ -359,12 +391,11 @@
                 />
               </List>
             </div>
-            {saved && (
-              <Text size="s" color="#555">
-                repris sur {saved.id}, {Math.round(saved.offset)}px sous le haut
-                de la vue
-              </Text>
-            )}
+            <Text size="s" color="#555">
+              {saved
+                ? `la liste a rouvert sur ${saved.id}: son haut doit toucher la ligne rouge`
+                : "faites défiler, puis quittez et revenez"}
+            </Text>
           </Section>
         );
       };
@@ -480,7 +511,9 @@
             title="Chaque page, à la main"
             caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
           >
-            <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
             <FakeBackend value={`${serverMessages.length} messages`}>
               {({ action }) => (
                 <List
