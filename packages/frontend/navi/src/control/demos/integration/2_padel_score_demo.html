@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Score de padel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 620px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.25rem;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .intro {
+        margin: 0 0 20px;
+        color: #555;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      /* Une feuille de match: une colonne par set, une ligne par équipe. Les
+         cases sont écrites set par set (l'entête, puis les deux équipes), ce
+         qui est aussi l'ordre dans lequel on les remplit — la grille les range
+         en colonnes sans que le DOM ait à suivre l'ordre visuel des lignes. */
+      .scoreboard {
+        display: grid;
+        width: fit-content;
+        grid-auto-flow: column;
+        grid-template-rows: auto auto auto;
+        align-items: center;
+        gap: 6px 10px;
+      }
+      .scoreboard_team {
+        padding-right: 6px;
+        font-weight: 600;
+      }
+      .scoreboard_set {
+        color: #777;
+        font-size: 12px;
+        text-align: center;
+      }
+      .result {
+        margin: 16px 0 0;
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <h1>Score de padel</h1>
+      <p class="intro">
+        Un chiffre par case: la saisie passe à la case suivante toute seule, les
+        flèches ↑↓ montent et descendent le jeu, ←→ vont d'une case à l'autre.
+        Une colonne de plus apparaît dès que le dernier set affiché est terminé.
+      </p>
+      <div id="app"></div>
+    </div>
+
+    <script type="module" jsenv-type="module/jsx">
+      import { Fragment, render } from "preact";
+      import { useRef, useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        Form,
+        NumberSpin,
+        useInputGroup,
+      } from "@jsenv/navi";
+
+      // Un set gagné au padel: 6 jeux avec deux d'écart, sinon 7-5, sinon le
+      // tie-break à 7-6. C'est ce qui dit qu'il y a un set de plus à jouer.
+      const SET_WON_AT = 6;
+      const TIE_BREAK_AT = 7;
+      const isSetOver = ({ us, them }) => {
+        const a = Number(us);
+        const b = Number(them);
+        if (!Number.isInteger(a) || !Number.isInteger(b)) {
+          return false;
+        }
+        const high = a > b ? a : b;
+        const low = a > b ? b : a;
+        if (high === SET_WON_AT) {
+          return low <= SET_WON_AT - 2;
+        }
+        if (high === TIE_BREAK_AT) {
+          return low === 5 || low === 6;
+        }
+        return false;
+      };
+
+      // Combien de colonnes sont à l'écran: deux, et une de plus tant que la
+      // dernière est terminée. Déduit des scores plutôt que compté à part —
+      // corriger un set qui n'en est plus un referme la colonne qu'il avait
+      // ouverte.
+      const setCountShown = (sets, maxSetCount, minSetCount) => {
+        let count = minSetCount;
+        while (count < maxSetCount && isSetOver(sets[count - 1])) {
+          count++;
+        }
+        return count;
+      };
+
+      const emptySets = (count) =>
+        Array.from({ length: count }, () => ({ us: "", them: "" }));
+
+      const PadelScore = ({
+        teamUs = "Nous",
+        teamThem = "Eux",
+        minSetCount = 2,
+        maxSetCount = 5,
+      }) => {
+        const [sets, setSets] = useState(() => emptySets(maxSetCount));
+        const boardRef = useRef(null);
+        // Ce qui fait sauter la saisie d'une case à l'autre: une case pleine
+        // (un chiffre, puisque le jeu ne va pas au-delà de 7) passe la main à
+        // la suivante, et ←→ font le tour du tableau.
+        useInputGroup(boardRef);
+
+        const countShown = setCountShown(sets, maxSetCount, minSetCount);
+        const writeGame = (setIndex, team) => (gameCount) => {
+          setSets((previous) =>
+            previous.map((set, index) =>
+              index === setIndex ? { ...set, [team]: gameCount } : set,
+            ),
+          );
+        };
+
+        return (
+          <div className="scoreboard" ref={boardRef}>
+            <div />
+            <div className="scoreboard_team">{teamUs}</div>
+            <div className="scoreboard_team">{teamThem}</div>
+            {sets.slice(0, countShown).map((set, index) => (
+              <Fragment key={index}>
+                <div className="scoreboard_set">Set {index + 1}</div>
+                <NumberSpin
+                  name={`set${index + 1}_us`}
+                  min={0}
+                  max={TIE_BREAK_AT}
+                  value={set.us}
+                  uiAction={writeGame(index, "us")}
+                  controlProps={{
+                    "aria-label": `${teamUs}, set ${index + 1}`,
+                  }}
+                  width="52px"
+                />
+                <NumberSpin
+                  name={`set${index + 1}_them`}
+                  min={0}
+                  max={TIE_BREAK_AT}
+                  value={set.them}
+                  uiAction={writeGame(index, "them")}
+                  controlProps={{
+                    "aria-label": `${teamThem}, set ${index + 1}`,
+                  }}
+                  width="52px"
+                />
+              </Fragment>
+            ))}
+          </div>
+        );
+      };
+
+      const App = () => {
+        const [scoreSent, setScoreSent] = useState(null);
+
+        return (
+          <div className="demo-section">
+            <h2>Feuille de match</h2>
+            <Form
+              action={(data) => {
+                const sets = [];
+                for (let i = 1; i <= 5; i++) {
+                  const us = data[`set${i}_us`];
+                  const them = data[`set${i}_them`];
+                  if (us !== undefined && them !== undefined) {
+                    sets.push(`${us}/${them}`);
+                  }
+                }
+                setScoreSent(sets.join(" "));
+              }}
+            >
+              <Box flex="y" alignX="start" spacing="l">
+                <PadelScore />
+                <Button type="submit">Valider</Button>
+              </Box>
+            </Form>
+            {scoreSent && <p className="result">{scoreSent}</p>}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

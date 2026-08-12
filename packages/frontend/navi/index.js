@@ -122,12 +122,17 @@ export {
 export { Field, Label } from "./src/control/field.jsx";
 export { Form } from "./src/control/form.jsx";
 export { Group } from "./src/control/group.jsx";
-export { DaySpin } from "./src/control/picker/picker_spin.jsx";
+export {
+  DaySpin,
+  NumberSpin,
+  Spin,
+} from "./src/control/picker/picker_spin.jsx";
 export { Button } from "./src/control/input/button.jsx";
 export { CheckboxGroup } from "./src/control/input/checkbox_group.jsx";
 export { Input } from "./src/control/input/input.jsx";
 export { Textarea, TextareaCharCount } from "./src/control/input/textarea.jsx";
 export { InputDuration } from "./src/control/input/input_duration.jsx";
+export { useInputGroup } from "./src/control/input/use_input_group.js";
 export { RadioGroup } from "./src/control/input/radio_group.jsx";
 export { Picker } from "./src/control/picker/picker.jsx";
 export {
