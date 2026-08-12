@@ -2,6 +2,11 @@
  * cmd+K / ctrl+K on any dev-served page: the .html files the server serves, as a
  * tree one walks, filter as you type, Enter to go there.
  *
+ * cmd+E / ctrl+E is the other half of the same question: instead of going to a
+ * page, open its file in the editor (the server does it, see
+ * GET /.internal/open_file/*). Pressed on the page itself it opens the page one
+ * is on; pressed inside the switcher it opens the row one is looking at.
+ *
  * A tree rather than a list of paths, because the paths are mostly the same
  * path: folding every directory that holds a single thing turns
  * "packages/frontend/navi/src/layout/demos/…" repeated forty times into one
@@ -25,6 +30,10 @@
 // another injected client. A function scope owes nothing to anybody.
 (() => {
   const PAGES_ENDPOINT = "/.internal/pages.json";
+  // The server asks the OS to open a file in whatever editor is configured
+  // (VSCode here) — it takes a file url, which is why the page list carries one
+  // per page (see html_pages.js).
+  const OPEN_FILE_ENDPOINT = "/.internal/open_file/";
   const STORAGE_KEY = "jsenv_page_switcher";
   // Open across a reload: this is a dev tool on a page one is editing, and a hot
   // reload in the middle of looking for the next page should not close what one
@@ -56,15 +65,20 @@
     }
   };
 
-  const isSwitcherKey = (event) => {
-    if (event.key !== "k" && event.key !== "K") {
-      return false;
-    }
-    // cmd on mac, ctrl elsewhere — the same split every editor makes.
-    return window.navigator.platform.toLowerCase().includes("mac")
+  // cmd on mac, ctrl elsewhere — the same split every editor makes.
+  const isCommandKey = (event) =>
+    window.navigator.platform.toLowerCase().includes("mac")
       ? event.metaKey && !event.ctrlKey
       : event.ctrlKey && !event.metaKey;
-  };
+
+  const isSwitcherKey = (event) =>
+    (event.key === "k" || event.key === "K") && isCommandKey(event);
+  // E for edit, next to K for the same reason the two belong together: K asks
+  // "which page", E asks "where does this page live". Outside the switcher it
+  // means the page one is on; inside it, the row one is looking at — so the
+  // same press reads the same way in both places.
+  const isEditorKey = (event) =>
+    (event.key === "e" || event.key === "E") && isCommandKey(event);
 
   const STYLE_TEXT = /* css */ `
     :host {
@@ -230,6 +244,32 @@
     }
   `;
 
+  const FLASH_STYLE_TEXT = /* css */ `
+    :host {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      /* Above the switcher's own panel: it is the switcher that triggers it. */
+      z-index: 2147483647;
+      display: block;
+      font-family: system-ui, sans-serif;
+      pointer-events: none;
+    }
+    .flash {
+      padding: 8px 14px;
+      color: light-dark(#0f172a, #e2e8f0);
+      font-size: 13px;
+      background: light-dark(white, #1e293b);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      color-scheme: light dark;
+    }
+    .flash[data-error] {
+      color: light-dark(#991b1b, #fecaca);
+      background: light-dark(#fee2e2, #7f1d1d);
+    }
+  `;
+
   let pagesPromise = null;
   const loadPages = () => {
     // Once per page load: the list is a filesystem scan behind a short cache
@@ -238,6 +278,54 @@
       .then((response) => response.json())
       .catch(() => []);
     return pagesPromise;
+  };
+
+  // Opening a file in an editor happens in another application, on another
+  // screen sometimes: without a word here, a press that failed and a press that
+  // worked look exactly the same. Its own host and its own shadow root, so it
+  // can be shown whether or not the switcher is open.
+  let flashHost = null;
+  let flashBox = null;
+  let flashTimeout = null;
+  const flash = (message, isError) => {
+    if (!flashHost) {
+      flashHost = document.createElement("div");
+      const shadow = flashHost.attachShadow({ mode: "open" });
+      const style = document.createElement("style");
+      style.textContent = FLASH_STYLE_TEXT;
+      flashBox = document.createElement("div");
+      flashBox.className = "flash";
+      shadow.append(style, flashBox);
+    }
+    flashBox.textContent = message;
+    flashBox.toggleAttribute("data-error", Boolean(isError));
+    // Appended last every time, so it sits above the switcher's host when both
+    // are on the page and they share the same z-index.
+    document.body.append(flashHost);
+    window.clearTimeout(flashTimeout);
+    flashTimeout = window.setTimeout(() => flashHost.remove(), 2500);
+  };
+
+  const openInEditor = async (file) => {
+    if (!file || !file.fileUrl) {
+      flash("This page is not a file the server lists.", true);
+      return;
+    }
+    flash(`Opening ${file.name || file.url} in editor…`);
+    try {
+      const response = await fetch(
+        `${OPEN_FILE_ENDPOINT}${encodeURIComponent(file.fileUrl)}`,
+      );
+      if (response.status === 404) {
+        // The route exists only when the server is willing to expose the
+        // machine it runs on (see start_server.js).
+        flash("This server does not open files in an editor.", true);
+      } else if (!response.ok) {
+        flash(`Editor said no (${response.status}).`, true);
+      }
+    } catch {
+      flash("Could not reach the dev server.", true);
+    }
   };
 
   const readStoredState = () => {
@@ -396,7 +484,11 @@
     panel.className = "panel";
     const input = document.createElement("input");
     input.type = "search";
-    input.placeholder = "Go to page…";
+    // The other key is written where one is already looking: a shortcut nobody
+    // is told about is a shortcut nobody presses. Both names, not the one this
+    // platform uses — the reader knows which of the two their keyboard has, and
+    // it keeps what the panel says the same everywhere.
+    input.placeholder = "Go to page…  (cmd/ctrl+E to open in editor)";
     input.setAttribute("aria-label", "Go to page");
     const kindsRow = document.createElement("div");
     kindsRow.className = "kinds";
@@ -664,6 +756,21 @@
         toggleCollapsed(row.node.path);
         return;
       }
+      if (isEditorKey(event)) {
+        // Taken whatever the row is: let go of on a directory it would reach
+        // the page below and open the page one came from, which is not what a
+        // key pressed inside an open switcher can be asking for.
+        stop();
+        const row = rows[currentIndex];
+        if (!row || row.type !== "file") {
+          return;
+        }
+        // Done with the switcher: the answer to "where does this live" arrives
+        // in the editor, not here.
+        close();
+        openInEditor(row.file);
+        return;
+      }
       if (isSwitcherKey(event)) {
         stop();
         close();
@@ -708,14 +815,30 @@
   // preventDefault, the key was theirs and nothing happens here.
   const listenSwitcherKey = () => {
     window.addEventListener("keydown", (event) => {
-      if (event.defaultPrevented || !isSwitcherKey(event)) {
+      if (event.defaultPrevented) {
         return;
       }
-      // Ours now: the browser has its own use for cmd+K (the address bar), which
-      // it must not get.
-      event.preventDefault();
-      openSwitcher();
+      if (isSwitcherKey(event)) {
+        // Ours now: the browser has its own use for cmd+K (the address bar),
+        // which it must not get.
+        event.preventDefault();
+        openSwitcher();
+        return;
+      }
+      if (isEditorKey(event)) {
+        event.preventDefault();
+        openCurrentPageInEditor();
+      }
     });
+  };
+  // The page one is looking at, in the editor. The list is where the file url
+  // comes from, so a page the server does not list (an @fs url, something under
+  // node_modules) says so rather than opening the wrong thing.
+  const openCurrentPageInEditor = async () => {
+    const here = currentPageUrl();
+    const pages = await loadPages();
+    const page = pages.find((candidate) => candidate.url === here);
+    openInEditor(page && { ...page, name: here.split("/").pop() });
   };
   const setup = () => {
     listenSwitcherKey();

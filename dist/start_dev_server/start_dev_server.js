@@ -1321,7 +1321,9 @@ const jsenvPluginClientMonitoring = () => {
 
 /*
  * cmd+K (ctrl+K elsewhere) on any page the dev server serves opens a list of
- * the .html files it serves, filter as you type, Enter to go there.
+ * the .html files it serves, filter as you type, Enter to go there. cmd+E
+ * (ctrl+E elsewhere) opens a page's file in the editor instead of going to it:
+ * the current page from anywhere, the selected row from inside the switcher.
  *
  * The list is the one the filesystem plugin already publishes for everyone
  * (GET /.internal/pages.json, see protocol_file/html_pages.js) — this only adds
@@ -3327,7 +3329,9 @@ const FILE_AND_SERVER_URLS_CONVERTER = {
  * of them, the page switcher (cmd+K) opens one in the current tab. Whoever asks
  * gets the same answer.
  *
- * Each page comes with what kind of page it is, read from where it sits and
+ * Each page comes with where its file is (so it can be opened in an editor as
+ * well as in the browser) and with what kind of page it is, read from where it
+ * sits and
  * what it is called — the two conventions this repo already follows:
  * - "experiment": something tried out, under a lab/ directory or named
  *   *_experiment.html;
@@ -3426,6 +3430,10 @@ const createHtmlPageLister = ({ rootDirectoryUrl }) => {
       );
       return {
         url: `/${relativeUrl}`,
+        // Where the file actually is, so whoever wants to open it in an editor
+        // rather than in the browser has what GET /.internal/open_file/* asks
+        // for (a file url) without having to know the root directory.
+        fileUrl,
         kind: readKind(meta),
         // Relative to the root and without its trailing slash, which is how a
         // tree names its own nodes.
@@ -4092,6 +4100,10 @@ const jsenvPluginFsRedirection = ({
           }
           const { requestedUrl, rootDirectoryUrl, mainFilePath } =
             reference.ownerUrlInfo.context;
+          if (!requestedUrl) {
+            // the SPA fallback answers a request; during build there is none
+            return null;
+          }
           const closestHtmlRootFile = getClosestHtmlRootFile(
             requestedUrl,
             rootDirectoryUrl,
@@ -4986,11 +4998,21 @@ const jsenvPluginDirectoryReferenceEffect = (
 
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
+  /**
+   * Inject `Object.assign(window, { [key]: value })` at the top of the file
+   * (into a script for html, into the module itself for js) instead of
+   * replacing a placeholder: the value is read at runtime as a global.
+   */
   global: (value) => {
     return { [injectionSymbol]: "global", value };
   },
+  /**
+   * Replace the placeholder when the file contains it, stay silent when it does not
+   * (without this a missing placeholder is reported as a warning).
+   */
   optional: (value) => {
-    if (value && value[injectionSymbol] === "optional") {
+    if (value && value[injectionSymbol]) {
+      // a global injection is not a placeholder, it can't be missing from the file
       return value;
     }
     return { [injectionSymbol]: "optional", value };
@@ -5095,17 +5117,25 @@ return {
       magicSource.replace({
         start,
         end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(value, null, "  ")
-            : value,
+        replacement: asReplacement(value, urlInfo),
       });
       index = content.indexOf(key, end);
     }
   }
   return magicSource.toContentAndSourcemap();
+};
+
+// In JS the placeholder stands for a value, so it must be substituted by a literal.
+// Everywhere else (html attributes and text, css, ...) it stands for a piece of text
+// and is substituted as-is, so it can be concatenated: href="__BACKEND_URL__/users/me"
+const asReplacement = (value, urlInfo) => {
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return JSON.stringify(value, null, "  ");
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return JSON.stringify(value, null, "  ");
 };
 
 const injectGlobals = (content, globals, urlInfo) => {
@@ -5181,18 +5211,45 @@ const jsenvPluginInjections = (rawAssociations) => {
           { injectionsGetter: rawAssociations },
           context.rootDirectoryUrl,
         );
-        getInjections = (urlInfo) => {
+        const findInjectionsGetter = (urlInfo) => {
           const { injectionsGetter } = URL_META.applyAssociations({
             url: asUrlWithoutSearch(urlInfo.url),
             associations: resolvedAssociations,
           });
-          if (!injectionsGetter) {
+          if (injectionsGetter) {
+            return { injectionsGetter, isInherited: false };
+          }
+          if (urlInfo.isInline) {
+            // content inlined into a file (a <script> inside html) is authored in that
+            // file, so injections configured for the file must reach it too
+            const found = findInjectionsGetter(
+              urlInfo.firstReference.ownerUrlInfo,
+            );
+            if (found) {
+              return {
+                injectionsGetter: found.injectionsGetter,
+                isInherited: true,
+              };
+            }
+          }
+          return null;
+        };
+        getInjections = async (urlInfo) => {
+          const found = findInjectionsGetter(urlInfo);
+          if (!found) {
             return null;
           }
+          const { injectionsGetter, isInherited } = found;
           if (typeof injectionsGetter !== "function") {
             throw new TypeError("injectionsGetter must be a function");
           }
-          return injectionsGetter(urlInfo);
+          const injections = await injectionsGetter(urlInfo);
+          if (!injections || !isInherited) {
+            return injections;
+          }
+          // the file holds several inline contents; a placeholder configured for the file
+          // is expected in one of them, not in each
+          return asOptionalInjections(injections);
         };
       }
     },
@@ -5203,13 +5260,12 @@ const jsenvPluginInjections = (rawAssociations) => {
           contentInjections: defaultInjections,
         };
       }
-      const injectionsResult = getInjections(urlInfo);
-      if (!injectionsResult) {
+      const injections = await getInjections(urlInfo);
+      if (!injections) {
         return {
           contentInjections: defaultInjections,
         };
       }
-      const injections = await injectionsResult;
       return {
         contentInjections: {
           ...defaultInjections,
@@ -5218,6 +5274,14 @@ const jsenvPluginInjections = (rawAssociations) => {
       };
     },
   };
+};
+
+const asOptionalInjections = (injections) => {
+  const optionalInjections = {};
+  for (const key of Object.keys(injections)) {
+    optionalInjections[key] = INJECTIONS.optional(injections[key]);
+  }
+  return optionalInjections;
 };
 
 const jsenvPluginInliningAsDataUrl = () => {
@@ -11434,6 +11498,7 @@ const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
  * @param {boolean} [params.ribbon=true] - The dev "ribbon" overlay.
  * @param {boolean} [params.supervisor=true] - Script supervisor (better error reporting).
  * @param {boolean|object} [params.directoryListing=true] - Directory listing pages.
+ * @param {object} [params.injections] - Values to inject into files, as `{ urlPattern: getInjections }`. Keys are url patterns relative to sourceDirectoryUrl (`"./index.html"`, `"**\/*.js"`), values are functions receiving `urlInfo` and returning (or resolving to) an object of placeholders to replace, named `__LIKE_THIS__` by convention. In JS the value is injected as a JS literal (a string brings its own quotes), everywhere else as-is so it can be concatenated: `href="__BACKEND_URL__/users/me"`. An html url pattern also covers what is inlined in that html, so `<script>window.backendUrl = __BACKEND_URL__;</script>` shares the value with every js file of the page. See `INJECTIONS.optional` and `INJECTIONS.global`.
  * @param {object} [params.runtimeCompat] - Target runtimes; warns when dev code wouldn't survive the build.
  * @param {string} [params.sourcemaps="inline"] - Sourcemap mode.
  * @param {AbortSignal} [params.signal] - Abort to stop the server.
