@@ -69,6 +69,7 @@ import {
   createJsenvPluginsController,
   createJsenvPluginStore,
 } from "../plugins/jsenv_plugins_controller.js";
+import { isBareSpecifier } from "../helpers/bare_specifier.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { renderBuildDoneLog } from "./build_content_report.js";
@@ -1488,7 +1489,10 @@ const prepareEntryPointBuild = async (
               const registerHtmlMutation = (callback) => {
                 htmlMutationCallbackSet.add(callback);
               };
-              htmlRefine(htmlAst, { registerHtmlMutation });
+              htmlRefine(htmlAst, {
+                registerHtmlMutation,
+                htmlUrlInfo: urlInfo,
+              });
               for (const htmlMutationCallback of htmlMutationCallbackSet) {
                 htmlMutationCallback();
               }
@@ -1571,21 +1575,4 @@ const prepareEntryPointBuild = async (
       };
     },
   };
-};
-
-const isBareSpecifier = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };

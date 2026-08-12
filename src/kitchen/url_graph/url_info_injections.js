@@ -25,6 +25,13 @@ export const INJECTIONS = {
   },
 };
 
+export const readInjectionValue = (injection) => {
+  if (injection && injection[injectionSymbol]) {
+    return injection.value;
+  }
+  return injection;
+};
+
 export const isPlaceholderInjection = (value) => {
   return (
     !value || !value[injectionSymbol] || value[injectionSymbol] !== "global"
@@ -98,7 +105,7 @@ export const injectPlaceholderReplacements = (
   for (const { key, isOptional, value } of placeholderReplacements) {
     let index = content.indexOf(key);
     if (index === -1) {
-      if (!isOptional) {
+      if (!isOptional && !urlInfo.contentInjectionUsedKeySet.has(key)) {
         urlInfo.context.logger.warn(
           `placeholder "${key}" not found in ${urlInfo.url}.
 --- suggestion a ---
@@ -123,7 +130,7 @@ return {
       magicSource.replace({
         start,
         end,
-        replacement: asReplacement(value, urlInfo),
+        replacement: asReplacement(value, urlInfo.type),
       });
       index = content.indexOf(key, end);
     }
@@ -134,8 +141,8 @@ return {
 // In JS the placeholder stands for a value, so it must be substituted by a literal.
 // Everywhere else (html attributes and text, css, ...) it stands for a piece of text
 // and is substituted as-is, so it can be concatenated: href="__BACKEND_URL__/users/me"
-const asReplacement = (value, urlInfo) => {
-  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+export const asReplacement = (value, type) => {
+  if (type === "js_classic" || type === "js_module") {
     return JSON.stringify(value, null, "  ");
   }
   if (typeof value === "string") {

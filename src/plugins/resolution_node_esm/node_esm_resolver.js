@@ -14,6 +14,7 @@ import {
 import { URL_META } from "@jsenv/url-meta";
 import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
+import { isBareSpecifier } from "../../helpers/bare_specifier.js";
 
 export const createNodeEsmResolver = ({
   packageDirectory,
@@ -486,21 +487,4 @@ const createResolverWithFallbackOnError = (mainResolver, fallbackResolver) => {
       return fallbackResolver(params);
     }
   };
-};
-
-const isBareSpecifier = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };

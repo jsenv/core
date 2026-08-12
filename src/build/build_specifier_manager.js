@@ -22,6 +22,7 @@ import {
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { prependContent } from "../kitchen/prepend_content.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
@@ -895,7 +896,7 @@ export const createBuildSpecifierManager = ({
 
     prepareResyncResourceHints: ({ registerHtmlRefine }) => {
       const hintToInjectMap = new Map();
-      registerHtmlRefine((htmlAst, { registerHtmlMutation }) => {
+      registerHtmlRefine((htmlAst, { registerHtmlMutation, htmlUrlInfo }) => {
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             if (getHtmlNodeAttribute(node, "jsenv-ignore") !== undefined) {
@@ -919,12 +920,39 @@ export const createBuildSpecifierManager = ({
               return;
             }
             const rawUrl = href;
+            if (targetsAFileThatDoesNotExist(rawUrl)) {
+              // this hint never designated anything, so nothing can explain its
+              // removal; taking away markup written by hand on a guess is worse
+              // than leaving it there
+              logger.warn(
+                createDetailedMessage(
+                  `${UNICODE.WARNING} resource hint kept as is: "${href}" cannot be resolved`,
+                  {
+                    "html file": htmlUrlInfo.url,
+                    ...(rawKitchen.context.hasInjections
+                      ? {
+                          suggestion: `when that url is written by an injection, jsenv resolves it in html attributes before analyzing references; check the placeholder spelling`,
+                        }
+                      : {}),
+                  },
+                ),
+              );
+              // the build url means nothing for something jsenv could not resolve,
+              // and it would leak a local path into the build
+              registerHtmlMutation(() => {
+                setHtmlNodeAttributes(node, {
+                  href: urlToRelativeUrl(rawUrl, htmlUrlInfo.url),
+                });
+              });
+              return;
+            }
             const finalUrl = internalRedirections.get(rawUrl) || rawUrl;
             const urlInfo = finalKitchen.graph.getUrlInfo(finalUrl);
             if (!urlInfo) {
-              if (rel === "preconnect" || rel === "dns-prefetch") {
-                // preconnect/dns-prefetch hints refer to origins, not specific resources in the graph.
-                // Keep them as-is — the author knows what external domains will be used at runtime.
+              if (!href.startsWith("file:")) {
+                // the hint designates a resource jsenv does not own: an origin for
+                // preconnect/dns-prefetch, a remote file for the others. The author
+                // knows what the page will request at runtime, keep it as-is.
                 return;
               }
               logger.warn(
@@ -1367,6 +1395,16 @@ const asBuildUrlVersioned = ({
   // let's move url to build directory
   const { pathname, search, hash } = new URL(buildSpecifierVersioned);
   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
+};
+
+const targetsAFileThatDoesNotExist = (url) => {
+  if (!url.startsWith("file:")) {
+    return false;
+  }
+  const urlObject = new URL(url);
+  urlObject.search = "";
+  urlObject.hash = "";
+  return !existsSync(urlObject);
 };
 
 // export for unit tests

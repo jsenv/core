@@ -17,6 +17,7 @@ const bar = __BAR__`,
   ],
   {
     type: "js_module",
+    contentInjectionUsedKeySet: new Set(),
   },
 );
 const actual = result.content;

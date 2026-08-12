@@ -6,6 +6,7 @@ import {
 import { createMagicSource } from "@jsenv/sourcemap";
 import { urlToExtension } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
+import { isBareSpecifier } from "../../../helpers/bare_specifier.js";
 
 export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
   return [
@@ -191,21 +192,4 @@ const parseAndTransformJsReferences = async (
   }
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
-};
-
-const isBareSpecifier = (specifier) => {
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    return false;
-  }
-  try {
-    // eslint-disable-next-line no-new
-    new URL(specifier);
-    return false;
-  } catch {
-    return true;
-  }
 };

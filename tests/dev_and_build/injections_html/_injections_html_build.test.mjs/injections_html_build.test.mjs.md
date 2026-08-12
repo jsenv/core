@@ -4,6 +4,8 @@
 - [backend_url_shared](0_backend_url_shared/0_backend_url_shared.md)
 - [backend_url_in_resource_hints](1_backend_url_in_resource_hints/1_backend_url_in_resource_hints.md)
 - [backend_url_per_request](2_backend_url_per_request/2_backend_url_per_request.md)
+- [resource_hint_without_jsenv_ignore](3_resource_hint_without_jsenv_ignore/3_resource_hint_without_jsenv_ignore.md)
+- [resource_hint_unresolved](4_resource_hint_unresolved/4_resource_hint_unresolved.md)
 
 ---
 

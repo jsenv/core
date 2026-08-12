@@ -87,8 +87,10 @@ export const getCorePlugins = ({
     ...(packageBundle
       ? [jsenvPluginWorkspaceBundle({ packageDirectory })]
       : []),
-    jsenvPluginReferenceAnalysis(referenceAnalysis),
+    // before reference analysis: an url written by an injection must hold its
+    // final value when references are analyzed
     jsenvPluginInjections(injections),
+    jsenvPluginReferenceAnalysis(referenceAnalysis),
     jsenvPluginTranspilation(transpilation),
     // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),

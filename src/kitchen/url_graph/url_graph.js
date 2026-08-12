@@ -214,6 +214,9 @@ const createUrlInfo = (url, context) => {
     contentFinalized: false,
     contentSideEffects: [],
     contentInjections: {},
+    // placeholders already consumed somewhere else than the content (in a specifier),
+    // so that not finding them in the content is not worth a warning
+    contentInjectionUsedKeySet: new Set(),
 
     sourcemap: null,
     sourcemapIsWrong: false,

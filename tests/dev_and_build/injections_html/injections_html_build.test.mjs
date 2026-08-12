@@ -13,6 +13,11 @@
  * pr-<n>-app.example.com talks to the api of its own pull request. The build
  * leaves the placeholder in place and the server serving the build files
  * substitutes it per request, so the same build files serve every deployment.
+ *
+ * The last two tests cover resource hints written without "jsenv-ignore": an
+ * attribute holds its injected value before references are analyzed, so the hint
+ * survives on its own. A hint jsenv cannot resolve at all is kept too, with the
+ * url as authored and a warning — a tag nobody can explain must not vanish.
  */
 
 import { build, INJECTIONS, startBuildServer } from "@jsenv/core";
@@ -118,4 +123,12 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
       injections: backendUrlInjections,
     }));
   test("backend_url_per_request", () => runPerRequest());
+  test("resource_hint_without_jsenv_ignore", () =>
+    buildClient(import.meta.resolve("./resource_hints_not_ignored/client/"), {
+      injections: backendUrlInjections,
+    }));
+  test("resource_hint_unresolved", () =>
+    buildClient(import.meta.resolve("./resource_hints_unresolved/client/"), {
+      injections: backendUrlInjections,
+    }));
 });

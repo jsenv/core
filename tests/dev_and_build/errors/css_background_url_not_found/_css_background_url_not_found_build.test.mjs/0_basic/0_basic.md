@@ -13,8 +13,8 @@ base/client/style.css:2:25
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:97:24)
-  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:139:14)
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:98:24)
+  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:140:14)
   at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:579:13)
   at async timePhase (@jsenv/core/src/kitchen/kitchen.js:653:13)
   at async @jsenv/core/src/kitchen/kitchen.js:658:11

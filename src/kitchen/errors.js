@@ -373,9 +373,10 @@ const getFirstReferenceInProject = (reference) => {
   return getFirstReferenceInProject(firstReference);
 };
 
-// An url written by an injection cannot be resolved: the placeholder is still there
-// when references are analyzed. Rather than guessing what a placeholder looks like
-// (the key is free-form), tell the file it comes from: injections are configured for it.
+// Injections write urls in html attributes before references are analyzed, so an url
+// that still cannot be resolved may be a placeholder no injection replaced. Rather than
+// guessing what a placeholder looks like (the key is free-form), tell the file it comes
+// from: injections are configured for it.
 const detailsFromInjectionsOnOwner = (reference) => {
   if (!reference) {
     return {};
@@ -394,7 +395,7 @@ const detailsFromInjectionsOnOwner = (reference) => {
     return {};
   }
   return {
-    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, add "jsenv-ignore" so jsenv leaves that url alone:
+    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, check the placeholder spelling, or add "jsenv-ignore" so jsenv leaves that url alone:
 <${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
   };
 };

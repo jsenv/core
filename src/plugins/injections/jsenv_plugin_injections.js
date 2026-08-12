@@ -3,6 +3,7 @@ import { asUrlWithoutSearch, urlToRelativeUrl } from "@jsenv/urls";
 import {
   INJECTIONS,
   isPlaceholderInjection,
+  readInjectionValue,
 } from "../../kitchen/url_graph/url_info_injections.js";
 
 export const jsenvPluginInjections = (rawAssociations) => {
@@ -18,6 +19,7 @@ export const jsenvPluginInjections = (rawAssociations) => {
     }
     return null;
   };
+  const injectionsForUrlInfoMap = new WeakMap();
   let getInjections = null;
 
   return {
@@ -36,8 +38,8 @@ export const jsenvPluginInjections = (rawAssociations) => {
           });
           return injectionsGetter;
         };
-        // an url written by an injection cannot be resolved during reference analysis;
-        // errors use this to tell the file holds injections and suggest "jsenv-ignore"
+        // errors and the build read this to know an unresolved url may come from
+        // an injection, and word what they report accordingly
         context.hasInjections = (url) => {
           return Boolean(findInjectionsGetterForUrl(url));
         };
@@ -91,14 +93,59 @@ export const jsenvPluginInjections = (rawAssociations) => {
           contentInjections: defaultInjections,
         };
       }
+      injectionsForUrlInfoMap.set(urlInfo, injections);
       return {
-        contentInjections: {
-          ...defaultInjections,
-          ...injections,
-        },
+        contentInjections: { ...defaultInjections, ...injections },
       };
     },
+    // The content still holds the placeholders when references are analyzed: they are
+    // replaced at the very end, once the type of every inline content is known.
+    // A specifier must not wait for that, it would resolve "__BACKEND_URL__/users/me"
+    // as a file sitting next to the document. Only the placeholder is resolved here,
+    // then the specifier goes to whoever resolves this kind of url (node esm, web, ...)
+    resolveReference: (reference) => {
+      const { ownerUrlInfo } = reference;
+      const injections = injectionsForUrlInfoMap.get(ownerUrlInfo);
+      if (!injections) {
+        return null;
+      }
+      const { specifier, keySet } = injectIntoSpecifier(
+        reference.specifier,
+        injections,
+      );
+      if (keySet.size === 0) {
+        return null;
+      }
+      reference.specifier = specifier;
+      for (const key of keySet) {
+        // rewriting the specifier takes the placeholder out of the content,
+        // so the injection step must not expect to find it there
+        ownerUrlInfo.contentInjectionUsedKeySet.add(key);
+      }
+      return null;
+    },
   };
+};
+
+const injectIntoSpecifier = (specifier, injections) => {
+  let specifierInjected = specifier;
+  const keySet = new Set();
+  for (const key of Object.keys(injections)) {
+    if (!specifierInjected.includes(key)) {
+      continue;
+    }
+    const injection = injections[key];
+    if (!isPlaceholderInjection(injection)) {
+      continue;
+    }
+    const value = readInjectionValue(injection);
+    if (typeof value !== "string") {
+      continue;
+    }
+    specifierInjected = specifierInjected.replaceAll(key, value);
+    keySet.add(key);
+  }
+  return { specifier: specifierInjected, keySet };
 };
 
 // What a file inlines (a <script> or a <style> inside html) is authored in that file
