@@ -310,35 +310,43 @@ const createItemTracker = (onChange) => {
     insertKey(key, index);
   };
 
+  const unregisterKey = (key) => {
+    registrations.delete(key);
+    const idx = keyToOrderedIndex.get(key);
+    if (idx !== undefined) {
+      orderedKeys.splice(idx, 1);
+      keyToOrderedIndex.delete(key);
+      for (let i = idx; i < orderedKeys.length; i++) {
+        keyToOrderedIndex.set(orderedKeys[i], i);
+      }
+    }
+    keyToExplicitOrder.delete(key);
+    allRegistrations.delete(key);
+    removeAllKey(key);
+    allKeys.delete(key);
+  };
+
+  const keyForId = (id) => {
+    if (!idToKey.has(id)) {
+      idToKey.set(id, keyCounter++);
+    }
+    return idToKey.get(id);
+  };
+
   // Register an item. data.hidden controls visibility.
   // explicitOrder is the caller-provided index (e.g. from items.map((item, i) => ...))
   // that determines this item's position among siblings.
   // Returns the item's visible rank among non-hidden items, or -1 when hidden.
   const useTrackItem = (data) => {
     const { id, index } = data;
-    if (!idToKey.has(id)) {
-      idToKey.set(id, keyCounter++);
-    }
-    const key = idToKey.get(id);
+    const key = keyForId(id);
 
     syncItem(key, index, data);
     notify();
 
     useLayoutEffect(() => {
       return () => {
-        registrations.delete(key);
-        const idx = keyToOrderedIndex.get(key);
-        if (idx !== undefined) {
-          orderedKeys.splice(idx, 1);
-          keyToOrderedIndex.delete(key);
-          for (let i = idx; i < orderedKeys.length; i++) {
-            keyToOrderedIndex.set(orderedKeys[i], i);
-          }
-        }
-        keyToExplicitOrder.delete(key);
-        allRegistrations.delete(key);
-        removeAllKey(key);
-        allKeys.delete(key);
+        unregisterKey(key);
         notify();
       };
     }, []);

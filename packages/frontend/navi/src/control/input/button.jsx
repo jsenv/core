@@ -4,6 +4,7 @@ import {
   createComponentResolver,
   useNextResolver,
 } from "@jsenv/navi/src/resolver/resolver.jsx";
+import { useConfirmParams } from "../../action/confirm.js";
 import { naviI18n } from "@jsenv/navi/src/text/navi_i18n.js";
 import { FormContext } from "../form_context.js";
 import { ButtonRouteResolver } from "./button_route.jsx";
@@ -13,6 +14,15 @@ const ButtonFirstResolver = (props) => {
   const Next = useNextResolver();
   const defaultRef = useRef(null);
   props.ref = props.ref || defaultRef;
+
+  // Attached to the element rather than kept as a prop: the action a button
+  // requests is not always run by the button (a submit button hands the send to
+  // the form around it), and what the request carries all the way there is this
+  // element — see confirm.js.
+  useConfirmParams(props.ref, {
+    message: props.confirm,
+    content: props.confirmPopupContent,
+  });
 
   return <Next {...props} />;
 };

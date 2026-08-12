@@ -441,9 +441,12 @@ const css = /* css */ `
  *   receives focus, whoever had the keyboard keeps it — the combobox case,
  *   where suggestions open under an input being typed in.
  * @param {boolean} [props.open] - Controlled open state.
- * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
- *   open state — plays no entrance animation (nothing was ever shown as
- *   "closed" for the user to see it transition away from).
+ * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
+ *   initial open state. `true` plays no entrance animation: the popover was
+ *   already open when the page appeared, and nothing was ever shown as "closed"
+ *   for the user to see it transition away from. `"interaction"` says the
+ *   opposite — this popover is mounted *because* the user just asked for it, so
+ *   the mount is the opening and the entrance plays like any other.
  * @param {(event: Event) => void} [props.onClose] - Called when the popover
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd

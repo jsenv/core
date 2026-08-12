@@ -84,6 +84,7 @@ const css = /* css */ `
     }
 
     &[data-skeleton] {
+      max-width: 100%;
       /* Children stay in the DOM to preserve natural layout dimensions,
          but are hidden so only the skeleton is visible. */
       visibility: hidden;

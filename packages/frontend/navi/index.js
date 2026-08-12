@@ -1,6 +1,10 @@
 import "./src/navi_css_vars.js";
 
 // actions
+// Importing this also registers the popup an action with a `confirm` asks its
+// question in — the action path only knows how to ask, not how to show (see
+// src/action/confirm.js).
+export { defineNaviConfirmPopupOptions } from "./src/action/confirm_popup.jsx";
 export { ActionRenderer } from "./src/action/action_renderer.jsx";
 export { actionRunEffect } from "./src/action/action_run_effect.js";
 export {
@@ -134,7 +138,12 @@ export {
 // --- List start ---
 export { applySearch } from "./src/control/list/apply_search.js";
 export { createSearch } from "./src/control/list/create_search.js";
-export { List, ListItem, ListItemGroup } from "./src/control/list/list.jsx";
+export {
+  List,
+  ListItem,
+  ListItemGroup,
+  ListItems,
+} from "./src/control/list/list.jsx";
 export { SelectableInput } from "./src/control/list/list_selectable.jsx";
 export { useSearchText } from "./src/control/list/use_search_text.js";
 // --- List end ---

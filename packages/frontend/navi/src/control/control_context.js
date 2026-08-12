@@ -51,6 +51,8 @@ export const CONTROL_PROP_SET = new Set([
   ...CONSTRAINT_MESSAGE_PROP_NAME_SET,
 
   "action",
+  "confirm",
+  "confirmPopupContent",
   "actionEvent",
   "actionAfterChange",
   "actionOnMouseDown",

@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Listes chargées au défilement</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 40px;
+        font-family: system-ui, sans-serif;
+        background: #f5f5f5;
+      }
+      #container {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 1.1rem;
+      }
+      .demo-section {
+        margin-bottom: 24px;
+        padding: 24px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .caption {
+        color: #555;
+        font-size: 0.8rem;
+        font-family: monospace;
+      }
+      .bubble {
+        max-width: 78%;
+        padding: 8px 12px;
+        border-radius: 14px;
+      }
+      .bubble[data-mine] {
+        color: #fff;
+        background: #3b6ef5;
+      }
+      .bubble:not([data-mine]) {
+        color: #1a1a2e;
+        background: #eceff4;
+      }
+      .bubble[data-loading] {
+        display: flex;
+        width: 78%;
+        flex-direction: column;
+        gap: 4px;
+        background: #f2f4f7;
+      }
+      /* Le jour, en travers du fil: une ligne de chaque côté et la date au
+         milieu. Opaque parce qu'elle est collante — les messages passent
+         dessous. */
+      .day-thread .navi_list_item_group .navi_list_item_group_label {
+        display: flex;
+        padding: 10px 12px 6px;
+        align-items: center;
+        gap: 10px;
+        color: #8a8f98;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: #fff;
+      }
+      .day-thread .navi_list_item_group .navi_list_item_group_label::before,
+      .day-thread .navi_list_item_group .navi_list_item_group_label::after {
+        flex: 1;
+        border-top: 1px solid #e2e5ea;
+        content: "";
+      }
+
+      /* La ligne posée à l'offset mémorisé, par-dessus la liste: le haut du
+         message repris doit venir s'y coller. */
+      .ruler-frame {
+        position: relative;
+      }
+      .ruler {
+        position: absolute;
+        right: 1px;
+        left: 1px;
+        z-index: 2;
+        height: 0;
+        border-top: 2px dashed #d33;
+        pointer-events: none;
+      }
+      .ruler::after {
+        position: absolute;
+        top: 2px;
+        right: 0;
+        padding: 1px 4px;
+        color: #fff;
+        font-size: 0.65rem;
+        background: #d33;
+        content: attr(data-label);
+      }
+      .navi_list_item[data-marked] {
+        box-shadow: inset 0 2px 0 #d33;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="app"></div>
+    </div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        Box,
+        Button,
+        List,
+        SelectableInput,
+        Text,
+        Time,
+      } from "@jsenv/navi";
+      import { DemoHeader } from "../../../internal/demo_header.jsx";
+      import { FakeBackend } from "../../../internal/fake_backend.jsx";
+
+      /* ------------------------------------------------------------------
+         Le serveur: une conversation dont le front ne tient que des pages.
+         Ce que la liste sait faire n'a rien à voir avec le sens du défilement:
+         elle demande ce qu'elle s'apprête à dessiner, qu'on monte ou qu'on
+         descende.
+         Un message garde son id quoi qu'il arrive — c'est ce qui permet de le
+         retrouver quand d'autres se sont insérés avant lui.
+         ------------------------------------------------------------------ */
+      const INITIAL_COUNT = 200;
+      const PAGE_MAX = 50;
+      const LATENCY = 500;
+      const MESSAGES_PER_DAY = 8;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const TODAY = new Date();
+
+      const PHRASES = [
+        "ok",
+        "je te confirme demain matin",
+        "on se retrouve devant la salle, comme la dernière fois",
+        "j'ai relu le compte-rendu: il manque le point sur les licences, le reste me va. Tu veux que je le complète ou tu préfères le faire toi ?",
+        "parfait",
+        "attends je regarde",
+        "c'est bon de mon côté, j'ai envoyé le mail hier soir et j'ai eu une réponse ce matin. Ils sont d'accord sur le principe, ils veulent juste décaler d'une semaine.",
+        "merci !",
+        "je te rappelle dans 10 min",
+        "franchement bien joué pour hier, tout le monde en parle encore. On refait ça quand ?",
+      ];
+      const createMessages = (count, firstNumber) =>
+        Array.from({ length: count }, (_, i) => {
+          const number = firstNumber + i;
+          const day =
+            Math.floor(number / MESSAGES_PER_DAY) -
+            Math.floor((INITIAL_COUNT - 1) / MESSAGES_PER_DAY);
+          const date = new Date(TODAY.getTime() + day * DAY_MS);
+          date.setHours(
+            9 + (number % MESSAGES_PER_DAY),
+            (number * 7) % 60,
+            0,
+            0,
+          );
+          return {
+            id: `m${number}`,
+            number,
+            day,
+            date,
+            mine: number % 3 === 0,
+            text: PHRASES[number % PHRASES.length],
+          };
+        });
+      const serverMessages = createMessages(INITIAL_COUNT, 0);
+      const insertOlderMessages = (count) => {
+        const first = serverMessages[0].number;
+        serverMessages.unshift(...createMessages(count, first - count));
+      };
+      const deleteMessage = (id) => {
+        const index = serverMessages.findIndex((m) => m.id === id);
+        if (index > -1) {
+          serverMessages.splice(index, 1);
+        }
+      };
+
+      // La réponse à un intervalle: jamais plus de PAGE_MAX messages, en
+      // disant où ça tombe et combien il y en a en tout. Un début négatif
+      // compte depuis la fin (Range: items=-30), et `around` demande la page
+      // qui contient un message nommé.
+      const readMessagePage = ({ start, end, around }) => {
+        const total = serverMessages.length;
+        if (around !== undefined) {
+          const index = serverMessages.findIndex((m) => m.id === around);
+          const wanted = end - start + 1;
+          start = index - Math.floor(wanted / 2);
+          if (start < 0) {
+            start = 0;
+          }
+          end = start + wanted - 1;
+        }
+        let from = start < 0 ? total + start : start;
+        let to = end < 0 ? total + end : end;
+        if (from < 0) {
+          from = 0;
+        }
+        if (to > total - 1) {
+          to = total - 1;
+        }
+        if (to - from + 1 > PAGE_MAX) {
+          // On rend la fin de l'intervalle demandé: c'est de là qu'on remonte.
+          from = to - PAGE_MAX + 1;
+        }
+        return {
+          items: serverMessages.slice(from, to + 1),
+          start: from,
+          count: total,
+        };
+      };
+      // Le réseau: un délai, et une requête qu'on peut abandonner — la liste
+      // fournit un signal quand ce qu'elle avait demandé ne l'intéresse plus.
+      const fetchMessagePage = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readMessagePage(range)),
+            LATENCY,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
+        });
+
+      const Message = ({ message, marked }) => (
+        <List.Item
+          paddingX="m"
+          paddingY="xs"
+          data-marked={marked ? "" : undefined}
+        >
+          <Box flex="y" alignX={message.mine ? "end" : "start"} expandX>
+            <div className="bubble" data-mine={message.mine ? "" : undefined}>
+              <Text>{message.text}</Text>
+            </div>
+            <Text size="xs" color="#999">
+              #{message.number} ·{" "}
+              <Time type="time" format="timestring">
+                {message.date}
+              </Time>
+            </Text>
+          </Box>
+        </List.Item>
+      );
+
+      // Un message qui n'est pas encore arrivé: même place, même côté, même
+      // gabarit — seul le texte manque. C'est cette hauteur-là que la liste
+      // réserve pour les messages qu'elle n'a pas encore vus.
+      const MessagePlaceholder = ({ index }) => (
+        <List.Item skeleton paddingX="m" paddingY="xs">
+          <Box flex="y" alignX={index % 3 === 0 ? "end" : "start"} expandX>
+            <div className="bubble" data-loading="">
+              <Text loading width={`${90 + ((index * 37) % 180)}px`}>
+                {" "}
+              </Text>
+              {index % 4 === 0 && (
+                <Text loading width={`${60 + ((index * 23) % 120)}px`}>
+                  {" "}
+                </Text>
+              )}
+            </div>
+            <Text size="xs" color="#999">
+              {" "}
+            </Text>
+          </Box>
+        </List.Item>
+      );
+
+      const Section = ({ title, caption, children }) => (
+        <div className="demo-section">
+          <h2>{title}</h2>
+          <Box flex="y" spacing="m" style="margin-top: 8px">
+            {caption && <span className="caption">{caption}</span>}
+            {children}
+          </Box>
+        </div>
+      );
+
+      /* ------------------------------------------------------------------ */
+
+      const LastMessagesSection = () => {
+        const [key, setKey] = useState(0);
+        return (
+          <Section
+            title="On arrive sur le dernier message"
+            caption='defaultScrolled="end"'
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            <List
+              key={key}
+              maxHeight="220px"
+              expandX
+              renderBudget={30}
+              defaultScrolled="end"
+              renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+            >
+              <List.Items
+                itemsAction={fetchMessagePage}
+                renderItem={(message) => <Message message={message} />}
+              />
+            </List>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
+      const GroupedByDaySection = () => {
+        const [key, setKey] = useState(0);
+        return (
+          <Section
+            title="Groupés par jour"
+            caption="groupBy + renderGroupLabel"
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            <List
+              key={key}
+              className="day-thread"
+              maxHeight="220px"
+              expandX
+              renderBudget={30}
+              defaultScrolled="end"
+              renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+            >
+              <List.Items
+                itemsAction={fetchMessagePage}
+                groupBy={(message) => message.day}
+                renderGroupLabel={(message) => (
+                  <Time type="date" dayLabel>
+                    {message.date}
+                  </Time>
+                )}
+                renderItem={(message) => <Message message={message} />}
+              />
+            </List>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
+      // Ce qu'on aurait gardé de la visite précédente (localStorage, url…).
+      // L'id dit quelle ligne, l'index dit à peu près où elle était, l'offset
+      // dit exactement où dans la vue — et le total permet à la barre de
+      // défilement d'avoir la bonne taille avant même la première réponse.
+      const POSITION_FROM_LAST_VISIT = { id: "m120", index: 120, offset: 24 };
+      const COUNT_FROM_LAST_VISIT = 200;
+
+      const ResumeSection = () => {
+        const [position, setPosition] = useState(null);
+        const [saved, setSaved] = useState(POSITION_FROM_LAST_VISIT);
+        const [key, setKey] = useState(0);
+        const [insertedCount, setInsertedCount] = useState(0);
+
+        return (
+          <Section
+            title="On reprend là où on s'était arrêté"
+            caption="onScrolledChange → scrolled={{ id, offset }}"
+          >
+            <Box flex alignY="center" spacing="m">
+              <Button
+                onClick={() => {
+                  setSaved(position);
+                  setKey(key + 1);
+                }}
+              >
+                quitter et revenir
+              </Button>
+              <Button
+                onClick={() => {
+                  insertOlderMessages(5);
+                  setInsertedCount(insertedCount + 5);
+                }}
+              >
+                5 messages plus anciens arrivent
+              </Button>
+              <Button
+                disabled={!position}
+                onClick={() => {
+                  deleteMessage(position.id);
+                  setSaved(position);
+                  setKey(key + 1);
+                }}
+              >
+                ce message est supprimé
+              </Button>
+              <span className="caption">
+                {position
+                  ? `${position.id} @${Math.round(position.offset)}`
+                  : "—"}
+                {insertedCount ? ` · ${insertedCount} insérés` : ""}
+              </span>
+            </Box>
+            <div className="ruler-frame">
+              {saved && (
+                <div
+                  className="ruler"
+                  data-label={`${saved.id} @${Math.round(saved.offset)}px`}
+                  style={{ top: `${1 + saved.offset}px` }}
+                ></div>
+              )}
+              <List
+                key={key}
+                maxHeight="220px"
+                expandX
+                renderBudget={30}
+                scrolled={saved}
+                defaultScrolled="end"
+                onScrolledChange={setPosition}
+                renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+              >
+                <List.Items
+                  itemsAction={fetchMessagePage}
+                  count={COUNT_FROM_LAST_VISIT}
+                  renderItem={(message) => (
+                    <Message
+                      message={message}
+                      marked={saved ? message.id === saved.id : false}
+                    />
+                  )}
+                />
+              </List>
+            </div>
+            <Text size="s" color="#555">
+              {saved
+                ? `la liste a rouvert sur ${saved.id}: son haut doit toucher la ligne rouge — sauf si ce message n'existe plus, auquel cas elle rouvre sur le dernier (fallback)`
+                : "faites défiler, puis quittez et revenez"}
+            </Text>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
+      // Le même retour, avec et sans le total. Sans lui, une liste ne mesure
+      // que ce qu'elle tient: la barre de défilement ne peut pas avoir sa
+      // taille, ni le retour tomber au bon endroit, tant que la première page
+      // n'est pas là.
+      const SLOW = 1500;
+      const fetchMessagePageSlowly = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readMessagePage(range)),
+            SLOW,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
+        });
+
+      const COLUMN_STYLE = { flex: "1 1 0", minWidth: 0 };
+
+      const CountSection = () => {
+        const [key, setKey] = useState(0);
+        const thread = (count) => (
+          <List
+            key={key}
+            maxHeight="220px"
+            expandX
+            renderBudget={30}
+            scrolled={POSITION_FROM_LAST_VISIT}
+            renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+          >
+            <List.Items
+              itemsAction={fetchMessagePageSlowly}
+              count={count}
+              renderItem={(message) => <Message message={message} />}
+            />
+          </List>
+        );
+        return (
+          <Section
+            title="Ce que le total apporte"
+            caption="1500 ms de latence: regarder la barre de défilement pendant le chargement"
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            {/* Deux colonnes qui se partagent la place également quoi qu'elles
+                contiennent: se dimensionner sur leur contenu ferait changer
+                leur largeur entre le chargement et le chargé. */}
+            <Box flex spacing="m" alignY="start">
+              <Box flex="y" spacing="xs" style={COLUMN_STYLE}>
+                <span className="caption">count={COUNT_FROM_LAST_VISIT}</span>
+                {thread(COUNT_FROM_LAST_VISIT)}
+              </Box>
+              <Box flex="y" spacing="xs" style={COLUMN_STYLE}>
+                <span className="caption">sans count</span>
+                {thread(undefined)}
+              </Box>
+            </Box>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------
+         Une autre collection, une autre liste: des parties de padel qu'on
+         choisit, pas des messages qu'on lit.
+         ------------------------------------------------------------------ */
+      const GAME_COUNT = 3000;
+      const COURTS = ["Court 1", "Court 2", "Court couvert", "Court extérieur"];
+      const NIVEAUX = ["P25", "P50", "P100", "P250"];
+      const readGamePage = ({ start, end }) => {
+        let from = start < 0 ? GAME_COUNT + start : start;
+        let to = end < 0 ? GAME_COUNT + end : end;
+        if (from < 0) {
+          from = 0;
+        }
+        if (to > GAME_COUNT - 1) {
+          to = GAME_COUNT - 1;
+        }
+        const items = [];
+        let index = from;
+        while (index <= to) {
+          items.push({
+            id: `g${index}`,
+            number: index,
+            court: COURTS[index % COURTS.length],
+            level: NIVEAUX[index % NIVEAUX.length],
+            players: 1 + (index % 4),
+            day: `${1 + (index % 28)}/0${1 + (index % 9)}`,
+            hour: `${8 + (index % 12)}h${index % 2 ? "30" : "00"}`,
+          });
+          index++;
+        }
+        return { items, start: from, count: GAME_COUNT };
+      };
+      const fetchGamePage = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readGamePage(range)),
+            LATENCY,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
+        });
+
+      const GameToJoinSection = () => {
+        const [chosen, setChosen] = useState(null);
+        return (
+          <Section
+            title="Une partie à rejoindre"
+            caption="3000 parties, une seule à choisir"
+          >
+            <List
+              selectable
+              maxHeight="260px"
+              expandX
+              renderBudget={30}
+              separator
+              action={(value) => setChosen(value)}
+              renderSkeleton={() => (
+                <List.Item
+                  skeleton
+                  flex
+                  alignY="center"
+                  spacing="s"
+                  paddingX="m"
+                  paddingY="s"
+                >
+                  <Text loading width="60px">
+                    {" "}
+                  </Text>
+                  <Text loading width="180px">
+                    {" "}
+                  </Text>
+                </List.Item>
+              )}
+            >
+              <List.Items
+                itemsAction={fetchGamePage}
+                renderItem={(game) => (
+                  <List.Item
+                    selectable
+                    value={game.number}
+                    selected={chosen === game.number}
+                    flex
+                    alignY="center"
+                    spacing="s"
+                    paddingX="m"
+                    paddingY="s"
+                  >
+                    <SelectableInput />
+                    <Text weight="bold">{game.level}</Text>
+                    <Text>{game.court}</Text>
+                    <Text size="s" color="#777">
+                      {game.day} · {game.hour}
+                    </Text>
+                    <Text size="s" color={game.players === 4 ? "#a72" : "#2a7"}>
+                      {game.players}/4 joueurs
+                    </Text>
+                  </List.Item>
+                )}
+              />
+            </List>
+            <Text size="s" color="#555">
+              partie choisie: {chosen === null ? "aucune" : `#${chosen}`}
+            </Text>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
+      const PageByPageSection = () => {
+        const [key, setKey] = useState(0);
+        return (
+          <Section
+            title="Chaque page, à la main"
+            caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            <FakeBackend value={`${serverMessages.length} messages`}>
+              {({ action }) => (
+                <List
+                  key={key}
+                  maxHeight="220px"
+                  expandX
+                  renderBudget={30}
+                  defaultScrolled="end"
+                  renderSkeleton={(index) => (
+                    <MessagePlaceholder index={index} />
+                  )}
+                >
+                  <List.Items
+                    itemsAction={async (range) => {
+                      await action(range, { signal: range.signal });
+                      return readMessagePage(range);
+                    }}
+                    renderItem={(message) => <Message message={message} />}
+                  />
+                </List>
+              )}
+            </FakeBackend>
+          </Section>
+        );
+      };
+
+      const App = () => (
+        <Box flex="y" spacing="l">
+          <DemoHeader
+            title="Listes chargées au défilement (listes « infinies »)"
+            previous={{
+              href: "./0_address_autocomplete_demo.html",
+              label: "Adresse avec autocomplete",
+            }}
+          />
+          <LastMessagesSection />
+          <ResumeSection />
+          <CountSection />
+          <GroupedByDaySection />
+          <GameToJoinSection />
+          <PageByPageSection />
+        </Box>
+      );
+
+      render(<App />, document.getElementById("app"));
+    </script>
+  </body>
+</html>

@@ -898,6 +898,11 @@ export const createBuildSpecifierManager = ({
       registerHtmlRefine((htmlAst, { registerHtmlMutation }) => {
         visitHtmlNodes(htmlAst, {
           link: (node) => {
+            if (getHtmlNodeAttribute(node, "jsenv-ignore") !== undefined) {
+              // reference analysis skipped this node, so it has no urlInfo in the graph
+              // and there is nothing to resync
+              return;
+            }
             const href = getHtmlNodeAttribute(node, "href");
             if (href === undefined || href.startsWith("data:")) {
               return;

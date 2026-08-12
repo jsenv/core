@@ -3,11 +3,21 @@ import "@jsenv/sourcemap";
 
 const injectionSymbol = Symbol.for("jsenv_injection");
 const INJECTIONS = {
+  /**
+   * Inject `Object.assign(window, { [key]: value })` at the top of the file
+   * (into a script for html, into the module itself for js) instead of
+   * replacing a placeholder: the value is read at runtime as a global.
+   */
   global: (value) => {
     return { [injectionSymbol]: "global", value };
   },
+  /**
+   * Replace the placeholder when the file contains it, stay silent when it does not
+   * (without this a missing placeholder is reported as a warning).
+   */
   optional: (value) => {
-    if (value && value[injectionSymbol] === "optional") {
+    if (value && value[injectionSymbol]) {
+      // a global injection is not a placeholder, it can't be missing from the file
       return value;
     }
     return { [injectionSymbol]: "optional", value };

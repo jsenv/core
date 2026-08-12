@@ -82,7 +82,7 @@ const css = /* css */ `
 
   .navi_list_container[navi-selectable] {
     .navi_list_fallback,
-    .navi_list_no_match_fallback {
+    .navi_list_search_fallback {
       --list-item-padding-x-default: inherit;
       --list-item-padding-y-default: inherit;
     }
@@ -229,17 +229,54 @@ const ListSelectable = (props) => {
   // we allow ourselves to auto-generate a name
   const defaultName = useId();
   props.name = props.name || `listbox_${defaultName}`;
-  const {
-    ref,
-    multiple,
-    selectedIndicator = "backgroundColor",
-    focusGroupDirection,
-    focusGroupWrap,
-  } = props;
+  const { ref, multiple, focusGroupDirection, focusGroupWrap } = props;
+  // What the list holds, which is not the same as what its rows say. A list
+  // draws the rows it needs and no more: the selected one may be scrolled out
+  // of the window, or filtered out of the view. Aggregating over the rows that
+  // happen to be mounted would then lose the selection — a row that is not
+  // there cannot say it is not selected.
+  const selectionRef = useRef(undefined);
+  if (selectionRef.current === undefined) {
+    selectionRef.current = Object.hasOwn(props, "value")
+      ? props.value
+      : props.defaultValue;
+  }
+  const aggregateChildStates = (children) => {
+    const kept = selectionRef.current;
+    if (multiple) {
+      const drawnValues = new Set(children.map((child) => child.props.value));
+      const stillSelected = Array.isArray(kept)
+        ? kept.filter((value) => !drawnValues.has(value))
+        : [];
+      for (const child of children) {
+        if (child.uiState !== undefined) {
+          stillSelected.push(child.uiState);
+        }
+      }
+      const values = stillSelected.length === 0 ? undefined : stillSelected;
+      selectionRef.current = values;
+      return values;
+    }
+    for (const child of children) {
+      if (child.uiState !== undefined) {
+        selectionRef.current = child.uiState;
+        return child.uiState;
+      }
+    }
+    // No drawn row claims it. If the row that held it IS drawn, it was really
+    // deselected; if it is not, the list keeps what it holds.
+    const keptIsDrawn = children.some((child) => child.props.value === kept);
+    if (keptIsDrawn) {
+      selectionRef.current = undefined;
+      return undefined;
+    }
+    return kept;
+  };
   const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       stateType: multiple ? "array" : "",
       controlType: multiple ? "checkbox_group" : "radio_group",
+      aggregateChildStates,
     });
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
@@ -253,8 +290,8 @@ const ListSelectable = (props) => {
   // <input navi-list>) navigates from. Defaults to the first selected item,
   // else the first navigable item. Updated when:
   //   - an item's real input gains focus (via Tab, click, etc.)
-  //   - the controller dispatches navi_request_list_nav
-  // The current id is announced via navi_list_current_change (bubbling) so a
+  //   - the controller dispatches navi_request_nav
+  // The current id is announced via navi_current_change (bubbling) so a
   // connected input can update its aria-controls / aria-activedescendant.
   const currentIdRef = useRef(null);
   const setCurrentId = (id, event) => {
@@ -323,9 +360,6 @@ const ListSelectable = (props) => {
   const listVnode = (
     <Next
       navi-selectable=""
-      navi-has-selected-background={
-        selectedIndicator === "backgroundColor" ? "" : undefined
-      }
       {...listControlRootProps}
       {...listControlProps}
       // "loading" is a control prop, so useControlgroupProps consumes it (into
@@ -336,7 +370,6 @@ const ListSelectable = (props) => {
       name={undefined}
       value={undefined}
       defaultValue={undefined}
-      selectedIndicator={undefined}
       selectable={undefined}
       multiple={undefined}
       focusGroupDirection={undefined}
@@ -480,6 +513,12 @@ export const ListItemSelectableResolver = (props) => {
 const ListItemSelectable = (props) => {
   const Next = useNextResolver();
   const defaultId = useId();
+  // Whether the caller SAYS anything about this row's selection. Passing
+  // `checked: undefined` is not the same as not passing it: a control with the
+  // key present calls itself controlled, and a controlled row is one the list
+  // must not seed — which is exactly how a list-level `value` ended up never
+  // reaching its rows.
+  const hasSelectedProp = Object.hasOwn(props, "selected");
   const {
     index,
     id = defaultId,
@@ -505,12 +544,10 @@ const ListItemSelectable = (props) => {
       id: inputId,
       type: inputType,
       defaultChecked: defaultSelected,
-      checked: selected,
+      ...(hasSelectedProp ? { checked: selected } : null),
     });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
-  // const disabled = basePseudoState[":disabled"];
-  // const loading = basePseudoState[":-navi-loading"];
   const realInputContextValue = useMemo(() => {
     return {
       id: inputId,
@@ -569,8 +606,6 @@ const SELECTABLE_PSEUDO_CLASSES = [
   ":-navi-loading",
   ":-navi-pointed",
   ":-navi-selected",
-  ":disabled",
-  ":read-only",
 ];
 const SelectableRealInput = (props) => {
   // here for some reason we can't use <Input, so instead we use <Box
@@ -584,7 +619,6 @@ const SelectableRealInput = (props) => {
       navi-visually-hidden=""
       navi-selectable-real-input=""
       data-callout-arrow-x="center"
-      // navi-debug
     />
   );
 };

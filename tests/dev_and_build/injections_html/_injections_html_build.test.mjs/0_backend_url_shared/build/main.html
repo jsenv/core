@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script>
+
+      window.backendUrl = "https://api.example.com";
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });</script>
+  </head>
+
+  <body>
+    <p data-backend-url="https://api.example.com/users/me">https://api.example.com</p>
+    <script type="module" src="/js/main.js?v=a3720481"></script>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <script>
+      // eslint-disable-next-line no-undef
+      window.backendUrl = __BACKEND_URL__;
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+  </head>
+
+  <body>
+    <p data-backend-url="__BACKEND_URL__/users/me">__BACKEND_URL__</p>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

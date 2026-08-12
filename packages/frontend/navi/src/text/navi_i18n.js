@@ -66,6 +66,10 @@ naviI18n.addAll({
     en: "Define",
     fr: "Définir",
   },
+  "button.confirm": {
+    en: "Confirm",
+    fr: "Confirmer",
+  },
 });
 
 // Default built-in translations — apps can override any key via add()
@@ -259,6 +263,14 @@ naviI18n.addAll({
   "list.no_match_rest_shown": {
     en: "No item matches this search. The rest is shown below.",
     fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
+  },
+  "list.rows_failed": {
+    en: "These elements could not be loaded.",
+    fr: "Ces élements n'ont pas pu être chargées.",
+  },
+  "list.rows_retry": {
+    en: "Retry",
+    fr: "Réessayer",
   },
 });
 

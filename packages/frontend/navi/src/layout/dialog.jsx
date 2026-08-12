@@ -489,9 +489,12 @@ const css = /* css */ `
  *   has no other focusable descendant, `"restore"` keeps it out of the
  *   opening focus chain unless it held focus when the dialog closed.
  * @param {boolean} [props.open] - Controlled open state.
- * @param {boolean} [props.defaultOpen] - Uncontrolled, mount-only initial
- *   open state — plays no entrance animation (nothing was ever shown as
- *   "closed" for the user to see it transition away from).
+ * @param {boolean|"interaction"} [props.defaultOpen] - Uncontrolled, mount-only
+ *   initial open state. `true` plays no entrance animation: the dialog was
+ *   already open when the page appeared, and nothing was ever shown as "closed"
+ *   for the user to see it transition away from. `"interaction"` says the
+ *   opposite — this dialog is mounted *because* the user just asked for it, so
+ *   the mount is the opening and the entrance plays like any other.
  * @param {(event: Event) => void} [props.onClose] - Called when the dialog
  *   actually closes — not preventable (see `open_controller.js`'s own
  *   `onRequestClose`/`onClose` distinction; `onRequestClose` is where you'd

@@ -26,18 +26,45 @@ export const jsenvPluginInjections = (rawAssociations) => {
           { injectionsGetter: rawAssociations },
           context.rootDirectoryUrl,
         );
-        getInjections = (urlInfo) => {
+        const findInjectionsGetter = (urlInfo) => {
           const { injectionsGetter } = URL_META.applyAssociations({
             url: asUrlWithoutSearch(urlInfo.url),
             associations: resolvedAssociations,
           });
-          if (!injectionsGetter) {
+          if (injectionsGetter) {
+            return { injectionsGetter, isInherited: false };
+          }
+          if (urlInfo.isInline) {
+            // content inlined into a file (a <script> inside html) is authored in that
+            // file, so injections configured for the file must reach it too
+            const found = findInjectionsGetter(
+              urlInfo.firstReference.ownerUrlInfo,
+            );
+            if (found) {
+              return {
+                injectionsGetter: found.injectionsGetter,
+                isInherited: true,
+              };
+            }
+          }
+          return null;
+        };
+        getInjections = async (urlInfo) => {
+          const found = findInjectionsGetter(urlInfo);
+          if (!found) {
             return null;
           }
+          const { injectionsGetter, isInherited } = found;
           if (typeof injectionsGetter !== "function") {
             throw new TypeError("injectionsGetter must be a function");
           }
-          return injectionsGetter(urlInfo);
+          const injections = await injectionsGetter(urlInfo);
+          if (!injections || !isInherited) {
+            return injections;
+          }
+          // the file holds several inline contents; a placeholder configured for the file
+          // is expected in one of them, not in each
+          return asOptionalInjections(injections);
         };
       }
     },
@@ -48,13 +75,12 @@ export const jsenvPluginInjections = (rawAssociations) => {
           contentInjections: defaultInjections,
         };
       }
-      const injectionsResult = getInjections(urlInfo);
-      if (!injectionsResult) {
+      const injections = await getInjections(urlInfo);
+      if (!injections) {
         return {
           contentInjections: defaultInjections,
         };
       }
-      const injections = await injectionsResult;
       return {
         contentInjections: {
           ...defaultInjections,
@@ -63,4 +89,12 @@ export const jsenvPluginInjections = (rawAssociations) => {
       };
     },
   };
+};
+
+const asOptionalInjections = (injections) => {
+  const optionalInjections = {};
+  for (const key of Object.keys(injections)) {
+    optionalInjections[key] = INJECTIONS.optional(injections[key]);
+  }
+  return optionalInjections;
 };

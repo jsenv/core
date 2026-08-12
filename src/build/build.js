@@ -133,6 +133,25 @@ import { jsenvPluginMappings } from "./jsenv_plugin_mappings.js";
  *        How URLs are versioned for this entry point (defaults to "search_param")
  * @param {('none'|'inline'|'file'|'programmatic')} [entryPoint.sourcemaps]
  *        Sourcemap generation strategy for this entry point (defaults to "none")
+ * @param {object} [entryPoint.injections]
+ *        Values to inject into files, as { urlPattern: getInjections }.
+ *        Keys are url patterns relative to sourceDirectoryUrl ("./index.html", "**\/*.js"),
+ *        values are functions receiving urlInfo and returning (or resolving to)
+ *        an object of placeholders to replace, named `__LIKE_THIS__` by convention:
+ *
+ *          injections: {
+ *            "./index.html": () => ({ __BACKEND_URL__: "https://api.example.com" }),
+ *          }
+ *
+ *        In JS files the value is injected as a JS literal (a string value brings its own quotes),
+ *        everywhere else it is injected as-is, so it can be concatenated:
+ *        `href="__BACKEND_URL__/users/me"`.
+ *        An html url pattern also covers what is inlined in that html: an inline
+ *        `<script>window.backendUrl = __BACKEND_URL__;</script>` gets the JS literal,
+ *        which is how a value is shared with every js file of the page.
+ *        Use INJECTIONS.optional(value) for a placeholder that may be absent from the file
+ *        and INJECTIONS.global(value) to inject `Object.assign(window, { ... })` instead of
+ *        replacing a placeholder.
  *
  * @return {Promise<Object>} buildReturnValue
  * @return {Promise<Object>} [buildReturnValue.buildInlineContents]
@@ -170,6 +189,17 @@ export const build = async ({
   {
     const unexpectedParamNames = Object.keys(rest);
     if (unexpectedParamNames.length > 0) {
+      const entryPointParamNames = unexpectedParamNames.filter((name) =>
+        Object.hasOwn(entryPointDefaultParams, name),
+      );
+      if (entryPointParamNames.length > 0) {
+        throw new TypeError(
+          `${entryPointParamNames.join(",")}: param(s) configured per entry point, move them into entryPoints, as in:
+entryPoints: {
+  "./index.html": { ${entryPointParamNames.map((name) => `${name}: ...`).join(", ")} },
+}`,
+        );
+      }
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
       );

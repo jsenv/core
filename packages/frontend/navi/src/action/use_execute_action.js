@@ -9,6 +9,7 @@ import { useCallback, useLayoutEffect, useState } from "preact/hooks";
 import { registerGlobalConstraint } from "../control/rules/control_validation.js";
 import { useResetErrorBoundary } from "../error_boundary_context.js";
 import { useDebugAction } from "../navi_debug.jsx";
+import { requestConfirmation } from "./confirm.js";
 
 const actionErrorWeakMap = new WeakMap();
 const NAVI_ACTION_ERROR_CONSTRAINT = {
@@ -124,7 +125,7 @@ export const useExecuteAction = (
   // errorEffectRef.current = errorEffect;
   const executeAction = useCallback(
     (actionEvent) => {
-      const { action, actionOrigin, requester, event, method, confirmMessage } =
+      const { action, actionOrigin, requester, event, method, confirmParams } =
         actionEvent.detail;
       const sharedActionEventDetail = {
         action,
@@ -230,24 +231,38 @@ export const useExecuteAction = (
         actionStartEventDetail,
       );
 
-      if (confirmMessage) {
-        // eslint-disable-next-line no-alert
-        if (!window.confirm(confirmMessage)) {
-          debugAction(event, `action aborted (via confirm dialog)`);
-          triggerAbort(
-            `user cancelled on confirm message: "${confirmMessage}"`,
-          );
-          return Promise.resolve();
-        }
+      const runAction = () => {
+        return action[method]({
+          event: actionEvent,
+          reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
+          onAbort: triggerAbort,
+          onError: triggerError,
+          onComplete: triggerComplete,
+        });
+      };
+
+      if (confirmParams) {
+        // The question is asked in a popup, so the answer only comes back a
+        // few frames later — everything the action does moves behind that
+        // await. Fine here and nowhere else: "start" has already been
+        // dispatched synchronously above, which is what tells a caller
+        // waiting on a commit that the action is running (see
+        // watchActionCompletion in control_action.js), so a dialog around it
+        // already knows to stay open until the answer lands.
+        return requestConfirmation({
+          ...confirmParams,
+          anchor: requester,
+        }).then((confirmed) => {
+          if (!confirmed) {
+            debugAction(event, `action aborted (via confirm popup)`);
+            triggerAbort(`user did not confirm`);
+            return undefined;
+          }
+          return runAction();
+        });
       }
 
-      return action[method]({
-        event: actionEvent,
-        reason: `"${event.type}" event on ${getElementSignature(event.target)}`,
-        onAbort: triggerAbort,
-        onError: triggerError,
-        onComplete: triggerComplete,
-      });
+      return runAction();
     },
     [elementRef, errorEffect],
   );

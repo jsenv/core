@@ -3,11 +3,21 @@ import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
 
 const injectionSymbol = Symbol.for("jsenv_injection");
 export const INJECTIONS = {
+  /**
+   * Inject `Object.assign(window, { [key]: value })` at the top of the file
+   * (into a script for html, into the module itself for js) instead of
+   * replacing a placeholder: the value is read at runtime as a global.
+   */
   global: (value) => {
     return { [injectionSymbol]: "global", value };
   },
+  /**
+   * Replace the placeholder when the file contains it, stay silent when it does not
+   * (without this a missing placeholder is reported as a warning).
+   */
   optional: (value) => {
-    if (value && value[injectionSymbol] === "optional") {
+    if (value && value[injectionSymbol]) {
+      // a global injection is not a placeholder, it can't be missing from the file
       return value;
     }
     return { [injectionSymbol]: "optional", value };
@@ -112,17 +122,25 @@ return {
       magicSource.replace({
         start,
         end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(value, null, "  ")
-            : value,
+        replacement: asReplacement(value, urlInfo),
       });
       index = content.indexOf(key, end);
     }
   }
   return magicSource.toContentAndSourcemap();
+};
+
+// In JS the placeholder stands for a value, so it must be substituted by a literal.
+// Everywhere else (html attributes and text, css, ...) it stands for a piece of text
+// and is substituted as-is, so it can be concatenated: href="__BACKEND_URL__/users/me"
+const asReplacement = (value, urlInfo) => {
+  if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
+    return JSON.stringify(value, null, "  ");
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  return JSON.stringify(value, null, "  ");
 };
 
 export const injectGlobals = (content, globals, urlInfo) => {
