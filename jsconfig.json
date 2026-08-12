@@ -12,5 +12,12 @@
         "./*"
       ],
     }
-  }
+  },
+  // keep the TS/JS language service project small: generated + vendored files
+  // would otherwise push it past the "project-wide features disabled" threshold
+  "exclude": [
+    "**/node_modules",
+    "**/.jsenv",
+    "**/snapshots"
+  ]
 }
