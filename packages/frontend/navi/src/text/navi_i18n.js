@@ -265,8 +265,8 @@ naviI18n.addAll({
     fr: "Aucun élément ne correspond à cette recherche. Le reste est affiché ci-dessous.",
   },
   "list.rows_failed": {
-    en: "These rows could not be loaded.",
-    fr: "Ces lignes n'ont pas pu être chargées.",
+    en: "These elements could not be loaded.",
+    fr: "Ces élements n'ont pas pu être chargées.",
   },
   "list.rows_retry": {
     en: "Retry",

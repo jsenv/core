@@ -96,6 +96,7 @@
         ListItem,
         SelectableInput,
         Text,
+        Time,
       } from "@jsenv/navi";
       import { DemoHeader } from "../../../internal/demo_header.jsx";
       import { FakeBackend } from "../../../internal/fake_backend.jsx";
@@ -122,15 +123,33 @@
 
       // Le serveur: une liste de messages, à laquelle on peut en ajouter au
       // début (les plus anciens), ce qui décale la place de tous les autres.
+      // Une journée de conversation fait MESSAGES_PER_DAY messages, et le
+      // dernier message initial tombe aujourd'hui — de quoi voir "aujourd'hui"
+      // et "hier" en haut des groupes.
+      const MESSAGES_PER_DAY = 8;
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const TODAY = new Date();
+      const dayOfMessage = (number) =>
+        Math.floor(number / MESSAGES_PER_DAY) -
+        Math.floor((INITIAL_COUNT - 1) / MESSAGES_PER_DAY);
       const createMessages = (count, firstNumber) =>
         Array.from({ length: count }, (_, i) => {
           const number = firstNumber + i;
+          const day = dayOfMessage(number);
+          const date = new Date(TODAY.getTime() + day * DAY_MS);
+          date.setHours(
+            9 + (number % MESSAGES_PER_DAY),
+            (number * 7) % 60,
+            0,
+            0,
+          );
           return {
             id: `m${number}`,
             number,
+            day,
+            date,
             mine: number % 3 === 0,
             text: PHRASES[number % PHRASES.length],
-            time: `${9 + Math.floor(number / 8)}h${String((number * 7) % 60).padStart(2, "0")}`,
           };
         });
       const serverMessages = createMessages(INITIAL_COUNT, 0);
@@ -209,7 +228,10 @@
               <Text>{message.text}</Text>
             </div>
             <Text size="xs" color="#999">
-              #{message.number} · {message.time}
+              #{message.number} ·{" "}
+              <Time type="time" format="timestring">
+                {message.date}
+              </Time>
             </Text>
           </Box>
         </ListItem>
@@ -238,7 +260,13 @@
         </ListItem>
       );
 
-      const Thread = ({ startAt, itemsAction, onPositionChange, markedId }) => (
+      const Thread = ({
+        startAt,
+        itemsAction,
+        onPositionChange,
+        markedId,
+        grouped,
+      }) => (
         <List
           maxHeight="220px"
           expandX
@@ -249,6 +277,12 @@
         >
           <List.Items
             itemsAction={itemsAction}
+            groupBy={grouped ? (message) => message.day : undefined}
+            renderGroupLabel={(message) => (
+              <Time type="date" dayLabel>
+                {message.date}
+              </Time>
+            )}
             renderItem={(message) => (
               <MessageItem message={message} marked={message.id === markedId} />
             )}
@@ -458,6 +492,14 @@
           >
             {(key) => (
               <Thread key={key} startAt="end" itemsAction={fetchPage} />
+            )}
+          </Section>
+          <Section
+            title="Groupés par jour"
+            caption="groupBy={(message) => message.day}"
+          >
+            {(key) => (
+              <Thread key={key} startAt="end" itemsAction={fetchPage} grouped />
             )}
           </Section>
           <ResumeSection />

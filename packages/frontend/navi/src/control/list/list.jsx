@@ -2326,13 +2326,12 @@ const ListItemUI = (props) => {
       props.muted = true;
     }
   }
-  // A row declared on its own stands for one row of the collection, at the
-  // place where the child declared before it left off. An explicit `index`
-  // still wins: it is how a caller says where a row belongs when declaration
-  // order is not it (a search reorders rows without moving them in the DOM).
-  // A row drawn by a run already knows its place — the run gave it.
+  // Where a row sits is where it was declared, full stop: a list is written in
+  // the order it reads. Nothing to pass, nothing to keep in sync — a search
+  // that reorders rows reorders the rows it declares. A row drawn by a run
+  // already knows its place; the run gave it.
   if (!row && !props.filtered) {
-    props.index = virtual.take(props.id, 1, props.index);
+    props.index = virtual.take(props.id, 1);
   }
   // Every row that is drawn registers itself, whether it was declared one by
   // one or drawn by a run: what it says about itself (its value, whether it is
@@ -2637,12 +2636,6 @@ const LIST_ITEM_PSEUDO_ELEMENTS = ["::highlight"];
  *               (--navi-select, --navi-unselect, --navi-scroll, --navi-update).
  *               Required when items need to be targeted programmatically from
  *               outside the list. Auto-generated internally if omitted.
- *   index     — where the row belongs in the collection. Defaults to where the
- *               row declared before it left off, so a list written as a list of
- *               rows needs nothing. Pass it to say something declaration order
- *               cannot: a search that reorders rows without moving them, a row
- *               standing for a precise place in a larger whole. Rows given as
- *               data (see List.Items) are numbered by the run itself.
  *   selectable — when true, the item participates in selection (radio or checkbox
  *               depending on whether the parent List has `multiple`). Requires
  *               `value` and typically a <SelectableInput /> child.
@@ -2809,11 +2802,21 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   items?: any[],
  *   count?: number,
  *   itemStart?: number,
+ *   groupBy?: (item: any, index: number) => any,
+ *   renderGroupLabel?: (item: any, index: number) => import("preact").ComponentChildren,
  *   pageSize?: number,
  *   memoryBudget?: number,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   itemProps?: (item: any, index: number) => object,
  * }>}
+ * @param {(item: any, index: number) => any} [props.groupBy]
+ *   What tells rows that belong together apart from the others — the day of a
+ *   message, the month of a game. Consecutive rows sharing it are wrapped in a
+ *   `<List.Group>` whose label (`renderGroupLabel`) stays on screen for as long
+ *   as one of them is. The groups are found in the data as it arrives, which is
+ *   the only way a list that discovers its rows page by page can have any.
+ * @param {(item: any, index: number) => any} [props.renderGroupLabel]
+ *   The label of the group a row opens, given that row.
  * @param {number} [props.pageSize]
  *   How many rows to ask for at a time. A turn of the wheel opens a hole three
  *   rows wide; asking for exactly that would ask again at the next turn.
@@ -2836,6 +2839,8 @@ export const ListItems = ({
   itemStart,
   pageSize,
   memoryBudget,
+  groupBy,
+  renderGroupLabel,
   renderSkeleton,
   renderError,
 }) => {
@@ -2968,6 +2973,41 @@ export const ListItems = ({
     failureRowIndex = looked < from ? from : looked > to ? to : looked;
   }
   const rows = [];
+  // Rows that belong together, as the data says (a day of messages, a month of
+  // games): consecutive rows sharing a group key are wrapped in one group, so
+  // its label can stay on screen for as long as any of them is. The wrapper is
+  // rebuilt as the window slides — a group holds the rows of its day that are
+  // currently drawn, which is exactly the span its label has to survive.
+  let group = null;
+  const closeGroup = () => {
+    if (!group) {
+      return;
+    }
+    rows.push(
+      <ListItemGroup key={`${ownerId}_group_${group.key}`} label={group.label}>
+        {group.children}
+      </ListItemGroup>,
+    );
+    group = null;
+  };
+  const pushRow = (rowKey, rowNode, item, rowIndex) => {
+    const groupKey =
+      groupBy && item !== undefined ? groupBy(item, rowIndex) : undefined;
+    if (groupKey === undefined) {
+      closeGroup();
+      rows.push(rowNode);
+      return;
+    }
+    if (!group || group.key !== groupKey) {
+      closeGroup();
+      group = {
+        key: groupKey,
+        label: renderGroupLabel ? renderGroupLabel(item, rowIndex) : groupKey,
+        children: [],
+      };
+    }
+    group.children.push(rowNode);
+  };
   // The room held for this run's own rows that the window leaves out. It
   // belongs to the run and not to the list: a list is not necessarily made of
   // one run, and what sits before or after it (a header, rows given one by
@@ -3016,13 +3056,17 @@ export const ListItems = ({
     }
     if (rowVnode) {
       if (separator && rowIndex > 0) {
-        rows.push(
+        pushRow(
+          `${key}_separator`,
           cloneElement(resolveSeparatorVnode(separator, rowIndex - 1), {
             key: `${key}_separator`,
           }),
+          item,
+          rowIndex,
         );
       }
-      rows.push(
+      pushRow(
+        key,
         <ListRowContext.Provider
           key={key}
           value={
@@ -3033,10 +3077,13 @@ export const ListItems = ({
         >
           {rowVnode}
         </ListRowContext.Provider>,
+        item,
+        rowIndex,
       );
     }
     rowIndex++;
   }
+  closeGroup();
   if (runEnd > windowTo) {
     rows.push(
       <VirtualFiller
