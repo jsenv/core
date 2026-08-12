@@ -18,6 +18,8 @@
   "exclude": [
     "**/node_modules",
     "**/.jsenv",
+    "**/.jsenv_b",
+    "**/dist",
     "**/snapshots"
   ]
 }
