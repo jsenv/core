@@ -46,6 +46,7 @@
       }
       .bubble[data-loading] {
         display: flex;
+        width: 78%;
         flex-direction: column;
         gap: 4px;
         background: #f2f4f7;
@@ -456,6 +457,8 @@
           });
         });
 
+      const COLUMN_STYLE = { flex: "1 1 0", minWidth: 0 };
+
       const CountSection = () => {
         const [key, setKey] = useState(0);
         const thread = (count) => (
@@ -482,12 +485,15 @@
             <Box flex alignX="start">
               <Button onClick={() => setKey(key + 1)}>recharger</Button>
             </Box>
+            {/* Deux colonnes qui se partagent la place également quoi qu'elles
+                contiennent: se dimensionner sur leur contenu ferait changer
+                leur largeur entre le chargement et le chargé. */}
             <Box flex spacing="m" alignY="start">
-              <Box flex="y" spacing="xs" expandX>
+              <Box flex="y" spacing="xs" style={COLUMN_STYLE}>
                 <span className="caption">count={COUNT_FROM_LAST_VISIT}</span>
                 {thread(COUNT_FROM_LAST_VISIT)}
               </Box>
-              <Box flex="y" spacing="xs" expandX>
+              <Box flex="y" spacing="xs" style={COLUMN_STYLE}>
                 <span className="caption">sans count</span>
                 {thread(undefined)}
               </Box>
