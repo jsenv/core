@@ -9742,7 +9742,7 @@ const setupNetworkMonitoring = () => {
 };
 setupNetworkMonitoring();
 
-installImportMetaCssBuild(import.meta);const css$X = /* css */`
+installImportMetaCssBuild(import.meta);const css$Y = /* css */`
   .navi_loading_indicator_fluid_container {
     position: relative;
     display: flex;
@@ -9774,7 +9774,7 @@ const LoadingIndicatorFluid = ({
   visuallyHidden,
   ...rest
 }) => {
-  import.meta.css = [css$X, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
+  import.meta.css = [css$Y, "@jsenv/navi/src/graphic/loading/loading_indicator_fluid.jsx"];
   const ref = useRef(null);
   // The container dimensions can be deduced from the ref itself as the indicator is absolute inset 0
   const [containerWidth, setContainerWidth] = useState(0);
@@ -9979,7 +9979,7 @@ const LoadingRectangleSvg = ({
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$W = /* css */`
+installImportMetaCssBuild(import.meta);const css$X = /* css */`
   .navi_loading_outline_wrapper {
     position: absolute;
     /* Controls place the outline slightly outside their box, right on top of
@@ -10016,7 +10016,7 @@ installImportMetaCssBuild(import.meta);const css$W = /* css */`
   }
 `;
 const LoadingOutline = props => {
-  import.meta.css = [css$W, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
+  import.meta.css = [css$X, "@jsenv/navi/src/graphic/loading/loading_outline.jsx"];
   if (props.containerRef) {
     const container = props.containerRef.current;
     if (!container) {
@@ -10341,7 +10341,7 @@ const selectByTextStrings = (element, range, startText, endText) => {
 };
 
 installImportMetaCssBuild(import.meta);// https://jsfiddle.net/v5xzJ/4/
-const css$V = /* css */`
+const css$W = /* css */`
   @layer navi {
     .navi_text {
       &[data-skeleton] {
@@ -10847,7 +10847,7 @@ const TextShrinkWrap = props => {
   });
 };
 const TextUI = props => {
-  import.meta.css = [css$V, "@jsenv/navi/src/text/text.jsx"];
+  import.meta.css = [css$W, "@jsenv/navi/src/text/text.jsx"];
   let {
     ref,
     spacing,
@@ -13561,7 +13561,7 @@ installImportMetaCssBuild(import.meta);/**
  * - Arrow automatically shows when pointing at a valid anchor element
  * - Centers in viewport when no anchor element provided or anchor is too big
  */
-const css$U = /* css */`
+const css$V = /* css */`
   @layer navi {
     .navi_callout {
       /* A callout is parented to what it explains, so it inherits from it — and
@@ -13781,7 +13781,7 @@ const openCallout = (message, {
   skipFocus = false,
   debug = () => {}
 } = {}) => {
-  import.meta.css = [css$U, "@jsenv/navi/src/control/rules/callout/callout.js"];
+  import.meta.css = [css$V, "@jsenv/navi/src/control/rules/callout/callout.js"];
   if (debug === true) {
     debug = (e, ...args) => console.debug(`"${e.type}" -> `, ...args);
   }
@@ -22859,7 +22859,7 @@ const getAssociatedLabels = element => {
   return [];
 };
 
-installImportMetaCssBuild(import.meta);const css$T = /* css */`
+installImportMetaCssBuild(import.meta);const css$U = /* css */`
   @layer navi {
     .navi_button {
       --button-border-radius: var(--navi-control-border-radius);
@@ -23252,7 +23252,7 @@ installImportMetaCssBuild(import.meta);const css$T = /* css */`
   }
 `;
 const ButtonUI = props => {
-  import.meta.css = [css$T, "@jsenv/navi/src/control/input/button_ui.jsx"];
+  import.meta.css = [css$U, "@jsenv/navi/src/control/input/button_ui.jsx"];
   const {
     ref,
     // href/link
@@ -25380,7 +25380,7 @@ installImportMetaCssBuild(import.meta);/**
  * reaches the real container.
  */
 let openLocalDialogCount = 0;
-const css$S = /* css */`
+const css$T = /* css */`
   @layer navi {
     .navi_dialog {
       /* Min gap between the dialog and the edges of its container. Written
@@ -25790,7 +25790,7 @@ const css$S = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Dialog = props => {
-  import.meta.css = [css$S, "@jsenv/navi/src/layout/dialog.jsx"];
+  import.meta.css = [css$T, "@jsenv/navi/src/layout/dialog.jsx"];
   if (props.openController) {
     return jsx(ControlledDialog, {
       ...props
@@ -26608,7 +26608,7 @@ installImportMetaCssBuild(import.meta);/**
  * and applied.
  */
 let openLocalPopoverCount = 0;
-const css$R = /* css */`
+const css$S = /* css */`
   @layer navi {
     .navi_popover {
       /* soft: user-configurable preferred max-height. Kept as a *default*
@@ -26978,7 +26978,7 @@ const css$R = /* css */`
  * @param {import("ignore:preact").ComponentChildren} props.children
  */
 const Popover = props => {
-  import.meta.css = [css$R, "@jsenv/navi/src/layout/popover.jsx"];
+  import.meta.css = [css$S, "@jsenv/navi/src/layout/popover.jsx"];
   if (props.openController) {
     return jsx(ControlledPopover, {
       ...props
@@ -27942,7 +27942,7 @@ installImportMetaCssBuild(import.meta);/**
  * event, and a caller replacing the body entirely then has one protocol to
  * follow — `--navi-confirm` for yes, anything that closes for no.
  */
-const css$Q = /* css */`
+const css$R = /* css */`
   /* The width lives on the body rather than on the popup, so that custom
      content (which replaces this body entirely) sizes itself instead of
      inheriting a ceiling meant for a sentence-long question. */
@@ -28079,7 +28079,7 @@ const ConfirmPopup = ({
   onAnswer,
   onClosed
 }) => {
-  import.meta.css = [css$Q, "@jsenv/navi/src/action/confirm_popup.jsx"];
+  import.meta.css = [css$R, "@jsenv/navi/src/action/confirm_popup.jsx"];
   const {
     mode,
     confirmLabel,
@@ -28163,7 +28163,7 @@ const defaultBody = (message, {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$P = /* css */`
+installImportMetaCssBuild(import.meta);const css$Q = /* css */`
   .action_error {
     margin-top: 0;
     margin-bottom: 20px;
@@ -28188,7 +28188,7 @@ const ActionRenderer = ({
   children,
   disabled
 }) => {
-  import.meta.css = [css$P, "@jsenv/navi/src/action/action_renderer.jsx"];
+  import.meta.css = [css$Q, "@jsenv/navi/src/action/action_renderer.jsx"];
   if (action === undefined) {
     throw new Error("ActionRenderer requires an action to render, but none was provided.");
   }
@@ -35234,7 +35234,7 @@ const PhoneSvg = () => {
 };
 
 installImportMetaCssBuild(import.meta);// # TextAnchor — how it works
-const css$O = /* css */`
+const css$P = /* css */`
   .navi_text_anchor {
     vertical-align: baseline;
     user-select: none;
@@ -35269,7 +35269,7 @@ const TextAnchor = ({
   textSize,
   lineLayout
 }) => {
-  import.meta.css = [css$O, "@jsenv/navi/src/text/text_anchor.jsx"];
+  import.meta.css = [css$P, "@jsenv/navi/src/text/text_anchor.jsx"];
   const anchorRef = useRef();
 
   // Plain useLayoutEffect would also fire while an ancestor dialog/popover
@@ -35384,7 +35384,7 @@ const computeTopOffset = ({
 };
 const charTopCanvas = document.createElement("canvas");
 
-installImportMetaCssBuild(import.meta);const css$N = /* css */`
+installImportMetaCssBuild(import.meta);const css$O = /* css */`
   @layer navi {
     /* Ensure data attributes from box.jsx can win to update display */
     .navi_icon {
@@ -35542,7 +35542,7 @@ const Icon = ({
   fillLine,
   ...props
 }) => {
-  import.meta.css = [css$N, "@jsenv/navi/src/text/icon.jsx"];
+  import.meta.css = [css$O, "@jsenv/navi/src/text/icon.jsx"];
   const innerChildren = href ? jsx("svg", {
     width: "100%",
     height: "100%",
@@ -35695,7 +35695,7 @@ const useDimColorWhen = (elementRef, shouldDim) => {
   });
 };
 
-installImportMetaCssBuild(import.meta);const css$M = /* css */`
+installImportMetaCssBuild(import.meta);const css$N = /* css */`
   @layer navi {
     .navi_link {
       --link-border-radius: unset;
@@ -36134,7 +36134,7 @@ Object.assign(PSEUDO_CLASSES, {
  * @param {boolean} [props.readOnly]
  */
 const Link = props => {
-  import.meta.css = [css$M, "@jsenv/navi/src/nav/link/link.jsx"];
+  import.meta.css = [css$N, "@jsenv/navi/src/nav/link/link.jsx"];
   if (props.route) {
     return jsx(LinkWithRoute, {
       ...props
@@ -36369,7 +36369,7 @@ installImportMetaCssBuild(import.meta);/**
  * TabList component with support for horizontal and vertical layouts
  * https://dribbble.com/search/tabs
  */
-const css$L = /* css */`
+const css$M = /* css */`
   @layer navi {
     .navi_nav {
       --nav-border: none;
@@ -36544,7 +36544,7 @@ const Nav = ({
   // "before" or "after": which side the panel sits on, turning the nav into folder tabs
   ...props
 }) => {
-  import.meta.css = [css$L, "@jsenv/navi/src/nav/link/nav.jsx"];
+  import.meta.css = [css$M, "@jsenv/navi/src/nav/link/nav.jsx"];
   children = toChildArray(children);
   return jsx(Box, {
     as: "nav",
@@ -36936,7 +36936,7 @@ installImportMetaCssBuild(import.meta);/**
  * Border width participates in layout (it is added to the tab and page
  * padding): a thick border grows the binder rather than eating into the text.
  */
-const css$K = /* css */`
+const css$L = /* css */`
   @layer navi {
     .navi_binder {
       --binder-border-width: var(--navi-control-border-width);
@@ -37249,7 +37249,7 @@ const Binder = ({
   pagePadding,
   ...props
 }) => {
-  import.meta.css = [css$K, "@jsenv/navi/src/nav/binder/binder.jsx"];
+  import.meta.css = [css$L, "@jsenv/navi/src/nav/binder/binder.jsx"];
   const items = toChildArray(children).map((child, index) => {
     const {
       value: itemValue,
@@ -37671,7 +37671,7 @@ installImportMetaCssBuild(import.meta);/**
  *    into the size; a box-shadow draws the identical line and stays out of
  *    layout.
  */
-const css$J = /* css */`
+const css$K = /* css */`
   @layer navi {
     :root {
       --navi-fixed-bar-width: 56px;
@@ -37809,7 +37809,7 @@ const FixedBar = ({
   border = true,
   ...props
 }) => {
-  import.meta.css = [css$J, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
+  import.meta.css = [css$K, "@jsenv/navi/src/layout/fixed_bar/fixed_bar.jsx"];
   const defaultRef = useRef();
   props.ref = props.ref || defaultRef;
   // Whichever of width/height crosses the edge the bar sits on is what the
@@ -37844,6 +37844,178 @@ const FixedBar = ({
     styleCSSVars: FixedBarStyleCSSVars,
     children: children
   });
+};
+
+/**
+ * Finds the element that is too wide for the page and says which one it is.
+ *
+ * A page that overflows horizontally is a bug wherever it happens, and on
+ * Chrome Android it is a catastrophic one: the layout viewport inflates to the
+ * content and `position: fixed` centering goes with it (see
+ * docs/MOBILE_LAYOUT_PITFALLS.md). The remedy there is a wrapper in
+ * `overflow-x: clip`, and it works — at the price of making the cause
+ * invisible: nothing sticks out anymore, so nothing says a fixed width, a
+ * `min-width` or an unbreakable string is still oversized. This puts the
+ * signal back, without giving up the net.
+ *
+ * What counts as "too wide" is measured against the box that clips, not
+ * against the document: with `clip` there is no scrollable overflow to read
+ * (`scrollWidth` reports none), so the rectangles of the descendants are what
+ * tells.
+ *
+ * Two things are deliberately not reported, because they cannot reach the
+ * document:
+ * - anything inside a box that clips or scrolls on its own — a wide table in
+ *   its `overflow-x: auto` container is doing exactly what it should;
+ * - anything out of flow in the viewport's own coordinates (`position: fixed`,
+ *   the top layer), which contributes nothing to the document's overflow.
+ */
+
+
+// Subpixel layout rounds rectangles up on boxes that fit exactly.
+const OVERFLOW_TOLERANCE = 1;
+
+const css$J = /* css */ `
+  [data-navi-overflow-x] {
+    outline: 2px dashed #e74c3c;
+    outline-offset: -2px;
+  }
+`;
+
+/**
+ * @param {object} [options]
+ * @param {Element} [options.root=document.body] The box the content must fit
+ *   in — the wrapper carrying `overflow-x: clip`, when there is one.
+ * @param {boolean} [options.highlight=true] Outline the culprits on screen.
+ * @param {(overflows: Array<{element: Element, overflow: number, side: "left"|"right"}>) => void} [options.onDetect]
+ *   Replaces the default console warning.
+ * @returns {() => void} Stops watching.
+ */
+const detectHorizontalOverflow = ({
+  root = document.body,
+  highlight = true,
+  onDetect = warnOverflows,
+} = {}) => {
+  let styleEl = null;
+  if (highlight) {
+    styleEl = document.createElement("style");
+    styleEl.textContent = css$J;
+    document.head.appendChild(styleEl);
+  }
+
+  let highlightedSet = new Set();
+  const detect = () => {
+    const overflows = findOverflows(root);
+    if (highlight) {
+      const nextHighlightedSet = new Set();
+      for (const { element } of overflows) {
+        element.setAttribute("data-navi-overflow-x", "");
+        nextHighlightedSet.add(element);
+      }
+      for (const element of highlightedSet) {
+        if (!nextHighlightedSet.has(element)) {
+          element.removeAttribute("data-navi-overflow-x");
+        }
+      }
+      highlightedSet = nextHighlightedSet;
+    }
+    if (overflows.length) {
+      onDetect(overflows);
+    }
+  };
+
+  // Measuring inside a resize callback is what makes the loop; wait for the
+  // frame that resize produced.
+  let frame = null;
+  const requestDetect = () => {
+    if (frame !== null) {
+      return;
+    }
+    frame = requestAnimationFrame(() => {
+      frame = null;
+      detect();
+    });
+  };
+
+  // Resize catches the window narrowing and the content growing (the root gets
+  // taller); mutations catch a wide element arriving without changing the
+  // root's size.
+  const resizeObserver = new ResizeObserver(requestDetect);
+  resizeObserver.observe(root);
+  const mutationObserver = new MutationObserver(requestDetect);
+  mutationObserver.observe(root, { subtree: true, childList: true });
+  requestDetect();
+
+  return () => {
+    resizeObserver.disconnect();
+    mutationObserver.disconnect();
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      frame = null;
+    }
+    for (const element of highlightedSet) {
+      element.removeAttribute("data-navi-overflow-x");
+    }
+    highlightedSet.clear();
+    if (styleEl) {
+      styleEl.remove();
+    }
+  };
+};
+
+const warnOverflows = (overflows) => {
+  for (const { element, overflow, side } of overflows) {
+    console.warn(
+      `${getElementSignature(element)} overflows the page by ${Math.round(
+        overflow,
+      )}px on the ${side}. Look for a width in px, a min-width, or an unbreakable string; if it is meant to be wider than the screen, give it its own "overflow-x: auto".`,
+      element,
+    );
+  }
+};
+
+const findOverflows = (root) => {
+  const rootRect = root.getBoundingClientRect();
+  const rootStyle = getComputedStyle(root);
+  // Only the end side is watched: what sticks out there is what the document
+  // grows to hold, and what inflates the layout viewport. Past the start edge
+  // the content is simply unreachable, and that is where the offscreen
+  // patterns (a label parked at `left: -9999px`) live.
+  const side = rootStyle.direction === "rtl" ? "left" : "right";
+  const overflows = [];
+  const collect = (parentEl) => {
+    for (const el of parentEl.children) {
+      const style = getComputedStyle(el);
+      if (style.display === "none" || style.position === "fixed") {
+        continue;
+      }
+      if (el.hasAttribute("popover") || el.tagName === "DIALOG") {
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        continue;
+      }
+      const overflow =
+        side === "right"
+          ? rect.right - rootRect.right
+          : rootRect.left - rect.left;
+      if (overflow > OVERFLOW_TOLERANCE) {
+        // The outermost box that sticks out is the one to fix; its children
+        // stick out because it does.
+        overflows.push({ element: el, overflow, side });
+        continue;
+      }
+      // A box holding its own horizontal overflow cannot leak into the page,
+      // whatever it holds — a wide table in its own scroll box is right.
+      if (style.overflowX !== "visible") {
+        continue;
+      }
+      collect(el);
+    }
+  };
+  collect(root);
+  return overflows;
 };
 
 const useFocusGroup = (
@@ -47048,7 +47220,7 @@ const css$u = /* css */`
        around it does. Its own scroll box must then be transparent to
        layout — otherwise it would cap the list at a height of its own and
        start a second, nested scroll inside the page's. */
-    &[data-scroller="parent"] {
+    &[data-scroller] {
       max-height: none;
       overflow: visible;
 
@@ -47056,6 +47228,14 @@ const css$u = /* css */`
         max-height: none;
         overflow: visible;
       }
+    }
+
+    /* Scrolling with the page means sticking to the viewport, and a FixedBar
+       is in front of that viewport: without the offset a sticky label lands
+       behind the bar. The bar publishes the room it takes (see
+       fixed_bar_space.js) and it is 0px when there is no bar. */
+    &[data-scroller="document"] {
+      --x-list-group-label-top: var(--navi-fixed-bar-space-top, 0px);
     }
 
     &[data-expand-x] {
@@ -47416,7 +47596,7 @@ const css$u = /* css */`
 
     .navi_list_item_group_label {
       position: sticky;
-      top: 0;
+      top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
       z-index: 1;
       display: block;
       background-color: var(--list-group-label-background-color);
@@ -47659,7 +47839,7 @@ const ListUI = props => {
     baseClassName: "navi_list_container",
     popover: popover,
     "data-horizontal": horizontal ? "" : undefined,
-    "data-scroller": scroller === "self" ? undefined : "parent",
+    "data-scroller": getScrollerAttribute(scroller),
     "data-expand-x": expandX || expand ? "" : undefined,
     "data-expand-y": expandY || expand ? "" : undefined,
     expandX: expandX,
@@ -47918,6 +48098,7 @@ const useListScrollSync = ({
     setScrollerElResolved(current => current === scrollerElNow ? current : scrollerElNow);
   };
   useLayoutEffect(resolveScroller);
+  useStickyScrollportWarning();
 
   // The row the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -48695,6 +48876,28 @@ const getScrollerViewportRect = scrollerEl => {
   }
   return scrollerEl.getBoundingClientRect();
 };
+const useStickyScrollportWarning = (ref, scroller) => {
+  useRef(false);
+  useLayoutEffect(() => {
+    {
+      return;
+    }
+  });
+};
+
+// The CSS needs to tell "the page scrolls me" from "some box around me
+// scrolls me": only the first one sticks to the viewport, where the fixed bars
+// are.
+const getScrollerAttribute = scroller => {
+  if (scroller === "self") {
+    return undefined;
+  }
+  if (scroller === "document") {
+    return "document";
+  }
+  return "parent";
+};
+
 // scroller="parent": the list virtualizes against the scroll box it lives in
 // instead of one of its own. Which box that is can only be measured, and a
 // measurement holds for the geometry it was taken on — see resolveScroller in
@@ -62783,5 +62986,5 @@ const UserSvg = () => jsx("svg", {
   })
 });
 
-export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
+export { ActionRenderer, ActiveKeyboardShortcuts, Address, Badge, BadgeCount, BadgeList, Binder, Box, Button, ButtonCopyToClipboard, Caption, CardLayout, CheckSvg, CheckboxGroup, CloseSvg, Code, Col, Colgroup, Color, ConstructionSvg, ControlGroup, DaySpin, Details, Dialog, Editable, ErrorBoundary, ErrorBoundaryContext, ExclamationSvg, EyeClosedSvg, EyeSvg, Field, FixedBar, Form, Group, Head, HeartSvg, HomeSvg, Icon, Image, Input, InputDuration, Interpolate, Label, Link, LinkAnchorSvg, LinkBlankTargetSvg, LinkCurrentSvg, List, ListItem, ListItemGroup, ListItems, Loading, LoadingDotsSvg, LoadingIndicator, LoadingIndicatorFluid, LoadingOutline, MessageBox, Meter, Nav, NaviDebug, NumberSpin, Paragraph, Picker, Popover, Popup, Quantity, RadioGroup, Route, RowNumberCol, RowNumberTableCell, SVGMaskOverlay, SearchSvg, SelectableInput, SelectionContext, Separator, SettingsSvg, SidePanel, Slide, SlideContainer, Spin, StarSvg, SummaryMarker, Svg, Table, TableCell, Tbody, Text, TextBox, Textarea, TextareaCharCount, Thead, Time, Title, Tr, UITransition, Unit, UserSvg, ViewportLayout, Wheel, WheelGroup, WheelItem, actionRunEffect, anyMatchingRouteSignal, applySearch, arraySignalMembership, coarsePointerSignal, compareTwoJsValues, createAction, createAvailableConstraint, createRequestCanceller, createSearch, createSelectionKeyboardShortcuts, createSlot, defineNaviConfirmPopupOptions, detectHorizontalOverflow, enableDebugActions, enableDebugOnDocumentLoading, ensureDocumentStartViewTransition, filterTableSelection, formatDatetime, formatDay, formatDayRelative, formatMonth, formatNumber, formatTime, formatTimeRelative, getNowHours, getNowHoursRoundedToStep, interpolateText, isCellSelected, isColumnSelected, isRowSelected, isToday, languagesSignal, localStorageSignal, moveArrayItemByIndex, navBack, navForward, navIntegratedVia, navTo, naviI18n, openCallout, rawUrlPart, registerGlobalConstraint, reload, rerunActions, resource, route, routeAction, setBaseUrl, setPreferredLanguage, setSupportedLanguages, setupRoutes, stateSignal, stopLoad, stringifyTableSelectionValue, swapArrayItemByIndex, syncOwnedResourceToSignals, syncResourceToSignals, updateActions, useActionStatus, useArraySignalMembership, useAsyncData, useCalloutRequestClose, useCancelPrevious, useCellGridFromRows, useConstraintValidityState, useDependenciesDiff, useDisplayedLayoutEffect, useDocumentResource, useDocumentState, useDocumentUrl, useEditionController, useFocusGroup, useInputGroup, useKeyboardShortcuts, useNavState, useOrderedColumns, usePopupMode, useRouteStatus, useRunOnMount, useSearchText, useSelectableElement, useSelectionController, useSignalSync, useSlideValue, useStateArray, useTitleLevel, useUrlSearchParam, valueInLocalStorage, windowWidthSignal };
 //# sourceMappingURL=jsenv_navi.js.map

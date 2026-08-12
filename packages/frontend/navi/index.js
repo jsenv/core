@@ -94,6 +94,7 @@ export { Binder } from "./src/nav/binder/binder.jsx";
 export { FixedBar } from "./src/layout/fixed_bar/fixed_bar.jsx";
 // debug/tests
 export { enableDebugOnDocumentLoading } from "./src/nav/browser_integration/document_loading_signal.js";
+export { detectHorizontalOverflow } from "./src/layout/detect_horizontal_overflow.js";
 
 // Details (in between navigation/interaction and fields)
 export { Details } from "./src/control/details/details.jsx";

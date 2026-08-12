@@ -196,7 +196,7 @@ const css = /* css */ `
        around it does. Its own scroll box must then be transparent to
        layout — otherwise it would cap the list at a height of its own and
        start a second, nested scroll inside the page's. */
-    &[data-scroller="parent"] {
+    &[data-scroller] {
       max-height: none;
       overflow: visible;
 
@@ -204,6 +204,14 @@ const css = /* css */ `
         max-height: none;
         overflow: visible;
       }
+    }
+
+    /* Scrolling with the page means sticking to the viewport, and a FixedBar
+       is in front of that viewport: without the offset a sticky label lands
+       behind the bar. The bar publishes the room it takes (see
+       fixed_bar_space.js) and it is 0px when there is no bar. */
+    &[data-scroller="document"] {
+      --x-list-group-label-top: var(--navi-fixed-bar-space-top, 0px);
     }
 
     &[data-expand-x] {
@@ -564,7 +572,7 @@ const css = /* css */ `
 
     .navi_list_item_group_label {
       position: sticky;
-      top: 0;
+      top: var(--list-group-label-top, var(--x-list-group-label-top, 0px));
       z-index: 1;
       display: block;
       background-color: var(--list-group-label-background-color);
@@ -847,7 +855,7 @@ const ListUI = (props) => {
       baseClassName="navi_list_container"
       popover={popover}
       data-horizontal={horizontal ? "" : undefined}
-      data-scroller={scroller === "self" ? undefined : "parent"}
+      data-scroller={getScrollerAttribute(scroller)}
       data-expand-x={expandX || expand ? "" : undefined}
       data-expand-y={expandY || expand ? "" : undefined}
       expandX={expandX}
@@ -1127,6 +1135,7 @@ const useListScrollSync = ({
     );
   };
   useLayoutEffect(resolveScroller);
+  useStickyScrollportWarning(ref, scroller);
 
   // The row the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -1931,6 +1940,83 @@ const getScrollerViewportRect = (scrollerEl) => {
   }
   return scrollerEl.getBoundingClientRect();
 };
+// What a sticky part of the list sticks to is the nearest scroll container in
+// the DOM; `scroller` has no say in it. A list told the page scrolls it can
+// therefore have its group labels and its header stuck to a wrapper that never
+// scrolls — and pushed down by that wrapper's scroll-padding on top of it. The
+// usual culprit is an app wrapper carrying `overflow-x: auto` to keep the
+// document from overflowing horizontally on mobile; `overflow-x: clip` keeps
+// that guarantee without making a scroll container.
+const STICKY_LIST_PART_SELECTOR = `.navi_list_item_header, .navi_list_item_footer, .navi_list_item_group_label`;
+const useStickyScrollportWarning = (ref, scroller) => {
+  const doneRef = useRef(false);
+  useLayoutEffect(() => {
+    if (!import.meta.dev || doneRef.current || scroller !== "document") {
+      return;
+    }
+    const listContainerEl = ref.current;
+    if (!listContainerEl) {
+      return;
+    }
+    const scrollportEl = findScrollportEl(listContainerEl);
+    if (!scrollportEl) {
+      doneRef.current = true;
+      return;
+    }
+    // Groups arrive with the rows: nothing sticky yet only means "not yet".
+    const stickyEl = listContainerEl.querySelector(STICKY_LIST_PART_SELECTOR);
+    if (!stickyEl) {
+      return;
+    }
+    doneRef.current = true;
+    console.warn(
+      `<List scroller="document"> is inside ${getElementSignature(
+        scrollportEl,
+      )}, a scroll container: its sticky group labels and header stick to that box instead of to the page. Give that box "overflow: clip" (it clips without creating a scroll container), or tell the list about it with scroller={element}.`,
+      { list: listContainerEl, scrollport: scrollportEl, sticky: stickyEl },
+    );
+  });
+};
+// Anything but visible and clip makes a scroll container, hidden included.
+const isScrollportOverflow = (overflow) =>
+  overflow !== "visible" && overflow !== "clip";
+const findScrollportEl = (el) => {
+  const { documentElement, body } = document;
+  let ancestor = el.parentElement;
+  while (ancestor && ancestor !== documentElement) {
+    const { overflowX, overflowY } = getComputedStyle(ancestor);
+    if (isScrollportOverflow(overflowX) || isScrollportOverflow(overflowY)) {
+      // <body> keeps its overflow for itself only when <html> declares one of
+      // its own; otherwise it hands it to the viewport, which is the page.
+      if (ancestor === body) {
+        const rootStyle = getComputedStyle(documentElement);
+        if (
+          !isScrollportOverflow(rootStyle.overflowX) &&
+          !isScrollportOverflow(rootStyle.overflowY)
+        ) {
+          return null;
+        }
+      }
+      return ancestor;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  return null;
+};
+
+// The CSS needs to tell "the page scrolls me" from "some box around me
+// scrolls me": only the first one sticks to the viewport, where the fixed bars
+// are.
+const getScrollerAttribute = (scroller) => {
+  if (scroller === "self") {
+    return undefined;
+  }
+  if (scroller === "document") {
+    return "document";
+  }
+  return "parent";
+};
+
 // scroller="parent": the list virtualizes against the scroll box it lives in
 // instead of one of its own. Which box that is can only be measured, and a
 // measurement holds for the geometry it was taken on — see resolveScroller in
