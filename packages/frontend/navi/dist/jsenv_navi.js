@@ -7,7 +7,7 @@ import { createContext, isValidElement, h, Fragment, toChildArray, render, clone
 import { useContext, useLayoutEffect, useRef, useEffect, useCallback, useState, useMemo, useId, useErrorBoundary } from "preact/hooks";
 import { jsx, jsxs, Fragment as Fragment$1 } from "preact/jsx-runtime";
 import { computed, signal, effect, batch, useSignal } from "@preact/signals";
-import { createPubSub, normalizeStyle, mergeOneStyle, getPositionedParent, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, resolveCSSSize, measureLongestVisualLineWidth, hasCSSSizeUnit, resolveOklchLightness, contrastColor, createIterableWeakSet, dispatchCustomEvent, getElementSignature, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, createEventGroupLogger, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, activeElementSignal, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, measureWidestChildRow, performTabNavigation, dragAfterThreshold, getScrollContainer, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
+import { createPubSub, normalizeStyle, mergeOneStyle, getPositionedParent, findEvent, dispatchInternalCustomEvent, mergeTwoStyles, normalizeStyles, resolveCSSSize, measureLongestVisualLineWidth, hasCSSSizeUnit, resolveOklchLightness, contrastColor, createIterableWeakSet, dispatchCustomEvent, getElementSignature, createValueEffect, getVisuallyVisibleInfo, getFirstVisuallyVisibleAncestor, findFocusDelegateTarget, findFocusable, allowWheelThrough, dispatchPublicCustomEvent, resolveCSSColor, ELEMENT_SIZE_CHANGE, findSelfOrAncestorFixedPosition, visibleRectEffect, pickPositionRelativeTo, getBorderSizes, getPaddingSizes, applyNewPosition, createEventGroupLogger, closestOpenableAncestor, isAncestorOpen, observeAncestorOpenState, getAncestorOpenType, getKeyboardEventDefaultAction, chainEvent, activeElementSignal, parsePositionArea, snapToPixel, trapFocusInside, trapScrollInside, onAncestorReopen, createGroupTransitionController, getBorderRadius, preventIntermediateScrollbar, createOpacityTransition, findBefore, findAfter, initFocusGroup, elementIsFocusable, scrollIntoViewScoped, getScrollContainer, canScroll, measureWidestChildRow, performTabNavigation, dragAfterThreshold, stickyAsRelativeCoords, createDragToMoveGestureController, getDropTargetInfo, setStyles, useActiveElement, stringifyStyle as stringifyStyle$1 } from "@jsenv/dom";
 export { contrastColor, startDragToReorder } from "@jsenv/dom";
 import { createValidity, parseDuration, durationContainsNaN, compareTwoDurations, durationToSeconds, durationToISOString } from "@jsenv/validity";
 export { compareTwoDurations, durationContainsNaN, durationToHours, durationToISOString, durationToMinutes, durationToNumber, durationToSeconds, durationToString, parseDuration } from "@jsenv/validity";
@@ -46952,10 +46952,10 @@ const css$u = /* css */`
       scrollbar-width: inherit;
     }
 
-    /* scroller="parent": the list does not scroll, the ancestor it lives in
-       does. Its own scroll box must then be transparent to layout — otherwise
-       it would cap the list at a height of its own and start a second, nested
-       scroll inside the page's. */
+    /* Any scroller other than "self": the list does not scroll, something
+       around it does. Its own scroll box must then be transparent to
+       layout — otherwise it would cap the list at a height of its own and
+       start a second, nested scroll inside the page's. */
     &[data-scroller="parent"] {
       max-height: none;
       overflow: visible;
@@ -47567,7 +47567,7 @@ const ListUI = props => {
     baseClassName: "navi_list_container",
     popover: popover,
     "data-horizontal": horizontal ? "" : undefined,
-    "data-scroller": scroller === "parent" ? "parent" : undefined,
+    "data-scroller": scroller === "self" ? undefined : "parent",
     "data-expand-x": expandX || expand ? "" : undefined,
     "data-expand-y": expandY || expand ? "" : undefined,
     expandX: expandX,
@@ -47644,7 +47644,7 @@ const ListFirstResolver = props => {
  *   scrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   defaultScrolled?: "start" | "end" | number | {id: string, offset?: number},
  *   onScrolledChange?: (scrolled: {id: string, index: number, offset: number}) => void,
- *   scroller?: "self" | "parent",
+ *   scroller?: "self" | "parent" | "document" | Element | {current: Element},
  *   fallback?: import("ignore:preact").ComponentChildren,
  *   searchFallback?: import("ignore:preact").ComponentChildren,
  *   searchText?: string,
@@ -47705,11 +47705,20 @@ const ListFirstResolver = props => {
  *   how far below the top of the view it starts. Keep it to come back to it
  *   later through `scrolled`/`defaultScrolled` — an index would not do, since
  *   rows get inserted while a list is being read.
- * @param {"self"|"parent"} [props.scroller="self"]
+ * @param {"self"|"parent"|"document"|Element|{current: Element}} [props.scroller="self"]
  *   Which box scrolls. `"self"` gives the list a scroll box of its own;
  *   `"parent"` makes it virtualize against the scrollable ancestor it lives in
  *   (the page, a panel) — no scroll box nested inside another one, no height
  *   to compute.
+ *
+ *   `"parent"` finds that ancestor by measuring: the nearest one whose content
+ *   actually overflows it, the page if none does. Declaring `overflow` is not
+ *   enough to be picked (a box with `overflow-x: auto` that grows with its
+ *   content computes `overflow-y: auto` without ever scrolling), and the
+ *   answer is taken again as the geometry moves, so an ancestor that starts to
+ *   scroll once it fills up is picked up then. When that is still not the box
+ *   you mean, say so: `"document"`, or the element itself (a ref works) —
+ *   nothing is guessed then.
  */
 const List = createComponentResolver([ListFirstResolver, ListSelectableResolver, ListUI]);
 const ListContent = ({
@@ -47803,6 +47812,20 @@ const useListScrollSync = ({
   const virtualItemSizeSignal = useVirtualItemSizeSignal(ref, virtualItemSize, horizontal);
   const getScroller = () => getScrollerEl(ref.current, scroller, horizontal);
   const getListEl = () => ref.current.querySelector(".navi_list");
+  // Which box scrolls is measured (see getScrollerEl), so the answer holds
+  // only for the geometry it was taken on: an ancestor that is bounded but
+  // still waiting for its first rows looks like it will never scroll. It is
+  // taken again on every commit and every resize; the state exists so the
+  // effects below reattach their listeners to whatever it lands on.
+  const [scrollerElResolved, setScrollerElResolved] = useState(null);
+  const resolveScroller = () => {
+    if (!ref.current) {
+      return;
+    }
+    const scrollerElNow = getScroller();
+    setScrollerElResolved(current => current === scrollerElNow ? current : scrollerElNow);
+  };
+  useLayoutEffect(resolveScroller);
 
   // The row the scroll holds onto across a change of geometry, and where it
   // sat when that change was decided. Captured at the two moments the list
@@ -48310,7 +48333,7 @@ const useListScrollSync = ({
         scrollerEl.removeEventListener(type, takeOver);
       }
     };
-  }, [scrolledWanted, scroller]);
+  }, [scrolledWanted, scrollerElResolved]);
 
   // Where the list is, said the way it can be given back to it: the row at the
   // top of what is on screen, and how far above the fold it sits. An index
@@ -48353,6 +48376,11 @@ const useListScrollSync = ({
     const scrollerEl = getScroller();
     const listEl = getListEl();
     const observer = new ResizeObserver(entries => {
+      // A box that grows may be a box that starts to scroll — the scroller is
+      // resolved again before anything is done about the resize, so that a
+      // list which has outgrown a bounded ancestor stops holding on to the
+      // page.
+      resolveScroller();
       // Two things resize here, and they call for opposite answers. The LIST
       // growing is its own content settling: only a list holding itself
       // somewhere cares (the end it aims at has moved), and a list the user is
@@ -48394,7 +48422,7 @@ const useListScrollSync = ({
     return () => {
       observer.disconnect();
     };
-  }, [scroller]);
+  }, [scrollerElResolved]);
 
   // Inserting rows above what the user is looking at must not move it by a
   // single pixel. The browser will not do it for us — overflow-anchor gives up
@@ -48547,7 +48575,7 @@ const useListScrollSync = ({
     return () => {
       scrollEventTarget.removeEventListener("scroll", onScroll);
     };
-  }, [renderBudget, scroller]);
+  }, [renderBudget, scrollerElResolved]);
   holdWindow();
   return {
     virtualItemSizeSignal,
@@ -48576,21 +48604,43 @@ const getScrollerViewportRect = scrollerEl => {
   return scrollerEl.getBoundingClientRect();
 };
 // scroller="parent": the list virtualizes against the scroll box it lives in
-// instead of one of its own.
+// instead of one of its own. Which box that is can only be measured, and a
+// measurement holds for the geometry it was taken on — see resolveScroller in
+// useListScrollSync, which takes it again whenever the geometry moves.
 const getScrollerEl = (listContainerEl, scroller, horizontal) => {
+  if (scroller === "document") {
+    return document.scrollingElement;
+  }
+  if (scroller && typeof scroller === "object") {
+    // The caller names the scroller: an element, or a ref holding one.
+    // Detection is a heuristic forever; being told is not.
+    const el = scroller.nodeType === 1 ? scroller : scroller.current;
+    return el || document.scrollingElement;
+  }
   if (scroller !== "parent") {
     return listContainerEl.querySelector(`.navi_list_scroll_container`);
   }
-  let ancestor = listContainerEl.parentElement;
-  while (ancestor) {
-    const style = window.getComputedStyle(ancestor);
-    const overflow = horizontal ? style.overflowX : style.overflowY;
-    if (overflow === "auto" || overflow === "scroll") {
-      return ancestor;
+  const axis = horizontal ? "x" : "y";
+  let element = listContainerEl;
+  let nearestScrollContainer = null;
+  while (true) {
+    const scrollContainer = getScrollContainer(element);
+    if (!scrollContainer || scrollContainer === element || scrollContainer === document.documentElement || scrollContainer === document.scrollingElement) {
+      break;
     }
-    ancestor = ancestor.parentElement;
+    // A scroll container that declares an overflow it does not have is not the
+    // one to listen to (see canScroll): the box that scrolls is above it.
+    if (canScroll(scrollContainer, axis)) {
+      return scrollContainer;
+    }
+    nearestScrollContainer = nearestScrollContainer || scrollContainer;
+    element = scrollContainer;
   }
-  return document.scrollingElement;
+  // Nothing scrolls yet. A bounded box waiting for its first rows is the one
+  // that will, and until it does, holding it changes nothing — where holding
+  // the page instead would drag the whole document to the end of a list that
+  // is not even scrollable.
+  return nearestScrollContainer || document.scrollingElement;
 };
 // A row must be worth looking at once put back where it was. The offset comes
 // from wherever the position was taken — another screen, another window size,
@@ -52581,7 +52631,7 @@ const renderDayDefault = (day, {
   // saying "you may wrap" there would undo the truncation instead.
   ,
 
-  noWrap: maxLines === 1 ? undefined : false,
+  noWrap: maxLines === 1 || maxLines === "1" ? undefined : false,
   maxLines: maxLines,
   children: day
 });

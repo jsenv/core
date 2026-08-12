@@ -99,6 +99,43 @@
       .navi_list_item[data-marked] {
         box-shadow: inset 0 2px 0 #d33;
       }
+
+      .page-scroll {
+        height: 220px;
+        background: #fff;
+        border: 1px solid #d5d8dd;
+        border-radius: 6px;
+        overflow: auto;
+      }
+      .page-title {
+        padding: 10px 12px;
+        color: #8a8f98;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      /* La recommandation mobile: une bande de filtres qui défile
+         horizontalement. overflow-x: auto rend l'overflow-y calculé "auto"
+         alors que cette boîte grandit avec son contenu et ne défilera jamais
+         verticalement. */
+      .mobile-main {
+        min-height: 100%;
+        overflow-x: auto;
+      }
+      .filters {
+        display: flex;
+        width: max-content;
+        padding: 8px;
+        gap: 8px;
+      }
+      .filter-chip {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        background: #f7f8fa;
+        border: 1px solid #d5d8dd;
+        border-radius: 999px;
+      }
     </style>
   </head>
   <body>
@@ -107,7 +144,7 @@
     </div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { useState } from "preact/hooks";
+      import { useRef, useState } from "preact/hooks";
       import {
         Box,
         Button,
@@ -613,6 +650,107 @@
 
       /* ------------------------------------------------------------------ */
 
+      const FILTERS = [
+        "Toutes",
+        "Terminées",
+        "À venir",
+        "Annulées",
+        "Court 1",
+        "Court 2",
+        "Court couvert",
+        "Court extérieur",
+        "P25",
+        "P50",
+        "P100",
+        "P250",
+      ];
+      const Filters = () => (
+        <div className="filters">
+          {FILTERS.map((filter) => (
+            <span key={filter} className="filter-chip">
+              {filter}
+            </span>
+          ))}
+        </div>
+      );
+
+      const ScrollerParentSection = () => {
+        const [key, setKey] = useState(0);
+        const pageRef = useRef(null);
+        const thread = () => (
+          <List
+            key={key}
+            scroller="parent"
+            expandX
+            renderBudget={30}
+            defaultScrolled="end"
+            renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+          >
+            <List.Items
+              itemsAction={fetchMessagePage}
+              renderItem={(message) => <Message message={message} />}
+            />
+          </List>
+        );
+        return (
+          <Section
+            title="C'est la page qui défile, pas la liste"
+            caption='scroller="parent"'
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span className="caption">une page qui défile</span>
+              <div className="page-scroll">
+                <div className="page-title">Mes parties</div>
+                {thread()}
+              </div>
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span className="caption">
+                une page qui défile, avec une bande de filtres qui défile
+                latéralement au-dessus de la liste
+              </span>
+              <div className="page-scroll">
+                <div className="mobile-main">
+                  <Filters />
+                  {thread()}
+                </div>
+              </div>
+            </Box>
+            <Box flex="y" spacing="xs">
+              <span className="caption">
+                scroller={"{pageRef}"} — la même, la boîte qui défile étant
+                désignée
+              </span>
+              <div className="page-scroll" ref={pageRef}>
+                <div className="mobile-main">
+                  <Filters />
+                  <List
+                    key={key}
+                    scroller={pageRef}
+                    expandX
+                    renderBudget={30}
+                    defaultScrolled="end"
+                    renderSkeleton={(index) => (
+                      <MessagePlaceholder index={index} />
+                    )}
+                  >
+                    <List.Items
+                      itemsAction={fetchMessagePage}
+                      renderItem={(message) => <Message message={message} />}
+                    />
+                  </List>
+                </div>
+              </div>
+            </Box>
+          </Section>
+        );
+      };
+
+      /* ------------------------------------------------------------------ */
+
       const PageByPageSection = () => {
         const [key, setKey] = useState(0);
         return (
@@ -663,6 +801,7 @@
           <CountSection />
           <GroupedByDaySection />
           <GameToJoinSection />
+          <ScrollerParentSection />
           <PageByPageSection />
         </Box>
       );

@@ -96,7 +96,10 @@ export {
 } from "./src/interaction/keyboard.js";
 // interaction/scroll
 export { captureScrollState } from "./src/interaction/scroll/capture_scroll.js";
-export { isScrollable } from "./src/interaction/scroll/is_scrollable.js";
+export {
+  canScroll,
+  isScrollable,
+} from "./src/interaction/scroll/is_scrollable.js";
 export { preventIntermediateScrollbar } from "./src/interaction/scroll/prevent_intermediate_scrollbar.js";
 export {
   getScrollContainer,

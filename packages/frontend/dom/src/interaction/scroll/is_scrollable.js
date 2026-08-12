@@ -14,6 +14,28 @@ export const isScrollable = (element, { includeHidden } = {}) => {
   return false;
 };
 
+// Whether this element is what scrolls on that axis: it says it may (overflow)
+// and it has somewhere to go (it overflows). Both are needed — an "auto" box
+// whose content fits scrolls nothing, and `overflow-x: auto` alone makes the
+// COMPUTED overflow-y auto too (CSS does not let one axis stay visible next to
+// a scrolling one), so a box scrolling sideways declares a vertical scroll it
+// will never do.
+export const canScroll = (element, axis) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  const style = getComputedStyle(element);
+  const overflow = axis === "x" ? style.overflowX : style.overflowY;
+  if (overflow !== "auto" && overflow !== "scroll") {
+    return false;
+  }
+  const scrollSize = axis === "x" ? element.scrollWidth : element.scrollHeight;
+  const clientSize = axis === "x" ? element.clientWidth : element.clientHeight;
+  // A pixel of slack: subpixel content rounds scrollSize up on boxes that have
+  // nowhere to scroll to.
+  return scrollSize - clientSize > 1;
+};
+
 const canHaveVerticalScroll = (element, { includeHidden }) => {
   const verticalOverflow = getStyle(element, "overflow-y");
   if (verticalOverflow === "visible") {

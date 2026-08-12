@@ -1,3 +1,5 @@
+import { canScroll } from "./scroll/is_scrollable.js";
+
 /**
  * Returns the browser's default action for a keyboard event on its target element.
  *
@@ -86,23 +88,6 @@ const isTypingIntent = (e) => {
     return true;
   }
   return false;
-};
-
-// Whether this element is what scrolls on that axis: it says it may (overflow)
-// and it has somewhere to go (it overflows). Both are needed — an "auto" box
-// whose content fits scrolls nothing, and the keys are then free.
-const canScrollSelf = (element, axis) => {
-  if (!element || element.nodeType !== 1) {
-    return false;
-  }
-  const style = getComputedStyle(element);
-  const overflow = axis === "x" ? style.overflowX : style.overflowY;
-  if (overflow !== "auto" && overflow !== "scroll") {
-    return false;
-  }
-  return axis === "x"
-    ? element.scrollWidth > element.clientWidth
-    : element.scrollHeight > element.clientHeight;
 };
 
 const DEFAULT_BEHAVIORS = [
@@ -281,22 +266,17 @@ const DEFAULT_BEHAVIORS = [
     // be read from the keyboard, and that is not a key to take. Asked per axis
     // and per element, not from a class or an attribute: what makes it true is
     // that it overflows right now.
-    test: (el) => canScrollSelf(el, "y") || canScrollSelf(el, "x"),
+    test: (el) => canScroll(el, "y") || canScroll(el, "x"),
     keys: {
-      arrowup: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      arrowdown: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      arrowleft: (e) =>
-        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
-      arrowright: (e) =>
-        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
-      pageup: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      pagedown: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      home: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      end: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      space: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      arrowup: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      arrowdown: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      arrowleft: (e) => (canScroll(e.target, "x") ? "scroll_self" : undefined),
+      arrowright: (e) => (canScroll(e.target, "x") ? "scroll_self" : undefined),
+      pageup: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      pagedown: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      home: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      end: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      space: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
     },
     // no fallback: only these keys are claimed, everything else keeps looking
   },

@@ -2051,16 +2051,12 @@ const parseCSSTransform = (transformString, normalize) => {
 
   const transformObj = {};
 
-  // Parse transform functions
-  const transformPattern = /(\w+)\(([^)]+)\)/g;
-  let match;
-
-  while ((match = transformPattern.exec(transformString)) !== null) {
-    const [, functionName, value] = match;
-
+  for (const { functionName, value, source } of readTransformFunctions(
+    transformString,
+  )) {
     // Handle matrix functions specially
     if (functionName === "matrix" || functionName === "matrix3d") {
-      const matrixComponents = parseMatrixTransform(match[0]);
+      const matrixComponents = parseMatrixTransform(source);
       if (matrixComponents) {
         // Only add non-default values to preserve original information
         Object.assign(transformObj, matrixComponents);
@@ -2078,6 +2074,42 @@ const parseCSSTransform = (transformString, normalize) => {
 
   // Return undefined if no properties were extracted (preserves original information)
   return Object.keys(transformObj).length > 0 ? transformObj : undefined;
+};
+
+// Cuts "translateX(10px) translateY(env(safe-area-inset-top))" into its
+// functions. Parentheses are counted rather than matched with a regex: a
+// transform value may hold calc(), env(), min()… and stopping at the first ")"
+// truncates them.
+const TRANSFORM_FUNCTION_START_REGEX = /(\w+)\(/g;
+const readTransformFunctions = (transformString) => {
+  const transformFunctions = [];
+  TRANSFORM_FUNCTION_START_REGEX.lastIndex = 0;
+  let match;
+  while ((match = TRANSFORM_FUNCTION_START_REGEX.exec(transformString))) {
+    const valueStart = match.index + match[0].length;
+    let depth = 1;
+    let index = valueStart;
+    while (index < transformString.length && depth > 0) {
+      const char = transformString[index];
+      if (char === "(") {
+        depth++;
+      } else if (char === ")") {
+        depth--;
+      }
+      index++;
+    }
+    if (depth > 0) {
+      // Unbalanced: nothing reliable left to read after this point.
+      break;
+    }
+    transformFunctions.push({
+      functionName: match[1],
+      value: transformString.slice(valueStart, index - 1),
+      source: transformString.slice(match.index, index),
+    });
+    TRANSFORM_FUNCTION_START_REGEX.lastIndex = index;
+  }
+  return transformFunctions;
 };
 // Parse a matrix transform and extract simple transform components when possible
 const parseMatrixTransform = (matrixString) => {
@@ -2324,33 +2356,6 @@ const globalCSSKeywordSet = new Set([
   "unset",
   "revert",
 ]);
-// Keywords that should NOT get automatic units when used with properties from:
-// - pxPropertySet (width, height, fontSize, etc.)
-// - degPropertySet (rotate, skew, etc.)
-// - unitlessPropertySet (opacity, zIndex, etc.)
-// This prevents auto-unit addition: e.g., width: "auto" stays "auto", not "autopx"
-const unitlessKeywordSet = new Set([
-  ...globalCSSKeywordSet,
-  // Size/dimension keywords for pxPropertySet properties
-  "fit-content",
-  "min-content",
-  "max-content",
-  // Font size keywords for fontSize
-  "medium",
-  "small",
-  "large",
-  "x-small",
-  "x-large",
-  "xx-small",
-  "xx-large",
-  "smaller",
-  "larger",
-  // Border width keywords for borderWidth properties
-  "thin",
-  "thick",
-  // Line height keyword (though lineHeight is handled specially)
-  "normal",
-]);
 // Keywords for backgroundImage property that should NOT be wrapped in url()
 // Used to prevent: background: "none" becoming background: "url(none)"
 const backgroundKeywordSet = new Set([
@@ -2387,9 +2392,27 @@ const getUnit = (value) => {
   }
   return "";
 };
-// Check if value already has a unit
-const isUnitless = (value) => getUnit(value) === "";
 const hasCSSSizeUnit = (value) => cssSizeUnitSet.has(getUnit(value));
+
+// A single number and nothing else — the only shape a unit may be appended to.
+// Everything else already says what it is: a unit ("2em"), a keyword ("auto"),
+// a CSS expression ("env(safe-area-inset-top)", "calc(…)") or a list of those
+// ("0 auto", "10px env(safe-area-inset-right)"). Asking "is this one number"
+// covers them all at once; listing what must be left alone (keywords, then
+// functions, then lists…) only ever covers what someone thought of.
+const isBareNumber = (value) => {
+  if (value === "") {
+    return false;
+  }
+  return !isNaN(Number(value));
+};
+// The same number, carrying exactly the unit asked for, and nothing else.
+const isBareNumberWithUnit = (value, unit) => {
+  if (!value.endsWith(unit)) {
+    return false;
+  }
+  return isBareNumber(value.slice(0, -unit.length));
+};
 
 // url(
 // linear-gradient(
@@ -2650,23 +2673,21 @@ const isCSSKeyword = (value) => {
 };
 const normalizeNumber = (value, { unit, propertyName, preferedType }) => {
   if (typeof value === "string") {
-    // CSS variables and CSS functions like calc() must be passed through as-is
-    if (isCSSFunction(value)) {
-      return value;
-    }
-    // Keep strings as-is (including %, em, rem, auto, none, etc.)
+    value = value.trim();
     if (preferedType === "string") {
-      if (unit && isUnitless(value) && !unitlessKeywordSet.has(value)) {
+      // Everything that is not a lone number already carries its own meaning
+      // and goes to the DOM untouched: "2em", "auto", "env(safe-area-inset-top)",
+      // "calc(…)", "0 auto", "10px env(safe-area-inset-right)".
+      if (unit && isBareNumber(value)) {
         return `${value}${unit}`;
       }
       return value;
     }
-    // convert to number if possible (font-size: "12px" -> fontSize:12, opacity: "0.5" -> opacity: 0.5)
-    if (!unit || value.endsWith(unit)) {
-      const numericValue = parseFloat(value);
-      if (!isNaN(numericValue)) {
-        return numericValue;
-      }
+    // A number to work with, only when the value is exactly one:
+    // "12px" -> 12, "0.5" -> 0.5. "10px 20px" is a list and "calc(…)" is an
+    // expression — parseFloat would silently keep their first number.
+    if (unit ? isBareNumberWithUnit(value, unit) : isBareNumber(value)) {
+      return parseFloat(value);
     }
     return value;
   }
@@ -4587,6 +4608,185 @@ const findFocusable = (element, { exclude } = {}) => {
   return focusableDescendant;
 };
 
+// note: keep in mind that an element with overflow: 'hidden' is scrollable
+// it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
+// the only overflow that prevents scroll is "visible"
+const isScrollable = (element, { includeHidden } = {}) => {
+  if (canHaveVerticalScroll(element, { includeHidden })) {
+    return true;
+  }
+  if (canHaveHorizontalScroll(element, { includeHidden })) {
+    return true;
+  }
+  return false;
+};
+
+// Whether this element is what scrolls on that axis: it says it may (overflow)
+// and it has somewhere to go (it overflows). Both are needed — an "auto" box
+// whose content fits scrolls nothing, and `overflow-x: auto` alone makes the
+// COMPUTED overflow-y auto too (CSS does not let one axis stay visible next to
+// a scrolling one), so a box scrolling sideways declares a vertical scroll it
+// will never do.
+const canScroll = (element, axis) => {
+  if (!element || element.nodeType !== 1) {
+    return false;
+  }
+  const style = getComputedStyle(element);
+  const overflow = axis === "x" ? style.overflowX : style.overflowY;
+  if (overflow !== "auto" && overflow !== "scroll") {
+    return false;
+  }
+  const scrollSize = axis === "x" ? element.scrollWidth : element.scrollHeight;
+  const clientSize = axis === "x" ? element.clientWidth : element.clientHeight;
+  // A pixel of slack: subpixel content rounds scrollSize up on boxes that have
+  // nowhere to scroll to.
+  return scrollSize - clientSize > 1;
+};
+
+const canHaveVerticalScroll = (element, { includeHidden }) => {
+  const verticalOverflow = getStyle(element, "overflow-y");
+  if (verticalOverflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
+    return false;
+  }
+  if (verticalOverflow === "hidden" || verticalOverflow === "clip") {
+    return includeHidden;
+  }
+  const overflow = getStyle(element, "overflow");
+  if (overflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
+    return false;
+  }
+  if (overflow === "hidden" || overflow === "clip") {
+    return includeHidden;
+  }
+  return true; // "auto", "scroll"
+};
+const canHaveHorizontalScroll = (element, { includeHidden }) => {
+  const horizontalOverflow = getStyle(element, "overflow-x");
+  if (horizontalOverflow === "visible") {
+    // browser returns "visible" on documentElement even if it is scrollable
+    if (isDocumentElement(element)) {
+      return true;
+    }
+    return false;
+  }
+  if (horizontalOverflow === "hidden" || horizontalOverflow === "clip") {
+    return includeHidden;
+  }
+  const overflow = getStyle(element, "overflow");
+  if (overflow === "visible") {
+    if (isDocumentElement(element)) {
+      // browser returns "visible" on documentElement even if it is scrollable
+      return true;
+    }
+    return false;
+  }
+  if (overflow === "hidden" || overflow === "clip") {
+    return includeHidden;
+  }
+  return true; // "auto", "scroll"
+};
+
+const getScrollingElement = (document) => {
+  const { scrollingElement } = document;
+  if (scrollingElement) {
+    return scrollingElement;
+  }
+
+  if (isCompliant(document)) {
+    return document.documentElement;
+  }
+
+  const body = document.body;
+  const isFrameset = body && !/body/i.test(body.tagName);
+  const possiblyScrollingElement = isFrameset ? getNextBodyElement(body) : body;
+
+  // If `body` is itself scrollable, it is not the `scrollingElement`.
+  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement)
+    ? null
+    : possiblyScrollingElement;
+};
+
+const isHidden = (element) => {
+  const display = getStyle(element, "display");
+  if (display === "none") {
+    return false;
+  }
+
+  if (
+    display === "table-row" ||
+    display === "table-group" ||
+    display === "table-column"
+  ) {
+    return getStyle(element, "visibility") !== "collapsed";
+  }
+
+  return true;
+};
+const isCompliant = (document) => {
+  // Note: document.compatMode can be toggle at runtime by document.write
+  const isStandardsMode = /^CSS1/.test(document.compatMode);
+  if (isStandardsMode) {
+    return testScrollCompliance(document);
+  }
+  return false;
+};
+const testScrollCompliance = (document) => {
+  const iframe = document.createElement("iframe");
+  iframe.style.height = "1px";
+  const parentNode = document.body || document.documentElement || document;
+  parentNode.appendChild(iframe);
+  const iframeDocument = iframe.contentWindow.document;
+  iframeDocument.write('<!DOCTYPE html><div style="height:9999em">x</div>');
+  iframeDocument.close();
+  const scrollComplianceResult =
+    iframeDocument.documentElement.scrollHeight >
+    iframeDocument.body.scrollHeight;
+  iframe.parentNode.removeChild(iframe);
+  return scrollComplianceResult;
+};
+const getNextBodyElement = (frameset) => {
+  // We use this function to be correct per spec in case `document.body` is
+  // a `frameset` but there exists a later `body`. Since `document.body` is
+  // a `frameset`, we know the root is an `html`, and there was no `body`
+  // before the `frameset`, so we just need to look at siblings after the
+  // `frameset`.
+  let current = frameset;
+  while ((current = current.nextSibling)) {
+    if (current.nodeType === 1 && isBodyElement(current)) {
+      return current;
+    }
+  }
+  return null;
+};
+const isBodyElement = (element) => element.ownerDocument.body === element;
+const bodyIsScrollable = (body) => {
+  // a body element is scrollable if body and html are scrollable and rendered
+  if (!isScrollable(body)) {
+    return false;
+  }
+  if (isHidden(body)) {
+    return false;
+  }
+
+  const documentElement = body.ownerDocument.documentElement;
+  if (!isScrollable(documentElement)) {
+    return false;
+  }
+  if (isHidden(documentElement)) {
+    return false;
+  }
+
+  return true;
+};
+
 /**
  * Returns the browser's default action for a keyboard event on its target element.
  *
@@ -4675,23 +4875,6 @@ const isTypingIntent = (e) => {
     return true;
   }
   return false;
-};
-
-// Whether this element is what scrolls on that axis: it says it may (overflow)
-// and it has somewhere to go (it overflows). Both are needed — an "auto" box
-// whose content fits scrolls nothing, and the keys are then free.
-const canScrollSelf = (element, axis) => {
-  if (!element || element.nodeType !== 1) {
-    return false;
-  }
-  const style = getComputedStyle(element);
-  const overflow = axis === "x" ? style.overflowX : style.overflowY;
-  if (overflow !== "auto" && overflow !== "scroll") {
-    return false;
-  }
-  return axis === "x"
-    ? element.scrollWidth > element.clientWidth
-    : element.scrollHeight > element.clientHeight;
 };
 
 const DEFAULT_BEHAVIORS = [
@@ -4870,22 +5053,17 @@ const DEFAULT_BEHAVIORS = [
     // be read from the keyboard, and that is not a key to take. Asked per axis
     // and per element, not from a class or an attribute: what makes it true is
     // that it overflows right now.
-    test: (el) => canScrollSelf(el, "y") || canScrollSelf(el, "x"),
+    test: (el) => canScroll(el, "y") || canScroll(el, "x"),
     keys: {
-      arrowup: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      arrowdown: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      arrowleft: (e) =>
-        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
-      arrowright: (e) =>
-        canScrollSelf(e.target, "x") ? "scroll_self" : undefined,
-      pageup: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      pagedown: (e) =>
-        canScrollSelf(e.target, "y") ? "scroll_self" : undefined,
-      home: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      end: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
-      space: (e) => (canScrollSelf(e.target, "y") ? "scroll_self" : undefined),
+      arrowup: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      arrowdown: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      arrowleft: (e) => (canScroll(e.target, "x") ? "scroll_self" : undefined),
+      arrowright: (e) => (canScroll(e.target, "x") ? "scroll_self" : undefined),
+      pageup: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      pagedown: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      home: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      end: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
+      space: (e) => (canScroll(e.target, "y") ? "scroll_self" : undefined),
     },
     // no fallback: only these keys are claimed, everything else keeps looking
   },
@@ -6343,163 +6521,6 @@ const captureScrollState = (element) => {
       element.scrollTop = scrollTop;
     }
   };
-};
-
-// note: keep in mind that an element with overflow: 'hidden' is scrollable
-// it can be scrolled using keyboard arrows or JavaScript properties such as scrollTop, scrollLeft
-// the only overflow that prevents scroll is "visible"
-const isScrollable = (element, { includeHidden } = {}) => {
-  if (canHaveVerticalScroll(element, { includeHidden })) {
-    return true;
-  }
-  if (canHaveHorizontalScroll(element, { includeHidden })) {
-    return true;
-  }
-  return false;
-};
-
-const canHaveVerticalScroll = (element, { includeHidden }) => {
-  const verticalOverflow = getStyle(element, "overflow-y");
-  if (verticalOverflow === "visible") {
-    // browser returns "visible" on documentElement even if it is scrollable
-    if (isDocumentElement(element)) {
-      return true;
-    }
-    return false;
-  }
-  if (verticalOverflow === "hidden" || verticalOverflow === "clip") {
-    return includeHidden;
-  }
-  const overflow = getStyle(element, "overflow");
-  if (overflow === "visible") {
-    // browser returns "visible" on documentElement even if it is scrollable
-    if (isDocumentElement(element)) {
-      return true;
-    }
-    return false;
-  }
-  if (overflow === "hidden" || overflow === "clip") {
-    return includeHidden;
-  }
-  return true; // "auto", "scroll"
-};
-const canHaveHorizontalScroll = (element, { includeHidden }) => {
-  const horizontalOverflow = getStyle(element, "overflow-x");
-  if (horizontalOverflow === "visible") {
-    // browser returns "visible" on documentElement even if it is scrollable
-    if (isDocumentElement(element)) {
-      return true;
-    }
-    return false;
-  }
-  if (horizontalOverflow === "hidden" || horizontalOverflow === "clip") {
-    return includeHidden;
-  }
-  const overflow = getStyle(element, "overflow");
-  if (overflow === "visible") {
-    if (isDocumentElement(element)) {
-      // browser returns "visible" on documentElement even if it is scrollable
-      return true;
-    }
-    return false;
-  }
-  if (overflow === "hidden" || overflow === "clip") {
-    return includeHidden;
-  }
-  return true; // "auto", "scroll"
-};
-
-const getScrollingElement = (document) => {
-  const { scrollingElement } = document;
-  if (scrollingElement) {
-    return scrollingElement;
-  }
-
-  if (isCompliant(document)) {
-    return document.documentElement;
-  }
-
-  const body = document.body;
-  const isFrameset = body && !/body/i.test(body.tagName);
-  const possiblyScrollingElement = isFrameset ? getNextBodyElement(body) : body;
-
-  // If `body` is itself scrollable, it is not the `scrollingElement`.
-  return possiblyScrollingElement && bodyIsScrollable(possiblyScrollingElement)
-    ? null
-    : possiblyScrollingElement;
-};
-
-const isHidden = (element) => {
-  const display = getStyle(element, "display");
-  if (display === "none") {
-    return false;
-  }
-
-  if (
-    display === "table-row" ||
-    display === "table-group" ||
-    display === "table-column"
-  ) {
-    return getStyle(element, "visibility") !== "collapsed";
-  }
-
-  return true;
-};
-const isCompliant = (document) => {
-  // Note: document.compatMode can be toggle at runtime by document.write
-  const isStandardsMode = /^CSS1/.test(document.compatMode);
-  if (isStandardsMode) {
-    return testScrollCompliance(document);
-  }
-  return false;
-};
-const testScrollCompliance = (document) => {
-  const iframe = document.createElement("iframe");
-  iframe.style.height = "1px";
-  const parentNode = document.body || document.documentElement || document;
-  parentNode.appendChild(iframe);
-  const iframeDocument = iframe.contentWindow.document;
-  iframeDocument.write('<!DOCTYPE html><div style="height:9999em">x</div>');
-  iframeDocument.close();
-  const scrollComplianceResult =
-    iframeDocument.documentElement.scrollHeight >
-    iframeDocument.body.scrollHeight;
-  iframe.parentNode.removeChild(iframe);
-  return scrollComplianceResult;
-};
-const getNextBodyElement = (frameset) => {
-  // We use this function to be correct per spec in case `document.body` is
-  // a `frameset` but there exists a later `body`. Since `document.body` is
-  // a `frameset`, we know the root is an `html`, and there was no `body`
-  // before the `frameset`, so we just need to look at siblings after the
-  // `frameset`.
-  let current = frameset;
-  while ((current = current.nextSibling)) {
-    if (current.nodeType === 1 && isBodyElement(current)) {
-      return current;
-    }
-  }
-  return null;
-};
-const isBodyElement = (element) => element.ownerDocument.body === element;
-const bodyIsScrollable = (body) => {
-  // a body element is scrollable if body and html are scrollable and rendered
-  if (!isScrollable(body)) {
-    return false;
-  }
-  if (isHidden(body)) {
-    return false;
-  }
-
-  const documentElement = body.ownerDocument.documentElement;
-  if (!isScrollable(documentElement)) {
-    return false;
-  }
-  if (isHidden(documentElement)) {
-    return false;
-  }
-
-  return true;
 };
 
 // https://developer.mozilla.org/en-US/docs/Glossary/Scroll_container
@@ -16813,4 +16834,4 @@ const useResizeStatus = (elementRef, { as = "number" } = {}) => {
   };
 };
 
-export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
+export { EASING, ELEMENT_SIZE_CHANGE, activeElementSignal, addActiveElementEffect, addAttributeEffect, allowWheelThrough, appendStyles, applyNewPosition, canScroll, captureScrollState, chainEvent, closestOpenableAncestor, contrastColor, createBackgroundColorTransition, createBackgroundTransition, createBorderRadiusTransition, createBorderTransition, createDragGestureController, createDragToMoveGestureController, createEventGroupLogger, createGroupTransitionController, createHeightTransition, createIterableWeakSet, createOpacityTransition, createPubSub, createStyleController, createTimelineTransition, createTransition, createTranslateXTransition, createValueEffect, createWidthTransition, cubicBezier, dispatchCustomEvent, dispatchInternalCustomEvent, dispatchPublicCustomEvent, dragAfterThreshold, elementIsFocusable, elementIsVisibleForFocus, elementIsVisuallyVisible, findAfter, findAncestor, findBefore, findDescendant, findEvent, findFocusDelegateTarget, findFocusable, findSelfOrAncestorFixedPosition, formatEventSideEffect, getAncestorOpenType, getAvailableHeight, getAvailableWidth, getBackground, getBackgroundColor, getBorder, getBorderRadius, getBorderSizes, getContrastRatio, getDefaultStyles, getDragCoordinates, getDropTargetInfo, getElementSignature, getFirstVisuallyVisibleAncestor, getFocusVisibilityInfo, getHeight, getHeightWithoutTransition, getInnerHeight, getInnerWidth, getKeyboardEventDefaultAction, getLuminance, getMarginSizes, getMaxHeight, getMaxWidth, getMinHeight, getMinWidth, getOpacity, getOpacityWithoutTransition, getPaddingSizes, getPositionedParent, getPositioningScrollOffset, getPreferedColorScheme, getScrollBox, getScrollContainer, getScrollContainerSet, getScrollRelativeRect, getSelfAndAncestorScrolls, getStyle, getTranslateX, getTranslateXWithoutTransition, getTranslateY, getVisuallyVisibleInfo, getWidth, getWidthWithoutTransition, hasCSSSizeUnit, initFlexDetailsSet, initFocusGroup, initPositionSticky, isAncestorOpen, isSameColor, isScrollable, measureLongestVisualLineWidth, measureScrollbar, measureWidestChildRow, mergeOneStyle, mergeTwoStyles, normalizeKeyboardKey, normalizeStyle, normalizeStyles, observeAncestorOpenState, onAncestorReopen, parsePositionArea, parseStyle, performTabNavigation, pickPositionRelativeTo, prefersDarkColors, prefersLightColors, preventFocusNav, preventFocusNavViaKeyboard, preventIntermediateScrollbar, resolveCSSColor, resolveCSSSize, resolveColorLuminance, resolveOklchLightness, scrollIntoViewScoped, scrollIntoViewWithStickyAwareness, setAttribute, setAttributes, setStyles, snapToPixel, startDragToReorder, startDragToResizeGesture, stickyAsRelativeCoords, stringifyStyle, subscribeVisualViewportResizeSettled, subscribeWindowResizeSettled, trapFocusInside, trapScrollInside, useActiveElement, useAvailableHeight, useAvailableWidth, useMaxHeight, useMaxWidth, useResizeStatus, visibleRectEffect };
