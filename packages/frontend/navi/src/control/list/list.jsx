@@ -2600,7 +2600,20 @@ const ListItemUI = (props) => {
   }
   // html-hidden items: excluded from virtual scroll accounting but always in DOM
   if (props.hidden) {
-    return <ListItemReal {...props} />;
+    // Its separator stays too, and stays invisible with it: the point of
+    // keeping a row that matches nothing is that nothing moves, and a divider
+    // that leaves takes its own height away.
+    if (!separator || props.index === 0) {
+      return <ListItemReal {...props} />;
+    }
+    return (
+      <>
+        {cloneElement(resolveSeparatorVnode(separator, props.index - 1), {
+          style: HIDDEN_SEPARATOR_STYLE,
+        })}
+        <ListItemReal {...props} />
+      </>
+    );
   }
   if (row) {
     return <ListItemReal {...props} />;
@@ -3024,6 +3037,7 @@ const createListVirtual = () => {
 };
 
 const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
+const HIDDEN_SEPARATOR_STYLE = { visibility: "hidden" };
 
 /**
  * List.Items — a run of rows given as data rather than as one component each.
