@@ -691,7 +691,7 @@ const renderDayDefault = (day, { lang, format, maxLines } = {}) => (
     // the box is meant to wrap, so that is undone — except for maxLines={1},
     // which IS one line and cuts it itself (see Text's own TextOverflow):
     // saying "you may wrap" there would undo the truncation instead.
-    noWrap={maxLines === 1 ? undefined : false}
+    noWrap={maxLines === 1 || maxLines === "1" ? undefined : false}
     maxLines={maxLines}
   >
     {day}

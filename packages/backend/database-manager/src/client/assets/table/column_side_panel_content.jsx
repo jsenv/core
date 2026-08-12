@@ -10,6 +10,7 @@ import {
   Radio,
   RadioList,
   Text,
+  Textarea,
 } from "@jsenv/navi";
 
 import { TABLE_INDEX_ROUTE } from "../routes.js";
@@ -763,11 +764,13 @@ const GeneratedField = ({ column, isGenerated, putColumn }) => {
     return (
       <Box flex="y" spacing="xs">
         <FieldLabel>Generated expression</FieldLabel>
-        <textarea
-          rows={3}
+        <Textarea
+          minRows={3}
+          resizable
           value={expression}
-          style={{ resize: "vertical", fontFamily: "monospace" }}
-          onInput={(e) => setExpression(e.currentTarget.value)}
+          uiAction={(newValue) => {
+            setExpression(newValue);
+          }}
         />
         <Button
           data-confirm-message={`Changing the generation expression will drop and re-create the column "${column.column_name}", permanently deleting its data. Continue?`}
@@ -792,12 +795,14 @@ const GeneratedField = ({ column, isGenerated, putColumn }) => {
     return (
       <Box flex="y" spacing="xs">
         <FieldLabel>Generated expression</FieldLabel>
-        <textarea
-          rows={3}
+        <Textarea
+          minRows={3}
+          resizable
           placeholder="e.g. first_name || ' ' || last_name"
           value={expression}
-          style={{ resize: "vertical", fontFamily: "monospace" }}
-          onInput={(e) => setExpression(e.currentTarget.value)}
+          uiAction={(newValue) => {
+            setExpression(newValue);
+          }}
         />
         <Box spacing="s">
           <Button
