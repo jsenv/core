@@ -71,7 +71,16 @@ export const devServerPluginServeSourceFiles = ({
         }
       }
     });
-    const clientRuntimeCompat = { [runtimeName]: runtimeVersion };
+    // A client we cannot identify (curl, fetch, a healthcheck, a proxy dropping
+    // the user agent) is assumed to be one of the runtimes the project targets.
+    // Treating it as a runtime supporting nothing would serve it the js module
+    // fallback, breaking tooling perfectly capable of ES modules; an actual
+    // ancient browser hiding its identity fails loudly instead, which is the
+    // cheaper of the two mistakes.
+    const clientRuntimeCompat =
+      runtimeName === "unknown"
+        ? runtimeCompat
+        : { [runtimeName]: runtimeVersion };
 
     kitchen = createKitchen({
       name: runtimeId,
