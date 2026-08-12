@@ -1158,6 +1158,11 @@ const useListScrollSync = ({
   };
 
   const startPlaceRef = useRef({ userTookOver: false });
+  // The row the scroll is held onto across a commit (see the anchoring below).
+  // A deliberate move — opening the list somewhere, coming back to a row — is
+  // the list saying where it wants to be: whatever it was holding onto before
+  // no longer applies, or the correction would undo the move.
+  const anchorRef = useRef(null);
   // Set around a scroll the list performs itself. What it protects against is
   // not the scroll event as such, but what the listener would conclude from it:
   // the position it is about to read was chosen to keep the rows where they
@@ -1389,52 +1394,46 @@ const useListScrollSync = ({
         return;
       }
     }
-    // Not now: the room held for the rows below the fold is written by the
-    // fillers, which only hear about the row size once this render has been
-    // committed. Landing at the right place means asking after they have — a
-    // microtask still runs before the frame is painted.
-    queueMicrotask(() => {
-      if (startPlaceRef.current.userTookOver || !ref.current) {
-        return;
-      }
-      const scrollerEl = getScroller();
-      if (startAt === "end") {
-        if (horizontal) {
-          scrollerEl.scrollLeft = scrollerEl.scrollWidth;
-        } else {
-          scrollerEl.scrollTop = scrollerEl.scrollHeight;
-        }
-        return;
-      }
-      if (startAt.id !== undefined) {
-        const rowEl = findRowElement(getListEl(), startAt.id);
-        if (!rowEl) {
-          return;
-        }
-        const viewportRect = getScrollerViewportRect(scrollerEl);
-        const rowRect = rowEl.getBoundingClientRect();
-        const offsetWanted = startAt.offset || 0;
-        const offsetNow = horizontal
-          ? rowRect.left - viewportRect.left
-          : rowRect.top - viewportRect.top;
-        const delta = offsetNow - offsetWanted;
-        if (delta > -0.5 && delta < 0.5) {
-          return;
-        }
-        if (horizontal) {
-          scrollerEl.scrollLeft += delta;
-        } else {
-          scrollerEl.scrollTop += delta;
-        }
-        return;
-      }
-      const rowPosition = startAt * virtualItemSizeSignal.peek();
+    const scrollerEl = getScroller();
+    if (startAt === "end") {
+      anchorRef.current = null;
       if (horizontal) {
-        scrollerEl.scrollLeft = rowPosition;
+        scrollerEl.scrollLeft = scrollerEl.scrollWidth;
       } else {
-        scrollerEl.scrollTop = rowPosition;
+        scrollerEl.scrollTop = scrollerEl.scrollHeight;
       }
-    });
+      return;
+    }
+    if (startAt.id !== undefined) {
+      const rowEl = findRowElement(getListEl(), startAt.id);
+      if (!rowEl) {
+        return;
+      }
+      const viewportRect = getScrollerViewportRect(scrollerEl);
+      const rowRect = rowEl.getBoundingClientRect();
+      const offsetWanted = startAt.offset || 0;
+      const offsetNow = horizontal
+        ? rowRect.left - viewportRect.left
+        : rowRect.top - viewportRect.top;
+      const delta = offsetNow - offsetWanted;
+      if (delta > -0.5 && delta < 0.5) {
+        return;
+      }
+      anchorRef.current = null;
+      if (horizontal) {
+        scrollerEl.scrollLeft += delta;
+      } else {
+        scrollerEl.scrollTop += delta;
+      }
+      return;
+    }
+    const rowPosition = startAt * virtualItemSizeSignal.peek();
+    anchorRef.current = null;
+    if (horizontal) {
+      scrollerEl.scrollLeft = rowPosition;
+    } else {
+      scrollerEl.scrollTop = rowPosition;
+    }
   });
   useLayoutEffect(() => {
     if (startAt === "start" || startAt === undefined || !ref.current) {
@@ -1487,7 +1486,6 @@ const useListScrollSync = ({
   // on changes it attributes to a scroll, and the fillers resize in the very
   // same commit — so the row at the top of the viewport is measured before the
   // commit and put back at the same offset after it.
-  const anchorRef = useRef(null);
   if (
     !searchText &&
     !anchorRef.current &&
@@ -1614,6 +1612,17 @@ const useListScrollSync = ({
       const { index, reason: hitReason } = scrollInfo;
       virtual.visibleIndex = index;
       reason = hitReason;
+      // Recentering on every row crossed would rebuild the whole window a few
+      // times a second, and a window rebuilt is every row of it rendered
+      // again. It only moves once what is on screen comes near one of its
+      // edges — until then, it already holds what has to be drawn.
+      const { start, end } = renderWindowRef.current;
+      const margin = Math.floor(renderBudget / 4);
+      const farFromStart = index - start >= margin || start === 0;
+      const farFromEnd = end - index > margin || end === total;
+      if (farFromStart && farFromEnd) {
+        return;
+      }
       const half = Math.floor(renderBudget / 2);
       let newStart = Math.max(0, index - half);
       let newEnd = Math.min(total, newStart + renderBudget);

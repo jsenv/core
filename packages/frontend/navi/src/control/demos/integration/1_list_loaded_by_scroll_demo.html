@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <title>Listes infinies</title>
+    <title>Listes chargées au défilement</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:," />
     <style>
@@ -120,6 +120,9 @@
 
       /* ------------------------------------------------------------------
          Le serveur: une conversation dont le front ne tient que des pages.
+         Ce que la liste sait faire n'a rien à voir avec le sens du défilement:
+         elle demande ce qu'elle s'apprête à dessiner, qu'on monte ou qu'on
+         descende.
          Un message garde son id quoi qu'il arrive — c'est ce qui permet de le
          retrouver quand d'autres se sont insérés avant lui.
          ------------------------------------------------------------------ */
@@ -543,7 +546,7 @@
       const App = () => (
         <Box flex="y" spacing="l">
           <DemoHeader
-            title="Listes infinies"
+            title="Listes chargées au défilement (listes « infinies »)"
             previous={{
               href: "./0_address_autocomplete_demo.html",
               label: "Adresse avec autocomplete",
