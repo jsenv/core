@@ -491,7 +491,7 @@ const css = /* css */ `
      centers a spinner; a custom loadingFallback is only given a row to live in,
      its own markup does the layout. */
   .navi_list_item_skeleton {
-    pointer-events: none;
+    /* pointer-events: none; */
   }
   .navi_list_loader {
     display: flex;

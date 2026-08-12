@@ -437,6 +437,65 @@
         );
       };
 
+      /* ------------------------------------------------------------------ */
+
+      // Le même retour, avec et sans le total. Sans lui, une liste ne mesure
+      // que ce qu'elle tient: la barre de défilement ne peut pas avoir sa
+      // taille, ni le retour tomber au bon endroit, tant que la première page
+      // n'est pas là.
+      const SLOW = 1500;
+      const fetchMessagePageSlowly = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readMessagePage(range)),
+            SLOW,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
+        });
+
+      const CountSection = () => {
+        const [key, setKey] = useState(0);
+        const thread = (count) => (
+          <List
+            key={key}
+            maxHeight="220px"
+            expandX
+            renderBudget={30}
+            scrolled={POSITION_FROM_LAST_VISIT}
+            renderSkeleton={(index) => <MessagePlaceholder index={index} />}
+          >
+            <List.Items
+              itemsAction={fetchMessagePageSlowly}
+              count={count}
+              renderItem={(message) => <Message message={message} />}
+            />
+          </List>
+        );
+        return (
+          <Section
+            title="Ce que le total apporte"
+            caption="1500 ms de latence: regarder la barre de défilement pendant le chargement"
+          >
+            <Box flex alignX="start">
+              <Button onClick={() => setKey(key + 1)}>recharger</Button>
+            </Box>
+            <Box flex spacing="m" alignY="start">
+              <Box flex="y" spacing="xs" expandX>
+                <span className="caption">count={COUNT_FROM_LAST_VISIT}</span>
+                {thread(COUNT_FROM_LAST_VISIT)}
+              </Box>
+              <Box flex="y" spacing="xs" expandX>
+                <span className="caption">sans count</span>
+                {thread(undefined)}
+              </Box>
+            </Box>
+          </Section>
+        );
+      };
+
       /* ------------------------------------------------------------------
          Une autre collection, une autre liste: des parties de padel qu'on
          choisit, pas des messages qu'on lit.
@@ -595,6 +654,7 @@
           />
           <LastMessagesSection />
           <ResumeSection />
+          <CountSection />
           <GroupedByDaySection />
           <GameToJoinSection />
           <PageByPageSection />
