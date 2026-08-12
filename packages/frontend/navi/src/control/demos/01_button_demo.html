@@ -139,6 +139,12 @@
         border-radius: 0 4px 4px 0;
       }
 
+      .demo-section h3 {
+        margin: 32px 0 8px;
+        color: #333;
+        font-size: 1.1rem;
+      }
+
       html.demo-roomy-confirm {
         --navi-confirm-popup-padding: 24px;
         --navi-confirm-popup-spacing: 20px;
@@ -226,6 +232,19 @@
                   </li>
                   <li>
                     <a href="#confirm">confirm</a>
+                    <ol style={{ paddingLeft: "20px" }}>
+                      <li>
+                        <a href="#confirm-submit">On a submit button</a>
+                      </li>
+                      <li>
+                        <a href="#confirm-customization">Customization</a>
+                      </li>
+                      <li>
+                        <a href="#confirm-options">
+                          defineNaviConfirmPopupOptions
+                        </a>
+                      </li>
+                    </ol>
                   </li>
                 </ol>
               </li>
@@ -567,127 +586,156 @@
       };
 
       const ConfirmDemo = () => {
+        return (
+          <div class="demo-section" id="confirm">
+            <h2>confirm</h2>
+            <ConfirmBasicsDemo />
+            <ConfirmOnSubmitDemo />
+            <ConfirmCustomizationDemo />
+            <ConfirmOptionsDemo />
+          </div>
+        );
+      };
+
+      // Deliberately slow: what these examples are about is the question, and a
+      // loading state that lasts is how one sees whether the action started at
+      // all — or never did.
+      const deleteAFile = async () => {
+        await new Promise((r) => setTimeout(r, 1500));
+      };
+
+      const ConfirmBasicsDemo = () => {
+        return (
+          <div class="states-section">
+            <div class="states-title">confirm</div>
+            <p class="states-description">
+              The action runs only once the question is answered. Cancelling —
+              the cancel button, Escape, a click outside — aborts it.
+            </p>
+
+            <fieldset>
+              <legend>No confirm</legend>
+              <Button action={deleteAFile}>Delete</Button>
+            </fieldset>
+
+            <fieldset>
+              <legend>confirm="Delete this file?"</legend>
+              <Button confirm="Delete this file?" action={deleteAFile}>
+                Delete
+              </Button>
+            </fieldset>
+          </div>
+        );
+      };
+
+      const ConfirmOnSubmitDemo = () => {
+        return (
+          <>
+            <h3 id="confirm-submit">confirm on a submit button</h3>
+            <div class="states-section">
+              <p class="states-description">
+                The form's action is asynchronous: nothing is sent while the
+                question is up, and the form only goes into loading once it is
+                answered.
+              </p>
+
+              <OneSubmitButtonDemo />
+              <TwoSubmitButtonsDemo />
+            </div>
+          </>
+        );
+      };
+
+      const OneSubmitButtonDemo = () => {
         const [entries, push, clear] = useCallLog();
+
+        return (
+          <fieldset>
+            <legend>One submit button</legend>
+            <Form
+              canSendWhileUnchanged
+              action={async ({ email }) => {
+                push("Form action", { email });
+                await new Promise((r) => setTimeout(r, 1500));
+                push("Form action done");
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Input
+                  type="email"
+                  name="email"
+                  placeholder="new@address.com"
+                />
+                <Button
+                  type="submit"
+                  confirm="Change the address every notification is sent to?"
+                >
+                  Save
+                </Button>
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </fieldset>
+        );
+      };
+
+      const TwoSubmitButtonsDemo = () => {
+        const [entries, push, clear] = useCallLog();
+
+        return (
+          <fieldset>
+            <legend>Two submit buttons, one of them asking</legend>
+            <Form
+              action={async ({ title, submitAction }) => {
+                push("Form action", { title, submitAction });
+                await new Promise((r) => setTimeout(r, 1500));
+                push("Form action done");
+              }}
+            >
+              <Box flex="y" spacing="s" alignX="start">
+                <Input type="text" name="title" placeholder="Article title…" />
+                <Box flex="x" spacing="s">
+                  <Button type="submit" name="submitAction" value="draft">
+                    Save as draft
+                  </Button>
+                  <Button
+                    type="submit"
+                    name="submitAction"
+                    value="publish"
+                    confirm="Publish this article for everyone?"
+                  >
+                    Publish
+                  </Button>
+                </Box>
+              </Box>
+            </Form>
+            <CallLog entries={entries} onClear={clear} />
+          </fieldset>
+        );
+      };
+
+      const ConfirmCustomizationDemo = () => {
         // On <html>, not on this section: the popup mounts its own tree at the
         // end of <body>, so the vars have to be set somewhere it inherits from.
         const [roomy, setRoomy] = useState(false);
 
         return (
-          <div class="demo-section" id="confirm">
-            <h2>confirm</h2>
-
+          <>
+            <h3 id="confirm-customization">confirm customization</h3>
             <div class="states-section">
-              <div class="states-title">confirm</div>
               <p class="states-description">
-                The action runs only once the question is answered. Cancelling —
-                the cancel button, Escape, a click outside — aborts it.
+                Same button, same action, four ways to shape what it asks.
               </p>
 
               <fieldset>
-                <legend>No confirm</legend>
-                <Button
-                  action={() => {
-                    push("Delete action");
-                  }}
-                >
+                <legend>1. A sentence</legend>
+                <Button confirm="Delete rapport-2024.pdf?" action={deleteAFile}>
                   Delete
                 </Button>
               </fieldset>
 
               <fieldset>
-                <legend>confirm="Delete this file?"</legend>
-                <Button
-                  confirm="Delete this file?"
-                  action={() => {
-                    push("Delete action");
-                  }}
-                  onActionAborted={() => {
-                    push("Delete aborted");
-                  }}
-                >
-                  Delete
-                </Button>
-              </fieldset>
-
-              <fieldset>
-                <legend>confirm + async action (800ms)</legend>
-                <Button
-                  confirm="Delete this file?"
-                  action={async () => {
-                    push("Delete action");
-                    await new Promise((r) => setTimeout(r, 800));
-                  }}
-                  onActionAborted={() => {
-                    push("Delete aborted");
-                  }}
-                >
-                  Delete
-                </Button>
-              </fieldset>
-
-              <fieldset>
-                <legend>confirm on a submit button</legend>
-                <Form
-                  action={async ({ email }) => {
-                    push("Form action", { email });
-                    await new Promise((r) => setTimeout(r, 800));
-                  }}
-                >
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Input
-                      type="email"
-                      name="email"
-                      placeholder="new@address.com"
-                    />
-                    <Button
-                      type="submit"
-                      confirm="Change the address every notification is sent to?"
-                    >
-                      Save
-                    </Button>
-                  </Box>
-                </Form>
-              </fieldset>
-
-              <fieldset>
-                <legend>confirm on one of two submit buttons</legend>
-                <Form
-                  action={async ({ title, submitAction }) => {
-                    push("Form action", { title, submitAction });
-                    await new Promise((r) => setTimeout(r, 800));
-                  }}
-                >
-                  <Box flex="y" spacing="s" alignX="start">
-                    <Input
-                      type="text"
-                      name="title"
-                      placeholder="Article title…"
-                    />
-                    <Box flex="x" spacing="s">
-                      <Button type="submit" name="submitAction" value="draft">
-                        Save as draft
-                      </Button>
-                      <Button
-                        type="submit"
-                        name="submitAction"
-                        value="publish"
-                        confirm="Publish this article for everyone?"
-                      >
-                        Publish
-                      </Button>
-                    </Box>
-                  </Box>
-                </Form>
-              </fieldset>
-
-              <CallLog entries={entries} onClear={clear} />
-            </div>
-
-            <div class="states-section">
-              <div class="states-title">confirm — JSX</div>
-
-              <fieldset>
-                <legend>confirm={"{jsx}"}</legend>
+                <legend>2. JSX — the question holds a link</legend>
                 <Button
                   confirm={
                     <>
@@ -699,28 +747,16 @@
                       .
                     </>
                   }
-                  action={() => {
-                    push("Delete action");
-                  }}
-                  onActionAborted={() => {
-                    push("Delete aborted");
-                  }}
+                  action={deleteAFile}
                 >
                   Delete
                 </Button>
               </fieldset>
-            </div>
-
-            <div class="states-section">
-              <div class="states-title">confirmPopupContent</div>
-              <p class="states-description">
-                The popup body, buttons included. Answer with the{" "}
-                <code>--navi-confirm</code> and <code>--navi-cancel</code>{" "}
-                commands; closing any other way is a "no" too.
-              </p>
 
               <fieldset>
-                <legend>Own layout, own labels</legend>
+                <legend>
+                  3. confirmPopupContent — the whole popup, buttons included
+                </legend>
                 <Button
                   confirmPopupContent={
                     <Box flex="y" spacing="m" padding="m" maxWidth="360px">
@@ -739,20 +775,47 @@
                       </Box>
                     </Box>
                   }
-                  action={() => {
-                    push("Delete action");
-                  }}
-                  onActionAborted={() => {
-                    push("Delete aborted");
-                  }}
+                  action={deleteAFile}
                 >
                   Delete
                 </Button>
               </fieldset>
-            </div>
 
+              <fieldset>
+                <legend>4. --navi-confirm-popup-* </legend>
+                <Box flex="y" spacing="s" alignX="start">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={roomy}
+                      onChange={(e) => {
+                        setRoomy(e.target.checked);
+                        document.documentElement.classList.toggle(
+                          "demo-roomy-confirm",
+                          e.target.checked,
+                        );
+                      }}
+                    />{" "}
+                    Roomy
+                  </label>
+                  <Button
+                    confirm="Delete rapport-2024.pdf?"
+                    action={deleteAFile}
+                  >
+                    Delete
+                  </Button>
+                </Box>
+              </fieldset>
+            </div>
+          </>
+        );
+      };
+
+      const ConfirmOptionsDemo = () => {
+        return (
+          <>
+            <h3 id="confirm-options">defineNaviConfirmPopupOptions</h3>
             <div class="states-section">
-              <div class="states-title">defineNaviConfirmPopupOptions</div>
               <p class="states-description">
                 Set once for the whole app, from anywhere. Every button below
                 asks the same question.
@@ -777,15 +840,7 @@
                       mode: "dialog"
                     </Button>
                   </Box>
-                  <Button
-                    confirm="Delete this file?"
-                    action={() => {
-                      push("Delete action");
-                    }}
-                    onActionAborted={() => {
-                      push("Delete aborted");
-                    }}
-                  >
+                  <Button confirm="Delete this file?" action={deleteAFile}>
                     Delete
                   </Button>
                 </Box>
@@ -810,15 +865,7 @@
                       autoFocus: "cancel"
                     </Button>
                   </Box>
-                  <Button
-                    confirm="Delete this file?"
-                    action={() => {
-                      push("Delete action");
-                    }}
-                    onActionAborted={() => {
-                      push("Delete aborted");
-                    }}
-                  >
+                  <Button confirm="Delete this file?" action={deleteAFile}>
                     Delete
                   </Button>
                 </Box>
@@ -853,56 +900,13 @@
                       Reset
                     </Button>
                   </Box>
-                  <Button
-                    confirm="Delete this file?"
-                    action={() => {
-                      push("Delete action");
-                    }}
-                    onActionAborted={() => {
-                      push("Delete aborted");
-                    }}
-                  >
+                  <Button confirm="Delete this file?" action={deleteAFile}>
                     Delete
                   </Button>
                 </Box>
               </fieldset>
             </div>
-
-            <div class="states-section">
-              <div class="states-title">Theming</div>
-
-              <fieldset>
-                <legend>--navi-confirm-popup-*</legend>
-                <Box flex="y" spacing="s" alignX="start">
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={roomy}
-                      onChange={(e) => {
-                        setRoomy(e.target.checked);
-                        document.documentElement.classList.toggle(
-                          "demo-roomy-confirm",
-                          e.target.checked,
-                        );
-                      }}
-                    />{" "}
-                    Roomy
-                  </label>
-                  <Button
-                    confirm="Delete this file?"
-                    action={() => {
-                      push("Delete action");
-                    }}
-                    onActionAborted={() => {
-                      push("Delete aborted");
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </fieldset>
-            </div>
-          </div>
+          </>
         );
       };
 

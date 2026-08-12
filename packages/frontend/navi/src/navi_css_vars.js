@@ -67,9 +67,9 @@ const css = /* css */ `
          rather than the popup ones above: every confirmation in an app is
          re-shaped together here, without touching the pickers and panels that
          are also popups. */
-      --navi-confirm-popup-padding: 12px;
-      --navi-confirm-popup-spacing: 12px;
-      --navi-confirm-popup-action-spacing: 8px;
+      --navi-confirm-popup-padding: var(--navi-m);
+      --navi-confirm-popup-spacing: var(--navi-m);
+      --navi-confirm-popup-action-spacing: var(--navi-s);
       --navi-confirm-popup-min-width: 180px;
       --navi-confirm-popup-max-width: 320px;
 
