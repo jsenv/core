@@ -1255,6 +1255,21 @@ const useListScrollSync = ({
     startPlaceRef.current.wanted = scrolledWanted;
     startPlaceRef.current.userTookOver = false;
   }
+  // Only one thing owns the scroll at a time: while the list is holding itself
+  // somewhere, the anchoring stays out of it (holding a row still is precisely
+  // not being at the end anymore once what is above it shrinks).
+  const heldSomewhere =
+    !startPlaceRef.current.userTookOver &&
+    scrolledWanted !== "start" &&
+    scrolledWanted !== undefined;
+  if (heldSomewhere) {
+    // Subscribing on purpose: the row size is measured by this list but read
+    // by the runs, so a size that settles re-renders THEM — their fillers grow,
+    // the end of the list moves, and nothing would tell this list to aim at it
+    // again.
+    // eslint-disable-next-line no-unused-expressions
+    virtualItemSizeSignal.value;
+  }
   // The row the scroll is held onto across a commit (see the anchoring below).
   // A deliberate move — opening the list somewhere, coming back to a row — is
   // the list saying where it wants to be: whatever it was holding onto before
@@ -1452,7 +1467,7 @@ const useListScrollSync = ({
   // hold is the user reaching for the list — a wheel, a finger, a key, a hand
   // on the scrollbar — and not the scroll event itself, which the list provokes
   // as much as the user does.
-  useLayoutEffect(() => {
+  const placeWhereHeld = () => {
     if (
       scrolledWanted === "start" ||
       scrolledWanted === undefined ||
@@ -1507,11 +1522,17 @@ const useListScrollSync = ({
     const scrollerEl = getScroller();
     if (openAt === "end") {
       anchorRef.current = null;
+      console.info(
+        `[place] before write: scrollHeight=${Math.round(scrollerEl.scrollHeight)} client=${Math.round(scrollerEl.clientHeight)} top=${Math.round(scrollerEl.scrollTop)}`,
+      );
       if (horizontal) {
         scrollerEl.scrollLeft = scrollerEl.scrollWidth;
       } else {
         scrollerEl.scrollTop = scrollerEl.scrollHeight;
       }
+      console.info(
+        `[place] after write: top=${Math.round(scrollerEl.scrollTop)} max=${Math.round(scrollerEl.scrollHeight - scrollerEl.clientHeight)}`,
+      );
       return;
     }
     if (typeof openAt === "object" && openAt.id !== undefined) {
@@ -1548,7 +1569,18 @@ const useListScrollSync = ({
     } else {
       scrollerEl.scrollTop = rowPosition;
     }
-  });
+  };
+  useLayoutEffect(placeWhereHeld);
+  // What to do when the list's own geometry moves under it, kept fresh for the
+  // observer below (which is installed once).
+  const onGeometryChangeRef = useRef(null);
+  onGeometryChangeRef.current = () => {
+    if (heldSomewhere) {
+      placeWhereHeld();
+      return true;
+    }
+    return false;
+  };
   useLayoutEffect(() => {
     if (
       scrolledWanted === "start" ||
@@ -1611,10 +1643,12 @@ const useListScrollSync = ({
       return undefined;
     }
     const scrollerEl = getScroller();
-    let firstObservation = true;
     const observer = new ResizeObserver(() => {
-      if (firstObservation) {
-        firstObservation = false;
+      // Held somewhere: its own height changing is the end of the list moving,
+      // so it aims at it again. Nothing else can tell it — the size of a row is
+      // measured here but read by the runs, so a size that settles re-renders
+      // THEM, not this.
+      if (onGeometryChangeRef.current()) {
         return;
       }
       const position = positionRef.current;
@@ -1648,6 +1682,7 @@ const useListScrollSync = ({
       }
     });
     observer.observe(scrollerEl);
+    observer.observe(getListEl());
     return () => {
       observer.disconnect();
     };
@@ -1659,6 +1694,7 @@ const useListScrollSync = ({
   // same commit — so the row at the top of the viewport is measured before the
   // commit and put back at the same offset after it.
   if (
+    !heldSomewhere &&
     !searchText &&
     !anchorRef.current &&
     !pendingScrollRef.current &&
@@ -1673,7 +1709,7 @@ const useListScrollSync = ({
   }
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
-    if (!anchor || !ref.current) {
+    if (!anchor || !ref.current || heldSomewhere) {
       anchorRef.current = null;
       return;
     }
@@ -3119,10 +3155,18 @@ export const ListItems = ({
   // index is not that — rows can be inserted while the list is being read.
   const itemBefore = getItemAt(askEnd + 1);
   const itemAfter = getItemAt(askStart - 1);
-  store.useRequestMissing(askStart, askEnd, {
-    before: itemBefore === undefined ? undefined : idOf(itemBefore, askEnd + 1),
-    after: itemAfter === undefined ? undefined : idOf(itemAfter, askStart - 1),
-  });
+  store.useRequestMissing(
+    askStart,
+    askEnd,
+    {
+      before:
+        itemBefore === undefined ? undefined : idOf(itemBefore, askEnd + 1),
+      after:
+        itemAfter === undefined ? undefined : idOf(itemAfter, askStart - 1),
+    },
+    windowFrom,
+    windowTo,
+  );
 
   // Where the sentence goes when rows are missing: on the row the user is
   // looking at, clamped to the rows that are actually missing. Putting it at
@@ -3332,7 +3376,17 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
   }
   const pages = pagesRef.current;
   const [, setPageVersion] = useState(0);
-  const requestRef = useRef({ busy: false, start: -1, end: -1, held: -1 });
+  // The one request in flight, with the means to call it off: a page asked for
+  // a window the list has left is work the server and the browser are doing for
+  // nothing.
+  const requestRef = useRef({
+    busy: false,
+    start: -1,
+    end: -1,
+    held: -1,
+    controller: null,
+    generation: 0,
+  });
   // The rows asked for that never came. Kept as a range so the list can say
   // where the hole is, and cleared by a retry — which is what makes the same
   // range askable again (see the request memory just above).
@@ -3379,7 +3433,13 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
       }
     },
     holds: (index) => pages.byIndex.has(index),
-    useRequestMissing: (missingStart, missingEnd, cursor) => {
+    useRequestMissing: (
+      missingStart,
+      missingEnd,
+      cursor,
+      windowFrom,
+      windowTo,
+    ) => {
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
@@ -3421,7 +3481,25 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
         }
         const request = requestRef.current;
         if (request.busy) {
-          return;
+          // Still worth waiting for as long as what it went to fetch is still
+          // what the list would draw. Once it is not, it is called off — and
+          // whatever comes back anyway is kept all the same (see done): paid
+          // for, and maybe useful when the user comes back this way.
+          // A range counted back from the end (the very first ask) says
+          // nothing the window can be compared to: it is what the list is
+          // waiting for to exist at all.
+          const stillWanted =
+            request.start < 0 ||
+            request.end < 0 ||
+            (request.start <= windowTo && request.end >= windowFrom);
+          if (stillWanted) {
+            return;
+          }
+          console.info(
+            `[abort] request ${request.start}..${request.end} window ${windowFrom}..${windowTo}`,
+          );
+          request.controller?.abort();
+          request.busy = false;
         }
         const held = pages.byIndex.size;
         // Asking again for a range that was already asked for, having received
@@ -3436,6 +3514,10 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
         request.start = start;
         request.end = end;
         request.held = held;
+        request.generation++;
+        const generation = request.generation;
+        const controller = new AbortController();
+        request.controller = controller;
         const range = {
           start,
           end,
@@ -3444,14 +3526,18 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           before: cursor.before,
           after: cursor.after,
           count: pages.count,
+          signal: controller.signal,
         };
         request.busy = true;
         const done = (page) => {
-          request.busy = false;
+          const current = generation === request.generation;
+          if (current) {
+            request.busy = false;
+            setFailure(null);
+          }
           if (!page) {
             return;
           }
-          setFailure(null);
           const pageItems = Array.isArray(page) ? page : page.items;
           const pageStart = Array.isArray(page) ? 0 : (page.start ?? 0);
           const pageCount = Array.isArray(page)
@@ -3467,6 +3553,10 @@ const useItemStore = ({ count, itemsAction, memoryBudget }) => {
           setPageVersion((version) => version + 1);
         };
         const failed = (error) => {
+          if (generation !== request.generation || controller.signal.aborted) {
+            // Called off on purpose: not a failure, and nothing to say about it.
+            return;
+          }
           request.busy = false;
           setFailure({ start, end, error });
         };

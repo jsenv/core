@@ -212,9 +212,18 @@
           count: total,
         };
       };
-      const fetchMessagePage = (range) =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve(readMessagePage(range)), LATENCY);
+      // Le réseau: un délai, et une requête qu'on peut abandonner — la liste
+      // fournit un signal quand ce qu'elle avait demandé ne l'intéresse plus.
+      const fetchMessagePage = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readMessagePage(range)),
+            LATENCY,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
         });
 
       const Message = ({ message, marked }) => (
@@ -337,9 +346,12 @@
 
       /* ------------------------------------------------------------------ */
 
+      // Ce qu'on aurait gardé de la visite précédente (localStorage, url…).
+      const POSITION_FROM_LAST_VISIT = { id: "m120", offset: 24 };
+
       const ResumeSection = () => {
         const [position, setPosition] = useState(null);
-        const [saved, setSaved] = useState(null);
+        const [saved, setSaved] = useState(POSITION_FROM_LAST_VISIT);
         const [key, setKey] = useState(0);
         const [insertedCount, setInsertedCount] = useState(0);
 
@@ -452,9 +464,16 @@
         }
         return { items, start: from, count: GAME_COUNT };
       };
-      const fetchGamePage = (range) =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve(readGamePage(range)), LATENCY);
+      const fetchGamePage = ({ signal, ...range }) =>
+        new Promise((resolve, reject) => {
+          const timeout = setTimeout(
+            () => resolve(readGamePage(range)),
+            LATENCY,
+          );
+          signal?.addEventListener("abort", () => {
+            clearTimeout(timeout);
+            reject(signal.reason ?? new Error("aborted"));
+          });
         });
 
       const GameToJoinSection = () => {
@@ -548,7 +567,7 @@
                 >
                   <List.Items
                     itemsAction={async (range) => {
-                      await action(range);
+                      await action(range, { signal: range.signal });
                       return readMessagePage(range);
                     }}
                     renderItem={(message) => <Message message={message} />}

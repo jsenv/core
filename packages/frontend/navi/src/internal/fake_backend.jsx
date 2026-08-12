@@ -28,7 +28,8 @@
  *
  * `action` is what a Form or a control takes: it returns a promise that settles
  * when the answer is given — with what it was handed (which becomes the new
- * state of the backend), or with an error.
+ * state of the backend), or with an error. Pass `{ signal }` alongside and the
+ * call leaves the frontier by itself when whoever made it gives up on it.
  *
  * Not exported from the package: it is a demo's furniture, not an
  * application's.
@@ -171,9 +172,19 @@ export const FakeBackend = ({ value: valueInitial, newRow, children }) => {
   // the two ways it can end.
   const [call, setCall] = useState(null);
 
-  const action = (received) =>
+  // A call can be given up on before it is answered — the frontend scrolled
+  // past what it went to fetch. It then leaves the frontier the way it would
+  // have left the network: dropped, with nobody waiting for it.
+  const action = (received, { signal } = {}) =>
     new Promise((resolve, reject) => {
-      setCall({ received, resolve, reject });
+      const call = { received, resolve, reject };
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          setCall((current) => (current === call ? null : current));
+          reject(signal.reason ?? new Error("aborted"));
+        });
+      }
+      setCall(call);
     });
   const answer = () => {
     setValue(call.received);
