@@ -333,6 +333,7 @@ ${reason}`,
   }
   return createFailedToResolveUrlError({
     reason: `An error occured during specifier resolution`,
+    ...detailsFromInjectionsOnOwner(reference),
     ...detailsFromValueThrown(error),
   });
 };
@@ -394,6 +395,7 @@ ${reason}`,
       return createFailedToFetchUrlContentError({
         code: "NOT_FOUND",
         reason: "no entry on filesystem",
+        ...detailsFromInjectionsOnOwner(urlInfo.firstReference),
       });
     }
   }
@@ -624,6 +626,32 @@ const getFirstReferenceInProject = (reference) => {
   }
   const { firstReference } = ownerUrlInfo;
   return getFirstReferenceInProject(firstReference);
+};
+
+// An url written by an injection cannot be resolved: the placeholder is still there
+// when references are analyzed. Rather than guessing what a placeholder looks like
+// (the key is free-form), tell the file it comes from: injections are configured for it.
+const detailsFromInjectionsOnOwner = (reference) => {
+  if (!reference) {
+    return {};
+  }
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (ownerUrlInfo.type !== "html") {
+    // "jsenv-ignore" is an html attribute
+    return {};
+  }
+  const { hasInjections } = ownerUrlInfo.context;
+  if (!hasInjections || !hasInjections(ownerUrlInfo.url)) {
+    return {};
+  }
+  const { node, attributeName } = reference.astInfo || {};
+  if (!node || !attributeName) {
+    return {};
+  }
+  return {
+    suggestion: `injections are configured for this file; when "${reference.specifier}" is meant to be written by one of them, add "jsenv-ignore" so jsenv leaves that url alone:
+<${node.nodeName} jsenv-ignore ${attributeName}="${reference.specifier}" />`,
+  };
 };
 
 const detailsFromPluginController = (jsenvPluginsController) => {
@@ -2511,7 +2539,14 @@ const injectGlobals = (content, globals, urlInfo) => {
   if (urlInfo.type === "js_classic" || urlInfo.type === "js_module") {
     return globalsInjectorOnJs(content, globals, urlInfo);
   }
-  throw new Error(`cannot inject globals into "${urlInfo.type}"`);
+  throw new Error(
+    createDetailedMessage(`cannot inject globals into "${urlInfo.type}"`, {
+      file: urlInfo.url,
+      ...(urlInfo.isInline
+        ? { "inline content of": urlInfo.inlineUrlSite.url }
+        : {}),
+    }),
+  );
 };
 const globalInjectorOnHtml = (content, globals, urlInfo) => {
   // ideally we would inject an importmap but browser support is too low
@@ -7652,11 +7687,20 @@ const jsenvPluginInjections = (rawAssociations) => {
           { injectionsGetter: rawAssociations },
           context.rootDirectoryUrl,
         );
-        const findInjectionsGetter = (urlInfo) => {
+        const findInjectionsGetterForUrl = (url) => {
           const { injectionsGetter } = URL_META.applyAssociations({
-            url: asUrlWithoutSearch(urlInfo.url),
+            url: asUrlWithoutSearch(url),
             associations: resolvedAssociations,
           });
+          return injectionsGetter;
+        };
+        // an url written by an injection cannot be resolved during reference analysis;
+        // errors use this to tell the file holds injections and suggest "jsenv-ignore"
+        context.hasInjections = (url) => {
+          return Boolean(findInjectionsGetterForUrl(url));
+        };
+        const findInjectionsGetter = (urlInfo) => {
+          const injectionsGetter = findInjectionsGetterForUrl(urlInfo.url);
           if (injectionsGetter) {
             return { injectionsGetter, isInherited: false };
           }
@@ -7688,9 +7732,7 @@ const jsenvPluginInjections = (rawAssociations) => {
           if (!injections || !isInherited) {
             return injections;
           }
-          // the file holds several inline contents; a placeholder configured for the file
-          // is expected in one of them, not in each
-          return asOptionalInjections(injections);
+          return asInheritedInjections(injections);
         };
       }
     },
@@ -7717,12 +7759,24 @@ const jsenvPluginInjections = (rawAssociations) => {
   };
 };
 
-const asOptionalInjections = (injections) => {
-  const optionalInjections = {};
+// What a file inlines (a <script> or a <style> inside html) is authored in that file
+// and inherits its injections, with two adjustments:
+// - a global belongs to the file itself, injecting it into each inline content would
+//   repeat it and reach types that cannot receive globals (css)
+// - a placeholder configured for the file is expected in one of its inline contents,
+//   not in each, so a missing one is not worth a warning
+const asInheritedInjections = (injections) => {
+  const inheritedInjections = {};
   for (const key of Object.keys(injections)) {
-    optionalInjections[key] = INJECTIONS.optional(injections[key]);
+    const value = injections[key];
+    if (isPlaceholderInjection(value)) {
+      inheritedInjections[key] = INJECTIONS.optional(value);
+    }
   }
-  return optionalInjections;
+  if (Object.keys(inheritedInjections).length === 0) {
+    return null;
+  }
+  return inheritedInjections;
 };
 
 /*
