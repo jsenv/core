@@ -618,6 +618,7 @@ const ListUI = (props) => {
     onListVisibleItemsChange,
     virtualItemSize,
     startAt = "start",
+    onPositionChange,
     initialScrollToItem,
     scroller = "self",
     lockSize,
@@ -715,6 +716,7 @@ const ListUI = (props) => {
     virtualItemSize,
     virtual,
     startAt,
+    onPositionChange,
     initialScrollToItem,
     scroller,
     searchText,
@@ -733,6 +735,8 @@ const ListUI = (props) => {
   // What the list stands for, which is not always what it holds: a run saying
   // it covers 60 rows is not an empty list while it waits for the first of
   // them (see List.Items).
+  // eslint-disable-next-line no-unused-expressions
+  virtual.pagesSignal.value;
   const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
   const searching = Boolean(searchText);
@@ -910,7 +914,8 @@ const ListFirstResolver = (props) => {
  *   virtualItemSize?: number,
  *   onItemsMissing?: (detail: {start: number, end: number, count: number}) => void | Promise<any>,
  *   loadMargin?: number | string,
- *   startAt?: "start" | "end",
+ *   startAt?: "start" | "end" | number | {id: string, offset?: number},
+ *   onPositionChange?: (position: {id: string, index: number, offset: number}) => void,
  *   initialScrollToItem?: string | {id: string, block?: "start" | "center" | "end" | "nearest"},
  *   scroller?: "self" | "parent",
  *   fallback?: import("preact").ComponentChildren,
@@ -958,12 +963,21 @@ const ListFirstResolver = (props) => {
  * @param {number|string} [props.loadMargin=5]
  *   How far outside the visible band `onItemsMissing` looks ahead: a number of
  *   rows, or an explicit distance (`"300px"`).
- * @param {"start"|"end"} [props.startAt="start"]
- *   Which end the list opens on. `"end"` is a thread read backwards — the last
- *   rows are the ones to show, and they are the ones asked for first. It holds
- *   the list against that end while it is still finding out how many rows
- *   there are and how tall one is, and lets go the moment the user reaches for
- *   the list.
+ * @param {"start"|"end"|number|{id: string, offset?: number}} [props.startAt="start"]
+ *   Where the list opens. `"end"` is a thread read backwards — the last rows
+ *   are the ones to show, and the ones asked for first. A number opens on that
+ *   row of the collection. `{id, offset}` — what `onPositionChange` hands out
+ *   — comes back to a NAMED row, `offset` pixels below the top of the view:
+ *   the row is asked for by name (see the range's own `around`), then put back
+ *   by measuring it, so it lands where it was even if rows were inserted
+ *   before it in the meantime. In every form the list holds itself there while
+ *   it is still finding out how many rows there are and how tall one is, and
+ *   lets go the moment the user reaches for the list.
+ * @param {(position: {id: string, index: number, offset: number}) => void} [props.onPositionChange]
+ *   Where the list is, as the user scrolls: the row at the top of the view and
+ *   how far above the fold it sits. Keep it to come back to it later through
+ *   `startAt` — an index would not do, since rows get inserted while a list is
+ *   being read.
  * @param {string|{id: string, block?: string}} [props.initialScrollToItem]
  *   The row to open the list on, the first time it is displayed (the frontier
  *   between past and future in a timeline, for instance). Works on a row that
@@ -1066,6 +1080,7 @@ const useListScrollSync = ({
   virtualItemSize,
   virtual,
   startAt,
+  onPositionChange,
   initialScrollToItem,
   scroller,
   searchText,
@@ -1378,14 +1393,15 @@ const useListScrollSync = ({
   });
 
   // Where the list opens when it has no reason to be anywhere else: at the end
-  // for a thread one reads backwards, at the start otherwise.
+  // for a thread one reads backwards, on a named row when one is coming back
+  // to where they were, at the start otherwise.
   //
-  // Held until the user takes over rather than done once: the end moves while
-  // the list is still finding out how many rows it has and how tall one is, so
-  // landing there once would land next to it. What ends it is the user
-  // reaching for the list — a wheel, a finger, a key, a hand on the scrollbar
-  // — and not the scroll event itself, which the list provokes as much as the
-  // user does.
+  // Held until the user takes over rather than done once: where that place is
+  // keeps moving while the list is still finding out how many rows it has and
+  // how tall one is, so landing there once would land next to it. What ends the
+  // hold is the user reaching for the list — a wheel, a finger, a key, a hand
+  // on the scrollbar — and not the scroll event itself, which the list provokes
+  // as much as the user does.
   useLayoutEffect(() => {
     if (
       startAt === "start" ||
@@ -1401,10 +1417,34 @@ const useListScrollSync = ({
     ) {
       return;
     }
+    // Coming back to a named row: it has to be on screen to be put back where
+    // it was — measured, not computed from an estimate, which is what makes
+    // the position exact whatever the rows in between turn out to weigh. Until
+    // it is drawn, the most this can do is aim the window at it.
+    if (startAt.id !== undefined) {
+      // Only whoever holds the rows can say where that one sits: the list
+      // itself knows the rows it has drawn, and this one is precisely the one
+      // it has not drawn yet.
+      const rowIndex = virtual.locateRow(startAt.id);
+      if (rowIndex === null) {
+        return;
+      }
+      const { start, end } = renderWindowRef.current;
+      if (rowIndex < start || rowIndex >= end) {
+        const half = Math.floor((end - start) / 2);
+        const wantedStart = rowIndex - half < 0 ? 0 : rowIndex - half;
+        updateRenderWindow(
+          wantedStart,
+          wantedStart + (end - start),
+          `opening on row ${startAt.id}`,
+        );
+        return;
+      }
+    }
     // Not now: the room held for the rows below the fold is written by the
     // fillers, which only hear about the row size once this render has been
-    // committed. Landing at the end means asking after they have — a microtask
-    // still runs before the frame is painted.
+    // committed. Landing at the right place means asking after they have — a
+    // microtask still runs before the frame is painted.
     queueMicrotask(() => {
       if (startPlaceRef.current.userTookOver || !ref.current) {
         return;
@@ -1415,6 +1455,28 @@ const useListScrollSync = ({
           scrollerEl.scrollLeft = scrollerEl.scrollWidth;
         } else {
           scrollerEl.scrollTop = scrollerEl.scrollHeight;
+        }
+        return;
+      }
+      if (startAt.id !== undefined) {
+        const rowEl = findRowElement(getListEl(), startAt.id);
+        if (!rowEl) {
+          return;
+        }
+        const viewportRect = getScrollerViewportRect(scrollerEl);
+        const rowRect = rowEl.getBoundingClientRect();
+        const offsetWanted = startAt.offset || 0;
+        const offsetNow = horizontal
+          ? rowRect.left - viewportRect.left
+          : rowRect.top - viewportRect.top;
+        const delta = offsetNow - offsetWanted;
+        if (delta > -0.5 && delta < 0.5) {
+          return;
+        }
+        if (horizontal) {
+          scrollerEl.scrollLeft += delta;
+        } else {
+          scrollerEl.scrollTop += delta;
         }
         return;
       }
@@ -1444,6 +1506,33 @@ const useListScrollSync = ({
       }
     };
   }, [startAt, scroller]);
+
+  // Where the list is, said the way it can be given back to it: the row at the
+  // top of what is on screen, and how far above the fold it sits. An index
+  // would not do — rows get inserted while a list is being read, and the row
+  // one was looking at is then somewhere else.
+  const positionRef = useRef(null);
+  positionRef.current = onPositionChange;
+  const reportPosition = () => {
+    const onPositionChange = positionRef.current;
+    if (!onPositionChange || !ref.current) {
+      return;
+    }
+    const position = captureScrollAnchor({
+      scrollerEl: getScroller(),
+      listEl: getListEl(),
+      items: tracker.visibleItemsSignal.peek(),
+      horizontal,
+    });
+    if (!position) {
+      return;
+    }
+    onPositionChange({
+      id: position.id,
+      index: position.index,
+      offset: position.offset,
+    });
+  };
 
   // Inserting rows above what the user is looking at must not move it by a
   // single pixel. The browser will not do it for us — overflow-anchor gives up
@@ -1549,6 +1638,7 @@ const useListScrollSync = ({
         scrolledByListRef.current = false;
         return;
       }
+      reportPosition();
       const total = virtual.totalSignal.peek();
       if (total <= renderBudget) {
         return;
@@ -2016,6 +2106,8 @@ const UnorderedList = ({
 // every matchable item has match=false (in-list filtering), or the list is empty
 // during an active search (filtering done outside the list, so itemCount is 0).
 const SearchFallback = ({ tracker, virtual, searchFallback, searching }) => {
+  // eslint-disable-next-line no-unused-expressions
+  virtual.pagesSignal.value;
   const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const noMatchCount = tracker.noMatchCountSignal.value;
   const allNoMatch = noMatchCount > 0 && noMatchCount === itemCount;
@@ -2045,6 +2137,8 @@ const SearchFallback = ({ tracker, virtual, searchFallback, searching }) => {
 // The "empty list" message. Not shown during a search — an empty search result
 // is a "no match" state (SearchFallback), not an empty-list state.
 const Fallback = ({ tracker, virtual, fallback, searching }) => {
+  // eslint-disable-next-line no-unused-expressions
+  virtual.pagesSignal.value;
   const itemCount = tracker.countSignal.value || virtual.totalSignal.value;
   const showFallback = itemCount === 0 && !searching;
   if (fallback === undefined) {
@@ -2232,19 +2326,17 @@ const ListItemUI = (props) => {
       props.muted = true;
     }
   }
-  if (row) {
-    if (props.filtered) {
-      return null;
-    }
-    return <ListItemReal {...props} />;
-  }
   // A row declared on its own stands for one row of the collection, at the
   // place where the child declared before it left off. An explicit `index`
   // still wins: it is how a caller says where a row belongs when declaration
   // order is not it (a search reorders rows without moving them in the DOM).
-  if (!props.filtered) {
+  // A row drawn by a run already knows its place — the run gave it.
+  if (!row && !props.filtered) {
     props.index = virtual.take(props.id, 1, props.index);
   }
+  // Every row that is drawn registers itself, whether it was declared one by
+  // one or drawn by a run: what it says about itself (its value, whether it is
+  // selected) is written where it is drawn, in one place.
   const item = props;
   tracker.useTrackItem(item);
   const groupTracker = useContext(GroupItemTrackerContext);
@@ -2258,6 +2350,9 @@ const ListItemUI = (props) => {
   }
   // html-hidden items: excluded from virtual scroll accounting but always in DOM
   if (props.hidden) {
+    return <ListItemReal {...props} />;
+  }
+  if (row) {
     return <ListItemReal {...props} />;
   }
   const index = props.index;
@@ -2614,12 +2709,19 @@ List.Item = ListItem;
 // opens a new one, and within a pass a child takes its place exactly once.
 const createListVirtual = () => {
   const totalSignal = signal(0);
+  // Bumped whenever a run takes in rows. The list itself has to hear about it:
+  // rows arriving outside the render window change nothing it can see (nothing
+  // registers, nothing is drawn), and yet they are what it may have been
+  // waiting for — the row it was told to open on, for one.
+  const pagesSignal = signal(0);
   const placeByOwner = new Map();
+  const locatorByOwner = new Map();
   let passId = 0;
   let nextIndex = 0;
 
   const virtual = {
     totalSignal,
+    pagesSignal,
     // What a run needs to know about the list it lives in: how many rows the
     // list is willing to draw at once, which end it opens on, and how much
     // room one row is given — a row whose content has not arrived must take
@@ -2640,6 +2742,22 @@ const createListVirtual = () => {
       virtual.startAt = startAt;
       passId++;
       nextIndex = 0;
+    },
+    setRowLocator: (ownerId, locate) => {
+      locatorByOwner.set(ownerId, locate);
+    },
+    dropRowLocator: (ownerId) => {
+      locatorByOwner.delete(ownerId);
+    },
+    // Where the row named by that id sits, asked of whoever holds it.
+    locateRow: (id) => {
+      for (const locate of locatorByOwner.values()) {
+        const index = locate(id);
+        if (index !== null) {
+          return index;
+        }
+      }
+      return null;
     },
     take: (ownerId, rowCount, indexStart) => {
       const placeTaken = placeByOwner.get(ownerId);
@@ -2679,8 +2797,8 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   does: `{ items, start, count }` — these rows, at this place, out of that
  *   many. May be async.
  * - `items` — the caller holds them and says where they sit (`itemStart`) and
- *   how many there are in all (`count`); `onItemsMissing({ start, end })` then
- *   reports what the list would draw and does not have.
+ *   how many there are in all (`count`). Rows it does not have are drawn as
+ *   skeletons until it does.
  *
  * Several runs can live in one list, next to plain `<List.Item>` children and
  * inside `<List.Group>`s; each takes its place in declaration order.
@@ -2693,7 +2811,6 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   itemStart?: number,
  *   pageSize?: number,
  *   memoryBudget?: number,
- *   onItemsMissing?: (range: object) => void,
  *   renderSkeleton?: false | ((index: number) => import("preact").ComponentChildren),
  *   itemProps?: (item: any, index: number) => object,
  * }>}
@@ -2710,11 +2827,6 @@ const SKELETON_HIDDEN_STYLE = { visibility: "hidden" };
  *   What to draw for a row the run does not hold. Defaults to a
  *   `<List.Item skeleton>`; `false` leaves the row empty (its room is still
  *   held, or the list would jump as it loads).
- * @param {(item: any, index: number) => object} [props.itemProps]
- *   The props of the row this item stands for — `value`, `selectable`,
- *   `selected`, `disabled`… They are both applied to the rendered row and
- *   registered with the list, so what the list decides from them (which row is
- *   selected, where to open) holds for rows that are not rendered too.
  */
 export const ListItems = ({
   renderItem,
@@ -2724,14 +2836,11 @@ export const ListItems = ({
   itemStart,
   pageSize,
   memoryBudget,
-  onItemsMissing,
   renderSkeleton,
   renderError,
-  itemProps,
 }) => {
   const ownerId = useId();
   const virtual = useContext(ListVirtualContext);
-  const tracker = useContext(ListItemTrackerContext);
   const renderWindow = useContext(RenderWindowContext);
   const separator = useContext(SeparatorContext);
   const store = useItemStore({ items, count, itemsAction, memoryBudget });
@@ -2758,27 +2867,29 @@ export const ListItems = ({
   const windowTo = renderWindow.end < runEnd ? renderWindow.end : runEnd;
   store.forget(windowFrom, windowTo);
 
-  const itemDataList = [];
-  store.eachHeld(heldStart, (item, index) => {
-    itemDataList.push({
-      // What the row stands for, which is what selecting it emits — the item
-      // itself unless itemProps names something else (an id, a code).
-      value: item,
-      ...(itemProps ? itemProps(item, index) : null),
-      // The row answers to its own id when the item carries one — that is what
-      // addresses it from outside (--navi-select, --navi-scroll) — and
-      // otherwise to one made from the run and its place, unique within the
-      // list, which is all an id has to be.
-      id: item && item.id !== undefined ? item.id : `${ownerId}_${index}`,
-      index,
-      item,
+  // The row answers to its own id when the item carries one — that is what
+  // addresses it from outside (--navi-select, --navi-scroll, startAt) — and
+  // otherwise to one made from the run and its place, unique within the list,
+  // which is all an id has to be.
+  const idOf = (item, index) =>
+    item && item.id !== undefined ? item.id : `${ownerId}_${index}`;
+  // Where a row named from outside actually sits. Only the run can answer:
+  // rows it holds but does not draw are nowhere else — a list only knows the
+  // rows it has drawn (they register themselves, see ListItemUI).
+  virtual.setRowLocator(ownerId, (id) => {
+    let found = null;
+    store.eachHeld(heldStart, (item, index) => {
+      if (found === null && idOf(item, index) === id) {
+        found = index;
+      }
     });
+    return found;
   });
-  tracker.useTrackItemList(itemDataList);
-  const itemDataByIndex = new Map();
-  for (const itemData of itemDataList) {
-    itemDataByIndex.set(itemData.index, itemData);
-  }
+  useLayoutEffect(() => {
+    return () => {
+      virtual.dropRowLocator(ownerId);
+    };
+  }, []);
 
   // What the list is about to draw and the run does not have. Asked for as one
   // range: a caller answering with less than that (a page at a time) is asked
@@ -2832,11 +2943,11 @@ export const ListItems = ({
   // The row the missing ones hang from, when there is one: a source paginating
   // by cursor ("the 50 before this one") needs a row to count from, and an
   // index is not that — rows can be inserted while the list is being read.
-  const rowBefore = itemDataByIndex.get(askEnd + 1);
-  const rowAfter = itemDataByIndex.get(askStart - 1);
-  store.useRequestMissing(askStart, askEnd, onItemsMissing, {
-    before: rowBefore ? rowBefore.id : undefined,
-    after: rowAfter ? rowAfter.id : undefined,
+  const itemBefore = getItemAt(askEnd + 1);
+  const itemAfter = getItemAt(askStart - 1);
+  store.useRequestMissing(askStart, askEnd, {
+    before: itemBefore === undefined ? undefined : idOf(itemBefore, askEnd + 1),
+    after: itemAfter === undefined ? undefined : idOf(itemAfter, askStart - 1),
   });
 
   // Where the sentence goes when rows are missing: on the row the user is
@@ -2873,11 +2984,14 @@ export const ListItems = ({
   }
   let rowIndex = windowFrom;
   while (rowIndex < windowTo) {
-    const itemData = itemDataByIndex.get(rowIndex);
-    const key = itemData ? itemData.id : `${ownerId}_skeleton_${rowIndex}`;
+    const item = getItemAt(rowIndex);
+    const key =
+      item === undefined
+        ? `${ownerId}_skeleton_${rowIndex}`
+        : idOf(item, rowIndex);
     let rowVnode;
-    if (itemData) {
-      rowVnode = renderItem(itemData.item, rowIndex);
+    if (item !== undefined) {
+      rowVnode = renderItem(item, rowIndex);
     } else if (store.failure && rowIndex === failureRowIndex) {
       // One row says it, at the top of the hole; the others below keep holding
       // the room, so nothing moves when the retry succeeds.
@@ -2911,7 +3025,11 @@ export const ListItems = ({
       rows.push(
         <ListRowContext.Provider
           key={key}
-          value={itemData || { id: key, index: rowIndex, ...skeletonRow }}
+          value={
+            item === undefined
+              ? { id: key, index: rowIndex, ...skeletonRow }
+              : { id: key, index: rowIndex, item }
+          }
         >
           {rowVnode}
         </ListRowContext.Provider>,
@@ -3043,7 +3161,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
       }
     },
     holds: (index, heldStart) => store.getItem(index, heldStart) !== undefined,
-    useRequestMissing: (missingStart, missingEnd, onItemsMissing, cursor) => {
+    useRequestMissing: (missingStart, missingEnd, cursor) => {
       // The very first ask has nothing to go on: the run does not even know
       // how many rows there are, so it asks for the rows the list would open
       // on — counting back from the end when that is where it opens, the way
@@ -3051,6 +3169,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
       const budget = virtual.renderBudget;
       let start = missingStart;
       let end = missingEnd;
+      let around;
       if (!controlled && pages.count === undefined) {
         const startAt = virtual.startAt;
         if (startAt === "end") {
@@ -3059,6 +3178,13 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
           // there are.
           start = -budget;
           end = -1;
+        } else if (startAt && startAt.id !== undefined) {
+          // The list cannot say where that row is — that is the whole point of
+          // naming it — so it asks for it by name and reads back where it
+          // landed (see the page's own `start`).
+          start = 0;
+          end = budget - 1;
+          around = startAt.id;
         } else {
           const first =
             typeof startAt === "number" ? startAt - Math.floor(budget / 2) : 0;
@@ -3090,13 +3216,13 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
         const range = {
           start,
           end,
+          around,
           limit: end - start + 1,
           before: cursor.before,
           after: cursor.after,
           count: controlled ? count : pages.count,
         };
         if (!itemsAction) {
-          onItemsMissing?.(range);
           return;
         }
         request.busy = true;
@@ -3117,6 +3243,7 @@ const useItemStore = ({ items, count, itemsAction, memoryBudget }) => {
             i++;
           }
           pages.count = pageCount;
+          virtual.pagesSignal.value = virtual.pagesSignal.peek() + 1;
           setPageVersion((version) => version + 1);
         };
         const failed = (error) => {

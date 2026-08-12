@@ -52,6 +52,28 @@
         color: #1a1a2e;
         background: #eceff4;
       }
+      /* La ligne posée à l'offset sauvegardé, devant la liste. */
+      .ruler-frame {
+        position: relative;
+        /* De la place au-dessus de la liste: le haut du message repris est
+           souvent juste au-dessus du pli, donc la ligne qui le marque tombe
+           en dehors du cadre. */
+        padding-top: 90px;
+      }
+      .ruler {
+        position: absolute;
+        right: 0;
+        left: 0;
+        z-index: 2;
+        height: 0;
+        border-top: 2px dashed #d33;
+        pointer-events: none;
+      }
+      /* Le message dont la position est mémorisée: son haut doit venir se
+         poser sur la ligne rouge. */
+      .navi_list_item[data-marked] {
+        box-shadow: inset 0 2px 0 #d33;
+      }
       .bubble[data-loading] {
         display: flex;
         flex-direction: column;
@@ -79,10 +101,11 @@
       import { FakeBackend } from "../../../internal/fake_backend.jsx";
 
       // La conversation entière vit "sur le serveur"; le front n'en tient que
-      // les pages qu'il a demandées.
-      const MESSAGE_COUNT = 200;
+      // les pages qu'il a demandées. Un message garde son id quoi qu'il arrive
+      // — c'est ce qui permet de le retrouver quand d'autres se sont insérés
+      // avant lui et que sa place a changé.
+      const INITIAL_COUNT = 200;
       const PAGE_MAX = 50;
-      const LAST_READ_INDEX = 96;
 
       const PHRASES = [
         "ok",
@@ -97,46 +120,96 @@
         "franchement bien joué pour hier, tout le monde en parle encore. On refait ça quand ?",
       ];
 
-      const createMessage = (index) => ({
-        index,
-        mine: index % 3 === 0,
-        text: PHRASES[index % PHRASES.length],
-        time: `${9 + Math.floor(index / 8)}h${String((index * 7) % 60).padStart(2, "0")}`,
-      });
+      // Le serveur: une liste de messages, à laquelle on peut en ajouter au
+      // début (les plus anciens), ce qui décale la place de tous les autres.
+      const createMessages = (count, firstNumber) =>
+        Array.from({ length: count }, (_, i) => {
+          const number = firstNumber + i;
+          return {
+            id: `m${number}`,
+            number,
+            mine: number % 3 === 0,
+            text: PHRASES[number % PHRASES.length],
+            time: `${9 + Math.floor(number / 8)}h${String((number * 7) % 60).padStart(2, "0")}`,
+          };
+        });
+      const serverMessages = createMessages(INITIAL_COUNT, 0);
+      const insertOlder = (count) => {
+        const first = serverMessages[0].number;
+        serverMessages.unshift(...createMessages(count, first - count));
+      };
 
-      // Ce que le serveur répond à un intervalle: jamais plus de PAGE_MAX
-      // lignes, en disant où ça tombe et combien il y en a en tout. Un début
-      // négatif compte depuis la fin (Range: items=-30).
-      const readPage = ({ start, end }) => {
-        let from = start < 0 ? MESSAGE_COUNT + start : start;
-        let to = end < 0 ? MESSAGE_COUNT + end : end;
+      const readPage = ({ start, end, around }) => {
+        const total = serverMessages.length;
+        // Retrouver un message par son id: c'est ce qu'on demande au serveur
+        // quand on revient là où on s'était arrêté, puisque sa place, on ne la
+        // connaît plus.
+        if (around !== undefined) {
+          const index = serverMessages.findIndex((m) => m.id === around);
+          const wanted = end - start + 1;
+          const from = index - Math.floor(wanted / 2);
+          start = from < 0 ? 0 : from;
+          end = start + wanted - 1;
+        }
+        let from = start < 0 ? total + start : start;
+        let to = end < 0 ? total + end : end;
         if (from < 0) {
           from = 0;
         }
-        if (to > MESSAGE_COUNT - 1) {
-          to = MESSAGE_COUNT - 1;
+        if (to > total - 1) {
+          to = total - 1;
         }
         if (to - from + 1 > PAGE_MAX) {
           // On rend la fin de l'intervalle demandé: c'est de là qu'on remonte.
           from = to - PAGE_MAX + 1;
         }
-        const items = [];
-        let index = from;
-        while (index <= to) {
-          items.push(createMessage(index));
-          index++;
-        }
-        return { items, start: from, count: MESSAGE_COUNT };
+        return {
+          items: serverMessages.slice(from, to + 1),
+          start: from,
+          count: total,
+        };
       };
 
-      const MessageItem = ({ message }) => (
-        <ListItem paddingX="m" paddingY="xs">
+      // Le vrai réseau: un délai qu'on subit, sans personne pour répondre à la
+      // place du serveur.
+      const LATENCY = 500;
+      const fetchPage = (range) => {
+        console.info("[ask]", JSON.stringify(range));
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            const page = readPage(range);
+            console.info(
+              "[got]",
+              page.start,
+              "..",
+              page.start + page.items.length - 1,
+              "/",
+              page.count,
+            );
+            resolve(page);
+          }, LATENCY);
+        });
+      };
+
+      const Stat = ({ label, value }) => (
+        <span>
+          <span className="stat-label">{label} </span>
+          <span className="stat-value">{value}</span>
+        </span>
+      );
+
+      const MessageItem = ({ message, marked }) => (
+        <ListItem
+          paddingX="m"
+          paddingY="xs"
+          data-marked={marked ? "" : undefined}
+        >
           <Box flex="y" alignX={message.mine ? "end" : "start"} expandX>
             <div className="bubble" data-mine={message.mine ? "" : undefined}>
               <Text>{message.text}</Text>
             </div>
             <Text size="xs" color="#999">
-              #{message.index} · {message.time}
+              #{message.number} · {message.time}
             </Text>
           </Box>
         </ListItem>
@@ -165,26 +238,20 @@
         </ListItem>
       );
 
-      // Le vrai réseau: un délai qu'on subit, sans personne pour répondre à la
-      // place du serveur.
-      const LATENCY = 500;
-      const fetchPage = (range) =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve(readPage(range)), LATENCY);
-        });
-
-      const Thread = ({ startAt, itemsAction }) => (
+      const Thread = ({ startAt, itemsAction, onPositionChange, markedId }) => (
         <List
           maxHeight="220px"
           expandX
           renderBudget={30}
           startAt={startAt}
+          onPositionChange={onPositionChange}
           renderSkeleton={(index) => <MessageSkeleton index={index} />}
         >
           <List.Items
-            count={MESSAGE_COUNT}
             itemsAction={itemsAction}
-            renderItem={(message) => <MessageItem message={message} />}
+            renderItem={(message) => (
+              <MessageItem message={message} marked={message.id === markedId} />
+            )}
           />
         </List>
       );
@@ -207,9 +274,7 @@
         );
       };
 
-      // Les parties de padel: des lignes qu'on choisit, pas qu'on lit. La
-      // sélection est décrite par itemProps, donc la liste la connaît aussi
-      // pour les lignes qu'elle ne rend pas.
+      // Les parties de padel: des lignes qu'on choisit, pas qu'on lit.
       const COURTS = ["Court 1", "Court 2", "Court couvert", "Court extérieur"];
       const NIVEAUX = ["P25", "P50", "P100", "P250"];
       const GAME_COUNT = 3000;
@@ -239,8 +304,17 @@
         return { items, start: from, count: GAME_COUNT };
       };
 
-      const GameItem = ({ game }) => (
-        <List.Item flex alignY="center" spacing="s" paddingX="m" paddingY="s">
+      const GameItem = ({ game, selected }) => (
+        <List.Item
+          selectable
+          value={game.index}
+          selected={selected}
+          flex
+          alignY="center"
+          spacing="s"
+          paddingX="m"
+          paddingY="s"
+        >
           <SelectableInput />
           <Text weight="bold">{game.level}</Text>
           <Text>{game.court}</Text>
@@ -290,18 +364,82 @@
                     setTimeout(() => resolve(readGamePage(range)), LATENCY);
                   })
                 }
-                itemProps={(game) => ({
-                  selectable: true,
-                  value: game.index,
-                  selected: selected === game.index,
-                })}
-                renderItem={(game) => <GameItem game={game} />}
+                renderItem={(game) => (
+                  <GameItem game={game} selected={selected === game.index} />
+                )}
               />
             </List>
             <Text size="s" color="#555">
               partie choisie: {selected === null ? "aucune" : `#${selected}`}
             </Text>
           </Box>
+        );
+      };
+
+      // Reprendre exactement là où on s'était arrêté. La ligne rouge est posée
+      // à l'offset sauvegardé: si la reprise est juste, le haut du message
+      // encadré vient s'y coller — que des messages se soient insérés avant lui
+      // entre-temps ou non.
+      const ResumeSection = () => {
+        const [position, setPosition] = useState(null);
+        const [saved, setSaved] = useState(null);
+        const [key, setKey] = useState(0);
+        const [insertedCount, setInsertedCount] = useState(0);
+
+        return (
+          <div className="demo-section">
+            <h2>On reprend là où on s'était arrêté</h2>
+            <Box flex="y" spacing="m" style="margin-top: 8px">
+              <Box flex alignY="center" spacing="m">
+                <Button
+                  onClick={() => {
+                    setSaved(position);
+                    setKey(key + 1);
+                  }}
+                >
+                  quitter et revenir
+                </Button>
+                <Button
+                  onClick={() => {
+                    insertOlder(5);
+                    setInsertedCount(insertedCount + 5);
+                  }}
+                >
+                  5 messages plus anciens arrivent
+                </Button>
+                <Stat
+                  label="position"
+                  value={
+                    position
+                      ? `${position.id} @${Math.round(position.offset)}`
+                      : "—"
+                  }
+                />
+                <Stat label="insérés" value={insertedCount} />
+              </Box>
+              <div className="ruler-frame">
+                {saved && (
+                  <div
+                    className="ruler"
+                    style={{ top: `${90 + saved.offset}px` }}
+                  ></div>
+                )}
+                <Thread
+                  key={key}
+                  startAt={saved || "end"}
+                  itemsAction={fetchPage}
+                  onPositionChange={setPosition}
+                  markedId={saved ? saved.id : position ? position.id : null}
+                />
+              </div>
+              {saved && (
+                <Text size="s" color="#555">
+                  repris sur {saved.id}, {Math.round(saved.offset)}px sous le
+                  haut de la vue
+                </Text>
+              )}
+            </Box>
+          </div>
         );
       };
 
@@ -322,18 +460,7 @@
               <Thread key={key} startAt="end" itemsAction={fetchPage} />
             )}
           </Section>
-          <Section
-            title="On reprend là où on s'était arrêté"
-            caption={`startAt={${LAST_READ_INDEX}}`}
-          >
-            {(key) => (
-              <Thread
-                key={key}
-                startAt={LAST_READ_INDEX}
-                itemsAction={fetchPage}
-              />
-            )}
-          </Section>
+          <ResumeSection />
           <Section
             title="Une partie à rejoindre"
             caption="3000 parties, une seule à choisir"
@@ -345,7 +472,7 @@
             caption="répondre ou échouer, pour voir ce que la liste fait de la réponse"
           >
             {(key) => (
-              <FakeBackend value={`${MESSAGE_COUNT} messages`}>
+              <FakeBackend value={`${serverMessages.length} messages`}>
                 {({ action }) => (
                   <Thread
                     key={key}

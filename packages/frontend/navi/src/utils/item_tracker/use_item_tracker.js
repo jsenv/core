@@ -357,39 +357,6 @@ const createItemTracker = (onChange) => {
     return keyToOrderedIndex.get(key) ?? -1;
   };
 
-  // Register a whole run of items at once, on behalf of a caller that holds
-  // them as data rather than as one component each (see List.Items). The run
-  // owns its keys: whatever it registered on the previous render and does not
-  // register now has left the list.
-  const useTrackItemList = (dataList) => {
-    const ownedKeysRef = useRef(null);
-    const ownedKeys = new Set();
-    for (const data of dataList) {
-      const key = keyForId(data.id);
-      syncItem(key, data.index, data);
-      ownedKeys.add(key);
-    }
-    const ownedKeysPrevious = ownedKeysRef.current;
-    if (ownedKeysPrevious) {
-      for (const key of ownedKeysPrevious) {
-        if (!ownedKeys.has(key)) {
-          unregisterKey(key);
-        }
-      }
-    }
-    ownedKeysRef.current = ownedKeys;
-    notify();
-
-    useLayoutEffect(() => {
-      return () => {
-        for (const key of ownedKeysRef.current) {
-          unregisterKey(key);
-        }
-        notify();
-      };
-    }, []);
-  };
-
   const getTrackedItemByIndex = (index) => {
     const key = orderedKeys[index];
     if (key === undefined) {
@@ -422,7 +389,6 @@ const createItemTracker = (onChange) => {
 
   return {
     useTrackItem,
-    useTrackItemList,
     getTrackedItemByIndex,
     peekItems,
     itemsSignal,

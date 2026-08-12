@@ -366,12 +366,10 @@
               >
                 <List.Items
                   items={orderedItems}
-                  itemProps={(item) => ({
-                    value: item,
-                    matchInfo: getItemMatchInfo(item),
-                  })}
                   renderItem={(item, index) => (
                     <ListItem
+                      value={item}
+                      matchInfo={getItemMatchInfo(item)}
                       style={{
                         backgroundColor: SUGGESTION_BG,
                         ...(itemHeight
