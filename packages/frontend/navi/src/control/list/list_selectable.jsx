@@ -236,10 +236,53 @@ const ListSelectable = (props) => {
     focusGroupDirection,
     focusGroupWrap,
   } = props;
+  // What the list holds, which is not the same as what its rows say. A list
+  // draws the rows it needs and no more: the selected one may be scrolled out
+  // of the window, or filtered out of the view. Aggregating over the rows that
+  // happen to be mounted would then lose the selection — a row that is not
+  // there cannot say it is not selected.
+  const selectionRef = useRef(undefined);
+  if (selectionRef.current === undefined) {
+    selectionRef.current = Object.hasOwn(props, "value")
+      ? props.value
+      : props.defaultValue;
+  }
+  const aggregateChildStates = (children) => {
+    const kept = selectionRef.current;
+    if (multiple) {
+      const drawnValues = new Set(children.map((child) => child.props.value));
+      const stillSelected = Array.isArray(kept)
+        ? kept.filter((value) => !drawnValues.has(value))
+        : [];
+      for (const child of children) {
+        if (child.uiState !== undefined) {
+          stillSelected.push(child.uiState);
+        }
+      }
+      const values = stillSelected.length === 0 ? undefined : stillSelected;
+      selectionRef.current = values;
+      return values;
+    }
+    for (const child of children) {
+      if (child.uiState !== undefined) {
+        selectionRef.current = child.uiState;
+        return child.uiState;
+      }
+    }
+    // No drawn row claims it. If the row that held it IS drawn, it was really
+    // deselected; if it is not, the list keeps what it holds.
+    const keptIsDrawn = children.some((child) => child.props.value === kept);
+    if (keptIsDrawn) {
+      selectionRef.current = undefined;
+      return undefined;
+    }
+    return kept;
+  };
   const [listControlRootProps, listControlProps, childrenWrapperProps] =
     useControlgroupProps(props, {
       stateType: multiple ? "array" : "",
       controlType: multiple ? "checkbox_group" : "radio_group",
+      aggregateChildStates,
     });
   const uiGroupStateController = getUIStateControllerById(listControlProps.id);
   useFocusGroup(ref, {
@@ -480,6 +523,12 @@ export const ListItemSelectableResolver = (props) => {
 const ListItemSelectable = (props) => {
   const Next = useNextResolver();
   const defaultId = useId();
+  // Whether the caller SAYS anything about this row's selection. Passing
+  // `checked: undefined` is not the same as not passing it: a control with the
+  // key present calls itself controlled, and a controlled row is one the list
+  // must not seed — which is exactly how a list-level `value` ended up never
+  // reaching its rows.
+  const hasSelectedProp = Object.hasOwn(props, "selected");
   const {
     index,
     id = defaultId,
@@ -505,7 +554,7 @@ const ListItemSelectable = (props) => {
       id: inputId,
       type: inputType,
       defaultChecked: defaultSelected,
-      checked: selected,
+      ...(hasSelectedProp ? { checked: selected } : null),
     });
   const { checked, value, basePseudoState, children } = checkableProps;
   const readOnly = basePseudoState[":read-only"];
